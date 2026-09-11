@@ -128,6 +128,13 @@ func adresse(chemin string) string {
 }
 
 func main() {
+	// Comme toute application, un second lancement revient à la fenêtre
+	// déjà ouverte au lieu d'en ouvrir une deuxième.
+	if h := fenetreOuverte(nom); h != 0 {
+		activerFenetre(h)
+		return
+	}
+
 	page, err := deposer()
 	if err != nil {
 		alerte(nom, "Impossible de préparer l'application :\n\n"+err.Error())
