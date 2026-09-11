@@ -4,9 +4,9 @@ const ExcelJS = require('exceljs');
 const X = require('../src/excel.js')(ExcelJS);
 
 const entries = [
-  { no: 1, date: '2025-01-08', compte: '51000.3662.50', libelle: 'REMBOURSEMENT - Collation - A. Nagy', debit: null, credit: 29.7 },
-  { no: 2, date: '2025-01-09', compte: '9206.101', libelle: 'RECETTE - Vente - N. Borlat', debit: 552, credit: null },
-  { no: 3, date: '2025-01-10', compte: '9111.100', libelle: 'RETRAIT - Bourse communale - F. Eminaj', debit: 10000, credit: null },
+  { no: 1, date: '2025-01-08', compte: '51000.3662.50', libelle: 'REMBOURSEMENT - Collation - A. Dupraz', debit: null, credit: 29.7 },
+  { no: 2, date: '2025-01-09', compte: '9206.101', libelle: 'RECETTE - Vente - N. Morel', debit: 552, credit: null },
+  { no: 3, date: '2025-01-10', compte: '9111.100', libelle: 'RETRAIT - Bourse communale - F. Bonnard', debit: 10000, credit: null },
 ];
 
 test('buildWorkbook produit le format du journal de caisse avec formules de solde', async () => {
@@ -48,7 +48,7 @@ test('readWorkbook relit un classeur généré (aller-retour)', async () => {
     [2, '2025-01-09', '9206.101', 552, null],
     [3, '2025-01-10', '9111.100', 10000, null],
   ]);
-  assert.equal(back.entries[0].libelle, 'REMBOURSEMENT - Collation - A. Nagy');
+  assert.equal(back.entries[0].libelle, 'REMBOURSEMENT - Collation - A. Dupraz');
   const t = X.computeTotals(back.opening, back.entries);
   assert.deepEqual(t, { start: 2062.2, debits: 10552, credits: 29.7, end: 12584.5 });
   assert.equal(X.suggestFileName(back.entries, back.opening), 'Caisse écoles 2025.xlsx');

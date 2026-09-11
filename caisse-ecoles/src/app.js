@@ -8,6 +8,23 @@
   const P = window.CaisseParser;
   const X = window.CaisseExcel;
   const pdfjsLib = window.pdfjsLib;
+  // Base de référence intégrée à l'application (générée depuis un classeur, voir
+  // tools/build-vocab.js). Les noms de personnes sont dans un module séparé.
+  const BASE_VOCAB = (function () {
+    const v = window.CaisseVocab || {};
+    const noms = window.CaisseVocabNoms || {};
+    return {
+      words: v.words || [],
+      persons: noms.persons || [],
+      classTokens: v.classTokens || [],
+      accounts: v.accounts || [],
+      typeAccounts: v.typeAccounts || [],
+      typeSides: v.typeSides || [],
+      source: v.source || null,
+      generated: v.generated || null,
+      hasNames: !!(noms.persons && noms.persons.length),
+    };
+  })();
 
   /* ---------------- pdf.js : worker embarqué ---------------- */
   (function setupWorker() {
@@ -24,7 +41,7 @@
 
   /* ---------------- État ---------------- */
   const state = {
-    mode: 'existing',
+    mode: 'new',
     existing: null, // { fileName, opening, entries }
     docs: [], // [{ id, name, doc (pdf.js), numPages, pages: [{pageInDoc,width,height,words}], pieceCount }]
     nextDocId: 1,
@@ -44,6 +61,8 @@
   const els = {
     modeRadios: document.querySelectorAll('input[name="mode"]'),
     newBox: $('newBox'),
+    existingBox: $('existingBox'),
+    openingHint: $('openingHint'),
     vocabInfo: $('vocabInfo'),
     xlsxFile: $('xlsxFile'),
     existingInfo: $('existingInfo'),
@@ -87,28 +106,75 @@
 
   /* ---------------- Vocabulaire appris (mémoire locale du PC) ---------------- */
   function loadVocab() {
+    const base = P.mergeVocabulary(P.emptyVocabulary(), BASE_VOCAB);
     try {
       const raw = localStorage.getItem('caisse.vocab');
       if (raw) {
         const v = JSON.parse(raw);
-        if (v && Array.isArray(v.words)) return P.mergeVocabulary(P.emptyVocabulary(), v);
+        if (v && Array.isArray(v.words)) return P.mergeVocabulary(base, v);
       }
     } catch (e) { /* ignore */ }
-    return P.emptyVocabulary();
+    return base;
   }
   function saveVocab() {
-    try { localStorage.setItem('caisse.vocab', JSON.stringify(state.vocab)); } catch (e) { /* ignore */ }
+    try {
+      // seule la part apprise en plus de la base intégrée est mémorisée
+      const baseWords = new Set(BASE_VOCAB.words);
+      const basePersons = new Set(BASE_VOCAB.persons);
+      const baseClasses = new Set(BASE_VOCAB.classTokens);
+      const baseAccounts = new Set(BASE_VOCAB.accounts);
+      const extra = {
+        words: state.vocab.words.filter((w) => !baseWords.has(w)),
+        persons: state.vocab.persons.filter((p) => !basePersons.has(p)),
+        classTokens: state.vocab.classTokens.filter((c) => !baseClasses.has(c)),
+        accounts: state.vocab.accounts.filter((a) => !baseAccounts.has(a)),
+        typeAccounts: state.vocab.typeAccounts.slice(-600),
+        typeSides: state.vocab.typeSides.slice(-600),
+      };
+      localStorage.setItem('caisse.vocab', JSON.stringify(extra));
+    } catch (e) { /* ignore */ }
   }
   function renderVocabInfo() {
     const v = state.vocab;
-    if (!v || (!v.words.length && !v.persons.length && !v.accounts.length)) {
-      els.vocabInfo.textContent = 'Aucun vocabulaire appris pour l\'instant : chargez un classeur pour améliorer la lecture des libellés.';
-      return;
+    const added = Math.max(0, v.words.length - BASE_VOCAB.words.length) + Math.max(0, v.persons.length - BASE_VOCAB.persons.length);
+    let html = '';
+    if (BASE_VOCAB.source) {
+      html = `<b>Base de référence intégrée</b> (${escapeHtml(BASE_VOCAB.source)}) : ` +
+        `${v.words.length} mot(s), ${v.persons.length} nom(s), ${v.accounts.length} compte(s), ` +
+        `comptes et sens habituels par type d'écriture. Elle sert à corriger les lectures et à repérer les anomalies : ` +
+        `aucun classeur n'est nécessaire pour lire des pièces.`;
+      if (!BASE_VOCAB.hasNames) html += ' <i>Les noms de personnes ne sont pas inclus dans cette version ; ils s\'ajoutent si vous chargez un classeur.</i>';
+    } else {
+      html = 'Aucune base de référence intégrée : chargez un classeur pour améliorer la lecture des libellés.';
     }
-    els.vocabInfo.textContent = `Vocabulaire appris : ${v.words.length} mot(s), ${v.persons.length} nom(s), ${v.accounts.length} compte(s) – utilisé pour corriger les lectures OCR.`;
+    if (added) html += ` <span style="color:#2563eb">+ ${added} élément(s) appris sur ce PC.</span>`;
+    els.vocabInfo.innerHTML = html;
   }
   state.vocab = loadVocab();
   renderVocabInfo();
+
+  /* ---------------- Solde à nouveau proposé d'après la dernière utilisation ---------------- */
+  function loadLastBalance() {
+    try {
+      const raw = localStorage.getItem('caisse.dernierSolde');
+      if (!raw) return null;
+      const v = JSON.parse(raw);
+      return v && typeof v.amount === 'number' ? v : null;
+    } catch (e) { return null; }
+  }
+  function renderOpeningHint() {
+    const last = loadLastBalance();
+    if (!last) { els.openingHint.textContent = ''; return; }
+    els.openingHint.innerHTML = `Dernier fichier généré : solde final <b>${fmtCHF(last.amount)}</b>` +
+      (last.date ? ` au ${P.isoToDisplay(last.date)}` : '') +
+      ` <button type="button" class="small" id="btnUseLast">Reprendre comme solde à nouveau</button>`;
+    const b = $('btnUseLast');
+    if (b) b.addEventListener('click', () => {
+      els.openingAmount.value = last.amount;
+      if (last.date) els.openingDate.value = last.date;
+      refreshAll();
+    });
+  }
 
   /* ---------------- Utilitaires ---------------- */
   function fmtCHF(n) {
@@ -165,6 +231,7 @@
   els.modeRadios.forEach((r) => r.addEventListener('change', () => {
     state.mode = document.querySelector('input[name="mode"]:checked').value;
     els.newBox.classList.toggle('hidden', state.mode !== 'new');
+    els.existingBox.classList.toggle('hidden', state.mode !== 'existing');
     if (state.pages.length) reparse();
     refreshAll();
   }));
@@ -183,8 +250,7 @@
         `<b>${escapeHtml(file.name)}</b> – feuille « ${escapeHtml(data.sheetName)} » : <b>${data.entries.length}</b> écriture(s), ` +
         `solde à nouveau <b>${fmtCHF(data.opening.amount)}</b>` + (data.opening.date ? ` au ${P.isoToDisplay(data.opening.date)}` : '') +
         (last ? `, dernière pièce n° <b>${escapeHtml(last.no)}</b>` + (last.date ? ` du ${P.isoToDisplay(last.date)}` : '') : '') +
-        `, solde actuel <b>${fmtCHF(totals.end)}</b>.` +
-        `<br><span class="legend">Si c'est le classeur de l'année passée, choisissez plutôt « Nouveau classeur » et indiquez le solde à nouveau (${fmtCHF(totals.end)}).</span>`;
+        `, solde actuel <b>${fmtCHF(totals.end)}</b>.`;
       if (!els.openingAmount.value || Number(els.openingAmount.value) === 0) els.openingAmount.value = totals.end;
       // apprentissage du vocabulaire (mots, noms, comptes) pour corriger l'OCR
       state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(data.entries));
@@ -198,6 +264,8 @@
     if (state.pages.length) reparse();
     refreshAll();
   });
+
+  renderOpeningHint();
 
   els.openingDate.addEventListener('change', refreshAll);
   els.openingAmount.addEventListener('input', refreshAll);
@@ -1024,6 +1092,14 @@
       const name = X.suggestFileName(all, currentOpening());
       const saved = await saveBlob(blob, name);
       if (saved === 'cancelled') return;
+      try {
+        const lastDate = all.map((e) => e.date).filter(Boolean).sort().pop() || null;
+        localStorage.setItem('caisse.dernierSolde', JSON.stringify({ amount: finalBalance, date: lastDate }));
+      } catch (e) { /* ignore */ }
+      // les écritures validées enrichissent la base pour les prochaines fois
+      state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(state.entries.map((e) => ({ libelle: e.libelle, compte: e.compte, debit: e.debit, credit: e.credit }))));
+      saveVocab();
+      renderVocabInfo();
       notice(els.excelNotices, 'ok', `Fichier <b>${escapeHtml(saved || name)}</b> généré : ${all.length} écriture(s), solde final <b>${fmtCHF(finalBalance)}</b>.` +
         (saved ? '' : ' Il se trouve dans votre dossier Téléchargements.') + ' Ouvrez-le dans Excel pour contrôler, puis enregistrez-le à la place de votre classeur.');
     } catch (e) {

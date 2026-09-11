@@ -1,6 +1,7 @@
 node_modules/
 caisse-ecoles/node_modules/
 caisse-ecoles/samples/
+caisse-ecoles/src/vocabulaire-noms.js
 caisse-ecoles/test/out/
 *.log
 .DS_Store

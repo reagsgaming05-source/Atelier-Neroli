@@ -17,12 +17,11 @@ compte de contrepartie.
 1. Copier `dist/Caisse-ecoles.html` sur le PC (clé USB, courriel, téléchargement depuis GitHub).
 2. Double-cliquer dessus : il s'ouvre dans le navigateur (Edge, Chrome, Firefox). Rien n'est
    envoyé sur internet, tout se passe dans le navigateur ; l'application fonctionne hors ligne.
-3. **Étape 1 – Classeur Excel** : charger le classeur de l'année en cours (les nouvelles pièces
-   sont ajoutées à la suite) ou celui de l'année passée comme référence en choisissant
-   *Nouveau classeur* (indiquer la date et le montant du solde à nouveau). Dans les deux cas,
-   l'application apprend du classeur les comptes, les noms de personnes et les mots habituels
-   des libellés, et s'en sert pour corriger les erreurs de lecture (ce vocabulaire est mémorisé
-   sur le PC). Vérifier le n° du compte caisse (`9100.104` par défaut).
+3. **Étape 1 – Classeur Excel** : par défaut *Nouveau classeur*, il suffit d'indiquer la date et
+   le montant du solde à nouveau (le solde final du dernier fichier généré est proposé d'un clic).
+   Choisir *Continuer un classeur existant* pour ajouter les pièces à la suite d'un classeur en
+   cours. **Aucun classeur n'est nécessaire pour lire les pièces** : la base de référence est
+   intégrée à l'application. Vérifier le n° du compte caisse (`9100.104` par défaut).
 4. **Étape 2 – PDF** : glisser un ou plusieurs PDF de pièces (ex. `Pce 01 à 33.pdf`,
    `Pce 34 à 60.pdf`). Les fichiers sont classés par nom (ordre naturel) et listés avec leur
    nombre de pièces ; on peut les monter/descendre, en retirer, en ajouter plus tard sans perdre
@@ -50,7 +49,7 @@ signalés. Avec plusieurs fichiers, la colonne *Page* indique le fichier (F1, F2
 Formulaire « PIÈCE COMPTABLE » : le numéro (en haut au milieu), les comptes des colonnes
 DOIT et AVOIR, la SOMME et le Total, les lignes du libellé (type en majuscules, description,
 personne) et la date sous le tableau. Le libellé du journal est composé ainsi :
-`TYPE - Description - Personne` (ex. `REMBOURSEMENT - Collation chœur 7-11S concert du 12.12.2024 - A. Nagy`).
+`TYPE - Description - Personne` (ex. `REMBOURSEMENT - Collation chœur 7-11S concert du 12.12.2024 - A. Dupraz`).
 Les fautes d'OCR courantes sont corrigées (`10'OOO.OQ` → 10 000.00, `51000. 3662. 50` → `51000.3662.50`,
 `REMBOURSMENT` → `REMBOURSEMENT`).
 
@@ -74,7 +73,7 @@ Précision de la lecture :
 - les mots du libellé sont comparés au vocabulaire (lexique de base d'environ 450 mots + mots
   appris dans le classeur) et corrigés quand l'écart est typique de l'OCR (`chour` → `chœur`,
   `expbsition` → `exposition`) ; les désignations de classes aussi (`98` → `9S`, `7-118` → `7-11S`) ;
-- le nom de la personne est corrigé d'après les noms connus (`N. Boriat` → `N. Borlat`) ;
+- le nom de la personne est corrigé d'après les noms connus (`N. Moret` → `N. Morel`) ;
 - un compte jamais utilisé qui ressemble à un compte connu est signalé avec une proposition
   (jamais corrigé d'office, les sous-comptes voisins étant légitimes) ; un compte caisse mal lu
   (`9100.184`) est reconnu ;
@@ -98,6 +97,35 @@ absence ne déclenche donc aucun doute.
 Sur le lot d'exemple de 33 pièces, trois lignes sont signalées et trente passent en vert, sans
 écart sur les dates, numéros, montants, sens et comptes par rapport au classeur de référence.
 
+## Base de référence intégrée
+
+L'application embarque le vocabulaire d'un classeur de référence : mots des libellés,
+désignations de classes, numéros de comptes, et pour chaque type d'écriture le compte et le sens
+habituels. C'est ce qui permet de corriger les lectures et de repérer les anomalies **sans
+charger aucun fichier**. Elle s'enrichit ensuite toute seule : chaque classeur chargé et chaque
+lot de pièces validé ajoutent ce qu'ils apportent de nouveau, mémorisé sur le PC.
+
+Régénérer la base depuis un classeur plus récent :
+
+```bash
+npm run vocab -- chemin/du/classeur.xlsx   # par défaut samples/caisse.xlsx
+npm run build
+```
+
+Deux fichiers sont produits :
+
+| Fichier | Contenu | Versionné |
+|---|---|---|
+| `src/vocabulaire.js` | mots, classes, comptes, comptes et sens par type | oui – aucune donnée personnelle |
+| `src/vocabulaire-noms.js` | noms des personnes citées dans les libellés | **non** – données personnelles |
+
+Le dépôt étant public, les noms ne sont pas publiés : ils ne figurent que dans la version de
+l'application construite au sein de l'établissement (`npm run build` les inclut si le fichier
+est présent, et l'indique dans son message ; `npm run build:public` construit sans, et c'est
+cette version qui est versionnée dans `dist/`). Une version téléchargée depuis le dépôt fonctionne
+de la même manière, sans la correction des noms ; charger une fois un classeur les rétablit.
+Un test automatique vérifie qu'aucun nom ne se glisse dans le fichier versionné.
+
 ## Développement
 
 ```bash
@@ -114,6 +142,8 @@ car il contient des données personnelles).
 Structure :
 
 - `src/parser.js` – analyse de la couche texte des pièces (positions des mots → champs → écriture)
+- `src/vocabulaire.js`, `src/vocabulaire-noms.js` – base de référence intégrée (générée)
+- `tools/build-vocab.js` – génère cette base depuis un classeur
 - `src/excel.js` – lecture d'un classeur existant et génération du classeur au format du modèle
 - `src/app.js`, `src/index.html`, `src/app.css` – interface
 - `build.js` – assemble tout (avec pdf.js et ExcelJS) dans `dist/Caisse-ecoles.html`

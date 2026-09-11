@@ -43,15 +43,15 @@ test('splitType reconnaît et corrige le type en tête du libellé', () => {
 });
 
 test('formatLibelle compose "TYPE - Description - Personne"', () => {
-  assert.equal(P.formatLibelle('AVANCE', "course d'école OS LAT 9S du 17.01.2025", 'L. Favre'), "AVANCE - Course d'école OS LAT 9S du 17.01.2025 - L. Favre");
+  assert.equal(P.formatLibelle('AVANCE', "course d'école OS LAT 9S du 17.01.2025", 'L. Girard'), "AVANCE - Course d'école OS LAT 9S du 17.01.2025 - L. Girard");
   assert.equal(P.formatLibelle(null, 'divers', null), 'Divers');
   assert.equal(P.cleanDescription('du 12. 12. 2024 , test'), 'du 12.12.2024, test');
 });
 
 test('looksLikePerson', () => {
-  assert.equal(P.looksLikePerson('A. Nagy'), true);
-  assert.equal(P.looksLikePerson('Ch. Ansermet'), true);
-  assert.equal(P.looksLikePerson('J. Gertsch (donné à Isabelle Braillard)'), true);
+  assert.equal(P.looksLikePerson('A. Dupraz'), true);
+  assert.equal(P.looksLikePerson('Ch. Marendaz'), true);
+  assert.equal(P.looksLikePerson('J. Tissot (donné à Isabelle Renaud)'), true);
   assert.equal(P.looksLikePerson('vente de fondues'), false);
   assert.equal(P.looksLikePerson('5P/3 - 18 élèves'), false);
 });
@@ -88,7 +88,7 @@ test('analyzePage lit une pièce (sortie de caisse)', () => {
     no: '01',
     lines: [{ doit: '51000. 3662. 50', somme: 'CHF 29. 70', avoir: '9100. 104' }],
     total: 'CHF 29. 70',
-    libelle: ['REMBOURSEMENT collation chœur 7-11S', 'concert du 12. 12. 2024', 'A. Nagy'],
+    libelle: ['REMBOURSEMENT collation chœur 7-11S', 'concert du 12. 12. 2024', 'A. Dupraz'],
     signature: 'A^dn',
     date: '08. 01. 2025',
   });
@@ -98,12 +98,12 @@ test('analyzePage lit une pièce (sortie de caisse)', () => {
   assert.deepEqual(info.avoir, ['9100.104']);
   assert.equal(info.total, 29.7);
   assert.equal(info.date, '2025-01-08');
-  assert.deepEqual(info.libelleLines, ['REMBOURSEMENT collation chœur 7-11S', 'concert du 12. 12. 2024', 'A. Nagy']);
+  assert.deepEqual(info.libelleLines, ['REMBOURSEMENT collation chœur 7-11S', 'concert du 12. 12. 2024', 'A. Dupraz']);
   const e = P.buildEntry(info, { caisse: '9100.104' });
   assert.equal(e.credit, 29.7);
   assert.equal(e.debit, null);
   assert.equal(e.compte, '51000.3662.50');
-  assert.equal(e.libelle, 'REMBOURSEMENT - Collation chœur 7-11S concert du 12.12.2024 - A. Nagy');
+  assert.equal(e.libelle, 'REMBOURSEMENT - Collation chœur 7-11S concert du 12.12.2024 - A. Dupraz');
   assert.deepEqual(e.warnings, []);
 });
 
@@ -112,7 +112,7 @@ test('analyzePage lit une entrée en caisse avec montant OCR abîmé', () => {
     no: '04',
     lines: [{ doit: '9100. 104', somme: "CHF 10'OOO.OQ", avoir: '9111.100' }],
     total: "CHF 10'OOO. OQ",
-    libelle: ['RETRAIT bourse communale', 'du 10. 01.2025', 'F. Eminaj'],
+    libelle: ['RETRAIT bourse communale', 'du 10. 01.2025', 'F. Bonnard'],
     date: '10. 01. 2025',
   });
   const e = P.buildEntry(P.analyzePage(page), { caisse: '9100.104' });
@@ -120,7 +120,7 @@ test('analyzePage lit une entrée en caisse avec montant OCR abîmé', () => {
   assert.equal(e.credit, null);
   assert.equal(e.compte, '9111.100');
   assert.equal(e.type, 'RETRAIT');
-  assert.equal(e.person, 'F. Eminaj');
+  assert.equal(e.person, 'F. Bonnard');
 });
 
 test('pièce à plusieurs comptes : total retenu, avertissement', () => {
@@ -131,7 +131,7 @@ test('pièce à plusieurs comptes : total retenu, avertissement', () => {
       { doit: '52000. 3819. 10', somme: 'CHF 552. 00', avoir: '9206. 101' },
     ],
     total: 'CHF 552. 00',
-    libelle: ['RECETTE caisse de classe 10VG/2', 'vente de fondues', 'N. Borlat'],
+    libelle: ['RECETTE caisse de classe 10VG/2', 'vente de fondues', 'N. Morel'],
     date: '09. 01. 2025',
   });
   const e = P.buildEntry(P.analyzePage(page), { caisse: '9100.104' });
@@ -142,8 +142,8 @@ test('pièce à plusieurs comptes : total retenu, avertissement', () => {
 });
 
 test('compte caisse des deux côtés : sens deviné, compte suggéré par l\'historique', () => {
-  const p1 = makePage({ pageNumber: 1, no: '20', lines: [{ doit: '9100. 104', somme: 'CHF 360. 00', avoir: '9100. 104' }], total: 'CHF 360. 00', libelle: ['PARTICIPATION DES PARENTS', 'Cours de ski', 'E. Heymoz'], date: '30. 01. 2025' });
-  const p2 = makePage({ pageNumber: 2, no: '21', lines: [{ doit: '9100. 104', somme: 'CHF 420. 00', avoir: '51000. 4392. 20' }], total: 'CHF 420. 00', libelle: ['PARTICIPATION DES PARENTS', 'Cours de ski', 'J. Pellet'], date: '30. 01. 2025' });
+  const p1 = makePage({ pageNumber: 1, no: '20', lines: [{ doit: '9100. 104', somme: 'CHF 360. 00', avoir: '9100. 104' }], total: 'CHF 360. 00', libelle: ['PARTICIPATION DES PARENTS', 'Cours de ski', 'E. Vallon'], date: '30. 01. 2025' });
+  const p2 = makePage({ pageNumber: 2, no: '21', lines: [{ doit: '9100. 104', somme: 'CHF 420. 00', avoir: '51000. 4392. 20' }], total: 'CHF 420. 00', libelle: ['PARTICIPATION DES PARENTS', 'Cours de ski', 'J. Bertholet'], date: '30. 01. 2025' });
   const res = P.parseDocument([p1, p2], { caisse: '9100.104' });
   const e20 = res.entries.find((e) => e.no === 20);
   assert.equal(e20.debit, 360);
@@ -153,10 +153,10 @@ test('compte caisse des deux côtés : sens deviné, compte suggéré par l\'his
 });
 
 test('parseDocument ignore les doublons, signale les numéros manquants et les pages sans pièce', () => {
-  const p1 = makePage({ pageNumber: 1, no: '01', lines: [{ doit: '51000.3662.50', somme: 'CHF 29.70', avoir: '9100.104' }], total: 'CHF 29.70', libelle: ['REMBOURSEMENT test', 'A. Nagy'], date: '08.01.2025' });
+  const p1 = makePage({ pageNumber: 1, no: '01', lines: [{ doit: '51000.3662.50', somme: 'CHF 29.70', avoir: '9100.104' }], total: 'CHF 29.70', libelle: ['REMBOURSEMENT test', 'A. Dupraz'], date: '08.01.2025' });
   const ticket = { pageNumber: 2, width: 595, height: 842, words: [{ str: 'COOP', x: 100, y: 100, h: 10 }, { str: 'Total', x: 100, y: 200, h: 10 }] };
-  const p1bis = makePage({ pageNumber: 3, no: '01', lines: [{ doit: '51000.3662.50', somme: 'CHF 29.70', avoir: '9100.104' }], total: 'CHF 29.70', libelle: ['REMBOURSEMENT test', 'A. Nagy'], date: '08.01.2025' });
-  const p3 = makePage({ pageNumber: 4, no: '03', lines: [{ doit: '9100.104', somme: 'CHF 552.00', avoir: '9206.101' }], total: 'CHF 552.00', libelle: ['RECETTE vente', 'N. Borlat'], date: '09.01.2025' });
+  const p1bis = makePage({ pageNumber: 3, no: '01', lines: [{ doit: '51000.3662.50', somme: 'CHF 29.70', avoir: '9100.104' }], total: 'CHF 29.70', libelle: ['REMBOURSEMENT test', 'A. Dupraz'], date: '08.01.2025' });
+  const p3 = makePage({ pageNumber: 4, no: '03', lines: [{ doit: '9100.104', somme: 'CHF 552.00', avoir: '9206.101' }], total: 'CHF 552.00', libelle: ['RECETTE vente', 'N. Morel'], date: '09.01.2025' });
   const empty = { pageNumber: 5, width: 595, height: 842, words: [] };
   const res = P.parseDocument([p1, ticket, p1bis, p3, empty], { caisse: '9100.104', existingNumbers: [3] });
   assert.equal(res.entries.length, 2);
@@ -168,6 +168,6 @@ test('parseDocument ignore les doublons, signale les numéros manquants et les p
 });
 
 test('typeFromLibelle retrouve le type dans un libellé du journal', () => {
-  assert.equal(P.typeFromLibelle('PARTICIPATION PARENTS - Cours de ski aux Pléiades 5P/6 - Ch. Ansermet'), 'PARTICIPATION PARENTS');
+  assert.equal(P.typeFromLibelle('PARTICIPATION PARENTS - Cours de ski aux Pléiades 5P/6 - Ch. Marendaz'), 'PARTICIPATION PARENTS');
   assert.equal(P.typeFromLibelle('Solde à nouveau'), null);
 });

@@ -285,7 +285,7 @@
     return null;
   }
 
-  // "A. Nagy", "Ch. Ansermet", "A.-L. Emmenegger", "F.N. Olgiati", "J. Gertsch (donné à ...)", "Mme Dupont"
+  // "A. Dupraz", "Ch. Marendaz", "A.-L. Delacroix", "F.N. Ravel", "J. Tissot (donné à ...)", "Mme Dupont"
   const PERSON_RE = /^((?:[A-ZÀ-Ý][a-zà-ÿ]{0,3}\.\s*-?\s*)+)\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+)*)(.*)$/;
 
   function looksLikePerson(line) {
@@ -438,7 +438,7 @@
       const k = stripAccents(t.type || '').toUpperCase();
       if (!k) continue;
       if (!counts.has(k)) counts.set(k, { debit: 0, credit: 0 });
-      counts.get(k)[t.side] += 1;
+      counts.get(k)[t.side] += t.n || 1;
     }
     const expectedSide = new Map();
     for (const [k, c] of counts) {
@@ -577,7 +577,7 @@
   }
 
   /**
-   * Corrige un nom de personne d'après les personnes connues ("N. Boriat" -> "N. Borlat").
+   * Corrige un nom de personne d'après les personnes connues ("N. Moret" -> "N. Morel").
    */
   function correctPerson(person, index) {
     if (!person || !index || !index.persons.length) return null;
@@ -1064,8 +1064,8 @@
 
   /**
    * Nom connu très proche : mêmes initiales et nom de famille à 1 (ou 2 si long) lettre près.
-   * Cas typique d'une erreur OCR sur le nom (« N. Boriat » pour « N. Borlat »).
-   * Un même nom avec d'autres initiales (C./Ch. Ansermet) n'est pas signalé : c'est courant
+   * Cas typique d'une erreur OCR sur le nom (« N. Moret » pour « N. Morel »).
+   * Un même nom avec d'autres initiales (C./Ch. Marendaz) n'est pas signalé : c'est courant
    * et légitime dans un établissement.
    */
   function nearPerson(person, index) {
@@ -1271,7 +1271,7 @@
       if (!h || !h.compte || !h.type) continue;
       if (stripAccents(h.type).toUpperCase() !== key) continue;
       if (allowed && !allowed.has(h.compte)) continue;
-      counts.set(h.compte, (counts.get(h.compte) || 0) + 1);
+      counts.set(h.compte, (counts.get(h.compte) || 0) + (h.n || 1));
     }
     let best = null;
     let bestN = 0;
