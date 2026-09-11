@@ -120,6 +120,8 @@ table.entries tr.entry.selected td { background: var(--accent-soft); }
 table.entries tr.msgs td { padding: 0 6px 6px 40px; border-bottom: 1px solid var(--line); font-size: 12px; }
 table.entries tr.msgs td ul { margin: 0; padding-left: 16px; color: var(--warn); }
 table.entries tr.msgs td ul li.err { color: var(--err); }
+table.entries tr.msgs td ul li.note { color: var(--muted); }
+.notice button { margin-left: 4px; }
 table.entries input[type="text"], table.entries input[type="number"] { width: 100%; padding: 4px 6px; }
 table.entries input.num { width: 84px; text-align: right; }
 table.entries input.no { width: 50px; text-align: center; }

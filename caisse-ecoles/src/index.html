@@ -15,18 +15,16 @@
 
   <section class="card" id="step1">
     <h2><span class="n">1</span> Classeur Excel</h2>
-    <div class="choice">
-      <label><input type="radio" name="mode" value="existing" checked> Continuer un classeur existant (les nouvelles pièces sont ajoutées à la suite)</label>
-      <label><input type="radio" name="mode" value="new"> Nouveau classeur (nouvelle année)</label>
-    </div>
-    <div id="existingBox">
-      <div class="row">
-        <div class="field">
-          <label for="xlsxFile">Fichier Excel (.xlsx) de l'année en cours – ou celui de l'année passée comme modèle</label>
-          <input type="file" id="xlsxFile" accept=".xlsx">
-        </div>
+    <div class="row">
+      <div class="field">
+        <label for="xlsxFile">Classeur Excel (.xlsx) : celui de l'année en cours, ou celui de l'année passée comme référence</label>
+        <input type="file" id="xlsxFile" accept=".xlsx">
       </div>
-      <div class="info" id="existingInfo">Aucun classeur chargé.</div>
+    </div>
+    <div class="info" id="existingInfo">Aucun classeur chargé. Le classeur permet aussi d'apprendre les comptes, les noms et les mots habituels de vos libellés : chargez-en un même pour commencer un nouveau classeur.</div>
+    <div class="choice" style="margin-top:12px">
+      <label><input type="radio" name="mode" value="existing" checked> Ajouter les nouvelles pièces à la suite de ce classeur</label>
+      <label><input type="radio" name="mode" value="new"> Nouveau classeur (nouvelle année) – le classeur chargé sert seulement de référence</label>
     </div>
     <div id="newBox" class="hidden">
       <div class="row">
@@ -46,6 +44,7 @@
         <input type="text" id="caisseAccount" value="9100.104" style="width:160px">
       </div>
       <div class="legend">Le compte caisse détermine le sens de l'écriture : caisse au <b>DOIT</b> → Débit (entrée), caisse à l'<b>AVOIR</b> → Crédit (sortie).</div>
+      <div class="legend" id="vocabInfo"></div>
     </div>
   </section>
 

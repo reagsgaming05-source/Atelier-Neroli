@@ -37,12 +37,57 @@
     'FRAIS',
     'SUBVENTION',
     'COTISATION',
+    'CADEAU',
+    'CADEAUX',
+    'PRIX',
   ];
 
   // Types qui, par nature, font entrer de l'argent dans la caisse (débit du compte caisse)
   const INFLOW_TYPES = ['RECETTE', 'RETRAIT', 'PARTICIPATION DES PARENTS', 'PARTICIPATION PARENTS', 'PARTICIPATION', 'ENCAISSEMENT', 'VENTE', 'DON', 'SUBVENTION', 'COTISATION', 'VERSEMENT'];
   // Types qui font sortir de l'argent (crédit du compte caisse)
-  const OUTFLOW_TYPES = ['REMBOURSEMENT', 'AVANCE', 'PAIEMENT', 'ACHAT', 'FRAIS'];
+  const OUTFLOW_TYPES = ['REMBOURSEMENT', 'AVANCE', 'PAIEMENT', 'ACHAT', 'FRAIS', 'CADEAU', 'CADEAUX', 'PRIX'];
+
+  // Vocabulaire de base (mots courants des libellés d'une caisse d'école). Complété à
+  // l'exécution par le vocabulaire appris dans le classeur de l'utilisateur.
+  const BASE_LEXICON = (
+    "école écoles classe classes élève élèves enseignant enseignants enseignante maîtres maîtresse " +
+    "camp camps mini-camp course courses voyage voyages excursion sortie sorties journée journées nuit " +
+    "ski neige montagne raquettes patinoire piscine palmes marche forêt jardin permaculture plantes graines bulbes " +
+    "engrais piquets bordures bacs pots fresque peinture pinceau pinceaux feutre feutres crayons marqueurs stylos stylet " +
+    "papier carton emballage tissu tissus nappe serviettes coussins tapis table tables chaises tabourets meuble meubles " +
+    "rangement aménagement stockage boîtes boites caisses clés câbles réseau informatique informatiques écran ordinateur " +
+    "matériel pharmacie médicaments santé vaccination anti-stress couverture lestée chariot pliable piles gants " +
+    "repas collation collations croissants pain pain-choc sandwich sandwichs fruits pommes jus boissons bouteilles eaux thé thés " +
+    "café chocolat glaces bonbons galettes crème farine riz miel champagne apéritif aliments nourriture cuisine resto " +
+    "gluten lactose préparé produits divers besoins particuliers " +
+    "fête fêtes noël cortège spectacle concert chœur chœurs orchestre musique musical musicale musiciens partitions flûtes " +
+    "répétition répétitions séminaire séance bilan réunion conférence soirée numérique animation atelier ateliers " +
+    "intervenant intervenante intervenants externe médiation défraiement défraichement frais douane transport trajets " +
+    "affiches flyers poster panneau panneaux décoration décorations décors exposition photo photos logo stickers t-shirts " +
+    "livres jeux ballons balles buts foot ping-pong boxe multi-sports relais match activité physique équipe " +
+    "vente ventes stand marché pâtisseries fondues caisse recette bourse communale retrait remboursement décompte avance " +
+    "participation parents cadeau cadeaux prix remerciements jubilaires départ départs arrivée nouveaux nouvelle fin " +
+    "semaine médias journalistes branché débranché branché-débranché inter-collège échange échanges linguistique linguistiques " +
+    "pédagogique scolarité information d'information secrétariat municipalité responsables place salle cours " +
+    "janvier février mars avril mai juin juillet août septembre octobre novembre décembre " +
+    "pléiades diablerets leysin villars cojonnex clos-béguin grand-pré echallens narcisse ricochet prodega juventute lift slam"
+  ).split(/\s+/).filter(Boolean);
+
+  // Désignations de classes (Vaud) : 1P…8P, 9S…11S, 9VP…11VG, groupes ACC, OS, LAT…
+  const BASE_CLASS_TOKENS = (
+    "1P 2P 3P 4P 5P 6P 7P 8P 9S 10S 11S 9VP 10VP 11VP 9VG 10VG 11VG 1-2P 3-4P 5-6P 7-8P 1-4P 5-8P 1-8P 7-11S 9-11S 10-11S 9-10S " +
+    "ACC OS LAT DEV RAC MITIC"
+  ).split(/\s+/);
+
+  // Paires de caractères souvent confondus par l'OCR (dans les deux sens)
+  const CONFUSION_GROUPS = [
+    'il1I|!t', 'o0OQcedpqb', 'sS58zZ', 'nuhrmvw', 'œoe', 'gqy9', 'B8E3', 'DO0', 'Z2', 'G6C', 'çc', 'éèêeë', 'àâa', 'ûùu', 'ïîi', 'ff', 'rv', 'kh',
+  ];
+  const CONFUSABLE = new Map();
+  for (const g of CONFUSION_GROUPS) for (const c of g) {
+    if (!CONFUSABLE.has(c)) CONFUSABLE.set(c, new Set());
+    for (const d of g) CONFUSABLE.get(c).add(d);
+  }
 
   /* ------------------------------------------------------------------ */
   /* Utilitaires texte                                                    */
@@ -50,6 +95,10 @@
 
   function stripAccents(s) {
     return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function wordKey(s) {
+    return stripAccents(String(s || '')).toLowerCase().replace(/œ|oe/g, 'o').replace(/[\u2019`\u00B4]/g, "'");
   }
 
   function levenshtein(a, b) {
@@ -84,6 +133,10 @@
     return Math.round(n * 100) / 100;
   }
 
+  function uniq(arr) {
+    return Array.from(new Set(arr));
+  }
+
   /* ------------------------------------------------------------------ */
   /* Normalisations                                                        */
   /* ------------------------------------------------------------------ */
@@ -91,15 +144,21 @@
   /**
    * "CHF 10'OOO.OQ" -> 10000 ; "CHF2'500. 00" -> 2500 ; "CHF 29. 70" -> 29.7
    * Retourne null si la chaîne n'est pas un montant lisible.
+   * lenient = true : accepte des lectures plus abîmées ("CHF rooo. oo" -> 1000).
    */
-  function normalizeAmount(raw) {
+  function normalizeAmount(raw, lenient) {
     if (raw == null) return null;
     let t = String(raw)
       .replace(/CHF|CHf|Fr\.?|SFr\.?|Frs\.?/gi, ' ')
       .replace(/[\u2019\u2018'`\u00B4"\u00A0]/g, ' ')
       .trim();
     if (!t) return null;
-    // Séparateur décimal : dernier point/virgule suivi de 1 ou 2 chiffres (ou lettres OCR)
+    if (lenient) {
+      // "r" en tête = "1'" mal lu ; lettres isolées collées aux chiffres
+      t = t.replace(/^r(?=[\d0OoQ])/i, '1').replace(/(?<=\d)r(?=[\d0OoQ])/g, '1');
+      t = t.replace(/[Ss]/g, '5').replace(/[Bb]/g, '8').replace(/[Zz]/g, '2').replace(/[Gg]/g, '6');
+    }
+    // Séparateur décimal : dernier point/virgule suivi de 2 chiffres (ou lettres OCR)
     const m = t.match(/^(.*?)[.,]\s*([0-9OoQIl|!Ss]{2})\s*$/);
     let intPart;
     let decPart = '00';
@@ -129,6 +188,12 @@
     const m = t.match(/(\d{4,5})\.(\d{3,4})(?:\.(\d{2}))?/);
     if (!m) return null;
     return m[3] != null ? `${m[1]}.${m[2]}.${m[3]}` : `${m[1]}.${m[2]}`;
+  }
+
+  function accountsClose(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    return a.length === b.length && levenshtein(a, b) <= 1;
   }
 
   /**
@@ -179,7 +244,6 @@
       else break;
     }
     if (!upper.length) return { type: null, rest: line };
-    // Ne garde que les mots utiles (DES / DE / DU peuvent faire partie du type)
     let typeRaw = upper.join(' ');
     let rest = words.slice(upper.length).join(' ');
     const canon = canonicalType(typeRaw);
@@ -209,12 +273,13 @@
     return null;
   }
 
+  // "A. Nagy", "Ch. Ansermet", "A.-L. Emmenegger", "F.N. Olgiati", "J. Gertsch (donné à ...)", "Mme Dupont"
+  const PERSON_RE = /^((?:[A-ZÀ-Ý][a-zà-ÿ]{0,3}\.\s*-?\s*)+)\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+)*)(.*)$/;
+
   function looksLikePerson(line) {
     const t = String(line || '').trim();
     if (!t) return false;
-    // "A. Nagy", "Ch. Ansermet", "J. Gertsch (donné à Isabelle Braillard)", "M. Chardome"
-    if (/^[A-ZÀ-Ý][a-zà-ÿ]{0,3}\.\s*[A-ZÀ-Ý]/.test(t)) return true;
-    // "Mme Dupont", "M Dupont"
+    if (PERSON_RE.test(t)) return true;
     if (/^(Mme|Mlle|M\.|Mr|M)\s+[A-ZÀ-Ý]/.test(t)) return true;
     return false;
   }
@@ -234,6 +299,249 @@
     if (description) parts.push(capitalizeFirst(description));
     if (person) parts.push(person.trim());
     return parts.join(' - ');
+  }
+
+  /**
+   * Nettoie une description OCR : "du 12. 12. 2024" -> "du 12.12.2024", "11 VP/4" -> "11VP/4"...
+   */
+  function cleanDescription(s) {
+    let t = String(s || '').replace(/\s+/g, ' ').trim();
+    for (let i = 0; i < 3; i++) t = t.replace(/(\d)\s*([.\-\/])\s+(\d)/g, '$1$2$3');
+    t = t.replace(/\b(\d{1,2})\s+(VP|VG)\b/g, '$1$2');
+    t = t.replace(/\b(\d{1,2}(?:VP|VG|P|S))\s*\/\s*(\d{1,2})\b/g, '$1/$2');
+    t = t.replace(/\s+([,;:!?])/g, '$1');
+    return t;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Vocabulaire (appris dans le classeur) et corrections OCR               */
+  /* ------------------------------------------------------------------ */
+
+  const CLASS_TOKEN_RE = /^\d{1,2}(?:-\d{1,2})?(?:VP|VG|P|S)(?:\/\d{1,2})?$/;
+
+  function emptyVocabulary() {
+    return { words: [], persons: [], classTokens: [], accounts: [], typeAccounts: [] };
+  }
+
+  /**
+   * Apprend le vocabulaire à partir des écritures d'un classeur
+   * ({libelle, compte}). Retourne un objet sérialisable (tableaux).
+   */
+  function learnVocabulary(entries) {
+    const words = new Map();
+    const persons = new Map();
+    const classTokens = new Set();
+    const accounts = new Set();
+    const typeAccounts = [];
+    for (const e of entries || []) {
+      const lib = String(e.libelle || '').trim();
+      if (!lib || /^solde/i.test(lib)) continue;
+      const compte = e.compte ? normalizeAccount(e.compte) : null;
+      if (compte) accounts.add(compte);
+      const parts = lib.split(' - ').map((p) => p.trim()).filter(Boolean);
+      let type = null;
+      if (parts.length) type = splitType(parts[0]).type;
+      if (type && compte) typeAccounts.push({ type, compte });
+      let body = parts;
+      if (parts.length >= 2 && looksLikePerson(parts[parts.length - 1])) {
+        const p = parts[parts.length - 1].replace(/\s*\(.*\)\s*$/, '').trim();
+        persons.set(wordKey(p), p);
+        body = parts.slice(0, -1);
+      }
+      for (const seg of body) {
+        for (const tok of seg.split(/[\s,;:()]+/)) {
+          const w = tok.replace(/^[^A-Za-zÀ-ÿœŒ0-9]+|[^A-Za-zÀ-ÿœŒ0-9]+$/g, '');
+          if (!w) continue;
+          if (CLASS_TOKEN_RE.test(w) || /^[A-Z]{2,5}$/.test(w)) { classTokens.add(w); continue; }
+          // "d'école" -> "école"
+          const m = /^[dlDLjJnNsS]['\u2019](.+)$/.exec(w);
+          const core = m ? m[1] : w;
+          if (/^[A-Za-zÀ-ÿœŒ][A-Za-zÀ-ÿœŒ'\u2019\-]{2,}$/.test(core) && !/^[A-Z]+$/.test(core)) {
+            const k = wordKey(core);
+            if (!words.has(k)) words.set(k, core);
+          }
+        }
+      }
+    }
+    return {
+      words: Array.from(words.values()),
+      persons: Array.from(persons.values()),
+      classTokens: Array.from(classTokens),
+      accounts: Array.from(accounts),
+      typeAccounts,
+    };
+  }
+
+  function mergeVocabulary(a, b) {
+    a = a || emptyVocabulary(); b = b || emptyVocabulary();
+    const byKey = (arr) => { const m = new Map(); for (const w of arr || []) m.set(wordKey(w), w); return m; };
+    const words = byKey(a.words); for (const [k, v] of byKey(b.words)) if (!words.has(k)) words.set(k, v);
+    const persons = byKey(a.persons); for (const [k, v] of byKey(b.persons)) if (!persons.has(k)) persons.set(k, v);
+    const seen = new Set();
+    const typeAccounts = [];
+    for (const t of (a.typeAccounts || []).concat(b.typeAccounts || [])) {
+      typeAccounts.push(t);
+    }
+    return {
+      words: Array.from(words.values()),
+      persons: Array.from(persons.values()),
+      classTokens: uniq((a.classTokens || []).concat(b.classTokens || [])),
+      accounts: uniq((a.accounts || []).concat(b.accounts || [])),
+      typeAccounts,
+    };
+  }
+
+  // Index rapide pour les corrections
+  function buildIndex(vocab) {
+    vocab = vocab || emptyVocabulary();
+    const words = new Map();
+    for (const w of BASE_LEXICON.concat(vocab.words || [])) {
+      const k = wordKey(w);
+      if (!words.has(k)) words.set(k, w);
+    }
+    const classTokens = new Set(BASE_CLASS_TOKENS.concat(vocab.classTokens || []));
+    const persons = [];
+    for (const p of vocab.persons || []) {
+      const m = PERSON_RE.exec(p);
+      if (m) persons.push({ full: p, initials: m[1].replace(/\s+/g, ''), surname: m[2], key: wordKey(m[2]) });
+    }
+    return { words, classTokens, persons, accounts: new Set(vocab.accounts || []) };
+  }
+
+  function singleSubstitutionConfusable(a, b) {
+    if (a.length !== b.length) return false;
+    let diff = -1;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) { if (diff >= 0) return false; diff = i; }
+    }
+    if (diff < 0) return true;
+    const x = a[diff]; const y = b[diff];
+    const set = CONFUSABLE.get(x);
+    return !!(set && set.has(y));
+  }
+
+  /**
+   * Corrige un mot (lettres) d'après le lexique. Retourne le mot corrigé ou null.
+   */
+  function correctWord(word, index) {
+    const core = word;
+    if (core.length < 4) return null;
+    const key = wordKey(core);
+    if (!/^[A-Za-zÀ-ÿœŒ][A-Za-zÀ-ÿœŒ'\u2019\-]+$/.test(core)) return null;
+    if (index.words.has(key)) {
+      // mot connu : on restaure seulement la ligature œ perdue par l'OCR ("chour" -> "chœur")
+      const form = index.words.get(key);
+      if (/œ/.test(form) && !/œ/.test(core) && wordKey(form) === key) {
+        const out = /^[A-ZÀ-Ý]/.test(core) ? form.charAt(0).toUpperCase() + form.slice(1) : form;
+        return out === core ? null : out;
+      }
+      return null;
+    }
+    if (/^[A-Z]{2,}$/.test(stripAccents(core))) return null; // sigle
+    const len = key.length;
+    const maxD = len >= 9 ? 2 : 1;
+    let best = null;
+    let bestD = Infinity;
+    let ties = 0;
+    for (const [k, form] of index.words) {
+      if (Math.abs(k.length - len) > maxD) continue;
+      if (k[0] !== key[0]) continue; // la 1re lettre doit correspondre
+      const d = levenshtein(key, k);
+      if (d === 0) return null;
+      if (d > maxD) continue;
+      if (d < bestD) { bestD = d; best = form; ties = 0; } else if (d === bestD) ties++;
+    }
+    if (!best || ties) return null;
+    const bestKey = wordKey(best);
+    if (bestD === 1) {
+      if (key.length === bestKey.length) {
+        // substitution : seulement entre caractères confondus par l'OCR (ou mot long)
+        if (len < 7 && !singleSubstitutionConfusable(key, bestKey)) return null;
+      } else {
+        // insertion/suppression : pas pour un simple pluriel, et mot assez long
+        if (len < 7) return null;
+        if (key.replace(/s$/, '') === bestKey.replace(/s$/, '')) return null;
+      }
+    } else if (bestD === 2) {
+      if (key[key.length - 1] !== bestKey[bestKey.length - 1]) return null;
+    }
+    // conserve la casse de la 1re lettre
+    const out = /^[A-ZÀ-Ý]/.test(core) ? best.charAt(0).toUpperCase() + best.slice(1) : best;
+    return out === core ? null : out;
+  }
+
+  /**
+   * Corrige un jeton contenant des chiffres (désignation de classe "98" -> "9S", "7-118" -> "7-11S").
+   */
+  function correctClassToken(tok, index) {
+    if (CLASS_TOKEN_RE.test(tok)) return null;
+    if (!/\d/.test(tok) || tok.length < 2 || tok.length > 8) return null;
+    if (/^\d+$/.test(tok) && tok.length !== 2 && tok.length !== 3) return null;
+    if (/^\d{1,2}[.,]\d{2}$/.test(tok)) return null; // montant
+    let best = null;
+    let ties = 0;
+    for (const c of index.classTokens) {
+      if (c.length !== tok.length) continue;
+      if (!/\d/.test(c)) continue;
+      if (levenshtein(tok, c) === 1 && tok[0] === c[0]) {
+        if (best) ties++; else best = c;
+      }
+    }
+    // "98" -> "9S" seulement si le jeton finit par 8/5 (S confondu) ou contient une lettre
+    if (best && !ties && (/[85]$/.test(tok) || /[A-Za-z]/.test(tok))) return best;
+    return null;
+  }
+
+  /**
+   * Corrige les mots d'une description. Retourne { text, notes[] }.
+   */
+  function correctDescription(text, index) {
+    const notes = [];
+    if (!text || !index) return { text, notes };
+    const out = String(text).split(/(\s+)/).map((tok) => {
+      if (!tok || /^\s+$/.test(tok)) return tok;
+      // séparer ponctuation de tête/queue
+      const m = /^([^A-Za-zÀ-ÿœŒ0-9]*)(.*?)([^A-Za-zÀ-ÿœŒ0-9]*)$/.exec(tok);
+      const lead = m[1]; let core = m[2]; const trail = m[3];
+      if (!core) return tok;
+      // "d'expbsition" -> préfixe élidé
+      const el = /^([dlDLjJnNsS][\u2019'])(.+)$/.exec(core);
+      const prefix = el ? el[1] : '';
+      const word = el ? el[2] : core;
+      let fixed = null;
+      if (/\d/.test(word)) fixed = correctClassToken(word, index);
+      else fixed = correctWord(word, index);
+      if (fixed && fixed !== word) {
+        notes.push(`${word} → ${fixed}`);
+        return lead + prefix + fixed + trail;
+      }
+      return tok;
+    }).join('');
+    return { text: out, notes };
+  }
+
+  /**
+   * Corrige un nom de personne d'après les personnes connues ("N. Boriat" -> "N. Borlat").
+   */
+  function correctPerson(person, index) {
+    if (!person || !index || !index.persons.length) return null;
+    const m = PERSON_RE.exec(person.trim());
+    if (!m) return null;
+    const initials = m[1].replace(/\s+/g, '');
+    const surname = m[2];
+    const rest = m[3] || '';
+    const key = wordKey(surname);
+    let best = null;
+    let bestD = Infinity;
+    for (const p of index.persons) {
+      if (p.initials !== initials) continue;
+      const d = levenshtein(key, p.key);
+      if (d < bestD) { bestD = d; best = p; }
+    }
+    if (!best || bestD === 0) return null;
+    const maxD = key.length >= 8 ? 2 : key.length >= 5 ? 1 : 0;
+    if (bestD > maxD) return null;
+    return `${m[1].trim()} ${best.surname}${rest}`.replace(/\s+/g, ' ').trim();
   }
 
   /* ------------------------------------------------------------------ */
@@ -260,19 +568,30 @@
   /* Regroupement en lignes                                                */
   /* ------------------------------------------------------------------ */
 
+  /**
+   * Regroupe les mots en lignes : deux mots sont sur la même ligne si leurs
+   * hauteurs se chevauchent nettement (tolère les scans légèrement inclinés).
+   */
   function groupLines(words, tol) {
     tol = tol || 5;
     const sorted = words.slice().sort((a, b) => a.y - b.y || a.x - b.x);
     const lines = [];
     for (const w of sorted) {
+      const h = w.h && w.h > 2 ? w.h : 10;
       let line = lines.length ? lines[lines.length - 1] : null;
-      if (!line || Math.abs(w.y - line.y) > tol) {
-        line = { y: w.y, words: [] };
+      let same = false;
+      if (line) {
+        const lh = line.h || 10;
+        const t = Math.max(tol, Math.min(h, lh) * 0.6);
+        same = Math.abs(w.y - line.y) <= t;
+      }
+      if (!same) {
+        line = { y: w.y, h, words: [] };
         lines.push(line);
       }
       line.words.push(w);
-      // moyenne glissante de y
       line.y = line.words.reduce((s, x) => s + x.y, 0) / line.words.length;
+      line.h = line.words.reduce((s, x) => s + (x.h > 2 ? x.h : 10), 0) / line.words.length;
     }
     for (const l of lines) {
       l.words.sort((a, b) => a.x - b.x);
@@ -287,12 +606,47 @@
     return null;
   }
 
+  function findWords(words, re) {
+    return words.filter((w) => re.test(stripAccents(w.str).trim()));
+  }
+
   /* ------------------------------------------------------------------ */
   /* Analyse d'une page                                                     */
   /* ------------------------------------------------------------------ */
 
+  function isFormPage(words) {
+    const flat = words.map((w) => stripAccents(w.str).toUpperCase()).join(' ');
+    const hasPiece = /PIECE\s*COMPTABLE/.test(flat) || /P[1I]ECE\s*C0?OMPTABLE/.test(flat);
+    const hasCols = /DOIT/.test(flat) && /AVOIR/.test(flat) && /SOMME/.test(flat);
+    return hasPiece || hasCols;
+  }
+
   /**
-   * Analyse la couche texte d'une page.
+   * Découpe une page contenant plusieurs formulaires (plusieurs entêtes "PIECE COMPTABLE").
+   * Retourne une liste de sous-pages { pageNumber, part, width, height, words }.
+   */
+  function splitForms(page) {
+    const words = (page.words || []).filter((w) => w.str && w.str.trim());
+    const heads = findWords(words, /^P[1I]?[EÉ]CE/i).filter((w) => {
+      // "PIECE" suivi de "COMPTABLE" sur la même ligne, ou "PIECECOMPTABLE"
+      if (/COMPTABLE/i.test(stripAccents(w.str))) return true;
+      return words.some((o) => Math.abs(o.y - w.y) < 8 && o.x > w.x && /^C0?OMPTABLE/i.test(stripAccents(o.str)));
+    }).sort((a, b) => a.y - b.y);
+    // plusieurs entêtes séparées d'au moins 150 pt
+    const cuts = [];
+    for (const h of heads) if (!cuts.length || h.y - cuts[cuts.length - 1] > 150) cuts.push(h.y);
+    if (cuts.length <= 1) return [page];
+    const parts = [];
+    for (let i = 0; i < cuts.length; i++) {
+      const y0 = cuts[i] - 30;
+      const y1 = i + 1 < cuts.length ? cuts[i + 1] - 30 : Infinity;
+      parts.push({ pageNumber: page.pageNumber, part: i + 1, width: page.width, height: page.height, words: words.filter((w) => w.y >= y0 && w.y < y1) });
+    }
+    return parts;
+  }
+
+  /**
+   * Analyse la couche texte d'une page (ou d'une partie de page).
    * page : { pageNumber, width, height, words: [{str,x,y,h}] }
    * Retourne null si la page n'est pas une pièce comptable, sinon les champs bruts.
    */
@@ -301,18 +655,16 @@
     if (!words.length) return null;
     const W = page.width || 595;
     const H = page.height || 842;
-
-    const flat = words.map((w) => stripAccents(w.str).toUpperCase()).join(' ');
-    const hasPiece = /PIECE\s*COMPTABLE/.test(flat) || /P[1I]ECE\s*C0?OMPTABLE/.test(flat);
-    const hasCols = /DOIT/.test(flat) && /AVOIR/.test(flat) && /SOMME/.test(flat);
-    if (!hasPiece && !hasCols) return null;
+    if (!isFormPage(words)) return null;
 
     const wDoit = findWord(words, /^DOIT/i);
     const wSomme = findWord(words, /^SOMME/i);
     const wAvoir = findWord(words, /^AVOIR/i);
     const wLibelle = findWord(words, /^Libell/i);
-    const wTotal = findWord(words, /^Total/i);
-    const wPiece = findWord(words, /^PIECE/i);
+    const wPiece = findWord(words, /^P[1I]?[EÉ]CE/i);
+    // "Total" : le plus bas des mots "Total" situés sous "Libellé"
+    const totals = findWords(words, /^Total/i).filter((w) => !wLibelle || w.y > wLibelle.y);
+    const wTotal = totals.length ? totals.reduce((a, b) => (a.y > b.y ? a : b)) : null;
 
     // Frontières de colonnes (DOIT | SOMME | AVOIR)
     const b1 = wSomme ? wSomme.x - 18 : W * 0.52;
@@ -330,14 +682,14 @@
     let no = null;
     let noRaw = null;
     const topWords = words.filter((w) => w.y < yHeader - 6);
-    for (const w of topWords) {
+    for (const w of topWords.slice().sort((a, b) => a.x - b.x)) {
       if (col(w.x) !== 'somme') continue;
       const t = ocrDigits(w.str.trim()).replace(/[^\d]/g, '');
-      if (/^\d{1,4}$/.test(t) && !/^\d{4}$/.test(t)) { no = parseInt(t, 10); noRaw = w.str; break; }
+      if (/^\d{1,3}$/.test(t)) { no = parseInt(t, 10); noRaw = w.str; break; }
     }
     if (no == null) {
       const top = groupLines(topWords).map((l) => l.text).join(' ');
-      let m = /(\d{1,3})\s*fe\b/i.exec(top) || /COMPTABLE\s*(\d{1,3})\b/i.exec(top);
+      const m = /(\d{1,3})\s*fe\b/i.exec(top) || /COMPTABLE\s*(\d{1,3})\b/i.exec(top);
       if (m) { no = parseInt(m[1], 10); noRaw = m[0]; }
     }
 
@@ -351,7 +703,7 @@
       for (const l of lines) {
         if (c === 'somme') {
           const a = normalizeAmount(l.text);
-          sommes.push({ raw: l.text, value: a });
+          sommes.push({ raw: l.text, value: a, lenient: a == null ? normalizeAmount(l.text, true) : null });
         } else {
           const acc = normalizeAccount(l.text);
           if (acc) (c === 'doit' ? doit : avoir).push(acc);
@@ -362,12 +714,14 @@
     // ---- Total (ligne "Total", colonne du milieu)
     let total = null;
     let totalRaw = null;
+    let totalLenient = null;
     if (wTotal) {
       const tw = words.filter((w) => Math.abs(w.y - yTotal) <= 8 && col(w.x) === 'somme');
       if (tw.length) {
         const l = groupLines(tw)[0];
         totalRaw = l.text;
         total = normalizeAmount(l.text);
+        if (total == null) totalLenient = normalizeAmount(l.text, true);
       }
     }
 
@@ -375,7 +729,7 @@
     const libWords = words.filter((w) => inBand(w, yLibelle, yTotal) && col(w.x) === 'doit');
     const libelleLines = groupLines(libWords).map((l) => l.text).filter((t) => t && /[A-Za-z0-9À-ÿ]/.test(t));
 
-    // ---- Date : sous la ligne Total (à gauche), sinon dernière date de la page
+    // ---- Date : sous la ligne Total (à gauche), sinon sur la ligne Total
     let date = null;
     let dateRaw = null;
     const below = groupLines(words.filter((w) => w.y > yTotal + 6 && col(w.x) === 'doit'));
@@ -384,7 +738,6 @@
       if (d) { date = d; dateRaw = l.text; break; }
     }
     if (!date) {
-      // Ligne "Total ... date" sur la même ligne ?
       const same = groupLines(words.filter((w) => Math.abs(w.y - yTotal) <= 8 && col(w.x) === 'doit'));
       for (const l of same) {
         const d = findDate(l.text.replace(/^Total/i, ''));
@@ -394,6 +747,7 @@
 
     return {
       pageNumber: page.pageNumber,
+      part: page.part || null,
       no,
       noRaw,
       doit,
@@ -401,6 +755,7 @@
       sommes,
       total,
       totalRaw,
+      totalLenient,
       libelleLines,
       date,
       dateRaw,
@@ -416,36 +771,66 @@
   function buildEntry(info, options) {
     options = options || {};
     const caisse = options.caisse || DEFAULT_CAISSE;
+    const index = options.index || null;
+    const learnedAccounts = index ? index.accounts : new Set();
+    const knownAccounts = options.knownAccounts || learnedAccounts;
     const warnings = [];
+    const notes = [];
 
-    // Libellé
+    // ---- Libellé
     const lines = info.libelleLines.slice();
     let person = null;
     if (lines.length >= 2 && looksLikePerson(lines[lines.length - 1])) person = lines.pop();
     const first = lines.shift() || '';
     const { type, rest } = splitType(first);
-    const description = cleanDescription([rest, ...lines].filter(Boolean).join(' '));
+    let description = cleanDescription([rest, ...lines].filter(Boolean).join(' '));
+    if (index) {
+      const c = correctDescription(description, index);
+      if (c.notes.length) { description = c.text; notes.push(`Libellé corrigé : ${c.notes.join(', ')}`); }
+      if (person) {
+        const p = correctPerson(person, index);
+        if (p) { notes.push(`Nom corrigé : ${person} → ${p}`); person = p; }
+      }
+    }
     if (!info.libelleLines.length) warnings.push('Libellé non reconnu');
 
-    // Montant
+    // ---- Montant
     let amount = null;
     const sommeVals = info.sommes.map((s) => s.value).filter((v) => v != null);
     if (info.total != null) amount = info.total;
     else if (sommeVals.length) amount = sommeVals[0];
-    if (amount == null) warnings.push('Montant non reconnu');
-    else if (info.total != null && sommeVals.length && sommeVals.every((v) => v !== info.total)) {
+    if (amount == null) {
+      const lenientVals = [info.totalLenient].concat(info.sommes.map((s) => s.lenient)).filter((v) => v != null);
+      if (lenientVals.length) {
+        amount = lenientVals[0];
+        warnings.push(`Montant difficile à lire (« ${info.totalRaw || (info.sommes[0] && info.sommes[0].raw) || '?'} ») : ${amount.toFixed(2)} proposé, à vérifier`);
+      } else {
+        warnings.push('Montant non reconnu');
+      }
+    } else if (info.total != null && sommeVals.length && sommeVals.every((v) => v !== info.total)) {
       const sum = round2(sommeVals.reduce((a, b) => a + b, 0));
-      if (sum === info.total) warnings.push(`Plusieurs sommes (${sommeVals.join(' + ')}) : total ${info.total} retenu`);
+      if (sum === info.total) notes.push(`Plusieurs sommes (${sommeVals.join(' + ')}) : total ${info.total} retenu`);
       else warnings.push(`Somme (${sommeVals.join(', ')}) différente du total (${info.total}) : vérifier le montant`);
     } else if (info.total == null && sommeVals.length > 1) {
       warnings.push(`Plusieurs sommes lues (${sommeVals.join(', ')}) : première retenue`);
     }
 
-    // Sens de l'écriture
-    const doitOther = info.doit.filter((a) => a !== caisse);
-    const avoirOther = info.avoir.filter((a) => a !== caisse);
-    const doitCaisse = info.doit.includes(caisse);
-    const avoirCaisse = info.avoir.includes(caisse);
+    // ---- Compte caisse mal lu ("9100.184") : reconnu s'il est proche et n'est pas un autre compte connu
+    const fixAccount = (a) => {
+      if (a !== caisse && accountsClose(a, caisse) && !knownAccounts.has(a)) {
+        notes.push(`Compte caisse lu « ${a} » → ${caisse}`);
+        return caisse;
+      }
+      return a;
+    };
+    const doitAcc = info.doit.map(fixAccount);
+    const avoirAcc = info.avoir.map(fixAccount);
+
+    // ---- Sens de l'écriture
+    const doitOther = doitAcc.filter((a) => a !== caisse);
+    const avoirOther = avoirAcc.filter((a) => a !== caisse);
+    const doitCaisse = doitAcc.includes(caisse);
+    const avoirCaisse = avoirAcc.includes(caisse);
     let side = null; // 'debit' = entrée en caisse, 'credit' = sortie
     let compte = null;
     let candidates = [];
@@ -462,7 +847,7 @@
       side = guessSideFromType(type);
       if (!side) warnings.push('Sens de l\'écriture (débit/crédit) à vérifier');
     } else {
-      if (!info.doit.length && !info.avoir.length) warnings.push('Aucun n° de compte reconnu');
+      if (!doitAcc.length && !avoirAcc.length) warnings.push('Aucun n° de compte reconnu');
       else warnings.push(`Le compte caisse ${caisse} n'apparaît pas sur la pièce : sens et compte à vérifier`);
       candidates = doitOther.concat(avoirOther);
       side = guessSideFromType(type);
@@ -470,8 +855,17 @@
 
     if (candidates.length) {
       compte = candidates[0];
-      if (new Set(candidates).size > 1) {
-        warnings.push(`Plusieurs comptes possibles : ${Array.from(new Set(candidates)).join(', ')}`);
+      if (uniq(candidates).length > 1) {
+        warnings.push(`Plusieurs comptes possibles : ${uniq(candidates).join(', ')}`);
+      } else if (learnedAccounts.size && !knownAccounts.has(compte)) {
+        // compte jamais vu : peut-être un chiffre mal lu -> on propose les comptes connus voisins
+        const close = Array.from(knownAccounts).filter((k) => k !== caisse && accountsClose(compte, k));
+        if (close.length) {
+          warnings.push(`Compte ${compte} jamais utilisé jusqu'ici, ressemble à ${close.join(' / ')} : à vérifier`);
+          candidates = candidates.concat(close);
+        } else {
+          warnings.push(`Compte ${compte} jamais utilisé jusqu'ici : à vérifier`);
+        }
       }
     } else {
       warnings.push('Compte de contrepartie non reconnu');
@@ -483,6 +877,7 @@
     return {
       no: info.no,
       page: info.pageNumber,
+      part: info.part,
       date: info.date,
       compte,
       type,
@@ -493,21 +888,11 @@
       credit: side === 'credit' ? amount : null,
       side,
       amount,
-      candidates: Array.from(new Set(candidates)),
+      candidates: uniq(candidates),
       warnings,
+      notes,
       raw: info,
     };
-  }
-
-  /**
-   * Nettoie une description OCR : "du 12. 12. 2024" -> "du 12.12.2024", espaces multiples...
-   */
-  function cleanDescription(s) {
-    let t = String(s || '').replace(/\s+/g, ' ').trim();
-    // points/tirets de dates séparés par des espaces
-    for (let i = 0; i < 3; i++) t = t.replace(/(\d)\s*([.\-\/])\s+(\d)/g, '$1$2$3');
-    t = t.replace(/\s+([,;:!?])/g, '$1');
-    return t;
   }
 
   function guessSideFromType(type) {
@@ -524,26 +909,39 @@
 
   /**
    * pages : [{ pageNumber, width, height, words }]
-   * options : { caisse, history: [{type, compte}] , existingNumbers: [..] }
+   * options : { caisse, vocabulary, history: [{type, compte}], existingNumbers: [..] }
    */
   function parseDocument(pages, options) {
     options = options || {};
     const caisse = options.caisse || DEFAULT_CAISSE;
+    const vocab = options.vocabulary || emptyVocabulary();
+    const index = buildIndex(vocab);
     const entries = [];
     const duplicates = [];
     const emptyPages = [];
     const globalWarnings = [];
 
+    // 1er passage : champs bruts
     const infos = [];
     for (const p of pages) {
-      if (!p.words || !p.words.length) emptyPages.push(p.pageNumber);
-      const info = analyzePage(p);
-      if (info) infos.push(info);
+      if (!p.words || !p.words.length) { emptyPages.push(p.pageNumber); continue; }
+      for (const part of splitForms(p)) {
+        const info = analyzePage(part);
+        if (info) infos.push(info);
+      }
     }
 
+    // Comptes connus : classeur + comptes vus au moins 2 fois dans ce lot
+    const knownAccounts = new Set(index.accounts);
+    const seenCounts = new Map();
+    for (const info of infos) for (const a of uniq(info.doit.concat(info.avoir))) seenCounts.set(a, (seenCounts.get(a) || 0) + 1);
+    for (const [a, n] of seenCounts) if (n >= 2) knownAccounts.add(a);
+    knownAccounts.add(caisse);
+
+    // 2e passage : écritures
     const byNo = new Map();
     for (const info of infos) {
-      const e = buildEntry(info, { caisse });
+      const e = buildEntry(info, { caisse, index, knownAccounts });
       if (e.no != null && byNo.has(e.no)) {
         const prev = byNo.get(e.no);
         const sameAmount = prev.amount != null && e.amount != null && prev.amount === e.amount;
@@ -560,8 +958,9 @@
       entries.push(e);
     }
 
-    // Suggestions de compte quand il manque (à partir de l'historique + des autres pièces)
-    const history = (options.history || []).concat(entries.filter((e) => e.compte).map((e) => ({ type: e.type, compte: e.compte })));
+    // Suggestions de compte quand il manque (historique + autres pièces)
+    const history = (options.history || []).concat(vocab.typeAccounts || [])
+      .concat(entries.filter((e) => e.compte).map((e) => ({ type: e.type, compte: e.compte })));
     for (const e of entries) {
       if (!e.compte && e.type) {
         const s = suggestAccount(e.type, history);
@@ -581,13 +980,34 @@
       }
     }
 
-    // Tri par numéro puis page ; numéros manquants
-    entries.sort((a, b) => {
-      if (a.no == null && b.no == null) return a.page - b.page;
+    // Tri par numéro puis page
+    const sortEntries = (list) => list.sort((a, b) => {
+      if (a.no == null && b.no == null) return a.page - b.page || (a.part || 0) - (b.part || 0);
       if (a.no == null) return 1;
       if (b.no == null) return -1;
       return a.no - b.no || a.page - b.page;
     });
+    sortEntries(entries);
+
+    // Numéro manquant : proposé d'après l'ordre des pages ; date manquante : date de la pièce précédente
+    const withNo = entries.filter((e) => e.no != null);
+    for (const e of entries) {
+      if (e.no == null) {
+        const before = withNo.filter((x) => x.page < e.page || (x.page === e.page && (x.part || 0) < (e.part || 0)));
+        if (before.length) {
+          const prev = before[before.length - 1];
+          e.no = prev.no + 1;
+          e.warnings.push(`Numéro ${e.no} proposé (pièce qui suit la n° ${prev.no}) : à vérifier`);
+        }
+      }
+    }
+    sortEntries(entries);
+    let lastDate = null;
+    for (const e of entries) {
+      if (e.date) lastDate = e.date;
+      else if (lastDate) { e.date = lastDate; e.warnings.push(`Date ${isoToDisplay(lastDate)} proposée (date de la pièce précédente) : à vérifier`); }
+    }
+
     const nos = entries.filter((e) => e.no != null).map((e) => e.no);
     if (nos.length) {
       const min = Math.min.apply(null, nos);
@@ -622,10 +1042,11 @@
   function detectCaisseAccount(pages) {
     const counts = new Map();
     for (const p of pages) {
-      const info = analyzePage(p);
-      if (!info) continue;
-      const set = new Set(info.doit.concat(info.avoir));
-      for (const a of set) counts.set(a, (counts.get(a) || 0) + 1);
+      for (const part of splitForms(p)) {
+        const info = analyzePage(part);
+        if (!info) continue;
+        for (const a of uniq(info.doit.concat(info.avoir))) counts.set(a, (counts.get(a) || 0) + 1);
+      }
     }
     let best = null;
     let bestN = 0;
@@ -634,7 +1055,16 @@
   }
 
   /**
-   * Extrait { type } d'un libellé du journal ("REMBOURSEMENT - ... - X. Y") pour l'historique.
+   * Nombre de formulaires reconnus sur une page.
+   */
+  function countForms(page) {
+    let n = 0;
+    for (const part of splitForms(page)) if (analyzePage(part)) n++;
+    return n;
+  }
+
+  /**
+   * Extrait le type d'un libellé du journal ("REMBOURSEMENT - ... - X. Y") pour l'historique.
    */
   function typeFromLibelle(libelle) {
     const first = String(libelle || '').split(' - ')[0];
@@ -644,6 +1074,7 @@
   return {
     DEFAULT_CAISSE,
     KNOWN_TYPES,
+    BASE_LEXICON,
     normalizeAmount,
     normalizeAccount,
     findDate,
@@ -654,9 +1085,19 @@
     looksLikePerson,
     formatLibelle,
     cleanDescription,
+    learnVocabulary,
+    mergeVocabulary,
+    emptyVocabulary,
+    buildIndex,
+    correctWord,
+    correctClassToken,
+    correctDescription,
+    correctPerson,
     itemsFromTextContent,
     groupLines,
+    splitForms,
     analyzePage,
+    countForms,
     buildEntry,
     parseDocument,
     detectCaisseAccount,

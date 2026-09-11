@@ -36,13 +36,14 @@
     nextId: 1,
     renderCache: new Map(),
     loading: false,
+    vocab: null, // vocabulaire appris (classeur + mémoire locale)
   };
 
   const $ = (id) => document.getElementById(id);
   const els = {
     modeRadios: document.querySelectorAll('input[name="mode"]'),
-    existingBox: $('existingBox'),
     newBox: $('newBox'),
+    vocabInfo: $('vocabInfo'),
     xlsxFile: $('xlsxFile'),
     existingInfo: $('existingInfo'),
     openingDate: $('openingDate'),
@@ -78,6 +79,31 @@
     const saved = localStorage.getItem('caisse.compte');
     if (saved) els.caisse.value = saved;
   } catch (e) { /* ignore */ }
+
+  /* ---------------- Vocabulaire appris (mémoire locale du PC) ---------------- */
+  function loadVocab() {
+    try {
+      const raw = localStorage.getItem('caisse.vocab');
+      if (raw) {
+        const v = JSON.parse(raw);
+        if (v && Array.isArray(v.words)) return P.mergeVocabulary(P.emptyVocabulary(), v);
+      }
+    } catch (e) { /* ignore */ }
+    return P.emptyVocabulary();
+  }
+  function saveVocab() {
+    try { localStorage.setItem('caisse.vocab', JSON.stringify(state.vocab)); } catch (e) { /* ignore */ }
+  }
+  function renderVocabInfo() {
+    const v = state.vocab;
+    if (!v || (!v.words.length && !v.persons.length && !v.accounts.length)) {
+      els.vocabInfo.textContent = 'Aucun vocabulaire appris pour l\'instant : chargez un classeur pour améliorer la lecture des libellés.';
+      return;
+    }
+    els.vocabInfo.textContent = `Vocabulaire appris : ${v.words.length} mot(s), ${v.persons.length} nom(s), ${v.accounts.length} compte(s) – utilisé pour corriger les lectures OCR.`;
+  }
+  state.vocab = loadVocab();
+  renderVocabInfo();
 
   /* ---------------- Utilitaires ---------------- */
   function fmtCHF(n) {
@@ -129,7 +155,6 @@
   /* ---------------- Étape 1 : classeur ---------------- */
   els.modeRadios.forEach((r) => r.addEventListener('change', () => {
     state.mode = document.querySelector('input[name="mode"]:checked').value;
-    els.existingBox.classList.toggle('hidden', state.mode !== 'existing');
     els.newBox.classList.toggle('hidden', state.mode !== 'new');
     if (state.pages.length) reparse();
     refreshAll();
@@ -152,6 +177,10 @@
         `, solde actuel <b>${fmtCHF(totals.end)}</b>.` +
         `<br><span class="legend">Si c'est le classeur de l'année passée, choisissez plutôt « Nouveau classeur » et indiquez le solde à nouveau (${fmtCHF(totals.end)}).</span>`;
       if (!els.openingAmount.value || Number(els.openingAmount.value) === 0) els.openingAmount.value = totals.end;
+      // apprentissage du vocabulaire (mots, noms, comptes) pour corriger l'OCR
+      state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(data.entries));
+      saveVocab();
+      renderVocabInfo();
     } catch (e) {
       console.error(e);
       state.existing = null;
@@ -250,7 +279,7 @@
       d.pieceCount = 0;
       for (const p of d.pages) {
         const page = { pageNumber: n++, docId: d.id, pageInDoc: p.pageInDoc, width: p.width, height: p.height, words: p.words };
-        if (P.analyzePage(page)) d.pieceCount++;
+        d.pieceCount += P.countForms(page);
         pages.push(page);
       }
     }
@@ -318,6 +347,18 @@
     afterDocsChanged();
   });
 
+  els.pdfNotices.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button[data-action="show-page"]');
+    if (!btn) return;
+    const ref = pageRef(Number(btn.dataset.page));
+    if (!ref) return;
+    state.selectedId = null;
+    els.body.querySelectorAll('tr.entry').forEach((r) => r.classList.remove('selected'));
+    els.step3.classList.remove('hidden');
+    showPage(ref, `Page sans texte – ${escapeHtml(ref.doc.name)}, page ${ref.pageInDoc} sur ${ref.doc.numPages}`, '', 1);
+    els.step3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
   els.btnSortFiles.addEventListener('click', () => {
     state.docs.sort((a, b) => naturalCompare(a.name, b.name));
     els.pdfNotices.innerHTML = '';
@@ -346,6 +387,7 @@
     const res = P.parseDocument(state.pages, {
       caisse,
       history,
+      vocabulary: state.vocab,
       existingNumbers: existing.map((e) => Number(e.no)).filter((n) => !isNaN(n)),
     });
 
@@ -363,7 +405,10 @@
       if (old) {
         // garde les corrections de l'utilisateur, rafraîchit ce qui vient de l'analyse
         old.page = e.page;
+        // un nouvel avertissement remet la ligne « à vérifier »
+        if (e.warnings.some((w) => !old.warnings.includes(w))) old.checked = false;
         old.warnings = e.warnings.slice();
+        old.notes = (e.notes || []).slice();
         old.candidates = e.candidates;
         old.raw = e.raw;
         if (!old.edited) {
@@ -383,6 +428,7 @@
         credit: e.credit,
         page: e.page,
         warnings: e.warnings.slice(),
+        notes: (e.notes || []).slice(),
         candidates: e.candidates,
         raw: e.raw,
         checked: e.warnings.length === 0,
@@ -413,7 +459,10 @@
     }
     for (const w of res.warnings) notice(els.pdfNotices, 'warn', escapeHtml(w));
     if (state.pages.length && textPages && textPages < state.pages.length) {
-      notice(els.pdfNotices, 'warn', `${state.pages.length - textPages} page(s) sans texte (photos, tickets) : normal pour les justificatifs.`);
+      const list = res.emptyPages.slice(0, 40).map((n) => `<button type="button" class="small" data-action="show-page" data-page="${n}">${escapeHtml(pageLabel(n))}</button>`).join(' ');
+      notice(els.pdfNotices, 'warn', `${state.pages.length - textPages} page(s) sans texte (tickets, photos) : normal pour les justificatifs. ` +
+        `Si l'une d'elles est une pièce comptable, elle a été scannée sans reconnaissance de texte : ajoutez-la à la main (« Ajouter une écriture manuelle »). Voir : ${list}` +
+        (res.emptyPages.length > 40 ? ' …' : ''));
     }
   }
 
@@ -439,7 +488,8 @@
 
   function rowMessages(e) {
     const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
-      .concat(e.warnings.map((m) => `<li>${escapeHtml(m)}</li>`));
+      .concat(e.warnings.map((m) => `<li>${escapeHtml(m)}</li>`))
+      .concat((e.notes || []).map((m) => `<li class="note">${escapeHtml(m)}</li>`));
     if (!items.length) return '';
     let html = `<ul>${items.join('')}</ul>`;
     const cands = (e.candidates || []).filter((a) => a !== e.compte);
@@ -621,7 +671,7 @@
     const last = state.entries[state.entries.length - 1];
     state.entries.push({
       id: state.nextId++, sourceKey: null, no: next, date: last ? last.date : null, compte: '', libelle: '', debit: null, credit: null,
-      page: null, warnings: [], candidates: [], raw: null, checked: true, manual: true, edited: true,
+      page: null, warnings: [], notes: [], candidates: [], raw: null, checked: true, manual: true, edited: true,
     });
     renderTable();
     renderTotals();
@@ -635,18 +685,51 @@
   });
 
   /* ---------------- Aperçu ---------------- */
+  let previewToken = 0;
+
+  async function showPage(ref, navHtml, fieldsHtml, fraction) {
+    const token = ++previewToken;
+    els.previewNav.innerHTML = navHtml;
+    els.previewFields.innerHTML = fieldsHtml || '';
+    const cacheKey = `${ref.doc.id}:${ref.pageInDoc}:${fraction || 0.62}`;
+    try {
+      let canvas = state.renderCache.get(cacheKey);
+      if (!canvas) {
+        const page = await ref.doc.doc.getPage(ref.pageInDoc);
+        const base = page.getViewport({ scale: 1 });
+        const targetWidth = 800;
+        const vp = page.getViewport({ scale: targetWidth / base.width });
+        canvas = document.createElement('canvas');
+        canvas.width = Math.round(vp.width);
+        canvas.height = Math.round(vp.height * (fraction || 0.62)); // le haut de la page suffit (formulaire + date)
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        state.renderCache.set(cacheKey, canvas);
+      }
+      if (token !== previewToken) return;
+      els.previewFrame.innerHTML = '';
+      els.previewFrame.appendChild(canvas);
+    } catch (err) {
+      console.error(err);
+      if (token === previewToken) els.previewFrame.innerHTML = `<span>Aperçu indisponible (${escapeHtml(err.message || err)})</span>`;
+    }
+  }
+
   async function renderPreview() {
     const e = state.entries.find((x) => x.id === state.selectedId);
-    els.previewFields.innerHTML = '';
     const ref = e && e.page ? pageRef(e.page) : null;
     if (!e || !ref) {
+      previewToken++;
+      els.previewFields.innerHTML = '';
       els.previewNav.textContent = e && e.manual ? 'Écriture saisie manuellement (pas de pièce).' : 'Sélectionnez une écriture pour afficher la pièce.';
       els.previewFrame.innerHTML = '<span>Aperçu de la pièce</span>';
       return;
     }
-    els.previewNav.innerHTML = `Pièce n° <b>${escapeHtml(e.no == null ? '?' : e.no)}</b> – ` +
+    const nav = `Pièce n° <b>${escapeHtml(e.no == null ? '?' : e.no)}</b> – ` +
       (state.docs.length > 1 ? `<b>F${ref.docIndex + 1}</b> ` : '') +
-      `${escapeHtml(ref.doc.name)}, page ${ref.pageInDoc} sur ${ref.doc.numPages}`;
+      `${escapeHtml(ref.doc.name)}, page ${ref.pageInDoc} sur ${ref.doc.numPages}` +
+      (e.raw && e.raw.part ? ` (formulaire ${e.raw.part})` : '');
+    let fields = '';
     const r = e.raw;
     if (r) {
       const dl = [
@@ -658,30 +741,9 @@
         ['Libellé', r.libelleLines.join(' / ') || '–'],
         ['Date', r.dateRaw || '–'],
       ].map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('');
-      els.previewFields.innerHTML = `<dl>${dl}</dl>`;
+      fields = `<dl>${dl}</dl>`;
     }
-    const cacheKey = `${ref.doc.id}:${ref.pageInDoc}`;
-    try {
-      let canvas = state.renderCache.get(cacheKey);
-      if (!canvas) {
-        const page = await ref.doc.doc.getPage(ref.pageInDoc);
-        const base = page.getViewport({ scale: 1 });
-        const targetWidth = 800;
-        const vp = page.getViewport({ scale: targetWidth / base.width });
-        canvas = document.createElement('canvas');
-        canvas.width = Math.round(vp.width);
-        canvas.height = Math.round(vp.height * 0.62); // le haut de la page suffit (formulaire + date)
-        const ctx = canvas.getContext('2d');
-        await page.render({ canvasContext: ctx, viewport: vp }).promise;
-        state.renderCache.set(cacheKey, canvas);
-      }
-      if (state.selectedId !== e.id) return;
-      els.previewFrame.innerHTML = '';
-      els.previewFrame.appendChild(canvas);
-    } catch (err) {
-      console.error(err);
-      els.previewFrame.innerHTML = `<span>Aperçu indisponible (${escapeHtml(err.message || err)})</span>`;
-    }
+    await showPage(ref, nav, fields, e.raw && e.raw.part ? 1 : 0.62);
   }
 
   /* ---------------- Étape 4 : totaux + Excel ---------------- */

@@ -17,10 +17,12 @@ compte de contrepartie.
 1. Copier `dist/Caisse-ecoles.html` sur le PC (clé USB, courriel, téléchargement depuis GitHub).
 2. Double-cliquer dessus : il s'ouvre dans le navigateur (Edge, Chrome, Firefox). Rien n'est
    envoyé sur internet, tout se passe dans le navigateur ; l'application fonctionne hors ligne.
-3. **Étape 1 – Classeur Excel** : soit *Continuer un classeur existant* (choisir le fichier de
-   l'année en cours : les nouvelles pièces sont ajoutées à la suite), soit *Nouveau classeur*
-   (indiquer la date et le montant du solde à nouveau). Vérifier le n° du compte caisse
-   (`9100.104` par défaut).
+3. **Étape 1 – Classeur Excel** : charger le classeur de l'année en cours (les nouvelles pièces
+   sont ajoutées à la suite) ou celui de l'année passée comme référence en choisissant
+   *Nouveau classeur* (indiquer la date et le montant du solde à nouveau). Dans les deux cas,
+   l'application apprend du classeur les comptes, les noms de personnes et les mots habituels
+   des libellés, et s'en sert pour corriger les erreurs de lecture (ce vocabulaire est mémorisé
+   sur le PC). Vérifier le n° du compte caisse (`9100.104` par défaut).
 4. **Étape 2 – PDF** : glisser un ou plusieurs PDF de pièces (ex. `Pce 01 à 33.pdf`,
    `Pce 34 à 60.pdf`). Les fichiers sont classés par nom (ordre naturel) et listés avec leur
    nombre de pièces ; on peut les monter/descendre, en retirer, en ajouter plus tard sans perdre
@@ -46,6 +48,21 @@ personne) et la date sous le tableau. Le libellé du journal est composé ainsi 
 Les fautes d'OCR courantes sont corrigées (`10'OOO.OQ` → 10 000.00, `51000. 3662. 50` → `51000.3662.50`,
 `REMBOURSMENT` → `REMBOURSEMENT`).
 
+Précision de la lecture :
+
+- les mots du libellé sont comparés au vocabulaire (lexique de base + mots appris dans le
+  classeur) et corrigés quand l'écart est typique de l'OCR (`chour` → `chœur`, `expbsition` →
+  `exposition`) ; les désignations de classes aussi (`98` → `9S`, `7-118` → `7-11S`) ;
+- le nom de la personne est corrigé d'après les noms connus (`N. Boriat` → `N. Borlat`) ;
+- un compte jamais utilisé qui ressemble à un compte connu est signalé avec une proposition
+  (jamais corrigé d'office, les sous-comptes voisins étant légitimes) ; un compte caisse mal lu
+  (`9100.184`) est reconnu ;
+- un montant illisible est retenté en mode tolérant et signalé ; un numéro ou une date
+  manquants sont proposés d'après la pièce précédente et signalés ;
+- deux formulaires sur une même page sont reconnus séparément ; les scans légèrement inclinés
+  sont tolérés ;
+- chaque correction est indiquée en gris sous la ligne, pour contrôle.
+
 ## Développement
 
 ```bash
@@ -70,7 +87,9 @@ Structure :
 
 - Le PDF doit contenir une couche texte (scan avec OCR). Un PDF « image » seule est signalé
   et ne peut pas être traité.
-- L'OCR du scanner peut confondre certains caractères (`œ`, `S`/`8`) dans le libellé :
-  la relecture à l'étape 3 reste nécessaire.
+- L'OCR du scanner peut confondre certains caractères ; les corrections automatiques couvrent les
+  cas fréquents, mais la relecture à l'étape 3 reste nécessaire.
+- Une pièce scannée sans couche texte n'est pas reconnue : les pages sans texte sont listées
+  avec un bouton pour les afficher, et la pièce peut être ajoutée à la main.
 - Quand une pièce porte plusieurs comptes de contrepartie, le premier est proposé et la
   ligne est signalée pour choisir le bon.
