@@ -206,6 +206,35 @@ fenêtre. C'est une fonction du navigateur, pas une installation de logiciel.
 | Alt + ← / → | Décaler la page d'une position |
 | ? | Afficher tous les raccourcis |
 
+## Confidentialité
+
+Les documents ne quittent pas l'ordinateur. Ils sont lus, modifiés et
+réassemblés par le navigateur, en mémoire. Il n'y a ni envoi, ni compte, ni
+cookie, ni mesure d'audience, ni identifiant. Le seul stockage est celui des
+préférences d'affichage, sous les clés `blonay-theme` et `blonay-zoom`.
+
+Ce n'est pas une promesse mais une contrainte : les fichiers livrés portent une
+politique de sécurité qui interdit au navigateur toute connexion sortante.
+Vérification faite dans Chromium, sur la version hors ligne, en tentant
+délibérément six sorties depuis la page :
+
+| Tentative | Résultat |
+| --- | --- |
+| `fetch` vers un serveur distant | refusée, `connect-src` |
+| `navigator.sendBeacon` | refusée, `connect-src` |
+| WebSocket | refusée, `connect-src` |
+| script tiers | refusé, `script-src-elem` |
+| pixel de traçage | refusé, `img-src` |
+| cadre distant | refusé, `frame-src` |
+
+Le même audit, mené pendant un parcours complet (ouverture, annotation,
+caviardage, filigrane, mot de passe, export, extraction de texte, recherche),
+ne relève aucune requête sortante, aucun cookie, aucune base de données créée.
+
+La version hébergée porte la même politique, élargie au strict nécessaire pour
+servir ses propres fichiers. L'hébergeur voit la demande de la page, comme tout
+serveur web, jamais les documents traités.
+
 ## Tests
 
 Le comportement est vérifié dans Chromium : réorganisation, rotation avec

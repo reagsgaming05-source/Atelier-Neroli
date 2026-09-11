@@ -2735,7 +2735,14 @@
           ['Ctrl+Z', 'Annuler'], ['Ctrl+Y', 'Rétablir'], ['?', 'Cette fenêtre'],
         ])));
         b.append(note('Astuce : tapez un chiffre sur une page sélectionnée au clavier pour la déplacer directement à ce numéro.'));
-        b.append(note('Tout le traitement se fait sur cet ordinateur. Aucun fichier n\'est envoyé sur internet.'));
+        const conf = document.createElement('div');
+        conf.style.display = 'flex'; conf.style.flexDirection = 'column'; conf.style.gap = '8px';
+        [
+          'Vos documents ne quittent jamais cet ordinateur. Ils sont lus, modifiés et réassemblés par le navigateur, dans la mémoire de cette page.',
+          'Aucun envoi, aucun compte, aucun cookie, aucune mesure d\'audience, aucun identifiant. Rien n\'est conservé après la fermeture, hormis la taille des vignettes et le thème choisi.',
+          'La page ne sait contacter personne : ses règles de sécurité interdisent toute connexion sortante.',
+        ].forEach(t => conf.appendChild(note(t)));
+        b.append(groupOf('Confidentialité', [conf]));
       },
     });
   }

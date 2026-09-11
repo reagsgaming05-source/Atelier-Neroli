@@ -7,6 +7,21 @@ const HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\
 const TAIL = '</body>\n</html>\n';
 const OUT = '/home/user/Atelier-Neroli/outils';
 
+// Règles de sécurité : la page n'a le droit de contacter personne. Ce n'est pas
+// une promesse mais une contrainte appliquée par le navigateur lui-même.
+// La version en ligne n'en reçoit pas : elle charge ses composants depuis un CDN
+// et la plateforme qui l'héberge applique déjà les siennes.
+const csp = extra => '<meta http-equiv="Content-Security-Policy" content="'
+  + "default-src 'none'; "
+  + "script-src 'unsafe-inline' blob:" + (extra ? " 'self'" : '') + '; '
+  + "worker-src blob:" + (extra ? " 'self'" : '') + '; '
+  + "style-src 'unsafe-inline'; "
+  + 'img-src data: blob:' + (extra ? " 'self'" : '') + '; '
+  + 'connect-src blob: data:' + (extra ? " 'self'" : '') + '; '
+  + (extra ? "manifest-src 'self'; " : '')
+  + "object-src 'none'; base-uri 'none'; form-action 'none'"
+  + '">\n';
+
 // 1. version en ligne (composants chargés depuis les CDN)
 fs.writeFileSync(path.join(OUT, 'blonay-pdf.html'), HEAD + src + TAIL);
 
@@ -17,6 +32,7 @@ const read = p => fs.readFileSync(path.join(LIB, p), 'utf8')
   .replace(/<!--/g, '<\\!--')
   .replace(/<\/script/gi, '<\\/script');
 const worker = read('pdfjs-dist-3.11.174/build/pdf.worker.min.js');
+const cspOffline = csp(false);
 const inline = [
   '<script id="blonay-worker" type="text/plain">\n' + worker + '\n</script>',
   '<script>window.__blonayWorker = URL.createObjectURL(new Blob([document.getElementById("blonay-worker").textContent], { type: "text/javascript" }));</script>',
@@ -31,7 +47,8 @@ const noFonts = src.replace(/<link rel="preconnect"[^>]*>\n/, '').replace(/<link
 if (noFonts === src) throw new Error('liens de polices introuvables');
 const offline = noFonts.replace('<script>\n(() => {', () => inline + '\n<script>\n(() => {');
 if (offline === src) throw new Error("point d'insertion introuvable");
-fs.writeFileSync(path.join(OUT, 'blonay-pdf-hors-ligne.html'), HEAD + offline + TAIL);
+fs.writeFileSync(path.join(OUT, 'blonay-pdf-hors-ligne.html'),
+  HEAD.replace('<meta charset="utf-8">\n', '<meta charset="utf-8">\n' + cspOffline) + offline + TAIL);
 
 // 3. version « installable » : même page, plus le manifeste et le cache hors
 //    ligne. À déposer sur une adresse https, où le navigateur proposera
@@ -40,6 +57,7 @@ fs.writeFileSync(path.join(OUT, 'blonay-pdf-hors-ligne.html'), HEAD + offline + 
 const SITE = path.join(OUT, '..', 'docs'); // GitHub Pages sait servir /docs
 const SITE_HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n'
   + '<meta charset="utf-8">\n'
+  + csp(true)
   + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
   + '<meta name="color-scheme" content="dark light">\n'
   + '<title>Blonay PDF</title>\n'

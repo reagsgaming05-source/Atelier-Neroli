@@ -16,6 +16,18 @@ L'outil s'ouvre dans une fenêtre d'application, sans onglet ni barre d'adresse.
 Vous pouvez aussi simplement double-cliquer sur blonay-pdf.html :
 l'outil s'ouvre alors dans un onglet du navigateur et fonctionne pareil.
 
+CONFIDENTIALITE
+---------------
+Vos documents ne quittent jamais votre ordinateur. Ils sont lus, modifiés et
+réassemblés par votre navigateur, dans la mémoire de la page.
+
+Aucun envoi, aucun compte, aucun cookie, aucune mesure d'audience, aucun
+identifiant, aucune connexion internet. Rien n'est conservé après la fermeture,
+hormis la taille des vignettes et le thème choisi.
+
+La page ne sait contacter personne : ses règles de sécurité interdisent au
+navigateur toute connexion sortante, quelle qu'elle soit.
+
 IMPORTANT
 ---------
 Gardez les fichiers de ce dossier ensemble.
