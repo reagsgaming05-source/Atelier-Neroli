@@ -65,18 +65,56 @@ demandé à l'ouverture.
 - recherche de texte dans toutes les pages, avec extrait et accès direct à la
   page trouvée.
 
+## Les deux fichiers
+
+| Fichier | Poids | Internet |
+| --- | --- | --- |
+| `outils/blonay-pdf.html` | 190 Ko | requis à l'ouverture, pour charger pdf.js, pdf-lib et JSZip |
+| `outils/blonay-pdf-hors-ligne.html` | 2,2 Mo | aucun : les trois bibliothèques sont incluses dans le fichier |
+
+Les deux fichiers offrent exactement les mêmes fonctions. La version hors ligne
+convient aux postes sans accès internet ou derrière un filtrage strict. Elle
+utilise les polices du système au lieu de celles de Google Fonts.
+
+Les deux sont produits à partir d'une source unique par `outils/build.js`.
+
 ## Utilisation
 
-1. Télécharger le fichier `outils/blonay-pdf.html`.
+1. Télécharger l'un des deux fichiers.
 2. L'ouvrir avec un navigateur récent (Chrome, Edge, Firefox ou Safari) en
    double-cliquant dessus.
 3. Ouvrir ses PDF, travailler, puis cliquer sur « Exporter le PDF ».
 
-Une connexion internet est nécessaire à l'ouverture de la page pour charger
-trois bibliothèques : pdf.js pour l'affichage des pages, pdf-lib pour
-l'assemblage et le chiffrement, JSZip pour les archives.
-
 La reconnaissance de texte sur documents scannés (OCR) n'est pas disponible.
+
+## L'ouvrir comme une application, sans rien installer
+
+### Windows, avec un raccourci
+
+1. Enregistrer `blonay-pdf-hors-ligne.html` dans ses documents.
+2. Clic droit sur le Bureau, Nouveau, Raccourci.
+3. Saisir cette cible, en remplaçant le chemin par le sien :
+
+   ```
+   msedge --app="file:///C:/Users/VOTRE-NOM/Documents/blonay-pdf-hors-ligne.html"
+   ```
+
+   Avec Chrome, remplacer `msedge` par `chrome`. Si le nom seul est refusé,
+   utiliser le chemin complet du navigateur, par exemple
+   `"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"`.
+4. Nommer le raccourci « Blonay PDF ».
+
+Le double-clic ouvre une fenêtre sans onglet ni barre d'adresse. Le raccourci
+s'épingle à la barre des tâches. Rien n'est installé sur le poste et aucun
+droit administrateur n'est nécessaire.
+
+### Depuis le navigateur
+
+Sur une page ouverte, Edge propose « Installer ce site en tant qu'application »
+dans le menu `…`, section Applications. Chrome propose la même chose dans
+`⋮`, « Diffuser, enregistrer et partager », « Installer la page en tant
+qu'application ». Un raccourci est créé et la page s'ouvre dans sa propre
+fenêtre. C'est une fonction du navigateur, pas une installation de logiciel.
 
 ## Raccourcis clavier
 
@@ -102,4 +140,5 @@ Le comportement est vérifié dans Chromium : réorganisation, rotation avec
 géométrie des annotations sur pages pivotées, caviardage, filigrane,
 numérotation Bates, formulaires, chiffrement, division, export images et texte,
 compression, redimensionnement, thèmes clair et sombre, affichage sur
-téléphone. 80 vérifications, toutes au vert.
+téléphone. 80 vérifications, toutes au vert. La version hors ligne est testée
+en plus avec tout accès réseau coupé.
