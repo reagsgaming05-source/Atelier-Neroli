@@ -54,8 +54,8 @@ Les fautes d'OCR courantes sont corrigées (`10'OOO.OQ` → 10 000.00, `51000. 3
 
 Doutes signalés (ce qui déclenche l'orange) :
 
-- **Montant** : illisible, lu une seule fois (SOMME ou Total manquant, donc sans confirmation
-  croisée), différent entre SOMME et Total, nul ou inhabituellement élevé ; sens débit/crédit
+- **Montant** : illisible, différent entre la colonne SOMME et le Total, nul ou inhabituellement
+  élevé ; sens débit/crédit
   déduit au lieu d'être lu, contraire au sens habituel du type dans le classeur (par exemple un
   REMBOURSEMENT en entrée de caisse), ou opposé à la nature du compte (compte de recettes `.4xxx`
   en sortie).
@@ -85,7 +85,11 @@ Précision de la lecture :
 - le sens attendu de chaque type d'écriture est appris du classeur (un type n'est utilisé comme
   règle que si ses écritures vont toutes dans le même sens, sur au moins cinq occurrences).
 
-Sur le lot d'exemple de 33 pièces, cinq lignes sont signalées et vingt-huit passent en vert, sans
+Le montant retenu est le **Total** en bas de la pièce. La colonne SOMME, souvent laissée vide,
+sert uniquement à confirmer ce total, ou à le remplacer quand il est absent ou illisible : son
+absence ne déclenche donc aucun doute.
+
+Sur le lot d'exemple de 33 pièces, trois lignes sont signalées et trente passent en vert, sans
 écart sur les dates, montants, sens et comptes.
 
 ## Développement

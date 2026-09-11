@@ -149,12 +149,28 @@ test('les doutes sont rattachés au bon champ', () => {
   assert.ok(Object.values(e.flags).every((f) => f.length === 0));
 });
 
-test('montant lu une seule fois : doute sur le montant', () => {
-  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], libelle: ['REMBOURSEMENT piles', 'R. Perrier'], date: '01.03.2025' }) };
-  const e = P.parseDocument([page], { caisse: '9100.104' }).entries[0];
-  assert.equal(e.credit, 12);
-  assert.ok(e.flags.montant.some((f) => f.level === 'doubt' && /une seule fois/.test(f.message)));
-  assert.equal(e.flags.compte.length, 0);
+test('le Total en bas fait foi ; une SOMME absente ou illisible ne crée pas de doute', () => {
+  const mk = (o) => ({ pageNumber: 1, width: 595, height: 842, words: makeForm(Object.assign({ no: '12', libelle: ['REMBOURSEMENT piles', 'R. Perrier'], date: '01.03.2025' }, o)) });
+  // pas de case SOMME remplie : le Total suffit
+  const e1 = P.parseDocument([mk({ lines: [{ doit: '51000.3185.00', avoir: '9100.104' }], total: 'CHF 12.00' })], { caisse: '9100.104' }).entries[0];
+  assert.equal(e1.credit, 12);
+  assert.deepEqual(e1.warnings, []);
+  // SOMME illisible, Total lisible : le Total est retenu, sans doute
+  const e2 = P.parseDocument([mk({ lines: [{ doit: '51000.3185.00', somme: 'CHF ??', avoir: '9100.104' }], total: 'CHF 12.00' })], { caisse: '9100.104' }).entries[0];
+  assert.equal(e2.credit, 12);
+  assert.deepEqual(e2.warnings, []);
+  // pas de Total lisible : la SOMME prend le relais, sans doute
+  const e3 = P.parseDocument([mk({ lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }] })], { caisse: '9100.104' }).entries[0];
+  assert.equal(e3.credit, 12);
+  assert.deepEqual(e3.warnings, []);
+  // Total et SOMME lisibles mais différents : doute
+  const e4 = P.parseDocument([mk({ lines: [{ doit: '51000.3185.00', somme: 'CHF 15.00', avoir: '9100.104' }], total: 'CHF 12.00' })], { caisse: '9100.104' }).entries[0];
+  assert.equal(e4.credit, 12, 'le Total fait foi');
+  assert.ok(e4.flags.montant.some((f) => /différente du total/.test(f.message)));
+  // aucun montant lisible : doute
+  const e5 = P.parseDocument([mk({ lines: [{ doit: '51000.3185.00', avoir: '9100.104' }] })], { caisse: '9100.104' }).entries[0];
+  assert.equal(e5.credit, null);
+  assert.ok(e5.flags.montant.some((f) => /Montant non reconnu/.test(f.message)));
 });
 
 test('libellé sans type ni personne : doutes sur le libellé', () => {

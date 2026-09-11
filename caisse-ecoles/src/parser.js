@@ -891,6 +891,8 @@
     }
 
     // ---- Montant
+    // Le Total en bas de la pièce fait foi ; la colonne SOMME, souvent laissée vide,
+    // ne sert qu'à confirmer le total ou à le remplacer quand il manque.
     let amount = null;
     const sommeVals = info.sommes.map((s) => s.value).filter((v) => v != null);
     if (info.total != null) amount = info.total;
@@ -909,10 +911,6 @@
       else doubt('montant', `Somme (${sommeVals.join(', ')}) différente du total (${info.total}) : vérifier le montant`);
     } else if (info.total == null && sommeVals.length > 1) {
       doubt('montant', `Plusieurs sommes lues (${sommeVals.join(', ')}) : première retenue`);
-    } else if (info.total == null || !sommeVals.length) {
-      // une seule lecture (SOMME ou Total) : pas de confirmation croisée
-      const other = info.total == null ? (info.totalRaw ? `Total illisible « ${info.totalRaw} »` : 'pas de ligne Total lisible') : (info.sommes.length ? `SOMME illisible « ${info.sommes[0].raw} »` : 'pas de SOMME lisible');
-      doubt('montant', `Montant ${amount.toFixed(2)} lu une seule fois (${other}) : à confirmer`);
     }
     if (amount != null && amount === 0) doubt('montant', 'Montant nul');
     if (amount != null && amount >= 50000) doubt('montant', 'Montant inhabituellement élevé');
