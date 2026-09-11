@@ -1,54 +1,105 @@
 # Atelier-Neroli
 
-## Blonay PDF — organiser ses PDF sans Acrobat
+## Blonay PDF — un logiciel PDF complet dans le navigateur
 
-`outils/blonay-pdf.html` est un logiciel de manipulation de PDF qui fonctionne
-entièrement dans le navigateur : rien n'est envoyé sur un serveur, les fichiers restent
-sur l'ordinateur.
+`outils/blonay-pdf.html` est un fichier HTML autonome qui offre les fonctions
+d'un logiciel PDF professionnel. Tout le traitement se fait sur l'ordinateur de
+l'utilisateur : aucun fichier n'est envoyé sur un serveur.
 
-**Ce qu'il permet de faire**
+### Organiser
 
 - ouvrir un ou plusieurs PDF (bouton « Ouvrir » ou glisser-déposer) ;
-- réorganiser les pages en les faisant glisser, ou en tapant directement le numéro
-  de la position voulue sous la page ;
-- déplacer une sélection de pages d'un bloc vers un numéro de position précis ;
-- retirer des pages, ou retirer un document entier avec toutes ses pages ;
-- pivoter des pages (90° à gauche ou à droite) ;
-- dupliquer des pages ;
-- fusionner plusieurs documents : leurs pages arrivent à la suite, chacune marquée
-  de la couleur de son document d'origine ;
-- extraire une sélection de pages dans un nouveau PDF ;
-- annuler et rétablir (Ctrl + Z, Ctrl + Y) ;
-- exporter le PDF obtenu sous le nom de son choix.
+- réorganiser les pages en les faisant glisser, ou en tapant directement le
+  numéro de la position voulue sous la page ;
+- déplacer une sélection de pages d'un bloc vers un numéro précis ;
+- retirer, dupliquer, pivoter des pages ; retirer un document entier ;
+- fusionner plusieurs documents, chaque page gardant la couleur de son origine ;
+- insérer des pages vierges (A4, A5, A3, Letter, Legal, portrait ou paysage) ;
+- convertir des images JPEG, PNG et WebP en pages ;
+- diviser le document : une page par fichier, par lots ou par plages, réunis
+  dans une archive ZIP ;
+- redimensionner toutes les pages à un format standard avec marge.
 
-**Utilisation**
+### Modifier
+
+L'éditeur de page (double-clic sur une page) permet d'ajouter du texte, de
+surligner, d'encadrer, de dessiner à main levée, de signer, d'insérer une image
+et de caviarder. Chaque annotation se déplace, se redimensionne et se supprime.
+
+- filigrane : texte, police, taille, angle, couleur, opacité, au centre ou en
+  mosaïque ;
+- en-tête et pied de page sur six zones, avec les codes `{p}`, `{n}`, `{date}`,
+  `{file}` et `{bates}` ;
+- numérotation des pages, y compris la numérotation Bates avec préfixe.
+
+### Formulaires
+
+Les champs d'un PDF de formulaire (texte, cases à cocher, listes, choix) sont
+détectés et remplissables. Les valeurs peuvent rester modifiables ou être
+aplaties. Si les pages sont réorganisées ou fusionnées, l'aplatissement est
+appliqué automatiquement pour conserver les valeurs saisies.
+
+### Exporter
+
+- le PDF complet, ou seulement les pages sélectionnées ;
+- les pages en images PNG ou JPEG (72, 150 ou 300 ppp) ;
+- le texte du document en fichier `.txt` ;
+- une version allégée : les pages sont converties en images, avec comparaison
+  des tailles avant et après.
+
+### Protéger
+
+- mot de passe d'ouverture et mot de passe propriétaire, chiffrement AES-256 ;
+- autorisations : impression, copie, modification, annotation, remplissage des
+  formulaires, réorganisation ;
+- aplatissement des champs de formulaire ;
+- caviardage réel : une page caviardée est convertie en image à l'export, ce
+  qui supprime définitivement le texte masqué.
+
+Les PDF protégés par mot de passe peuvent être ouverts : le mot de passe est
+demandé à l'ouverture.
+
+### Document
+
+- propriétés : titre, auteur, sujet, mots-clés ;
+- recherche de texte dans toutes les pages, avec extrait et accès direct à la
+  page trouvée.
+
+## Utilisation
 
 1. Télécharger le fichier `outils/blonay-pdf.html`.
-2. L'ouvrir avec un navigateur récent (Chrome, Edge, Firefox ou Safari) en double-cliquant dessus.
-3. Ouvrir ses PDF, réorganiser, puis cliquer sur « Exporter le PDF ».
+2. L'ouvrir avec un navigateur récent (Chrome, Edge, Firefox ou Safari) en
+   double-cliquant dessus.
+3. Ouvrir ses PDF, travailler, puis cliquer sur « Exporter le PDF ».
 
-Une connexion internet est nécessaire à l'ouverture de la page pour charger les deux
-bibliothèques utilisées (pdf.js pour l'aperçu des pages, pdf-lib pour l'assemblage du
-PDF final). Les fichiers PDF protégés par mot de passe ne sont pas pris en charge.
+Une connexion internet est nécessaire à l'ouverture de la page pour charger
+trois bibliothèques : pdf.js pour l'affichage des pages, pdf-lib pour
+l'assemblage et le chiffrement, JSZip pour les archives.
 
-**Déplacer une page vers un numéro précis**
+La reconnaissance de texte sur documents scannés (OCR) n'est pas disponible.
 
-- Sous chaque page, le champ numéroté indique sa position. Cliquer dedans, taper le
-  numéro voulu puis appuyer sur Entrée : la page prend cette position.
-- Avec une page sélectionnée (ou plusieurs), la barre du bas propose « Déplacer en
-  position » : le bloc sélectionné est placé à partir du numéro saisi.
-- Une page ayant le focus clavier accepte aussi la saisie directe d'un chiffre.
-
-**Raccourcis clavier**
+## Raccourcis clavier
 
 | Touche | Action |
 | --- | --- |
 | Clic | Sélectionner ou désélectionner une page |
 | Maj + clic | Sélectionner une plage de pages |
-| Clic sur un document (panneau de gauche) | Sélectionner toutes ses pages |
+| Double-clic | Ouvrir l'éditeur de page |
+| Chiffre | Déplacer la page vers ce numéro |
 | Ctrl + A | Tout sélectionner |
-| Suppr | Retirer les pages sélectionnées |
-| R / Maj + R | Pivoter la sélection à droite / à gauche |
-| Alt + ← / → | Décaler la page d'une position |
+| Ctrl + O | Ouvrir des fichiers |
+| Ctrl + S | Exporter le PDF |
+| Ctrl + F | Rechercher du texte |
 | Ctrl + Z / Ctrl + Y | Annuler / Rétablir |
-| Échap | Désélectionner |
+| Suppr | Retirer les pages sélectionnées |
+| R / Maj + R | Pivoter à droite / à gauche |
+| Alt + ← / → | Décaler la page d'une position |
+| ? | Afficher tous les raccourcis |
+
+## Tests
+
+Le comportement est vérifié dans Chromium : réorganisation, rotation avec
+géométrie des annotations sur pages pivotées, caviardage, filigrane,
+numérotation Bates, formulaires, chiffrement, division, export images et texte,
+compression, redimensionnement, thèmes clair et sombre, affichage sur
+téléphone. 80 vérifications, toutes au vert.
