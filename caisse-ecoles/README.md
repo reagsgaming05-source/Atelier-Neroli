@@ -21,8 +21,11 @@ compte de contrepartie.
    l'année en cours : les nouvelles pièces sont ajoutées à la suite), soit *Nouveau classeur*
    (indiquer la date et le montant du solde à nouveau). Vérifier le n° du compte caisse
    (`9100.104` par défaut).
-4. **Étape 2 – PDF** : glisser le PDF des pièces (ex. `Pce 01 à 33.pdf`). Le PDF doit avoir été
-   scanné avec reconnaissance de texte (PDF « consultable »), ce que fait le copieur.
+4. **Étape 2 – PDF** : glisser un ou plusieurs PDF de pièces (ex. `Pce 01 à 33.pdf`,
+   `Pce 34 à 60.pdf`). Les fichiers sont classés par nom (ordre naturel) et listés avec leur
+   nombre de pièces ; on peut les monter/descendre, en retirer, en ajouter plus tard sans perdre
+   les corrections déjà faites. Les PDF doivent avoir été scannés avec reconnaissance de texte
+   (PDF « consultable »), ce que fait le copieur.
 5. **Étape 3 – Vérification** : chaque pièce reconnue apparaît sur une ligne ; cliquer sur une
    ligne affiche la pièce scannée à droite. Les lignes ⚠ demandent une vérification
    (plusieurs comptes possibles, montant douteux, compte caisse des deux côtés…) : corriger
@@ -31,7 +34,8 @@ compte de contrepartie.
    L'ouvrir dans Excel et l'enregistrer à la place du classeur.
 
 Les copies de pièces jointes à d'autres pièces (même numéro, même montant) sont ignorées
-automatiquement ; les numéros manquants dans la séquence sont signalés.
+automatiquement, y compris d'un fichier à l'autre ; les numéros manquants dans la séquence sont
+signalés. Avec plusieurs fichiers, la colonne *Page* indique le fichier (F1, F2…) et la page.
 
 ## Ce que l'application lit sur une pièce
 

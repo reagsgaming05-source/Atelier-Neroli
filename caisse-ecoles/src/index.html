@@ -50,13 +50,22 @@
   </section>
 
   <section class="card" id="step2">
-    <h2><span class="n">2</span> Pièces comptables (PDF scanné)</h2>
+    <h2><span class="n">2</span> Pièces comptables (PDF scannés)</h2>
     <div class="dropzone" id="dropzone">
-      <div><strong>Glissez le PDF ici</strong> ou <button type="button" id="btnPickPdf">choisissez un fichier</button></div>
-      <div style="margin-top:6px;font-size:12px">Le PDF doit être scanné avec reconnaissance de texte (PDF « consultable »), comme ceux produits par le copieur.</div>
-      <input type="file" id="pdfFile" accept="application/pdf,.pdf" class="hidden">
+      <div><strong>Glissez un ou plusieurs PDF ici</strong> ou <button type="button" id="btnPickPdf">choisissez des fichiers</button></div>
+      <div style="margin-top:6px;font-size:12px">Les pièces peuvent être réparties dans plusieurs fichiers (ex. « Pce 01 à 33.pdf », « Pce 34 à 60.pdf ») : vous pouvez en ajouter à tout moment et les mettre dans l'ordre ci-dessous. Les PDF doivent être scannés avec reconnaissance de texte (PDF « consultable »), comme ceux produits par le copieur.</div>
+      <input type="file" id="pdfFile" accept="application/pdf,.pdf" multiple class="hidden">
     </div>
     <progress id="pdfProgress" max="100" value="0" class="hidden"></progress>
+    <div id="pdfListBox" class="hidden">
+      <div class="toolbar">
+        <span class="legend"><b>Fichiers chargés</b> – ordre des pièces : utilisez ▲ ▼ ou le tri par nom.</span>
+        <span class="spacer"></span>
+        <button type="button" class="small" id="btnSortFiles">Trier par nom</button>
+        <button type="button" class="small danger" id="btnClearFiles">Tout retirer</button>
+      </div>
+      <table class="files" id="pdfList"></table>
+    </div>
     <div class="info" id="pdfInfo"></div>
     <div id="pdfNotices"></div>
   </section>
@@ -82,7 +91,7 @@
               <th>Libellé</th>
               <th>Débit</th>
               <th>Crédit</th>
-              <th>Page</th>
+              <th title="Fichier · page">Page</th>
               <th>Vérifié</th>
               <th></th>
             </tr>

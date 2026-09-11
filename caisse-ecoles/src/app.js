@@ -26,15 +26,16 @@
   const state = {
     mode: 'existing',
     existing: null, // { fileName, opening, entries }
-    pdfDoc: null,
-    pdfName: '',
-    pages: [], // { pageNumber, width, height, words }
+    docs: [], // [{ id, name, doc (pdf.js), numPages, pages: [{pageInDoc,width,height,words}], pieceCount }]
+    nextDocId: 1,
+    pages: [], // pages globales : { pageNumber, docId, pageInDoc, width, height, words }
     entries: [], // écritures nouvelles (modifiables)
     duplicates: [],
     docWarnings: [],
     selectedId: null,
     nextId: 1,
     renderCache: new Map(),
+    loading: false,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -51,6 +52,10 @@
     pdfFile: $('pdfFile'),
     btnPickPdf: $('btnPickPdf'),
     pdfProgress: $('pdfProgress'),
+    pdfListBox: $('pdfListBox'),
+    pdfList: $('pdfList'),
+    btnSortFiles: $('btnSortFiles'),
+    btnClearFiles: $('btnClearFiles'),
     pdfInfo: $('pdfInfo'),
     pdfNotices: $('pdfNotices'),
     step3: $('step3'),
@@ -100,6 +105,10 @@
     container.appendChild(div);
   }
 
+  function naturalCompare(a, b) {
+    return String(a).localeCompare(String(b), 'fr', { numeric: true, sensitivity: 'base' });
+  }
+
   function getCaisse() {
     return P.normalizeAccount(els.caisse.value) || P.DEFAULT_CAISSE;
   }
@@ -122,6 +131,7 @@
     state.mode = document.querySelector('input[name="mode"]:checked').value;
     els.existingBox.classList.toggle('hidden', state.mode !== 'existing');
     els.newBox.classList.toggle('hidden', state.mode !== 'new');
+    if (state.pages.length) reparse();
     refreshAll();
   }));
 
@@ -158,55 +168,177 @@
     if (state.pages.length) { reparse(); refreshAll(); }
   });
 
-  /* ---------------- Étape 2 : PDF ---------------- */
+  /* ---------------- Étape 2 : PDF (plusieurs fichiers) ---------------- */
   els.btnPickPdf.addEventListener('click', () => els.pdfFile.click());
-  els.pdfFile.addEventListener('change', () => { if (els.pdfFile.files[0]) loadPdf(els.pdfFile.files[0]); });
+  els.pdfFile.addEventListener('change', () => {
+    const files = Array.from(els.pdfFile.files || []);
+    els.pdfFile.value = '';
+    if (files.length) addPdfFiles(files);
+  });
   ['dragenter', 'dragover'].forEach((ev) => els.dropzone.addEventListener(ev, (e) => { e.preventDefault(); els.dropzone.classList.add('over'); }));
   ['dragleave', 'drop'].forEach((ev) => els.dropzone.addEventListener(ev, (e) => { e.preventDefault(); els.dropzone.classList.remove('over'); }));
   els.dropzone.addEventListener('drop', (e) => {
-    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) loadPdf(f);
+    const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+    if (files.length) addPdfFiles(files);
   });
 
-  async function loadPdf(file) {
+  async function addPdfFiles(files) {
     if (!pdfjsLib) { alert('pdf.js non chargé'); return; }
+    if (state.loading) { alert('Veuillez attendre la fin du chargement en cours.'); return; }
+    const pdfs = files.filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+    const rejected = files.length - pdfs.length;
     els.pdfNotices.innerHTML = '';
-    els.pdfInfo.textContent = `Lecture de ${file.name}…`;
+    if (rejected) notice(els.pdfNotices, 'warn', `${rejected} fichier(s) ignoré(s) : seuls les PDF sont acceptés.`);
+    if (!pdfs.length) return;
+    // Ordre naturel des noms (Pce 01 à 33, Pce 34 à 60, ...)
+    pdfs.sort((a, b) => naturalCompare(a.name, b.name));
+
+    state.loading = true;
     els.pdfProgress.classList.remove('hidden');
     els.pdfProgress.value = 0;
-    state.renderCache.clear();
-    try {
-      const buf = await file.arrayBuffer();
-      if (state.pdfDoc) { try { state.pdfDoc.destroy(); } catch (e) { /* ignore */ } }
-      const doc = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
-      state.pdfDoc = doc;
-      state.pdfName = file.name;
-      const pages = [];
-      for (let i = 1; i <= doc.numPages; i++) {
-        const page = await doc.getPage(i);
-        const vp = page.getViewport({ scale: 1 });
-        const tc = await page.getTextContent();
-        pages.push({ pageNumber: i, width: vp.width, height: vp.height, words: P.itemsFromTextContent(tc, vp, pdfjsLib.Util) });
-        els.pdfProgress.value = Math.round((i / doc.numPages) * 100);
-        if (i % 5 === 0) await new Promise((r) => setTimeout(r, 0));
+    const totalFiles = pdfs.length;
+    let fileIdx = 0;
+    for (const file of pdfs) {
+      els.pdfInfo.textContent = `Lecture de ${file.name} (${fileIdx + 1}/${totalFiles})…`;
+      try {
+        const buf = await file.arrayBuffer();
+        const doc = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
+        const pages = [];
+        for (let i = 1; i <= doc.numPages; i++) {
+          const page = await doc.getPage(i);
+          const vp = page.getViewport({ scale: 1 });
+          const tc = await page.getTextContent();
+          pages.push({ pageInDoc: i, width: vp.width, height: vp.height, words: P.itemsFromTextContent(tc, vp, pdfjsLib.Util) });
+          els.pdfProgress.value = Math.round(((fileIdx + i / doc.numPages) / totalFiles) * 100);
+          if (i % 5 === 0) await new Promise((r) => setTimeout(r, 0));
+        }
+        const existingSame = state.docs.find((d) => d.name === file.name && d.numPages === doc.numPages);
+        if (existingSame) {
+          notice(els.pdfNotices, 'warn', `Le fichier <b>${escapeHtml(file.name)}</b> est déjà chargé : ignoré.`);
+          try { doc.destroy(); } catch (e) { /* ignore */ }
+        } else {
+          state.docs.push({ id: state.nextDocId++, name: file.name, doc, numPages: doc.numPages, pages, pieceCount: 0 });
+        }
+      } catch (e) {
+        console.error(e);
+        notice(els.pdfNotices, 'err', `Impossible de lire <b>${escapeHtml(file.name)}</b> : ${escapeHtml(e.message || e)}`);
       }
-      state.pages = pages;
-      // Compte caisse détecté
-      const detected = P.detectCaisseAccount(pages);
+      fileIdx++;
+    }
+    state.loading = false;
+    els.pdfProgress.classList.add('hidden');
+    afterDocsChanged();
+  }
+
+  function afterDocsChanged() {
+    rebuildPages();
+    if (state.pages.length) {
+      const detected = P.detectCaisseAccount(state.pages);
       if (detected && detected !== getCaisse()) {
         notice(els.pdfNotices, 'warn', `Le compte le plus fréquent sur les pièces est <b>${escapeHtml(detected)}</b>, alors que le compte caisse réglé est <b>${escapeHtml(getCaisse())}</b>. Vérifiez le réglage à l'étape 1.`);
       }
-      reparse();
-      refreshAll();
-    } catch (e) {
-      console.error(e);
-      els.pdfInfo.textContent = '';
-      notice(els.pdfNotices, 'err', `Impossible de lire ce PDF : ${escapeHtml(e.message || e)}`);
-    } finally {
-      els.pdfProgress.classList.add('hidden');
     }
+    reparse();
+    renderFileList();
+    refreshAll();
   }
 
+  function rebuildPages() {
+    const pages = [];
+    let n = 1;
+    for (const d of state.docs) {
+      d.pieceCount = 0;
+      for (const p of d.pages) {
+        const page = { pageNumber: n++, docId: d.id, pageInDoc: p.pageInDoc, width: p.width, height: p.height, words: p.words };
+        if (P.analyzePage(page)) d.pieceCount++;
+        pages.push(page);
+      }
+    }
+    state.pages = pages;
+  }
+
+  function pageRef(globalPage) {
+    const p = state.pages.find((x) => x.pageNumber === globalPage);
+    if (!p) return null;
+    const doc = state.docs.find((d) => d.id === p.docId);
+    if (!doc) return null;
+    return { doc, docIndex: state.docs.indexOf(doc), pageInDoc: p.pageInDoc };
+  }
+
+  // Étiquette courte d'une page : "p. 5" (un seul fichier) ou "F2 p. 5" (plusieurs fichiers)
+  function pageLabel(globalPage, withBadge) {
+    const ref = pageRef(globalPage);
+    if (!ref) return `p. ${globalPage}`;
+    if (state.docs.length <= 1) return `p. ${ref.pageInDoc}`;
+    const badge = `F${ref.docIndex + 1}`;
+    return withBadge
+      ? `<span class="fbadge" title="${escapeHtml(ref.doc.name)}">${badge}</span>p. ${ref.pageInDoc}`
+      : `${badge} p. ${ref.pageInDoc} (${ref.doc.name})`;
+  }
+
+  function renderFileList() {
+    const has = state.docs.length > 0;
+    els.pdfListBox.classList.toggle('hidden', !has);
+    if (!has) { els.pdfList.innerHTML = ''; return; }
+    els.pdfList.innerHTML = state.docs.map((d, i) =>
+      `<tr data-id="${d.id}">` +
+      `<td class="badge">F${i + 1}</td>` +
+      `<td class="name">${escapeHtml(d.name)}</td>` +
+      `<td class="meta">${d.numPages} page(s) · ${d.pieceCount} pièce(s)</td>` +
+      `<td class="actions">` +
+      `<button type="button" class="small" data-action="up" title="Monter" ${i === 0 ? 'disabled' : ''}>▲</button>` +
+      `<button type="button" class="small" data-action="down" title="Descendre" ${i === state.docs.length - 1 ? 'disabled' : ''}>▼</button>` +
+      `<button type="button" class="small danger" data-action="remove" title="Retirer ce fichier">✕</button>` +
+      `</td></tr>`
+    ).join('');
+  }
+
+  els.pdfList.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button[data-action]');
+    if (!btn) return;
+    const tr = btn.closest('tr');
+    const id = Number(tr.dataset.id);
+    const idx = state.docs.findIndex((d) => d.id === id);
+    if (idx < 0) return;
+    const action = btn.dataset.action;
+    if (action === 'up' && idx > 0) {
+      [state.docs[idx - 1], state.docs[idx]] = [state.docs[idx], state.docs[idx - 1]];
+    } else if (action === 'down' && idx < state.docs.length - 1) {
+      [state.docs[idx + 1], state.docs[idx]] = [state.docs[idx], state.docs[idx + 1]];
+    } else if (action === 'remove') {
+      const d = state.docs[idx];
+      if (!confirm(`Retirer le fichier « ${d.name} » et ses ${d.pieceCount} pièce(s) ?`)) return;
+      state.docs.splice(idx, 1);
+      try { d.doc.destroy(); } catch (e) { /* ignore */ }
+      for (const k of Array.from(state.renderCache.keys())) if (k.startsWith(`${d.id}:`)) state.renderCache.delete(k);
+    } else {
+      return;
+    }
+    els.pdfNotices.innerHTML = '';
+    afterDocsChanged();
+  });
+
+  els.btnSortFiles.addEventListener('click', () => {
+    state.docs.sort((a, b) => naturalCompare(a.name, b.name));
+    els.pdfNotices.innerHTML = '';
+    afterDocsChanged();
+  });
+
+  els.btnClearFiles.addEventListener('click', () => {
+    if (!state.docs.length) return;
+    if (!confirm('Retirer tous les fichiers PDF chargés ? Les écritures reconnues (et vos corrections) seront effacées.')) return;
+    for (const d of state.docs) { try { d.doc.destroy(); } catch (e) { /* ignore */ } }
+    state.docs = [];
+    state.renderCache.clear();
+    els.pdfNotices.innerHTML = '';
+    els.pdfInfo.textContent = '';
+    afterDocsChanged();
+  });
+
+  /**
+   * Analyse toutes les pages chargées. Les écritures déjà présentes (même fichier, même page)
+   * conservent les valeurs corrigées par l'utilisateur ; les écritures manuelles sont gardées.
+   */
   function reparse() {
     const caisse = getCaisse();
     const existing = existingEntries();
@@ -216,38 +348,68 @@
       history,
       existingNumbers: existing.map((e) => Number(e.no)).filter((n) => !isNaN(n)),
     });
-    state.entries = res.entries.map((e) => ({
-      id: state.nextId++,
-      no: e.no,
-      date: e.date,
-      compte: e.compte || '',
-      libelle: e.libelle,
-      debit: e.debit,
-      credit: e.credit,
-      page: e.page,
-      warnings: e.warnings.slice(),
-      candidates: e.candidates,
-      raw: e.raw,
-      checked: e.warnings.length === 0,
-      manual: false,
-    }));
+
+    const sourceKey = (globalPage) => {
+      const p = state.pages.find((x) => x.pageNumber === globalPage);
+      return p ? `${p.docId}:${p.pageInDoc}` : null;
+    };
+    const previous = new Map();
+    for (const e of state.entries) if (e.sourceKey) previous.set(e.sourceKey, e);
+    const manual = state.entries.filter((e) => e.manual);
+
+    const entries = res.entries.map((e) => {
+      const key = sourceKey(e.page);
+      const old = key ? previous.get(key) : null;
+      if (old) {
+        // garde les corrections de l'utilisateur, rafraîchit ce qui vient de l'analyse
+        old.page = e.page;
+        old.warnings = e.warnings.slice();
+        old.candidates = e.candidates;
+        old.raw = e.raw;
+        if (!old.edited) {
+          old.no = e.no; old.date = e.date; old.compte = e.compte || ''; old.libelle = e.libelle; old.debit = e.debit; old.credit = e.credit;
+          old.checked = e.warnings.length === 0;
+        }
+        return old;
+      }
+      return {
+        id: state.nextId++,
+        sourceKey: key,
+        no: e.no,
+        date: e.date,
+        compte: e.compte || '',
+        libelle: e.libelle,
+        debit: e.debit,
+        credit: e.credit,
+        page: e.page,
+        warnings: e.warnings.slice(),
+        candidates: e.candidates,
+        raw: e.raw,
+        checked: e.warnings.length === 0,
+        manual: false,
+        edited: false,
+      };
+    });
+    state.entries = entries.concat(manual);
     state.duplicates = res.duplicates;
     state.docWarnings = res.warnings;
-    state.selectedId = state.entries.length ? state.entries[0].id : null;
+    if (!state.entries.some((e) => e.id === state.selectedId)) state.selectedId = state.entries.length ? state.entries[0].id : null;
 
     const textPages = state.pages.filter((p) => p.words.length).length;
-    els.pdfInfo.innerHTML =
-      `<b>${escapeHtml(state.pdfName)}</b> : ${state.pages.length} page(s), ${res.pieceCount} pièce(s) comptable(s) reconnue(s), ` +
-      `<b>${state.entries.length}</b> écriture(s)` +
-      (res.duplicates.length ? `, ${res.duplicates.length} doublon(s) ignoré(s)` : '') + '.';
-    if (!textPages) {
-      notice(els.pdfNotices, 'err', "Ce PDF ne contient aucun texte : il a été scanné sans reconnaissance de texte (OCR). Rescannez-le en mode « PDF consultable » (option OCR du copieur) ou utilisez la fonction de reconnaissance de texte d'Acrobat, puis réessayez.");
-    } else if (!res.pieceCount) {
+    if (state.docs.length) {
+      els.pdfInfo.innerHTML =
+        `<b>${state.docs.length}</b> fichier(s), ${state.pages.length} page(s), ${res.pieceCount} pièce(s) comptable(s) reconnue(s), ` +
+        `<b>${state.entries.filter((e) => !e.manual).length}</b> écriture(s)` +
+        (res.duplicates.length ? `, ${res.duplicates.length} doublon(s) ignoré(s)` : '') + '.';
+    }
+    if (state.pages.length && !textPages) {
+      notice(els.pdfNotices, 'err', "Ces PDF ne contiennent aucun texte : ils ont été scannés sans reconnaissance de texte (OCR). Rescannez-les en mode « PDF consultable » (option OCR du copieur) ou utilisez la fonction de reconnaissance de texte d'Acrobat, puis réessayez.");
+    } else if (state.pages.length && !res.pieceCount) {
       notice(els.pdfNotices, 'err', "Aucune pièce comptable n'a été reconnue (formulaire « PIÈCE COMPTABLE » avec colonnes DOIT / SOMME / AVOIR).");
     }
     if (res.duplicates.length) {
       notice(els.pdfNotices, 'ok', 'Pièces en double (même numéro et même montant, copie jointe à une autre pièce) ignorées : ' +
-        res.duplicates.map((d) => `n° ${d.no} (page ${d.page}, identique à la page ${d.sameAs})`).join(', ') + '.');
+        res.duplicates.map((d) => `n° ${d.no} (${escapeHtml(pageLabel(d.page))}, identique à ${escapeHtml(pageLabel(d.sameAs))})`).join(', ') + '.');
     }
     for (const w of res.warnings) notice(els.pdfNotices, 'warn', escapeHtml(w));
     if (state.pages.length && textPages && textPages < state.pages.length) {
@@ -275,6 +437,19 @@
     return 'ok';
   }
 
+  function rowMessages(e) {
+    const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
+      .concat(e.warnings.map((m) => `<li>${escapeHtml(m)}</li>`));
+    if (!items.length) return '';
+    let html = `<ul>${items.join('')}</ul>`;
+    const cands = (e.candidates || []).filter((a) => a !== e.compte);
+    if ((e.candidates || []).length > 1 && cands.length) {
+      html += `<div style="margin-top:4px">Compte : ` +
+        cands.map((a) => `<button type="button" class="small" data-action="use-account" data-account="${escapeHtml(a)}">Utiliser ${escapeHtml(a)}</button>`).join('') + `</div>`;
+    }
+    return html;
+  }
+
   function renderTable() {
     const body = els.body;
     body.innerHTML = '';
@@ -291,7 +466,7 @@
         `<td class="libelle"><input type="text" data-field="libelle" value="${escapeHtml(e.libelle)}"></td>` +
         `<td><input type="number" class="num" step="0.01" data-field="debit" value="${fmtInput(e.debit)}"></td>` +
         `<td><input type="number" class="num" step="0.01" data-field="credit" value="${fmtInput(e.credit)}"></td>` +
-        `<td class="page">${e.page ? 'p. ' + e.page : (e.manual ? 'manuel' : '')}</td>` +
+        `<td class="page">${e.page ? pageLabel(e.page, true) : (e.manual ? 'manuel' : '')}</td>` +
         `<td class="check"><input type="checkbox" data-field="checked" ${e.checked ? 'checked' : ''} title="Marquer comme vérifié"></td>` +
         `<td><button type="button" class="small danger" data-action="delete" title="Supprimer cette écriture">✕</button></td>`;
       body.appendChild(tr);
@@ -311,19 +486,6 @@
     for (const e of state.entries) { if (e.compte) accounts.add(e.compte); (e.candidates || []).forEach((a) => accounts.add(a)); }
     els.accountsList.innerHTML = Array.from(accounts).sort().map((a) => `<option value="${escapeHtml(a)}">`).join('');
     renderSummary();
-  }
-
-  function rowMessages(e) {
-    const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
-      .concat(e.warnings.map((m) => `<li>${escapeHtml(m)}</li>`));
-    if (!items.length) return '';
-    let html = `<ul>${items.join('')}</ul>`;
-    const cands = (e.candidates || []).filter((a) => a !== e.compte);
-    if ((e.candidates || []).length > 1 && cands.length) {
-      html += `<div style="margin-top:4px">Compte : ` +
-        cands.map((a) => `<button type="button" class="small" data-action="use-account" data-account="${escapeHtml(a)}">Utiliser ${escapeHtml(a)}</button>`).join('') + `</div>`;
-    }
-    return html;
   }
 
   function renderSummary() {
@@ -382,6 +544,7 @@
       const v = input.value.trim();
       e[field] = v === '' ? null : P.round2(Number(v.replace(',', '.')));
     }
+    e.edited = true;
     updateRowStatus(id);
     renderTotals();
   });
@@ -391,7 +554,7 @@
     if (input.dataset.field === 'checked') {
       const id = Number(input.closest('tr').dataset.id);
       const e = state.entries.find((x) => x.id === id);
-      if (e) { e.checked = input.checked; updateRowStatus(id); }
+      if (e) { e.checked = input.checked; e.edited = true; updateRowStatus(id); }
     } else if (input.dataset.field === 'date') {
       // reformate la date proprement
       const id = Number(input.closest('tr').dataset.id);
@@ -415,6 +578,7 @@
       const e = state.entries.find((x) => x.id === id);
       if (e) {
         e.compte = useBtn.dataset.account;
+        e.edited = true;
         const input = els.body.querySelector(`tr.entry[data-id="${id}"] input[data-field="compte"]`);
         if (input) input.value = e.compte;
         updateRowStatus(id);
@@ -456,8 +620,8 @@
     const next = Math.max(0, ...nos, ...exNos) + 1;
     const last = state.entries[state.entries.length - 1];
     state.entries.push({
-      id: state.nextId++, no: next, date: last ? last.date : null, compte: '', libelle: '', debit: null, credit: null,
-      page: null, warnings: [], candidates: [], raw: null, checked: true, manual: true,
+      id: state.nextId++, sourceKey: null, no: next, date: last ? last.date : null, compte: '', libelle: '', debit: null, credit: null,
+      page: null, warnings: [], candidates: [], raw: null, checked: true, manual: true, edited: true,
     });
     renderTable();
     renderTotals();
@@ -466,7 +630,7 @@
   });
 
   els.btnCheckAll.addEventListener('click', () => {
-    state.entries.forEach((e) => { e.checked = true; });
+    state.entries.forEach((e) => { e.checked = true; e.edited = true; });
     renderTable();
   });
 
@@ -474,13 +638,15 @@
   async function renderPreview() {
     const e = state.entries.find((x) => x.id === state.selectedId);
     els.previewFields.innerHTML = '';
-    if (!e || !e.page || !state.pdfDoc) {
+    const ref = e && e.page ? pageRef(e.page) : null;
+    if (!e || !ref) {
       els.previewNav.textContent = e && e.manual ? 'Écriture saisie manuellement (pas de pièce).' : 'Sélectionnez une écriture pour afficher la pièce.';
       els.previewFrame.innerHTML = '<span>Aperçu de la pièce</span>';
       return;
     }
-    const pageNo = e.page;
-    els.previewNav.innerHTML = `Pièce n° <b>${escapeHtml(e.no == null ? '?' : e.no)}</b> – page ${pageNo} sur ${state.pdfDoc.numPages}`;
+    els.previewNav.innerHTML = `Pièce n° <b>${escapeHtml(e.no == null ? '?' : e.no)}</b> – ` +
+      (state.docs.length > 1 ? `<b>F${ref.docIndex + 1}</b> ` : '') +
+      `${escapeHtml(ref.doc.name)}, page ${ref.pageInDoc} sur ${ref.doc.numPages}`;
     const r = e.raw;
     if (r) {
       const dl = [
@@ -494,10 +660,11 @@
       ].map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('');
       els.previewFields.innerHTML = `<dl>${dl}</dl>`;
     }
+    const cacheKey = `${ref.doc.id}:${ref.pageInDoc}`;
     try {
-      let canvas = state.renderCache.get(pageNo);
+      let canvas = state.renderCache.get(cacheKey);
       if (!canvas) {
-        const page = await state.pdfDoc.getPage(pageNo);
+        const page = await ref.doc.doc.getPage(ref.pageInDoc);
         const base = page.getViewport({ scale: 1 });
         const targetWidth = 800;
         const vp = page.getViewport({ scale: targetWidth / base.width });
@@ -506,7 +673,7 @@
         canvas.height = Math.round(vp.height * 0.62); // le haut de la page suffit (formulaire + date)
         const ctx = canvas.getContext('2d');
         await page.render({ canvasContext: ctx, viewport: vp }).promise;
-        state.renderCache.set(pageNo, canvas);
+        state.renderCache.set(cacheKey, canvas);
       }
       if (state.selectedId !== e.id) return;
       els.previewFrame.innerHTML = '';
@@ -584,6 +751,9 @@
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
     return null;
   }
+
+  // Accès pour les tests automatisés
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
