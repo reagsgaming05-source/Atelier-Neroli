@@ -318,7 +318,13 @@
    */
   function cleanDescription(s) {
     let t = String(s || '').replace(/\s+/g, ' ').trim();
-    for (let i = 0; i < 3; i++) t = t.replace(/(\d)\s*([.\-\/])\s+(\d)/g, '$1$2$3');
+    // « 12. 12. 2024 » → « 12.12.2024 » : un point ou une barre suivis d'un espace sont
+    // un artefact de l'OCR. En revanche « 5P/6 - 20 élèves » garde son tiret entouré
+    // d'espaces : c'est une vraie séparation écrite sur la pièce.
+    for (let i = 0; i < 3; i++) {
+      t = t.replace(/(\d)\s*([./])\s+(\d)/g, '$1$2$3');
+      t = t.replace(/(\d)-\s+(\d)/g, '$1-$2');
+    }
     t = t.replace(/\b(\d{1,2})\s+(VP|VG)\b/g, '$1$2');
     t = t.replace(/\b(\d{1,2}(?:VP|VG|P|S))\s*\/\s*(\d{1,2})\b/g, '$1/$2');
     t = t.replace(/\s+([,;:!?])/g, '$1');
@@ -955,6 +961,7 @@
       doubt('montant', side ? `Sens de l'écriture (${side === 'debit' ? 'débit' : 'crédit'}) déduit du type : à vérifier` : 'Sens de l\'écriture (débit/crédit) inconnu');
     }
 
+    const readCandidates = uniq(candidates); // comptes réellement lus sur la pièce
     if (candidates.length) {
       compte = candidates[0];
       if (uniq(candidates).length > 1) {
@@ -1005,6 +1012,7 @@
       side,
       amount,
       candidates: uniq(candidates),
+      readCandidates,
       warnings,
       notes,
       flags,
@@ -1161,6 +1169,19 @@
           e.suggested = true;
           addDoubt(e, 'compte', `Compte ${s} proposé d'après les autres pièces "${e.type}" : à vérifier`);
         }
+      } else if (e.readCandidates.length > 1 && e.type) {
+        // Plusieurs comptes lus sur la pièce : mettre en tête celui habituellement utilisé
+        // pour ce type d'écriture (le doute reste signalé). Ne s'applique jamais à un compte
+        // simplement proposé par ressemblance.
+        const usual = suggestAccount(e.type, history, e.readCandidates);
+        if (usual && usual !== e.compte) {
+          e.compte = usual;
+          e.candidates = [usual].concat(e.candidates.filter((a) => a !== usual));
+          for (const f of e.flags.compte) {
+            if (/Plusieurs comptes possibles/.test(f.message)) f.message += ` – ${usual} retenu, habituel pour « ${e.type} »`;
+          }
+          e.warnings = e.warnings.map((w) => (/Plusieurs comptes possibles/.test(w) ? `${w} – ${usual} retenu, habituel pour « ${e.type} »` : w));
+        }
       }
     }
 
@@ -1237,13 +1258,19 @@
     return { entries, duplicates, emptyPages, warnings: globalWarnings, pieceCount: infos.length };
   }
 
-  function suggestAccount(type, history) {
+  /**
+   * Compte le plus souvent utilisé pour ce type d'écriture.
+   * `only` limite le choix à une liste de comptes (les candidats lus sur la pièce).
+   */
+  function suggestAccount(type, history, only) {
     const key = stripAccents(type || '').toUpperCase();
     if (!key) return null;
+    const allowed = only && only.length ? new Set(only) : null;
     const counts = new Map();
     for (const h of history) {
       if (!h || !h.compte || !h.type) continue;
       if (stripAccents(h.type).toUpperCase() !== key) continue;
+      if (allowed && !allowed.has(h.compte)) continue;
       counts.set(h.compte, (counts.get(h.compte) || 0) + 1);
     }
     let best = null;

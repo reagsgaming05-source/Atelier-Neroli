@@ -33,9 +33,11 @@ compte de contrepartie.
    (numéro, date, compte, libellé ou montant), la raison s'affiche sous la ligne et au survol.
    Les cellules **bleues** signalent une correction automatique (mot, nom ou compte caisse mal lu).
    Cliquer sur une ligne affiche la pièce à droite avec les zones lues encadrées : **orange** pour
-   la zone en doute, **bleu** pour les autres. Deux aides : la case *Afficher seulement les lignes
-   à vérifier* et le bouton *✓ Vérifié → suivante* qui enchaîne les contrôles. On peut aussi
-   ajouter une écriture manuelle.
+   la zone en doute, **bleu** pour les autres ; un clic sur l'image l'agrandit en plein écran.
+   Dès qu'une cellule orange est corrigée elle redevient normale, et la ligne passe au vert quand
+   tous ses doutes sont traités. Trois aides pour aller vite : la case *Afficher seulement les
+   lignes à vérifier*, le bouton *✓ Vérifié → suivante*, et le raccourci **Ctrl + Entrée** qui
+   valide la ligne affichée et saute à la suivante. On peut aussi ajouter une écriture manuelle.
 6. **Étape 4 – Excel** : *Générer le fichier Excel* télécharge `Caisse écoles AAAA.xlsx`.
    L'ouvrir dans Excel et l'enregistrer à la place du classeur.
 
@@ -76,6 +78,10 @@ Précision de la lecture :
 - un compte jamais utilisé qui ressemble à un compte connu est signalé avec une proposition
   (jamais corrigé d'office, les sous-comptes voisins étant légitimes) ; un compte caisse mal lu
   (`9100.184`) est reconnu ;
+- quand la pièce porte plusieurs comptes possibles, celui habituellement utilisé pour ce type
+  d'écriture dans le classeur est retenu, l'autre restant proposé d'un clic ;
+- le texte de la pièce est respecté : seuls les séparateurs de dates cassés par l'OCR
+  (`12. 12. 2024`) sont recollés, un tiret entouré d'espaces (`5P/6 - 20 élèves`) est conservé ;
 - un montant illisible est retenté en mode tolérant et signalé ; un numéro ou une date
   manquants sont proposés d'après la pièce précédente et signalés ;
 - deux formulaires sur une même page sont reconnus séparément ; les scans légèrement inclinés
@@ -90,7 +96,7 @@ sert uniquement à confirmer ce total, ou à le remplacer quand il est absent ou
 absence ne déclenche donc aucun doute.
 
 Sur le lot d'exemple de 33 pièces, trois lignes sont signalées et trente passent en vert, sans
-écart sur les dates, montants, sens et comptes.
+écart sur les dates, numéros, montants, sens et comptes par rapport au classeur de référence.
 
 ## Développement
 

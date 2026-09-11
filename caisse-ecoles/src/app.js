@@ -136,6 +136,10 @@
     container.appendChild(div);
   }
 
+  function uniqList(arr) {
+    return Array.from(new Set(arr));
+  }
+
   function naturalCompare(a, b) {
     return String(a).localeCompare(String(b), 'fr', { numeric: true, sensitivity: 'base' });
   }
@@ -304,7 +308,7 @@
     if (!e.raw || !e.raw.boxes) return [];
     const b = e.raw.boxes;
     const f = e.flags || {};
-    const lvl = (field) => (!e.checked && (f[field] || []).some((x) => x.level === 'doubt') ? 'doubt' : 'read');
+    const lvl = (field) => (fieldDoubt(e, field) ? 'doubt' : 'read');
     const z = [];
     if (b.no) z.push({ box: b.no, level: lvl('no'), label: 'N°' });
     if (b.date) z.push({ box: b.date, level: lvl('date'), label: 'Date' });
@@ -433,6 +437,7 @@
         old.notes = (e.notes || []).slice();
         old.flags = e.flags;
         old.candidates = e.candidates;
+        if (!old.edited) old.resolved = {};
         old.raw = e.raw;
         if (!old.edited) {
           old.no = e.no; old.date = e.date; old.compte = e.compte || ''; old.libelle = e.libelle; old.debit = e.debit; old.credit = e.credit;
@@ -453,6 +458,7 @@
         warnings: e.warnings.slice(),
         notes: (e.notes || []).slice(),
         flags: e.flags,
+        resolved: {},
         candidates: e.candidates,
         raw: e.raw,
         checked: e.warnings.length === 0,
@@ -504,9 +510,11 @@
     return errs;
   }
 
+  const FIELDS = ['no', 'date', 'compte', 'libelle', 'montant'];
+
   function rowStatus(e) {
     if (rowIssues(e).length) return 'err';
-    if (e.warnings.length && !e.checked) return 'warn';
+    if (FIELDS.some((f) => fieldDoubt(e, f))) return 'warn';
     return 'ok';
   }
 
@@ -515,8 +523,10 @@
     // Une ligne en ordre n'affiche pas le détail des corrections : elles restent visibles
     // par la cellule bleue, son info-bulle, et le détail quand la ligne est sélectionnée.
     const showNotes = status !== 'ok' || e.id === state.selectedId;
+    const open = [];
+    for (const f of FIELDS) if (fieldDoubt(e, f)) for (const x of e.flags[f]) if (x.level === 'doubt') open.push(x.message);
     const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
-      .concat(e.warnings.map((m) => `<li>${escapeHtml(m)}</li>`))
+      .concat(uniqList(open).map((m) => `<li>${escapeHtml(m)}</li>`))
       .concat(showNotes ? (e.notes || []).map((m) => `<li class="note">${escapeHtml(m)}</li>`) : []);
     if (!items.length) return '';
     let html = `<ul>${items.join('')}</ul>`;
@@ -529,9 +539,15 @@
   }
 
   // classe + info-bulle d'une cellule selon les drapeaux du champ
+  function fieldDoubt(e, field) {
+    if (e.checked) return false;
+    if (e.resolved && e.resolved[field]) return false;
+    return ((e.flags && e.flags[field]) || []).some((f) => f.level === 'doubt');
+  }
+
   function cellAttrs(e, field) {
     const list = (e.flags && e.flags[field]) || [];
-    if (!e.checked && list.some((f) => f.level === 'doubt')) {
+    if (fieldDoubt(e, field)) {
       return { cls: 'doubt', title: list.filter((f) => f.level === 'doubt').map((f) => f.message).join('\n') };
     }
     if (list.some((f) => f.level === 'note')) return { cls: 'fixed', title: list.filter((f) => f.level === 'note').map((f) => f.message).join('\n') };
@@ -642,6 +658,11 @@
     const id = Number(tr.dataset.id);
     const e = state.entries.find((x) => x.id === id);
     if (!e) return;
+    const FIELD_OF = { no: 'no', date: 'date', compte: 'compte', libelle: 'libelle', debit: 'montant', credit: 'montant' };
+    if (FIELD_OF[field]) {
+      e.resolved = e.resolved || {};
+      e.resolved[FIELD_OF[field]] = true;
+    }
     if (field === 'no') {
       const v = input.value.trim();
       e.no = v === '' ? null : (/^\d+$/.test(v) ? parseInt(v, 10) : v);
@@ -690,6 +711,7 @@
       if (e) {
         e.compte = useBtn.dataset.account;
         e.edited = true;
+        e.resolved = Object.assign({}, e.resolved, { compte: true });
         const input = els.body.querySelector(`tr.entry[data-id="${id}"] input[data-field="compte"]`);
         if (input) input.value = e.compte;
         updateRowStatus(id);
@@ -724,7 +746,7 @@
     const last = state.entries[state.entries.length - 1];
     state.entries.push({
       id: state.nextId++, sourceKey: null, no: next, date: last ? last.date : null, compte: '', libelle: '', debit: null, credit: null,
-      page: null, warnings: [], notes: [], candidates: [], raw: null, checked: true, manual: true, edited: true,
+      page: null, warnings: [], notes: [], flags: { no: [], date: [], compte: [], libelle: [], montant: [] }, resolved: {}, candidates: [], raw: null, checked: true, manual: true, edited: true,
     });
     renderTable();
     renderTotals();
@@ -808,6 +830,8 @@
       if (token !== previewToken) return;
       els.previewFrame.innerHTML = '';
       els.previewFrame.appendChild(canvas);
+      els.previewFrame.style.cursor = 'zoom-in';
+      els.previewFrame.title = 'Cliquer pour agrandir la pièce';
       if (zones && zones.length) {
         const ov = document.createElement('canvas');
         ov.className = 'overlay';
@@ -867,6 +891,37 @@
     const needFull = state.fullPage || (e.raw && e.raw.part) || zones.some((z) => z.box && (z.box.y + z.box.h) > ref.pageHeight * 0.6);
     await showPage(ref, nav, fields, needFull ? 1 : 0.62, zones);
   }
+
+  // Agrandissement plein écran de l'aperçu (clic sur l'image)
+  els.previewFrame.addEventListener('click', () => {
+    const canvases = els.previewFrame.querySelectorAll('canvas');
+    if (!canvases.length) return;
+    const box = document.createElement('div');
+    box.className = 'zoom-overlay';
+    box.innerHTML = '<div class="zoom-inner"></div><div class="zoom-hint">Cliquer ou appuyer sur Échap pour fermer</div>';
+    const inner = box.querySelector('.zoom-inner');
+    canvases.forEach((c) => {
+      const copy = document.createElement('canvas');
+      copy.width = c.width;
+      copy.height = c.height;
+      copy.className = c.className;
+      copy.getContext('2d').drawImage(c, 0, 0);
+      inner.appendChild(copy);
+    });
+    const close = () => { box.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+    box.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(box);
+  });
+
+  // Raccourcis clavier : Ctrl/⌘+Entrée = vérifié puis ligne suivante à contrôler
+  document.addEventListener('keydown', (ev) => {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter' && !els.step3.classList.contains('hidden')) {
+      ev.preventDefault();
+      els.btnVerifyNext.click();
+    }
+  });
 
   /* ---------------- Étape 4 : totaux + Excel ---------------- */
   function allEntriesForExcel() {

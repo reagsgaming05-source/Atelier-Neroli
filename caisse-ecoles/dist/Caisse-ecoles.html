@@ -191,6 +191,13 @@ table.entries tr.entry.warn-row td.status { background: var(--warn-soft); }
 .preview .frame canvas.overlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 .preview .zones { font-size: 12px; margin-top: 6px; color: var(--muted); }
 
+/* Agrandissement de la pièce */
+.zoom-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.82); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: zoom-out; padding: 20px; }
+.zoom-inner { position: relative; max-width: min(1100px, 92vw); max-height: 86vh; overflow: auto; background: #fff; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
+.zoom-inner canvas { display: block; width: 100%; height: auto; }
+.zoom-inner canvas.overlay { position: absolute; left: 0; top: 0; }
+.zoom-hint { color: #e2e8f0; font-size: 13px; }
+
 </style>
 </head>
 <body>
@@ -262,7 +269,9 @@ table.entries tr.entry.warn-row td.status { background: var(--warn-soft); }
       Seules les lignes <span class="chip warn">⚠ orange</span> demandent un contrôle : la cellule en doute est colorée en orange, l'explication apparaît sous la ligne
       et au survol. Les lignes <span class="chip ok">✓ vertes</span> ont été lues sans ambiguïté (montant lu sur la pièce, compte caisse d'un seul côté, comptes connus…). Le montant retenu est le <b>Total</b> en bas de la pièce ; la colonne SOMME, souvent vide, sert seulement de confirmation.
       Les cellules <span class="chip fixed">bleues</span> ont été corrigées automatiquement (détail en gris). Cliquez sur une ligne : la pièce s'affiche à droite avec des cadres
-      <span style="color:#d97706;font-weight:600">orange</span> (zone en doute) et <span style="color:#2563eb;font-weight:600">bleus</span> (zones lues) ; les champs restent modifiables.
+      <span style="color:#d97706;font-weight:600">orange</span> (zone en doute) et <span style="color:#2563eb;font-weight:600">bleus</span> (zones lues) ; cliquez sur l'image pour l'agrandir.
+      Dès que vous corrigez une cellule orange, elle redevient normale ; quand tous les doutes d'une ligne sont traités, la ligne passe au vert.
+      Raccourci : <b>Ctrl + Entrée</b> valide la ligne affichée et saute à la suivante à vérifier.
     </div>
     <div class="toolbar">
       <button type="button" id="btnAddRow">+ Ajouter une écriture manuelle</button>
@@ -736,7 +745,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
    */
   function cleanDescription(s) {
     let t = String(s || '').replace(/\s+/g, ' ').trim();
-    for (let i = 0; i < 3; i++) t = t.replace(/(\d)\s*([.\-\/])\s+(\d)/g, '$1$2$3');
+    // « 12. 12. 2024 » → « 12.12.2024 » : un point ou une barre suivis d'un espace sont
+    // un artefact de l'OCR. En revanche « 5P/6 - 20 élèves » garde son tiret entouré
+    // d'espaces : c'est une vraie séparation écrite sur la pièce.
+    for (let i = 0; i < 3; i++) {
+      t = t.replace(/(\d)\s*([./])\s+(\d)/g, '$1$2$3');
+      t = t.replace(/(\d)-\s+(\d)/g, '$1-$2');
+    }
     t = t.replace(/\b(\d{1,2})\s+(VP|VG)\b/g, '$1$2');
     t = t.replace(/\b(\d{1,2}(?:VP|VG|P|S))\s*\/\s*(\d{1,2})\b/g, '$1/$2');
     t = t.replace(/\s+([,;:!?])/g, '$1');
@@ -1373,6 +1388,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       doubt('montant', side ? `Sens de l'écriture (${side === 'debit' ? 'débit' : 'crédit'}) déduit du type : à vérifier` : 'Sens de l\'écriture (débit/crédit) inconnu');
     }
 
+    const readCandidates = uniq(candidates); // comptes réellement lus sur la pièce
     if (candidates.length) {
       compte = candidates[0];
       if (uniq(candidates).length > 1) {
@@ -1423,6 +1439,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       side,
       amount,
       candidates: uniq(candidates),
+      readCandidates,
       warnings,
       notes,
       flags,
@@ -1579,6 +1596,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           e.suggested = true;
           addDoubt(e, 'compte', `Compte ${s} proposé d'après les autres pièces "${e.type}" : à vérifier`);
         }
+      } else if (e.readCandidates.length > 1 && e.type) {
+        // Plusieurs comptes lus sur la pièce : mettre en tête celui habituellement utilisé
+        // pour ce type d'écriture (le doute reste signalé). Ne s'applique jamais à un compte
+        // simplement proposé par ressemblance.
+        const usual = suggestAccount(e.type, history, e.readCandidates);
+        if (usual && usual !== e.compte) {
+          e.compte = usual;
+          e.candidates = [usual].concat(e.candidates.filter((a) => a !== usual));
+          for (const f of e.flags.compte) {
+            if (/Plusieurs comptes possibles/.test(f.message)) f.message += ` – ${usual} retenu, habituel pour « ${e.type} »`;
+          }
+          e.warnings = e.warnings.map((w) => (/Plusieurs comptes possibles/.test(w) ? `${w} – ${usual} retenu, habituel pour « ${e.type} »` : w));
+        }
       }
     }
 
@@ -1655,13 +1685,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return { entries, duplicates, emptyPages, warnings: globalWarnings, pieceCount: infos.length };
   }
 
-  function suggestAccount(type, history) {
+  /**
+   * Compte le plus souvent utilisé pour ce type d'écriture.
+   * `only` limite le choix à une liste de comptes (les candidats lus sur la pièce).
+   */
+  function suggestAccount(type, history, only) {
     const key = stripAccents(type || '').toUpperCase();
     if (!key) return null;
+    const allowed = only && only.length ? new Set(only) : null;
     const counts = new Map();
     for (const h of history) {
       if (!h || !h.compte || !h.type) continue;
       if (stripAccents(h.type).toUpperCase() !== key) continue;
+      if (allowed && !allowed.has(h.compte)) continue;
       counts.set(h.compte, (counts.get(h.compte) || 0) + 1);
     }
     let best = null;
@@ -2199,6 +2235,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     container.appendChild(div);
   }
 
+  function uniqList(arr) {
+    return Array.from(new Set(arr));
+  }
+
   function naturalCompare(a, b) {
     return String(a).localeCompare(String(b), 'fr', { numeric: true, sensitivity: 'base' });
   }
@@ -2367,7 +2407,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (!e.raw || !e.raw.boxes) return [];
     const b = e.raw.boxes;
     const f = e.flags || {};
-    const lvl = (field) => (!e.checked && (f[field] || []).some((x) => x.level === 'doubt') ? 'doubt' : 'read');
+    const lvl = (field) => (fieldDoubt(e, field) ? 'doubt' : 'read');
     const z = [];
     if (b.no) z.push({ box: b.no, level: lvl('no'), label: 'N°' });
     if (b.date) z.push({ box: b.date, level: lvl('date'), label: 'Date' });
@@ -2496,6 +2536,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         old.notes = (e.notes || []).slice();
         old.flags = e.flags;
         old.candidates = e.candidates;
+        if (!old.edited) old.resolved = {};
         old.raw = e.raw;
         if (!old.edited) {
           old.no = e.no; old.date = e.date; old.compte = e.compte || ''; old.libelle = e.libelle; old.debit = e.debit; old.credit = e.credit;
@@ -2516,6 +2557,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         warnings: e.warnings.slice(),
         notes: (e.notes || []).slice(),
         flags: e.flags,
+        resolved: {},
         candidates: e.candidates,
         raw: e.raw,
         checked: e.warnings.length === 0,
@@ -2567,9 +2609,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return errs;
   }
 
+  const FIELDS = ['no', 'date', 'compte', 'libelle', 'montant'];
+
   function rowStatus(e) {
     if (rowIssues(e).length) return 'err';
-    if (e.warnings.length && !e.checked) return 'warn';
+    if (FIELDS.some((f) => fieldDoubt(e, f))) return 'warn';
     return 'ok';
   }
 
@@ -2578,8 +2622,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     // Une ligne en ordre n'affiche pas le détail des corrections : elles restent visibles
     // par la cellule bleue, son info-bulle, et le détail quand la ligne est sélectionnée.
     const showNotes = status !== 'ok' || e.id === state.selectedId;
+    const open = [];
+    for (const f of FIELDS) if (fieldDoubt(e, f)) for (const x of e.flags[f]) if (x.level === 'doubt') open.push(x.message);
     const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
-      .concat(e.warnings.map((m) => `<li>${escapeHtml(m)}</li>`))
+      .concat(uniqList(open).map((m) => `<li>${escapeHtml(m)}</li>`))
       .concat(showNotes ? (e.notes || []).map((m) => `<li class="note">${escapeHtml(m)}</li>`) : []);
     if (!items.length) return '';
     let html = `<ul>${items.join('')}</ul>`;
@@ -2592,9 +2638,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   // classe + info-bulle d'une cellule selon les drapeaux du champ
+  function fieldDoubt(e, field) {
+    if (e.checked) return false;
+    if (e.resolved && e.resolved[field]) return false;
+    return ((e.flags && e.flags[field]) || []).some((f) => f.level === 'doubt');
+  }
+
   function cellAttrs(e, field) {
     const list = (e.flags && e.flags[field]) || [];
-    if (!e.checked && list.some((f) => f.level === 'doubt')) {
+    if (fieldDoubt(e, field)) {
       return { cls: 'doubt', title: list.filter((f) => f.level === 'doubt').map((f) => f.message).join('\n') };
     }
     if (list.some((f) => f.level === 'note')) return { cls: 'fixed', title: list.filter((f) => f.level === 'note').map((f) => f.message).join('\n') };
@@ -2705,6 +2757,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const id = Number(tr.dataset.id);
     const e = state.entries.find((x) => x.id === id);
     if (!e) return;
+    const FIELD_OF = { no: 'no', date: 'date', compte: 'compte', libelle: 'libelle', debit: 'montant', credit: 'montant' };
+    if (FIELD_OF[field]) {
+      e.resolved = e.resolved || {};
+      e.resolved[FIELD_OF[field]] = true;
+    }
     if (field === 'no') {
       const v = input.value.trim();
       e.no = v === '' ? null : (/^\d+$/.test(v) ? parseInt(v, 10) : v);
@@ -2753,6 +2810,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (e) {
         e.compte = useBtn.dataset.account;
         e.edited = true;
+        e.resolved = Object.assign({}, e.resolved, { compte: true });
         const input = els.body.querySelector(`tr.entry[data-id="${id}"] input[data-field="compte"]`);
         if (input) input.value = e.compte;
         updateRowStatus(id);
@@ -2787,7 +2845,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const last = state.entries[state.entries.length - 1];
     state.entries.push({
       id: state.nextId++, sourceKey: null, no: next, date: last ? last.date : null, compte: '', libelle: '', debit: null, credit: null,
-      page: null, warnings: [], notes: [], candidates: [], raw: null, checked: true, manual: true, edited: true,
+      page: null, warnings: [], notes: [], flags: { no: [], date: [], compte: [], libelle: [], montant: [] }, resolved: {}, candidates: [], raw: null, checked: true, manual: true, edited: true,
     });
     renderTable();
     renderTotals();
@@ -2871,6 +2929,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (token !== previewToken) return;
       els.previewFrame.innerHTML = '';
       els.previewFrame.appendChild(canvas);
+      els.previewFrame.style.cursor = 'zoom-in';
+      els.previewFrame.title = 'Cliquer pour agrandir la pièce';
       if (zones && zones.length) {
         const ov = document.createElement('canvas');
         ov.className = 'overlay';
@@ -2930,6 +2990,37 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const needFull = state.fullPage || (e.raw && e.raw.part) || zones.some((z) => z.box && (z.box.y + z.box.h) > ref.pageHeight * 0.6);
     await showPage(ref, nav, fields, needFull ? 1 : 0.62, zones);
   }
+
+  // Agrandissement plein écran de l'aperçu (clic sur l'image)
+  els.previewFrame.addEventListener('click', () => {
+    const canvases = els.previewFrame.querySelectorAll('canvas');
+    if (!canvases.length) return;
+    const box = document.createElement('div');
+    box.className = 'zoom-overlay';
+    box.innerHTML = '<div class="zoom-inner"></div><div class="zoom-hint">Cliquer ou appuyer sur Échap pour fermer</div>';
+    const inner = box.querySelector('.zoom-inner');
+    canvases.forEach((c) => {
+      const copy = document.createElement('canvas');
+      copy.width = c.width;
+      copy.height = c.height;
+      copy.className = c.className;
+      copy.getContext('2d').drawImage(c, 0, 0);
+      inner.appendChild(copy);
+    });
+    const close = () => { box.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+    box.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(box);
+  });
+
+  // Raccourcis clavier : Ctrl/⌘+Entrée = vérifié puis ligne suivante à contrôler
+  document.addEventListener('keydown', (ev) => {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter' && !els.step3.classList.contains('hidden')) {
+      ev.preventDefault();
+      els.btnVerifyNext.click();
+    }
+  });
 
   /* ---------------- Étape 4 : totaux + Excel ---------------- */
   function allEntriesForExcel() {
