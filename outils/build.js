@@ -80,6 +80,25 @@ const siteBody = offline
   .replace(/<link rel="icon" href="data:image\/svg\+xml;base64,[^"]*">\n/, '');
 fs.writeFileSync(path.join(SITE, 'index.html'), SITE_HEAD + siteBody + pwaTail + TAIL);
 
-for (const f of ['blonay-pdf.html', 'blonay-pdf-hors-ligne.html', '../docs/index.html']) {
-  console.log(f.replace('../', '').padEnd(30), (fs.statSync(path.join(OUT, f)).size / 1024 / 1024).toFixed(2) + ' Mo');
+// 4. version pour l'application de bureau : l'icône est un vrai fichier posé à
+//    côté de la page. Une icône encodée dans la page n'est jamais chargée par
+//    le moteur d'affichage, d'où une fenêtre sans icône dans la barre des tâches.
+const APPDIR = path.join(OUT, 'application', 'lanceur');
+const APP_HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n'
+  + '<meta charset="utf-8">\n'
+  + csp(true)
+  + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+  + '<meta name="color-scheme" content="dark light">\n'
+  + '<title>Blonay PDF</title>\n'
+  + '<link rel="icon" type="image/png" sizes="256x256" href="icon-256.png">\n'
+  + '<link rel="icon" type="image/png" sizes="48x48" href="icon-48.png">\n'
+  + '<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">\n'
+  + '</head>\n<body>\n';
+fs.writeFileSync(path.join(APPDIR, 'blonay-pdf.html'), APP_HEAD + siteBody + TAIL);
+for (const ic of ['icon-32.png', 'icon-48.png', 'icon-256.png']) {
+  fs.copyFileSync(path.join(OUT, 'application', ic), path.join(APPDIR, ic));
+}
+
+for (const f of ['blonay-pdf.html', 'blonay-pdf-hors-ligne.html', '../docs/index.html', 'application/lanceur/blonay-pdf.html']) {
+  console.log(f.replace('../', '').padEnd(34), (fs.statSync(path.join(OUT, f)).size / 1024 / 1024).toFixed(2) + ' Mo');
 }

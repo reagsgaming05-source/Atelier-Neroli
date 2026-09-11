@@ -1,2 +1,5 @@
 # Bibliothèques récupérées depuis npm par outils/build.js
 outils/libs/
+
+# produit par outils/build.js puis compressé pour être embarqué
+outils/application/lanceur/blonay-pdf.html.gz

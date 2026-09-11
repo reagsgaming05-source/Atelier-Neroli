@@ -24,6 +24,19 @@ import (
 //go:embed blonay-pdf.html.gz
 var compresse []byte
 
+// L'icône de la fenêtre doit être un vrai fichier posé à côté de la page :
+// une icône encodée dans la page n'est pas chargée par le moteur d'affichage,
+// et la barre des tâches affiche alors un globe générique.
+//
+//go:embed icon-32.png
+var icone32 []byte
+
+//go:embed icon-48.png
+var icone48 []byte
+
+//go:embed icon-256.png
+var icone256 []byte
+
 const nom = "Blonay PDF"
 
 // Emplacements habituels des navigateurs sur Windows.
@@ -59,10 +72,16 @@ func deposer() (string, error) {
 	if err := os.MkdirAll(dossier, 0o755); err != nil {
 		return "", err
 	}
+	// Nom de fichier stable : un raccourci épinglé par l'utilisateur doit
+	// continuer de fonctionner après une mise à jour de l'application.
 	somme := sha256.Sum256(compresse)
-	cible := filepath.Join(dossier, "blonay-pdf-"+hex.EncodeToString(somme[:4])+".html")
+	version := hex.EncodeToString(somme[:8])
+	cible := filepath.Join(dossier, "blonay-pdf.html")
+	marque := filepath.Join(dossier, "version.txt")
 	if existe(cible) {
-		return cible, nil
+		if connue, err := os.ReadFile(marque); err == nil && string(connue) == version {
+			return cible, nil
+		}
 	}
 	lecteur, err := gzip.NewReader(bytes.NewReader(compresse))
 	if err != nil {
@@ -80,10 +99,18 @@ func deposer() (string, error) {
 	if err := os.Rename(temporaire, cible); err != nil {
 		return "", err
 	}
-	// ménage des versions précédentes
+	for nom, image := range map[string][]byte{
+		"icon-32.png":  icone32,
+		"icon-48.png":  icone48,
+		"icon-256.png": icone256,
+	} {
+		os.WriteFile(filepath.Join(dossier, nom), image, 0o644)
+	}
+	os.WriteFile(marque, []byte(version), 0o644)
+	// ménage des fichiers laissés par les versions précédentes
 	if entrees, err := os.ReadDir(dossier); err == nil {
 		for _, e := range entrees {
-			if strings.HasPrefix(e.Name(), "blonay-pdf-") && e.Name() != filepath.Base(cible) {
+			if strings.HasPrefix(e.Name(), "blonay-pdf-") && strings.HasSuffix(e.Name(), ".html") {
 				os.Remove(filepath.Join(dossier, e.Name()))
 			}
 		}
