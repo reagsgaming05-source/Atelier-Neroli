@@ -3,7 +3,7 @@
   "short_name": "Blonay PDF",
   "description": "Organiser, annoter et protéger des PDF, directement sur votre ordinateur.",
   "lang": "fr",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

@@ -103,6 +103,22 @@ connexion.
 | `sw.js` | cache hors ligne |
 | `icon-192.png`, `icon-512.png`, `icon.svg` | icônes |
 
+### Mise en ligne avec Vercel
+
+Le fichier `vercel.json` à la racine indique déjà quoi servir : rien à
+configurer, rien à installer.
+
+1. ouvrir https://vercel.com et se connecter avec son compte GitHub
+2. Add New, Project, puis importer le dépôt `Atelier-Neroli`
+3. Deploy
+
+Vercel sert le dossier `docs/` et attribue une adresse en https du type
+`atelier-neroli.vercel.app`. Chaque envoi de code met le site à jour.
+
+Vercel déploie la branche par défaut du dépôt. Tant que le travail vit sur une
+autre branche, il faut soit la fusionner dans `main`, soit, dans Vercel,
+Settings, Git, Production Branch, choisir cette branche.
+
 ### Mise en ligne avec GitHub Pages
 
 Le dépôt étant public, quatre étapes suffisent, sans rien installer :
@@ -110,6 +126,7 @@ Le dépôt étant public, quatre étapes suffisent, sans rien installer :
 1. ouvrir https://github.com/reagsgaming05-source/Atelier-Neroli/settings/pages
 2. Source : « Deploy from a branch »
 3. Branch : la branche qui contient ce dossier, dossier `/docs`, puis Save
+   (GitHub Pages accepte n'importe quelle branche, pas seulement `main`)
 4. après une minute, l'adresse https://reagsgaming05-source.github.io/Atelier-Neroli/
    sert l'application
 
