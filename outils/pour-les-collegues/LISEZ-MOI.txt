@@ -1,0 +1,37 @@
+BLONAY PDF
+==========
+
+Un outil pour organiser, annoter et protéger des PDF.
+Tout se passe sur votre ordinateur : aucun fichier n'est envoyé sur internet,
+et rien n'est installé sur le poste.
+
+DEMARRER
+--------
+Windows : double-cliquez sur  Blonay-PDF-Windows.cmd
+Mac     : double-cliquez sur  Blonay-PDF-Mac.command
+          (au premier lancement : clic droit, Ouvrir, puis Ouvrir)
+
+L'outil s'ouvre dans une fenêtre d'application, sans onglet ni barre d'adresse.
+
+Vous pouvez aussi simplement double-cliquer sur blonay-pdf.html :
+l'outil s'ouvre alors dans un onglet du navigateur et fonctionne pareil.
+
+IMPORTANT
+---------
+Gardez les fichiers de ce dossier ensemble.
+Le dossier peut être placé où vous voulez : Bureau, Documents, clé USB.
+
+CE QU'IL SAIT FAIRE
+-------------------
+Réorganiser les pages par glisser-déposer ou par numéro, en supprimer,
+les pivoter, les dupliquer, fusionner plusieurs documents, extraire une
+sélection, insérer des pages vierges, transformer des images en pages.
+
+Annoter : texte, surlignage, cadre, dessin à main levée, signature, image,
+caviardage. Filigrane, en-tête et pied de page, numérotation des pages.
+
+Remplir les formulaires PDF. Diviser un document en plusieurs fichiers.
+Exporter en images ou en texte. Réduire la taille du fichier.
+Protéger par mot de passe avec autorisations.
+
+Aide des raccourcis clavier : touche ?

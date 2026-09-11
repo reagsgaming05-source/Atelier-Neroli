@@ -87,6 +87,28 @@ Les deux sont produits à partir d'une source unique par `outils/build.js`.
 
 La reconnaissance de texte sur documents scannés (OCR) n'est pas disponible.
 
+## Le donner à quelqu'un d'autre
+
+Le dossier `outils/pour-les-collegues/` est prêt à être transmis tel quel, par
+clé USB, partage réseau ou archive ZIP. Il contient :
+
+| Fichier | Rôle |
+| --- | --- |
+| `blonay-pdf.html` | l'outil complet, hors ligne |
+| `Blonay-PDF-Windows.cmd` | ouvre l'outil dans une fenêtre d'application |
+| `Blonay-PDF-Mac.command` | la même chose sur Mac |
+| `LISEZ-MOI.txt` | mode d'emploi en trois lignes |
+
+Le destinataire double-clique sur le lanceur de son système : l'outil s'ouvre
+dans une fenêtre sans onglet ni barre d'adresse. Les lanceurs ne font que
+démarrer le navigateur déjà présent sur la machine, avec l'option `--app`.
+Rien n'est installé, aucun compte n'est nécessaire, aucune donnée ne sort du
+poste. Un double-clic sur le fichier HTML seul fonctionne aussi, dans un
+onglet ordinaire.
+
+Sur Mac, le premier lancement demande un clic droit puis Ouvrir, parce que le
+fichier n'est pas signé.
+
 ## L'ouvrir comme une application, sans rien installer
 
 ### Windows, avec un raccourci
