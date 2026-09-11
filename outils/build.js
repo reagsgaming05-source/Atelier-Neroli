@@ -1,18 +1,4 @@
-// Construit les deux fichiers livrés à partir de source.html.
-//
-//   node outils/build.js
-//
-// Les bibliothèques sont attendues dans outils/libs, récupérées depuis npm :
-//   npm pack pdfjs-dist@3.11.174 @cantoo/pdf-lib@2.11.0 jszip@3.10.1
-//   puis décompressées dans outils/libs/<nom>-<version>/
-// Fichiers utilisés :
-//   pdfjs-dist-3.11.174/build/pdf.min.js
-//   pdfjs-dist-3.11.174/build/pdf.worker.min.js
-//   cantoo-pdf-lib-2.11.0/dist/pdf-lib.min.js   (pdf-lib, avec le chiffrement)
-//   jszip-3.10.1/dist/jszip.min.js
-//
-// La version en ligne charge ces bibliothèques depuis un CDN ; la version hors
-// ligne les contient.
+// Produit les deux fichiers livrés à partir de la source unique pro.html
 const fs = require('fs');
 const path = require('path');
 const LIB = path.join(__dirname, 'libs');
@@ -47,6 +33,35 @@ const offline = noFonts.replace('<script>\n(() => {', () => inline + '\n<script>
 if (offline === src) throw new Error("point d'insertion introuvable");
 fs.writeFileSync(path.join(OUT, 'blonay-pdf-hors-ligne.html'), HEAD + offline + TAIL);
 
-for (const f of ['blonay-pdf.html', 'blonay-pdf-hors-ligne.html']) {
+// 3. version « installable » : même page, plus le manifeste et le cache hors
+//    ligne. À déposer sur une adresse https, où le navigateur proposera
+//    « Installer en tant qu'application ». Le manifeste doit être dans <head>,
+//    sinon le navigateur l'ignore.
+const SITE = path.join(OUT, 'site');
+const SITE_HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n'
+  + '<meta charset="utf-8">\n'
+  + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+  + '<meta name="color-scheme" content="dark light">\n'
+  + '<title>Blonay PDF</title>\n'
+  + '<link rel="manifest" href="manifest.webmanifest">\n'
+  + '<meta name="theme-color" content="#1B1E23">\n'
+  + '<meta name="description" content="Organiser, annoter et protéger des PDF, directement sur votre ordinateur.">\n'
+  + '<meta name="apple-mobile-web-app-capable" content="yes">\n'
+  + '<meta name="apple-mobile-web-app-title" content="Blonay PDF">\n'
+  + '<link rel="apple-touch-icon" href="icon-192.png">\n'
+  + '<link rel="icon" href="icon.svg">\n'
+  + '</head>\n<body>\n';
+const pwaTail = '\n<script>\n'
+  + "if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {\n"
+  + "  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));\n"
+  + '}\n'
+  + '</scr' + 'ipt>\n';
+// le titre et l'icône intégrée sont déjà dans l'en-tête ci-dessus
+const siteBody = offline
+  .replace('<title>Blonay PDF</title>\n', () => '')
+  .replace(/<link rel="icon" href="data:image\/svg\+xml;base64,[^"]*">\n/, '');
+fs.writeFileSync(path.join(SITE, 'index.html'), SITE_HEAD + siteBody + pwaTail + TAIL);
+
+for (const f of ['blonay-pdf.html', 'blonay-pdf-hors-ligne.html', 'site/index.html']) {
   console.log(f.padEnd(30), (fs.statSync(path.join(OUT, f)).size / 1024 / 1024).toFixed(2) + ' Mo');
 }

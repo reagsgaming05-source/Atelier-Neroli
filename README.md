@@ -87,6 +87,29 @@ Les deux sont produits à partir d'une source unique par `outils/build.js`.
 
 La reconnaissance de texte sur documents scannés (OCR) n'est pas disponible.
 
+## L'installer comme une vraie application
+
+Le dossier `outils/site/` contient la même application, accompagnée d'un
+manifeste et d'un cache hors ligne. Déposé sur une adresse web en https, il
+devient installable : le navigateur propose « Installer Blonay PDF », et
+l'application apparaît ensuite dans le menu Démarrer avec son icône, dans sa
+propre fenêtre, sans onglet ni barre d'adresse. Après la première ouverture,
+elle fonctionne sans connexion.
+
+| Fichier | Rôle |
+| --- | --- |
+| `index.html` | l'application complète |
+| `manifest.webmanifest` | nom, icône, fenêtre autonome |
+| `sw.js` | cache hors ligne |
+| `icon-192.png`, `icon-512.png`, `icon.svg` | icônes |
+
+L'installation est une fonction du navigateur : elle se fait au niveau du
+compte utilisateur, sans droits administrateur.
+
+Vérifié dans Chromium : manifeste lu sans erreur, fenêtre autonome, quatre
+icônes, service worker actif, et la page se charge encore après extinction du
+serveur.
+
 ## Le donner à quelqu'un d'autre
 
 Le dossier `outils/pour-les-collegues/` est prêt à être transmis tel quel, par
