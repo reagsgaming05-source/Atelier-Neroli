@@ -37,7 +37,7 @@ fs.writeFileSync(path.join(OUT, 'blonay-pdf-hors-ligne.html'), HEAD + offline + 
 //    ligne. À déposer sur une adresse https, où le navigateur proposera
 //    « Installer en tant qu'application ». Le manifeste doit être dans <head>,
 //    sinon le navigateur l'ignore.
-const SITE = path.join(OUT, 'site');
+const SITE = path.join(OUT, '..', 'docs'); // GitHub Pages sait servir /docs
 const SITE_HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n'
   + '<meta charset="utf-8">\n'
   + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
@@ -62,6 +62,6 @@ const siteBody = offline
   .replace(/<link rel="icon" href="data:image\/svg\+xml;base64,[^"]*">\n/, '');
 fs.writeFileSync(path.join(SITE, 'index.html'), SITE_HEAD + siteBody + pwaTail + TAIL);
 
-for (const f of ['blonay-pdf.html', 'blonay-pdf-hors-ligne.html', 'site/index.html']) {
-  console.log(f.padEnd(30), (fs.statSync(path.join(OUT, f)).size / 1024 / 1024).toFixed(2) + ' Mo');
+for (const f of ['blonay-pdf.html', 'blonay-pdf-hors-ligne.html', '../docs/index.html']) {
+  console.log(f.replace('../', '').padEnd(30), (fs.statSync(path.join(OUT, f)).size / 1024 / 1024).toFixed(2) + ' Mo');
 }
