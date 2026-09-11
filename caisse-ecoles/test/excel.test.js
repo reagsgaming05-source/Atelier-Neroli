@@ -1,0 +1,55 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const ExcelJS = require('exceljs');
+const X = require('../src/excel.js')(ExcelJS);
+
+const entries = [
+  { no: 1, date: '2025-01-08', compte: '51000.3662.50', libelle: 'REMBOURSEMENT - Collation - A. Nagy', debit: null, credit: 29.7 },
+  { no: 2, date: '2025-01-09', compte: '9206.101', libelle: 'RECETTE - Vente - N. Borlat', debit: 552, credit: null },
+  { no: 3, date: '2025-01-10', compte: '9111.100', libelle: 'RETRAIT - Bourse communale - F. Eminaj', debit: 10000, credit: null },
+];
+
+test('buildWorkbook produit le format du journal de caisse avec formules de solde', async () => {
+  const { workbook, finalBalance } = X.buildWorkbook({ opening: { date: '2025-01-06', amount: 2062.2 }, entries, prefillTo: 10 });
+  assert.equal(finalBalance, 12584.5);
+  const ws = workbook.getWorksheet('Caisse');
+  assert.ok(ws);
+  assert.deepEqual(ws.getRow(1).values.slice(1), ['Date', 'No ', 'Compte', 'Libellé', 'Débit ', 'Crédit', 'Solde']);
+  assert.equal(ws.getCell('D2').value, 'Solde à nouveau');
+  assert.equal(ws.getCell('G2').value, 2062.2);
+  assert.equal(ws.getCell('A3').value.toISOString().slice(0, 10), '2025-01-08');
+  assert.equal(ws.getCell('B3').value, 1);
+  assert.equal(ws.getCell('C3').value, '51000.3662.50');
+  assert.equal(ws.getCell('F3').value, 29.7);
+  assert.deepEqual(ws.getCell('G3').value, { formula: 'G2+E3-F3', result: 2032.5 });
+  assert.deepEqual(ws.getCell('G5').value, { formula: 'G4+E5-F5', result: 12584.5 });
+  assert.equal(ws.getCell('B6').value, 4); // numérotation pré-remplie
+  assert.equal(ws.getCell('B12').value, 10);
+  assert.equal(ws.getCell('A3').numFmt, 'mm-dd-yy');
+  assert.equal(ws.getCell('E3').numFmt, '0.00');
+  assert.equal(ws.getCell('C3').numFmt, '@');
+  assert.equal(ws.getCell('D3').font.name, 'Arial');
+  assert.equal(ws.getCell('A1').font.bold, true);
+  assert.equal(ws.getColumn(4).width, 110);
+  assert.equal(ws.views[0].state, 'frozen');
+  assert.equal(ws.pageSetup.orientation, 'landscape');
+  assert.ok(workbook.getWorksheet('Compte'));
+});
+
+test('readWorkbook relit un classeur généré (aller-retour)', async () => {
+  const { workbook } = X.buildWorkbook({ opening: { date: '2025-01-06', amount: 2062.2 }, entries, prefillTo: 10 });
+  const buf = await workbook.xlsx.writeBuffer();
+  const back = await X.readWorkbook(buf);
+  assert.equal(back.sheetName, 'Caisse');
+  assert.deepEqual(back.opening, { date: '2025-01-06', amount: 2062.2, libelle: 'Solde à nouveau' });
+  assert.equal(back.entries.length, 3);
+  assert.deepEqual(back.entries.map((e) => [e.no, e.date, e.compte, e.debit, e.credit]), [
+    [1, '2025-01-08', '51000.3662.50', null, 29.7],
+    [2, '2025-01-09', '9206.101', 552, null],
+    [3, '2025-01-10', '9111.100', 10000, null],
+  ]);
+  assert.equal(back.entries[0].libelle, 'REMBOURSEMENT - Collation - A. Nagy');
+  const t = X.computeTotals(back.opening, back.entries);
+  assert.deepEqual(t, { start: 2062.2, debits: 10552, credits: 29.7, end: 12584.5 });
+  assert.equal(X.suggestFileName(back.entries, back.opening), 'Caisse écoles 2025.xlsx');
+});

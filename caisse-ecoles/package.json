@@ -1,0 +1,14 @@
+{
+  "name": "caisse-ecoles",
+  "version": "1.0.0",
+  "description": "Saisie automatique des pièces comptables (PDF scanné) dans le journal de caisse Excel",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "dependencies": {
+    "exceljs": "4.4.0",
+    "pdfjs-dist": "3.11.174"
+  }
+}
