@@ -21,6 +21,22 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
 L'icône et les informations du fichier sont ensuite posées avec `resedit`
 (paquet npm), à partir de `icon.ico`.
 
+### Pare-feu
+
+Le moteur d'affichage est démarré avec ses fonctions de découverte réseau
+désactivées, et sans profil séparé. C'est ce qui évite la fenêtre du pare-feu
+Windows : un profil neuf fait démarrer la découverte de périphériques locaux,
+qui ouvre un port d'écoute et déclenche la demande d'autorisation. Sans elle,
+rien n'écoute, le pare-feu n'a rien à signaler.
+
+### Avertissement de Windows
+
+L'exécutable n'est pas signé. Un fichier venu d'internet porte une marque qui
+déclenche « Windows a protégé votre ordinateur » au premier lancement. Cocher
+« Débloquer » dans les propriétés de l'archive avant de la décompresser retire
+cette marque, et l'avertissement n'apparaît pas. Le supprimer définitivement
+demanderait un certificat de signature de code.
+
 ## Application autonome Electron
 
 `electron/` contient la fenêtre d'application : `main.js` et `package.json`.

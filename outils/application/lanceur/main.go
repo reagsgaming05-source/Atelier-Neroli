@@ -107,20 +107,28 @@ func main() {
 		return
 	}
 	url := adresse(page)
-	profil := filepath.Join(filepath.Dir(page), "fenetre")
 	for _, nav := range navigateurs() {
 		if !existe(nav) {
 			continue
 		}
+		// Le moteur d'affichage est lancé sans aucune fonction de découverte
+		// réseau : rien n'écoute, donc le pare-feu n'a rien à signaler.
 		cmd := exec.Command(nav,
 			"--app="+url,
-			"--user-data-dir="+profil,
 			"--window-size=1500,950",
 			"--no-first-run",
 			"--no-default-browser-check",
+			"--no-service-autorun",
+			"--no-pings",
+			"--media-router=0",
 			"--disable-background-networking",
+			"--disable-component-update",
+			"--disable-default-apps",
 			"--disable-sync",
-			"--disable-features=Translate,OptimizationHints",
+			"--disable-client-side-phishing-detection",
+			"--disable-component-extensions-with-background-pages",
+			"--disable-features=MediaRouter,DialMediaRouteProvider,CastMediaRouteProvider,"+
+				"MediaRouterComponentExtension,Translate,OptimizationHints,NetworkTimeServiceQuerying",
 		)
 		cacher(cmd)
 		if err := cmd.Start(); err == nil {
