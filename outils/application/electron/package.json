@@ -1,0 +1,8 @@
+{
+  "name": "blonay-pdf",
+  "productName": "Blonay PDF",
+  "version": "1.0.0",
+  "description": "Organiser, annoter et protéger des PDF, sans rien envoyer sur internet",
+  "main": "main.js",
+  "author": "Atelier Néroli"
+}
