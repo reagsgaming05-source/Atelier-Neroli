@@ -36,6 +36,7 @@
     nextId: 1,
     renderCache: new Map(),
     loading: false,
+    fullPage: false,
     vocab: null, // vocabulaire appris (classeur + mémoire locale)
   };
 
@@ -63,6 +64,10 @@
     step4: $('step4'),
     body: $('entriesBody'),
     rowSummary: $('rowSummary'),
+    filterDoubt: $('filterDoubt'),
+    btnNextDoubt: $('btnNextDoubt'),
+    btnVerifyNext: $('btnVerifyNext'),
+    btnFullPage: $('btnFullPage'),
     btnAddRow: $('btnAddRow'),
     btnCheckAll: $('btnCheckAll'),
     previewNav: $('previewNav'),
@@ -291,7 +296,24 @@
     if (!p) return null;
     const doc = state.docs.find((d) => d.id === p.docId);
     if (!doc) return null;
-    return { doc, docIndex: state.docs.indexOf(doc), pageInDoc: p.pageInDoc };
+    return { doc, docIndex: state.docs.indexOf(doc), pageInDoc: p.pageInDoc, pageWidth: p.width, pageHeight: p.height };
+  }
+
+  // Zones lues sur la pièce, avec leur niveau (doute / lu) pour les cadres de l'aperçu
+  function zonesFor(e) {
+    if (!e.raw || !e.raw.boxes) return [];
+    const b = e.raw.boxes;
+    const f = e.flags || {};
+    const lvl = (field) => (!e.checked && (f[field] || []).some((x) => x.level === 'doubt') ? 'doubt' : 'read');
+    const z = [];
+    if (b.no) z.push({ box: b.no, level: lvl('no'), label: 'N°' });
+    if (b.date) z.push({ box: b.date, level: lvl('date'), label: 'Date' });
+    if (b.doit) z.push({ box: b.doit, level: lvl('compte'), label: 'DOIT' });
+    if (b.avoir) z.push({ box: b.avoir, level: lvl('compte'), label: 'AVOIR' });
+    if (b.somme) z.push({ box: b.somme, level: lvl('montant'), label: 'Somme' });
+    if (b.total) z.push({ box: b.total, level: lvl('montant'), label: 'Total' });
+    if (b.libelle) z.push({ box: b.libelle, level: lvl('libelle'), label: 'Libellé' });
+    return z;
   }
 
   // Étiquette courte d'une page : "p. 5" (un seul fichier) ou "F2 p. 5" (plusieurs fichiers)
@@ -409,6 +431,7 @@
         if (e.warnings.some((w) => !old.warnings.includes(w))) old.checked = false;
         old.warnings = e.warnings.slice();
         old.notes = (e.notes || []).slice();
+        old.flags = e.flags;
         old.candidates = e.candidates;
         old.raw = e.raw;
         if (!old.edited) {
@@ -429,6 +452,7 @@
         page: e.page,
         warnings: e.warnings.slice(),
         notes: (e.notes || []).slice(),
+        flags: e.flags,
         candidates: e.candidates,
         raw: e.raw,
         checked: e.warnings.length === 0,
@@ -487,9 +511,13 @@
   }
 
   function rowMessages(e) {
+    const status = rowStatus(e);
+    // Une ligne en ordre n'affiche pas le détail des corrections : elles restent visibles
+    // par la cellule bleue, son info-bulle, et le détail quand la ligne est sélectionnée.
+    const showNotes = status !== 'ok' || e.id === state.selectedId;
     const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
       .concat(e.warnings.map((m) => `<li>${escapeHtml(m)}</li>`))
-      .concat((e.notes || []).map((m) => `<li class="note">${escapeHtml(m)}</li>`));
+      .concat(showNotes ? (e.notes || []).map((m) => `<li class="note">${escapeHtml(m)}</li>`) : []);
     if (!items.length) return '';
     let html = `<ul>${items.join('')}</ul>`;
     const cands = (e.candidates || []).filter((a) => a !== e.compte);
@@ -500,22 +528,41 @@
     return html;
   }
 
+  // classe + info-bulle d'une cellule selon les drapeaux du champ
+  function cellAttrs(e, field) {
+    const list = (e.flags && e.flags[field]) || [];
+    if (!e.checked && list.some((f) => f.level === 'doubt')) {
+      return { cls: 'doubt', title: list.filter((f) => f.level === 'doubt').map((f) => f.message).join('\n') };
+    }
+    if (list.some((f) => f.level === 'note')) return { cls: 'fixed', title: list.filter((f) => f.level === 'note').map((f) => f.message).join('\n') };
+    return { cls: '', title: '' };
+  }
+
+  function hasDoubt(e) {
+    return rowStatus(e) !== 'ok';
+  }
+
   function renderTable() {
     const body = els.body;
     body.innerHTML = '';
+    const filter = els.filterDoubt.checked;
     for (const e of state.entries) {
       const status = rowStatus(e);
       const tr = document.createElement('tr');
-      tr.className = 'entry' + (e.id === state.selectedId ? ' selected' : '');
+      tr.className = 'entry' + (e.id === state.selectedId ? ' selected' : '') + (status === 'warn' ? ' warn-row' : '') + (filter && status === 'ok' ? ' hidden-row' : '');
       tr.dataset.id = e.id;
+      const a = {
+        no: cellAttrs(e, 'no'), date: cellAttrs(e, 'date'), compte: cellAttrs(e, 'compte'), libelle: cellAttrs(e, 'libelle'), montant: cellAttrs(e, 'montant'),
+      };
+      const attr = (x) => `class="${x.cls}" title="${escapeHtml(x.title)}"`;
       tr.innerHTML =
-        `<td class="status ${status}" title="${status === 'ok' ? 'En ordre' : status === 'warn' ? 'À vérifier' : 'Incomplet'}">${status === 'ok' ? '✓' : status === 'warn' ? '⚠' : '✖'}</td>` +
-        `<td><input type="text" class="no" data-field="no" value="${escapeHtml(e.no == null ? '' : e.no)}"></td>` +
-        `<td><input type="text" class="date" data-field="date" placeholder="jj.mm.aaaa" value="${escapeHtml(P.isoToDisplay(e.date))}"></td>` +
-        `<td><input type="text" class="compte" data-field="compte" list="accountsList" value="${escapeHtml(e.compte)}"></td>` +
-        `<td class="libelle"><input type="text" data-field="libelle" value="${escapeHtml(e.libelle)}"></td>` +
-        `<td><input type="number" class="num" step="0.01" data-field="debit" value="${fmtInput(e.debit)}"></td>` +
-        `<td><input type="number" class="num" step="0.01" data-field="credit" value="${fmtInput(e.credit)}"></td>` +
+        `<td class="status ${status}" title="${status === 'ok' ? 'En ordre : lu sans ambiguïté' : status === 'warn' ? 'À vérifier : voir les cellules orange' : 'Incomplet'}">${status === 'ok' ? '✓' : status === 'warn' ? '⚠' : '✖'}</td>` +
+        `<td><input type="text" class="no ${a.no.cls}" title="${escapeHtml(a.no.title)}" data-field="no" value="${escapeHtml(e.no == null ? '' : e.no)}"></td>` +
+        `<td><input type="text" class="date ${a.date.cls}" title="${escapeHtml(a.date.title)}" data-field="date" placeholder="jj.mm.aaaa" value="${escapeHtml(P.isoToDisplay(e.date))}"></td>` +
+        `<td><input type="text" class="compte ${a.compte.cls}" title="${escapeHtml(a.compte.title)}" data-field="compte" list="accountsList" value="${escapeHtml(e.compte)}"></td>` +
+        `<td class="libelle"><input type="text" class="${a.libelle.cls}" title="${escapeHtml(a.libelle.title)}" data-field="libelle" value="${escapeHtml(e.libelle)}"></td>` +
+        `<td><input type="number" class="num ${a.montant.cls}" title="${escapeHtml(a.montant.title)}" step="0.01" data-field="debit" value="${fmtInput(e.debit)}"></td>` +
+        `<td><input type="number" class="num ${a.montant.cls}" title="${escapeHtml(a.montant.title)}" step="0.01" data-field="credit" value="${fmtInput(e.credit)}"></td>` +
         `<td class="page">${e.page ? pageLabel(e.page, true) : (e.manual ? 'manuel' : '')}</td>` +
         `<td class="check"><input type="checkbox" data-field="checked" ${e.checked ? 'checked' : ''} title="Marquer comme vérifié"></td>` +
         `<td><button type="button" class="small danger" data-action="delete" title="Supprimer cette écriture">✕</button></td>`;
@@ -524,7 +571,7 @@
       const msgs = rowMessages(e);
       if (msgs) {
         const tr2 = document.createElement('tr');
-        tr2.className = 'msgs';
+        tr2.className = 'msgs' + (filter && status === 'ok' ? ' hidden-row' : '');
         tr2.dataset.id = e.id;
         tr2.innerHTML = `<td colspan="10">${msgs}</td>`;
         body.appendChild(tr2);
@@ -542,9 +589,13 @@
     const n = state.entries.length;
     const errs = state.entries.filter((e) => rowStatus(e) === 'err').length;
     const warns = state.entries.filter((e) => rowStatus(e) === 'warn').length;
+    const fixed = state.entries.filter((e) => (e.notes || []).length).length;
     els.rowSummary.innerHTML = `${n} écriture(s) – <span style="color:var(--ok)">${n - errs - warns} en ordre</span>` +
       (warns ? `, <span style="color:var(--warn)">${warns} à vérifier</span>` : '') +
-      (errs ? `, <span style="color:var(--err)">${errs} incomplète(s)</span>` : '');
+      (errs ? `, <span style="color:var(--err)">${errs} incomplète(s)</span>` : '') +
+      (fixed ? ` <span style="color:#2563eb" title="Lignes dont un mot, un nom ou un compte a été corrigé automatiquement (cellule bleue)">· ${fixed} corrigée(s)</span>` : '');
+    els.btnNextDoubt.disabled = !(errs + warns);
+    els.btnVerifyNext.disabled = !(errs + warns);
   }
 
   function updateRowStatus(id) {
@@ -556,6 +607,16 @@
       const td = tr.querySelector('td.status');
       td.className = `status ${status}`;
       td.textContent = status === 'ok' ? '✓' : status === 'warn' ? '⚠' : '✖';
+      tr.classList.toggle('warn-row', status === 'warn');
+      const map = { no: 'no', date: 'date', compte: 'compte', libelle: 'libelle', debit: 'montant', credit: 'montant' };
+      tr.querySelectorAll('input[data-field]').forEach((inp) => {
+        const f = map[inp.dataset.field];
+        if (!f) return;
+        const a = cellAttrs(e, f);
+        inp.classList.remove('doubt', 'fixed');
+        if (a.cls) inp.classList.add(a.cls);
+        inp.title = a.title;
+      });
     }
     let tr2 = els.body.querySelector(`tr.msgs[data-id="${id}"]`);
     const msgs = rowMessages(e);
@@ -646,22 +707,14 @@
       }
       return;
     }
-    if (state.selectedId !== id) {
-      state.selectedId = id;
-      els.body.querySelectorAll('tr.entry').forEach((r) => r.classList.toggle('selected', Number(r.dataset.id) === id));
-      renderPreview();
-    }
+    if (state.selectedId !== id) selectEntry(id);
   });
 
   els.body.addEventListener('focusin', (ev) => {
     const tr = ev.target.closest('tr');
     if (!tr) return;
     const id = Number(tr.dataset.id);
-    if (state.selectedId !== id) {
-      state.selectedId = id;
-      els.body.querySelectorAll('tr.entry').forEach((r) => r.classList.toggle('selected', Number(r.dataset.id) === id));
-      renderPreview();
-    }
+    if (state.selectedId !== id) selectEntry(id);
   });
 
   els.btnAddRow.addEventListener('click', () => {
@@ -684,10 +737,56 @@
     renderTable();
   });
 
+  els.filterDoubt.addEventListener('change', () => renderTable());
+
+  function selectEntry(id) {
+    const prev = state.selectedId;
+    state.selectedId = id;
+    els.body.querySelectorAll('tr.entry').forEach((r) => r.classList.toggle('selected', Number(r.dataset.id) === id));
+    if (prev != null) updateRowStatus(prev);
+    updateRowStatus(id);
+    const tr = els.body.querySelector(`tr.entry[data-id="${id}"]`);
+    if (tr) tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    renderPreview();
+  }
+
+  function gotoNextDoubt(fromId) {
+    const list = state.entries;
+    const start = fromId != null ? list.findIndex((e) => e.id === fromId) : -1;
+    for (let k = 1; k <= list.length; k++) {
+      const e = list[(start + k) % list.length];
+      if (hasDoubt(e)) { selectEntry(e.id); return true; }
+    }
+    return false;
+  }
+
+  els.btnNextDoubt.addEventListener('click', () => {
+    if (!gotoNextDoubt(state.selectedId)) alert('Aucune ligne à vérifier : tout est en ordre.');
+  });
+
+  els.btnVerifyNext.addEventListener('click', () => {
+    const e = state.entries.find((x) => x.id === state.selectedId);
+    if (e) {
+      e.checked = true;
+      e.edited = true;
+      const cb = els.body.querySelector(`tr.entry[data-id="${e.id}"] input[data-field="checked"]`);
+      if (cb) cb.checked = true;
+      updateRowStatus(e.id);
+      if (els.filterDoubt.checked) renderTable();
+    }
+    if (!gotoNextDoubt(state.selectedId)) { renderPreview(); alert('Toutes les lignes sont vérifiées.'); }
+  });
+
+  els.btnFullPage.addEventListener('click', () => {
+    state.fullPage = !state.fullPage;
+    els.btnFullPage.textContent = state.fullPage ? 'Haut de page' : 'Page entière';
+    renderPreview();
+  });
+
   /* ---------------- Aperçu ---------------- */
   let previewToken = 0;
 
-  async function showPage(ref, navHtml, fieldsHtml, fraction) {
+  async function showPage(ref, navHtml, fieldsHtml, fraction, zones) {
     const token = ++previewToken;
     els.previewNav.innerHTML = navHtml;
     els.previewFields.innerHTML = fieldsHtml || '';
@@ -709,6 +808,27 @@
       if (token !== previewToken) return;
       els.previewFrame.innerHTML = '';
       els.previewFrame.appendChild(canvas);
+      if (zones && zones.length) {
+        const ov = document.createElement('canvas');
+        ov.className = 'overlay';
+        ov.width = canvas.width;
+        ov.height = canvas.height;
+        const octx = ov.getContext('2d');
+        const scale = canvas.width / ref.pageWidth;
+        for (const z of zones) {
+          if (!z.box) continue;
+          const x = z.box.x * scale - 4; const y = z.box.y * scale - 3; const w = z.box.w * scale + 8; const h = z.box.h * scale + 6;
+          octx.lineWidth = z.level === 'doubt' ? 4 : 2;
+          octx.strokeStyle = z.level === 'doubt' ? 'rgba(217,119,6,0.95)' : 'rgba(37,99,235,0.7)';
+          octx.fillStyle = z.level === 'doubt' ? 'rgba(251,191,36,0.22)' : 'rgba(96,165,250,0.10)';
+          octx.fillRect(x, y, w, h);
+          octx.strokeRect(x, y, w, h);
+          octx.font = 'bold 15px Segoe UI, Arial, sans-serif';
+          octx.fillStyle = z.level === 'doubt' ? '#b45309' : '#1d4ed8';
+          octx.fillText(z.label, x + 2, Math.max(14, y - 5));
+        }
+        els.previewFrame.appendChild(ov);
+      }
     } catch (err) {
       console.error(err);
       if (token === previewToken) els.previewFrame.innerHTML = `<span>Aperçu indisponible (${escapeHtml(err.message || err)})</span>`;
@@ -743,7 +863,9 @@
       ].map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('');
       fields = `<dl>${dl}</dl>`;
     }
-    await showPage(ref, nav, fields, e.raw && e.raw.part ? 1 : 0.62);
+    const zones = zonesFor(e);
+    const needFull = state.fullPage || (e.raw && e.raw.part) || zones.some((z) => z.box && (z.box.y + z.box.h) > ref.pageHeight * 0.6);
+    await showPage(ref, nav, fields, needFull ? 1 : 0.62, zones);
   }
 
   /* ---------------- Étape 4 : totaux + Excel ---------------- */
@@ -815,7 +937,7 @@
   }
 
   // Accès pour les tests automatisés
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll };
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';

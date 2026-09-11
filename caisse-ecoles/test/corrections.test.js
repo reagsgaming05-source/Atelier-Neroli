@@ -138,3 +138,97 @@ test('scan incliné : les mots d\'une même ligne restent groupés', () => {
   const lines = P.groupLines(words);
   assert.deepEqual(lines.map((l) => l.text), ['REMBOURSEMENT matériel pharmacie camp', 'R. Perrier']);
 });
+
+/* ---- Doutes signalés par champ (drapeaux orange) ---- */
+
+test('les doutes sont rattachés au bon champ', () => {
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Perrier'], date: '01.03.2025' }) };
+  const e = P.parseDocument([page], { caisse: '9100.104' }).entries[0];
+  assert.deepEqual(e.warnings, [], 'pièce lisible : aucun doute');
+  assert.deepEqual(Object.keys(e.flags).sort(), ['compte', 'date', 'libelle', 'montant', 'no']);
+  assert.ok(Object.values(e.flags).every((f) => f.length === 0));
+});
+
+test('montant lu une seule fois : doute sur le montant', () => {
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], libelle: ['REMBOURSEMENT piles', 'R. Perrier'], date: '01.03.2025' }) };
+  const e = P.parseDocument([page], { caisse: '9100.104' }).entries[0];
+  assert.equal(e.credit, 12);
+  assert.ok(e.flags.montant.some((f) => f.level === 'doubt' && /une seule fois/.test(f.message)));
+  assert.equal(e.flags.compte.length, 0);
+});
+
+test('libellé sans type ni personne : doutes sur le libellé', () => {
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['achat de piles'], date: '01.03.2025' }) };
+  const e = P.parseDocument([page], { caisse: '9100.104' }).entries[0];
+  const msgs = e.flags.libelle.map((f) => f.message).join(' ');
+  assert.match(msgs, /sans type d'écriture/);
+  assert.match(msgs, /Aucun nom de personne/);
+});
+
+test('sens contraire au classeur : doute sur le montant', () => {
+  const history = [];
+  for (let i = 0; i < 6; i++) history.push({ no: i + 1, compte: '50000.3652.00', libelle: `REMBOURSEMENT - Frais ${i} - A. Nicolet`, debit: null, credit: 20 });
+  const vocab = P.learnVocabulary(history);
+  const idx = P.buildIndex(vocab);
+  assert.deepEqual(idx.expectedSide.get('REMBOURSEMENT'), { side: 'credit', n: 6 });
+  // une pièce REMBOURSEMENT avec la caisse au DOIT (entrée) contredit le classeur
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '9100.104', somme: 'CHF 12.00', avoir: '50000.3652.00' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT frais', 'A. Nicolet'], date: '01.03.2025' }) };
+  const e = P.parseDocument([page], { caisse: '9100.104', vocabulary: vocab }).entries[0];
+  assert.equal(e.debit, 12);
+  assert.ok(e.flags.montant.some((f) => /Sens inhabituel.*REMBOURSEMENT/.test(f.message)), e.warnings.join('|'));
+  // le même sens que le classeur ne déclenche rien
+  const ok = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '50000.3652.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT frais', 'A. Nicolet'], date: '01.03.2025' }) };
+  const e2 = P.parseDocument([ok], { caisse: '9100.104', vocabulary: vocab }).entries[0];
+  assert.deepEqual(e2.warnings, []);
+});
+
+test('compte de recettes au crédit : doute, même sans classeur', () => {
+  assert.equal(P.expectedSideFromAccount('51000.4392.20'), 'debit');
+  assert.equal(P.expectedSideFromAccount('51000.3662.00'), null);
+  assert.equal(P.expectedSideFromAccount('9100.104'), null);
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.4392.20', somme: 'CHF 300.00', avoir: '9100.104' }], total: 'CHF 300.00', libelle: ['VERSEMENT participation', 'E. Heymoz'], date: '01.03.2025' }) };
+  const e = P.parseDocument([page], { caisse: '9100.104' }).entries[0];
+  assert.equal(e.credit, 300);
+  assert.ok(e.flags.montant.some((f) => /compte de recettes/.test(f.message)), e.warnings.join('|'));
+});
+
+test('numéro hors séquence par rapport à l\'ordre des pages', () => {
+  const mk = (p, no, d) => ({ pageNumber: p, width: 595, height: 842, words: makeForm({ no, lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Perrier'], date: d }) });
+  const res = P.parseDocument([mk(1, '10', '01.03.2025'), mk(2, '11', '02.03.2025'), mk(3, '15', '03.03.2025')], { caisse: '9100.104' });
+  const e15 = res.entries.find((x) => x.no === 15);
+  assert.ok(e15.flags.no.some((f) => /ordre des pages/.test(f.message)), e15.warnings.join('|'));
+  assert.ok(res.entries.find((x) => x.no === 11).flags.no.length === 0);
+});
+
+test('date antérieure à la pièce précédente ou d\'une autre année', () => {
+  const mk = (p, no, d) => ({ pageNumber: p, width: 595, height: 842, words: makeForm({ no, lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Perrier'], date: d }) });
+  const res = P.parseDocument([mk(1, '10', '01.03.2025'), mk(2, '11', '02.03.2025'), mk(3, '12', '15.01.2025'), mk(4, '13', '20.03.2024')], { caisse: '9100.104' });
+  assert.ok(res.entries.find((x) => x.no === 12).flags.date.some((f) => /antérieure/.test(f.message)));
+  const e13 = res.entries.find((x) => x.no === 13);
+  assert.ok(e13.flags.date.some((f) => /Année 2024/.test(f.message)));
+});
+
+test('mots suspects : seulement ceux qui ressemblent à une erreur de lecture', () => {
+  const idx = P.buildIndex(P.learnVocabulary(sampleEntries));
+  // Un mot resté non corrigé mais proche d'un mot connu est signalé pour contrôle.
+  assert.deepEqual(P.unknownWords('Collatlon des éleves', idx), ['Collatlon']);
+  // Après la correction automatique, plus rien à signaler.
+  const fixed = P.correctDescription('Collatlon des éleves', idx).text;
+  assert.equal(fixed, 'Collation des éleves');
+  assert.deepEqual(P.unknownWords(fixed, idx), []);
+  assert.ok(P.isSuspiciousWord('coIlation', idx), 'majuscule au milieu');
+  assert.ok(P.isSuspiciousWord('Leysinn', idx), 'proche d\'un mot connu');
+  assert.equal(P.isSuspiciousWord('Wengen', idx), false, 'mot inconnu mais normal');
+  assert.equal(P.isSuspiciousWord('collations', idx), false, 'pluriel d\'un mot connu');
+});
+
+test('boxOf donne la zone lue pour l\'aperçu', () => {
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Perrier'], date: '01.03.2025' }) };
+  const info = P.analyzePage(page);
+  for (const k of ['no', 'doit', 'somme', 'avoir', 'total', 'libelle', 'date']) {
+    assert.ok(info.boxes[k], `zone ${k} manquante`);
+    assert.ok(info.boxes[k].w > 0 && info.boxes[k].h > 0, `zone ${k} vide`);
+  }
+  assert.ok(info.boxes.libelle.y > info.boxes.doit.y, 'le libellé est sous les comptes');
+  assert.ok(info.boxes.date.y > info.boxes.total.y, 'la date est sous le total');
+});

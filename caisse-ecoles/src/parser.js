@@ -70,7 +70,19 @@
     "semaine médias journalistes branché débranché branché-débranché inter-collège échange échanges linguistique linguistiques " +
     "pédagogique scolarité information d'information secrétariat municipalité responsables place salle cours " +
     "janvier février mars avril mai juin juillet août septembre octobre novembre décembre " +
-    "pléiades diablerets leysin villars cojonnex clos-béguin grand-pré echallens narcisse ricochet prodega juventute lift slam"
+    "pléiades diablerets leysin villars cojonnex clos-béguin grand-pré echallens narcisse ricochet prodega juventute lift slam " +
+    "complémentaire supplémentaire fond fonds point points rond-point achat achats location réparation entretien nettoyage abonnement " +
+    "billet billets entrée entrées train bus cars taxi essence parking hôtel auberge cabane chalet refuge hébergement logement " +
+    "petit-déjeuner déjeuner dîner souper pique-nique goûter boisson lait sirop sucre beurre fromage raclette viande légumes salade " +
+    "dessert gâteau gâteaux tarte tartes cake biscuits chips bricolage colle ciseaux scotch ruban laine perles bois clous outils outil " +
+    "vernis ampoules lampe lampes batterie batteries chargeur adaptateur écouteurs casque casques enceinte micro caméra appareil " +
+    "impression impressions photocopies reliure plastification carte cartes timbres enveloppes courrier offert offerts acheté achetés " +
+    "payé payée reçu reçue remis versé prêté solde restant reste différence erreur correction annulation retour retours " +
+    "lundi mardi mercredi jeudi vendredi samedi dimanche maître maîtresses professeur professeurs direction directeur directrice " +
+    "doyen doyenne secrétaire concierge infirmière psychologue logopédiste médiateur médiatrice bibliothèque bibliothécaire " +
+    "informaticien aula gymnase terrain stade bassin vestiaires accueil visite visites guide guides musée théâtre cinéma zoo " +
+    "exposition exposé exposés projet projets thème semestre trimestre année scolaire vacances rentrée mémoire souvenir souvenirs " +
+    "réserve avance frais participation groupe groupes pièce pièces cheque chèque espèces monnaie caisse caissier caissière"
   ).split(/\s+/).filter(Boolean);
 
   // Désignations de classes (Vaud) : 1P…8P, 9S…11S, 9VP…11VG, groupes ACC, OS, LAT…
@@ -320,7 +332,7 @@
   const CLASS_TOKEN_RE = /^\d{1,2}(?:-\d{1,2})?(?:VP|VG|P|S)(?:\/\d{1,2})?$/;
 
   function emptyVocabulary() {
-    return { words: [], persons: [], classTokens: [], accounts: [], typeAccounts: [] };
+    return { words: [], persons: [], classTokens: [], accounts: [], typeAccounts: [], typeSides: [] };
   }
 
   /**
@@ -333,6 +345,7 @@
     const classTokens = new Set();
     const accounts = new Set();
     const typeAccounts = [];
+    const typeSides = [];
     for (const e of entries || []) {
       const lib = String(e.libelle || '').trim();
       if (!lib || /^solde/i.test(lib)) continue;
@@ -342,6 +355,12 @@
       let type = null;
       if (parts.length) type = splitType(parts[0]).type;
       if (type && compte) typeAccounts.push({ type, compte });
+      if (type) {
+        const d = Number(e.debit) || 0;
+        const c = Number(e.credit) || 0;
+        if (d && !c) typeSides.push({ type, side: 'debit' });
+        else if (c && !d) typeSides.push({ type, side: 'credit' });
+      }
       let body = parts;
       if (parts.length >= 2 && looksLikePerson(parts[parts.length - 1])) {
         const p = parts[parts.length - 1].replace(/\s*\(.*\)\s*$/, '').trim();
@@ -369,6 +388,7 @@
       classTokens: Array.from(classTokens),
       accounts: Array.from(accounts),
       typeAccounts,
+      typeSides,
     };
   }
 
@@ -388,6 +408,7 @@
       classTokens: uniq((a.classTokens || []).concat(b.classTokens || [])),
       accounts: uniq((a.accounts || []).concat(b.accounts || [])),
       typeAccounts,
+      typeSides: (a.typeSides || []).concat(b.typeSides || []),
     };
   }
 
@@ -405,7 +426,36 @@
       const m = PERSON_RE.exec(p);
       if (m) persons.push({ full: p, initials: m[1].replace(/\s+/g, ''), surname: m[2], key: wordKey(m[2]) });
     }
-    return { words, classTokens, persons, accounts: new Set(vocab.accounts || []) };
+    // Sens attendu par type : uniquement les types dont le classeur ne montre qu'un seul sens
+    const counts = new Map();
+    for (const t of vocab.typeSides || []) {
+      const k = stripAccents(t.type || '').toUpperCase();
+      if (!k) continue;
+      if (!counts.has(k)) counts.set(k, { debit: 0, credit: 0 });
+      counts.get(k)[t.side] += 1;
+    }
+    const expectedSide = new Map();
+    for (const [k, c] of counts) {
+      const n = c.debit + c.credit;
+      if (n < MIN_SIDE_SAMPLES) continue;
+      if (c.credit === 0) expectedSide.set(k, { side: 'debit', n });
+      else if (c.debit === 0) expectedSide.set(k, { side: 'credit', n });
+    }
+    return { words, classTokens, persons, accounts: new Set(vocab.accounts || []), expectedSide };
+  }
+
+  // Nombre minimal d'écritures du classeur pour retenir un sens comme constant
+  const MIN_SIDE_SAMPLES = 5;
+
+  /**
+   * Sens attendu pour un compte de contrepartie d'après le plan comptable :
+   * un compte de revenus (2e groupe commençant par 4) entre en caisse (débit).
+   * Retourne 'debit', ou null si aucune règle sûre.
+   */
+  function expectedSideFromAccount(compte) {
+    const m = /^\d{4,5}\.(\d)/.exec(String(compte || ''));
+    if (m && m[1] === '4') return 'debit';
+    return null;
   }
 
   function singleSubstitutionConfusable(a, b) {
@@ -610,6 +660,19 @@
     return words.filter((w) => re.test(stripAccents(w.str).trim()));
   }
 
+  // Rectangle englobant d'une liste de mots (coordonnées page, origine en haut à gauche)
+  function boxOf(words) {
+    if (!words || !words.length) return null;
+    let x0 = Infinity; let y0 = Infinity; let x1 = -Infinity; let y1 = -Infinity;
+    for (const w of words) {
+      const h = w.h && w.h > 2 ? w.h : 10;
+      const wd = w.w && w.w > 0 ? w.w : String(w.str || '').length * h * 0.5;
+      x0 = Math.min(x0, w.x); y0 = Math.min(y0, w.y - h);
+      x1 = Math.max(x1, w.x + wd); y1 = Math.max(y1, w.y + h * 0.25);
+    }
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+
   /* ------------------------------------------------------------------ */
   /* Analyse d'une page                                                     */
   /* ------------------------------------------------------------------ */
@@ -681,11 +744,12 @@
     // ---- Numéro de pièce : au-dessus de l'entête, colonne du milieu
     let no = null;
     let noRaw = null;
+    let noWords = [];
     const topWords = words.filter((w) => w.y < yHeader - 6);
     for (const w of topWords.slice().sort((a, b) => a.x - b.x)) {
       if (col(w.x) !== 'somme') continue;
       const t = ocrDigits(w.str.trim()).replace(/[^\d]/g, '');
-      if (/^\d{1,3}$/.test(t)) { no = parseInt(t, 10); noRaw = w.str; break; }
+      if (/^\d{1,3}$/.test(t)) { no = parseInt(t, 10); noRaw = w.str; noWords = [w]; break; }
     }
     if (no == null) {
       const top = groupLines(topWords).map((l) => l.text).join(' ');
@@ -698,8 +762,10 @@
     const avoir = [];
     const sommes = [];
     const bandWords = words.filter((w) => inBand(w, yHeader, yLibelle));
+    const colWords = { doit: [], somme: [], avoir: [] };
     for (const c of ['doit', 'somme', 'avoir']) {
-      const lines = groupLines(bandWords.filter((w) => col(w.x) === c));
+      colWords[c] = bandWords.filter((w) => col(w.x) === c);
+      const lines = groupLines(colWords[c]);
       for (const l of lines) {
         if (c === 'somme') {
           const a = normalizeAmount(l.text);
@@ -715,8 +781,10 @@
     let total = null;
     let totalRaw = null;
     let totalLenient = null;
+    let totalWords = [];
     if (wTotal) {
       const tw = words.filter((w) => Math.abs(w.y - yTotal) <= 8 && col(w.x) === 'somme');
+      totalWords = tw;
       if (tw.length) {
         const l = groupLines(tw)[0];
         totalRaw = l.text;
@@ -732,18 +800,28 @@
     // ---- Date : sous la ligne Total (à gauche), sinon sur la ligne Total
     let date = null;
     let dateRaw = null;
+    let dateWords = [];
     const below = groupLines(words.filter((w) => w.y > yTotal + 6 && col(w.x) === 'doit'));
     for (const l of below) {
       const d = findDate(l.text);
-      if (d) { date = d; dateRaw = l.text; break; }
+      if (d) { date = d; dateRaw = l.text; dateWords = l.words; break; }
     }
     if (!date) {
       const same = groupLines(words.filter((w) => Math.abs(w.y - yTotal) <= 8 && col(w.x) === 'doit'));
       for (const l of same) {
         const d = findDate(l.text.replace(/^Total/i, ''));
-        if (d) { date = d; dateRaw = l.text; break; }
+        if (d) { date = d; dateRaw = l.text; dateWords = l.words; break; }
       }
     }
+    const boxes = {
+      no: boxOf(noWords),
+      doit: boxOf(colWords.doit),
+      somme: boxOf(colWords.somme),
+      avoir: boxOf(colWords.avoir),
+      total: boxOf(totalWords),
+      libelle: boxOf(libWords),
+      date: boxOf(dateWords),
+    };
 
     return {
       pageNumber: page.pageNumber,
@@ -761,6 +839,7 @@
       dateRaw,
       hasTotalWord: !!wTotal,
       hasLibelleWord: !!wLibelle,
+      boxes,
     };
   }
 
@@ -774,8 +853,12 @@
     const index = options.index || null;
     const learnedAccounts = index ? index.accounts : new Set();
     const knownAccounts = options.knownAccounts || learnedAccounts;
+    // drapeaux par champ : { level: 'doubt' | 'note', message }
+    const flags = { no: [], date: [], compte: [], libelle: [], montant: [] };
     const warnings = [];
     const notes = [];
+    const doubt = (field, message) => { warnings.push(message); if (flags[field]) flags[field].push({ level: 'doubt', message }); };
+    const note = (field, message) => { notes.push(message); if (flags[field]) flags[field].push({ level: 'note', message }); };
 
     // ---- Libellé
     const lines = info.libelleLines.slice();
@@ -786,13 +869,26 @@
     let description = cleanDescription([rest, ...lines].filter(Boolean).join(' '));
     if (index) {
       const c = correctDescription(description, index);
-      if (c.notes.length) { description = c.text; notes.push(`Libellé corrigé : ${c.notes.join(', ')}`); }
+      if (c.notes.length) { description = c.text; note('libelle', `Libellé corrigé : ${c.notes.join(', ')}`); }
       if (person) {
         const p = correctPerson(person, index);
-        if (p) { notes.push(`Nom corrigé : ${person} → ${p}`); person = p; }
+        if (p) { note('libelle', `Nom corrigé : ${person} → ${p}`); person = p; }
       }
     }
-    if (!info.libelleLines.length) warnings.push('Libellé non reconnu');
+    if (!info.libelleLines.length) doubt('libelle', 'Libellé non reconnu');
+    else {
+      if (!type) doubt('libelle', `Libellé sans type d'écriture en tête (REMBOURSEMENT, AVANCE…) : « ${first} »`);
+      else if (!KNOWN_TYPES.includes(type)) doubt('libelle', `Type d'écriture inhabituel : « ${type} »`);
+      if (!person) doubt('libelle', 'Aucun nom de personne trouvé en fin de libellé');
+      if (index) {
+        const unknown = unknownWords(description, index);
+        if (unknown.length) doubt('libelle', `Mot(s) inconnu(s) du vocabulaire, peut-être mal lu(s) : ${unknown.map((w) => `« ${w} »`).join(', ')}`);
+        if (person && index.persons.length) {
+          const near = nearPerson(person, index);
+          if (near) doubt('libelle', `Nom « ${person} » proche d'un nom connu (${near}) : à vérifier`);
+        }
+      }
+    }
 
     // ---- Montant
     let amount = null;
@@ -803,22 +899,28 @@
       const lenientVals = [info.totalLenient].concat(info.sommes.map((s) => s.lenient)).filter((v) => v != null);
       if (lenientVals.length) {
         amount = lenientVals[0];
-        warnings.push(`Montant difficile à lire (« ${info.totalRaw || (info.sommes[0] && info.sommes[0].raw) || '?'} ») : ${amount.toFixed(2)} proposé, à vérifier`);
+        doubt('montant', `Montant difficile à lire (« ${info.totalRaw || (info.sommes[0] && info.sommes[0].raw) || '?'} ») : ${amount.toFixed(2)} proposé, à vérifier`);
       } else {
-        warnings.push('Montant non reconnu');
+        doubt('montant', 'Montant non reconnu');
       }
     } else if (info.total != null && sommeVals.length && sommeVals.every((v) => v !== info.total)) {
       const sum = round2(sommeVals.reduce((a, b) => a + b, 0));
-      if (sum === info.total) notes.push(`Plusieurs sommes (${sommeVals.join(' + ')}) : total ${info.total} retenu`);
-      else warnings.push(`Somme (${sommeVals.join(', ')}) différente du total (${info.total}) : vérifier le montant`);
+      if (sum === info.total) note('montant', `Plusieurs sommes (${sommeVals.join(' + ')}) : total ${info.total} retenu`);
+      else doubt('montant', `Somme (${sommeVals.join(', ')}) différente du total (${info.total}) : vérifier le montant`);
     } else if (info.total == null && sommeVals.length > 1) {
-      warnings.push(`Plusieurs sommes lues (${sommeVals.join(', ')}) : première retenue`);
+      doubt('montant', `Plusieurs sommes lues (${sommeVals.join(', ')}) : première retenue`);
+    } else if (info.total == null || !sommeVals.length) {
+      // une seule lecture (SOMME ou Total) : pas de confirmation croisée
+      const other = info.total == null ? (info.totalRaw ? `Total illisible « ${info.totalRaw} »` : 'pas de ligne Total lisible') : (info.sommes.length ? `SOMME illisible « ${info.sommes[0].raw} »` : 'pas de SOMME lisible');
+      doubt('montant', `Montant ${amount.toFixed(2)} lu une seule fois (${other}) : à confirmer`);
     }
+    if (amount != null && amount === 0) doubt('montant', 'Montant nul');
+    if (amount != null && amount >= 50000) doubt('montant', 'Montant inhabituellement élevé');
 
     // ---- Compte caisse mal lu ("9100.184") : reconnu s'il est proche et n'est pas un autre compte connu
     const fixAccount = (a) => {
       if (a !== caisse && accountsClose(a, caisse) && !knownAccounts.has(a)) {
-        notes.push(`Compte caisse lu « ${a} » → ${caisse}`);
+        note('compte', `Compte caisse lu « ${a} » → ${caisse}`);
         return caisse;
       }
       return a;
@@ -842,37 +944,53 @@
       side = 'credit';
       candidates = doitOther;
     } else if (doitCaisse && avoirCaisse) {
-      warnings.push(`Le compte caisse ${caisse} figure au DOIT et à l'AVOIR : compte à corriger`);
+      doubt('compte', `Le compte caisse ${caisse} figure au DOIT et à l'AVOIR : compte à corriger`);
       candidates = doitOther.concat(avoirOther);
       side = guessSideFromType(type);
-      if (!side) warnings.push('Sens de l\'écriture (débit/crédit) à vérifier');
+      if (!side) doubt('montant', 'Sens de l\'écriture (débit/crédit) à vérifier');
+      else doubt('montant', `Sens de l'écriture (${side === 'debit' ? 'débit' : 'crédit'}) déduit du type « ${type} » : à vérifier`);
     } else {
-      if (!doitAcc.length && !avoirAcc.length) warnings.push('Aucun n° de compte reconnu');
-      else warnings.push(`Le compte caisse ${caisse} n'apparaît pas sur la pièce : sens et compte à vérifier`);
+      if (!doitAcc.length && !avoirAcc.length) doubt('compte', 'Aucun n° de compte reconnu');
+      else doubt('compte', `Le compte caisse ${caisse} n'apparaît pas sur la pièce : sens et compte à vérifier`);
       candidates = doitOther.concat(avoirOther);
       side = guessSideFromType(type);
+      doubt('montant', side ? `Sens de l'écriture (${side === 'debit' ? 'débit' : 'crédit'}) déduit du type : à vérifier` : 'Sens de l\'écriture (débit/crédit) inconnu');
     }
 
     if (candidates.length) {
       compte = candidates[0];
       if (uniq(candidates).length > 1) {
-        warnings.push(`Plusieurs comptes possibles : ${uniq(candidates).join(', ')}`);
+        doubt('compte', `Plusieurs comptes possibles : ${uniq(candidates).join(', ')}`);
       } else if (learnedAccounts.size && !knownAccounts.has(compte)) {
         // compte jamais vu : peut-être un chiffre mal lu -> on propose les comptes connus voisins
         const close = Array.from(knownAccounts).filter((k) => k !== caisse && accountsClose(compte, k));
         if (close.length) {
-          warnings.push(`Compte ${compte} jamais utilisé jusqu'ici, ressemble à ${close.join(' / ')} : à vérifier`);
+          doubt('compte', `Compte ${compte} jamais utilisé jusqu'ici, ressemble à ${close.join(' / ')} : à vérifier`);
           candidates = candidates.concat(close);
         } else {
-          warnings.push(`Compte ${compte} jamais utilisé jusqu'ici : à vérifier`);
+          doubt('compte', `Compte ${compte} jamais utilisé jusqu'ici : à vérifier`);
         }
       }
     } else {
-      warnings.push('Compte de contrepartie non reconnu');
+      doubt('compte', 'Compte de contrepartie non reconnu');
     }
 
-    if (!info.date) warnings.push('Date non reconnue');
-    if (info.no == null) warnings.push('Numéro de pièce non reconnu');
+    // Contrôle croisé du sens : type d'écriture et nature du compte
+    if (side && compte) {
+      const key = stripAccents(type || '').toUpperCase();
+      const exp = index && index.expectedSide ? index.expectedSide.get(key) : null;
+      const sideFr = (x) => (x === 'debit' ? 'Débit (entrée en caisse)' : 'Crédit (sortie de caisse)');
+      if (exp && exp.side !== side) {
+        doubt('montant', `Sens inhabituel : ${sideFr(side)} alors que les ${exp.n} écritures « ${type} » du classeur sont toutes en ${exp.side === 'debit' ? 'débit' : 'crédit'} : à vérifier`);
+      } else {
+        const accSide = expectedSideFromAccount(compte);
+        if (accSide && accSide !== side) doubt('montant', `Sens inhabituel : ${sideFr(side)} sur un compte de recettes (${compte}) : à vérifier`);
+      }
+    }
+
+    if (!info.date) doubt('date', 'Date non reconnue');
+    if (info.no == null) doubt('no', 'Numéro de pièce non reconnu');
+    else if (info.noRaw && /[^0-9\s]/.test(String(info.noRaw))) doubt('no', `Numéro lu « ${String(info.noRaw).trim()} » interprété ${info.no} : à vérifier`);
 
     return {
       no: info.no,
@@ -891,8 +1009,80 @@
       candidates: uniq(candidates),
       warnings,
       notes,
+      flags,
       raw: info,
     };
+  }
+
+  // Mots de la description qui ressemblent à une erreur OCR : inconnus du vocabulaire et
+  // proches d'un mot connu (sans avoir pu être corrigés sûrement), ou d'aspect anormal.
+  function unknownWords(description, index) {
+    const out = [];
+    if (!index) return out;
+    for (const tok of String(description || '').split(/\s+/)) {
+      const m = /^[^A-Za-zÀ-ÿœŒ0-9]*(.*?)[^A-Za-zÀ-ÿœŒ0-9]*$/.exec(tok);
+      let core = m ? m[1] : tok;
+      const el = /^[dlDLjJnNsS][\u2019'](.+)$/.exec(core);
+      if (el) core = el[1];
+      if (!core || core.length < 4) continue;
+      if (/\d/.test(core)) continue; // dates, classes, montants
+      if (/^[A-Z]{2,}$/.test(stripAccents(core))) continue; // sigles
+      if (!/^[A-Za-zÀ-ÿœŒ][A-Za-zÀ-ÿœŒ'\u2019\-]+$/.test(core)) continue;
+      const parts = core.split(/[-\u2019']/).filter((x) => x.length >= 3);
+      const known = (x) => index.words.has(wordKey(x));
+      if (known(core) || (parts.length > 1 && parts.every(known))) continue;
+      if (isSuspiciousWord(core, index)) out.push(core);
+    }
+    return uniq(out).slice(0, 4);
+  }
+
+  function isSuspiciousWord(word, index) {
+    const key = wordKey(word);
+    // aspect anormal : majuscule au milieu, lettre triplée, amas de consonnes
+    if (/[a-zà-ÿ][A-ZÀ-Ý]/.test(word)) return true;
+    if (/(.)\1\1/.test(key)) return true;
+    if (/[bcdfghjklmnpqrstvwxz]{5}/.test(key)) return true;
+    // proche d'un mot connu (même 1re lettre) sans avoir été corrigé
+    const maxD = key.length >= 7 ? 2 : 1;
+    for (const k of index.words.keys()) {
+      if (k[0] !== key[0] || Math.abs(k.length - key.length) > maxD) continue;
+      const d = levenshtein(key, k);
+      if (d > 0 && d <= maxD) {
+        // simple pluriel / féminin : pas suspect
+        if (k.replace(/e?s$/, '') === key.replace(/e?s$/, '')) return false;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Nom connu très proche : mêmes initiales et nom de famille à 1 (ou 2 si long) lettre près.
+   * Cas typique d'une erreur OCR sur le nom (« N. Boriat » pour « N. Borlat »).
+   * Un même nom avec d'autres initiales (C./Ch. Ansermet) n'est pas signalé : c'est courant
+   * et légitime dans un établissement.
+   */
+  function nearPerson(person, index) {
+    const m = PERSON_RE.exec(String(person || '').trim());
+    if (!m) return null;
+    const initials = m[1].replace(/\s+/g, '');
+    const key = wordKey(m[2]);
+    if (index.persons.some((p) => p.key === key)) return null; // nom de famille déjà connu
+    const maxD = key.length >= 8 ? 2 : key.length >= 5 ? 1 : 0;
+    if (!maxD) return null;
+    for (const p of index.persons) {
+      if (p.initials !== initials) continue;
+      if (Math.abs(p.key.length - key.length) <= maxD && levenshtein(key, p.key) <= maxD) return p.full;
+    }
+    return null;
+  }
+
+  function knownPerson(person, index) {
+    const m = PERSON_RE.exec(String(person || '').trim());
+    if (!m) return false;
+    const initials = m[1].replace(/\s+/g, '');
+    const key = wordKey(m[2]);
+    return index.persons.some((p) => p.key === key && p.initials === initials);
   }
 
   function guessSideFromType(type) {
@@ -951,12 +1141,16 @@
           continue;
         }
         e.warnings.push(`Numéro ${e.no} déjà utilisé en page ${prev.page} avec un autre montant`);
+        e.flags.no.push({ level: 'doubt', message: e.warnings[e.warnings.length - 1] });
         prev.warnings.push(`Numéro ${e.no} aussi en page ${e.page} avec un autre montant`);
+        prev.flags.no.push({ level: 'doubt', message: prev.warnings[prev.warnings.length - 1] });
       } else if (e.no != null) {
         byNo.set(e.no, e);
       }
       entries.push(e);
     }
+
+    const addDoubt = (e, field, message) => { e.warnings.push(message); if (e.flags && e.flags[field]) e.flags[field].push({ level: 'doubt', message }); };
 
     // Suggestions de compte quand il manque (historique + autres pièces)
     const history = (options.history || []).concat(vocab.typeAccounts || [])
@@ -967,7 +1161,7 @@
         if (s) {
           e.compte = s;
           e.suggested = true;
-          e.warnings.push(`Compte ${s} proposé d'après les autres pièces "${e.type}" : à vérifier`);
+          addDoubt(e, 'compte', `Compte ${s} proposé d'après les autres pièces "${e.type}" : à vérifier`);
         }
       }
     }
@@ -976,7 +1170,7 @@
     if (options.existingNumbers && options.existingNumbers.length) {
       const ex = new Set(options.existingNumbers.map(Number));
       for (const e of entries) {
-        if (e.no != null && ex.has(Number(e.no))) e.warnings.push(`La pièce n° ${e.no} existe déjà dans le classeur`);
+        if (e.no != null && ex.has(Number(e.no))) addDoubt(e, 'no', `La pièce n° ${e.no} existe déjà dans le classeur`);
       }
     }
 
@@ -997,15 +1191,39 @@
         if (before.length) {
           const prev = before[before.length - 1];
           e.no = prev.no + 1;
-          e.warnings.push(`Numéro ${e.no} proposé (pièce qui suit la n° ${prev.no}) : à vérifier`);
+          addDoubt(e, 'no', `Numéro ${e.no} proposé (pièce qui suit la n° ${prev.no}) : à vérifier`);
         }
+      }
+    }
+    // Numéro incohérent avec l'ordre des pages (les pièces sont scannées dans l'ordre)
+    const byPage = entries.filter((e) => e.no != null).slice().sort((a, b) => a.page - b.page || (a.part || 0) - (b.part || 0));
+    for (let i = 1; i < byPage.length; i++) {
+      const prev = byPage[i - 1];
+      const cur = byPage[i];
+      if (cur.no !== prev.no + 1) {
+        const msg = cur.no < prev.no
+          ? `Numéro ${cur.no} lu après la pièce n° ${prev.no} (ordre des pages) : numéro à vérifier`
+          : `Numéro ${cur.no} lu, ${prev.no + 1} attendu d'après l'ordre des pages : numéro à vérifier (ou pièce manquante)`;
+        addDoubt(cur, 'no', msg);
       }
     }
     sortEntries(entries);
     let lastDate = null;
     for (const e of entries) {
       if (e.date) lastDate = e.date;
-      else if (lastDate) { e.date = lastDate; e.warnings.push(`Date ${isoToDisplay(lastDate)} proposée (date de la pièce précédente) : à vérifier`); }
+      else if (lastDate) { e.date = lastDate; addDoubt(e, 'date', `Date ${isoToDisplay(lastDate)} proposée (date de la pièce précédente) : à vérifier`); }
+    }
+    // Dates dans l'ordre des numéros ; année dominante
+    const years = new Map();
+    for (const e of entries) if (e.date) { const y = e.date.slice(0, 4); years.set(y, (years.get(y) || 0) + 1); }
+    let mainYear = null; let mainN = 0;
+    for (const [y, n] of years) if (n > mainN) { mainYear = y; mainN = n; }
+    let prevDated = null;
+    for (const e of entries) {
+      if (!e.date) continue;
+      if (mainYear && entries.length >= 3 && e.date.slice(0, 4) !== mainYear) addDoubt(e, 'date', `Année ${e.date.slice(0, 4)} différente des autres pièces (${mainYear}) : date à vérifier`);
+      if (prevDated && e.date < prevDated.date) addDoubt(e, 'date', `Date ${isoToDisplay(e.date)} antérieure à la pièce n° ${prevDated.no} (${isoToDisplay(prevDated.date)}) : à vérifier`);
+      prevDated = e;
     }
 
     const nos = entries.filter((e) => e.no != null).map((e) => e.no);
@@ -1099,6 +1317,12 @@
     analyzePage,
     countForms,
     buildEntry,
+    unknownWords,
+    expectedSideFromAccount,
+    isSuspiciousWord,
+    nearPerson,
+    knownPerson,
+    boxOf,
     parseDocument,
     detectCaisseAccount,
     typeFromLibelle,

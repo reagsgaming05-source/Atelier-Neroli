@@ -71,10 +71,17 @@
 
   <section class="card hidden" id="step3">
     <h2><span class="n">3</span> Vérification des écritures</h2>
-    <div class="legend">Vérifiez chaque ligne (cliquez sur une ligne pour voir la pièce scannée). Les champs sont modifiables. Les lignes signalées <span style="color:var(--warn)">⚠</span> demandent une vérification ; cochez « Vérifié » quand c'est en ordre.</div>
+    <div class="legend">
+      Seules les lignes <span class="chip warn">⚠ orange</span> demandent un contrôle : la cellule en doute est colorée en orange, l'explication apparaît sous la ligne
+      et au survol. Les lignes <span class="chip ok">✓ vertes</span> ont été lues sans ambiguïté (montant confirmé par deux lectures, compte caisse d'un seul côté, comptes connus…).
+      Les cellules <span class="chip fixed">bleues</span> ont été corrigées automatiquement (détail en gris). Cliquez sur une ligne : la pièce s'affiche à droite avec des cadres
+      <span style="color:#d97706;font-weight:600">orange</span> (zone en doute) et <span style="color:#2563eb;font-weight:600">bleus</span> (zones lues) ; les champs restent modifiables.
+    </div>
     <div class="toolbar">
       <button type="button" id="btnAddRow">+ Ajouter une écriture manuelle</button>
       <button type="button" id="btnCheckAll" class="small">Tout marquer vérifié</button>
+      <label class="legend" style="display:flex;align-items:center;gap:6px;margin-left:8px"><input type="checkbox" id="filterDoubt"> Afficher seulement les lignes à vérifier</label>
+      <button type="button" id="btnNextDoubt" class="small">Aller à la prochaine ligne à vérifier ▼</button>
       <span class="spacer"></span>
       <span class="legend" id="rowSummary"></span>
     </div>
@@ -100,6 +107,10 @@
       </div>
       <aside class="preview" id="preview">
         <div class="navpage" id="previewNav">Sélectionnez une écriture pour afficher la pièce.</div>
+        <div class="toolbar" style="margin:0 0 8px">
+          <button type="button" class="small primary" id="btnVerifyNext" title="Marque cette ligne comme vérifiée et passe à la suivante à vérifier">✓ Vérifié → suivante</button>
+          <button type="button" class="small" id="btnFullPage" title="Afficher la page entière">Page entière</button>
+        </div>
         <div class="frame" id="previewFrame"><span>Aperçu de la pièce</span></div>
         <div class="fields" id="previewFields"></div>
       </aside>

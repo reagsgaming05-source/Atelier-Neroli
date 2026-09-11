@@ -28,10 +28,14 @@ compte de contrepartie.
    nombre de pièces ; on peut les monter/descendre, en retirer, en ajouter plus tard sans perdre
    les corrections déjà faites. Les PDF doivent avoir été scannés avec reconnaissance de texte
    (PDF « consultable »), ce que fait le copieur.
-5. **Étape 3 – Vérification** : chaque pièce reconnue apparaît sur une ligne ; cliquer sur une
-   ligne affiche la pièce scannée à droite. Les lignes ⚠ demandent une vérification
-   (plusieurs comptes possibles, montant douteux, compte caisse des deux côtés…) : corriger
-   au besoin puis cocher « Vérifié ». On peut aussi ajouter une écriture manuelle.
+5. **Étape 3 – Vérification** : seules les lignes ⚠ **orange** demandent un contrôle ; les lignes
+   ✓ vertes ont été lues sans ambiguïté. Dans une ligne orange, **la cellule en doute est colorée**
+   (numéro, date, compte, libellé ou montant), la raison s'affiche sous la ligne et au survol.
+   Les cellules **bleues** signalent une correction automatique (mot, nom ou compte caisse mal lu).
+   Cliquer sur une ligne affiche la pièce à droite avec les zones lues encadrées : **orange** pour
+   la zone en doute, **bleu** pour les autres. Deux aides : la case *Afficher seulement les lignes
+   à vérifier* et le bouton *✓ Vérifié → suivante* qui enchaîne les contrôles. On peut aussi
+   ajouter une écriture manuelle.
 6. **Étape 4 – Excel** : *Générer le fichier Excel* télécharge `Caisse écoles AAAA.xlsx`.
    L'ouvrir dans Excel et l'enregistrer à la place du classeur.
 
@@ -48,11 +52,26 @@ personne) et la date sous le tableau. Le libellé du journal est composé ainsi 
 Les fautes d'OCR courantes sont corrigées (`10'OOO.OQ` → 10 000.00, `51000. 3662. 50` → `51000.3662.50`,
 `REMBOURSMENT` → `REMBOURSEMENT`).
 
+Doutes signalés (ce qui déclenche l'orange) :
+
+- **Montant** : illisible, lu une seule fois (SOMME ou Total manquant, donc sans confirmation
+  croisée), différent entre SOMME et Total, nul ou inhabituellement élevé ; sens débit/crédit
+  déduit au lieu d'être lu, contraire au sens habituel du type dans le classeur (par exemple un
+  REMBOURSEMENT en entrée de caisse), ou opposé à la nature du compte (compte de recettes `.4xxx`
+  en sortie).
+- **Compte** : plusieurs comptes possibles sur la pièce, aucun compte lu, compte caisse des deux
+  côtés ou absent, compte jamais utilisé jusqu'ici (avec les comptes connus voisins proposés).
+- **Numéro** : absent, dupliqué, déjà présent dans le classeur, ou hors séquence par rapport à
+  l'ordre des pages (pièces scannées dans l'ordre).
+- **Date** : absente, antérieure à la pièce précédente, ou d'une autre année que le reste du lot.
+- **Libellé** : absent, sans type d'écriture en tête, sans nom de personne, contenant un mot qui
+  ressemble à une erreur de lecture, ou un nom très proche d'un nom connu.
+
 Précision de la lecture :
 
-- les mots du libellé sont comparés au vocabulaire (lexique de base + mots appris dans le
-  classeur) et corrigés quand l'écart est typique de l'OCR (`chour` → `chœur`, `expbsition` →
-  `exposition`) ; les désignations de classes aussi (`98` → `9S`, `7-118` → `7-11S`) ;
+- les mots du libellé sont comparés au vocabulaire (lexique de base d'environ 450 mots + mots
+  appris dans le classeur) et corrigés quand l'écart est typique de l'OCR (`chour` → `chœur`,
+  `expbsition` → `exposition`) ; les désignations de classes aussi (`98` → `9S`, `7-118` → `7-11S`) ;
 - le nom de la personne est corrigé d'après les noms connus (`N. Boriat` → `N. Borlat`) ;
 - un compte jamais utilisé qui ressemble à un compte connu est signalé avec une proposition
   (jamais corrigé d'office, les sous-comptes voisins étant légitimes) ; un compte caisse mal lu
@@ -61,7 +80,13 @@ Précision de la lecture :
   manquants sont proposés d'après la pièce précédente et signalés ;
 - deux formulaires sur une même page sont reconnus séparément ; les scans légèrement inclinés
   sont tolérés ;
-- chaque correction est indiquée en gris sous la ligne, pour contrôle.
+- chaque correction est indiquée par une cellule bleue, avec le détail au survol et sous la ligne
+  quand elle est sélectionnée ;
+- le sens attendu de chaque type d'écriture est appris du classeur (un type n'est utilisé comme
+  règle que si ses écritures vont toutes dans le même sens, sur au moins cinq occurrences).
+
+Sur le lot d'exemple de 33 pièces, cinq lignes sont signalées et vingt-huit passent en vert, sans
+écart sur les dates, montants, sens et comptes.
 
 ## Développement
 
