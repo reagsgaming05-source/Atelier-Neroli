@@ -4166,18 +4166,40 @@
     };
   }
 
-  // Couleur du fond et couleur de l'encre, relevées sur la page affichée.
-  function edCouleurs(zone) {
+  // Rendu net d'une zone de la page. À la taille d'affichage, une lettre de
+  // dix points ne fait qu'un pixel d'épaisseur : son cœur n'atteint jamais
+  // sa vraie densité et la couleur relevée ressortirait délavée.
+  async function edZoneNette(zone, corps) {
+    const p = edPage();
+    const src = srcById(p.src);
+    const g = pageGeom(p);
+    const echelle = Math.min(6, Math.max(2.5, 36 / Math.max(4, corps || 11)));
+    const page = await src.pdfjs.getPage(p.index + 1);
+    const vp = page.getViewport({ scale: echelle, rotation: g.total });
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(2, Math.ceil((zone.w + 4) * echelle));
+    cv.height = Math.max(2, Math.ceil((zone.h + 4) * echelle));
+    const ctx = cv.getContext('2d', { alpha: false, willReadFrequently: true });
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.translate(-(zone.x - 2) * echelle, -(zone.y - 2) * echelle);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    page.cleanup();
+    return { cv, echelle, x0: zone.x - 2, y0: zone.y - 2 };
+  }
+
+  // Couleur du fond et couleur de l'encre, relevées sur ce rendu net.
+  function edCouleurs(zone, net) {
     const defaut = { fond: '#FFFFFF', encre: '#111111' };
+    if (!net) return defaut;
     try {
-      const g = pageGeom(edPage());
-      const k = ed.canvas.width / g.Wd;
-      const x = Math.max(0, Math.round((zone.x - 2) * k));
-      const y = Math.max(0, Math.round((zone.y - 2) * k));
-      const w = Math.min(ed.canvas.width - x, Math.round((zone.w + 4) * k));
-      const h = Math.min(ed.canvas.height - y, Math.round((zone.h + 4) * k));
+      const k = net.echelle;
+      const x = Math.max(0, Math.round((zone.x - 2 - net.x0) * k));
+      const y = Math.max(0, Math.round((zone.y - 2 - net.y0) * k));
+      const w = Math.min(net.cv.width - x, Math.round((zone.w + 4) * k));
+      const h = Math.min(net.cv.height - y, Math.round((zone.h + 4) * k));
       if (w < 2 || h < 2) return defaut;
-      const d = ed.canvas.getContext('2d', { willReadFrequently: true }).getImageData(x, y, w, h).data;
+      const d = net.cv.getContext('2d', { willReadFrequently: true }).getImageData(x, y, w, h).data;
       const compte = new Map();
       let sombre = null, minLum = 1e9, clair = 0;
       for (let i = 0; i < d.length; i += 4) {
@@ -4245,14 +4267,15 @@
       toast(lignes.length ? 'Cliquez sur un paragraphe encadré.' : 'Aucun texte modifiable sur cette page. Un scan doit d\'abord être reconnu par un logiciel d\'OCR.', 'warn');
       return;
     }
-    const couleurs = edCouleurs({ x: cible.x, y: cible.y, w: cible.w, h: cible.h });
+    const net = await edZoneNette({ x: cible.x, y: cible.y, w: cible.w, h: cible.h }, cible.size);
+    const couleurs = edCouleurs({ x: cible.x, y: cible.y, w: cible.w, h: cible.h }, net);
     if (!couleurs.encre) couleurs.encre = '#111111';
     // Couleur relevee morceau par morceau : un paragraphe peut porter un mot
     // dans une autre teinte, et le reprendre en noir se verrait.
     const enRun = b => {
       let encre = couleurs.encre;
       if (b.x1 - b.x0 > 7 && b.h0) {
-        const c = edCouleurs({ x: b.x0 - 1, y: b.y0, w: b.x1 - b.x0 + 2, h: b.h0 });
+        const c = edCouleurs({ x: b.x0 - 1, y: b.y0, w: b.x1 - b.x0 + 2, h: b.h0 }, net);
         if (c && c.encre) encre = c.encre;
       }
       return {
