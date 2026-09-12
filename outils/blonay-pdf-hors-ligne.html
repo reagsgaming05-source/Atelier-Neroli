@@ -57,7 +57,7 @@
     --ombre-flottante: 0 1px 2px rgba(0, 0, 0, .4), 0 24px 48px -12px rgba(0, 0, 0, .65);
     --voile: rgba(8, 11, 14, .72);
 
-    --tuile: 176px;
+    --tuile: 158px;
     --rond: 10px;
     --rond-petit: 7px;
     --elan: cubic-bezier(.2, .7, .2, 1);
@@ -297,7 +297,7 @@
   .tool .t-sub { font-size: 11.5px; color: var(--texte-3); }
   .tool .dot { margin-left: auto; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--vert); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vert) 18%, transparent); }
 
-  .shortcuts { margin-top: auto; padding: 14px 16px; border-top: 1px solid var(--trait-fin); flex: none; }
+  .shortcuts { margin-top: 18px; padding: 14px 16px; border-top: 1px solid var(--trait-fin); flex: none; }
   .shortcuts dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: baseline; font-size: 12px; color: var(--texte-2); }
   .shortcuts dt { white-space: nowrap; color: var(--texte-3); }
   .shortcuts dd { margin: 0; }
@@ -305,7 +305,7 @@
     font-family: var(--chiffre); font-size: 10.5px; color: var(--texte); padding: 1.5px 5px;
     border: 1px solid var(--trait); border-bottom-width: 2px; border-radius: 5px; background: var(--relief);
   }
-  .privacy { display: flex; gap: 9px; align-items: flex-start; padding: 12px 16px 16px; font-size: 12px; color: var(--texte-3); flex: none; }
+  .privacy { display: flex; gap: 9px; align-items: flex-start; padding: 14px 16px 16px; border-top: 1px solid var(--trait-fin); font-size: 12px; color: var(--texte-3); flex: none; }
   .privacy svg { width: 13px; height: 13px; flex: none; margin-top: 3px; color: var(--vert); }
 
   /* ---------- la table lumineuse ---------- */
@@ -336,24 +336,23 @@
   .pages {
     list-style: none; margin: 0; padding: 0;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tuile), 1fr));
-    gap: 28px 20px; align-items: start;
+    gap: 24px 18px; align-items: start;
   }
 
   /* une page est une feuille : angles vifs, ombre de contact, papier chaud */
-  .tile { position: relative; display: flex; flex-direction: column; gap: 9px; cursor: grab; user-select: none; }
+  .tile { position: relative; display: flex; flex-direction: column; gap: 8px; cursor: grab; user-select: none; }
   .tile:active { cursor: grabbing; }
   .tile.arrive { animation: pose .4s var(--elan) backwards; }
   @keyframes pose { from { opacity: 0; transform: translateY(8px) scale(.985); } }
   .tile:focus-visible { outline: none; }
   .tile:focus-visible .thumb { box-shadow: 0 0 0 2px var(--bleu); }
   .thumb {
-    position: relative; aspect-ratio: 1 / 1; display: grid; place-items: center; overflow: hidden;
-    border-radius: var(--rond);
-    transition: transform .18s var(--elan), box-shadow .18s var(--elan);
+    position: relative; aspect-ratio: 1 / 1.414; display: grid; place-items: center;
+    transition: transform .18s var(--elan);
   }
   .sheet {
     position: relative; display: block; background: var(--papier);
-    max-width: calc(100% - 24px); max-height: calc(100% - 24px);
+    max-width: 100%; max-height: 100%;
     border-radius: 2px;
     box-shadow: var(--ombre-feuille);
     transition: box-shadow .18s var(--elan);
@@ -361,36 +360,39 @@
   .sheet img { display: block; width: 100%; height: 100%; object-fit: fill; border-radius: 2px; }
   .sheet .ann-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .thumb .placeholder {
-    width: 58%; aspect-ratio: 1 / 1.414; border-radius: 2px;
+    width: 100%; height: 100%; border-radius: 2px;
     background: var(--survol); border: 1px solid var(--trait-fin);
     font-family: var(--chiffre); font-size: 11px; color: var(--texte-3);
     display: grid; place-items: center; align-content: center; gap: 10px; text-align: center; padding: 8px;
   }
   .thumb-error .placeholder { color: var(--rouge); }
-  .tile:hover .thumb { transform: translateY(-3px); }
+  .tile:hover .thumb { transform: translateY(-2px); }
   .tile:hover .sheet { box-shadow: var(--ombre-levee); }
   .tile.selected .sheet { box-shadow: 0 0 0 2px var(--bleu), var(--ombre-levee); }
   .tile.hit .sheet { box-shadow: 0 0 0 2px var(--ambre), var(--ombre-levee); }
   .tile.dragging { opacity: .28; }
   .tile.drop-before::before, .tile.drop-after::after {
-    content: ""; position: absolute; top: 4px; bottom: 40px; width: 3px; border-radius: 3px;
+    content: ""; position: absolute; top: 0; bottom: 36px; width: 3px; border-radius: 3px;
     background: var(--bleu); box-shadow: 0 0 12px var(--bleu-ombre);
     animation: apparait .14s var(--elan);
   }
   @keyframes apparait { from { opacity: 0; transform: scaleY(.6); } }
-  .tile.drop-before::before { left: -12px; }
-  .tile.drop-after::after { right: -12px; }
+  .tile.drop-before::before { left: -11px; }
+  .tile.drop-after::after { right: -11px; }
 
   .check {
-    position: absolute; top: 9px; left: 9px; z-index: 2; width: 21px; height: 21px; border-radius: 6px;
+    position: absolute; top: 7px; left: 7px; z-index: 2; width: 20px; height: 20px; border-radius: 6px;
     border: 1px solid rgba(16, 21, 26, .28); background: rgba(255, 255, 255, .86); color: transparent;
     display: grid; place-items: center; backdrop-filter: blur(3px);
-    transition: background .14s var(--elan), border-color .14s var(--elan), transform .14s var(--elan);
+    opacity: 0;
+    transition: opacity .13s var(--elan), background .14s var(--elan), border-color .14s var(--elan);
   }
+  .tile:hover .check, .tile:focus-within .check, .tile.selected .check, .tile.hit .check { opacity: 1; }
+  @media (hover: none) { .check { opacity: 1; } }
   .check svg { width: 12px; height: 12px; }
   .tile:hover .check { border-color: rgba(16, 21, 26, .45); }
-  .tile.selected .check { background: var(--bleu); border-color: var(--bleu); color: #fff; transform: scale(1.05); }
-  .flags { position: absolute; top: 9px; right: 9px; z-index: 2; display: flex; gap: 4px; }
+  .tile.selected .check { background: var(--bleu); border-color: var(--bleu); color: #fff; }
+  .flags { position: absolute; top: 7px; right: 7px; z-index: 2; display: flex; gap: 4px; }
   .flag {
     font-family: var(--chiffre); font-size: 10px; padding: 2.5px 6px; border-radius: 5px;
     background: rgba(16, 21, 26, .72); color: #E7ECF1; backdrop-filter: blur(3px);
@@ -399,7 +401,7 @@
   .flag.ann { background: var(--bleu); color: #fff; }
 
   .tile-tools {
-    position: absolute; left: 50%; bottom: 9px; transform: translateX(-50%) translateY(4px); z-index: 3;
+    position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%) translateY(4px); z-index: 3;
     display: flex; gap: 1px; padding: 3px;
     background: color-mix(in srgb, var(--feutre) 88%, transparent); backdrop-filter: blur(10px) saturate(1.4);
     border: 1px solid var(--trait); border-radius: 9px; box-shadow: var(--ombre-flottante);
@@ -420,15 +422,16 @@
   .tile-tools button svg { width: 14px; height: 14px; }
   .tile-tools .sep { width: 1px; background: var(--trait); margin: 5px 2px; }
 
-  .tile-foot { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 0 1px; }
+  .tile-foot { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0; }
   .pos {
     width: 42px; height: 25px; flex: none; text-align: center;
     font-family: var(--chiffre); font-size: 12.5px; font-variant-numeric: tabular-nums;
-    color: var(--texte); background: transparent; border: 1px solid var(--trait);
+    color: var(--texte-2); background: transparent; border: 1px solid transparent;
     border-radius: 6px; cursor: text;
     transition: border-color .14s, background .14s, color .14s;
   }
-  .pos:hover { border-color: var(--texte-3); }
+  .tile:hover .pos { border-color: var(--trait); color: var(--texte); }
+  .pos:hover { border-color: var(--texte-3); color: var(--texte); }
   .pos:focus { outline: none; border-color: var(--bleu); background: var(--relief); }
   .tile.selected .pos { border-color: var(--bleu); color: var(--bleu-vif); }
   .src-label { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 11.5px; color: var(--texte-3); }
@@ -595,17 +598,17 @@
   .ed-head .title { font-family: var(--titre); font-size: 19px; margin-right: 6px; white-space: nowrap; }
   .ed-head .nav { display: flex; align-items: center; gap: 4px; font-family: var(--chiffre); font-size: 12px; color: var(--texte-3); font-variant-numeric: tabular-nums; }
   .ed-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 62px minmax(0, 1fr) 244px; }
-  .ed-rail { background: var(--encre); border-right: 1px solid var(--trait); padding: 12px 0; display: flex; flex-direction: column; align-items: center; gap: 4px; overflow-y: auto; }
+  .ed-rail { background: var(--encre); border-right: 1px solid var(--trait); padding: 10px 0; display: flex; flex-direction: column; align-items: center; gap: 2px; overflow-y: auto; }
   .ed-tool {
-    width: 44px; height: 44px; border-radius: 10px; border: 1px solid transparent; background: transparent;
-    color: var(--texte-3); display: grid; place-items: center; position: relative;
+    width: 40px; height: 40px; border-radius: 9px; border: 1px solid transparent; background: transparent;
+    color: var(--texte-2); display: grid; place-items: center; position: relative;
     transition: background .14s var(--elan), color .14s var(--elan), transform .1s var(--elan);
   }
   .ed-tool svg { width: 19px; height: 19px; }
   .ed-tool:hover { background: var(--survol); color: var(--texte); }
   .ed-tool:active { transform: scale(.95); }
   .ed-tool[aria-pressed="true"] { background: var(--bleu); color: var(--bleu-encre); box-shadow: 0 2px 10px var(--bleu-ombre); }
-  .ed-rail .rail-sep { width: 26px; height: 1px; background: var(--trait); margin: 7px 0; }
+  .ed-rail .rail-sep { width: 22px; height: 1px; background: var(--trait); margin: 6px 0; }
   .ed-stage {
     position: relative; overflow: auto; display: grid; place-items: center; padding: 28px;
     background: radial-gradient(110% 70% at 50% 0%, rgba(255, 255, 255, .05), transparent 65%), var(--table);
@@ -614,13 +617,31 @@
   .ed-sheet canvas { display: block; width: 100%; height: 100%; border-radius: 2px; }
   .ed-overlay { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
   .ed-overlay.pick { cursor: default; }
+  .ed-overlay.texte { cursor: text; }
+  .ed-overlay .bloc {
+    fill: rgba(91, 156, 246, .07); stroke: rgba(91, 156, 246, .40);
+    stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none;
+  }
+  .ed-overlay .bloc.chaud { fill: rgba(91, 156, 246, .17); stroke: var(--bleu-vif); stroke-width: 1.6; }
   .ed-overlay .sel-box { fill: none; stroke: var(--bleu); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
   .ed-overlay .handle { fill: var(--bleu); stroke: #fff; stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: nwse-resize; }
   .ed-overlay .hit { cursor: move; }
   .ed-side { background: var(--feutre); border-left: 1px solid var(--trait); padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
   .ed-side h3 { margin: 0; font-size: 10.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--texte-3); }
   .ed-side .empty { font-size: 12.5px; color: var(--texte-3); }
-  .ed-foot { flex: none; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px; background: var(--encre); border-top: 1px solid var(--trait); font-size: 12px; color: var(--texte-3); }
+  .ed-side .fiche {
+    display: grid; grid-template-columns: auto 1fr; gap: 4px 12px;
+    font-size: 12px; color: var(--texte-3); padding: 10px 11px;
+    background: var(--encre); border: 1px solid var(--trait-fin); border-radius: var(--rond-petit);
+  }
+  .ed-side .fiche b { color: var(--texte); font-weight: 500; }
+  .ed-side .regle { height: 1px; background: var(--trait-fin); margin: 1px 0; flex: none; }
+  .ed-side .pied { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--trait-fin); display: flex; flex-direction: column; gap: 8px; flex: none; }
+  .ed-side .pied .tb-btn { justify-content: center; border: 1px solid var(--trait); }
+  .ed-side .pied .tb-btn:hover { background: var(--survol); border-color: var(--texte-3); }
+  .ed-side .pied .tb-btn.danger { color: var(--rouge); }
+  .ed-side .pied .tb-btn.danger:hover { background: var(--rouge-ombre); border-color: var(--rouge); }
+  .ed-foot { flex: none; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px; background: var(--encre); border-top: 1px solid var(--trait); font-size: 12px; color: var(--texte-2); }
   .ed-textarea {
     position: absolute; border: 1px dashed var(--bleu); background: rgba(255, 255, 255, .96); color: #111;
     border-radius: 2px; padding: 1px 2px; margin: 0; resize: none; overflow: hidden; line-height: 1.25;
@@ -632,23 +653,23 @@
   .ed-riche {
     position: absolute; z-index: 5; margin: 0; padding: 1px 2px;
     box-sizing: content-box;
-    border: 1px dashed var(--bleu); border-radius: 2px;
-    background: rgba(255, 255, 255, .97); color: #111;
+    border: 1px solid color-mix(in srgb, var(--bleu) 62%, transparent); border-radius: 2px;
+    background: transparent; color: #111;
     line-height: 1.18; white-space: pre-wrap; overflow-wrap: anywhere;
-    box-shadow: 0 0 0 3px var(--bleu-ombre); caret-color: var(--bleu);
+    caret-color: var(--bleu); cursor: text;
   }
-  .ed-riche:focus { outline: none; }
+  .ed-riche:focus { outline: none; border-color: var(--bleu); box-shadow: 0 0 0 3px var(--bleu-ombre); }
   .ed-riche span { white-space: pre-wrap; }
   .ed-riche ::selection { background: var(--bleu); color: #fff; }
 
+  .ed-bandeau { flex: 0 1 auto; display: flex; justify-content: center; min-width: 0; }
   .ed-format {
-    position: absolute; z-index: 6; display: flex; align-items: center; gap: 2px; padding: 4px;
-    border-radius: 10px; border: 1px solid var(--trait);
-    background: color-mix(in srgb, var(--feutre) 94%, transparent);
-    backdrop-filter: blur(12px) saturate(1.4);
-    box-shadow: var(--ombre-flottante);
+    display: flex; align-items: center; gap: 2px; padding: 3px;
+    border-radius: 9px; border: 1px solid var(--trait); background: var(--feutre);
     font-family: var(--ui); font-size: 12.5px; color: var(--texte);
+    animation: apparait-barre .16s var(--elan);
   }
+  @keyframes apparait-barre { from { opacity: 0; transform: translateY(-4px); } }
   .ed-format button {
     min-width: 29px; height: 27px; padding: 0 7px; border: 0; border-radius: 6px;
     background: transparent; color: var(--texte-2);
@@ -677,6 +698,7 @@
 
   /* ---------- adaptation aux petits écrans ---------- */
   @media (max-width: 1180px) {
+    .editor.en-saisie .ed-head .title { display: none; }
     .tb-btn .lbl { display: none; }
     .tb-btn.primary .lbl, .pane-foot .lbl, .dz-actions .lbl { display: inline; }
     .filename input { width: 124px; }
@@ -690,7 +712,7 @@
     .canvas { overflow: visible; padding: 18px 16px 96px; }
     .statusbar { position: sticky; bottom: 0; z-index: 20; }
     .toolbar { flex-wrap: wrap; height: auto; padding: 10px 12px; row-gap: 8px; }
-    .tb-spacer { flex-basis: 100%; min-width: 0; }
+    .toolbar > .tb-spacer { flex-basis: 100%; min-width: 0; }
     .filename { margin-left: auto; }
     .brand .name span { display: none; }
     .selbar { bottom: 46px; padding-left: 11px; }
@@ -698,10 +720,19 @@
     .ed-body { grid-template-columns: 54px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
     .ed-side { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--trait); max-height: 38vh; }
     .ed-tool { width: 40px; height: 40px; }
+    .editor.en-saisie .ed-head .nav { display: none; }
+    .ed-format .police { max-width: 88px; }
   }
   @media (max-width: 520px) {
-    :root { --tuile: 138px; }
-    .pages { gap: 20px 14px; }
+    :root { --tuile: 126px; }
+    .pages { gap: 18px 12px; }
+    /* Sur un téléphone, la barre d'actions doit tenir dans la largeur d'une
+       page : on la resserre et on retire le bouton de numéro, que le champ
+       sous la page fait déjà. */
+    .tile-tools { gap: 0; padding: 2px; border-radius: 8px; }
+    .tile-tools button { width: 21px; height: 24px; border-radius: 5px; }
+    .tile-tools button svg { width: 12px; height: 12px; }
+    .tile-tools .sep, .tile-tools button[data-act="pos"] { display: none; }
     .zoom { display: none; }
     .dialog { max-height: 92vh; }
     .dlg-body { padding: 15px; }
@@ -1519,6 +1550,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       fond.setAttribute('width', Math.max(0, a.w)); fond.setAttribute('height', Math.max(0, annHauteur(a)));
       fond.setAttribute('fill', a.bg || '#FFFFFF');
       gEl.appendChild(fond);
+      if (forEditor && ed.saisie && ed.saisie.a === a) return gEl;
       (a.lignes || []).forEach((seg, i) => {
         if (!seg.length) return;
         const t = document.createElementNS(SVGNS, 'text');
@@ -1681,8 +1713,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const ph = li.querySelector('.placeholder');
     const portrait = g.Hd >= g.Wd;
     sheet.style.aspectRatio = g.Wd.toFixed(2) + ' / ' + g.Hd.toFixed(2);
-    sheet.style.width = portrait ? 'auto' : 'calc(100% - 22px)';
-    sheet.style.height = portrait ? 'calc(100% - 22px)' : 'auto';
+    sheet.style.width = portrait ? 'auto' : '100%';
+    sheet.style.height = portrait ? '100%' : 'auto';
     rot.style.width = (g.Wb / g.Wd * 100).toFixed(4) + '%';
     rot.style.height = (g.Hb / g.Hd * 100).toFixed(4) + '%';
     rot.style.transform = 'translate(-50%, -50%) rotate(' + g.rot + 'deg)';
@@ -3157,6 +3189,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // page couverte par des marques qui se tiennent : une page vraiment vide,
   // même bruitée par un scanner, mesure zéro ; un petit tampon 0,11 % ;
   // un titre seul 0,04 % ; trois lignes de texte 0,98 % ; une page pleine 5 %.
+  // Au-delà, la page porte une vraie image ou un vrai texte : elle n'est
+  // pas « presque vide » et ne doit pas être proposée au retrait.
+  // Repères mesurés : un tampon 0,11 %, un titre seul 0,04 %, trois lignes
+  // 0,98 %, une page pleine 5 %, un scan pleine page 12 à 40 %.
+  const PRESQUE_VIDE = { ratio: 0.006, lettres: 120 };
   const SENSIBILITE = {
     strict: { ecart: 20, seuil: 0, marge: 0.03, lettres: 0 },
     normal: { ecart: 34, seuil: 0.0002, marge: 0.04, lettres: 2 },
@@ -3266,16 +3303,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (mien !== jeton) return;
 
       const vides = mesures.filter(m => m.vide);
-      // Même quand rien n'est détecté, on montre les pages les plus vides
-      // avec leur mesure : l'outil ne doit jamais être un cul-de-sac.
-      const autres = mesures.filter(m => !m.vide)
+      // « Presque vide » veut dire : la page ne porte qu'une marque ou deux,
+      // un tampon, un titre seul. Une photo ou un scan en couvre bien
+      // davantage et n'a rien à faire dans cette liste, même si c'est la
+      // page la moins chargée du document.
+      const autres = mesures.filter(m => !m.vide && m.mesure.ratio <= PRESQUE_VIDE.ratio && m.lettres <= PRESQUE_VIDE.lettres)
         .sort((a, b) => (a.mesure.ratio - b.mesure.ratio) || (a.lettres - b.lettres))
         .slice(0, 8);
 
       info.textContent = (vides.length
         ? plural(vides.length, 'page vide d\u00e9tect\u00e9e', 'pages vides d\u00e9tect\u00e9es') + ' sur ' + state.pages.length + ', d\u00e9j\u00e0 coch\u00e9e' + (vides.length > 1 ? 's' : '') + '.'
         : 'Aucune page enti\u00e8rement vide sur ' + plural(state.pages.length, 'page', 'pages') + '.')
-        + (autres.length ? ' Les plus vides suivent, avec ce qui a \u00e9t\u00e9 mesur\u00e9 : cochez celles \u00e0 retirer.' : '')
+        + (autres.length
+          ? ' ' + plural(autres.length, 'page ne porte presque rien', 'pages ne portent presque rien') + ' : cochez celles \u00e0 retirer.'
+          : (vides.length ? '' : ' Toutes portent du texte ou une image.'))
         + (rates ? ' ' + plural(rates, 'page n\'a pas pu \u00eatre analys\u00e9e', 'pages n\'ont pas pu \u00eatre analys\u00e9es') + '.' : '');
 
       const ajouter = (m, coche, titre) => {
@@ -3960,7 +4001,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const done = document.createElement('button');
     done.type = 'button'; done.className = 'tb-btn primary'; done.textContent = 'Terminer';
     done.addEventListener('click', closeEditor);
-    head.append(title, nav, spacer, zoomSel, done);
+    const bandeau = document.createElement('div'); bandeau.className = 'ed-bandeau';
+    const spacer2 = document.createElement('span'); spacer2.className = 'tb-spacer';
+    head.append(title, nav, spacer, bandeau, spacer2, zoomSel, done);
 
     const body = document.createElement('div'); body.className = 'ed-body';
     const rail = document.createElement('div'); rail.className = 'ed-rail';
@@ -4014,9 +4057,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     foot.id = 'ed-foot';
     root.append(head, body, foot);
     document.body.appendChild(root);
-    ed.root = root; ed.canvas = canvas; ed.svg = svg; ed.sheet = sheet; ed.side = side; ed.label = label; ed.stage = stage;
+    ed.root = root; ed.canvas = canvas; ed.svg = svg; ed.sheet = sheet; ed.side = side; ed.label = label; ed.stage = stage; ed.bandeau = bandeau;
 
     svg.addEventListener('pointerdown', edPointerDown);
+    svg.addEventListener('pointermove', e => {
+      if (ed.tool !== 'edittext' || !ed.lignes || ed.saisie) return;
+      const pt = edPt(e);
+      const i = ed.lignes.findIndex(l => pt.x >= l.x - 2 && pt.x <= l.x + l.w + 2 && pt.y >= l.y - 1 && pt.y <= l.y + l.h + 1);
+      if (i === ed.chaud) return;
+      ed.chaud = i;
+      $$('.bloc', svg).forEach(r => r.classList.toggle('chaud', +r.dataset.bloc === i));
+    });
+    svg.addEventListener('pointerleave', () => {
+      if (ed.chaud === -1 || ed.chaud == null) return;
+      ed.chaud = -1;
+      $$('.bloc', svg).forEach(r => r.classList.remove('chaud'));
+    });
     svg.addEventListener('dblclick', e => {
       const p = edPage();
       if (!p) return;
@@ -4038,6 +4094,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function edSyncTools() {
     $$('.ed-tool', ed.root).forEach(b => b.setAttribute('aria-pressed', b.dataset.tool === ed.tool ? 'true' : 'false'));
     const svg = ed.svg;
+    ed.chaud = -1;
     svg.classList.toggle('pick', ed.tool === 'select');
     const hints = {
       select: 'Cliquez une annotation pour la déplacer, la redimensionner ou la supprimer.',
@@ -4045,7 +4102,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       highlight: 'Faites glisser sur le texte à surligner.',
       box: 'Faites glisser pour tracer un cadre.',
       draw: 'Dessinez en maintenant le bouton enfoncé.',
-      edittext: 'Cliquez un paragraphe encadré pour le corriger. Sélectionnez un bout de texte pour le supprimer, le grossir ou le mettre en gras.',
+      edittext: 'Cliquez dans un paragraphe : le curseur se pose à cet endroit. Entrée revient à la ligne, Échap valide.',
       redact: 'Faites glisser sur la zone à masquer. La page sera convertie en image à l\'export pour supprimer le texte en dessous.',
     };
     $('#ed-foot').textContent = hints[ed.tool] || '';
@@ -4056,7 +4113,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const i = pageIndex(ed.pageId);
     const n = state.pages[i + dir];
     if (!n) return;
-    ed.pageId = n.id; ed.sel = null;
+    ed.pageId = n.id; ed.sel = null; ed.chaud = -1;
     ed.lignes = null; ed.lignesCle = null;
     edRenderPage();
   }
@@ -4317,11 +4374,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     a.h = Math.max(1, a.lines.length) * a.size * 1.25;
   }
 
-  async function edModifierTexte(pt) {
+  async function edModifierTexte(pt, point) {
     // Deja corrigee : on rouvre la retouche au lieu d'en empiler une seconde.
     const deja = (edPage().ann || []).filter(x => x.type === 'edit')
-      .find(x => pt.x >= x.x - 1 && pt.x <= x.x + x.w + 1 && pt.y >= x.y - 1 && pt.y <= x.y + x.h + 1);
-    if (deja) { ed.sel = deja.id; edEditRuns(deja); return; }
+      .find(x => pt.x >= x.x - 1 && pt.x <= x.x + x.w + 1 && pt.y >= x.y - 1 && pt.y <= x.y + annHauteur(x) + 1);
+    if (deja) { ed.sel = deja.id; edEditRuns(deja, { point }); return; }
     const lignes = await edLignes();
     const cible = lignes.find(l => pt.x >= l.x - 2 && pt.x <= l.x + l.w + 2 && pt.y >= l.y - 1 && pt.y <= l.y + l.h + 1);
     if (!cible) {
@@ -4363,7 +4420,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     a.marge = Math.max(0, plusLarge + 0.5 - (a.w - 2));
     recalcRuns(a);
     edCommit(a);
-    edEditRuns(a, { nouveau: true });
+    edEditRuns(a, { nouveau: true, point });
   }
 
   async function edRenderPage() {
@@ -4431,20 +4488,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         svg.appendChild(hit);
       }
     });
+    svg.classList.toggle('texte', ed.tool === 'edittext');
     if (ed.tool === 'edittext' && ed.lignes && ed.lignesCle === p.id + ':' + p.rot) {
-      ed.lignes.forEach(l => {
+      ed.lignes.forEach((l, i) => {
         const r = document.createElementNS(SVGNS, 'rect');
+        r.setAttribute('class', 'bloc' + (ed.chaud === i ? ' chaud' : ''));
         r.setAttribute('x', l.x - 1); r.setAttribute('y', l.y - 1);
         r.setAttribute('width', l.w + 2); r.setAttribute('height', l.h + 2);
-        r.setAttribute('fill', 'rgba(91,156,246,.10)');
-        r.setAttribute('stroke', 'rgba(91,156,246,.55)');
-        r.setAttribute('stroke-width', Math.max(0.4, 1 / ed.scale));
-        r.style.pointerEvents = 'none';
+        r.dataset.bloc = i;
         svg.appendChild(r);
       });
     }
     const sel = p.ann.find(a => a.id === ed.sel);
-    if (sel) {
+    if (sel && !(ed.saisie && ed.saisie.a === sel)) {
       const bb = annBounds(sel);
       const r = document.createElementNS(SVGNS, 'rect');
       r.setAttribute('class', 'sel-box');
@@ -4534,7 +4590,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       return;
     }
     e.preventDefault();
-    if (t === 'edittext') { edModifierTexte(pt); return; }
+    if (t === 'edittext') { edModifierTexte(pt, { cx: e.clientX, cy: e.clientY }); return; }
     if (t === 'text') { edCreateText(pt); return; }
     if (t === 'draw') { edStart('draw', pt, e); return; }
     edStart('rect', pt, e);
@@ -4808,17 +4864,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
     s.zone.remove();
     if (s.barre) s.barre.remove();
+    if (ed.root) ed.root.classList.remove('en-saisie');
     edDrawOverlay();
   }
 
-  function edPlacerBarre(a, barre) {
-    const h = barre.offsetHeight || 35;
-    const w = barre.offsetWidth || 250;
-    let top = a.y * ed.scale - h - 9;
-    if (top < 2) top = (a.y + a.h) * ed.scale + 9;
-    const max = Math.max(2, (ed.sheet.clientWidth || w) - w - 3);
-    barre.style.left = Math.max(2, Math.min(a.x * ed.scale, max)) + 'px';
-    barre.style.top = Math.max(2, top) + 'px';
+
+  // Ou tomberait le curseur si l'on cliquait a cet endroit de l'ecran.
+  function richeAuPoint(zone, cx, cy) {
+    if (cx == null || cy == null) return null;
+    try {
+      let r = null;
+      if (document.caretRangeFromPoint) r = document.caretRangeFromPoint(cx, cy);
+      else if (document.caretPositionFromPoint) {
+        const c = document.caretPositionFromPoint(cx, cy);
+        if (c) { r = document.createRange(); r.setStart(c.offsetNode, c.offset); r.collapse(true); }
+      }
+      if (!r || !zone.contains(r.startContainer)) return null;
+      return richeIndex(zone, r.startContainer, r.startOffset);
+    } catch (_) { return null; }
   }
 
   function edBarreFormat(a, zone) {
@@ -4970,10 +5033,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     ed.sheet.appendChild(zone);
 
     const barre = edBarreFormat(a, zone);
-    ed.sheet.appendChild(barre);
+    ed.bandeau.appendChild(barre);
+    ed.root.classList.add('en-saisie');
     const total = runsTexte(a.runs).length;
-    const saisie = { zone, barre, a, sel: { debut: 0, fin: total } };
+    // Le curseur se pose la ou l'on a clique. Rien n'est selectionne : la
+    // premiere touche frappee ne doit jamais effacer le paragraphe entier.
+    let debut = richeAuPoint(zone, opts.point && opts.point.cx, opts.point && opts.point.cy);
+    if (debut == null) debut = total;
+    const saisie = { zone, barre, a, sel: { debut, fin: debut } };
     ed.saisie = saisie;
+    edDrawOverlay();
 
     saisie.suivre = () => {
       const o = richeOffsets(zone);
@@ -4989,7 +5058,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     zone.addEventListener('keydown', e => {
       e.stopPropagation();
       const mod = e.ctrlKey || e.metaKey;
-      if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) { e.preventDefault(); edFermerSaisie(); return; }
+      // Entree fait un retour a la ligne, comme dans un traitement de texte ;
+      // c'est Echap (ou Ctrl+Entree) qui valide la correction.
+      if (e.key === 'Escape' || (e.key === 'Enter' && mod)) { e.preventDefault(); edFermerSaisie(); return; }
       if (mod && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); basculerDepuisBarre('gras'); return; }
       if (mod && (e.key === 'i' || e.key === 'I')) { e.preventDefault(); basculerDepuisBarre('italique'); return; }
     });
@@ -4999,12 +5070,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     };
 
     zone.focus();
-    richePlacer(zone, 0, total);
+    richePlacer(zone, debut, debut);
     barre.maj();
     requestAnimationFrame(() => {
       if (ed.saisie !== saisie) return;
-      if (document.activeElement !== zone) { zone.focus(); richePlacer(zone, 0, total); }
-      edPlacerBarre(a, barre);
+      if (document.activeElement !== zone) { zone.focus(); richePlacer(zone, debut, debut); }
     });
   }
 
@@ -5126,7 +5196,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (!p) return;
     const sel = p.ann.find(a => a.id === ed.sel);
     const h = document.createElement('h3');
-    h.textContent = sel ? 'Annotation sélectionnée' : 'Style de l\'outil';
+    const enSaisie = !!(ed.saisie && sel && ed.saisie.a === sel);
+    h.textContent = sel
+      ? (sel.type === 'edit' ? (enSaisie ? 'Correction en cours' : 'Texte corrigé') : 'Annotation sélectionnée')
+      : 'Style de l\'outil';
     ed.side.appendChild(h);
 
     const isEdit = sel ? sel.type === 'edit' : ed.tool === 'edittext';
@@ -5139,7 +5212,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const change = fn => { if (sel) { snapshot(); state.touched = true; } fn(); edDrawOverlay(true); };
 
     if (isEdit && !sel) {
-      ed.side.appendChild(note('Cliquez un paragraphe encadré pour le corriger. Il est recouvert, puis réécrit avec ses polices, son interligne et sa justification d\'origine. Une barre apparaît au-dessus : elle agit sur la partie sélectionnée.'));
+      ed.side.appendChild(note('Cliquez dans un paragraphe encadré : le curseur se pose là où vous avez cliqué et vous écrivez directement sur la page, avec ses polices, son interligne et sa justification d\'origine.'));
     }
     // Une retouche de ligne se regle dans la barre flottante, morceau par
     // morceau ; le panneau n'agit que sur la ligne entiere.
@@ -5178,16 +5251,28 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       }
     }
     if (retouche) {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'tb-btn primary'; b.style.justifyContent = 'center';
-      b.textContent = 'Modifier le texte';
-      b.addEventListener('click', () => edEditRuns(sel));
-      ed.side.appendChild(b);
       const polices = Array.from(new Set((sel.runs || []).map(r => r.pol && r.pol.lisible).filter(Boolean)));
       const tailles = Array.from(new Set((sel.runs || []).map(r => Math.round(r.size * 10) / 10)));
-      ed.side.appendChild(note('Police : ' + (polices.join(', ') || 'standard')
-        + ' \u00b7 ' + (tailles.length > 1 ? tailles.join(' / ') + ' pt' : tailles[0] + ' pt')
-        + '. Double-cliquez la ligne pour la reprendre : la taille, le gras et la couleur se reglent alors sur la partie selectionnee.'));
+      const fiche = document.createElement('div'); fiche.className = 'fiche';
+      [['Police', polices.join(', ') || 'standard'],
+       ['Taille', (tailles.length > 1 ? tailles.join(' / ') : tailles[0]) + ' pt'],
+       ['Mise en page', sel.aligne === 'justifie' ? 'justifiée' : 'alignée à gauche']].forEach(kv => {
+        const d = document.createElement('span'); d.textContent = kv[0];
+        const v = document.createElement('b'); v.textContent = kv[1];
+        fiche.append(d, v);
+      });
+      ed.side.appendChild(fiche);
+      if (enSaisie) {
+        ed.side.appendChild(note('Écrivez directement sur la page. La barre en haut règle la taille, le gras et la couleur de la partie sélectionnée. Échap valide.'));
+      } else {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'tb-btn primary'; b.style.justifyContent = 'center';
+        b.textContent = 'Reprendre le texte';
+        b.addEventListener('click', () => edEditRuns(sel));
+        ed.side.appendChild(b);
+      }
+      const r = document.createElement('div'); r.className = 'regle';
+      ed.side.appendChild(r);
     }
     if (isEdit && sel) {
       const bg = input('ed-bg', 'color', sel.bg || '#FFFFFF');
@@ -5202,9 +5287,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       });
       ed.side.appendChild(eff);
       ed.side.appendChild(note(sel.efface
-        ? 'Cette page sera convertie en image à l\'export : le texte d\'origine disparaît réellement, mais la page n\'est plus sélectionnable.'
-        : 'Le texte d\'origine reste présent sous le rectangle et peut être retrouvé par copier-coller.',
-        sel.efface ? null : 'warn'));
+        ? 'La page sera convertie en image à l\'export : le texte d\'origine disparaît réellement, mais la page n\'est plus sélectionnable.'
+        : 'Sans cela, le texte d\'origine reste sous le rectangle et peut être retrouvé par copier-coller.',
+        sel.efface ? 'warn' : null));
     }
     if (isDraw || (isRect && (sel ? sel.type === 'box' : ed.tool === 'box'))) {
       const w = input('ed-width', 'number', sel ? (sel.width || 2) : ed.style.width, { min: 1, max: 24 });
@@ -5224,28 +5309,39 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       ed.side.appendChild(field('Opacité', o));
     }
     if (sel) {
+      const pied = document.createElement('div'); pied.className = 'pied';
       const del = document.createElement('button');
-      del.type = 'button'; del.className = 'tb-btn';
-      del.style.border = '1px solid var(--trait)'; del.style.color = 'var(--rouge)'; del.style.justifyContent = 'center';
-      del.textContent = 'Supprimer';
+      del.type = 'button'; del.className = 'tb-btn danger';
+      del.textContent = sel.type === 'edit' ? 'Annuler cette correction' : 'Supprimer';
       del.addEventListener('click', () => {
+        edFermerSaisie(true);
         snapshot();
         p.ann = p.ann.filter(a => a.id !== sel.id);
         ed.sel = null; state.touched = true; edDrawOverlay();
       });
-      ed.side.appendChild(del);
+      pied.appendChild(del);
+      ed.side.appendChild(pied);
     } else if (ed.tool === 'redact') {
       ed.side.appendChild(note('À l\'export, une page caviardée est convertie en image : le texte masqué disparaît réellement du fichier.', 'warn'));
-    } else {
-      ed.side.appendChild(document.createElement('div')).className = 'empty';
+    } else if (!isEdit) {
+      // Le panneau ne reste jamais vide : il dit ce que fait l'outil choisi.
+      const AIDE = {
+        select: 'Aucune annotation sélectionnée. Cliquez-en une sur la page pour la déplacer, la redimensionner ou en changer le style.',
+        text: 'Cliquez sur la page à l\'endroit où écrire. Le texte ajouté se pose par-dessus, sans toucher au contenu d\'origine.',
+        highlight: 'Faites glisser sur la page pour poser un surlignage translucide.',
+        box: 'Faites glisser pour tracer un cadre autour d\'une zone.',
+        draw: 'Dessinez à main levée en maintenant le bouton enfoncé.',
+      };
+      if (AIDE[ed.tool]) ed.side.appendChild(note(AIDE[ed.tool]));
     }
     if (p.ann.length) {
+      let pied = ed.side.querySelector('.pied');
+      if (!pied) { pied = document.createElement('div'); pied.className = 'pied'; ed.side.appendChild(pied); }
       const all = document.createElement('button');
       all.type = 'button'; all.className = 'tb-btn';
-      all.style.border = '1px solid var(--trait)'; all.style.justifyContent = 'center'; all.style.marginTop = 'auto';
       all.textContent = 'Tout effacer sur cette page';
-      all.addEventListener('click', () => { snapshot(); p.ann = []; ed.sel = null; state.touched = true; edDrawOverlay(); });
-      ed.side.appendChild(all);
+      all.addEventListener('click', () => { edFermerSaisie(true); snapshot(); p.ann = []; ed.sel = null; state.touched = true; edDrawOverlay(); });
+      pied.appendChild(all);
     }
   }
 
