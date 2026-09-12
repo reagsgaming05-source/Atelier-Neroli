@@ -4336,43 +4336,143 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return l;
   }
 
+  // Les bandes verticales que le texte ne traverse jamais : ce sont les
+  // gouttières entre colonnes. Elles disent où couper une ligne de base qui
+  // court d'une colonne à l'autre.
+  function edRivieres(brutes, g) {
+    const n = Math.max(8, Math.ceil(g.Wd));
+    const couv = new Uint16Array(n + 2);
+    brutes.forEach(b => b.items.forEach(m => {
+      const a = Math.max(0, Math.floor(m.x)), z = Math.min(n, Math.ceil(m.x + m.w));
+      for (let i = a; i < z; i++) couv[i]++;
+    }));
+    let xmin = 0; while (xmin < n && !couv[xmin]) xmin++;
+    let xmax = n - 1; while (xmax > xmin && !couv[xmax]) xmax--;
+    const tailles = [];
+    brutes.forEach(b => b.items.forEach(m => tailles.push(m.size)));
+    tailles.sort((a, b) => a - b);
+    const corps = tailles.length ? tailles[Math.floor(tailles.length / 2)] : 10;
+    const mini = Math.max(6, corps * 1.4);
+    // Un titre ou un pied de page peut enjamber une gouttière sans qu'elle
+    // cesse d'en être une.
+    const toleres = Math.floor(brutes.length * 0.08);
+    const out = [];
+    let i = xmin;
+    while (i <= xmax) {
+      if (couv[i] > toleres) { i++; continue; }
+      let j = i;
+      while (j <= xmax && couv[j] <= toleres) j++;
+      if (j - i >= mini) out.push([i, j]);
+      i = j;
+    }
+    return out;
+  }
+
   function edParagraphes(morceaux, g) {
     morceaux.sort((a, b) => (a.base - b.base) || (a.x - b.x));
 
-    // --- lignes : meme ligne de base. Un texte justifie ecarte beaucoup ses
-    // mots, on ne coupe donc que sur un vrai saut, celui d'une colonne.
-    const lignes = [];
-    let L = null;
+    // --- 1er temps : tout ce qui partage une ligne de base, sans rien couper.
+    const brutes = [];
+    let R = null;
     morceaux.forEach(m => {
-      const colonne = Math.max(m.size * 7, g.Wd * 0.14);
-      if (L && Math.abs(m.base - L.base) <= Math.max(1.2, L.size * 0.3)
-        && m.x - L.droite <= colonne && m.x >= L.x - 1) {
-        if (m.x - L.droite > m.size * 0.12 && !/\s$/.test(L.texte())) L.espace();
-        L.pousser(m);
+      if (R && Math.abs(m.base - R.base) <= Math.max(1.2, R.size * 0.3) && m.x >= R.x - 1) {
+        R.items.push(m);
+        R.droite = Math.max(R.droite, m.x + m.w);
+        R.size = Math.max(R.size, m.size);
         return;
       }
-      L = edNouvelleLigne(m);
-      lignes.push(L);
+      R = { base: m.base, x: m.x, droite: m.x + m.w, size: m.size, items: [m] };
+      brutes.push(R);
+    });
+
+    // --- 2e temps : couper aux gouttières, pour séparer les colonnes.
+    const rivieres = edRivieres(brutes, g);
+    const segments = [];
+    brutes.forEach(b => {
+      let seg = null;
+      b.items.forEach(m => {
+        const traverse = seg && rivieres.some(r => r[0] >= seg.droite - 1 && r[1] <= m.x + 1);
+        if (seg && !traverse) {
+          seg.items.push(m);
+          seg.droite = Math.max(seg.droite, m.x + m.w);
+          seg.size = Math.max(seg.size, m.size);
+          return;
+        }
+        seg = { base: b.base, x: m.x, droite: m.x + m.w, size: m.size, items: [m] };
+        segments.push(seg);
+      });
+    });
+
+    // Le bord droit de chaque colonne : c'est lui qui dit si une ligne est
+    // justifiée ou non.
+    const bandes = [];
+    let prec = 0;
+    rivieres.forEach(r => { bandes.push([prec, r[0]]); prec = r[1]; });
+    bandes.push([prec, Math.max(g.Wd, prec + 1)]);
+    const bandeDe = seg => {
+      for (let i = 0; i < bandes.length; i++) if (seg.x >= bandes[i][0] - 1 && seg.x < bandes[i][1] + 1) return i;
+      return bandes.length - 1;
+    };
+    const bords = new Map();
+    segments.forEach(s => {
+      const i = bandeDe(s);
+      bords.set(i, Math.max(bords.get(i) || 0, s.droite));
+    });
+
+    // --- 3e temps : couper là où un blanc n'est pas une espace.
+    // Une ligne qui touche le bord droit de sa colonne est justifiée : ses
+    // blancs sont étirés exprès, parfois beaucoup, et il ne faut pas y
+    // couper. Une ligne qui s'arrête avant ne justifie rien — un grand blanc
+    // y sépare deux choses distinctes : deux libellés, deux cases, deux
+    // pastilles.
+    const lignes = [];
+    segments.forEach(s => {
+      const nb = bandeDe(s);
+      const bord = bords.get(nb) || s.droite;
+      const plein = s.droite >= bord - Math.max(1.5, s.size * 0.4);
+      let L = null;
+      s.items.forEach(m => {
+        const plafond = m.size * (plein ? 6 : 1.5);
+        if (L && m.x - L.droite <= plafond) {
+          if (m.x - L.droite > m.size * 0.12 && !/\s$/.test(L.texte())) L.espace();
+          L.pousser(m);
+          return;
+        }
+        L = edNouvelleLigne(m);
+        L.bande = nb;
+        lignes.push(L);
+      });
     });
     lignes.forEach(l => l.finir());
 
     // --- rythme de la page : l'interligne le plus courant sert de repere.
     // Un écart plus large qu'une interligne ordinaire marque un changement
-    // de paragraphe, quel que soit le pas choisi par le document.
+    // de paragraphe, quel que soit le pas choisi par le document. Les écarts
+    // se mesurent colonne par colonne : deux lignes côte à côte dans deux
+    // colonnes ne se suivent pas.
     const utiles = lignes.filter(l => l.bouts.length);
+    const colonnes = new Map();
+    utiles.forEach(l => {
+      const k = l.bande == null ? 0 : l.bande;
+      if (!colonnes.has(k)) colonnes.set(k, []);
+      colonnes.get(k).push(l);
+    });
     const ecarts = [];
-    for (let i = 1; i < utiles.length; i++) {
-      const a = utiles[i - 1], b = utiles[i];
-      const d = b.base - a.base;
-      if (d > 0 && d < a.size * 3 && Math.abs(a.size - b.size) < a.size * 0.1) ecarts.push(d);
-    }
+    colonnes.forEach(ls => {
+      for (let i = 1; i < ls.length; i++) {
+        const a = ls[i - 1], b = ls[i];
+        const d = b.base - a.base;
+        if (d > 0 && d < a.size * 3 && Math.abs(a.size - b.size) < a.size * 0.1) ecarts.push(d);
+      }
+    });
     ecarts.sort((a, b) => a - b);
     const rythme = ecarts.length ? ecarts[Math.floor(ecarts.length / 2)] : 0;
 
     // --- paragraphes : lignes qui se suivent, meme bord gauche, meme corps
     const blocs = [];
+    colonnes.forEach(ls => {
     let B = null;
-    utiles.forEach(l => {
+    ls.forEach(l => {
       if (B) {
         const prec = B.lignes[B.lignes.length - 1];
         const saut = l.base - prec.base;
@@ -4396,6 +4496,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       }
       B = { lignes: [l], sauts: [], x: l.x, droite: l.droite };
       blocs.push(B);
+    });
     });
     return blocs.map(edBloc).filter(b => b.text.trim() && b.w > 1);
   }
@@ -4666,9 +4767,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       }
       const n = lisse.length / 4;
       const moyen = [sR / n, sV / n, sB / n];
-      if (Math.max(maxR - minR, maxV - minV, maxB - minB) <= 6) {
+      // Le seuil est serré : deux teintes voisines moyennées en une seule
+      // donnent une bande grisâtre là où la page était blanche. Au moindre
+      // doute, on recopie le fond plutôt que de l'approcher.
+      if (Math.max(maxR - minR, maxV - minV, maxB - minB) <= 3) {
         const plat = moyen.map(Math.round);
-        if (plat.every(v => v >= 250)) { plat[0] = plat[1] = plat[2] = 255; }
+        if (plat.every(v => v >= 248)) { plat[0] = plat[1] = plat[2] = 255; }
         return { img: null, uni: hexRVB(plat) };
       }
       pc.putImageData(new ImageData(lisse, W, H), 0, 0);
