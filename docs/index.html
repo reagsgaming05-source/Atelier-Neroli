@@ -1522,6 +1522,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     info: ['C8,8,6', 'M8 7.5v3.5', 'M8 5.2h.01'],
     search: ['C7,7,4.5', 'm10.5 10.5 3 3'],
     form: ['M2.5 3.5h11v9h-11z', 'M5 6.5h6M5 9.5h3'],
+    champ: ['M2.5 4.5h11v7h-11z', 'M5.5 6.5v3', 'M4.5 6.5h2M4.5 9.5h2'],
     flat: ['M2.5 8 8 4.5 13.5 8 8 11.5z', 'M2.5 11 8 14l5.5-3'],
     sun: ['C8,8,3', 'M8 1.5v1.5M8 13v1.5M14.5 8H13M3 8H1.5M12.6 3.4l-1 1M4.4 11.6l-1 1M12.6 12.6l-1-1M4.4 4.4l-1-1'],
     moon: ['M13 9.5A5.5 5.5 0 0 1 6.5 3a5.5 5.5 0 1 0 6.5 6.5z'],
@@ -1556,6 +1557,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       fond.setAttribute('width', Math.max(0, a.w)); fond.setAttribute('height', Math.max(0, annHauteur(a)));
       fond.setAttribute('fill', a.bg || '#FFFFFF');
       gEl.appendChild(fond);
+      // Le fond relevé sur la page couvre le bloc d'origine ; l'aplat
+      // dessous sert au cas où la correction déborde vers le bas.
+      if (a.bgImg && a.h0 > 0) {
+        const im = document.createElementNS(SVGNS, 'image');
+        im.setAttribute('x', a.x); im.setAttribute('y', a.y);
+        im.setAttribute('width', Math.max(0, a.w)); im.setAttribute('height', Math.max(0, a.h0));
+        im.setAttribute('preserveAspectRatio', 'none');
+        im.setAttribute('href', a.bgImg);
+        gEl.appendChild(im);
+      }
       if (forEditor && ed.saisie && ed.saisie.a === a) return gEl;
       (a.lignes || []).forEach((seg, i) => {
         if (!seg.length) return;
@@ -1600,6 +1611,33 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         t.textContent = line;
         gEl.appendChild(t);
       });
+      return gEl;
+    }
+    if (a.type === 'champ') {
+      const gEl = document.createElementNS(SVGNS, 'g');
+      gEl.setAttribute('data-ann', a.id);
+      const r = document.createElementNS(SVGNS, 'rect');
+      r.setAttribute('x', a.x); r.setAttribute('y', a.y);
+      r.setAttribute('width', Math.max(0, a.w)); r.setAttribute('height', Math.max(0, a.h));
+      r.setAttribute('fill', a.fond || '#F2F6FC');
+      r.setAttribute('stroke', a.bordure || '#7A8899');
+      r.setAttribute('stroke-width', 1);
+      r.setAttribute('vector-effect', 'non-scaling-stroke');
+      gEl.appendChild(r);
+      const corps = champTaille(a);
+      const dedans = a.valeur || '';
+      const gris = !dedans && !!(a.libelle || '').trim();
+      if (dedans || gris) {
+        const t = document.createElementNS(SVGNS, 'text');
+        t.setAttribute('x', a.x + 2.5);
+        t.setAttribute('y', a.multi ? a.y + 2 + corps * 0.85 : a.y + a.h / 2 + corps * 0.35);
+        t.setAttribute('font-size', corps);
+        t.setAttribute('font-family', 'Helvetica, Arial, sans-serif');
+        t.setAttribute('fill', gris ? '#8A98A8' : (a.encre || '#111111'));
+        t.setAttribute('xml:space', 'preserve');
+        t.textContent = dedans || a.libelle;
+        gEl.appendChild(t);
+      }
       return gEl;
     }
     if (a.type === 'draw') {
@@ -2505,7 +2543,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function recalcRuns(a) {
     a.runs = runsRanger(a.runs);
     a.text = runsTexte(a.runs);
+    // Le repli s'autorise une marge : notre mesure ne colle jamais au
+    // millimetre a celle du PDF. La justification, elle, vise exactement le
+    // bord droit d'origine, sinon le paragraphe s'elargirait a chaque
+    // correction.
     const limite = Math.max(12, a.w - 2 + (a.marge || 0));
+    const bord = Math.max(12, a.w - 2);
     a.lignes = replierRuns(a.runs, limite);
     a.size = a.runs.reduce((m, r) => Math.max(m, r.size), 6);
     a.color = a.runs[0].color;
@@ -2516,7 +2559,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     a.lignes.forEach((seg, i) => {
       if (i) base += inter;
       a.ly.push(base);
-      poserJetons(a, seg, limite, i === a.lignes.length - 1 || !!seg.dur);
+      poserJetons(a, seg, bord, i === a.lignes.length - 1 || !!seg.dur);
     });
     a.lignes = a.lignes.map(seg => { const f = fondreJetons(seg); f.dur = seg.dur; return f; });
     const fin = corpsDe(a.lignes[a.lignes.length - 1] || []);
@@ -2641,6 +2684,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       } else if (an.type === 'edit') {
         const r = rectToUser({ x: an.x, y: an.y, w: an.w, h: annHauteur(an) }, g);
         if (r.w > 0 && r.h > 0) page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.bg || '#FFFFFF') });
+        if (an.bgImg && an.h0 > 0) {
+          const fondImg = await embedDataUrl(doc, images, an.bgImg);
+          const coin = toUser(an.x, an.y + an.h0, g);
+          page.drawImage(fondImg, { x: coin.x, y: coin.y, width: an.w, height: an.h0, rotate: PDFLib.degrees(g.total) });
+        }
         const lignes = an.lignes || [];
         for (let i = 0; i < lignes.length; i++) {
           for (const jeton of lignes[i]) {
@@ -2675,11 +2723,43 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           const s = toUser(pts[0][0], pts[0][1], g);
           page.drawCircle({ x: s.x, y: s.y, size: (an.width || 2) / 2, color: pdfColor(an.color) });
         }
+      } else if (an.type === 'champ') {
+        continue; // posé plus tard, comme vraie case de formulaire
       } else if (an.type === 'image') {
         const img = await embedDataUrl(doc, images, an.data);
         const anchor = toUser(an.x, an.y + an.h, g);
         page.drawImage(img, { x: anchor.x, y: anchor.y, width: an.w, height: an.h, rotate: PDFLib.degrees(g.total), opacity: an.opacity == null ? 1 : an.opacity });
       }
+    }
+  }
+
+  // Les champs à remplir sont de vraies cases de formulaire PDF : elles
+  // restent renseignables dans Acrobat, dans un navigateur, partout. Elles
+  // sont posées même sur une page convertie en image : ce sont des objets à
+  // part, qui se posent par-dessus.
+  async function poserChamps(doc, page, p, fonts, pris) {
+    const champs = (p.ann || []).filter(a => a.type === 'champ' && a.w > 2 && a.h > 2);
+    if (!champs.length) return;
+    const g = pageGeom(p);
+    const form = doc.getForm();
+    const police = await getFont(doc, fonts, 'Helvetica', false, false);
+    for (const a of champs) {
+      try {
+        const r = rectToUser({ x: a.x, y: a.y, w: a.w, h: a.h }, g);
+        if (r.w <= 0 || r.h <= 0) continue;
+        const f = form.createTextField(champNom(a, pris));
+        if (a.multi) f.enableMultiline();
+        if (a.valeur) f.setText(String(a.valeur));
+        f.setFontSize(champTaille(a));
+        f.addToPage(page, {
+          x: r.x, y: r.y, width: r.w, height: r.h, font: police,
+          textColor: pdfColor(a.encre || '#111111'),
+          backgroundColor: a.fond ? pdfColor(a.fond) : undefined,
+          borderColor: a.bordure ? pdfColor(a.bordure) : undefined,
+          borderWidth: a.bordure ? 1 : 0,
+          rotate: PDFLib.degrees(g.total),
+        });
+      } catch (e) { console.error(e); }
     }
   }
 
@@ -2757,6 +2837,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       } else if (an.type === 'edit') {
         ctx.fillStyle = an.bg || '#FFFFFF';
         ctx.fillRect(an.x * s, an.y * s, an.w * s, annHauteur(an) * s);
+        if (an.bgImg && an.h0 > 0) {
+          try { ctx.drawImage(await loadImage(an.bgImg), an.x * s, an.y * s, an.w * s, an.h0 * s); } catch (_) {}
+        }
         ctx.textBaseline = 'alphabetic';
         (an.lignes || []).forEach((seg, i) => {
           seg.forEach(jeton => {
@@ -2768,6 +2851,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             ctx.fillText(jeton.t, (an.x + 1 + jeton.x) * s, (an.y + an.ly[i]) * s);
           });
         });
+      } else if (an.type === 'champ') {
+        ctx.restore();
+        continue; // posé ensuite, comme vraie case de formulaire
       } else if (an.type === 'text') {
         ctx.fillStyle = an.color;
         const st1 = polAffichage(an);
@@ -2874,6 +2960,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
 
     const fonts = new Map(), images = new Map();
+    // Les noms déjà portés par les formulaires d'origine, pour ne pas les
+    // écraser avec un champ ajouté ici.
+    const nomsPris = new Set();
+    try { out.getForm().getFields().forEach(f => nomsPris.add(f.getName())); } catch (_) {}
     const file = safeBase(el.filename.value);
     const bates = state.stamp && state.stamp.batesPrefix != null ? state.stamp : null;
     for (let i = 0; i < mapped.length; i++) {
@@ -2884,6 +2974,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         page.setRotation(degrees(g.total));
         await drawAnnotations(out, page, p, fonts, images);
       }
+      await poserChamps(out, page, p, fonts, nomsPris);
       await drawWatermark(out, page, p, fonts);
       const num = (state.stamp ? state.stamp.start : 1) + i;
       await drawStamp(out, page, p, fonts, {
@@ -4021,6 +4112,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       ['box', IC.box, 'Encadrer'],
       ['draw', IC.draw, 'Dessiner à main levée'],
       ['redact', IC.redact, 'Caviarder'],
+      ['champ', IC.champ, 'Ajouter un champ à remplir'],
       ['|'],
       ['sign', IC.pencil, 'Signer'],
       ['image', IC.image, 'Insérer une image'],
@@ -4110,6 +4202,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       draw: 'Dessinez en maintenant le bouton enfoncé.',
       edittext: 'Cliquez dans un paragraphe : le curseur se pose à cet endroit. Entrée revient à la ligne, Échap valide.',
       redact: 'Faites glisser sur la zone à masquer. La page sera convertie en image à l\'export pour supprimer le texte en dessous.',
+      champ: 'Faites glisser pour tracer un champ à remplir, de la taille voulue. L\'outil reste actif : tracez-en autant que nécessaire, puis prenez la flèche pour les déplacer.',
     };
     $('#ed-foot').textContent = hints[ed.tool] || '';
     edSide();
@@ -4313,63 +4406,194 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return { cv, echelle, x0: zone.x - 2, y0: zone.y - 2 };
   }
 
+  const hexRVB = t => '#' + t.map(n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')).join('');
+  const lumRVB = c => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  const ecartRVB = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+  // Le morceau de rendu net qui correspond exactement à une zone de la page.
+  function edPixels(zone, net) {
+    const k = net.echelle;
+    const x = Math.max(0, Math.round((zone.x - net.x0) * k));
+    const y = Math.max(0, Math.round((zone.y - net.y0) * k));
+    const w = Math.min(net.cv.width - x, Math.round(zone.w * k));
+    const h = Math.min(net.cv.height - y, Math.round(zone.h * k));
+    if (w < 2 || h < 2) return null;
+    return { d: net.cv.getContext('2d', { willReadFrequently: true }).getImageData(x, y, w, h), w, h, k };
+  }
+
   // Couleur du fond et couleur de l'encre, relevées sur ce rendu net.
+  // L'encre n'est pas forcément plus sombre que le fond : un bandeau de
+  // couleur porte souvent un texte blanc. On cherche donc la teinte la plus
+  // éloignée du fond, dans un sens comme dans l'autre.
   function edCouleurs(zone, net) {
     const defaut = { fond: '#FFFFFF', encre: '#111111' };
     if (!net) return defaut;
     try {
-      const k = net.echelle;
-      const x = Math.max(0, Math.round((zone.x - 2 - net.x0) * k));
-      const y = Math.max(0, Math.round((zone.y - 2 - net.y0) * k));
-      const w = Math.min(net.cv.width - x, Math.round((zone.w + 4) * k));
-      const h = Math.min(net.cv.height - y, Math.round((zone.h + 4) * k));
-      if (w < 2 || h < 2) return defaut;
-      const d = net.cv.getContext('2d', { willReadFrequently: true }).getImageData(x, y, w, h).data;
+      const px = edPixels({ x: zone.x - 2, y: zone.y - 2, w: zone.w + 4, h: zone.h + 4 }, net);
+      if (!px) return defaut;
+      const d = px.d.data;
+
+      // Fond : la teinte la plus répandue. Moyenne des vrais pixels du
+      // groupe dominant, pas du centre de son intervalle, sinon un blanc pur
+      // ressortirait en gris très clair et le recouvrement se verrait.
       const compte = new Map();
-      let sombre = null, minLum = 1e9, clair = 0;
       for (let i = 0; i < d.length; i += 4) {
-        const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        if (lum > clair) clair = lum;
         const cle = (d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4);
         const e = compte.get(cle) || { n: 0, r: 0, v: 0, b: 0 };
         e.n++; e.r += d[i]; e.v += d[i + 1]; e.b += d[i + 2];
         compte.set(cle, e);
-        if (lum < minLum) { minLum = lum; sombre = [d[i], d[i + 1], d[i + 2]]; }
-      }
-      // Couleur de l'encre : moyenne du cœur des lettres. Les bords lissés,
-      // gris ou colorés, fausseraient la teinte, et un pixel isolé aussi.
-      const limite = Math.max(40, clair - 90);
-      const fonces = [];
-      for (let i = 0; i < d.length; i += 4) {
-        const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        if (lum <= limite) fonces.push([lum, d[i], d[i + 1], d[i + 2]]);
-      }
-      // Une zone sans encre -- un blanc entre deux mots -- ne doit rien
-      // imposer : sinon le morceau serait ecrit en blanc sur blanc.
-      if (clair - minLum < 25) sombre = null;
-      if (sombre && fonces.length >= 4) {
-        fonces.sort((a, b) => a[0] - b[0]);
-        const coeur = fonces.slice(0, Math.max(4, Math.round(fonces.length * 0.2)));
-        const somme = coeur.reduce((acc, p) => [acc[0] + p[1], acc[1] + p[2], acc[2] + p[3]], [0, 0, 0]);
-        sombre = somme.map(v => Math.round(v / coeur.length));
-        // À l'écran, un texte de petite taille n'atteint jamais sa vraie densité :
-        // la teinte est ramenée à celle du pixel le plus dense.
-        const lumCoeur = 0.299 * sombre[0] + 0.587 * sombre[1] + 0.114 * sombre[2];
-        if (lumCoeur > 1 && minLum < lumCoeur) {
-          const k = Math.max(0.2, minLum / lumCoeur);
-          sombre = sombre.map(v => Math.round(v * k));
-        }
       }
       let meilleur = null, mieux = -1;
       compte.forEach(e => { if (e.n > mieux) { mieux = e.n; meilleur = e; } });
-      const hex = t => '#' + t.map(n => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')).join('');
-      // Moyenne des vrais pixels du groupe dominant, pas du centre de son
-      // intervalle : sinon un blanc pur ressortirait en gris tres clair et
-      // le rectangle de recouvrement se verrait sur la page.
       const fond = [meilleur.r / meilleur.n, meilleur.v / meilleur.n, meilleur.b / meilleur.n].map(Math.round);
       if (fond.every(v => v >= 250)) { fond[0] = fond[1] = fond[2] = 255; }
-      return { fond: hex(fond), encre: sombre ? hex(sombre) : null };
+
+      // Encre : la moyenne du cœur des lettres, c'est-à-dire des pixels les
+      // plus éloignés du fond. Les bords lissés fausseraient la teinte.
+      let loin = 0;
+      const ecarts = new Float32Array(d.length / 4);
+      for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+        const e = Math.hypot(d[i] - fond[0], d[i + 1] - fond[1], d[i + 2] - fond[2]);
+        ecarts[j] = e;
+        if (e > loin) loin = e;
+      }
+      // Une zone sans encre — un blanc entre deux mots — ne doit rien
+      // imposer : sinon le morceau serait écrit en blanc sur blanc.
+      if (loin < 26) return { fond: hexRVB(fond), encre: null };
+      const seuil = Math.max(loin * 0.55, 24);
+      const coeur = [];
+      for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+        if (ecarts[j] >= seuil) coeur.push([ecarts[j], d[i], d[i + 1], d[i + 2]]);
+      }
+      if (coeur.length < 4) return { fond: hexRVB(fond), encre: null };
+      coeur.sort((a, b) => b[0] - a[0]);
+      const gros = coeur.slice(0, Math.max(4, Math.round(coeur.length * 0.2)));
+      const somme = gros.reduce((acc, q) => [acc[0] + q[1], acc[1] + q[2], acc[2] + q[3]], [0, 0, 0]);
+      let encre = somme.map(v => v / gros.length);
+      // À l'écran, un texte de petite taille n'atteint jamais sa vraie
+      // densité : on pousse la teinte jusqu'au pixel le plus franc.
+      const vu = ecartRVB(encre, fond);
+      if (vu > 1 && loin > vu) {
+        const f = loin / vu;
+        encre = encre.map((v, i) => fond[i] + (v - fond[i]) * f);
+      }
+      return { fond: hexRVB(fond), encre: hexRVB(encre) };
     } catch (_) { return defaut; }
+  }
+
+  // Le fond d'un bloc n'est pas toujours uni : un aplat de couleur, un
+  // dégradé, la trame d'une ligne de tableau. On le relève tel quel en
+  // effaçant les lettres — chaque pixel d'encre est remplacé par le fond qui
+  // l'entoure — puis on le repose sous le texte corrigé. Quand tout est de
+  // la même teinte, on s'en tient à un aplat : bien plus léger.
+  function edFond(zone, net, corps, couleurs) {
+    const uni = { img: null, uni: (couleurs && couleurs.fond) || '#FFFFFF' };
+    if (!net) return uni;
+    try {
+      const px = edPixels(zone, net);
+      if (!px) return uni;
+      // On travaille en basse définition : un fond est lisse, et le filtre
+      // coûterait cher sur le rendu net.
+      const vise = Math.min(2.4, px.k);
+      const W = Math.max(8, Math.min(1400, Math.round(zone.w * vise)));
+      const H = Math.max(4, Math.min(1400, Math.round(zone.h * vise)));
+      const petit = document.createElement('canvas');
+      petit.width = W; petit.height = H;
+      const pc = petit.getContext('2d', { alpha: false, willReadFrequently: true });
+      const tampon = document.createElement('canvas');
+      tampon.width = px.w; tampon.height = px.h;
+      tampon.getContext('2d').putImageData(px.d, 0, 0);
+      pc.drawImage(tampon, 0, 0, W, H);
+      const im = pc.getImageData(0, 0, W, H);
+      const src = im.data;
+
+      // L'encre est-elle plus claire ou plus sombre que le fond ? On garde,
+      // dans chaque fenêtre, le pixel qui ressemble le plus au fond.
+      const encreClaire = couleurs && couleurs.encre
+        ? lumRVB(lireHex(couleurs.encre)) > lumRVB(lireHex(couleurs.fond))
+        : false;
+      const mieux = encreClaire ? (a, b) => a < b : (a, b) => a > b;
+      const ech = W / Math.max(1, zone.w);
+      const rayonX = Math.max(3, Math.min(48, Math.round((corps || 11) * ech * 0.85)));
+      const rayonY = Math.max(2, Math.min(32, Math.round((corps || 11) * ech * 0.7)));
+
+      const lum = new Float32Array(W * H);
+      for (let j = 0, i = 0; j < W * H; j++, i += 4) lum[j] = 0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2];
+      const passe = (entree, lumEntree, rayon, horizontal) => {
+        const sortie = new Uint8ClampedArray(entree.length);
+        const lumSortie = new Float32Array(W * H);
+        const n1 = horizontal ? H : W, n2 = horizontal ? W : H;
+        for (let a = 0; a < n1; a++) {
+          for (let b = 0; b < n2; b++) {
+            let best = -1, bestLum = 0;
+            const d0 = Math.max(0, b - rayon), d1 = Math.min(n2 - 1, b + rayon);
+            for (let c = d0; c <= d1; c++) {
+              const j = horizontal ? a * W + c : c * W + a;
+              if (best < 0 || mieux(lumEntree[j], bestLum)) { best = j; bestLum = lumEntree[j]; }
+            }
+            const j = horizontal ? a * W + b : b * W + a;
+            sortie[j * 4] = entree[best * 4];
+            sortie[j * 4 + 1] = entree[best * 4 + 1];
+            sortie[j * 4 + 2] = entree[best * 4 + 2];
+            sortie[j * 4 + 3] = 255;
+            lumSortie[j] = bestLum;
+          }
+        }
+        return { d: sortie, l: lumSortie };
+      };
+      let r = passe(src, lum, rayonX, true);
+      r = passe(r.d, r.l, rayonY, false);
+
+      // Un dernier lissage : le filtre laisse des marches, un fond n'en a pas.
+      const flou = (t, tours) => {
+        let cur = t;
+        for (let p = 0; p < tours; p++) {
+          const out = new Uint8ClampedArray(cur.length);
+          for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+              let sr = 0, sv = 0, sb = 0, n = 0;
+              for (let dy = -1; dy <= 1; dy++) {
+                const yy = y + dy; if (yy < 0 || yy >= H) continue;
+                for (let dx = -1; dx <= 1; dx++) {
+                  const xx = x + dx; if (xx < 0 || xx >= W) continue;
+                  const j = (yy * W + xx) * 4;
+                  sr += cur[j]; sv += cur[j + 1]; sb += cur[j + 2]; n++;
+                }
+              }
+              const j = (y * W + x) * 4;
+              out[j] = sr / n; out[j + 1] = sv / n; out[j + 2] = sb / n; out[j + 3] = 255;
+            }
+          }
+          cur = out;
+        }
+        return cur;
+      };
+      const lisse = flou(r.d, 2);
+
+      // Fond uni : inutile d'embarquer une image dans le PDF.
+      let minR = 255, maxR = 0, minV = 255, maxV = 0, minB = 255, maxB = 0;
+      let sR = 0, sV = 0, sB = 0;
+      for (let j = 0; j < lisse.length; j += 4) {
+        if (lisse[j] < minR) minR = lisse[j]; if (lisse[j] > maxR) maxR = lisse[j];
+        if (lisse[j + 1] < minV) minV = lisse[j + 1]; if (lisse[j + 1] > maxV) maxV = lisse[j + 1];
+        if (lisse[j + 2] < minB) minB = lisse[j + 2]; if (lisse[j + 2] > maxB) maxB = lisse[j + 2];
+        sR += lisse[j]; sV += lisse[j + 1]; sB += lisse[j + 2];
+      }
+      const n = lisse.length / 4;
+      const moyen = [sR / n, sV / n, sB / n];
+      if (Math.max(maxR - minR, maxV - minV, maxB - minB) <= 6) {
+        const plat = moyen.map(Math.round);
+        if (plat.every(v => v >= 250)) { plat[0] = plat[1] = plat[2] = 255; }
+        return { img: null, uni: hexRVB(plat) };
+      }
+      pc.putImageData(new ImageData(lisse, W, H), 0, 0);
+      return { img: petit.toDataURL('image/png'), uni: hexRVB(moyen), w: W, h: H };
+    } catch (e) { console.error(e); return uni; }
+  }
+
+  function lireHex(h) {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(h || ''));
+    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [255, 255, 255];
   }
 
   function recalcAnn(a) {
@@ -4395,6 +4619,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const net = await edZoneNette({ x: cible.x, y: cible.y, w: cible.w, h: cible.h }, cible.size);
     const couleurs = edCouleurs({ x: cible.x, y: cible.y, w: cible.w, h: cible.h }, net);
     if (!couleurs.encre) couleurs.encre = '#111111';
+    const releve = edFond({ x: cible.x, y: cible.y, w: cible.w, h: cible.h }, net, cible.size, couleurs);
     // Couleur relevee morceau par morceau : un paragraphe peut porter un mot
     // dans une autre teinte, et le reprendre en noir se verrait.
     const enRun = b => {
@@ -4414,7 +4639,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       x: cible.x, y: cible.y, w: cible.w, h: cible.h, pad: 1,
       h0: cible.h, b0: cible.base - cible.y, interligne: cible.interligne, aligne: cible.aligne,
       runs: cible.bouts.map(enRun), size: cible.size, color: couleurs.encre,
-      bg: couleurs.fond, efface: false, marge: 0,
+      bg: releve.uni || couleurs.fond, bgImg: releve.img || null, efface: false, marge: 0,
     };
     // Le texte d'origine ne doit pas se replier autrement qu'avant : la
     // largeur mesuree ici ne colle jamais au millimetre a celle inscrite
@@ -4527,6 +4752,31 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (!skipSide) edSide();
   }
 
+  // Un champ à remplir : une case que le lecteur du PDF pourra renseigner,
+  // dans Acrobat comme dans n'importe quelle visionneuse.
+  let champNumero = 0;
+  function champNeuf() {
+    return {
+      type: 'champ', nom: '', valeur: '', libelle: '',
+      size: 11, multi: false, bordure: '#7A8899', fond: '#F2F6FC', encre: '#111111',
+    };
+  }
+  // Le nom sert d'étiquette dans le PDF : il doit rester unique et lisible.
+  function champNom(a, pris) {
+    let base = String(a.libelle || a.nom || '').trim().replace(/[.\[\]()]/g, ' ').replace(/\s+/g, ' ').slice(0, 60);
+    if (!base) base = 'Champ';
+    let nom = base, n = 1;
+    while (pris.has(nom)) { n++; nom = base + ' ' + n; }
+    pris.add(nom);
+    return nom;
+  }
+  function champTaille(a) {
+    const voulue = a.size > 0 ? a.size : 11;
+    // Le texte doit tenir dans la hauteur tracée, sinon la visionneuse le
+    // rogne : un champ d'une ligne de 14 pt ne peut pas porter du 20 pt.
+    return a.multi ? voulue : Math.max(5, Math.min(voulue, (a.h || 18) * 0.68));
+  }
+
   // Hauteur du rectangle de recouvrement : au moins celle du bloc d'origine.
   function annHauteur(a) {
     return a.type === 'edit' ? Math.max(a.h || 0, a.h0 || 0) : a.h;
@@ -4615,6 +4865,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         opacity: ed.tool === 'highlight' ? ed.style.opacity : 1,
         width: ed.style.width,
       };
+      if (ed.tool === 'champ') Object.assign(ed.pending, champNeuf());
     } else if (type === 'draw') {
       ed.pending = { id: -1, type: 'draw', pts: [[pt.x, pt.y]], color: ed.style.textColor, width: ed.style.width };
     }
@@ -4685,7 +4936,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     p.ann.push(a);
     ed.sel = a.id;
     state.touched = true;
-    if (ed.tool !== 'draw' && ed.tool !== 'edittext') { ed.tool = 'select'; edSyncTools(); }
+    if (ed.tool !== 'draw' && ed.tool !== 'edittext' && ed.tool !== 'champ') { ed.tool = 'select'; edSyncTools(); }
     edDrawOverlay();
     setLast('Annotation ajoutée');
   }
@@ -5204,10 +5455,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const h = document.createElement('h3');
     const enSaisie = !!(ed.saisie && sel && ed.saisie.a === sel);
     h.textContent = sel
-      ? (sel.type === 'edit' ? (enSaisie ? 'Correction en cours' : 'Texte corrigé') : 'Annotation sélectionnée')
-      : 'Style de l\'outil';
+      ? (sel.type === 'edit' ? (enSaisie ? 'Correction en cours' : 'Texte corrigé')
+        : sel.type === 'champ' ? 'Champ à remplir' : 'Annotation sélectionnée')
+      : (ed.tool === 'champ' ? 'Champ à remplir' : 'Style de l\'outil');
     ed.side.appendChild(h);
 
+    const isChamp = sel ? sel.type === 'champ' : ed.tool === 'champ';
     const isEdit = sel ? sel.type === 'edit' : ed.tool === 'edittext';
     const isText = sel ? sel.type === 'text' : ed.tool === 'text';
     const isRect = sel ? (sel.type === 'highlight' || sel.type === 'box' || sel.type === 'redact') : (ed.tool === 'highlight' || ed.tool === 'box' || ed.tool === 'redact');
@@ -5216,6 +5469,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const texteModifiable = isText || (isEdit && !!sel);
 
     const change = fn => { if (sel) { snapshot(); state.touched = true; } fn(); edDrawOverlay(true); };
+
+    if (isChamp) { edSideChamp(sel, p, change); return; }
 
     if (isEdit && !sel) {
       ed.side.appendChild(note('Cliquez dans un paragraphe encadré : le curseur se pose là où vous avez cliqué et vous écrivez directement sur la page, avec ses polices, son interligne et sa justification d\'origine.'));
@@ -5282,8 +5537,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
     if (isEdit && sel) {
       const bg = input('ed-bg', 'color', sel.bg || '#FFFFFF');
-      bg.addEventListener('input', () => change(() => { sel.bg = bg.value; }));
-      ed.side.appendChild(field('Couleur du fond', bg, 'Relevée sur la page. À ajuster si le fond n\'est pas uni.'));
+      // Choisir une couleur à la main remplace le fond relevé : l'un ou
+      // l'autre, jamais les deux superposés.
+      bg.addEventListener('input', () => change(() => { sel.bg = bg.value; sel.bgImg = null; }));
+      ed.side.appendChild(field('Couleur du fond', bg, sel.bgImg
+        ? 'Le fond de la page a été recopié tel quel sous le texte. Choisir une couleur ici le remplace par un aplat.'
+        : 'Relevée sur la page. À ajuster si le fond n\'est pas uni.'));
       const eff = checkbox('ed-eff', 'Effacer vraiment le texte d\'origine', sel.efface);
       eff.input.addEventListener('change', () => {
         snapshot();
@@ -5349,6 +5608,56 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       all.addEventListener('click', () => { edFermerSaisie(true); snapshot(); p.ann = []; ed.sel = null; state.touched = true; edDrawOverlay(); });
       pied.appendChild(all);
     }
+  }
+
+  // Le panneau d'un champ à remplir.
+  function edSideChamp(sel, p, change) {
+    if (!sel) {
+      ed.side.appendChild(note('Faites glisser sur la page pour tracer un champ, à l\'endroit et à la taille voulus. '
+        + 'Dans le PDF exporté, n\'importe qui pourra écrire dedans, avec Acrobat ou un simple navigateur.'));
+      return;
+    }
+    const lib = input('ch-lib', 'text', sel.libelle || '');
+    lib.placeholder = 'Nom, Prénom, Date…';
+    lib.addEventListener('input', () => change(() => { sel.libelle = lib.value; }));
+    ed.side.appendChild(field('Intitulé', lib, 'Sert d\'étiquette au champ dans le PDF, et s\'affiche en gris tant qu\'il est vide.'));
+
+    const val = input('ch-val', 'text', sel.valeur || '');
+    val.addEventListener('input', () => change(() => { sel.valeur = val.value; }));
+    ed.side.appendChild(field('Texte déjà inscrit', val, 'Laissez vide pour un champ à remplir par la suite.'));
+
+    const t = input('ch-size', 'number', sel.size || 11, { min: 5, max: 48, step: 0.5 });
+    t.addEventListener('change', () => change(() => { sel.size = Math.min(48, Math.max(5, parseFloat(t.value) || 11)); }));
+    ed.side.appendChild(field('Taille (pt)', t));
+
+    const ml = checkbox('ch-multi', 'Plusieurs lignes', sel.multi);
+    ml.input.addEventListener('change', () => change(() => { sel.multi = ml.input.checked; }));
+    ed.side.appendChild(ml);
+
+    const cf = input('ch-fond', 'color', sel.fond || '#F2F6FC');
+    cf.addEventListener('input', () => change(() => { sel.fond = cf.value; }));
+    const cb = input('ch-bord', 'color', sel.bordure || '#7A8899');
+    cb.addEventListener('input', () => change(() => { sel.bordure = cb.value; }));
+    const ce = input('ch-encre', 'color', sel.encre || '#111111');
+    ce.addEventListener('input', () => change(() => { sel.encre = ce.value; }));
+    const rang = document.createElement('div'); rang.className = 'row tight';
+    rang.append(field('Fond', cf), field('Bordure', cb), field('Texte', ce));
+    ed.side.appendChild(rang);
+
+    const r = document.createElement('div'); r.className = 'regle';
+    ed.side.appendChild(r);
+    ed.side.appendChild(note('Tirez le coin pour changer la taille, glissez pour déplacer.'));
+
+    const pied = document.createElement('div'); pied.className = 'pied';
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'tb-btn danger'; del.textContent = 'Supprimer ce champ';
+    del.addEventListener('click', () => {
+      snapshot();
+      p.ann = p.ann.filter(a => a.id !== sel.id);
+      ed.sel = null; state.touched = true; edDrawOverlay();
+    });
+    pied.appendChild(del);
+    ed.side.appendChild(pied);
   }
 
   // Editor keyboard + double-click to edit text
