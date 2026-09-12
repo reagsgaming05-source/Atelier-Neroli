@@ -1516,7 +1516,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       gEl.setAttribute('data-ann', a.id);
       const fond = document.createElementNS(SVGNS, 'rect');
       fond.setAttribute('x', a.x); fond.setAttribute('y', a.y);
-      fond.setAttribute('width', Math.max(0, a.w)); fond.setAttribute('height', Math.max(0, a.h));
+      fond.setAttribute('width', Math.max(0, a.w)); fond.setAttribute('height', Math.max(0, annHauteur(a)));
       fond.setAttribute('fill', a.bg || '#FFFFFF');
       gEl.appendChild(fond);
       (a.lignes || []).forEach((seg, i) => {
@@ -1525,11 +1525,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         t.setAttribute('x', a.x + 1);
         t.setAttribute('y', a.y + a.ly[i]);
         t.setAttribute('xml:space', 'preserve');
-        seg.forEach(bout => {
-          const run = a.runs[bout.r];
-          if (!run) return;
+        seg.forEach(jeton => {
+          const run = a.runs[jeton.r];
+          if (!run || !jeton.t) return;
           const st = polAffichageRun(run);
           const sp = document.createElementNS(SVGNS, 'tspan');
+          sp.setAttribute('x', (a.x + 1 + jeton.x).toFixed(2));
           sp.setAttribute('data-gras', run.gras ? '1' : '0');
           sp.setAttribute('font-size', run.size);
           sp.setAttribute('font-family', st.famille);
@@ -1537,7 +1538,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           if (st.penche !== 'normal') sp.setAttribute('font-style', st.penche);
           sp.setAttribute('fill', run.color);
           sp.setAttribute('xml:space', 'preserve');
-          sp.textContent = bout.t;
+          sp.textContent = jeton.t;
           t.appendChild(sp);
         });
         gEl.appendChild(t);
@@ -2409,47 +2410,79 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       : { t: '', pol: null, genre: 'Helvetica', gras: false, italique: false, size: 12, color: '#111111' }];
   }
 
-  // Replie les morceaux en lignes sans jamais couper un mot entre deux styles.
+  // Replie les morceaux en lignes de jetons : un mot ou une espace, chacun
+  // avec sa largeur, pour pouvoir ensuite les poser un par un.
   function replierRuns(runs, maxW) {
-    const lim = Math.max(10, maxW * 0.98);
     const lignes = [];
     let courante = [], largeur = 0;
     const fermer = () => { lignes.push(courante); courante = []; largeur = 0; };
-    const ajouter = (i, t) => {
-      const d = courante[courante.length - 1];
-      if (d && d.r === i) d.t += t; else courante.push({ r: i, t });
-      largeur += mesurerRun(t, runs[i]);
-    };
     runs.forEach((run, i) => {
       String(run.t).split(/(\n|[ \t]+)/).forEach(bout => {
         if (bout === '') return;
-        if (bout === '\n') { fermer(); return; }
+        if (bout === '\n') { courante.dur = true; fermer(); return; }
         const blanc = !bout.trim();
         if (!courante.length && blanc) return;          // pas d'espace en debut de ligne
         const w = mesurerRun(bout, run);
-        if (courante.length && !blanc && largeur + w > lim) fermer();
-        ajouter(i, bout);
+        if (courante.length && !blanc && largeur + w > maxW) {
+          // l'espace qui trainait en fin de ligne ne descend pas avec le mot
+          while (courante.length && courante[courante.length - 1].blanc) largeur -= courante.pop().w;
+          fermer();
+        }
+        courante.push({ r: i, t: bout, w, blanc });
+        largeur += w;
       });
     });
     fermer();
     return lignes;
   }
 
-  // Position de chaque ligne : l'interligne suit le plus grand corps present.
+  // Pose les jetons d'une ligne. Un paragraphe justifie repartit le vide
+  // entre les mots, comme le faisait le document d'origine.
+  function poserJetons(a, seg, limite, derniere) {
+    let naturelle = 0, espaces = 0, mini = 0;
+    seg.forEach(j => { naturelle += j.w; if (j.blanc) { espaces++; mini = mini ? Math.min(mini, j.w) : j.w; } });
+    let extra = 0;
+    if (a.aligne === 'justifie' && !derniere && espaces > 0 && naturelle > limite * 0.55) {
+      extra = Math.max((limite - naturelle) / espaces, -mini * 0.6);
+    }
+    let x = 0;
+    seg.forEach(j => { j.x = x; x += j.w + (j.blanc ? extra : 0); });
+  }
+
+  // Les jetons qui se touchent sont écrits d'un seul tenant : le texte du
+  // PDF exporté reste copiable en entier, et non mot par mot. Seule une
+  // ligne justifiée, dont les blancs sont étirés, reste en morceaux.
+  function fondreJetons(seg) {
+    const out = [];
+    seg.forEach(j => {
+      const d = out[out.length - 1];
+      if (d && d.r === j.r && Math.abs(d.x + d.w - j.x) < 0.01) { d.t += j.t; d.w += j.w; return; }
+      out.push({ r: j.r, t: j.t, x: j.x, w: j.w });
+    });
+    return out;
+  }
+
+  // Place chaque ligne : la première garde exactement la ligne de base du
+  // document, les suivantes suivent son interligne.
   function recalcRuns(a) {
     a.runs = runsRanger(a.runs);
     a.text = runsTexte(a.runs);
-    a.lignes = replierRuns(a.runs, Math.max(8, a.w - 2 + (a.marge || 0)));
+    const limite = Math.max(12, a.w - 2 + (a.marge || 0));
+    a.lignes = replierRuns(a.runs, limite);
     a.size = a.runs.reduce((m, r) => Math.max(m, r.size), 6);
     a.color = a.runs[0].color;
+    const corpsDe = seg => seg.reduce((m, j) => Math.max(m, a.runs[j.r] ? a.runs[j.r].size : 0), 0) || a.size;
+    const inter = a.interligne > 0 ? a.interligne : a.size * 1.18;
     a.ly = [];
-    let y = a.pad;
-    a.lignes.forEach(seg => {
-      const s = seg.reduce((m, x) => Math.max(m, a.runs[x.r].size), 0) || a.size;
-      a.ly.push(y + s * 0.82);
-      y += s * 1.18;
+    let base = a.b0 != null ? a.b0 : a.pad + a.size * 0.82;
+    a.lignes.forEach((seg, i) => {
+      if (i) base += inter;
+      a.ly.push(base);
+      poserJetons(a, seg, limite, i === a.lignes.length - 1 || !!seg.dur);
     });
-    a.h = y + a.pad;
+    a.lignes = a.lignes.map(seg => { const f = fondreJetons(seg); f.dur = seg.dur; return f; });
+    const fin = corpsDe(a.lignes[a.lignes.length - 1] || []);
+    a.h = Math.max(a.pad * 2 + fin, base + fin * 0.36 + a.pad);
   }
 
   // Applique une transformation aux morceaux couvrant [debut, fin[ en
@@ -2568,21 +2601,21 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.color || '#000000'), opacity: an.type === 'highlight' ? (an.opacity == null ? 0.35 : an.opacity) : 1 });
         }
       } else if (an.type === 'edit') {
-        const r = rectToUser(an, g);
+        const r = rectToUser({ x: an.x, y: an.y, w: an.w, h: annHauteur(an) }, g);
         if (r.w > 0 && r.h > 0) page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.bg || '#FFFFFF') });
         const lignes = an.lignes || [];
         for (let i = 0; i < lignes.length; i++) {
-          let x = an.x + 1;
-          for (const bout of lignes[i]) {
-            const run = an.runs[bout.r];
-            if (!run) continue;
+          for (const jeton of lignes[i]) {
+            const run = an.runs[jeton.r];
+            if (!run || !jeton.t) continue;
             // la police du document ne convient que si sa graisse et son
             // italique sont bien ceux demandes pour ce morceau
             const exacte = run.pol && run.pol.nom && !!run.pol.gras === !!run.gras && !!run.pol.italique === !!run.italique;
             const propre = exacte ? polPourPage(doc, page, run.pol.nom, fonts, p.id) : null;
             const repli = await getFont(doc, fonts, (run.pol && run.pol.genre) || run.genre, run.gras, run.italique);
-            x = dessinerSuites(page, g, {
-              text: bout.t, x, y: an.y + (an.ly ? an.ly[i] : an.pad + run.size * 0.82),
+            dessinerSuites(page, g, {
+              text: jeton.t, x: an.x + 1 + jeton.x,
+              y: an.y + (an.ly ? an.ly[i] : an.pad + run.size * 0.82),
               size: run.size, color: run.color, propre, repli,
             });
           }
@@ -2685,18 +2718,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         }
       } else if (an.type === 'edit') {
         ctx.fillStyle = an.bg || '#FFFFFF';
-        ctx.fillRect(an.x * s, an.y * s, an.w * s, an.h * s);
+        ctx.fillRect(an.x * s, an.y * s, an.w * s, annHauteur(an) * s);
         ctx.textBaseline = 'alphabetic';
         (an.lignes || []).forEach((seg, i) => {
-          let x = (an.x + 1) * s;
-          seg.forEach(bout => {
-            const run = an.runs[bout.r];
-            if (!run) return;
+          seg.forEach(jeton => {
+            const run = an.runs[jeton.r];
+            if (!run || !jeton.t) return;
             const st2 = polAffichageRun(run);
             ctx.font = st2.penche + ' ' + st2.poids + ' ' + (run.size * s) + 'px ' + st2.famille;
             ctx.fillStyle = run.color;
-            ctx.fillText(bout.t, x, (an.y + an.ly[i]) * s);
-            x += ctx.measureText(bout.t).width;
+            ctx.fillText(jeton.t, (an.x + 1 + jeton.x) * s, (an.y + an.ly[i]) * s);
           });
         });
       } else if (an.type === 'text') {
@@ -3120,10 +3151,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // Seuils établis par mesure : une page réellement vide, même bruitée par un
   // scanner ou marquée par l'ombre du bord, mesure zéro ; un simple tampon de
   // deux centimètres mesure déjà un dixième de pourcent.
+  // « lettres » : combien de caractères une page peut porter tout en restant
+  // considérée comme vide — un simple numéro de page, un pied de page court.
+  // Seuils établis par mesure sur des documents réels, en proportion de la
+  // page couverte par des marques qui se tiennent : une page vraiment vide,
+  // même bruitée par un scanner, mesure zéro ; un petit tampon 0,11 % ;
+  // un titre seul 0,04 % ; trois lignes de texte 0,98 % ; une page pleine 5 %.
   const SENSIBILITE = {
-    strict: { ecart: 20, seuil: 0.00002, marge: 0.03 },
-    normal: { ecart: 32, seuil: 0.0002, marge: 0.04 },
-    tolerant: { ecart: 46, seuil: 0.0006, marge: 0.06 },
+    strict: { ecart: 20, seuil: 0, marge: 0.03, lettres: 0 },
+    normal: { ecart: 34, seuil: 0.0002, marge: 0.04, lettres: 2 },
+    tolerant: { ecart: 48, seuil: 0.004, marge: 0.06, lettres: 30 },
   };
 
   // Mesure la quantité d'encre d'une page, bords exclus, bruit isolé écarté.
@@ -3163,8 +3200,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
     // Regroupement par blocs : une poussière isolée ne suffit pas à noircir un bloc.
     const B = 3, bw = Math.floor(W / B), bh = Math.floor(H / B);
-    let blocsEncres = 0;
     const totalBlocs = Math.max(1, bw * bh);
+    const grille = new Uint8Array(totalBlocs);
+    let bruts = 0;
     for (let by = 0; by < bh; by++) {
       for (let bx = 0; bx < bw; bx++) {
         let n = 0;
@@ -3172,14 +3210,30 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           const ligne = (by * B + y) * W + bx * B;
           for (let x = 0; x < B; x++) if (lum[ligne + x] < seuilEncre) n++;
         }
-        if (n >= 4) blocsEncres++;
+        if (n >= 4) { grille[by * bw + bx] = 1; bruts++; }
+      }
+    }
+    // Le grain d'un scanner sème des blocs isolés ; l'écriture, elle, est
+    // toujours faite de blocs qui se touchent. On ne garde que ceux-là.
+    let blocsEncres = 0;
+    for (let by = 0; by < bh; by++) {
+      for (let bx = 0; bx < bw; bx++) {
+        if (!grille[by * bw + bx]) continue;
+        const voisins = (bx > 0 && grille[by * bw + bx - 1])
+          + (bx < bw - 1 && grille[by * bw + bx + 1])
+          + (by > 0 && grille[(by - 1) * bw + bx])
+          + (by < bh - 1 && grille[(by + 1) * bw + bx]);
+        if (voisins > 0) blocsEncres++;
       }
     }
     const apercu = document.createElement('canvas');
     apercu.width = 80;
     apercu.height = Math.max(8, Math.round(80 * canvas.height / canvas.width));
     apercu.getContext('2d').drawImage(canvas, 0, 0, apercu.width, apercu.height);
-    return { ratio: blocsEncres / totalBlocs, blanc, apercu: apercu.toDataURL('image/jpeg', 0.6) };
+    return {
+      ratio: blocsEncres / totalBlocs, brut: bruts / totalBlocs, blanc,
+      apercu: apercu.toDataURL('image/jpeg', 0.6),
+    };
   }
 
   function toolPagesVides() {
@@ -3195,48 +3249,68 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const reglages = SENSIBILITE[mode];
       liste.replaceChildren();
       cases.clear();
-      const vides = [];
+      const mesures = [];
+      let rates = 0;
       for (let i = 0; i < state.pages.length; i++) {
         if (mien !== jeton) return;
         const p = state.pages[i];
-        info.textContent = 'Analyse… page ' + (i + 1) + ' sur ' + state.pages.length;
-        let mesure;
-        try { mesure = await mesurerEncre(p, reglages); } catch (e) { console.error(e); continue; }
+        info.textContent = 'Analyse\u2026 page ' + (i + 1) + ' sur ' + state.pages.length;
+        let mesure = null;
+        try { mesure = await mesurerEncre(p, reglages); } catch (e) { console.error(e); rates++; }
+        if (!mesure) continue;
         const texte = (await getPageText(p)).replace(/\s/g, '');
-        if (mesure.ratio <= reglages.seuil && texte.length <= 1) vides.push({ p, i, mesure });
+        mesures.push({ p, i, mesure, lettres: texte.length,
+          vide: mesure.ratio <= reglages.seuil && texte.length <= reglages.lettres });
         if (i % 3 === 0) await nextFrame();
       }
       if (mien !== jeton) return;
-      info.textContent = vides.length
-        ? plural(vides.length, 'page vide détectée', 'pages vides détectées') + ' sur ' + state.pages.length + '. Décochez celles à conserver.'
-        : 'Aucune page vide détectée sur ' + plural(state.pages.length, 'page', 'pages') + '.';
-      vides.forEach(({ p, i, mesure }) => {
+
+      const vides = mesures.filter(m => m.vide);
+      // Même quand rien n'est détecté, on montre les pages les plus vides
+      // avec leur mesure : l'outil ne doit jamais être un cul-de-sac.
+      const autres = mesures.filter(m => !m.vide)
+        .sort((a, b) => (a.mesure.ratio - b.mesure.ratio) || (a.lettres - b.lettres))
+        .slice(0, 8);
+
+      info.textContent = (vides.length
+        ? plural(vides.length, 'page vide d\u00e9tect\u00e9e', 'pages vides d\u00e9tect\u00e9es') + ' sur ' + state.pages.length + ', d\u00e9j\u00e0 coch\u00e9e' + (vides.length > 1 ? 's' : '') + '.'
+        : 'Aucune page enti\u00e8rement vide sur ' + plural(state.pages.length, 'page', 'pages') + '.')
+        + (autres.length ? ' Les plus vides suivent, avec ce qui a \u00e9t\u00e9 mesur\u00e9 : cochez celles \u00e0 retirer.' : '')
+        + (rates ? ' ' + plural(rates, 'page n\'a pas pu \u00eatre analys\u00e9e', 'pages n\'ont pas pu \u00eatre analys\u00e9es') + '.' : '');
+
+      const ajouter = (m, coche, titre) => {
         const ligne = document.createElement('div'); ligne.className = 'list-item';
-        const c = checkbox('pv-' + p.id, '', true);
+        const c = checkbox('pv-' + m.p.id, '', coche);
         const img = document.createElement('img');
-        img.src = mesure.apercu;
+        img.src = m.mesure.apercu;
         img.alt = '';
         img.style.width = '34px'; img.style.border = '1px solid var(--trait)'; img.style.background = '#fff';
         const g = document.createElement('div'); g.className = 'g';
-        const n = document.createElement('div'); n.className = 'n'; n.textContent = 'Page ' + (i + 1);
+        const n = document.createElement('div'); n.className = 'n';
+        n.textContent = 'Page ' + (m.i + 1) + (titre ? ' \u00b7 ' + titre : '');
         const sous = document.createElement('div'); sous.className = 's';
-        const src = srcById(p.src);
-        sous.textContent = (mesure.ratio === 0 ? 'parfaitement vide' : 'marques : ' + (mesure.ratio * 100).toFixed(3) + ' %')
-          + (src ? ' · ' + baseName(src.name) + ' p. ' + (p.index + 1) : '');
+        const src = srcById(m.p.id) || srcById(m.p.src);
+        const marques = m.mesure.ratio === 0
+          ? (m.mesure.brut > 0 ? 'aucune marque, seulement du grain' : 'parfaitement vide')
+          : 'marques : ' + (m.mesure.ratio * 100).toFixed(2) + ' %';
+        sous.textContent = marques + (m.lettres ? ' \u00b7 ' + plural(m.lettres, 'caract\u00e8re', 'caract\u00e8res') : ' \u00b7 aucun texte')
+          + (src ? ' \u00b7 ' + baseName(src.name) + ' p. ' + (m.p.index + 1) : '');
         g.append(n, sous);
         ligne.append(c, img, g);
         liste.appendChild(ligne);
-        cases.set(p.id, c.input);
-      });
+        cases.set(m.p.id, c.input);
+      };
+      vides.forEach(m => ajouter(m, true, null));
+      autres.forEach(m => ajouter(m, false, 'presque vide'));
     }
 
     dialog({
       title: 'Détecter les pages vides', icon: IC.vide, wide: true, submitOnEnter: false,
       build: b => {
-        b.append(field('Sensibilité', sensi, 'Strict ne retient que les pages sans la moindre marque. Tolérant accepte les traces et poussières d\'un scanner.'));
+        b.append(field('Sensibilité', sensi, 'Strict ne retient que les pages sans la moindre marque. Normal tolère un numéro de page. Tolérant accepte un pied de page court et le grain d\'un scanner.'));
         b.append(info);
         b.append(liste);
-        b.append(note('Une page n\'est retenue que si elle ne contient aucun texte et aucune marque visible, les bords étant ignorés.'));
+        b.append(note('Les bords sont ignorés, et le grain isolé d\'un scanner ne compte pas : seules les marques qui se tiennent, comme de l\'écriture, sont mesurées.'));
       },
       onOpen: () => {},
       actions: [
@@ -3817,7 +3891,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           ['Suppr', 'Retirer la sélection'], ['R', 'Pivoter à droite'], ['Maj+R', 'Pivoter à gauche'],
           ['Alt+←', 'Décaler la page à gauche'], ['Alt+→', 'Décaler la page à droite'],
           ['Entrée', 'Ouvrir l\'éditeur de page'],
-          ['Double-clic', 'Ouvrir l\'éditeur, où le texte existant se corrige'],
+          ['Double-clic', 'Ouvrir l\'éditeur, où le texte existant se corrige par paragraphe'],
         ])));
         b.append(groupOf('Document', mk([
           ['Ctrl+O', 'Ouvrir des fichiers'], ['Ctrl+S', 'Exporter le PDF'], ['Ctrl+F', 'Rechercher du texte'],
@@ -3917,7 +3991,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           edLignes().then(l => {
             setBusy('');
             edDrawOverlay();
-            setLast(l.length ? plural(l.length, 'ligne modifiable', 'lignes modifiables') + ' sur cette page' : 'Aucun texte sur cette page');
+            setLast(l.length ? plural(l.length, 'bloc de texte modifiable', 'blocs de texte modifiables') + ' sur cette page' : 'Aucun texte sur cette page');
           });
         }
       });
@@ -3971,7 +4045,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       highlight: 'Faites glisser sur le texte à surligner.',
       box: 'Faites glisser pour tracer un cadre.',
       draw: 'Dessinez en maintenant le bouton enfoncé.',
-      edittext: 'Cliquez une ligne encadrée pour la corriger. Sélectionnez un bout de texte pour le supprimer, le grossir ou le mettre en gras.',
+      edittext: 'Cliquez un paragraphe encadré pour le corriger. Sélectionnez un bout de texte pour le supprimer, le grossir ou le mettre en gras.',
       redact: 'Faites glisser sur la zone à masquer. La page sera convertie en image à l\'export pour supprimer le texte en dessous.',
     };
     $('#ed-foot').textContent = hints[ed.tool] || '';
@@ -3991,6 +4065,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   //  Modification du texte existant
   // =====================================================================
   // Les lignes de texte de la page, repérées dans le repère affiché.
+  // Les blocs de texte de la page. Les morceaux sont d'abord regroupes en
+  // lignes, puis les lignes en paragraphes : c'est le paragraphe entier
+  // qu'on corrige, sinon une correction laisse les autres lignes en place.
   async function edLignes() {
     const p = edPage();
     if (!p) return [];
@@ -4018,52 +4095,137 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       });
       page.cleanup();
     } catch (e) { console.error(e); }
-
-    // Regroupement par ligne. Chaque morceau garde sa police, sa taille et
-    // sa place : une ligne dont la moitie est en gras le restera.
-    morceaux.sort((a, b) => (a.base - b.base) || (a.x - b.x));
-    const lignes = [];
-    let courante = null;
-    const pousser = (l, texte, m, x0, x1) => {
-      if (!texte) return;
-      const d = l.bouts[l.bouts.length - 1];
-      if (d && d.pol === m.pol && Math.abs(d.size - m.size) < 0.2) { d.t += texte; d.x1 = Math.max(d.x1, x1); return; }
-      l.bouts.push({ t: texte, pol: m.pol, size: m.size, x0, x1 });
-    };
-    morceaux.forEach(m => {
-      if (courante && Math.abs(m.base - courante.base) <= Math.max(1.5, courante.size * 0.35)
-        && m.x >= courante.x - 1 && m.x - (courante.x + courante.w) <= courante.size * 2) {
-        const espace = m.x - (courante.x + courante.w) > courante.size * 0.22 && !/\s$/.test(courante.texte()) ? ' ' : '';
-        if (espace) { const d = courante.bouts[courante.bouts.length - 1]; if (d) d.t += ' '; }
-        pousser(courante, m.str, m, m.x, m.x + m.w);
-        courante.w = Math.max(courante.w, m.x + m.w - courante.x);
-        courante.size = Math.max(courante.size, m.size);
-        return;
-      }
-      courante = {
-        x: m.x, base: m.base, w: m.w, size: m.size, bouts: [],
-        texte() { return this.bouts.map(b => b.t).join(''); },
-      };
-      pousser(courante, m.str, m, m.x, m.x + m.w);
-      lignes.push(courante);
-    });
-    lignes.forEach(l => {
-      l.bouts.forEach(b => { b.t = b.t.replace(/\s+/g, ' '); });
-      if (l.bouts.length) {
-        l.bouts[0].t = l.bouts[0].t.replace(/^\s+/, '');
-        l.bouts[l.bouts.length - 1].t = l.bouts[l.bouts.length - 1].t.replace(/\s+$/, '');
-      }
-      l.bouts = l.bouts.filter(b => b.t.length);
-      l.text = l.bouts.map(b => b.t).join('');
-      const dominant = l.bouts.reduce((m, b) => (!m || b.t.length > m.t.length ? b : m), null);
-      l.size = dominant ? dominant.size : l.size;
-      l.pol = dominant ? dominant.pol : null;
-      l.y = l.base - l.size * 0.82;
-      l.h = l.size * 1.18;
-    });
-    ed.lignes = lignes.filter(l => l.text.trim() && l.w > 1);
+    ed.lignes = edParagraphes(morceaux, g);
     ed.lignesCle = cle;
     return ed.lignes;
+  }
+
+  function edNouvelleLigne(m) {
+    const l = {
+      x: m.x, base: m.base, size: 0, droite: m.x, bouts: [],
+      texte() { return this.bouts.map(b => b.t).join(''); },
+      pousser(n) {
+        const d = this.bouts[this.bouts.length - 1];
+        if (d && d.pol === n.pol && Math.abs(d.size - n.size) < 0.2) { d.t += n.str; d.x1 = n.x + n.w; }
+        else this.bouts.push({ t: n.str, pol: n.pol, size: n.size, x0: n.x, x1: n.x + n.w });
+        this.droite = Math.max(this.droite, n.x + n.w);
+        this.size = Math.max(this.size, n.size);
+      },
+      finir() {
+        this.bouts.forEach(b => { b.t = b.t.replace(/\s+/g, ' '); });
+        if (this.bouts.length) {
+          this.bouts[0].t = this.bouts[0].t.replace(/^\s+/, '');
+          this.bouts[this.bouts.length - 1].t = this.bouts[this.bouts.length - 1].t.replace(/\s+$/, '');
+        }
+        this.bouts = this.bouts.filter(b => b.t.length);
+        const haut = this.base - this.size * 0.82 - 1;
+        this.bouts.forEach(b => { b.y0 = haut; b.h0 = this.size * 1.18 + 2; });
+        const dominant = this.bouts.reduce((m, b) => (!m || b.t.length > m.t.length ? b : m), null);
+        this.pol = dominant ? dominant.pol : null;
+      },
+    };
+    l.pousser(m);
+    return l;
+  }
+
+  function edParagraphes(morceaux, g) {
+    morceaux.sort((a, b) => (a.base - b.base) || (a.x - b.x));
+
+    // --- lignes : meme ligne de base. Un texte justifie ecarte beaucoup ses
+    // mots, on ne coupe donc que sur un vrai saut, celui d'une colonne.
+    const lignes = [];
+    let L = null;
+    morceaux.forEach(m => {
+      const colonne = Math.max(m.size * 7, g.Wd * 0.14);
+      if (L && Math.abs(m.base - L.base) <= Math.max(1.2, L.size * 0.3)
+        && m.x - L.droite <= colonne && m.x >= L.x - 1) {
+        if (m.x - L.droite > m.size * 0.12 && !/\s$/.test(L.texte())) L.bouts[L.bouts.length - 1].t += ' ';
+        L.pousser(m);
+        return;
+      }
+      L = edNouvelleLigne(m);
+      lignes.push(L);
+    });
+    lignes.forEach(l => l.finir());
+
+    // --- rythme de la page : l'interligne le plus courant sert de repere.
+    // Un écart plus large qu'une interligne ordinaire marque un changement
+    // de paragraphe, quel que soit le pas choisi par le document.
+    const utiles = lignes.filter(l => l.bouts.length);
+    const ecarts = [];
+    for (let i = 1; i < utiles.length; i++) {
+      const a = utiles[i - 1], b = utiles[i];
+      const d = b.base - a.base;
+      if (d > 0 && d < a.size * 3 && Math.abs(a.size - b.size) < a.size * 0.1) ecarts.push(d);
+    }
+    ecarts.sort((a, b) => a - b);
+    const rythme = ecarts.length ? ecarts[Math.floor(ecarts.length / 2)] : 0;
+
+    // --- paragraphes : lignes qui se suivent, meme bord gauche, meme corps
+    const blocs = [];
+    let B = null;
+    utiles.forEach(l => {
+      if (B) {
+        const prec = B.lignes[B.lignes.length - 1];
+        const saut = l.base - prec.base;
+        const corps = Math.max(prec.size, l.size, 1);
+        const attendu = rythme > 0 ? rythme : corps * 1.2;
+        // La ligne precedente s'arretait-elle bien avant le bord ? Alors elle
+        // finissait son paragraphe, et la suivante en ouvre un autre.
+        const bord = B.lignes.length > 1 ? B.droite : l.droite;
+        const courte = prec.droite < bord - corps * 4;
+        // Un titre n'entre pas dans le paragraphe qui le suit : ni le corps
+        // ni la police ne concordent.
+        if (l.pol === prec.pol && !courte
+          && Math.abs(l.size - prec.size) <= Math.max(0.35, prec.size * 0.08)
+          && Math.abs(l.x - B.x) <= corps * 1.8
+          && saut > attendu * 0.55 && saut < Math.min(attendu * 1.35, corps * 2.4)) {
+          B.lignes.push(l); B.sauts.push(saut);
+          B.x = Math.min(B.x, l.x);
+          B.droite = Math.max(B.droite, l.droite);
+          return;
+        }
+      }
+      B = { lignes: [l], sauts: [], x: l.x, droite: l.droite };
+      blocs.push(B);
+    });
+    return blocs.map(edBloc).filter(b => b.text.trim() && b.w > 1);
+  }
+
+  function edBloc(b) {
+    const lignes = b.lignes;
+    const premiere = lignes[0], derniere = lignes[lignes.length - 1];
+    const corps = lignes.reduce((m, l) => Math.max(m, l.size), 0) || 10;
+    const x = b.x - 1;
+    const y = premiere.base - corps * 0.82 - 1;
+    const sauts = b.sauts.slice().sort((p, q) => p - q);
+    const interligne = sauts.length ? sauts[Math.floor(sauts.length / 2)] : corps * 1.18;
+    // Justifie : toutes les lignes sauf la derniere s'arretent au meme bord.
+    // Il en faut au moins deux pour conclure : sur un paragraphe de deux
+    // lignes, la premiere touche forcement le bord et ne prouve rien.
+    const justifie = lignes.length >= 3
+      && lignes.slice(0, -1).every(l => Math.abs(l.droite - b.droite) < Math.max(1.2, corps * 0.2));
+    // Des lignes qui coulent se rejoignent par une espace ; une liste, ou
+    // une ligne qui s'arretait bien avant le bord, garde son retour.
+    const puce = t => /^\s*([-\u2013\u2014\u2022\u00b7\u25cf\u25aa*]|\d{1,2}[.)])\s/.test(t);
+    const bouts = [];
+    lignes.forEach((l, i) => {
+      if (i && bouts.length) {
+        const d = bouts[bouts.length - 1];
+        const prec = lignes[i - 1];
+        const rupture = puce(l.bouts.map(z => z.t).join('')) || prec.droite < b.droite - corps * 4;
+        if (rupture) d.t = d.t.replace(/\s+$/, '') + '\n';
+        else if (!/[\s-]$/.test(d.t)) d.t += ' ';
+      }
+      l.bouts.forEach(z => bouts.push(z));
+    });
+    return {
+      x, y, w: b.droite - b.x + 2, h: (derniere.base + corps * 0.36) - y + 1,
+      base: premiere.base, size: corps, interligne,
+      aligne: justifie ? 'justifie' : 'gauche',
+      bouts, text: bouts.map(z => z.t).join(''),
+      lignesBouts: lignes.map(l => l.bouts),
+    };
   }
 
   // Couleur du fond et couleur de l'encre, relevées sur la page affichée.
@@ -4141,19 +4303,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const lignes = await edLignes();
     const cible = lignes.find(l => pt.x >= l.x - 2 && pt.x <= l.x + l.w + 2 && pt.y >= l.y - 1 && pt.y <= l.y + l.h + 1);
     if (!cible) {
-      setLast(lignes.length ? 'Aucune ligne de texte à cet endroit.' : 'Cette page ne contient pas de texte : c\'est une image ou un scan.');
-      toast(lignes.length ? 'Cliquez sur une ligne encadrée.' : 'Aucun texte modifiable sur cette page. Un scan doit d\'abord être reconnu par un logiciel d\'OCR.', 'warn');
+      setLast(lignes.length ? 'Aucun texte à cet endroit.' : 'Cette page ne contient pas de texte : c\'est une image ou un scan.');
+      toast(lignes.length ? 'Cliquez sur un paragraphe encadré.' : 'Aucun texte modifiable sur cette page. Un scan doit d\'abord être reconnu par un logiciel d\'OCR.', 'warn');
       return;
     }
-    const zone = { x: cible.x - 1, y: cible.y - 1, w: cible.w + 2, h: cible.h + 2 };
-    const couleurs = edCouleurs(zone);
+    const couleurs = edCouleurs({ x: cible.x, y: cible.y, w: cible.w, h: cible.h });
     if (!couleurs.encre) couleurs.encre = '#111111';
-    // Couleur relevee morceau par morceau : une ligne peut porter un mot
-    // dans une autre teinte, et la reprendre en noir se verrait.
-    const runs = cible.bouts.map(b => {
+    // Couleur relevee morceau par morceau : un paragraphe peut porter un mot
+    // dans une autre teinte, et le reprendre en noir se verrait.
+    const enRun = b => {
       let encre = couleurs.encre;
-      if (b.x1 - b.x0 > 7) {
-        const c = edCouleurs({ x: b.x0 - 1, y: zone.y, w: b.x1 - b.x0 + 2, h: zone.h });
+      if (b.x1 - b.x0 > 7 && b.h0) {
+        const c = edCouleurs({ x: b.x0 - 1, y: b.y0, w: b.x1 - b.x0 + 2, h: b.h0 });
         if (c && c.encre) encre = c.encre;
       }
       return {
@@ -4161,18 +4322,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         gras: !!(b.pol && b.pol.gras), italique: !!(b.pol && b.pol.italique),
         size: b.size, color: encre,
       };
-    });
+    };
     const a = {
       id: -1, type: 'edit',
-      x: zone.x, y: zone.y, w: zone.w, h: zone.h, pad: 1,
-      runs, size: cible.size, color: couleurs.encre,
+      x: cible.x, y: cible.y, w: cible.w, h: cible.h, pad: 1,
+      h0: cible.h, b0: cible.base - cible.y, interligne: cible.interligne, aligne: cible.aligne,
+      runs: cible.bouts.map(enRun), size: cible.size, color: couleurs.encre,
       bg: couleurs.fond, efface: false, marge: 0,
     };
-    // Le texte d'origine ne doit jamais se replier tout seul : la largeur
-    // mesuree ici ne colle jamais au millimetre a celle inscrite dans le
-    // PDF, et un pouce de trop suffirait a casser la ligne en deux.
-    const large = runs.reduce((w, r) => w + mesurerRun(r.t, r), 0);
-    a.marge = Math.max(0, large / 0.97 - (a.w - 2));
+    // Le texte d'origine ne doit pas se replier autrement qu'avant : la
+    // largeur mesuree ici ne colle jamais au millimetre a celle inscrite
+    // dans le PDF, et un cheveu de trop ajouterait une ligne au bloc.
+    let plusLarge = 0;
+    (cible.lignesBouts || []).forEach(bs => {
+      plusLarge = Math.max(plusLarge, bs.reduce((w, b) => w + mesurerRun(b.t, enRun(b)), 0));
+    });
+    a.marge = Math.max(0, plusLarge + 0.5 - (a.w - 2));
     recalcRuns(a);
     edCommit(a);
     edEditRuns(a, { nouveau: true });
@@ -4277,13 +4442,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (!skipSide) edSide();
   }
 
+  // Hauteur du rectangle de recouvrement : au moins celle du bloc d'origine.
+  function annHauteur(a) {
+    return a.type === 'edit' ? Math.max(a.h || 0, a.h0 || 0) : a.h;
+  }
+
   function annBounds(a) {
     if (a.type === 'draw') {
       const xs = a.pts.map(p => p[0]), ys = a.pts.map(p => p[1]);
       const x = Math.min.apply(null, xs), y = Math.min.apply(null, ys);
       return { x, y, w: Math.max.apply(null, xs) - x, h: Math.max.apply(null, ys) - y };
     }
-    return { x: a.x, y: a.y, w: a.w, h: a.h };
+    return { x: a.x, y: a.y, w: a.w, h: annHauteur(a) };
   }
 
   function edPt(e) {
@@ -4395,8 +4565,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         else { a.x = gst.orig.x + dx; a.y = gst.orig.y + dy; }
       } else {
         a.w = Math.max(4, gst.orig.w + dx);
-        a.h = Math.max(4, gst.orig.h + dy);
-        if (a.type === 'text' || a.type === 'edit') recalcAnn(a);
+        const voulue = Math.max(4, gst.orig.h + dy);
+        if (a.type === 'edit') { a.h0 = voulue; recalcAnn(a); }
+        else if (a.type === 'text') { a.h = voulue; recalcAnn(a); }
+        else a.h = voulue;
       }
       edDrawOverlay();
     }
@@ -4765,9 +4937,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     zone.setAttribute('aria-label', 'Texte de la ligne');
     // bordure (1) + marge interieure (2) : la zone est decalee d'autant
     // pour que le texte se pose la ou il sera dessine.
+    const hautTexte = (a.b0 == null ? a.pad + a.size * 0.82 : a.b0) - a.size * 0.82;
     zone.style.left = ((a.x + 1) * ed.scale - 3) + 'px';
-    zone.style.top = ((a.y + a.pad) * ed.scale - 2) + 'px';
+    zone.style.top = ((a.y + hautTexte) * ed.scale - 2) + 'px';
     zone.style.width = (Math.max(8, a.w - 2 + (a.marge || 0)) * ed.scale) + 'px';
+    zone.style.lineHeight = String(((a.interligne > 0 ? a.interligne : a.size * 1.18) / Math.max(1, a.size)).toFixed(3));
+    zone.style.textAlign = a.aligne === 'justifie' ? 'justify' : 'left';
     richePeindre(zone, a);
     ed.sheet.appendChild(zone);
 
@@ -4941,7 +5116,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const change = fn => { if (sel) { snapshot(); state.touched = true; } fn(); edDrawOverlay(true); };
 
     if (isEdit && !sel) {
-      ed.side.appendChild(note('Cliquez une ligne encadrée pour la corriger. Elle est recouverte, puis réécrite avec ses polices d\'origine. Une barre apparaît au-dessus : elle agit sur la partie sélectionnée.'));
+      ed.side.appendChild(note('Cliquez un paragraphe encadré pour le corriger. Il est recouvert, puis réécrit avec ses polices, son interligne et sa justification d\'origine. Une barre apparaît au-dessus : elle agit sur la partie sélectionnée.'));
     }
     // Une retouche de ligne se regle dans la barre flottante, morceau par
     // morceau ; le panneau n'agit que sur la ligne entiere.
