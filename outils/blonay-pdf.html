@@ -629,6 +629,53 @@
   }
   .ed-textarea:focus { outline: none; }
 
+  /* saisie enrichie : chaque morceau garde sa police */
+  .ed-riche {
+    position: absolute; z-index: 5; margin: 0; padding: 1px 2px;
+    box-sizing: content-box;
+    border: 1px dashed var(--bleu); border-radius: 2px;
+    background: rgba(255, 255, 255, .97); color: #111;
+    line-height: 1.18; white-space: pre-wrap; overflow-wrap: anywhere;
+    box-shadow: 0 0 0 3px var(--bleu-ombre); caret-color: var(--bleu);
+  }
+  .ed-riche:focus { outline: none; }
+  .ed-riche span { white-space: pre-wrap; }
+  .ed-riche ::selection { background: var(--bleu); color: #fff; }
+
+  .ed-format {
+    position: absolute; z-index: 6; display: flex; align-items: center; gap: 2px; padding: 4px;
+    border-radius: 10px; border: 1px solid var(--trait);
+    background: color-mix(in srgb, var(--feutre) 94%, transparent);
+    backdrop-filter: blur(12px) saturate(1.4);
+    box-shadow: var(--ombre-flottante);
+    font-family: var(--ui); font-size: 12.5px; color: var(--texte);
+  }
+  .ed-format button {
+    min-width: 29px; height: 27px; padding: 0 7px; border: 0; border-radius: 6px;
+    background: transparent; color: var(--texte-2);
+    display: grid; place-items: center; font-size: 13px; line-height: 1;
+    transition: background .12s var(--elan), color .12s var(--elan);
+  }
+  .ed-format button:hover { background: var(--survol); color: var(--texte); }
+  .ed-format button[aria-pressed="true"] { background: var(--bleu); color: var(--bleu-encre); }
+  .ed-format button b, .ed-format button i { font-size: 13.5px; }
+  .ed-format .taille {
+    width: 46px; height: 27px; text-align: center; border-radius: 6px;
+    border: 1px solid var(--trait); background: var(--encre); color: var(--texte);
+    font-family: var(--chiffre); font-size: 12px; font-variant-numeric: tabular-nums;
+  }
+  .ed-format .taille:focus { outline: none; border-color: var(--bleu); }
+  .ed-format .police {
+    height: 27px; max-width: 118px; padding: 0 4px; border-radius: 6px;
+    border: 1px solid var(--trait); background: var(--encre); color: var(--texte); font-size: 12px;
+  }
+  .ed-format .police:focus { outline: none; border-color: var(--bleu); }
+  .ed-format input[type="color"] {
+    width: 27px; height: 27px; padding: 2px; border: 1px solid var(--trait);
+    border-radius: 6px; background: var(--encre); cursor: pointer;
+  }
+  .ed-format .sep { width: 1px; height: 17px; background: var(--trait); margin: 0 3px; }
+
   /* ---------- adaptation aux petits écrans ---------- */
   @media (max-width: 1180px) {
     .tb-btn .lbl { display: none; }
@@ -1410,18 +1457,27 @@
       fond.setAttribute('width', Math.max(0, a.w)); fond.setAttribute('height', Math.max(0, a.h));
       fond.setAttribute('fill', a.bg || '#FFFFFF');
       gEl.appendChild(fond);
-      const lh = a.size * 1.18;
-      const st = polAffichage(a);
-      (a.lines || []).forEach((line, i) => {
+      (a.lignes || []).forEach((seg, i) => {
+        if (!seg.length) return;
         const t = document.createElementNS(SVGNS, 'text');
         t.setAttribute('x', a.x + 1);
-        t.setAttribute('y', a.y + a.pad + lh * i + a.size * 0.82);
-        t.setAttribute('font-size', a.size);
-        t.setAttribute('font-family', st.famille);
-        if (st.poids !== '400') t.setAttribute('font-weight', st.poids);
-        if (st.penche !== 'normal') t.setAttribute('font-style', st.penche);
-        t.setAttribute('fill', a.color);
-        t.textContent = line;
+        t.setAttribute('y', a.y + a.ly[i]);
+        t.setAttribute('xml:space', 'preserve');
+        seg.forEach(bout => {
+          const run = a.runs[bout.r];
+          if (!run) return;
+          const st = polAffichageRun(run);
+          const sp = document.createElementNS(SVGNS, 'tspan');
+          sp.setAttribute('data-gras', run.gras ? '1' : '0');
+          sp.setAttribute('font-size', run.size);
+          sp.setAttribute('font-family', st.famille);
+          if (st.poids !== '400') sp.setAttribute('font-weight', st.poids);
+          if (st.penche !== 'normal') sp.setAttribute('font-style', st.penche);
+          sp.setAttribute('fill', run.color);
+          sp.setAttribute('xml:space', 'preserve');
+          sp.textContent = bout.t;
+          t.appendChild(sp);
+        });
         gEl.appendChild(t);
       });
       return gEl;
@@ -1981,7 +2037,7 @@
     pile.push(genre === 'Times' ? 'serif' : genre === 'Courier' ? 'monospace' : 'sans-serif');
     return {
       nom: base, genre, gras: st.gras, italique: st.italique,
-      lisible: familles[0] || genre,
+      familles, lisible: familles[0] || genre,
       face: propre ? face : null,
       css: pile.join(', '),
       // La fonte embarquee porte deja sa graisse et son italique : les
@@ -2232,6 +2288,140 @@
     return f;
   }
 
+  // ---------------------------------------------------------------------
+  //  Morceaux de ligne : chaque bout garde sa police, sa taille, sa couleur
+  // ---------------------------------------------------------------------
+  // Une ligne de PDF melange souvent plusieurs styles -- « Montant total :
+  // 4 250.00 CHF » ou la moitie est en gras. On ne garde donc pas un style
+  // pour toute la ligne mais un par morceau, et la correction les conserve.
+
+  // Cherche sur la page la meme famille dans la graisse ou l'italique voulu.
+  // Un document qui contient Arial et Arial-Bold permet ainsi de basculer en
+  // gras avec le vrai gras du document, pas un gras de synthese.
+  function polVariante(catalogue, pol, gras, italique) {
+    if (!pol) return null;
+    if (!!pol.gras === !!gras && !!pol.italique === !!italique) return pol;
+    const cle = (pol.familles || [])[0] || pol.lisible || '';
+    if (!cle) return null;
+    let trouve = null;
+    (catalogue || []).forEach(c => {
+      if (!c || c === pol || trouve) return;
+      if (((c.familles || [])[0] || c.lisible || '') !== cle) return;
+      if (!!c.gras === !!gras && !!c.italique === !!italique) trouve = c;
+    });
+    return trouve;
+  }
+
+  // Style d'affichage d'un morceau. La police du document n'est reprise que
+  // si sa graisse et son italique sont bien ceux demandes ; sinon on passe
+  // a la famille systeme, qui sait fabriquer les deux.
+  function polAffichageRun(r) {
+    const pol = r.pol;
+    if (pol && !!pol.gras === !!r.gras && !!pol.italique === !!r.italique) {
+      return { famille: pol.css, poids: pol.poids, penche: pol.penche };
+    }
+    const genre = (pol && pol.genre) || r.genre || 'Helvetica';
+    const pile = [];
+    if (pol) (pol.familles || []).forEach(n => pile.push('"' + String(n).replace(/["\\]/g, '') + '"'));
+    pile.push(genre === 'Times' ? 'serif' : genre === 'Courier' ? 'monospace' : 'sans-serif');
+    return { famille: pile.join(', '), poids: r.gras ? '700' : '400', penche: r.italique ? 'italic' : 'normal' };
+  }
+
+  function mesurerRun(texte, r) { return mesurerTexte(texte, r.size, polAffichageRun(r)); }
+
+  function runsTexte(runs) { return (runs || []).map(r => r.t).join(''); }
+
+  // Fusionne les morceaux voisins de style identique et jette les vides.
+  function runsRanger(runs) {
+    const out = [];
+    (runs || []).forEach(r => {
+      if (!r.t) return;
+      const d = out[out.length - 1];
+      if (d && d.pol === r.pol && d.gras === r.gras && d.italique === r.italique
+        && Math.abs(d.size - r.size) < 0.01 && d.color === r.color) { d.t += r.t; return; }
+      out.push(Object.assign({}, r));
+    });
+    if (out.length) return out;
+    const modele = (runs || [])[0];
+    return [modele ? Object.assign({}, modele, { t: '' })
+      : { t: '', pol: null, genre: 'Helvetica', gras: false, italique: false, size: 12, color: '#111111' }];
+  }
+
+  // Replie les morceaux en lignes sans jamais couper un mot entre deux styles.
+  function replierRuns(runs, maxW) {
+    const lim = Math.max(10, maxW * 0.98);
+    const lignes = [];
+    let courante = [], largeur = 0;
+    const fermer = () => { lignes.push(courante); courante = []; largeur = 0; };
+    const ajouter = (i, t) => {
+      const d = courante[courante.length - 1];
+      if (d && d.r === i) d.t += t; else courante.push({ r: i, t });
+      largeur += mesurerRun(t, runs[i]);
+    };
+    runs.forEach((run, i) => {
+      String(run.t).split(/(\n|[ \t]+)/).forEach(bout => {
+        if (bout === '') return;
+        if (bout === '\n') { fermer(); return; }
+        const blanc = !bout.trim();
+        if (!courante.length && blanc) return;          // pas d'espace en debut de ligne
+        const w = mesurerRun(bout, run);
+        if (courante.length && !blanc && largeur + w > lim) fermer();
+        ajouter(i, bout);
+      });
+    });
+    fermer();
+    return lignes;
+  }
+
+  // Position de chaque ligne : l'interligne suit le plus grand corps present.
+  function recalcRuns(a) {
+    a.runs = runsRanger(a.runs);
+    a.text = runsTexte(a.runs);
+    a.lignes = replierRuns(a.runs, Math.max(8, a.w - 2 + (a.marge || 0)));
+    a.size = a.runs.reduce((m, r) => Math.max(m, r.size), 6);
+    a.color = a.runs[0].color;
+    a.ly = [];
+    let y = a.pad;
+    a.lignes.forEach(seg => {
+      const s = seg.reduce((m, x) => Math.max(m, a.runs[x.r].size), 0) || a.size;
+      a.ly.push(y + s * 0.82);
+      y += s * 1.18;
+    });
+    a.h = y + a.pad;
+  }
+
+  // Applique une transformation aux morceaux couvrant [debut, fin[ en
+  // caracteres, en decoupant proprement les morceaux a cheval.
+  function runsAppliquer(a, debut, fin, transformer) {
+    const out = [];
+    let pos = 0;
+    a.runs.forEach(r => {
+      const d = pos, f = pos + r.t.length;
+      pos = f;
+      if (fin <= d || debut >= f) { out.push(r); return; }
+      const avant = r.t.slice(0, Math.max(0, debut - d));
+      const milieu = r.t.slice(Math.max(0, debut - d), Math.min(r.t.length, fin - d));
+      const apres = r.t.slice(Math.min(r.t.length, fin - d));
+      if (avant) out.push(Object.assign({}, r, { t: avant }));
+      if (milieu) { const c = Object.assign({}, r, { t: milieu }); transformer(c); out.push(c); }
+      if (apres) out.push(Object.assign({}, r, { t: apres }));
+    });
+    a.runs = out;
+  }
+
+  // Vrai si tous les morceaux couverts repondent au test.
+  function runsTous(a, debut, fin, test) {
+    let pos = 0, vu = false, tous = true;
+    a.runs.forEach(r => {
+      const d = pos, f = pos + r.t.length;
+      pos = f;
+      if (fin <= d || debut >= f || !r.t.length) return;
+      vu = true;
+      if (!test(r)) tous = false;
+    });
+    return vu && tous;
+  }
+
   // =====================================================================
   //  PDF building
   // =====================================================================
@@ -2282,7 +2472,7 @@
   // possede le caractere, et en repliant sur une police standard ailleurs.
   function dessinerSuites(page, g, o) {
     const txt = String(o.text == null ? '' : o.text);
-    if (!txt) return;
+    if (!txt) return o.x;
     const suites = [];
     for (const ch of txt) {
       const propre = !!(o.propre && o.propre.connait(ch));
@@ -2301,6 +2491,7 @@
       });
       x += font.widthOfTextAtSize(texte, o.size);
     });
+    return x;
   }
 
   async function drawAnnotations(doc, page, p, fonts, images) {
@@ -2317,15 +2508,23 @@
       } else if (an.type === 'edit') {
         const r = rectToUser(an, g);
         if (r.w > 0 && r.h > 0) page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.bg || '#FFFFFF') });
-        const repli = await getFont(doc, fonts, an.font, an.bold, an.italic);
-        const propre = an.pol && an.pol.nom ? polPourPage(doc, page, an.pol.nom, fonts, p.id) : null;
-        const lh = an.size * 1.18;
-        (an.lines || []).forEach((line, i) => {
-          dessinerSuites(page, g, {
-            text: line, x: an.x + 1, y: an.y + an.pad + lh * i + an.size * 0.82,
-            size: an.size, color: an.color, propre, repli,
-          });
-        });
+        const lignes = an.lignes || [];
+        for (let i = 0; i < lignes.length; i++) {
+          let x = an.x + 1;
+          for (const bout of lignes[i]) {
+            const run = an.runs[bout.r];
+            if (!run) continue;
+            // la police du document ne convient que si sa graisse et son
+            // italique sont bien ceux demandes pour ce morceau
+            const exacte = run.pol && run.pol.nom && !!run.pol.gras === !!run.gras && !!run.pol.italique === !!run.italique;
+            const propre = exacte ? polPourPage(doc, page, run.pol.nom, fonts, p.id) : null;
+            const repli = await getFont(doc, fonts, (run.pol && run.pol.genre) || run.genre, run.gras, run.italique);
+            x = dessinerSuites(page, g, {
+              text: bout.t, x, y: an.y + (an.ly ? an.ly[i] : an.pad + run.size * 0.82),
+              size: run.size, color: run.color, propre, repli,
+            });
+          }
+        }
       } else if (an.type === 'text') {
         const font = await getFont(doc, fonts, an.font, an.bold, an.italic);
         const lh = an.size * 1.25;
@@ -2425,12 +2624,19 @@
       } else if (an.type === 'edit') {
         ctx.fillStyle = an.bg || '#FFFFFF';
         ctx.fillRect(an.x * s, an.y * s, an.w * s, an.h * s);
-        ctx.fillStyle = an.color;
-        const st2 = polAffichage(an);
-        ctx.font = st2.penche + ' ' + st2.poids + ' ' + (an.size * s) + 'px ' + st2.famille;
         ctx.textBaseline = 'alphabetic';
-        const lh2 = an.size * 1.18;
-        (an.lines || []).forEach((line, i) => ctx.fillText(line, (an.x + 1) * s, (an.y + an.pad + lh2 * i + an.size * 0.82) * s));
+        (an.lignes || []).forEach((seg, i) => {
+          let x = (an.x + 1) * s;
+          seg.forEach(bout => {
+            const run = an.runs[bout.r];
+            if (!run) return;
+            const st2 = polAffichageRun(run);
+            ctx.font = st2.penche + ' ' + st2.poids + ' ' + (run.size * s) + 'px ' + st2.famille;
+            ctx.fillStyle = run.color;
+            ctx.fillText(bout.t, x, (an.y + an.ly[i]) * s);
+            x += ctx.measureText(bout.t).width;
+          });
+        });
       } else if (an.type === 'text') {
         ctx.fillStyle = an.color;
         const st1 = polAffichage(an);
@@ -3574,7 +3780,7 @@
   const ed = {
     root: null, pageId: null, tool: 'select', zoom: 'fit', scale: 1, sel: null,
     style: { color: '#E8B04B', textColor: '#D0021B', size: 14, width: 2, opacity: 0.35, font: 'Helvetica', bold: false },
-    gesture: null, snapped: false, lignes: null, lignesCle: null,
+    gesture: null, snapped: false, lignes: null, lignesCle: null, saisie: null, polices: [],
   };
 
   function edPage() { return state.pages.find(p => p.id === ed.pageId); }
@@ -3591,6 +3797,7 @@
   }
   function closeEditor() {
     if (!ed.root) return;
+    edFermerSaisie();
     ed.root.hidden = true;
     document.body.style.overflow = '';
     ed.pageId = null; ed.sel = null;
@@ -3674,6 +3881,13 @@
     ed.root = root; ed.canvas = canvas; ed.svg = svg; ed.sheet = sheet; ed.side = side; ed.label = label; ed.stage = stage;
 
     svg.addEventListener('pointerdown', edPointerDown);
+    svg.addEventListener('dblclick', e => {
+      const p = edPage();
+      if (!p) return;
+      const id = e.target instanceof Element ? e.target.getAttribute('data-ann') : null;
+      const a = id ? p.ann.find(x => x.id === +id) : null;
+      if (a && a.type === 'edit') { e.preventDefault(); ed.sel = a.id; edEditRuns(a); }
+    });
     window.addEventListener('resize', () => { if (ed.root && !ed.root.hidden && ed.zoom === 'fit') edRenderPage(); });
   }
 
@@ -3695,13 +3909,14 @@
       highlight: 'Faites glisser sur le texte à surligner.',
       box: 'Faites glisser pour tracer un cadre.',
       draw: 'Dessinez en maintenant le bouton enfoncé.',
-      edittext: 'Cliquez sur une ligne de texte pour la corriger. Les lignes modifiables sont encadrées.',
+      edittext: 'Cliquez une ligne encadrée pour la corriger. Sélectionnez un bout de texte pour le supprimer, le grossir ou le mettre en gras.',
       redact: 'Faites glisser sur la zone à masquer. La page sera convertie en image à l\'export pour supprimer le texte en dessous.',
     };
     $('#ed-foot').textContent = hints[ed.tool] || '';
     edSide();
   }
   function edGo(dir) {
+    edFermerSaisie();
     const i = pageIndex(ed.pageId);
     const n = state.pages[i + dir];
     if (!n) return;
@@ -3727,6 +3942,7 @@
       const vp = page.getViewport({ scale: 1, rotation: g.total });
       const tc = await page.getTextContent();
       const polices = await polDeLaPage(page, tc);
+      ed.polices = Array.from(new Set(polices.values()));
       tc.items.forEach(it => {
         if (!it.str || !it.str.trim()) return;
         const m = pdfjs.Util.transform(vp.transform, it.transform);
@@ -3741,47 +3957,49 @@
       page.cleanup();
     } catch (e) { console.error(e); }
 
-    // regroupement par ligne, puis par suites contiguës
+    // Regroupement par ligne. Chaque morceau garde sa police, sa taille et
+    // sa place : une ligne dont la moitie est en gras le restera.
     morceaux.sort((a, b) => (a.base - b.base) || (a.x - b.x));
     const lignes = [];
     let courante = null;
-    // Une ligne peut melanger plusieurs polices : celle qui porte le plus
-    // de caracteres decide, c'est elle qu'on rendra a l'identique.
-    const compter = (l, m) => {
-      const cle = m.pol || 'sans';
-      const e = l.parts.get(cle) || { n: 0, pol: m.pol, size: m.size };
-      e.n += m.str.length;
-      if (m.size > e.size) e.size = m.size;
-      l.parts.set(cle, e);
+    const pousser = (l, texte, m, x0, x1) => {
+      if (!texte) return;
+      const d = l.bouts[l.bouts.length - 1];
+      if (d && d.pol === m.pol && Math.abs(d.size - m.size) < 0.2) { d.t += texte; d.x1 = Math.max(d.x1, x1); return; }
+      l.bouts.push({ t: texte, pol: m.pol, size: m.size, x0, x1 });
     };
     morceaux.forEach(m => {
       if (courante && Math.abs(m.base - courante.base) <= Math.max(1.5, courante.size * 0.35)
         && m.x >= courante.x - 1 && m.x - (courante.x + courante.w) <= courante.size * 2) {
-        const espace = m.x - (courante.x + courante.w) > courante.size * 0.22 && !/\s$/.test(courante.text) ? ' ' : '';
-        courante.text += espace + m.str;
+        const espace = m.x - (courante.x + courante.w) > courante.size * 0.22 && !/\s$/.test(courante.texte()) ? ' ' : '';
+        if (espace) { const d = courante.bouts[courante.bouts.length - 1]; if (d) d.t += ' '; }
+        pousser(courante, m.str, m, m.x, m.x + m.w);
         courante.w = Math.max(courante.w, m.x + m.w - courante.x);
         courante.size = Math.max(courante.size, m.size);
-        compter(courante, m);
         return;
       }
-      courante = { text: m.str, x: m.x, base: m.base, w: m.w, size: m.size, parts: new Map() };
-      compter(courante, m);
+      courante = {
+        x: m.x, base: m.base, w: m.w, size: m.size, bouts: [],
+        texte() { return this.bouts.map(b => b.t).join(''); },
+      };
+      pousser(courante, m.str, m, m.x, m.x + m.w);
       lignes.push(courante);
     });
     lignes.forEach(l => {
-      let mieux = null;
-      l.parts.forEach(e => { if (!mieux || e.n > mieux.n) mieux = e; });
-      l.pol = mieux ? mieux.pol : null;
-      if (mieux && mieux.size >= 1) l.size = mieux.size;
-      l.font = l.pol ? l.pol.genre : 'Helvetica';
-      l.gras = l.pol ? l.pol.gras : false;
-      l.italique = l.pol ? l.pol.italique : false;
-      delete l.parts;
+      l.bouts.forEach(b => { b.t = b.t.replace(/\s+/g, ' '); });
+      if (l.bouts.length) {
+        l.bouts[0].t = l.bouts[0].t.replace(/^\s+/, '');
+        l.bouts[l.bouts.length - 1].t = l.bouts[l.bouts.length - 1].t.replace(/\s+$/, '');
+      }
+      l.bouts = l.bouts.filter(b => b.t.length);
+      l.text = l.bouts.map(b => b.t).join('');
+      const dominant = l.bouts.reduce((m, b) => (!m || b.t.length > m.t.length ? b : m), null);
+      l.size = dominant ? dominant.size : l.size;
+      l.pol = dominant ? dominant.pol : null;
       l.y = l.base - l.size * 0.82;
       l.h = l.size * 1.18;
-      l.text = l.text.replace(/\s+/g, ' ').trim();
     });
-    ed.lignes = lignes.filter(l => l.text && l.w > 1);
+    ed.lignes = lignes.filter(l => l.text.trim() && l.w > 1);
     ed.lignesCle = cle;
     return ed.lignes;
   }
@@ -3817,7 +4035,10 @@
         const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
         if (lum <= limite) fonces.push([lum, d[i], d[i + 1], d[i + 2]]);
       }
-      if (fonces.length >= 4) {
+      // Une zone sans encre -- un blanc entre deux mots -- ne doit rien
+      // imposer : sinon le morceau serait ecrit en blanc sur blanc.
+      if (clair - minLum < 25) sombre = null;
+      if (sombre && fonces.length >= 4) {
         fonces.sort((a, b) => a[0] - b[0]);
         const coeur = fonces.slice(0, Math.max(4, Math.round(fonces.length * 0.2)));
         const somme = coeur.reduce((acc, p) => [acc[0] + p[1], acc[1] + p[2], acc[2] + p[3]], [0, 0, 0]);
@@ -3838,22 +4059,23 @@
       // le rectangle de recouvrement se verrait sur la page.
       const fond = [meilleur.r / meilleur.n, meilleur.v / meilleur.n, meilleur.b / meilleur.n].map(Math.round);
       if (fond.every(v => v >= 250)) { fond[0] = fond[1] = fond[2] = 255; }
-      return { fond: hex(fond), encre: sombre ? hex(sombre) : defaut.encre };
+      return { fond: hex(fond), encre: sombre ? hex(sombre) : null };
     } catch (_) { return defaut; }
   }
 
   function recalcAnn(a) {
-    const st = polAffichage(a);
-    if (a.type === 'edit') {
-      a.lines = wrapText(a.text || '', Math.max(8, a.w - 2 + (a.marge || 0)), a.size, a.font, a.bold, st);
-      a.h = a.pad * 2 + Math.max(1, a.lines.length) * a.size * 1.18;
-    } else {
-      a.lines = wrapText(a.text || '', a.w, a.size, a.font, a.bold, st);
-      a.h = Math.max(1, a.lines.length) * a.size * 1.25;
-    }
+    // Une retouche de ligne est faite de morceaux ; le texte ajoute, lui,
+    // n'a qu'un seul style.
+    if (a.type === 'edit') { recalcRuns(a); return; }
+    a.lines = wrapText(a.text || '', a.w, a.size, a.font, a.bold, polAffichage(a));
+    a.h = Math.max(1, a.lines.length) * a.size * 1.25;
   }
 
   async function edModifierTexte(pt) {
+    // Deja corrigee : on rouvre la retouche au lieu d'en empiler une seconde.
+    const deja = (edPage().ann || []).filter(x => x.type === 'edit')
+      .find(x => pt.x >= x.x - 1 && pt.x <= x.x + x.w + 1 && pt.y >= x.y - 1 && pt.y <= x.y + x.h + 1);
+    if (deja) { ed.sel = deja.id; edEditRuns(deja); return; }
     const lignes = await edLignes();
     const cible = lignes.find(l => pt.x >= l.x - 2 && pt.x <= l.x + l.w + 2 && pt.y >= l.y - 1 && pt.y <= l.y + l.h + 1);
     if (!cible) {
@@ -3863,24 +4085,39 @@
     }
     const zone = { x: cible.x - 1, y: cible.y - 1, w: cible.w + 2, h: cible.h + 2 };
     const couleurs = edCouleurs(zone);
+    if (!couleurs.encre) couleurs.encre = '#111111';
+    // Couleur relevee morceau par morceau : une ligne peut porter un mot
+    // dans une autre teinte, et la reprendre en noir se verrait.
+    const runs = cible.bouts.map(b => {
+      let encre = couleurs.encre;
+      if (b.x1 - b.x0 > 7) {
+        const c = edCouleurs({ x: b.x0 - 1, y: zone.y, w: b.x1 - b.x0 + 2, h: zone.h });
+        if (c && c.encre) encre = c.encre;
+      }
+      return {
+        t: b.t, pol: b.pol, polSrc: b.pol, genre: (b.pol && b.pol.genre) || 'Helvetica',
+        gras: !!(b.pol && b.pol.gras), italique: !!(b.pol && b.pol.italique),
+        size: b.size, color: encre,
+      };
+    });
     const a = {
       id: -1, type: 'edit',
       x: zone.x, y: zone.y, w: zone.w, h: zone.h, pad: 1,
-      text: cible.text, size: cible.size, font: cible.font,
-      bold: cible.gras, italic: cible.italique,
-      pol: cible.pol, polSrc: cible.pol,
-      color: couleurs.encre, bg: couleurs.fond, efface: false, marge: 0,
+      runs, size: cible.size, color: couleurs.encre,
+      bg: couleurs.fond, efface: false, marge: 0,
     };
     // Le texte d'origine ne doit jamais se replier tout seul : la largeur
     // mesuree ici ne colle jamais au millimetre a celle inscrite dans le
     // PDF, et un pouce de trop suffirait a casser la ligne en deux.
-    a.marge = Math.max(0, mesurerTexte(a.text, a.size, polAffichage(a)) / 0.97 - (a.w - 2));
-    recalcAnn(a);
+    const large = runs.reduce((w, r) => w + mesurerRun(r.t, r), 0);
+    a.marge = Math.max(0, large / 0.97 - (a.w - 2));
+    recalcRuns(a);
     edCommit(a);
-    edEditText(a);
+    edEditRuns(a, { nouveau: true });
   }
 
   async function edRenderPage() {
+    edFermerSaisie();
     const p = edPage();
     if (!p) { closeEditor(); return; }
     const g = pageGeom(p);
@@ -4129,7 +4366,7 @@
     p.ann.push(a);
     ed.sel = a.id;
     state.touched = true;
-    if (ed.tool !== 'draw') { ed.tool = 'select'; edSyncTools(); }
+    if (ed.tool !== 'draw' && ed.tool !== 'edittext') { ed.tool = 'select'; edSyncTools(); }
     edDrawOverlay();
     setLast('Annotation ajoutée');
   }
@@ -4180,6 +4417,334 @@
     ta.addEventListener('keydown', e => {
       e.stopPropagation();
       if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); commit(); }
+    });
+  }
+
+  // =====================================================================
+  //  Saisie enrichie : une zone editable ou chaque morceau garde son style
+  // =====================================================================
+  function richeLongueur(n) {
+    if (n.nodeType === 3) return n.nodeValue.length;
+    if (n.nodeName === 'BR') return 1;
+    let s = 0;
+    n.childNodes.forEach(c => { s += richeLongueur(c); });
+    return s;
+  }
+  // Position d'un point du DOM, comptee en caracteres depuis le debut.
+  function richeIndex(zone, node, offset) {
+    if (node === zone) {
+      let n = 0;
+      for (let k = 0; k < offset && k < zone.childNodes.length; k++) n += richeLongueur(zone.childNodes[k]);
+      return n;
+    }
+    let n = 0, fini = false;
+    const parcourir = el => {
+      if (fini) return;
+      for (const enfant of Array.from(el.childNodes)) {
+        if (fini) return;
+        if (enfant.nodeType === 3) {
+          if (enfant === node) { n += Math.min(offset, enfant.nodeValue.length); fini = true; return; }
+          n += enfant.nodeValue.length;
+        } else if (enfant.nodeName === 'BR') {
+          if (enfant === node) { fini = true; return; }
+          n += 1;
+        } else if (enfant === node) {
+          for (let k = 0; k < offset && k < enfant.childNodes.length; k++) n += richeLongueur(enfant.childNodes[k]);
+          fini = true; return;
+        } else parcourir(enfant);
+      }
+    };
+    parcourir(zone);
+    return fini ? n : null;
+  }
+  function richeOffsets(zone) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    const r = sel.getRangeAt(0);
+    if (!zone.contains(r.startContainer) || !zone.contains(r.endContainer)) return null;
+    const a = richeIndex(zone, r.startContainer, r.startOffset);
+    const b = richeIndex(zone, r.endContainer, r.endOffset);
+    if (a == null || b == null) return null;
+    return { debut: Math.min(a, b), fin: Math.max(a, b) };
+  }
+  function richePoint(zone, index) {
+    let reste = Math.max(0, index), cible = null;
+    const parcourir = el => {
+      for (const enfant of Array.from(el.childNodes)) {
+        if (cible) return;
+        if (enfant.nodeType === 3) {
+          const L = enfant.nodeValue.length;
+          if (reste <= L) { cible = { node: enfant, offset: reste }; return; }
+          reste -= L;
+        } else if (enfant.nodeName === 'BR') {
+          if (reste === 0) { cible = { node: zone, offset: Array.from(zone.childNodes).indexOf(enfant) }; return; }
+          reste -= 1;
+        } else parcourir(enfant);
+      }
+    };
+    parcourir(zone);
+    return cible || { node: zone, offset: zone.childNodes.length };
+  }
+  function richePlacer(zone, debut, fin) {
+    try {
+      const a = richePoint(zone, debut), b = richePoint(zone, fin == null ? debut : fin);
+      const r = document.createRange();
+      r.setStart(a.node, a.offset);
+      r.setEnd(b.node, b.offset);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+    } catch (_) {}
+  }
+  function richePeindre(zone, a) {
+    zone.replaceChildren();
+    a.runs.forEach((run, i) => {
+      const st = polAffichageRun(run);
+      String(run.t).split('\n').forEach((bout, k) => {
+        if (k) zone.appendChild(document.createElement('br'));
+        const sp = document.createElement('span');
+        sp.dataset.i = i;
+        sp.dataset.gras = run.gras ? '1' : '0';
+        sp.dataset.italique = run.italique ? '1' : '0';
+        sp.style.fontFamily = st.famille;
+        sp.style.fontWeight = st.poids;
+        sp.style.fontStyle = st.penche;
+        sp.style.fontSize = (run.size * ed.scale).toFixed(2) + 'px';
+        sp.style.color = run.color;
+        sp.textContent = bout;
+        zone.appendChild(sp);
+      });
+    });
+  }
+  // Relit la zone : chaque bout de texte retrouve le style du morceau d'ou
+  // il vient, et ce qui a ete tape reprend celui de son voisin de gauche.
+  function richeLire(zone, a) {
+    const bouts = [];
+    let dernier = 0;
+    const parcourir = el => {
+      Array.from(el.childNodes).forEach(n => {
+        if (n.nodeType === 3) {
+          const sp = n.parentElement && n.parentElement.closest('[data-i]');
+          const i = sp ? Math.min(a.runs.length - 1, Math.max(0, +sp.dataset.i || 0)) : dernier;
+          dernier = i;
+          if (n.nodeValue) bouts.push({ i, t: n.nodeValue });
+        } else if (n.nodeName === 'BR') bouts.push({ i: dernier, t: '\n' });
+        else parcourir(n);
+      });
+    };
+    parcourir(zone);
+    // Le navigateur ajoute un saut de ligne technique en fin de zone.
+    if (bouts.length && bouts[bouts.length - 1].t === '\n') bouts.pop();
+    return runsRanger(bouts.map(b => Object.assign({}, a.runs[b.i], { t: b.t })));
+  }
+
+  function edFermerSaisie(annuler) {
+    const s = ed.saisie;
+    if (!s) return;
+    ed.saisie = null;
+    document.removeEventListener('pointerdown', s.dehors, true);
+    document.removeEventListener('selectionchange', s.suivre);
+    if (!annuler) {
+      s.a.runs = richeLire(s.zone, s.a);
+      recalcRuns(s.a);
+      state.touched = true;
+    }
+    s.zone.remove();
+    if (s.barre) s.barre.remove();
+    edDrawOverlay();
+  }
+
+  function edPlacerBarre(a, barre) {
+    const h = barre.offsetHeight || 35;
+    const w = barre.offsetWidth || 250;
+    let top = a.y * ed.scale - h - 9;
+    if (top < 2) top = (a.y + a.h) * ed.scale + 9;
+    const max = Math.max(2, (ed.sheet.clientWidth || w) - w - 3);
+    barre.style.left = Math.max(2, Math.min(a.x * ed.scale, max)) + 'px';
+    barre.style.top = Math.max(2, top) + 'px';
+  }
+
+  function edBarreFormat(a, zone) {
+    const barre = document.createElement('div');
+    barre.className = 'ed-format';
+    barre.setAttribute('role', 'toolbar');
+    barre.setAttribute('aria-label', 'Mise en forme du texte');
+    barre.addEventListener('pointerdown', e => { if (e.target === barre || e.target.tagName === 'BUTTON' || e.target.closest('button')) e.preventDefault(); });
+
+    const taille = document.createElement('input');
+    taille.className = 'taille'; taille.type = 'text'; taille.inputMode = 'decimal';
+    taille.title = 'Taille du texte, en points';
+    taille.setAttribute('aria-label', 'Taille du texte en points');
+
+    let etatGras = null, etatItal = null;
+    const bouton = (texte, titre, onClick) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.title = titre; b.setAttribute('aria-label', titre);
+      b.append(texte);
+      b.addEventListener('mousedown', e => e.preventDefault());
+      b.addEventListener('click', onClick);
+      return b;
+    };
+
+    // Sur quoi agir : la selection si elle existe, tout le texte sinon.
+    const agir = calcul => {
+      const o = richeOffsets(zone) || ed.saisie.sel || null;
+      a.runs = richeLire(zone, a);
+      const total = runsTexte(a.runs).length;
+      let debut = o ? Math.min(o.debut, total) : 0;
+      let fin = o ? Math.min(o.fin, total) : total;
+      if (debut === fin) { debut = 0; fin = total; }
+      runsAppliquer(a, debut, fin, calcul(debut, fin));
+      a.runs = runsRanger(a.runs);
+      richePeindre(zone, a);
+      zone.focus();
+      richePlacer(zone, o ? o.debut : 0, o ? o.fin : total);
+      ed.saisie.sel = { debut: o ? o.debut : 0, fin: o ? o.fin : total };
+      majBarre();
+    };
+    const basculer = champ => agir((d, f) => {
+      const tous = runsTous(a, d, f, r => !!r[champ]);
+      return r => {
+        r[champ] = !tous;
+        const alt = polVariante(ed.polices, r.pol, r.gras, r.italique);
+        if (alt) r.pol = alt;
+      };
+    });
+    const corps = v => agir(() => r => { r.size = Math.max(4, Math.min(200, Math.round(v * 10) / 10)); });
+    const pas = d => agir(() => r => { r.size = Math.max(4, Math.min(200, Math.round((r.size + d) * 10) / 10)); });
+
+    const police = document.createElement('select');
+    police.className = 'police';
+    police.title = 'Police du texte';
+    police.setAttribute('aria-label', 'Police du texte');
+    [['doc', 'Du document'], ['Helvetica', 'Helvetica'], ['Times', 'Times'], ['Courier', 'Courier']]
+      .forEach(o => { const op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; police.appendChild(op); });
+    police.addEventListener('mousedown', () => { ed.saisie.sel = richeOffsets(zone) || ed.saisie.sel; });
+    police.addEventListener('change', () => agir(() => r => {
+      if (police.value === 'doc') {
+        if (!r.polSrc) return;
+        r.pol = polVariante(ed.polices, r.polSrc, r.gras, r.italique) || r.polSrc;
+        r.genre = r.pol.genre;
+      } else { r.pol = null; r.genre = police.value; }
+    }));
+
+    const gEl = document.createElement('b'); gEl.textContent = 'G';
+    const iEl = document.createElement('i'); iEl.textContent = 'I';
+    const bGras = bouton(gEl, 'Gras (Ctrl+B)', () => basculer('gras'));
+    bGras.dataset.a = 'gras';
+    const bItal = bouton(iEl, 'Italique (Ctrl+I)', () => basculer('italique'));
+    bItal.dataset.a = 'italique';
+    const couleur = document.createElement('input');
+    couleur.type = 'color'; couleur.title = 'Couleur du texte';
+    couleur.setAttribute('aria-label', 'Couleur du texte');
+    couleur.addEventListener('change', () => agir(() => r => { r.color = couleur.value; }));
+
+    taille.addEventListener('mousedown', () => { ed.saisie.sel = richeOffsets(zone) || ed.saisie.sel; });
+    taille.addEventListener('change', () => {
+      const v = parseFloat(String(taille.value).replace(',', '.'));
+      if (v > 0) corps(v); else majBarre();
+    });
+    taille.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); taille.blur(); } });
+
+    const sep = () => { const s = document.createElement('span'); s.className = 'sep'; return s; };
+    barre.append(
+      bouton('A−', 'Réduire la taille', () => pas(-0.5)), taille, bouton('A+', 'Agrandir la taille', () => pas(0.5)),
+      sep(), police, sep(), bGras, bItal, sep(), couleur, sep(),
+      bouton('✓', 'Valider (Échap)', () => edFermerSaisie()),
+    );
+
+    function majBarre() {
+      const o = richeOffsets(zone) || ed.saisie.sel;
+      const total = runsTexte(a.runs).length;
+      const d = o ? o.debut : 0, f = o && o.fin > o.debut ? o.fin : total;
+      etatGras = runsTous(a, d, f, r => !!r.gras);
+      etatItal = runsTous(a, d, f, r => !!r.italique);
+      bGras.setAttribute('aria-pressed', etatGras ? 'true' : 'false');
+      bItal.setAttribute('aria-pressed', etatItal ? 'true' : 'false');
+      let corpsVu = null, multiple = false;
+      let pos = 0;
+      a.runs.forEach(r => {
+        const x = pos, y = pos + r.t.length; pos = y;
+        if (f <= x || d >= y || !r.t.length) return;
+        if (corpsVu == null) corpsVu = r.size;
+        else if (Math.abs(corpsVu - r.size) > 0.05) multiple = true;
+      });
+      if (document.activeElement !== taille) {
+        taille.value = multiple ? '' : (corpsVu == null ? '' : String(Math.round(corpsVu * 10) / 10));
+      }
+      taille.placeholder = multiple ? '—' : '';
+      const duDoc = runsTous(a, d, f, r => !!r.pol);
+      let genreVu = null, genresMeles = false;
+      pos = 0;
+      a.runs.forEach(r => {
+        const x = pos, y = pos + r.t.length; pos = y;
+        if (f <= x || d >= y || !r.t.length) return;
+        const gg = r.pol ? 'doc' : (r.genre || 'Helvetica');
+        if (genreVu == null) genreVu = gg; else if (genreVu !== gg) genresMeles = true;
+      });
+      police.value = duDoc ? 'doc' : (genresMeles || genreVu == null ? '' : genreVu);
+      police.options[0].disabled = !runsTous(a, d, f, r => !!r.polSrc);
+    }
+    barre.maj = majBarre;
+    return barre;
+  }
+
+  // Ouvre la saisie enrichie sur une retouche de ligne.
+  function edEditRuns(a, opts) {
+    opts = opts || {};
+    edFermerSaisie();
+    if (!opts.nouveau) snapshot();
+    const zone = document.createElement('div');
+    zone.className = 'ed-riche';
+    try { zone.contentEditable = 'plaintext-only'; } catch (_) {}
+    if (zone.contentEditable !== 'plaintext-only') zone.contentEditable = 'true';
+    zone.spellcheck = false;
+    zone.setAttribute('role', 'textbox');
+    zone.setAttribute('aria-label', 'Texte de la ligne');
+    // bordure (1) + marge interieure (2) : la zone est decalee d'autant
+    // pour que le texte se pose la ou il sera dessine.
+    zone.style.left = ((a.x + 1) * ed.scale - 3) + 'px';
+    zone.style.top = ((a.y + a.pad) * ed.scale - 2) + 'px';
+    zone.style.width = (Math.max(8, a.w - 2 + (a.marge || 0)) * ed.scale) + 'px';
+    richePeindre(zone, a);
+    ed.sheet.appendChild(zone);
+
+    const barre = edBarreFormat(a, zone);
+    ed.sheet.appendChild(barre);
+    const total = runsTexte(a.runs).length;
+    const saisie = { zone, barre, a, sel: { debut: 0, fin: total } };
+    ed.saisie = saisie;
+
+    saisie.suivre = () => {
+      const o = richeOffsets(zone);
+      if (o) { saisie.sel = o; barre.maj(); }
+    };
+    saisie.dehors = e => {
+      if (zone.contains(e.target) || barre.contains(e.target)) return;
+      edFermerSaisie();
+    };
+    document.addEventListener('selectionchange', saisie.suivre);
+    document.addEventListener('pointerdown', saisie.dehors, true);
+
+    zone.addEventListener('keydown', e => {
+      e.stopPropagation();
+      const mod = e.ctrlKey || e.metaKey;
+      if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) { e.preventDefault(); edFermerSaisie(); return; }
+      if (mod && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); basculerDepuisBarre('gras'); return; }
+      if (mod && (e.key === 'i' || e.key === 'I')) { e.preventDefault(); basculerDepuisBarre('italique'); return; }
+    });
+    const basculerDepuisBarre = champ => {
+      const b = barre.querySelector('[data-a="' + champ + '"]');
+      if (b) b.click();
+    };
+
+    zone.focus();
+    richePlacer(zone, 0, total);
+    barre.maj();
+    requestAnimationFrame(() => {
+      if (ed.saisie !== saisie) return;
+      if (document.activeElement !== zone) { zone.focus(); richePlacer(zone, 0, total); }
+      edPlacerBarre(a, barre);
     });
   }
 
@@ -4314,9 +4879,12 @@
     const change = fn => { if (sel) { snapshot(); state.touched = true; } fn(); edDrawOverlay(true); };
 
     if (isEdit && !sel) {
-      ed.side.appendChild(note('Cliquez sur une ligne encadrée pour la corriger. Elle est recouverte, puis remplacée par le texte que vous saisissez.'));
+      ed.side.appendChild(note('Cliquez une ligne encadrée pour la corriger. Elle est recouverte, puis réécrite avec ses polices d\'origine. Une barre apparaît au-dessus : elle agit sur la partie sélectionnée.'));
     }
-    if (texteModifiable || isDraw || isRect) {
+    // Une retouche de ligne se regle dans la barre flottante, morceau par
+    // morceau ; le panneau n'agit que sur la ligne entiere.
+    const retouche = isEdit && !!sel;
+    if ((texteModifiable && !retouche) || isDraw || isRect) {
       const cur = sel ? sel.color : (isText || isDraw ? ed.style.textColor : ed.style.color);
       const c = input('ed-color', 'color', cur);
       c.addEventListener('input', () => change(() => {
@@ -4324,36 +4892,23 @@
         else if (isText || isDraw) ed.style.textColor = c.value;
         else ed.style.color = c.value;
       }));
-      ed.side.appendChild(field(isEdit ? 'Couleur du texte' : 'Couleur', c));
+      ed.side.appendChild(field('Couleur', c));
     }
-    if (texteModifiable) {
+    if (texteModifiable && !retouche) {
       const s = input('ed-size', 'number', sel ? Math.round(sel.size * 10) / 10 : ed.style.size, { min: 5, max: 96, step: 0.5 });
       s.addEventListener('change', () => change(() => {
         const v = Math.min(96, Math.max(5, parseFloat(s.value) || 14));
         if (sel) { sel.size = v; recalcAnn(sel); } else ed.style.size = v;
       }));
-      const origine = sel && sel.polSrc ? sel.polSrc : null;
-      const choix = [['Helvetica', 'Helvetica'], ['Times', 'Times'], ['Courier', 'Courier']];
-      if (origine) choix.unshift(['doc', 'Celle du document \u2014 ' + origine.lisible]);
-      const f = select('ed-font', choix, sel ? (sel.pol ? 'doc' : sel.font) : ed.style.font);
+      const f = select('ed-font', [['Helvetica', 'Helvetica'], ['Times', 'Times'], ['Courier', 'Courier']], sel ? sel.font : ed.style.font);
       f.addEventListener('change', () => change(() => {
-        if (!sel) { ed.style.font = f.value === 'doc' ? 'Helvetica' : f.value; return; }
-        if (f.value === 'doc' && sel.polSrc) {
-          sel.pol = sel.polSrc; sel.font = sel.polSrc.genre;
-          sel.bold = sel.polSrc.gras; sel.italic = sel.polSrc.italique;
-        } else { sel.pol = null; sel.font = f.value; }
-        recalcAnn(sel);
+        if (sel) { sel.font = f.value; recalcAnn(sel); } else ed.style.font = f.value;
       }));
-      ed.side.append(field('Taille (pt)', s), field('Police', f));
-      if (sel && sel.pol) {
-        ed.side.appendChild(note('Police reprise du document, graisse et italique comprises.'));
-      } else {
-        const bd = checkbox('ed-bold', 'Gras', sel ? sel.bold : ed.style.bold);
-        bd.input.addEventListener('change', () => change(() => {
-          if (sel) { sel.bold = bd.input.checked; recalcAnn(sel); } else ed.style.bold = bd.input.checked;
-        }));
-        ed.side.appendChild(bd);
-      }
+      const bd = checkbox('ed-bold', 'Gras', sel ? sel.bold : ed.style.bold);
+      bd.input.addEventListener('change', () => change(() => {
+        if (sel) { sel.bold = bd.input.checked; recalcAnn(sel); } else ed.style.bold = bd.input.checked;
+      }));
+      ed.side.append(field('Taille (pt)', s), field('Police', f), bd);
       if (sel) {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'tb-btn'; b.style.border = '1px solid var(--trait)'; b.style.justifyContent = 'center';
@@ -4361,6 +4916,18 @@
         b.addEventListener('click', () => edEditText(sel));
         ed.side.appendChild(b);
       }
+    }
+    if (retouche) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'tb-btn primary'; b.style.justifyContent = 'center';
+      b.textContent = 'Modifier le texte';
+      b.addEventListener('click', () => edEditRuns(sel));
+      ed.side.appendChild(b);
+      const polices = Array.from(new Set((sel.runs || []).map(r => r.pol && r.pol.lisible).filter(Boolean)));
+      const tailles = Array.from(new Set((sel.runs || []).map(r => Math.round(r.size * 10) / 10)));
+      ed.side.appendChild(note('Police : ' + (polices.join(', ') || 'standard')
+        + ' \u00b7 ' + (tailles.length > 1 ? tailles.join(' / ') + ' pt' : tailles[0] + ' pt')
+        + '. Double-cliquez la ligne pour la reprendre : la taille, le gras et la couleur se reglent alors sur la partie selectionnee.'));
     }
     if (isEdit && sel) {
       const bg = input('ed-bg', 'color', sel.bg || '#FFFFFF');
@@ -4425,6 +4992,9 @@
   // Editor keyboard + double-click to edit text
   document.addEventListener('keydown', e => {
     if (!ed.root || ed.root.hidden) return;
+    // Pendant une saisie, Suppr efface le texte selectionne et Echap valide :
+    // la zone de saisie garde la main sur son clavier.
+    if (ed.saisie) return;
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'textarea' || tag === 'input' || tag === 'select') return;
     if (e.key === 'Escape') { e.preventDefault(); if (ed.sel != null) { ed.sel = null; edDrawOverlay(); } else closeEditor(); }
