@@ -1403,13 +1403,15 @@
       fond.setAttribute('fill', a.bg || '#FFFFFF');
       gEl.appendChild(fond);
       const lh = a.size * 1.18;
+      const st = polAffichage(a);
       (a.lines || []).forEach((line, i) => {
         const t = document.createElementNS(SVGNS, 'text');
         t.setAttribute('x', a.x + 1);
         t.setAttribute('y', a.y + a.pad + lh * i + a.size * 0.82);
         t.setAttribute('font-size', a.size);
-        t.setAttribute('font-family', a.font === 'Times' ? 'Times New Roman, Times, serif' : a.font === 'Courier' ? 'Courier New, Courier, monospace' : 'Helvetica, Arial, sans-serif');
-        if (a.bold) t.setAttribute('font-weight', '700');
+        t.setAttribute('font-family', st.famille);
+        if (st.poids !== '400') t.setAttribute('font-weight', st.poids);
+        if (st.penche !== 'normal') t.setAttribute('font-style', st.penche);
         t.setAttribute('fill', a.color);
         t.textContent = line;
         gEl.appendChild(t);
@@ -1420,13 +1422,15 @@
       const gEl = document.createElementNS(SVGNS, 'g');
       gEl.setAttribute('data-ann', a.id);
       const lh = a.size * 1.25;
+      const st = polAffichage(a);
       (a.lines || []).forEach((line, i) => {
         const t = document.createElementNS(SVGNS, 'text');
         t.setAttribute('x', a.x);
         t.setAttribute('y', a.y + lh * i + a.size * 0.95);
         t.setAttribute('font-size', a.size);
-        t.setAttribute('font-family', a.font === 'Times' ? 'Times New Roman, Times, serif' : a.font === 'Courier' ? 'Courier New, Courier, monospace' : 'Helvetica, Arial, sans-serif');
-        if (a.bold) t.setAttribute('font-weight', '700');
+        t.setAttribute('font-family', st.famille);
+        if (st.poids !== '400') t.setAttribute('font-weight', st.poids);
+        if (st.penche !== 'normal') t.setAttribute('font-style', st.penche);
         t.setAttribute('fill', a.color);
         t.textContent = line;
         gEl.appendChild(t);
@@ -1868,17 +1872,373 @@
   }
 
   // =====================================================================
+  //  Polices du document
+  // =====================================================================
+  // Pour qu'une ligne corrigee garde exactement la police de la page, on
+  // s'appuie sur deux choses. A l'ecran : la fonte que pdf.js a deja
+  // installee dans le navigateur pour dessiner la page -- c'est la police
+  // embarquee dans le PDF, glyphe pour glyphe. A l'export : l'objet
+  // police du PDF lui-meme, reutilise tel quel, sans le reencapsuler.
+  // Quand le PDF n'embarque pas sa police (les 14 polices standard), on
+  // retombe sur la standard correspondante, qui est la meme police.
+
+  const POL_CONNUES = {
+    arial: 'Arial', arialnarrow: 'Arial Narrow', arialblack: 'Arial Black',
+    arialunicodems: 'Arial Unicode MS', helvetica: 'Helvetica', helveticaneue: 'Helvetica Neue',
+    timesnewroman: 'Times New Roman', times: 'Times New Roman', timesroman: 'Times New Roman',
+    couriernew: 'Courier New', courier: 'Courier New',
+    calibri: 'Calibri', cambria: 'Cambria', cambriamath: 'Cambria Math',
+    segoeui: 'Segoe UI', candara: 'Candara', constantia: 'Constantia', corbel: 'Corbel',
+    consolas: 'Consolas', georgia: 'Georgia', verdana: 'Verdana', tahoma: 'Tahoma',
+    trebuchetms: 'Trebuchet MS', palatinolinotype: 'Palatino Linotype', bookantiqua: 'Book Antiqua',
+    garamond: 'Garamond', centurygothic: 'Century Gothic', franklingothicbook: 'Franklin Gothic Book',
+    lucidasansunicode: 'Lucida Sans Unicode', lucidaconsole: 'Lucida Console',
+    bookmanoldstyle: 'Bookman Old Style', comicsansms: 'Comic Sans MS', impact: 'Impact',
+    symbol: 'Symbol', wingdings: 'Wingdings',
+    liberationserif: 'Liberation Serif', liberationsans: 'Liberation Sans',
+    liberationmono: 'Liberation Mono', dejavusans: 'DejaVu Sans', dejavuserif: 'DejaVu Serif',
+    dejavusansmono: 'DejaVu Sans Mono', freesans: 'FreeSans', freeserif: 'FreeSerif',
+    roboto: 'Roboto', opensans: 'Open Sans', lato: 'Lato', montserrat: 'Montserrat',
+    notosans: 'Noto Sans', notoserif: 'Noto Serif', inter: 'Inter', poppins: 'Poppins',
+    sourcesanspro: 'Source Sans Pro', ptsans: 'PT Sans', nunito: 'Nunito', ubuntu: 'Ubuntu',
+  };
+
+  // « ABCDEF+TimesNewRomanPS-BoldItalicMT » donne « Times New Roman ».
+  function polFamilles(base) {
+    const brut = String(base || '').replace(/^[A-Z]{6}\+/, '').replace(/[,_]/g, '-');
+    const tete = (brut.split('-').filter(Boolean)[0] || '').replace(/\s+/g, '');
+    const court = tete.replace(/(PSMT|PSM|MT|PS|LT|Std|Pro|Roman)$/i, '') || tete;
+    const cle = t => t.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const out = [];
+    const pousse = v => { if (v && out.indexOf(v) < 0) out.push(v); };
+    pousse(POL_CONNUES[cle(tete)]);
+    pousse(POL_CONNUES[cle(court)]);
+    pousse(court.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').trim());
+    pousse(court);
+    return out.filter(Boolean);
+  }
+
+  function polStyle(base, o) {
+    if (o && o.missingFile) return { gras: !!(o.bold || o.black), italique: !!o.italic };
+    const s = String(base || '').toLowerCase();
+    return {
+      gras: /bold|black|heavy|semib|demib|extrab|ultrab|-bd|-blk/.test(s),
+      italique: /italic|oblique|-it$|-it-/.test(s),
+    };
+  }
+
+  // Famille de repli parmi les 14 polices standard du PDF.
+  function polGenre(base, o, style) {
+    const s = String(base || '').toLowerCase();
+    if (/mono|courier|consol|typewriter/.test(s)) return 'Courier';
+    const fb = String((o && o.fallbackName) || (style && style.fontFamily) || '');
+    if (/mono/.test(fb)) return 'Courier';
+    if (/serif|times|roman|georgia|garamond|cambria|palatino|bookman|minion|century|caslon|baskerville|didot|utopia|charter|constantia/.test(s)) {
+      return /sans/.test(s) ? 'Helvetica' : 'Times';
+    }
+    if (/^serif$/.test(fb)) return 'Times';
+    return 'Helvetica';
+  }
+
+  // La fonte installee par pdf.js rend-elle vraiment quelque chose ?
+  const polFaces = new Map();
+  function polFaceUtilisable(nom) {
+    if (polFaces.has(nom)) return polFaces.get(nom);
+    let ok = false;
+    try {
+      ok = document.fonts.check('16px "' + nom + '"');
+      if (ok) {
+        if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
+        measureCtx.font = '32px "' + nom + '"';
+        ok = measureCtx.measureText('Hn0').width > 0;
+      }
+    } catch (_) { ok = false; }
+    polFaces.set(nom, ok);
+    return ok;
+  }
+
+  function polDescripteur(o, style) {
+    const base = o && o.name ? String(o.name) : '';
+    const st = polStyle(base, o);
+    const familles = polFamilles(base);
+    const face = o && !o.missingFile && !o.isType3Font && o.loadedName ? String(o.loadedName) : null;
+    const propre = !!(face && polFaceUtilisable(face));
+    // Toujours entre guillemets : un nom de police peut commencer par un
+    // chiffre ou porter des signes qui casseraient la declaration entiere.
+    const cite = n => '"' + String(n).replace(/["\\]/g, '') + '"';
+    const pile = [];
+    if (propre) pile.push(cite(face));
+    familles.forEach(n => { const v = cite(n); if (pile.indexOf(v) < 0) pile.push(v); });
+    const genre = polGenre(base, o, style);
+    pile.push(genre === 'Times' ? 'serif' : genre === 'Courier' ? 'monospace' : 'sans-serif');
+    return {
+      nom: base, genre, gras: st.gras, italique: st.italique,
+      lisible: familles[0] || genre,
+      face: propre ? face : null,
+      css: pile.join(', '),
+      // La fonte embarquee porte deja sa graisse et son italique : les
+      // reappliquer donnerait un gras de synthese par-dessus un vrai gras.
+      poids: propre ? '400' : (st.gras ? '700' : '400'),
+      penche: propre ? 'normal' : (st.italique ? 'italic' : 'normal'),
+    };
+  }
+
+  // Catalogue des polices d'une page, repere via pdf.js.
+  async function polDeLaPage(pdfPage, tc) {
+    const noms = [];
+    tc.items.forEach(it => { if (it.fontName && noms.indexOf(it.fontName) < 0) noms.push(it.fontName); });
+    const co = pdfPage.commonObjs;
+    if (noms.some(n => !(co && co.has && co.has(n)))) {
+      // Les objets police n'existent qu'une fois la page interpretee.
+      try { await pdfPage.getOperatorList(); } catch (_) {}
+    }
+    const map = new Map();
+    noms.forEach(n => {
+      let o = null;
+      try { if (co && co.has && co.has(n)) o = co.get(n); } catch (_) { o = null; }
+      map.set(n, polDescripteur(o, tc.styles && tc.styles[n]));
+    });
+    return map;
+  }
+
+  // Style d'affichage d'une annotation de texte, police du document comprise.
+  function polAffichage(a) {
+    if (a.pol && a.pol.css) return { famille: a.pol.css, poids: a.pol.poids, penche: a.pol.penche };
+    return { famille: famOf(a.font), poids: a.bold ? '700' : '400', penche: a.italic ? 'italic' : 'normal' };
+  }
+
+  // ---------------------------------------------------------------------
+  //  Cote export : reprise de l'objet police d'origine
+  // ---------------------------------------------------------------------
+  function polNomPdf(n) {
+    return String(n == null ? '' : n).replace(/^\//, '')
+      .replace(/#([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+  }
+
+  function polTrouverDict(doc, page, nom) {
+    const { PDFName, PDFDict, PDFRef } = PDFLib;
+    let res = null, fonts = null;
+    try { res = page.node.Resources(); } catch (_) { return null; }
+    if (!res) return null;
+    try { fonts = res.lookup(PDFName.of('Font'), PDFDict); } catch (_) { return null; }
+    if (!fonts) return null;
+    const cible = String(nom).replace(/[,_]/g, '-');
+    const nu = t => t.replace(/^[A-Z]{6}\+/, '').toLowerCase();
+    let exact = null, proche = null, seule = null, n = 0;
+    fonts.keys().forEach(k => {
+      let d = null;
+      try { d = fonts.lookup(k, PDFDict); } catch (_) { return; }
+      if (!d) return;
+      n++;
+      const cand = { dict: d, val: fonts.get(k) };
+      seule = cand;
+      const base = polNomPdf(d.get(PDFName.of('BaseFont'))).replace(/[,_]/g, '-');
+      if (base === cible) { if (!exact) exact = cand; }
+      else if (nu(base) === nu(cible)) { if (!proche) proche = cand; }
+    });
+    const pris = exact || proche || (n === 1 ? seule : null);
+    if (!pris) return null;
+    pris.ref = pris.val instanceof PDFRef ? pris.val : doc.context.register(pris.dict);
+    return pris;
+  }
+
+  function polFlux(obj) {
+    if (!obj) return null;
+    try {
+      if (obj instanceof PDFLib.PDFRawStream) return PDFLib.decodePDFRawStream(obj).decode();
+      if (typeof obj.getContents === 'function') return obj.getContents();
+    } catch (_) {}
+    return null;
+  }
+
+  // Lecture du CMap /ToUnicode : il donne, pour chaque code de la police,
+  // le caractere qu'il represente. Inverse, il dit quel code ecrire.
+  function polLireToUnicode(octets) {
+    const txt = new TextDecoder('latin1').decode(octets);
+    const vers = new Map();
+    let taille = 0;
+    const cs = /begincodespacerange([\s\S]*?)endcodespacerange/.exec(txt);
+    if (cs) { const m = /<([0-9A-Fa-f]+)>/.exec(cs[1]); if (m) taille = Math.max(1, Math.round(m[1].length / 2)); }
+    const dec = hex => {
+      let s = '';
+      for (let i = 0; i + 4 <= hex.length; i += 4) s += String.fromCharCode(parseInt(hex.substr(i, 4), 16));
+      return s;
+    };
+    const ajout = (code, s) => {
+      if (!s || Array.from(s).length !== 1) return;   // ligatures : hors jeu
+      if (!vers.has(s)) vers.set(s, code);
+    };
+    let b, m;
+    const rxC = /beginbfchar([\s\S]*?)endbfchar/g;
+    while ((b = rxC.exec(txt))) {
+      const rx = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]*)>/g;
+      while ((m = rx.exec(b[1]))) ajout(parseInt(m[1], 16), dec(m[2]));
+    }
+    const rxR = /beginbfrange([\s\S]*?)endbfrange/g;
+    while ((b = rxR.exec(txt))) {
+      const rx = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*(?:<([0-9A-Fa-f]*)>|\[([\s\S]*?)\])/g;
+      while ((m = rx.exec(b[1]))) {
+        const lo = parseInt(m[1], 16);
+        const hi = Math.min(parseInt(m[2], 16), lo + 65535);
+        if (m[3] != null) {
+          const base = dec(m[3]);
+          if (!base) continue;
+          const tete = base.slice(0, -1), fin = base.charCodeAt(base.length - 1);
+          for (let c = lo; c <= hi; c++) ajout(c, tete + String.fromCharCode((fin + (c - lo)) & 0xFFFF));
+        } else {
+          let i = 0, mm; const rx2 = /<([0-9A-Fa-f]*)>/g;
+          while ((mm = rx2.exec(m[4]))) { ajout(lo + i, dec(mm[1])); i++; }
+        }
+      }
+    }
+    return { vers, taille };
+  }
+
+  // Codes 128-159 de WinAnsi : ils ne suivent pas Latin-1.
+  const POL_CP1252 = {
+    128: '€', 130: '‚', 131: 'ƒ', 132: '„', 133: '…', 134: '†',
+    135: '‡', 136: 'ˆ', 137: '‰', 138: 'Š', 139: '‹', 140: 'Œ',
+    142: 'Ž', 145: '‘', 146: '’', 147: '“', 148: '”', 149: '•',
+    150: '–', 151: '—', 152: '˜', 153: '™', 154: 'š', 155: '›',
+    156: 'œ', 158: 'ž', 159: 'Ÿ',
+  };
+  let polWinAnsiMap = null;
+  function polWinAnsi() {
+    if (polWinAnsiMap) return polWinAnsiMap;
+    const m = new Map();
+    for (let c = 32; c <= 255; c++) {
+      const s = (c >= 127 && c <= 159) ? POL_CP1252[c] : String.fromCharCode(c);
+      if (s && !m.has(s)) m.set(s, c);
+    }
+    polWinAnsiMap = m;
+    return m;
+  }
+
+  function polLargeurs(fd, df) {
+    const { PDFName, PDFArray } = PDFLib;
+    const w = new Map();
+    let defaut = df ? 1000 : 0;
+    const nb = v => (v && typeof v.asNumber === 'function' ? v.asNumber() : null);
+    if (df) {
+      try { const d = nb(df.lookup(PDFName.of('DW'))); if (d != null) defaut = d; } catch (_) {}
+      try {
+        const arr = df.lookup(PDFName.of('W'), PDFArray);
+        let i = 0;
+        while (arr && i < arr.size()) {
+          const c1 = nb(arr.lookup(i));
+          if (c1 == null) break;
+          const suite = arr.lookup(i + 1);
+          if (suite instanceof PDFArray) {
+            for (let k = 0; k < suite.size(); k++) { const v = nb(suite.lookup(k)); if (v != null) w.set(c1 + k, v); }
+            i += 2;
+          } else {
+            const c2 = nb(suite), v = nb(arr.lookup(i + 2));
+            if (c2 == null || v == null) break;
+            for (let c = c1; c <= c2 && c - c1 < 65536; c++) w.set(c, v);
+            i += 3;
+          }
+        }
+      } catch (_) {}
+    } else {
+      try {
+        const dsc = fd.lookup(PDFName.of('FontDescriptor'));
+        if (dsc && typeof dsc.lookup === 'function') { const mw = nb(dsc.lookup(PDFName.of('MissingWidth'))); if (mw != null) defaut = mw; }
+      } catch (_) {}
+      try {
+        const premier = nb(fd.lookup(PDFName.of('FirstChar')));
+        const arr = fd.lookup(PDFName.of('Widths'), PDFArray);
+        if (arr && premier != null) {
+          for (let i = 0; i < arr.size(); i++) { const v = nb(arr.lookup(i)); if (v != null) w.set(premier + i, v); }
+        }
+      } catch (_) {}
+    }
+    return { w, defaut };
+  }
+
+  // Rend une police pdf-lib qui pointe sur l'objet police deja present
+  // dans le PDF : aucun glyphe n'est recree, ce sont les memes.
+  function polReprise(doc, page, nom) {
+    const { PDFName, PDFDict, PDFArray, PDFHexString, PDFFont } = PDFLib;
+    const trouve = polTrouverDict(doc, page, nom);
+    if (!trouve) return null;
+    const fd = trouve.dict;
+    const sous = polNomPdf(fd.get(PDFName.of('Subtype')));
+    if (sous === 'Type3') return null;
+    const composite = sous === 'Type0';
+    let df = null;
+    if (composite) {
+      // Seul l'encodage Identity laisse ecrire les codes directement ;
+      // avec un CMap predefini les largeurs ne seraient plus alignees.
+      if (!/^Identity/.test(polNomPdf(fd.get(PDFName.of('Encoding'))))) return null;
+      try { const arr = fd.lookup(PDFName.of('DescendantFonts'), PDFArray); df = arr && arr.lookup(0, PDFDict); } catch (_) {}
+      if (!df) return null;
+    }
+    let codes = null, taille = composite ? 2 : 1;
+    const tu = polFlux(fd.lookup(PDFName.of('ToUnicode')));
+    if (tu) {
+      const r = polLireToUnicode(tu);
+      if (r.vers.size) { codes = r.vers; if (r.taille) taille = r.taille; }
+    }
+    if (!codes && !composite) {
+      const enc = fd.get(PDFName.of('Encoding'));
+      const encNom = polNomPdf(enc);
+      const differences = enc && typeof enc.lookup === 'function';
+      if (!differences && (encNom === 'WinAnsiEncoding' || (!enc && /^(TrueType|Type1|MMType1)$/.test(sous)))) codes = polWinAnsi();
+    }
+    if (!codes) return null;
+    const lg = polLargeurs(fd, df);
+    if (!lg.w.size) return null;   // sans table de largeurs, rien de sur
+
+    const large = code => { const v = lg.w.get(code); return (v == null ? lg.defaut : v) / 1000; };
+    const hex = n => { let s = (n & 0xFFFFFF).toString(16).toUpperCase(); while (s.length < taille * 2) s = '0' + s; return s; };
+
+    const f = Object.create(PDFFont.prototype);
+    f.ref = trouve.ref;
+    f.doc = doc;
+    f.name = 'PoliceDoc';
+    f.duDocument = true;
+    f.connait = ch => codes.has(ch);
+    f.encodeText = t => {
+      let s = '';
+      for (const ch of String(t)) { const c = codes.get(ch); if (c != null) s += hex(c); }
+      return PDFHexString.of(s);
+    };
+    f.widthOfTextAtSize = (t, size) => {
+      let w = 0;
+      for (const ch of String(t)) { const c = codes.get(ch); if (c != null) w += large(c); }
+      return w * size;
+    };
+    f.glyphCountOfText = t => Array.from(String(t)).length;
+    f.heightAtSize = s => s;
+    f.sizeAtHeight = h => h;
+    f.embed = () => Promise.resolve();
+    return f;
+  }
+
+  function polPourPage(doc, page, nom, cache, cle) {
+    const k = 'police:' + cle + ':' + nom;
+    if (cache.has(k)) return cache.get(k);
+    let f = null;
+    try { f = polReprise(doc, page, nom); } catch (e) { console.warn('Police du document :', e); }
+    cache.set(k, f);
+    return f;
+  }
+
+  // =====================================================================
   //  PDF building
   // =====================================================================
-  function fontKey(name, bold) { return (name || 'Helvetica') + (bold ? '-B' : ''); }
-  async function getFont(doc, cache, name, bold) {
-    const k = fontKey(name, bold);
+  function fontKey(name, bold, italic) { return (name || 'Helvetica') + (bold ? '-B' : '') + (italic ? '-I' : ''); }
+  async function getFont(doc, cache, name, bold, italic) {
+    const k = fontKey(name, bold, italic);
     if (cache.has(k)) return cache.get(k);
     const S = PDFLib.StandardFonts;
     const map = {
       'Helvetica': S.Helvetica, 'Helvetica-B': S.HelveticaBold,
+      'Helvetica-I': S.HelveticaOblique, 'Helvetica-B-I': S.HelveticaBoldOblique,
       'Times': S.TimesRoman, 'Times-B': S.TimesRomanBold,
+      'Times-I': S.TimesRomanItalic, 'Times-B-I': S.TimesRomanBoldItalic,
       'Courier': S.Courier, 'Courier-B': S.CourierBold,
+      'Courier-I': S.CourierOblique, 'Courier-B-I': S.CourierBoldOblique,
     };
     const f = await doc.embedFont(map[k] || S.Helvetica);
     cache.set(k, f);
@@ -1894,7 +2254,7 @@
 
   // Draw text positioned in *display* space (upright whatever the page rotation).
   function drawDisplayText(page, g, o) {
-    const text = winAnsi(o.text);
+    const text = o.brut ? String(o.text == null ? '' : o.text) : winAnsi(o.text);
     if (!text) return;
     const a = (o.angle || 0) * Math.PI / 180;
     const w = o.font.widthOfTextAtSize(text, o.size);
@@ -1907,6 +2267,31 @@
       x: anchor.x, y: anchor.y, size: o.size, font: o.font,
       color: pdfColor(o.color), opacity: o.opacity == null ? 1 : o.opacity,
       rotate: PDFLib.degrees((g.total + (o.angle || 0)) % 360),
+    });
+  }
+
+  // Trace une ligne en gardant la police du document partout ou elle
+  // possede le caractere, et en repliant sur une police standard ailleurs.
+  function dessinerSuites(page, g, o) {
+    const txt = String(o.text == null ? '' : o.text);
+    if (!txt) return;
+    const suites = [];
+    for (const ch of txt) {
+      const propre = !!(o.propre && o.propre.connait(ch));
+      const d = suites[suites.length - 1];
+      if (d && d.propre === propre) d.t += ch;
+      else suites.push({ propre, t: ch });
+    }
+    let x = o.x;
+    suites.forEach(suite => {
+      const font = suite.propre ? o.propre : o.repli;
+      const texte = suite.propre ? suite.t : winAnsi(suite.t);
+      if (!texte) return;
+      drawDisplayText(page, g, {
+        text: texte, brut: suite.propre, x, y: o.y, size: o.size,
+        font, color: o.color, align: 'left',
+      });
+      x += font.widthOfTextAtSize(texte, o.size);
     });
   }
 
@@ -1924,13 +2309,17 @@
       } else if (an.type === 'edit') {
         const r = rectToUser(an, g);
         if (r.w > 0 && r.h > 0) page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.bg || '#FFFFFF') });
-        const font = await getFont(doc, fonts, an.font, an.bold);
+        const repli = await getFont(doc, fonts, an.font, an.bold, an.italic);
+        const propre = an.pol && an.pol.nom ? polPourPage(doc, page, an.pol.nom, fonts, p.id) : null;
         const lh = an.size * 1.18;
         (an.lines || []).forEach((line, i) => {
-          drawDisplayText(page, g, { text: line, x: an.x + 1, y: an.y + an.pad + lh * i + an.size * 0.82, size: an.size, font, color: an.color, align: 'left' });
+          dessinerSuites(page, g, {
+            text: line, x: an.x + 1, y: an.y + an.pad + lh * i + an.size * 0.82,
+            size: an.size, color: an.color, propre, repli,
+          });
         });
       } else if (an.type === 'text') {
-        const font = await getFont(doc, fonts, an.font, an.bold);
+        const font = await getFont(doc, fonts, an.font, an.bold, an.italic);
         const lh = an.size * 1.25;
         (an.lines || []).forEach((line, i) => {
           drawDisplayText(page, g, { text: line, x: an.x, y: an.y + lh * i + an.size * 0.95, size: an.size, font, color: an.color, align: 'left' });
@@ -2029,15 +2418,15 @@
         ctx.fillStyle = an.bg || '#FFFFFF';
         ctx.fillRect(an.x * s, an.y * s, an.w * s, an.h * s);
         ctx.fillStyle = an.color;
-        const fam2 = an.font === 'Times' ? '"Times New Roman", Times, serif' : an.font === 'Courier' ? '"Courier New", Courier, monospace' : 'Helvetica, Arial, sans-serif';
-        ctx.font = (an.bold ? '700 ' : '') + (an.size * s) + 'px ' + fam2;
+        const st2 = polAffichage(an);
+        ctx.font = st2.penche + ' ' + st2.poids + ' ' + (an.size * s) + 'px ' + st2.famille;
         ctx.textBaseline = 'alphabetic';
         const lh2 = an.size * 1.18;
         (an.lines || []).forEach((line, i) => ctx.fillText(line, (an.x + 1) * s, (an.y + an.pad + lh2 * i + an.size * 0.82) * s));
       } else if (an.type === 'text') {
         ctx.fillStyle = an.color;
-        const fam = an.font === 'Times' ? '"Times New Roman", Times, serif' : an.font === 'Courier' ? '"Courier New", Courier, monospace' : 'Helvetica, Arial, sans-serif';
-        ctx.font = (an.bold ? '700 ' : '') + (an.size * s) + 'px ' + fam;
+        const st1 = polAffichage(an);
+        ctx.font = st1.penche + ' ' + st1.poids + ' ' + (an.size * s) + 'px ' + st1.famille;
         ctx.textBaseline = 'alphabetic';
         const lh = an.size * 1.25;
         (an.lines || []).forEach((line, i) => ctx.fillText(line, an.x * s, (an.y + lh * i + an.size * 0.95) * s));
@@ -3329,17 +3718,16 @@
       const page = await src.pdfjs.getPage(p.index + 1);
       const vp = page.getViewport({ scale: 1, rotation: g.total });
       const tc = await page.getTextContent();
+      const polices = await polDeLaPage(page, tc);
       tc.items.forEach(it => {
         if (!it.str || !it.str.trim()) return;
         const m = pdfjs.Util.transform(vp.transform, it.transform);
         const taille = Math.hypot(m[2], m[3]) || Math.abs(m[3]) || 10;
         if (taille < 1) return;
-        const style = tc.styles && tc.styles[it.fontName];
-        const fam = style && style.fontFamily ? String(style.fontFamily).toLowerCase() : '';
         morceaux.push({
           str: it.str, x: m[4], base: m[5], size: taille,
           w: it.width > 0 ? it.width : taille * it.str.length * 0.5,
-          font: /mono|courier/.test(fam) ? 'Courier' : /serif|times|roman|georgia|book/.test(fam) ? 'Times' : 'Helvetica',
+          pol: polices.get(it.fontName) || null,
         });
       });
       page.cleanup();
@@ -3349,6 +3737,15 @@
     morceaux.sort((a, b) => (a.base - b.base) || (a.x - b.x));
     const lignes = [];
     let courante = null;
+    // Une ligne peut melanger plusieurs polices : celle qui porte le plus
+    // de caracteres decide, c'est elle qu'on rendra a l'identique.
+    const compter = (l, m) => {
+      const cle = m.pol || 'sans';
+      const e = l.parts.get(cle) || { n: 0, pol: m.pol, size: m.size };
+      e.n += m.str.length;
+      if (m.size > e.size) e.size = m.size;
+      l.parts.set(cle, e);
+    };
     morceaux.forEach(m => {
       if (courante && Math.abs(m.base - courante.base) <= Math.max(1.5, courante.size * 0.35)
         && m.x >= courante.x - 1 && m.x - (courante.x + courante.w) <= courante.size * 2) {
@@ -3356,12 +3753,22 @@
         courante.text += espace + m.str;
         courante.w = Math.max(courante.w, m.x + m.w - courante.x);
         courante.size = Math.max(courante.size, m.size);
+        compter(courante, m);
         return;
       }
-      courante = { text: m.str, x: m.x, base: m.base, w: m.w, size: m.size, font: m.font };
+      courante = { text: m.str, x: m.x, base: m.base, w: m.w, size: m.size, parts: new Map() };
+      compter(courante, m);
       lignes.push(courante);
     });
     lignes.forEach(l => {
+      let mieux = null;
+      l.parts.forEach(e => { if (!mieux || e.n > mieux.n) mieux = e; });
+      l.pol = mieux ? mieux.pol : null;
+      if (mieux && mieux.size >= 1) l.size = mieux.size;
+      l.font = l.pol ? l.pol.genre : 'Helvetica';
+      l.gras = l.pol ? l.pol.gras : false;
+      l.italique = l.pol ? l.pol.italique : false;
+      delete l.parts;
       l.y = l.base - l.size * 0.82;
       l.h = l.size * 1.18;
       l.text = l.text.replace(/\s+/g, ' ').trim();
@@ -3389,7 +3796,9 @@
         const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
         if (lum > clair) clair = lum;
         const cle = (d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4);
-        compte.set(cle, (compte.get(cle) || 0) + 1);
+        const e = compte.get(cle) || { n: 0, r: 0, v: 0, b: 0 };
+        e.n++; e.r += d[i]; e.v += d[i + 1]; e.b += d[i + 2];
+        compte.set(cle, e);
         if (lum < minLum) { minLum = lum; sombre = [d[i], d[i + 1], d[i + 2]]; }
       }
       // Couleur de l'encre : moyenne du cœur des lettres. Les bords lissés,
@@ -3414,19 +3823,24 @@
         }
       }
       let meilleur = null, mieux = -1;
-      compte.forEach((n, cle) => { if (n > mieux) { mieux = n; meilleur = cle; } });
+      compte.forEach(e => { if (e.n > mieux) { mieux = e.n; meilleur = e; } });
       const hex = t => '#' + t.map(n => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')).join('');
-      const [qr, qv, qb] = meilleur.split(',').map(n => (+n << 4) + 8);
-      return { fond: hex([qr, qv, qb]), encre: sombre ? hex(sombre) : defaut.encre };
+      // Moyenne des vrais pixels du groupe dominant, pas du centre de son
+      // intervalle : sinon un blanc pur ressortirait en gris tres clair et
+      // le rectangle de recouvrement se verrait sur la page.
+      const fond = [meilleur.r / meilleur.n, meilleur.v / meilleur.n, meilleur.b / meilleur.n].map(Math.round);
+      if (fond.every(v => v >= 250)) { fond[0] = fond[1] = fond[2] = 255; }
+      return { fond: hex(fond), encre: sombre ? hex(sombre) : defaut.encre };
     } catch (_) { return defaut; }
   }
 
   function recalcAnn(a) {
+    const st = polAffichage(a);
     if (a.type === 'edit') {
-      a.lines = wrapText(a.text || '', Math.max(8, a.w - 2), a.size, a.font, a.bold);
+      a.lines = wrapText(a.text || '', Math.max(8, a.w - 2 + (a.marge || 0)), a.size, a.font, a.bold, st);
       a.h = a.pad * 2 + Math.max(1, a.lines.length) * a.size * 1.18;
     } else {
-      a.lines = wrapText(a.text || '', a.w, a.size, a.font, a.bold);
+      a.lines = wrapText(a.text || '', a.w, a.size, a.font, a.bold, st);
       a.h = Math.max(1, a.lines.length) * a.size * 1.25;
     }
   }
@@ -3444,9 +3858,15 @@
     const a = {
       id: -1, type: 'edit',
       x: zone.x, y: zone.y, w: zone.w, h: zone.h, pad: 1,
-      text: cible.text, size: cible.size, font: cible.font, bold: false,
-      color: couleurs.encre, bg: couleurs.fond, efface: false,
+      text: cible.text, size: cible.size, font: cible.font,
+      bold: cible.gras, italic: cible.italique,
+      pol: cible.pol, polSrc: cible.pol,
+      color: couleurs.encre, bg: couleurs.fond, efface: false, marge: 0,
     };
+    // Le texte d'origine ne doit jamais se replier tout seul : la largeur
+    // mesuree ici ne colle jamais au millimetre a celle inscrite dans le
+    // PDF, et un pouce de trop suffirait a casser la ligne en deux.
+    a.marge = Math.max(0, mesurerTexte(a.text, a.size, polAffichage(a)) / 0.97 - (a.w - 2));
     recalcAnn(a);
     edCommit(a);
     edEditText(a);
@@ -3571,9 +3991,15 @@
     return name === 'Times' ? '"Times New Roman", Times, serif' : name === 'Courier' ? '"Courier New", Courier, monospace' : 'Helvetica, Arial, sans-serif';
   }
   let measureCtx = null;
-  function wrapText(text, maxW, size, fontName, bold) {
+  function mesurerTexte(texte, size, style) {
     if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
-    measureCtx.font = (bold ? '700 ' : '') + size + 'px ' + famOf(fontName);
+    measureCtx.font = style.penche + ' ' + style.poids + ' ' + size + 'px ' + style.famille;
+    return measureCtx.measureText(String(texte == null ? '' : texte)).width;
+  }
+  function wrapText(text, maxW, size, fontName, bold, style) {
+    if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
+    const st = style || { famille: famOf(fontName), poids: bold ? '700' : '400', penche: 'normal' };
+    measureCtx.font = st.penche + ' ' + st.poids + ' ' + size + 'px ' + st.famille;
     const lim = Math.max(10, maxW * 0.98);
     const out = [];
     String(text).split('\n').forEach(par => {
@@ -3757,9 +4183,11 @@
     ta.style.left = ((a.x + (retouche ? 1 : 0)) * ed.scale) + 'px';
     ta.style.top = ((a.y + (retouche ? a.pad : 0)) * ed.scale) + 'px';
     ta.style.width = ((a.w - (retouche ? 2 : 0)) * ed.scale) + 'px';
+    const stp = polAffichage(a);
     ta.style.fontSize = (a.size * ed.scale) + 'px';
-    ta.style.fontFamily = famOf(a.font);
-    ta.style.fontWeight = a.bold ? '700' : '400';
+    ta.style.fontFamily = stp.famille;
+    ta.style.fontWeight = stp.poids;
+    ta.style.fontStyle = stp.penche;
     ta.style.color = a.color;
     ta.value = a.text || (a.lines || []).join('\n');
     ed.sheet.appendChild(ta);
@@ -3896,15 +4324,28 @@
         const v = Math.min(96, Math.max(5, parseFloat(s.value) || 14));
         if (sel) { sel.size = v; recalcAnn(sel); } else ed.style.size = v;
       }));
-      const f = select('ed-font', [['Helvetica', 'Helvetica'], ['Times', 'Times'], ['Courier', 'Courier']], sel ? sel.font : ed.style.font);
+      const origine = sel && sel.polSrc ? sel.polSrc : null;
+      const choix = [['Helvetica', 'Helvetica'], ['Times', 'Times'], ['Courier', 'Courier']];
+      if (origine) choix.unshift(['doc', 'Celle du document \u2014 ' + origine.lisible]);
+      const f = select('ed-font', choix, sel ? (sel.pol ? 'doc' : sel.font) : ed.style.font);
       f.addEventListener('change', () => change(() => {
-        if (sel) { sel.font = f.value; recalcAnn(sel); } else ed.style.font = f.value;
+        if (!sel) { ed.style.font = f.value === 'doc' ? 'Helvetica' : f.value; return; }
+        if (f.value === 'doc' && sel.polSrc) {
+          sel.pol = sel.polSrc; sel.font = sel.polSrc.genre;
+          sel.bold = sel.polSrc.gras; sel.italic = sel.polSrc.italique;
+        } else { sel.pol = null; sel.font = f.value; }
+        recalcAnn(sel);
       }));
-      const bd = checkbox('ed-bold', 'Gras', sel ? sel.bold : ed.style.bold);
-      bd.input.addEventListener('change', () => change(() => {
-        if (sel) { sel.bold = bd.input.checked; recalcAnn(sel); } else ed.style.bold = bd.input.checked;
-      }));
-      ed.side.append(field('Taille (pt)', s), field('Police', f), bd);
+      ed.side.append(field('Taille (pt)', s), field('Police', f));
+      if (sel && sel.pol) {
+        ed.side.appendChild(note('Police reprise du document, graisse et italique comprises.'));
+      } else {
+        const bd = checkbox('ed-bold', 'Gras', sel ? sel.bold : ed.style.bold);
+        bd.input.addEventListener('change', () => change(() => {
+          if (sel) { sel.bold = bd.input.checked; recalcAnn(sel); } else ed.style.bold = bd.input.checked;
+        }));
+        ed.side.appendChild(bd);
+      }
       if (sel) {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'tb-btn'; b.style.border = '1px solid var(--trait)'; b.style.justifyContent = 'center';
