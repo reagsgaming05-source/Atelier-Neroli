@@ -1075,7 +1075,12 @@
   function pdfColor(hex) { const c = hexToRgb01(hex); return PDFLib.rgb(c.r, c.g, c.b); }
 
   // WinAnsi-safe text for the standard PDF fonts ----------------------
-  const CHAR_MAP = { '‘': "'", '’': "'", '‚': "'", '“': '"', '”': '"', '„': '"', '–': '-', '—': '-', '…': '...', ' ': ' ', ' ': ' ', '•': '-', '€': '€', 'œ': 'oe', 'Œ': 'OE', '™': '(TM)', '‹': '<', '›': '>' };
+  // Les polices standard d'un PDF savent écrire tout le jeu WinAnsi, et la
+  // ponctuation typographique en fait partie : l'apostrophe courbe, les
+  // guillemets, le tiret cadratin, les points de suspension. Les remplacer
+  // par leur approximation ASCII abîmait le texte pour rien.
+  const WINANSI_SUP = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
+  const CHAR_MAP = { ' ': ' ', ' ': ' ', ' ': ' ', '‑': '-', '−': '-', '­': '' };
   function winAnsi(s) {
     let out = '';
     for (const ch of String(s == null ? '' : s)) {
@@ -1083,7 +1088,9 @@
       const c = ch.codePointAt(0);
       if (c === 9) { out += '    '; continue; }
       if (c < 32) { out += ch === '\n' ? '\n' : ' '; continue; }
-      out += c <= 255 ? ch : '?';
+      // 0x7F à 0x9F : des codes de commande, que WinAnsi ne porte pas.
+      if (c >= 0x7f && c <= 0x9f) { out += ' '; continue; }
+      out += (c <= 255 || WINANSI_SUP.indexOf(ch) >= 0) ? ch : '?';
     }
     return out;
   }
@@ -2460,19 +2467,54 @@
   // Les jetons qui se touchent sont écrits d'un seul tenant : le texte du
   // PDF exporté reste copiable en entier, et non mot par mot. Seule une
   // ligne justifiée, dont les blancs sont étirés, reste en morceaux.
-  function fondreJetons(seg) {
+  function fondreJetons(seg, jeu) {
+    const tol = jeu == null ? 0.01 : jeu;
     const out = [];
     seg.forEach(j => {
       const d = out[out.length - 1];
-      if (d && d.r === j.r && Math.abs(d.x + d.w - j.x) < 0.01) { d.t += j.t; d.w += j.w; return; }
+      if (d && d.r === j.r && Math.abs(d.x + d.w - j.x) <= tol) { d.t += j.t; d.w = j.x + j.w - d.x; return; }
       out.push({ r: j.r, t: j.t, x: j.x, w: j.w });
     });
     return out;
   }
 
+  // Tant que rien n'a été changé, on rejoue exactement la mise en page du
+  // document : mêmes coupures de ligne, mêmes positions, mêmes blancs. Replier
+  // le texte nous-mêmes, avec nos propres mesures, le ferait bouger dès le
+  // premier clic — et c'est justement ce qu'on ne veut pas.
+  function edPoserOrigine(a, cible) {
+    const gauche = a.x + 1;
+    const rang = new Map();
+    cible.bouts.forEach((b, i) => rang.set(b, i));
+    a.lignes = [];
+    a.ly = [];
+    (cible.lignesBouts || []).forEach((bs, i) => {
+      const seg = [];
+      bs.forEach(b => {
+        const r = rang.get(b);
+        if (r == null) return;
+        (b.pos || []).forEach(q => { if (q.t) seg.push({ r, t: q.t, x: q.x - gauche, w: q.w }); });
+      });
+      if (!seg.length) return;
+      a.lignes.push(fondreJetons(seg, 0.4));
+      a.ly.push((cible.lignesBase[i] != null ? cible.lignesBase[i] : cible.base) - a.y);
+    });
+    if (!a.lignes.length) { recalcRuns(a); return; }
+    a.h = cible.h;
+    a.intact = true;
+  }
+
+  // Ce qui, dans les morceaux, décide de la mise en page. Deux signatures
+  // identiques : rien n'a bougé, et la mise en page d'origine doit rester.
+  function runsEmpreinte(runs) {
+    return JSON.stringify(runsRanger((runs || []).map(r => Object.assign({}, r)))
+      .map(r => [r.t, Math.round(r.size * 100), r.gras ? 1 : 0, r.italique ? 1 : 0, r.color, r.genre || '', r.pol ? r.pol.nom : '']));
+  }
+
   // Place chaque ligne : la première garde exactement la ligne de base du
   // document, les suivantes suivent son interligne.
   function recalcRuns(a) {
+    a.intact = false;
     a.runs = runsRanger(a.runs);
     a.text = runsTexte(a.runs);
     // Le repli s'autorise une marge : notre mesure ne colle jamais au
@@ -4192,19 +4234,35 @@
     const l = {
       x: m.x, base: m.base, size: 0, droite: m.x, bouts: [],
       texte() { return this.bouts.map(b => b.t).join(''); },
+      // Une espace à la charnière de deux morceaux écartés.
+      espace() {
+        const d = this.bouts[this.bouts.length - 1];
+        if (!d) return;
+        const q = d.pos[d.pos.length - 1];
+        if (q && !/\s$/.test(q.t)) { q.t += ' '; d.t += ' '; }
+      },
       pousser(n) {
         const d = this.bouts[this.bouts.length - 1];
-        if (d && d.pol === n.pol && Math.abs(d.size - n.size) < 0.2) { d.t += n.str; d.x1 = n.x + n.w; }
-        else this.bouts.push({ t: n.str, pol: n.pol, size: n.size, x0: n.x, x1: n.x + n.w });
+        if (d && d.pol === n.pol && Math.abs(d.size - n.size) < 0.2) {
+          d.t += n.str; d.x1 = n.x + n.w;
+          d.pos.push({ t: n.str, x: n.x, w: n.w });
+        } else {
+          this.bouts.push({ t: n.str, pol: n.pol, size: n.size, x0: n.x, x1: n.x + n.w,
+            pos: [{ t: n.str, x: n.x, w: n.w }] });
+        }
         this.droite = Math.max(this.droite, n.x + n.w);
         this.size = Math.max(this.size, n.size);
       },
       finir() {
-        this.bouts.forEach(b => { b.t = b.t.replace(/\s+/g, ' '); });
-        if (this.bouts.length) {
-          this.bouts[0].t = this.bouts[0].t.replace(/^\s+/, '');
-          this.bouts[this.bouts.length - 1].t = this.bouts[this.bouts.length - 1].t.replace(/\s+$/, '');
+        // Le nettoyage porte sur les morceaux ; le texte du bout s'en déduit,
+        // pour que les deux disent toujours la même chose.
+        const tous = [];
+        this.bouts.forEach(b => b.pos.forEach(q => { q.t = q.t.replace(/\s+/g, ' '); tous.push(q); }));
+        if (tous.length) {
+          tous[0].t = tous[0].t.replace(/^\s+/, '');
+          tous[tous.length - 1].t = tous[tous.length - 1].t.replace(/\s+$/, '');
         }
+        this.bouts.forEach(b => { b.pos = b.pos.filter(q => q.t.length); b.t = b.pos.map(q => q.t).join(''); });
         this.bouts = this.bouts.filter(b => b.t.length);
         const haut = this.base - this.size * 0.82 - 1;
         this.bouts.forEach(b => { b.y0 = haut; b.h0 = this.size * 1.18 + 2; });
@@ -4227,7 +4285,7 @@
       const colonne = Math.max(m.size * 7, g.Wd * 0.14);
       if (L && Math.abs(m.base - L.base) <= Math.max(1.2, L.size * 0.3)
         && m.x - L.droite <= colonne && m.x >= L.x - 1) {
-        if (m.x - L.droite > m.size * 0.12 && !/\s$/.test(L.texte())) L.bouts[L.bouts.length - 1].t += ' ';
+        if (m.x - L.droite > m.size * 0.12 && !/\s$/.test(L.texte())) L.espace();
         L.pousser(m);
         return;
       }
@@ -4302,8 +4360,14 @@
         const d = bouts[bouts.length - 1];
         const prec = lignes[i - 1];
         const rupture = puce(l.bouts.map(z => z.t).join('')) || prec.droite < b.droite - corps * 4;
-        if (rupture) d.t = d.t.replace(/\s+$/, '') + '\n';
-        else if (!/[\s-]$/.test(d.t)) d.t += ' ';
+        const q = d.pos && d.pos[d.pos.length - 1];
+        if (rupture) {
+          d.t = d.t.replace(/\s+$/, '') + '\n';
+          if (q) q.t = q.t.replace(/\s+$/, '') + '\n';
+        } else if (!/[\s-]$/.test(d.t)) {
+          d.t += ' ';
+          if (q) q.t += ' ';
+        }
       }
       l.bouts.forEach(z => bouts.push(z));
     });
@@ -4313,6 +4377,7 @@
       aligne: justifie ? 'justifie' : 'gauche',
       bouts, text: bouts.map(z => z.t).join(''),
       lignesBouts: lignes.map(l => l.bouts),
+      lignesBase: lignes.map(l => l.base),
     };
   }
 
@@ -4476,31 +4541,57 @@
       let r = passe(src, lum, rayonX, true);
       r = passe(r.d, r.l, rayonY, false);
 
-      // Un dernier lissage : le filtre laisse des marches, un fond n'en a pas.
-      const flou = (t, tours) => {
-        let cur = t;
-        for (let p = 0; p < tours; p++) {
-          const out = new Uint8ClampedArray(cur.length);
-          for (let y = 0; y < H; y++) {
-            for (let x = 0; x < W; x++) {
-              let sr = 0, sv = 0, sb = 0, n = 0;
-              for (let dy = -1; dy <= 1; dy++) {
-                const yy = y + dy; if (yy < 0 || yy >= H) continue;
-                for (let dx = -1; dx <= 1; dx++) {
-                  const xx = x + dx; if (xx < 0 || xx >= W) continue;
-                  const j = (yy * W + xx) * 4;
-                  sr += cur[j]; sv += cur[j + 1]; sb += cur[j + 2]; n++;
-                }
-              }
-              const j = (y * W + x) * 4;
-              out[j] = sr / n; out[j + 1] = sv / n; out[j + 2] = sb / n; out[j + 3] = 255;
+      // Le filtre déborde : au bord d'un aplat de couleur il ramène la teinte
+      // voisine vers l'intérieur, et l'aplat paraît rétréci. On ne remplace
+      // donc QUE les pixels d'encre ; tout le reste garde sa couleur exacte,
+      // bords francs compris.
+      const encre = new Uint8Array(W * H);
+      for (let j = 0, i = 0; j < W * H; j++, i += 4) {
+        const e = Math.hypot(src[i] - r.d[i], src[i + 1] - r.d[i + 1], src[i + 2] - r.d[i + 2]);
+        if (e > 16) encre[j] = 1;
+      }
+      // Les bords lissés d'une lettre sont à peine plus clairs que l'encre :
+      // on élargit d'un pixel pour ne pas laisser de halo.
+      const large = new Uint8Array(W * H);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (!encre[y * W + x]) continue;
+          for (let dy = -1; dy <= 1; dy++) {
+            const yy = y + dy; if (yy < 0 || yy >= H) continue;
+            for (let dx = -1; dx <= 1; dx++) {
+              const xx = x + dx; if (xx < 0 || xx >= W) continue;
+              large[yy * W + xx] = 1;
             }
           }
-          cur = out;
         }
-        return cur;
-      };
-      const lisse = flou(r.d, 2);
+      }
+      const lisse = new Uint8ClampedArray(src.length);
+      for (let j = 0, i = 0; j < W * H; j++, i += 4) {
+        const de = large[j] ? r.d : src;
+        lisse[i] = de[i]; lisse[i + 1] = de[i + 1]; lisse[i + 2] = de[i + 2]; lisse[i + 3] = 255;
+      }
+      // Un lissage, mais seulement là où une lettre a été effacée : ailleurs
+      // la page doit rester telle qu'elle est.
+      for (let tour = 0; tour < 2; tour++) {
+        const avant = lisse.slice();
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            const j = y * W + x;
+            if (!large[j]) continue;
+            let sr = 0, sv = 0, sb = 0, n = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+              const yy = y + dy; if (yy < 0 || yy >= H) continue;
+              for (let dx = -1; dx <= 1; dx++) {
+                const xx = x + dx; if (xx < 0 || xx >= W) continue;
+                const k = (yy * W + xx) * 4;
+                sr += avant[k]; sv += avant[k + 1]; sb += avant[k + 2]; n++;
+              }
+            }
+            const i = j * 4;
+            lisse[i] = sr / n; lisse[i + 1] = sv / n; lisse[i + 2] = sb / n;
+          }
+        }
+      }
 
       // Fond uni : inutile d'embarquer une image dans le PDF.
       let minR = 255, maxR = 0, minV = 255, maxV = 0, minB = 255, maxB = 0;
@@ -4581,7 +4672,8 @@
       plusLarge = Math.max(plusLarge, bs.reduce((w, b) => w + mesurerRun(b.t, enRun(b)), 0));
     });
     a.marge = Math.max(0, plusLarge + 0.5 - (a.w - 2));
-    recalcRuns(a);
+    a.text = runsTexte(a.runs);
+    edPoserOrigine(a, cible);
     edCommit(a);
     edEditRuns(a, { nouveau: true, point });
   }
@@ -5047,9 +5139,14 @@
     document.removeEventListener('pointerdown', s.dehors, true);
     document.removeEventListener('selectionchange', s.suivre);
     if (!annuler) {
-      s.a.runs = richeLire(s.zone, s.a);
-      recalcRuns(s.a);
-      state.touched = true;
+      const neufs = richeLire(s.zone, s.a);
+      // Rouvrir un paragraphe sans y toucher ne doit rien déplacer : on ne
+      // replie le texte que s'il a réellement changé.
+      if (runsEmpreinte(neufs) !== s.empreinte) {
+        s.a.runs = neufs;
+        recalcRuns(s.a);
+        state.touched = true;
+      }
     }
     s.zone.remove();
     if (s.barre) s.barre.remove();
@@ -5229,7 +5326,7 @@
     // premiere touche frappee ne doit jamais effacer le paragraphe entier.
     let debut = richeAuPoint(zone, opts.point && opts.point.cx, opts.point && opts.point.cy);
     if (debut == null) debut = total;
-    const saisie = { zone, barre, a, sel: { debut, fin: debut } };
+    const saisie = { zone, barre, a, sel: { debut, fin: debut }, empreinte: runsEmpreinte(a.runs) };
     ed.saisie = saisie;
     edDrawOverlay();
 
