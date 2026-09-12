@@ -895,7 +895,7 @@
       setBusy('Lecture de ' + f.name + '…');
       try {
         const bytes = await f.arrayBuffer();
-        const src = await addPdfSource(f.name, bytes);
+        const src = await addPdfSource(f.name, bytes, { remplaceExemple: true });
         setLast(f.name + ' · ' + plural(src.count, 'page ajoutée', 'pages ajoutées'));
       } catch (e) {
         console.error(e);
@@ -907,7 +907,7 @@
       setBusy('Conversion ' + plural(images.length, 'de l\'image', 'des images') + '…');
       try {
         const { bytes, name } = await imagesToPdf(images);
-        const src = await addPdfSource(name, bytes);
+        const src = await addPdfSource(name, bytes, { remplaceExemple: true });
         setLast(plural(src.count, 'image convertie', 'images converties') + ' en pages');
       } catch (e) {
         console.error(e);
@@ -945,6 +945,16 @@
     const fresh = [];
     for (let i = 0; i < src.count; i++) fresh.push({ id: ++uid, src: src.id, index: i, rot: 0, ann: [] });
     state.pages.push(...fresh);
+    // L'exemple cède la place au premier document ouvert par l'utilisateur,
+    // même s'il finissait de se charger à ce moment-là. Les pages produites par
+    // l'outil, elles, s'ajoutent normalement.
+    if (opts.remplaceExemple && !state.touched) {
+      const exemple = state.sources.find(x => x.isSample);
+      if (exemple) {
+        state.sources = state.sources.filter(x => x !== exemple);
+        state.pages = state.pages.filter(q => q.src !== exemple.id);
+      }
+    }
     render();
     await measurePages(src);
     render();
@@ -1152,6 +1162,8 @@
     select: ['m3 2.5 9 5.5-4 1-1.5 4z'],
     box: ['M3 3.5h10v9H3z'],
     save: ['M8 2v8', 'm4.5 6.5 3.5 3.5 3.5-3.5', 'M2.5 11v1.5A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V11'],
+    vide: ['M3 2.5h7l3 3v8H3z', 'M10 2.5V5.5h3', 'M5.5 11.5h5'],
+    editText: ['M2.5 5V3.5h7V5', 'M6 3.5v7M4.5 10.5h3', 'M9.5 13.5l4.5-4.5-1.5-1.5L8 12v1.5z'],
   };
 
   // =====================================================================
@@ -1166,6 +1178,28 @@
     return svg;
   }
   function annNode(a, forEditor) {
+    if (a.type === 'edit') {
+      const gEl = document.createElementNS(SVGNS, 'g');
+      gEl.setAttribute('data-ann', a.id);
+      const fond = document.createElementNS(SVGNS, 'rect');
+      fond.setAttribute('x', a.x); fond.setAttribute('y', a.y);
+      fond.setAttribute('width', Math.max(0, a.w)); fond.setAttribute('height', Math.max(0, a.h));
+      fond.setAttribute('fill', a.bg || '#FFFFFF');
+      gEl.appendChild(fond);
+      const lh = a.size * 1.18;
+      (a.lines || []).forEach((line, i) => {
+        const t = document.createElementNS(SVGNS, 'text');
+        t.setAttribute('x', a.x + 1);
+        t.setAttribute('y', a.y + a.pad + lh * i + a.size * 0.82);
+        t.setAttribute('font-size', a.size);
+        t.setAttribute('font-family', a.font === 'Times' ? 'Times New Roman, Times, serif' : a.font === 'Courier' ? 'Courier New, Courier, monospace' : 'Helvetica, Arial, sans-serif');
+        if (a.bold) t.setAttribute('font-weight', '700');
+        t.setAttribute('fill', a.color);
+        t.textContent = line;
+        gEl.appendChild(t);
+      });
+      return gEl;
+    }
     if (a.type === 'text') {
       const gEl = document.createElementNS(SVGNS, 'g');
       gEl.setAttribute('data-ann', a.id);
@@ -1336,7 +1370,12 @@
     const flags = li.querySelector('.flags');
     flags.replaceChildren();
     if (p.rot) { const f = document.createElement('span'); f.className = 'flag'; f.textContent = p.rot + '°'; flags.appendChild(f); }
-    if (p.ann.length) { const f = document.createElement('span'); f.className = 'flag ann'; f.textContent = p.ann.length + (p.ann.length > 1 ? ' annot.' : ' annot.'); flags.appendChild(f); }
+    if (p.ann.length) {
+      const f = document.createElement('span'); f.className = 'flag ann';
+      const retouches = p.ann.filter(a => a.type === 'edit').length;
+      f.textContent = retouches === p.ann.length ? retouches + (retouches > 1 ? ' retouches' : ' retouche') : p.ann.length + ' annot.';
+      flags.appendChild(f);
+    }
 
     const sel = state.selected.has(p.id);
     li.classList.toggle('selected', sel);
@@ -1653,6 +1692,14 @@
         } else {
           page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.color || '#000000'), opacity: an.type === 'highlight' ? (an.opacity == null ? 0.35 : an.opacity) : 1 });
         }
+      } else if (an.type === 'edit') {
+        const r = rectToUser(an, g);
+        if (r.w > 0 && r.h > 0) page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.bg || '#FFFFFF') });
+        const font = await getFont(doc, fonts, an.font, an.bold);
+        const lh = an.size * 1.18;
+        (an.lines || []).forEach((line, i) => {
+          drawDisplayText(page, g, { text: line, x: an.x + 1, y: an.y + an.pad + lh * i + an.size * 0.82, size: an.size, font, color: an.color, align: 'left' });
+        });
       } else if (an.type === 'text') {
         const font = await getFont(doc, fonts, an.font, an.bold);
         const lh = an.size * 1.25;
@@ -1749,6 +1796,15 @@
           ctx.fillStyle = an.color || '#000';
           ctx.fillRect(an.x * s, an.y * s, an.w * s, an.h * s);
         }
+      } else if (an.type === 'edit') {
+        ctx.fillStyle = an.bg || '#FFFFFF';
+        ctx.fillRect(an.x * s, an.y * s, an.w * s, an.h * s);
+        ctx.fillStyle = an.color;
+        const fam2 = an.font === 'Times' ? '"Times New Roman", Times, serif' : an.font === 'Courier' ? '"Courier New", Courier, monospace' : 'Helvetica, Arial, sans-serif';
+        ctx.font = (an.bold ? '700 ' : '') + (an.size * s) + 'px ' + fam2;
+        ctx.textBaseline = 'alphabetic';
+        const lh2 = an.size * 1.18;
+        (an.lines || []).forEach((line, i) => ctx.fillText(line, (an.x + 1) * s, (an.y + an.pad + lh2 * i + an.size * 0.82) * s));
       } else if (an.type === 'text') {
         ctx.fillStyle = an.color;
         const fam = an.font === 'Times' ? '"Times New Roman", Times, serif' : an.font === 'Courier' ? '"Courier New", Courier, monospace' : 'Helvetica, Arial, sans-serif';
@@ -1810,7 +1866,10 @@
     const onProgress = opts.onProgress || (() => {});
     const rasterAll = !!opts.rasterize;
     const rasterSet = new Set();
-    pages.forEach(p => { if (rasterAll || p.ann.some(a => a.type === 'redact')) rasterSet.add(p.id); });
+    pages.forEach(p => {
+      const doitAplatir = p.ann.some(a => a.type === 'redact' || (a.type === 'edit' && a.efface));
+      if (rasterAll || doitAplatir) rasterSet.add(p.id);
+    });
 
     const inPlace = !rasterSet.size && !opts.noInPlace && canExportInPlace(pages);
     let out, mapped;
@@ -2157,6 +2216,149 @@
         finally { setBusy(''); }
       } }],
     });
+  }
+
+  // =====================================================================
+  //  Détection des pages vides
+  // =====================================================================
+  // Réglages : écart de luminosité à partir duquel un pixel compte comme de
+  // l'encre, et proportion de la page au-delà de laquelle elle n'est plus vide.
+  // Seuils établis par mesure : une page réellement vide, même bruitée par un
+  // scanner ou marquée par l'ombre du bord, mesure zéro ; un simple tampon de
+  // deux centimètres mesure déjà un dixième de pourcent.
+  const SENSIBILITE = {
+    strict: { ecart: 20, seuil: 0.00002, marge: 0.03 },
+    normal: { ecart: 32, seuil: 0.0002, marge: 0.04 },
+    tolerant: { ecart: 46, seuil: 0.0006, marge: 0.06 },
+  };
+
+  // Mesure la quantité d'encre d'une page, bords exclus, bruit isolé écarté.
+  async function mesurerEncre(p, reglages) {
+    const src = srcById(p.src);
+    const g = pageGeom(p);
+    const page = await src.pdfjs.getPage(p.index + 1);
+    const echelle = Math.min(2, 360 / Math.max(g.Wd, g.Hd, 1));
+    const vp = page.getViewport({ scale: echelle, rotation: g.total });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(8, Math.ceil(vp.width));
+    canvas.height = Math.max(8, Math.ceil(vp.height));
+    const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    page.cleanup();
+
+    const mx = Math.round(canvas.width * reglages.marge);
+    const my = Math.round(canvas.height * reglages.marge);
+    const W = Math.max(4, canvas.width - 2 * mx);
+    const H = Math.max(4, canvas.height - 2 * my);
+    const d = ctx.getImageData(mx, my, W, H).data;
+
+    const lum = new Uint8Array(W * H);
+    const hist = new Uint32Array(256);
+    for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+      const l = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000 | 0;
+      lum[j] = l;
+      hist[l]++;
+    }
+    // Blanc du papier : 92e centile, ce qui absorbe un fond légèrement gris.
+    let cumul = 0, blanc = 255;
+    const cible = Math.floor(W * H * 0.92);
+    for (let l = 0; l < 256; l++) { cumul += hist[l]; if (cumul >= cible) { blanc = l; break; } }
+    const seuilEncre = Math.max(8, blanc - reglages.ecart);
+
+    // Regroupement par blocs : une poussière isolée ne suffit pas à noircir un bloc.
+    const B = 3, bw = Math.floor(W / B), bh = Math.floor(H / B);
+    let blocsEncres = 0;
+    const totalBlocs = Math.max(1, bw * bh);
+    for (let by = 0; by < bh; by++) {
+      for (let bx = 0; bx < bw; bx++) {
+        let n = 0;
+        for (let y = 0; y < B; y++) {
+          const ligne = (by * B + y) * W + bx * B;
+          for (let x = 0; x < B; x++) if (lum[ligne + x] < seuilEncre) n++;
+        }
+        if (n >= 4) blocsEncres++;
+      }
+    }
+    const apercu = document.createElement('canvas');
+    apercu.width = 80;
+    apercu.height = Math.max(8, Math.round(80 * canvas.height / canvas.width));
+    apercu.getContext('2d').drawImage(canvas, 0, 0, apercu.width, apercu.height);
+    return { ratio: blocsEncres / totalBlocs, blanc, apercu: apercu.toDataURL('image/jpeg', 0.6) };
+  }
+
+  function toolPagesVides() {
+    let mode = 'normal';
+    const sensi = segmented('pv-sensi', [['strict', 'Strict'], ['normal', 'Normal'], ['tolerant', 'Tolérant']], mode, v => { mode = v; analyser(); });
+    const info = note('');
+    const liste = document.createElement('div'); liste.className = 'list';
+    const cases = new Map();
+    let jeton = 0;
+
+    async function analyser() {
+      const mien = ++jeton;
+      const reglages = SENSIBILITE[mode];
+      liste.replaceChildren();
+      cases.clear();
+      const vides = [];
+      for (let i = 0; i < state.pages.length; i++) {
+        if (mien !== jeton) return;
+        const p = state.pages[i];
+        info.textContent = 'Analyse… page ' + (i + 1) + ' sur ' + state.pages.length;
+        let mesure;
+        try { mesure = await mesurerEncre(p, reglages); } catch (e) { console.error(e); continue; }
+        const texte = (await getPageText(p)).replace(/\s/g, '');
+        if (mesure.ratio <= reglages.seuil && texte.length <= 1) vides.push({ p, i, mesure });
+        if (i % 3 === 0) await nextFrame();
+      }
+      if (mien !== jeton) return;
+      info.textContent = vides.length
+        ? plural(vides.length, 'page vide détectée', 'pages vides détectées') + ' sur ' + state.pages.length + '. Décochez celles à conserver.'
+        : 'Aucune page vide détectée sur ' + plural(state.pages.length, 'page', 'pages') + '.';
+      vides.forEach(({ p, i, mesure }) => {
+        const ligne = document.createElement('div'); ligne.className = 'list-item';
+        const c = checkbox('pv-' + p.id, '', true);
+        const img = document.createElement('img');
+        img.src = mesure.apercu;
+        img.alt = '';
+        img.style.width = '34px'; img.style.border = '1px solid var(--line)'; img.style.background = '#fff';
+        const g = document.createElement('div'); g.className = 'g';
+        const n = document.createElement('div'); n.className = 'n'; n.textContent = 'Page ' + (i + 1);
+        const sous = document.createElement('div'); sous.className = 's';
+        const src = srcById(p.src);
+        sous.textContent = (mesure.ratio === 0 ? 'parfaitement vide' : 'marques : ' + (mesure.ratio * 100).toFixed(3) + ' %')
+          + (src ? ' · ' + baseName(src.name) + ' p. ' + (p.index + 1) : '');
+        g.append(n, sous);
+        ligne.append(c, img, g);
+        liste.appendChild(ligne);
+        cases.set(p.id, c.input);
+      });
+    }
+
+    dialog({
+      title: 'Détecter les pages vides', icon: IC.vide, wide: true, submitOnEnter: false,
+      build: b => {
+        b.append(field('Sensibilité', sensi, 'Strict ne retient que les pages sans la moindre marque. Tolérant accepte les traces et poussières d\'un scanner.'));
+        b.append(info);
+        b.append(liste);
+        b.append(note('Une page n\'est retenue que si elle ne contient aucun texte et aucune marque visible, les bords étant ignorés.'));
+      },
+      onOpen: () => {},
+      actions: [
+        { label: 'Fermer', onClick: c => { jeton++; c(); } },
+        { label: 'Retirer les pages cochées', primary: true, onClick: close => {
+          const ids = [];
+          cases.forEach((input, id) => { if (input.checked) ids.push(id); });
+          if (!ids.length) { toast('Aucune page cochée.', 'warn'); return; }
+          jeton++;
+          close();
+          const ordonnees = state.pages.filter(p => ids.indexOf(p.id) !== -1).map(p => p.id);
+          deletePages(ordonnees);
+        } },
+      ],
+    });
+    analyser();
   }
 
   function toolImages() {
@@ -2721,6 +2923,7 @@
           ['Suppr', 'Retirer la sélection'], ['R', 'Pivoter à droite'], ['Maj+R', 'Pivoter à gauche'],
           ['Alt+←', 'Décaler la page à gauche'], ['Alt+→', 'Décaler la page à droite'],
           ['Entrée', 'Ouvrir l\'éditeur de page'],
+          ['Double-clic', 'Ouvrir l\'éditeur, où le texte existant se corrige'],
         ])));
         b.append(groupOf('Document', mk([
           ['Ctrl+O', 'Ouvrir des fichiers'], ['Ctrl+S', 'Exporter le PDF'], ['Ctrl+F', 'Rechercher du texte'],
@@ -2745,7 +2948,7 @@
   const ed = {
     root: null, pageId: null, tool: 'select', zoom: 'fit', scale: 1, sel: null,
     style: { color: '#E8B04B', textColor: '#D0021B', size: 14, width: 2, opacity: 0.35, font: 'Helvetica', bold: false },
-    gesture: null, snapped: false,
+    gesture: null, snapped: false, lignes: null, lignesCle: null,
   };
 
   function edPage() { return state.pages.find(p => p.id === ed.pageId); }
@@ -2794,6 +2997,7 @@
     const rail = document.createElement('div'); rail.className = 'ed-rail';
     const TOOLS = [
       ['select', IC.select, 'Sélectionner et déplacer'],
+      ['edittext', IC.editText, 'Modifier le texte existant'],
       ['text', IC.text, 'Ajouter du texte'],
       ['highlight', IC.highlight, 'Surligner'],
       ['box', IC.box, 'Encadrer'],
@@ -2813,6 +3017,14 @@
         if (t[0] === 'sign') { edSignature(); return; }
         if (t[0] === 'image') { edPickImage(); return; }
         ed.tool = t[0]; ed.sel = null; edSyncTools(); edDrawOverlay();
+        if (t[0] === 'edittext') {
+          setBusy('Repérage du texte…');
+          edLignes().then(l => {
+            setBusy('');
+            edDrawOverlay();
+            setLast(l.length ? plural(l.length, 'ligne modifiable', 'lignes modifiables') + ' sur cette page' : 'Aucun texte sur cette page');
+          });
+        }
       });
       rail.appendChild(b);
     });
@@ -2857,6 +3069,7 @@
       highlight: 'Faites glisser sur le texte à surligner.',
       box: 'Faites glisser pour tracer un cadre.',
       draw: 'Dessinez en maintenant le bouton enfoncé.',
+      edittext: 'Cliquez sur une ligne de texte pour la corriger. Les lignes modifiables sont encadrées.',
       redact: 'Faites glisser sur la zone à masquer. La page sera convertie en image à l\'export pour supprimer le texte en dessous.',
     };
     $('#ed-foot').textContent = hints[ed.tool] || '';
@@ -2867,7 +3080,147 @@
     const n = state.pages[i + dir];
     if (!n) return;
     ed.pageId = n.id; ed.sel = null;
+    ed.lignes = null; ed.lignesCle = null;
     edRenderPage();
+  }
+
+  // =====================================================================
+  //  Modification du texte existant
+  // =====================================================================
+  // Les lignes de texte de la page, repérées dans le repère affiché.
+  async function edLignes() {
+    const p = edPage();
+    if (!p) return [];
+    const cle = p.id + ':' + p.rot;
+    if (ed.lignesCle === cle && ed.lignes) return ed.lignes;
+    const src = srcById(p.src);
+    const g = pageGeom(p);
+    const morceaux = [];
+    try {
+      const page = await src.pdfjs.getPage(p.index + 1);
+      const vp = page.getViewport({ scale: 1, rotation: g.total });
+      const tc = await page.getTextContent();
+      tc.items.forEach(it => {
+        if (!it.str || !it.str.trim()) return;
+        const m = pdfjs.Util.transform(vp.transform, it.transform);
+        const taille = Math.hypot(m[2], m[3]) || Math.abs(m[3]) || 10;
+        if (taille < 1) return;
+        const style = tc.styles && tc.styles[it.fontName];
+        const fam = style && style.fontFamily ? String(style.fontFamily).toLowerCase() : '';
+        morceaux.push({
+          str: it.str, x: m[4], base: m[5], size: taille,
+          w: it.width > 0 ? it.width : taille * it.str.length * 0.5,
+          font: /mono|courier/.test(fam) ? 'Courier' : /serif|times|roman|georgia|book/.test(fam) ? 'Times' : 'Helvetica',
+        });
+      });
+      page.cleanup();
+    } catch (e) { console.error(e); }
+
+    // regroupement par ligne, puis par suites contiguës
+    morceaux.sort((a, b) => (a.base - b.base) || (a.x - b.x));
+    const lignes = [];
+    let courante = null;
+    morceaux.forEach(m => {
+      if (courante && Math.abs(m.base - courante.base) <= Math.max(1.5, courante.size * 0.35)
+        && m.x >= courante.x - 1 && m.x - (courante.x + courante.w) <= courante.size * 2) {
+        const espace = m.x - (courante.x + courante.w) > courante.size * 0.22 && !/\s$/.test(courante.text) ? ' ' : '';
+        courante.text += espace + m.str;
+        courante.w = Math.max(courante.w, m.x + m.w - courante.x);
+        courante.size = Math.max(courante.size, m.size);
+        return;
+      }
+      courante = { text: m.str, x: m.x, base: m.base, w: m.w, size: m.size, font: m.font };
+      lignes.push(courante);
+    });
+    lignes.forEach(l => {
+      l.y = l.base - l.size * 0.82;
+      l.h = l.size * 1.18;
+      l.text = l.text.replace(/\s+/g, ' ').trim();
+    });
+    ed.lignes = lignes.filter(l => l.text && l.w > 1);
+    ed.lignesCle = cle;
+    return ed.lignes;
+  }
+
+  // Couleur du fond et couleur de l'encre, relevées sur la page affichée.
+  function edCouleurs(zone) {
+    const defaut = { fond: '#FFFFFF', encre: '#111111' };
+    try {
+      const g = pageGeom(edPage());
+      const k = ed.canvas.width / g.Wd;
+      const x = Math.max(0, Math.round((zone.x - 2) * k));
+      const y = Math.max(0, Math.round((zone.y - 2) * k));
+      const w = Math.min(ed.canvas.width - x, Math.round((zone.w + 4) * k));
+      const h = Math.min(ed.canvas.height - y, Math.round((zone.h + 4) * k));
+      if (w < 2 || h < 2) return defaut;
+      const d = ed.canvas.getContext('2d', { willReadFrequently: true }).getImageData(x, y, w, h).data;
+      const compte = new Map();
+      let sombre = null, minLum = 1e9, clair = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        if (lum > clair) clair = lum;
+        const cle = (d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4);
+        compte.set(cle, (compte.get(cle) || 0) + 1);
+        if (lum < minLum) { minLum = lum; sombre = [d[i], d[i + 1], d[i + 2]]; }
+      }
+      // Couleur de l'encre : moyenne du cœur des lettres. Les bords lissés,
+      // gris ou colorés, fausseraient la teinte, et un pixel isolé aussi.
+      const limite = Math.max(40, clair - 90);
+      const fonces = [];
+      for (let i = 0; i < d.length; i += 4) {
+        const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        if (lum <= limite) fonces.push([lum, d[i], d[i + 1], d[i + 2]]);
+      }
+      if (fonces.length >= 4) {
+        fonces.sort((a, b) => a[0] - b[0]);
+        const coeur = fonces.slice(0, Math.max(4, Math.round(fonces.length * 0.2)));
+        const somme = coeur.reduce((acc, p) => [acc[0] + p[1], acc[1] + p[2], acc[2] + p[3]], [0, 0, 0]);
+        sombre = somme.map(v => Math.round(v / coeur.length));
+        // À l'écran, un texte de petite taille n'atteint jamais sa vraie densité :
+        // la teinte est ramenée à celle du pixel le plus dense.
+        const lumCoeur = 0.299 * sombre[0] + 0.587 * sombre[1] + 0.114 * sombre[2];
+        if (lumCoeur > 1 && minLum < lumCoeur) {
+          const k = Math.max(0.2, minLum / lumCoeur);
+          sombre = sombre.map(v => Math.round(v * k));
+        }
+      }
+      let meilleur = null, mieux = -1;
+      compte.forEach((n, cle) => { if (n > mieux) { mieux = n; meilleur = cle; } });
+      const hex = t => '#' + t.map(n => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')).join('');
+      const [qr, qv, qb] = meilleur.split(',').map(n => (+n << 4) + 8);
+      return { fond: hex([qr, qv, qb]), encre: sombre ? hex(sombre) : defaut.encre };
+    } catch (_) { return defaut; }
+  }
+
+  function recalcAnn(a) {
+    if (a.type === 'edit') {
+      a.lines = wrapText(a.text || '', Math.max(8, a.w - 2), a.size, a.font, a.bold);
+      a.h = a.pad * 2 + Math.max(1, a.lines.length) * a.size * 1.18;
+    } else {
+      a.lines = wrapText(a.text || '', a.w, a.size, a.font, a.bold);
+      a.h = Math.max(1, a.lines.length) * a.size * 1.25;
+    }
+  }
+
+  async function edModifierTexte(pt) {
+    const lignes = await edLignes();
+    const cible = lignes.find(l => pt.x >= l.x - 2 && pt.x <= l.x + l.w + 2 && pt.y >= l.y - 1 && pt.y <= l.y + l.h + 1);
+    if (!cible) {
+      setLast(lignes.length ? 'Aucune ligne de texte à cet endroit.' : 'Cette page ne contient pas de texte : c\'est une image ou un scan.');
+      toast(lignes.length ? 'Cliquez sur une ligne encadrée.' : 'Aucun texte modifiable sur cette page. Un scan doit d\'abord être reconnu par un logiciel d\'OCR.', 'warn');
+      return;
+    }
+    const zone = { x: cible.x - 1, y: cible.y - 1, w: cible.w + 2, h: cible.h + 2 };
+    const couleurs = edCouleurs(zone);
+    const a = {
+      id: -1, type: 'edit',
+      x: zone.x, y: zone.y, w: zone.w, h: zone.h, pad: 1,
+      text: cible.text, size: cible.size, font: cible.font, bold: false,
+      color: couleurs.encre, bg: couleurs.fond, efface: false,
+    };
+    recalcAnn(a);
+    edCommit(a);
+    edEditText(a);
   }
 
   async function edRenderPage() {
@@ -2934,6 +3287,18 @@
         svg.appendChild(hit);
       }
     });
+    if (ed.tool === 'edittext' && ed.lignes && ed.lignesCle === p.id + ':' + p.rot) {
+      ed.lignes.forEach(l => {
+        const r = document.createElementNS(SVGNS, 'rect');
+        r.setAttribute('x', l.x - 1); r.setAttribute('y', l.y - 1);
+        r.setAttribute('width', l.w + 2); r.setAttribute('height', l.h + 2);
+        r.setAttribute('fill', 'rgba(91,156,246,.10)');
+        r.setAttribute('stroke', 'rgba(91,156,246,.55)');
+        r.setAttribute('stroke-width', Math.max(0.4, 1 / ed.scale));
+        r.style.pointerEvents = 'none';
+        svg.appendChild(r);
+      });
+    }
     const sel = p.ann.find(a => a.id === ed.sel);
     if (sel) {
       const bb = annBounds(sel);
@@ -3014,6 +3379,7 @@
       return;
     }
     e.preventDefault();
+    if (t === 'edittext') { edModifierTexte(pt); return; }
     if (t === 'text') { edCreateText(pt); return; }
     if (t === 'draw') { edStart('draw', pt, e); return; }
     edStart('rect', pt, e);
@@ -3068,10 +3434,7 @@
       } else {
         a.w = Math.max(4, gst.orig.w + dx);
         a.h = Math.max(4, gst.orig.h + dy);
-        if (a.type === 'text') {
-          a.lines = wrapText(a.text || (a.lines || []).join('\n'), a.w, a.size, a.font, a.bold);
-          a.h = a.lines.length * a.size * 1.25;
-        }
+        if (a.type === 'text' || a.type === 'edit') recalcAnn(a);
       }
       edDrawOverlay();
     }
@@ -3159,11 +3522,12 @@
 
   function edEditText(a) {
     const p = edPage();
+    const retouche = a.type === 'edit';
     const ta = document.createElement('textarea');
     ta.className = 'ed-textarea';
-    ta.style.left = (a.x * ed.scale) + 'px';
-    ta.style.top = (a.y * ed.scale) + 'px';
-    ta.style.width = (a.w * ed.scale) + 'px';
+    ta.style.left = ((a.x + (retouche ? 1 : 0)) * ed.scale) + 'px';
+    ta.style.top = ((a.y + (retouche ? a.pad : 0)) * ed.scale) + 'px';
+    ta.style.width = ((a.w - (retouche ? 2 : 0)) * ed.scale) + 'px';
     ta.style.fontSize = (a.size * ed.scale) + 'px';
     ta.style.fontFamily = famOf(a.font);
     ta.style.fontWeight = a.bold ? '700' : '400';
@@ -3181,8 +3545,8 @@
       const text = ta.value.replace(/\s+$/, '');
       ta.remove();
       snapshot();
-      if (!text.trim()) { p.ann = p.ann.filter(x => x.id !== a.id); ed.sel = null; }
-      else { a.text = text; a.lines = wrapText(text, a.w, a.size, a.font, a.bold); a.h = a.lines.length * a.size * 1.25; }
+      if (!text.trim() && !retouche) { p.ann = p.ann.filter(x => x.id !== a.id); ed.sel = null; }
+      else { a.text = text; recalcAnn(a); }
       state.touched = true;
       edDrawOverlay();
     };
@@ -3275,14 +3639,19 @@
     h.textContent = sel ? 'Annotation sélectionnée' : 'Style de l\'outil';
     ed.side.appendChild(h);
 
+    const isEdit = sel ? sel.type === 'edit' : ed.tool === 'edittext';
     const isText = sel ? sel.type === 'text' : ed.tool === 'text';
     const isRect = sel ? (sel.type === 'highlight' || sel.type === 'box' || sel.type === 'redact') : (ed.tool === 'highlight' || ed.tool === 'box' || ed.tool === 'redact');
     const isDraw = sel ? sel.type === 'draw' : ed.tool === 'draw';
     const isImg = sel && sel.type === 'image';
+    const texteModifiable = isText || (isEdit && !!sel);
 
     const change = fn => { if (sel) { snapshot(); state.touched = true; } fn(); edDrawOverlay(true); };
 
-    if (isText || isDraw || isRect) {
+    if (isEdit && !sel) {
+      ed.side.appendChild(note('Cliquez sur une ligne encadrée pour la corriger. Elle est recouverte, puis remplacée par le texte que vous saisissez.'));
+    }
+    if (texteModifiable || isDraw || isRect) {
       const cur = sel ? sel.color : (isText || isDraw ? ed.style.textColor : ed.style.color);
       const c = input('ed-color', 'color', cur);
       c.addEventListener('input', () => change(() => {
@@ -3290,24 +3659,21 @@
         else if (isText || isDraw) ed.style.textColor = c.value;
         else ed.style.color = c.value;
       }));
-      ed.side.appendChild(field('Couleur', c));
+      ed.side.appendChild(field(isEdit ? 'Couleur du texte' : 'Couleur', c));
     }
-    if (isText) {
-      const s = input('ed-size', 'number', sel ? sel.size : ed.style.size, { min: 5, max: 96 });
+    if (texteModifiable) {
+      const s = input('ed-size', 'number', sel ? Math.round(sel.size * 10) / 10 : ed.style.size, { min: 5, max: 96, step: 0.5 });
       s.addEventListener('change', () => change(() => {
-        const v = clampInt(s.value, 5, 96) || 14;
-        if (sel) { sel.size = v; sel.lines = wrapText(sel.text || sel.lines.join('\n'), sel.w, v, sel.font, sel.bold); sel.h = sel.lines.length * v * 1.25; }
-        else ed.style.size = v;
+        const v = Math.min(96, Math.max(5, parseFloat(s.value) || 14));
+        if (sel) { sel.size = v; recalcAnn(sel); } else ed.style.size = v;
       }));
       const f = select('ed-font', [['Helvetica', 'Helvetica'], ['Times', 'Times'], ['Courier', 'Courier']], sel ? sel.font : ed.style.font);
       f.addEventListener('change', () => change(() => {
-        if (sel) { sel.font = f.value; sel.lines = wrapText(sel.text || sel.lines.join('\n'), sel.w, sel.size, f.value, sel.bold); }
-        else ed.style.font = f.value;
+        if (sel) { sel.font = f.value; recalcAnn(sel); } else ed.style.font = f.value;
       }));
       const bd = checkbox('ed-bold', 'Gras', sel ? sel.bold : ed.style.bold);
       bd.input.addEventListener('change', () => change(() => {
-        if (sel) { sel.bold = bd.input.checked; sel.lines = wrapText(sel.text || sel.lines.join('\n'), sel.w, sel.size, sel.font, sel.bold); }
-        else ed.style.bold = bd.input.checked;
+        if (sel) { sel.bold = bd.input.checked; recalcAnn(sel); } else ed.style.bold = bd.input.checked;
       }));
       ed.side.append(field('Taille (pt)', s), field('Police', f), bd);
       if (sel) {
@@ -3317,6 +3683,23 @@
         b.addEventListener('click', () => edEditText(sel));
         ed.side.appendChild(b);
       }
+    }
+    if (isEdit && sel) {
+      const bg = input('ed-bg', 'color', sel.bg || '#FFFFFF');
+      bg.addEventListener('input', () => change(() => { sel.bg = bg.value; }));
+      ed.side.appendChild(field('Couleur du fond', bg, 'Relevée sur la page. À ajuster si le fond n\'est pas uni.'));
+      const eff = checkbox('ed-eff', 'Effacer vraiment le texte d\'origine', sel.efface);
+      eff.input.addEventListener('change', () => {
+        snapshot();
+        sel.efface = eff.input.checked;
+        state.touched = true;
+        edDrawOverlay(); // panneau reconstruit : l'avertissement doit suivre
+      });
+      ed.side.appendChild(eff);
+      ed.side.appendChild(note(sel.efface
+        ? 'Cette page sera convertie en image à l\'export : le texte d\'origine disparaît réellement, mais la page n\'est plus sélectionnable.'
+        : 'Le texte d\'origine reste présent sous le rectangle et peut être retrouvé par copier-coller.',
+        sel.efface ? null : 'warn'));
     }
     if (isDraw || (isRect && (sel ? sel.type === 'box' : ed.tool === 'box'))) {
       const w = input('ed-width', 'number', sel ? (sel.width || 2) : ed.style.width, { min: 1, max: 24 });
@@ -3387,6 +3770,7 @@
       { title: 'Organiser', items: [
         { id: 'blank', name: 'Pages vierges', sub: 'Insérer une ou plusieurs pages', icon: IC.plus, run: toolBlank },
         { id: 'images', name: 'Ajouter des images', sub: 'JPEG, PNG, WebP en pages', icon: IC.image, run: toolImages },
+        { id: 'vides', name: 'Détecter les pages vides', sub: 'Nettoyer un document scanné', icon: IC.vide, need: 'pages', run: toolPagesVides },
         { id: 'split', name: 'Diviser le document', sub: 'Un ou plusieurs fichiers', icon: IC.split, need: 'pages', run: toolSplit },
         { id: 'resize', name: 'Redimensionner', sub: 'A4, Letter, marges', icon: IC.resize, need: 'pages', run: toolResize },
       ] },

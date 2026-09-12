@@ -39,6 +39,11 @@ Réorganiser les pages par glisser-déposer ou par numéro, en supprimer,
 les pivoter, les dupliquer, fusionner plusieurs documents, extraire une
 sélection, insérer des pages vierges, transformer des images en pages.
 
+Corriger le texte existant d'un PDF : double-clic sur une page, outil de
+modification du texte, puis clic sur la ligne à reprendre.
+
+Détecter les pages vides d'un scan et les retirer après vérification.
+
 Annoter : texte, surlignage, cadre, dessin à main levée, signature, image,
 caviardage. Filigrane, en-tête et pied de page, numérotation des pages.
 

@@ -16,15 +16,25 @@ l'utilisateur : aucun fichier n'est envoyé sur un serveur.
 - fusionner plusieurs documents, chaque page gardant la couleur de son origine ;
 - insérer des pages vierges (A4, A5, A3, Letter, Legal, portrait ou paysage) ;
 - convertir des images JPEG, PNG et WebP en pages ;
+- détecter et retirer les pages vides d'un document scanné, après vérification
+  page par page ;
 - diviser le document : une page par fichier, par lots ou par plages, réunis
   dans une archive ZIP ;
 - redimensionner toutes les pages à un format standard avec marge.
 
 ### Modifier
 
-L'éditeur de page (double-clic sur une page) permet d'ajouter du texte, de
-surligner, d'encadrer, de dessiner à main levée, de signer, d'insérer une image
-et de caviarder. Chaque annotation se déplace, se redimensionne et se supprime.
+L'éditeur de page (double-clic sur une page) permet de corriger le texte
+existant, d'ajouter du texte, de surligner, d'encadrer, de dessiner à main
+levée, de signer, d'insérer une image et de caviarder. Chaque annotation se
+déplace, se redimensionne et se supprime.
+
+La correction du texte repère les lignes de la page et les encadre. Un clic
+reprend la ligne telle quelle, avec sa taille, sa police approchée, la couleur
+de son encre et celle de son fond, toutes deux relevées sur la page. Le texte
+saisi remplace l'ancien, recouvert. Une case permet d'effacer réellement le
+texte d'origine : la page concernée est alors convertie en image à l'export,
+faute de quoi l'ancien texte resterait retrouvable par copier-coller.
 
 - filigrane : texte, police, taille, angle, couleur, opacité, au centre ou en
   mosaïque ;
@@ -206,6 +216,27 @@ fenêtre. C'est une fonction du navigateur, pas une installation de logiciel.
 | Alt + ← / → | Décaler la page d'une position |
 | ? | Afficher tous les raccourcis |
 
+## Pages vides
+
+La détection mesure l'encre de chaque page sur un rendu réduit, bords ignorés
+pour écarter les ombres de scanner, et ne compte que les groupes de pixels
+sombres, ce qui élimine les poussières isolées. Une page n'est retenue que si
+elle ne contient aucun texte et que cette mesure reste sous le seuil choisi.
+
+Les seuils viennent de mesures : une page réellement vide, y compris un verso
+de scan bruité ou marqué par l'ombre du bord, mesure zéro ; un simple tampon de
+deux centimètres mesure déjà un dixième de pourcent. Trois sensibilités sont
+proposées, la plus tolérante restant six fois sous ce tampon.
+
+Rien n'est supprimé sans votre accord : les pages détectées sont présentées
+avec leur aperçu et leur mesure, cochées, et vous décochez celles à garder.
+
+Vérifié sur un document d'épreuve de six pages comportant une page blanche, un
+verso bruité, une page marquée par l'ombre du bord, une page portant un simple
+tampon et une page portant deux mots : les trois premières sont détectées, les
+deux dernières non, et le résultat reste le même une fois le document converti
+en images, sans aucune couche de texte.
+
 ## Confidentialité
 
 Les documents ne quittent pas l'ordinateur. Ils sont lus, modifiés et
@@ -241,5 +272,6 @@ Le comportement est vérifié dans Chromium : réorganisation, rotation avec
 géométrie des annotations sur pages pivotées, caviardage, filigrane,
 numérotation Bates, formulaires, chiffrement, division, export images et texte,
 compression, redimensionnement, thèmes clair et sombre, affichage sur
-téléphone. 80 vérifications, toutes au vert. La version hors ligne est testée
-en plus avec tout accès réseau coupé.
+téléphone, détection des pages vides et correction du texte existant.
+106 vérifications, toutes au vert. La version hors ligne est testée en plus
+avec tout accès réseau coupé.
