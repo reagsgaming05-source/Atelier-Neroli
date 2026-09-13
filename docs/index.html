@@ -702,6 +702,37 @@
   }
   .ed-format .sep { width: 1px; height: 17px; background: var(--trait); margin: 0 3px; }
 
+  /* ---------- fenêtre d'impression ---------- */
+  .imp-grille { display: grid; grid-template-columns: minmax(0, 1fr) 254px; gap: 20px; align-items: start; }
+  .imp-reglages { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .imp-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .imp-mode {
+    display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 4px;
+    border: 1px solid var(--trait); border-radius: var(--rond-petit); background: var(--encre);
+    color: var(--texte-2); font-size: 11.5px; font-weight: 500;
+    transition: border-color .14s var(--elan), background .14s var(--elan), color .14s var(--elan);
+  }
+  .imp-mode svg { width: 24px; height: 18px; color: var(--texte-3); transition: color .14s var(--elan); }
+  .imp-mode:hover { border-color: var(--texte-3); color: var(--texte); }
+  .imp-mode[aria-pressed="true"] { border-color: var(--bleu); background: var(--bleu-ombre); color: var(--texte); }
+  .imp-mode[aria-pressed="true"] svg { color: var(--bleu-vif); }
+  .imp-apercu { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 0; }
+  .imp-apercu .chiffres { font-family: var(--chiffre); font-size: 11px; color: var(--texte-3); text-align: center; font-variant-numeric: tabular-nums; }
+  .imp-vue {
+    display: grid; place-items: center; min-height: 268px; padding: 12px;
+    background: var(--table); border: 1px solid var(--trait); border-radius: var(--rond-petit);
+  }
+  .imp-vue canvas { max-width: 100%; max-height: 244px; background: #fff; box-shadow: var(--ombre-feuille); }
+  .imp-vue .attente { font-size: 12px; color: var(--texte-3); }
+  .imp-nav { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; color: var(--texte-2); }
+  .imp-nav button {
+    width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--trait); background: var(--encre);
+    color: var(--texte-2); display: grid; place-items: center; font-size: 13px; line-height: 1;
+  }
+  .imp-nav button:hover:not(:disabled) { border-color: var(--bleu); color: var(--texte); }
+  .imp-nav button:disabled { opacity: .35; cursor: not-allowed; }
+  @media (max-width: 720px) { .imp-grille { grid-template-columns: 1fr; } .imp-apercu { position: static; } }
+
   /* ---------- impression ---------- */
   .feuille-impression { display: none; }
   @media print {
@@ -3599,22 +3630,159 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   //  navigateur, qui ouvre la fenêtre d'impression du système : c'est là
   //  qu'on choisit l'imprimante, le recto verso et le nombre de copies.
   // =====================================================================
-  async function imprimerPages(pages) {
-    if (!pages.length || state.busy) return;
+  // =====================================================================
+  //  Mise en page à l'impression
+  //  -------------------------------------------------------------------
+  //  Livret, plusieurs pages par feuille : le document est réassemblé avant
+  //  d'être envoyé, comme le fait la « gestion des pages » d'Acrobat. Ce
+  //  qui part à l'imprimante est donc exactement ce qu'on voit décrit.
+  // =====================================================================
+  const NUP_GRILLES = { 2: [[1, 2], [2, 1]], 4: [[2, 2]], 6: [[2, 3], [3, 2]], 9: [[3, 3]], 16: [[4, 4]] };
+  const PAPIERS = { doc: null, a4: [595.28, 841.89], a3: [841.89, 1190.55], letter: [612, 792], legal: [612, 1008] };
+  const orienter = (t, sens) => {
+    const [a, b] = t;
+    if (sens === 'portrait') return a <= b ? [a, b] : [b, a];
+    if (sens === 'paysage') return a >= b ? [a, b] : [b, a];
+    return [a, b];
+  };
+
+  async function imposerPdf(octets, o) {
+    const { PDFDocument, rgb } = PDFLib;
+    // Rien à changer : on garde le document tel quel, au point près.
+    if (o.disposition === 'normale' && o.papier === 'doc' && o.echelle === 'ajuster' && o.orientation === 'auto') return octets;
+    const src = await PDFDocument.load(octets);
+    const pagesSrc = src.getPages();
+    const n = pagesSrc.length;
+    if (!n) return octets;
+    const out = await PDFDocument.create();
+
+    // Une page restée vide n'a pas de contenu : on la laisse en blanc plutôt
+    // que de faire échouer tout l'assemblage.
+    const emb = [];
+    for (const pg of pagesSrc) {
+      let e = null;
+      try { if (pg.node.Contents()) e = await out.embedPage(pg); } catch (_) { e = null; }
+      emb.push(e);
+    }
+    const dim = i => {
+      const pg = pagesSrc[Math.max(0, Math.min(n - 1, i))];
+      const t = pg.getSize();
+      return [t.width, t.height];
+    };
+    const base = dim(0);
+    const perso = o.echelle === 'perso' ? Math.max(10, Math.min(400, o.pourcent || 100)) / 100 : 1;
+
+    const poser = (feuille, i, x, y, largeur, hauteur, bord, regle) => {
+      if (bord) feuille.drawRectangle({ x, y, width: largeur, height: hauteur, borderColor: rgb(0.62, 0.65, 0.69), borderWidth: 0.5 });
+      const e = emb[i];
+      if (i == null || i < 0 || i >= n || !e) return;
+      const ajuste = Math.min(largeur / e.width, hauteur / e.height);
+      let k = ajuste;
+      if (regle === 'libre') {
+        if (o.echelle === 'reelle') k = 1;
+        else if (o.echelle === 'reduire') k = Math.min(1, ajuste);
+        else if (o.echelle === 'perso') k = perso;
+      } else if (o.echelle === 'perso') k = ajuste * perso;
+      feuille.drawPage(e, {
+        x: x + (largeur - e.width * k) / 2,
+        y: y + (hauteur - e.height * k) / 2,
+        xScale: k, yScale: k,
+      });
+    };
+
+    // ---------------------------------------------------------------- livret
+    if (o.disposition === 'livret') {
+      // Un livret se plie : la feuille est celle du papier, à l'italienne,
+      // et les deux pages viennent s'y loger côte à côte — comme dans
+      // Acrobat. La feuille n'est jamais doublée.
+      const f = orienter(o.papier === 'doc' ? base : (PAPIERS[o.papier] || PAPIERS.a4), 'paysage');
+      const N = Math.max(4, Math.ceil(n / 4) * 4);
+      const cotes = [];
+      for (let i = 0; i < N / 4; i++) {
+        cotes.push([N - 1 - 2 * i, 2 * i]);        // recto de la feuille
+        cotes.push([2 * i + 1, N - 2 - 2 * i]);    // verso
+      }
+      cotes.filter((_, i) => o.cotes === 'tous' || (o.cotes === 'recto' ? i % 2 === 0 : i % 2 === 1))
+        .forEach(paire => {
+          const [g, d] = o.reliure === 'droite' ? [paire[1], paire[0]] : paire;
+          const feuille = out.addPage([f[0], f[1]]);
+          poser(feuille, g, 0, 0, f[0] / 2, f[1], false, 'case');
+          poser(feuille, d, f[0] / 2, 0, f[0] / 2, f[1], false, 'case');
+        });
+      return out.save();
+    }
+
+    // ------------------------------------------------ plusieurs par feuille
+    if (o.disposition === 'nup') {
+      const par = NUP_GRILLES[o.parFeuille] ? o.parFeuille : 4;
+      const marge = 10;
+      const papier = o.papier === 'doc' ? base : (PAPIERS[o.papier] || PAPIERS.a4);
+      const sens = o.orientation === 'auto' ? [[papier[0], papier[1]], [papier[1], papier[0]]] : [orienter(papier, o.orientation)];
+      let choix = null;
+      NUP_GRILLES[par].forEach(([cols, rangs]) => {
+        sens.forEach(([fw, fh]) => {
+          const cw = (fw - marge * (cols + 1)) / cols;
+          const ch = (fh - marge * (rangs + 1)) / rangs;
+          if (cw <= 4 || ch <= 4) return;
+          const k = Math.min(cw / base[0], ch / base[1]);
+          if (!choix || k > choix.k) choix = { cols, rangs, fw, fh, cw, ch, k };
+        });
+      });
+      if (!choix) return octets;
+      for (let d = 0; d < n; d += par) {
+        const feuille = out.addPage([choix.fw, choix.fh]);
+        for (let c = 0; c < par; c++) {
+          const i = d + c;
+          if (i >= n) break;
+          // Horizontal : de gauche à droite puis ligne suivante.
+          // Vertical : de haut en bas puis colonne suivante.
+          const col = o.ordre === 'vertical' ? Math.floor(c / choix.rangs) : c % choix.cols;
+          const rang = o.ordre === 'vertical' ? c % choix.rangs : Math.floor(c / choix.cols);
+          if (col >= choix.cols || rang >= choix.rangs) break;
+          const x = marge + col * (choix.cw + marge);
+          const y = choix.fh - marge - (rang + 1) * choix.ch - rang * marge;
+          poser(feuille, i, x, y, choix.cw, choix.ch, !!o.bordure, 'case');
+        }
+      }
+      return out.save();
+    }
+
+    // ---------------------------------------------------------------- normale
+    for (let i = 0; i < n; i++) {
+      const d = dim(i);
+      let f = o.papier === 'doc' ? d : (PAPIERS[o.papier] || PAPIERS.a4);
+      if (o.orientation !== 'auto') f = orienter(f, o.orientation);
+      else if (o.papier !== 'doc' && (d[0] > d[1]) !== (f[0] > f[1])) f = [f[1], f[0]];
+      const feuille = out.addPage([f[0], f[1]]);
+      poser(feuille, i, 0, 0, f[0], f[1], false, 'libre');
+    }
+    return out.save();
+  }
+
+  async function assemblerPourImpression(pages, o) {
     setBusy('Assemblage de ' + plural(pages.length, 'page', 'pages') + '…', 0);
-    let octets;
     try {
-      octets = await buildPdf(pages, { onProgress: (r, t) => setBusy(t || 'Assemblage…', r) });
+      let octets = await buildPdf(pages, { onProgress: (r, t) => setBusy(t || 'Assemblage…', r) });
+      if (o.disposition !== 'normale') {
+        setBusy('Mise en page…', 0.9);
+        octets = await imposerPdf(octets, o);
+      }
+      return octets;
     } catch (e) {
       console.error(e);
-      setBusy('');
       toast('Échec de la préparation : ' + (e && e.message ? e.message : e), 'error');
-      return;
-    }
-    // Le navigateur affiche un PDF dans un cadre d'une autre origine : il
-    // refuse d'y lancer l'impression, et cela quelle que soit la façon dont
-    // la page est servie. On imprime donc le document assemblé rendu page
-    // par page — ce qui part à l'imprimante est bien ce qui a été corrigé.
+      return null;
+    } finally { setBusy(''); }
+  }
+
+  async function imprimerPages(pages, o) {
+    if (!pages.length || state.busy) return;
+    const octets = await assemblerPourImpression(pages, o);
+    if (!octets) return;
+    // Le navigateur affiche un PDF dans un cadre d'une autre origine et
+    // refuse d'y lancer l'impression, quelle que soit la façon dont la page
+    // est servie. On imprime donc le document assemblé rendu page par page :
+    // ce qui part à l'imprimante est bien ce qui a été mis en page.
     await imprimerEnImages(octets, pages.length);
   }
 
@@ -3671,53 +3839,234 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }, 60);
   }
 
-  // Choisir ce qu'on imprime avant d'ouvrir la fenêtre du système.
+  const IMP_MODES = [
+    ['normale', 'Taille', ['M5 2.5h14v19H5z']],
+    ['nup', 'Multiple', ['M4 3.5h7v7H4z', 'M13 3.5h7v7h-7z', 'M4 13.5h7v7H4z', 'M13 13.5h7v7h-7z']],
+    ['livret', 'Livret', ['M12 4v16', 'M12 4 4 6v14l8-2', 'M12 4l8 2v14l-8-2']],
+  ];
+
+  // Choisir ce qu'on imprime, et comment, avec l'aperçu de ce qui sortira.
   function dialogImprimer() {
     if (!state.pages.length) { toast('Aucune page à imprimer.', 'warn'); return; }
     const nSel = state.selected.size;
-    let quoi = nSel ? 'selection' : 'tout';
-    const choix = [['tout', 'Tout le document']];
-    if (nSel) choix.push(['selection', plural(nSel, 'page sélectionnée', 'pages sélectionnées')]);
-    choix.push(['plage', 'Une plage']);
-    const seg = segmented('imp-quoi', choix, quoi, v => { quoi = v; majPlage(); });
+    const o = {
+      quoi: nSel ? 'selection' : 'tout', disposition: 'normale',
+      parFeuille: 4, ordre: 'horizontal', bordure: false,
+      reliure: 'gauche', cotes: 'tous', faces: 'toutes', inverse: false,
+      papier: 'doc', echelle: 'ajuster', pourcent: 100, orientation: 'auto',
+    };
+
+    // ------------------------------------------------------------ réglages
+    const choix = [['tout', 'Tout']];
+    if (nSel) choix.push(['selection', 'Sélection']);
+    choix.push(['plage', 'Pages']);
+    const seg = segmented('imp-quoi', choix, o.quoi, v => { o.quoi = v; rafraichir(); });
     const plage = input('imp-plage', 'text', '1-' + state.pages.length);
     plage.placeholder = 'ex. 1-3, 5, 8-10';
-    const champPlage = field('Pages à imprimer', plage, 'Numéros ou intervalles, séparés par des virgules.');
-    const majPlage = () => { champPlage.hidden = quoi !== 'plage'; };
+    const champPlage = field('Lesquelles', plage, 'Numéros ou intervalles, séparés par des virgules.');
+
+    const modes = document.createElement('div');
+    modes.className = 'imp-modes';
+    modes.setAttribute('role', 'group');
+    const boutonsMode = IMP_MODES.map(([cle, nom, traits]) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'imp-mode'; b.dataset.mode = cle;
+      const sv = document.createElementNS(SVGNS, 'svg');
+      sv.setAttribute('viewBox', '0 0 24 24');
+      sv.setAttribute('fill', 'none');
+      sv.setAttribute('stroke', 'currentColor');
+      sv.setAttribute('stroke-width', '1.4');
+      sv.setAttribute('stroke-linejoin', 'round');
+      traits.forEach(d => { const p = document.createElementNS(SVGNS, 'path'); p.setAttribute('d', d); sv.appendChild(p); });
+      const t = document.createElement('span'); t.textContent = nom;
+      b.append(sv, t);
+      b.addEventListener('click', () => { o.disposition = cle; rafraichir(); });
+      modes.appendChild(b);
+      return b;
+    });
+
+    const nup = select('imp-nup', [['2', '2 pages'], ['4', '4 pages'], ['6', '6 pages'], ['9', '9 pages'], ['16', '16 pages']], '4');
+    const ordre = select('imp-ordre', [['horizontal', 'De gauche à droite'], ['vertical', 'De haut en bas']], 'horizontal');
+    const bordure = checkbox('imp-bord', 'Tracer un cadre autour de chaque page', false);
+    const blocNup = document.createElement('div');
+    blocNup.className = 'imp-reglages';
+    blocNup.append(field('Pages par feuille', nup), field('Ordre', ordre), bordure);
+
+    const reliure = select('imp-reliure', [['gauche', 'À gauche'], ['droite', 'À droite']], 'gauche');
+    const cotes = select('imp-cotes', [['tous', 'Les deux côtés'], ['recto', 'Recto seulement'], ['verso', 'Verso seulement']], 'tous');
+    const blocLivret = document.createElement('div');
+    blocLivret.className = 'imp-reglages';
+    blocLivret.append(field('Reliure', reliure), field('Côtés', cotes, 'Sans recto verso automatique : imprimez les rectos, remettez la pile, puis les versos.'));
+
+    const papier = select('imp-papier', [['doc', 'Comme le document'], ['a4', 'A4'], ['a3', 'A3'], ['letter', 'Letter'], ['legal', 'Legal']], 'doc');
+    const echelle = select('imp-echelle', [['ajuster', 'Ajuster à la feuille'], ['reduire', 'Réduire si trop grand'], ['reelle', 'Taille réelle'], ['perso', 'Échelle personnalisée']], 'ajuster');
+    const pourcent = input('imp-pct', 'number', 100, { min: 10, max: 400, step: 1 });
+    const champPct = field('Pourcentage', pourcent);
+    const orientation = segmented('imp-orient', [['auto', 'Auto'], ['portrait', 'Portrait'], ['paysage', 'Paysage']], 'auto', v => { o.orientation = v; rafraichir(); });
+
+    const faces = select('imp-faces', [['toutes', 'Toutes les pages'], ['impaires', 'Pages impaires seulement'], ['paires', 'Pages paires seulement']], 'toutes');
+    const champFaces = field('Sous-ensemble', faces);
+    const inverse = checkbox('imp-inv', 'Ordre inverse, de la dernière à la première', false);
+
+    // ------------------------------------------------------------- aperçu
+    const vue = document.createElement('div'); vue.className = 'imp-vue';
+    const attente = document.createElement('span'); attente.className = 'attente'; attente.textContent = 'Aperçu…';
+    vue.appendChild(attente);
+    const chiffres = document.createElement('div'); chiffres.className = 'chiffres';
+    const nav = document.createElement('div'); nav.className = 'imp-nav';
+    const prec = document.createElement('button'); prec.type = 'button'; prec.textContent = '‹'; prec.setAttribute('aria-label', 'Feuille précédente');
+    const suiv = document.createElement('button'); suiv.type = 'button'; suiv.textContent = '›'; suiv.setAttribute('aria-label', 'Feuille suivante');
+    const compte = document.createElement('span');
+    nav.append(prec, compte, suiv);
+    const bloc = document.createElement('div'); bloc.className = 'imp-apercu';
+    bloc.append(chiffres, vue, nav);
+
+    let feuille = 0, total = 0, jeton = 0, cacheCle = null, cacheOctets = null, minuteur = null;
+    prec.addEventListener('click', () => { if (feuille > 0) { feuille--; dessiner(); } });
+    suiv.addEventListener('click', () => { if (feuille < total - 1) { feuille++; dessiner(); } });
+
+    const signature = p => [p.map(x => x.id).join(','), o.disposition, o.parFeuille, o.ordre, o.bordure,
+      o.reliure, o.cotes, o.papier, o.echelle, o.pourcent, o.orientation].join('|');
+
+    let doc = null;
+    async function reconstruire() {
+      const p = retenues();
+      const cle = signature(p);
+      if (cle === cacheCle && doc) return;
+      const mien = ++jeton;
+      attente.textContent = 'Aperçu…';
+      if (!p.length) { vue.replaceChildren(attente); attente.textContent = 'Rien à imprimer.'; chiffres.textContent = ''; compte.textContent = ''; total = 0; majNav(); return; }
+      try {
+        let octets = cacheOctets && cacheCle && cacheCle.split('|')[0] === cle.split('|')[0] ? cacheOctets : await buildPdf(p, {});
+        if (mien !== jeton) return;
+        cacheOctets = octets;
+        const imposes = await imposerPdf(octets, o);
+        if (mien !== jeton) return;
+        if (doc) { try { doc.destroy(); } catch (_) {} }
+        doc = await pdfjs.getDocument({ data: imposes.slice(0) }).promise;
+        if (mien !== jeton) { try { doc.destroy(); } catch (_) {} doc = null; return; }
+        cacheCle = cle;
+        total = doc.numPages;
+        if (feuille >= total) feuille = 0;
+        await dessiner();
+      } catch (e) {
+        console.error(e);
+        vue.replaceChildren(attente);
+        attente.textContent = 'Aperçu indisponible.';
+      }
+    }
+
+    async function dessiner() {
+      if (!doc) return;
+      majNav();
+      const pg = await doc.getPage(feuille + 1);
+      const v1 = pg.getViewport({ scale: 1 });
+      const k = Math.min(214 / v1.width, 244 / v1.height, 1.6);
+      const vp = pg.getViewport({ scale: k });
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.ceil(vp.width));
+      cv.height = Math.max(1, Math.ceil(vp.height));
+      const cx = cv.getContext('2d', { alpha: false });
+      cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+      await pg.render({ canvasContext: cx, viewport: vp }).promise;
+      pg.cleanup();
+      vue.replaceChildren(cv);
+      const mm = t => (t * 25.4 / 72).toFixed(0);
+      chiffres.textContent = mm(v1.width) + ' × ' + mm(v1.height) + ' mm'
+        + (o.echelle === 'perso' ? '  ·  ' + (o.pourcent || 100) + ' %' : '');
+    }
+    function majNav() {
+      compte.textContent = total ? 'Feuille ' + (feuille + 1) + ' sur ' + total : '';
+      prec.disabled = feuille <= 0;
+      suiv.disabled = feuille >= total - 1;
+    }
 
     const retenues = () => {
-      if (quoi === 'selection') return selectedPages();
-      if (quoi !== 'plage') return state.pages.slice();
-      const vues = new Set();
-      String(plage.value).split(',').forEach(bout => {
-        const m = /^\s*(\d+)\s*(?:[-\u2013]\s*(\d+))?\s*$/.exec(bout);
-        if (!m) return;
-        // On ne ramène pas un numéro hors du document sur la première page :
-        // « 9-12 » dans un document de 5 pages ne désigne rien.
-        const a = parseInt(m[1], 10), b = m[2] ? parseInt(m[2], 10) : a;
-        if (!(a > 0) || !(b > 0)) return;
-        const d = Math.max(1, Math.min(a, b)), f = Math.min(state.pages.length, Math.max(a, b));
-        for (let i = d; i <= f; i++) vues.add(i - 1);
+      let liste;
+      if (o.quoi === 'selection') liste = selectedPages();
+      else if (o.quoi !== 'plage') liste = state.pages.slice();
+      else {
+        const vues = new Set();
+        String(plage.value).split(',').forEach(bout => {
+          const m = /^\s*(\d+)\s*(?:[-–]\s*(\d+))?\s*$/.exec(bout);
+          if (!m) return;
+          // On ne ramène pas un numéro hors du document sur la première page :
+          // « 9-12 » dans un document de 5 pages ne désigne rien.
+          const a = parseInt(m[1], 10), b = m[2] ? parseInt(m[2], 10) : a;
+          if (!(a > 0) || !(b > 0)) return;
+          const d = Math.max(1, Math.min(a, b)), f = Math.min(state.pages.length, Math.max(a, b));
+          for (let i = d; i <= f; i++) vues.add(i - 1);
+        });
+        liste = Array.from(vues).sort((x, y) => x - y).map(i => state.pages[i]);
+      }
+      if (o.disposition !== 'livret') {
+        if (o.faces === 'impaires') liste = liste.filter((_, i) => i % 2 === 0);
+        else if (o.faces === 'paires') liste = liste.filter((_, i) => i % 2 === 1);
+        if (o.inverse) liste = liste.slice().reverse();
+      }
+      return liste;
+    };
+
+    function rafraichir() {
+      o.parFeuille = parseInt(nup.value, 10) || 4;
+      o.ordre = ordre.value; o.bordure = bordure.input.checked;
+      o.reliure = reliure.value; o.cotes = cotes.value;
+      o.papier = papier.value; o.echelle = echelle.value;
+      o.pourcent = Math.max(10, Math.min(400, parseFloat(pourcent.value) || 100));
+      o.faces = faces.value; o.inverse = inverse.input.checked;
+      boutonsMode.forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === o.disposition ? 'true' : 'false'));
+      champPlage.hidden = o.quoi !== 'plage';
+      blocNup.hidden = o.disposition !== 'nup';
+      blocLivret.hidden = o.disposition !== 'livret';
+      champPct.hidden = o.echelle !== 'perso';
+      // Un livret a son propre recto verso et sa propre feuille : le
+      // sous-ensemble et l'échelle libre n'y ont pas de sens.
+      champFaces.hidden = o.disposition === 'livret';
+      inverse.hidden = o.disposition === 'livret';
+      clearTimeout(minuteur);
+      minuteur = setTimeout(reconstruire, 220);
+    }
+    [nup, ordre, reliure, cotes, papier, echelle, pourcent, faces].forEach(c => c.addEventListener('change', rafraichir));
+    [bordure.input, inverse.input].forEach(c => c.addEventListener('change', rafraichir));
+    plage.addEventListener('input', rafraichir);
+    pourcent.addEventListener('input', rafraichir);
+
+    const lancer = quoi => close => {
+      const pages = retenues();
+      if (!pages.length) { toast('Cette plage ne désigne aucune page.', 'warn'); return; }
+      clearTimeout(minuteur);
+      jeton++;
+      if (doc) { try { doc.destroy(); } catch (_) {} doc = null; }
+      close();
+      if (quoi === 'imprimer') { imprimerPages(pages, o); return; }
+      assemblerPourImpression(pages, o).then(octets => {
+        if (octets) deliver(octets, safeBase(el.filename.value)
+          + (o.disposition === 'livret' ? '-livret' : o.disposition === 'nup' ? '-' + o.parFeuille + '-par-feuille' : '') + '.pdf');
       });
-      return Array.from(vues).sort((x, y) => x - y).map(i => state.pages[i]);
     };
 
     dialog({
-      title: 'Imprimer', icon: IC.print, submitOnEnter: true,
+      title: 'Imprimer', icon: IC.print, wide: true, submitOnEnter: true,
       build: b => {
-        b.append(field('Étendue', seg));
-        b.append(champPlage);
-        majPlage();
-        b.append(note('Le document est assemblé avec toutes vos corrections, puis la fenêtre d\'impression de Windows s\'ouvre : c\'est là que se choisissent l\'imprimante, le recto verso et le nombre de copies.'));
+        const grille = document.createElement('div'); grille.className = 'imp-grille';
+        const gauche = document.createElement('div'); gauche.className = 'imp-reglages';
+        gauche.append(
+          field('Pages à imprimer', seg), champPlage,
+          field('Dimensionnement et gestion des pages', modes),
+          blocNup, blocLivret,
+          field('Papier', papier), field('Mise à l\'échelle', echelle), champPct,
+          field('Orientation', orientation),
+          champFaces, inverse,
+        );
+        grille.append(gauche, bloc);
+        b.append(grille);
+        rafraichir();
       },
+      onClose: () => { jeton++; clearTimeout(minuteur); if (doc) { try { doc.destroy(); } catch (_) {} doc = null; } },
       actions: [
         { label: 'Annuler', onClick: c => c() },
-        { label: 'Imprimer', primary: true, onClick: close => {
-          const pages = retenues();
-          if (!pages.length) { toast('Cette plage ne désigne aucune page.', 'warn'); return; }
-          close();
-          imprimerPages(pages);
-        } },
+        { label: 'Enregistrer', onClick: lancer('enregistrer') },
+        { label: 'Imprimer', primary: true, onClick: lancer('imprimer') },
       ],
     });
   }
