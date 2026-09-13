@@ -73,61 +73,61 @@
     :root:not([data-theme="dark"]) {
       color-scheme: light;
       --encre: #FFFFFF;
-      --table: #E9EBEE;
-      --feutre: #F7F8FA;
+      --table: #F1F2F4;
+      --feutre: #FFFFFF;
       --relief: #FFFFFF;
-      --survol: rgba(16, 21, 26, .045);
+      --survol: rgba(22, 26, 32, .06);
       --papier: #FFFFFF;
-      --trait: #D8DCE2;
-      --trait-fin: #E6E9ED;
+      --trait: #E2E5E9;
+      --trait-fin: #EDEFF2;
       --lueur: rgba(255, 255, 255, .9);
-      --texte: #131A21;
-      --texte-2: #5A6672;
-      --texte-3: #8B96A2;
-      --bleu: #1F5FD8;
-      --bleu-vif: #1A54C4;
-      --bleu-ombre: rgba(31, 95, 216, .14);
+      --texte: #22262C;
+      --texte-2: #5B636E;
+      --texte-3: #8A929D;
+      --bleu: #1473E6;
+      --bleu-vif: #0D66D0;
+      --bleu-ombre: rgba(20, 115, 230, .13);
       --bleu-encre: #FFFFFF;
       --ambre: #9A6B08;
-      --rouge: #C22F27;
-      --rouge-ombre: rgba(194, 47, 39, .10);
+      --rouge: #C7342B;
+      --rouge-ombre: rgba(199, 52, 43, .10);
       --vert: #16795A;
       --teinte-l: 42%;
       --teinte-s: 56%;
-      --ombre-feuille: 0 1px 1px rgba(19, 26, 33, .10), 0 6px 16px -6px rgba(19, 26, 33, .18);
-      --ombre-levee: 0 2px 4px rgba(19, 26, 33, .10), 0 18px 34px -12px rgba(19, 26, 33, .24);
-      --ombre-flottante: 0 1px 2px rgba(19, 26, 33, .10), 0 24px 48px -14px rgba(19, 26, 33, .28);
-      --voile: rgba(34, 41, 49, .34);
+      --ombre-feuille: 0 1px 2px rgba(20, 25, 35, .10), 0 4px 12px -4px rgba(20, 25, 35, .13);
+      --ombre-levee: 0 2px 4px rgba(20, 25, 35, .10), 0 14px 28px -10px rgba(20, 25, 35, .18);
+      --ombre-flottante: 0 1px 2px rgba(20, 25, 35, .10), 0 18px 40px -12px rgba(20, 25, 35, .22);
+      --voile: rgba(34, 41, 49, .30);
     }
   }
   :root[data-theme="light"] {
     color-scheme: light;
     --encre: #FFFFFF;
-    --table: #E9EBEE;
-    --feutre: #F7F8FA;
+    --table: #F1F2F4;
+    --feutre: #FFFFFF;
     --relief: #FFFFFF;
-    --survol: rgba(16, 21, 26, .045);
+    --survol: rgba(22, 26, 32, .06);
     --papier: #FFFFFF;
-    --trait: #D8DCE2;
-    --trait-fin: #E6E9ED;
+    --trait: #E2E5E9;
+    --trait-fin: #EDEFF2;
     --lueur: rgba(255, 255, 255, .9);
-    --texte: #131A21;
-    --texte-2: #5A6672;
-    --texte-3: #8B96A2;
-    --bleu: #1F5FD8;
-    --bleu-vif: #1A54C4;
-    --bleu-ombre: rgba(31, 95, 216, .14);
+    --texte: #22262C;
+    --texte-2: #5B636E;
+    --texte-3: #8A929D;
+    --bleu: #1473E6;
+    --bleu-vif: #0D66D0;
+    --bleu-ombre: rgba(20, 115, 230, .13);
     --bleu-encre: #FFFFFF;
     --ambre: #9A6B08;
-    --rouge: #C22F27;
-    --rouge-ombre: rgba(194, 47, 39, .10);
+    --rouge: #C7342B;
+    --rouge-ombre: rgba(199, 52, 43, .10);
     --vert: #16795A;
     --teinte-l: 42%;
     --teinte-s: 56%;
-    --ombre-feuille: 0 1px 1px rgba(19, 26, 33, .10), 0 6px 16px -6px rgba(19, 26, 33, .18);
-    --ombre-levee: 0 2px 4px rgba(19, 26, 33, .10), 0 18px 34px -12px rgba(19, 26, 33, .24);
-    --ombre-flottante: 0 1px 2px rgba(19, 26, 33, .10), 0 24px 48px -14px rgba(19, 26, 33, .28);
-    --voile: rgba(34, 41, 49, .34);
+    --ombre-feuille: 0 1px 2px rgba(20, 25, 35, .10), 0 4px 12px -4px rgba(20, 25, 35, .13);
+    --ombre-levee: 0 2px 4px rgba(20, 25, 35, .10), 0 14px 28px -10px rgba(20, 25, 35, .18);
+    --ombre-flottante: 0 1px 2px rgba(20, 25, 35, .10), 0 18px 40px -12px rgba(20, 25, 35, .22);
+    --voile: rgba(34, 41, 49, .30);
   }
 
   *, *::before, *::after { box-sizing: border-box; }
@@ -164,26 +164,25 @@
 
   /* ---------- barre d'outils ---------- */
   .toolbar {
-    flex: none; display: flex; align-items: center; gap: 3px;
-    height: 56px; padding: 0 14px;
+    flex: none; display: flex; align-items: center; gap: 2px;
+    height: 46px; padding: 0 12px;
     background: var(--encre);
     border-bottom: 1px solid var(--trait);
-    box-shadow: inset 0 1px 0 var(--lueur);
   }
-  .brand { display: flex; align-items: center; gap: 10px; margin-right: 10px; flex: none; }
-  .brand .mark { width: 27px; height: 27px; }
+  .brand { display: flex; align-items: center; gap: 9px; margin-right: 8px; flex: none; }
+  .brand .mark { width: 23px; height: 23px; }
   .brand .name {
     font-family: var(--titre);
-    font-size: 25px; line-height: 1; letter-spacing: .002em;
+    font-size: 20px; line-height: 1; letter-spacing: .002em;
     white-space: nowrap; padding-top: 2px;
   }
   .brand .name span { color: var(--texte-2); }
-  .tb-sep { width: 1px; height: 22px; background: var(--trait); margin: 0 7px; flex: none; }
+  .tb-sep { width: 1px; height: 20px; background: var(--trait); margin: 0 6px; flex: none; }
   .tb-spacer { flex: 1 1 8px; min-width: 4px; }
 
   .tb-btn {
     display: inline-flex; align-items: center; gap: 7px; flex: none;
-    height: 34px; padding: 0 11px;
+    height: 30px; padding: 0 10px;
     border-radius: var(--rond-petit); border: 1px solid transparent;
     background: transparent; color: var(--texte);
     font-weight: 500; white-space: nowrap;
@@ -200,12 +199,12 @@
   }
   .tb-btn.primary svg { color: currentColor; }
   .tb-btn.primary:hover:not(:disabled) { background: var(--bleu-vif); box-shadow: 0 2px 8px var(--bleu-ombre), 0 0 0 3px var(--bleu-ombre); }
-  .tb-btn.icon { padding: 0; width: 34px; justify-content: center; }
+  .tb-btn.icon { padding: 0; width: 30px; justify-content: center; }
   .tb-btn.on { background: var(--bleu-ombre); color: var(--bleu-vif); }
   .tb-btn.on svg { color: currentColor; }
 
   .filename {
-    position: relative; display: flex; align-items: center; flex: none; height: 34px;
+    position: relative; display: flex; align-items: center; flex: none; height: 30px;
     background: var(--survol); border: 1px solid var(--trait);
     border-radius: var(--rond-petit); padding: 0 11px; margin-right: 5px;
     transition: border-color .14s var(--elan), background .14s var(--elan);
@@ -291,10 +290,9 @@
     border: 1px solid transparent; border-radius: var(--rond-petit); background: transparent; text-align: left; color: var(--texte);
     transition: background .14s var(--elan), transform .14s var(--elan);
   }
-  .tool:hover:not(:disabled) { background: var(--survol); transform: translateX(2px); }
+  .tool:hover:not(:disabled) { background: var(--survol); }
   .tool:disabled { opacity: .36; cursor: not-allowed; }
-  .tool svg { width: 16px; height: 16px; flex: none; color: var(--texte-3); transition: color .14s var(--elan); }
-  .tool:hover:not(:disabled) svg { color: var(--bleu-vif); }
+  .tool svg { width: 17px; height: 17px; flex: none; color: var(--texte-3); }
   .tool .t-name { font-weight: 500; }
   .tool .t-sub { font-size: 11.5px; color: var(--texte-3); }
   .tool .dot { margin-left: auto; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--vert); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vert) 18%, transparent); }
@@ -596,11 +594,16 @@
 
   /* ---------- éditeur de page ---------- */
   .editor { position: fixed; inset: 0; z-index: 80; background: var(--table); display: flex; flex-direction: column; animation: fondu .18s var(--elan); }
-  .ed-head { flex: none; display: flex; align-items: center; gap: 7px; height: 54px; padding: 0 14px; background: var(--encre); border-bottom: 1px solid var(--trait); }
-  .ed-head .title { font-family: var(--titre); font-size: 19px; margin-right: 6px; white-space: nowrap; }
+  .ed-head { flex: none; display: flex; align-items: center; gap: 7px; height: 46px; padding: 0 12px; background: var(--encre); border-bottom: 1px solid var(--trait); }
+  .ed-head .title { font-family: var(--titre); font-size: 17px; margin-right: 6px; white-space: nowrap; }
   .ed-head .nav { display: flex; align-items: center; gap: 4px; font-family: var(--chiffre); font-size: 12px; color: var(--texte-3); font-variant-numeric: tabular-nums; }
-  .ed-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 62px minmax(0, 1fr) 244px; }
-  .ed-rail { background: var(--encre); border-right: 1px solid var(--trait); padding: 10px 0; display: flex; flex-direction: column; align-items: center; gap: 2px; overflow-y: auto; }
+  .ed-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 62px minmax(0, 1fr) 244px; background: var(--table); }
+  .ed-rail {
+    background: var(--encre); border: 1px solid var(--trait); border-radius: 13px;
+    margin: 10px 0 10px 9px; padding: 5px 4px; align-self: start;
+    box-shadow: var(--ombre-feuille);
+    display: flex; flex-direction: column; align-items: center; gap: 2px; overflow-y: auto;
+  }
   .ed-tool {
     width: 40px; height: 40px; border-radius: 9px; border: 1px solid transparent; background: transparent;
     color: var(--texte-2); display: grid; place-items: center; position: relative;
@@ -6898,6 +6901,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     ];
   }
 
+  // Chaque outil porte sa couleur : on le retrouve du coin de l'œil dans la
+  // liste, sans avoir à lire.
+  const TEINTES_OUTILS = {
+    vierges: '#2680EB', images: '#8C5AE8', vides: '#0D9F8F', diviser: '#E68619', resize: '#2680EB',
+    edit: '#8C5AE8', filigrane: '#D83790', entete: '#0D9F8F', numeros: '#E68619', form: '#2D9D5F',
+    'exp-pdf': '#D7373F', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', compress: '#E68619',
+    password: '#D7373F', flatten: '#2680EB',
+    props: '#6E7681', search: '#2680EB',
+  };
+
   function renderTools() {
     const host = $('#tool-groups');
     host.replaceChildren();
@@ -6910,7 +6923,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         b.type = 'button'; b.className = 'tool';
         b.dataset.tool = item.id;
         if (item.need) b.dataset.need = item.need;
-        b.appendChild(icon(item.icon));
+        const ic = icon(item.icon);
+        if (TEINTES_OUTILS[item.id]) ic.style.color = TEINTES_OUTILS[item.id];
+        b.appendChild(ic);
         const box = document.createElement('span');
         const n = document.createElement('span'); n.className = 't-name'; n.textContent = item.name;
         const s = document.createElement('span'); s.className = 't-sub'; s.textContent = item.sub || '';
@@ -7036,11 +7051,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       toast: $('#toast'),
     });
 
-    let theme = 'auto';
-    try { theme = localStorage.getItem('blonay-theme') || 'auto'; } catch (_) {}
+    let theme = 'light';
+    try { theme = localStorage.getItem('blonay-theme') || 'light'; } catch (_) {}
     applyTheme(theme);
     el.btnTheme.addEventListener('click', () => {
-      theme = theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto';
+      theme = theme === 'light' ? 'dark' : theme === 'dark' ? 'auto' : 'light';
       applyTheme(theme);
     });
     el.btnHelp.addEventListener('click', toolHelp);
