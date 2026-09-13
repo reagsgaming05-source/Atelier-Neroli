@@ -698,6 +698,18 @@
   }
   .ed-format .sep { width: 1px; height: 17px; background: var(--trait); margin: 0 3px; }
 
+  /* ---------- impression ---------- */
+  .feuille-impression { display: none; }
+  @media print {
+    html.en-impression, html.en-impression body { height: auto; overflow: visible; background: #fff; }
+    html.en-impression body > *:not(.feuille-impression) { display: none !important; }
+    html.en-impression .feuille-impression { display: block; }
+    .page-impression { page-break-after: always; break-after: page; overflow: hidden; line-height: 0; }
+    .page-impression:last-child { page-break-after: auto; break-after: auto; }
+    .page-impression img { display: block; width: 100%; height: auto; }
+    @page { margin: 0; }
+  }
+
   /* ---------- adaptation aux petits écrans ---------- */
   @media (max-width: 1180px) {
     .editor.en-saisie .ed-head .title { display: none; }
@@ -796,6 +808,10 @@
   <button class="tb-btn icon" id="btn-theme" type="button" title="Thème clair ou sombre"></button>
   <button class="tb-btn icon" id="btn-help" type="button" title="Raccourcis clavier (?)">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M6.3 6.2a1.8 1.8 0 1 1 2.3 1.9c-.4.2-.6.5-.6.9v.3"/><path d="M8 11.6h.01"/></svg>
+  </button>
+  <button class="tb-btn" id="btn-print" type="button" disabled title="Imprimer (Ctrl+P)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6V2.5h7V6"/><path d="M3 6h10a1 1 0 0 1 1 1v4h-2.5"/><path d="M3 11H1.5"/><path d="M4.5 9.5h7v4h-7z"/></svg>
+    <span class="lbl">Imprimer</span>
   </button>
   <div class="filename" title="Nom du fichier exporté">
     <label for="filename" class="sr-only">Nom du fichier</label>
@@ -1536,6 +1552,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     select: ['m3 2.5 9 5.5-4 1-1.5 4z'],
     box: ['M3 3.5h10v9H3z'],
     save: ['M8 2v8', 'm4.5 6.5 3.5 3.5 3.5-3.5', 'M2.5 11v1.5A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V11'],
+    print: ['M4.5 6V2.5h7V6', 'M3 6h10a1 1 0 0 1 1 1v4h-2.5', 'M3 11H1.5', 'M4.5 9.5h7v4h-7z'],
     vide: ['M3 2.5h7l3 3v8H3z', 'M10 2.5V5.5h3', 'M5.5 11.5h5'],
     editText: ['M2.5 5V3.5h7V5', 'M6 3.5v7M4.5 10.5h3', 'M9.5 13.5l4.5-4.5-1.5-1.5L8 12v1.5z'],
   };
@@ -1908,6 +1925,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     el.btnUndo.disabled = !state.history.length;
     el.btnRedo.disabled = !state.redo.length;
     el.btnExport.disabled = !has || state.busy;
+    el.btnPrint.disabled = !has || state.busy;
     el.btnSelectAll.disabled = !has;
     el.btnSearch.disabled = !has;
     $$('[data-tool]').forEach(b => {
@@ -2490,7 +2508,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       }
       i++;
       while (i < n && fxRegulier(o[i])) i++;
-      j.push({ t: 'op', v: fxTxt(o, a, i), a, b: i });
+      const nom = fxTxt(o, a, i);
+      j.push({ t: 'op', v: nom, a, b: i });
+      if (nom === 'ID') {
+        // Les octets de l'image suivent, bruts, jusqu'à EI isolé.
+        let k = i + 1;
+        while (k < n - 1) {
+          if (o[k] === 0x45 && o[k + 1] === 0x49 && (k + 2 >= n || fxBlanc(o[k + 2])) && fxBlanc(o[k - 1])) break;
+          k++;
+        }
+        i = Math.min(n, k + 2);
+        j.push({ t: 'op', v: 'EI', a: k, b: i });
+      }
     }
     return j;
   }
@@ -2588,8 +2617,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (j.t !== 'op' || j.v === '[' || j.v === ']' || j.v === '<<' || j.v === '>>') { args.push(j); continue; }
       const op = j.v;
       const nb = i => { const t = args[args.length + i]; return t && t.t === 'nombre' ? t.v : 0; };
-      if (op === 'q') pile.push(ctm.slice());
-      else if (op === 'Q') { const m = pile.pop(); if (m) ctm = m; }
+      if (op === 'q') pile.push({ ctm: ctm.slice(), Tf, Tfs, Tc, Tw, Th, TL, Ts, pol });
+      else if (op === 'Q') {
+        const e = pile.pop();
+        if (e) { ctm = e.ctm; Tf = e.Tf; Tfs = e.Tfs; Tc = e.Tc; Tw = e.Tw; Th = e.Th; TL = e.TL; Ts = e.Ts; pol = e.pol; }
+      }
       else if (op === 'cm') ctm = fxMat([nb(-6), nb(-5), nb(-4), nb(-3), nb(-2), nb(-1)], ctm);
       else if (op === 'BT') { Tm = [1, 0, 0, 1, 0, 0]; Tlm = Tm.slice(); }
       else if (op === 'Tf') { const n = args[args.length - 2]; if (n && n.t === 'nom') Tf = n.v; Tfs = nb(-1); pol = police(Tf); }
@@ -2767,8 +2799,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (!fxMemeStyle(a, o, P, finV)) return fxNon('style change');
     let touchees = o.ancres.filter(an => an.i < finV && an.i + an.n > P);
     if (!touchees.length) touchees = o.ancres.filter(an => an.i <= P && an.i + an.n >= P).slice(0, 1);
-    if (touchees.length !== 1) return fxNon('ancres touchees=' + touchees.length);
-    const an = touchees[0];
+    if (!touchees.length) return fxNon('aucune ancre touchee');
+    // Plusieurs morceaux voisins : ils doivent se suivre sans trou, et tomber
+    // dans le même affichage — on les traite alors comme un seul.
+    const prem = touchees[0], der = touchees[touchees.length - 1];
+    for (let i = 1; i < touchees.length; i++) {
+      if (touchees[i].i !== touchees[i - 1].i + touchees[i - 1].n) return fxNon('morceaux non contigus');
+      if (Math.abs(touchees[i].dy - prem.dy) > 0.6) return fxNon('morceaux sur des lignes differentes');
+    }
+    const an = { i: prem.i, n: der.i + der.n - prem.i, dx: prem.dx, dy: prem.dy };
     if (P < an.i || finV > an.i + an.n) return fxNon('changement a cheval');
     const ancienBout = vieux.slice(an.i, an.i + an.n);
     const nouveauBout = ancienBout.slice(0, P - an.i) + milieu + ancienBout.slice(finV - an.i);
@@ -2851,6 +2890,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (r) { remplacements.push.apply(remplacements, r); faits.add(a.id); }
     });
     if (remplacements.length) {
+      const tries = remplacements.slice().sort((x, y) => x.a - y.a);
+      for (let i = 1; i < tries.length; i++) {
+        if (tries[i].a < tries[i - 1].b) { console.warn('Retouches qui se chevauchent : on recouvre.'); return new Set(); }
+      }
       try { flux.ecrire(fxAppliquer(flux.octets, remplacements)); }
       catch (e) { console.warn('Écriture du flux :', e); return new Set(); }
     }
@@ -3543,6 +3586,136 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       toast('Échec de l\'assemblage : ' + (e && e.message ? e.message : e), 'error');
       return null;
     } finally { setBusy(''); }
+  }
+
+  // =====================================================================
+  //  Impression
+  //  -------------------------------------------------------------------
+  //  Le document est assemblé exactement comme à l'export, puis remis au
+  //  navigateur, qui ouvre la fenêtre d'impression du système : c'est là
+  //  qu'on choisit l'imprimante, le recto verso et le nombre de copies.
+  // =====================================================================
+  async function imprimerPages(pages) {
+    if (!pages.length || state.busy) return;
+    setBusy('Assemblage de ' + plural(pages.length, 'page', 'pages') + '…', 0);
+    let octets;
+    try {
+      octets = await buildPdf(pages, { onProgress: (r, t) => setBusy(t || 'Assemblage…', r) });
+    } catch (e) {
+      console.error(e);
+      setBusy('');
+      toast('Échec de la préparation : ' + (e && e.message ? e.message : e), 'error');
+      return;
+    }
+    // Le navigateur affiche un PDF dans un cadre d'une autre origine : il
+    // refuse d'y lancer l'impression, et cela quelle que soit la façon dont
+    // la page est servie. On imprime donc le document assemblé rendu page
+    // par page — ce qui part à l'imprimante est bien ce qui a été corrigé.
+    await imprimerEnImages(octets, pages.length);
+  }
+
+  // Le document assemblé, rendu page par page, dans une feuille que seule
+  // l'imprimante voit. Marche partout, y compris depuis un simple fichier.
+  async function imprimerEnImages(octets, combien) {
+    setBusy('Préparation de l\'impression…', 0);
+    const hote = document.createElement('div');
+    hote.className = 'feuille-impression';
+    let doc = null;
+    try {
+      doc = await pdfjs.getDocument({ data: octets.slice(0) }).promise;
+      // Assez fin pour que le texte reste net sur le papier, sans faire
+      // enfler la page au point de la bloquer sur un gros document.
+      const ppp = doc.numPages > 12 ? 200 : 300;
+      for (let i = 1; i <= doc.numPages; i++) {
+        setBusy('Préparation de l\'impression…', (i - 1) / doc.numPages);
+        const pg = await doc.getPage(i);
+        const vp = pg.getViewport({ scale: ppp / 72 });
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.ceil(vp.width));
+        cv.height = Math.max(1, Math.ceil(vp.height));
+        const cx = cv.getContext('2d', { alpha: false });
+        cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+        await pg.render({ canvasContext: cx, viewport: vp }).promise;
+        pg.cleanup();
+        const f = document.createElement('div');
+        f.className = 'page-impression';
+        const img = document.createElement('img');
+        img.alt = '';
+        img.src = cv.toDataURL('image/jpeg', 0.92);
+        f.appendChild(img);
+        hote.appendChild(f);
+      }
+    } catch (e) {
+      console.error(e);
+      setBusy('');
+      toast('Impossible de préparer l\'impression : ' + (e && e.message ? e.message : e), 'error');
+      return;
+    } finally { try { if (doc) doc.destroy(); } catch (_) {} }
+    setBusy('');
+    document.body.appendChild(hote);
+    document.documentElement.classList.add('en-impression');
+    const finir = () => {
+      document.documentElement.classList.remove('en-impression');
+      hote.remove();
+      window.removeEventListener('afterprint', finir);
+    };
+    window.addEventListener('afterprint', finir);
+    setTimeout(() => {
+      try { window.print(); } catch (e) { console.warn('Impression :', e); }
+      setLast(plural(combien, 'page envoyée', 'pages envoyées') + ' à l\'impression');
+      setTimeout(finir, 1500);
+    }, 60);
+  }
+
+  // Choisir ce qu'on imprime avant d'ouvrir la fenêtre du système.
+  function dialogImprimer() {
+    if (!state.pages.length) { toast('Aucune page à imprimer.', 'warn'); return; }
+    const nSel = state.selected.size;
+    let quoi = nSel ? 'selection' : 'tout';
+    const choix = [['tout', 'Tout le document']];
+    if (nSel) choix.push(['selection', plural(nSel, 'page sélectionnée', 'pages sélectionnées')]);
+    choix.push(['plage', 'Une plage']);
+    const seg = segmented('imp-quoi', choix, quoi, v => { quoi = v; majPlage(); });
+    const plage = input('imp-plage', 'text', '1-' + state.pages.length);
+    plage.placeholder = 'ex. 1-3, 5, 8-10';
+    const champPlage = field('Pages à imprimer', plage, 'Numéros ou intervalles, séparés par des virgules.');
+    const majPlage = () => { champPlage.hidden = quoi !== 'plage'; };
+
+    const retenues = () => {
+      if (quoi === 'selection') return selectedPages();
+      if (quoi !== 'plage') return state.pages.slice();
+      const vues = new Set();
+      String(plage.value).split(',').forEach(bout => {
+        const m = /^\s*(\d+)\s*(?:[-\u2013]\s*(\d+))?\s*$/.exec(bout);
+        if (!m) return;
+        // On ne ramène pas un numéro hors du document sur la première page :
+        // « 9-12 » dans un document de 5 pages ne désigne rien.
+        const a = parseInt(m[1], 10), b = m[2] ? parseInt(m[2], 10) : a;
+        if (!(a > 0) || !(b > 0)) return;
+        const d = Math.max(1, Math.min(a, b)), f = Math.min(state.pages.length, Math.max(a, b));
+        for (let i = d; i <= f; i++) vues.add(i - 1);
+      });
+      return Array.from(vues).sort((x, y) => x - y).map(i => state.pages[i]);
+    };
+
+    dialog({
+      title: 'Imprimer', icon: IC.print, submitOnEnter: true,
+      build: b => {
+        b.append(field('Étendue', seg));
+        b.append(champPlage);
+        majPlage();
+        b.append(note('Le document est assemblé avec toutes vos corrections, puis la fenêtre d\'impression de Windows s\'ouvre : c\'est là que se choisissent l\'imprimante, le recto verso et le nombre de copies.'));
+      },
+      actions: [
+        { label: 'Annuler', onClick: c => c() },
+        { label: 'Imprimer', primary: true, onClick: close => {
+          const pages = retenues();
+          if (!pages.length) { toast('Cette plage ne désigne aucune page.', 'warn'); return; }
+          close();
+          imprimerPages(pages);
+        } },
+      ],
+    });
   }
 
   // =====================================================================
@@ -4511,7 +4684,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           ['Double-clic', 'Ouvrir l\'éditeur, où le texte existant se corrige par paragraphe'],
         ])));
         b.append(groupOf('Document', mk([
-          ['Ctrl+O', 'Ouvrir des fichiers'], ['Ctrl+S', 'Exporter le PDF'], ['Ctrl+F', 'Rechercher du texte'],
+          ['Ctrl+O', 'Ouvrir des fichiers'], ['Ctrl+S', 'Exporter le PDF'], ['Ctrl+P', 'Imprimer'], ['Ctrl+F', 'Rechercher du texte'],
           ['Ctrl+Z', 'Annuler'], ['Ctrl+Y', 'Rétablir'], ['?', 'Cette fenêtre'],
         ])));
         b.append(note('Astuce : tapez un chiffre sur une page sélectionnée au clavier pour la déplacer directement à ce numéro.'));
@@ -6503,7 +6676,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       docList: $('#doc-list'), docsEmpty: $('#docs-empty'), docCount: $('#doc-count'),
       fileInput: $('#file-input'), filename: $('#filename'),
       btnOpen: $('#btn-open'), btnAdd: $('#btn-add'), btnChoose: $('#btn-choose'), btnSample: $('#btn-sample'),
-      btnExport: $('#btn-export'), btnUndo: $('#btn-undo'), btnRedo: $('#btn-redo'),
+      btnExport: $('#btn-export'), btnPrint: $('#btn-print'), btnUndo: $('#btn-undo'), btnRedo: $('#btn-redo'),
       btnSelectAll: $('#btn-select-all'), selectAllLabel: $('#select-all-label'), btnSearch: $('#btn-search'),
       btnTheme: $('#btn-theme'), btnHelp: $('#btn-help'),
       zoom: $('#zoom'), summary: $('#summary'), last: $('#last'),
@@ -6542,6 +6715,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     el.btnSearch.addEventListener('click', toolSearch);
     el.btnSelectAll.addEventListener('click', () => { if (state.selected.size === state.pages.length) clearSelection(); else selectAll(); });
     el.btnExport.addEventListener('click', () => exportPages(state.pages, safeBase(el.filename.value) + '.pdf'));
+    el.btnPrint.addEventListener('click', dialogImprimer);
     el.filename.addEventListener('input', () => { state.filenameDirty = el.filename.value.trim() !== ''; });
     el.filename.addEventListener('blur', () => { if (!el.filename.value.trim()) { state.filenameDirty = false; el.filename.value = defaultBase(); } });
     el.filename.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.filename.blur(); } });
@@ -6692,6 +6866,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       else if (mod && (e.key === 'a' || e.key === 'A') && state.pages.length) { e.preventDefault(); selectAll(); }
       else if (mod && (e.key === 'o' || e.key === 'O')) { e.preventDefault(); openPicker(); }
       else if (mod && (e.key === 's' || e.key === 'S')) { e.preventDefault(); if (state.pages.length && !state.busy) exportPages(state.pages, safeBase(el.filename.value) + '.pdf'); }
+      else if (mod && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); if (state.pages.length && !state.busy) dialogImprimer(); }
       else if (mod && (e.key === 'f' || e.key === 'F')) { if (state.pages.length) { e.preventDefault(); toolSearch(); } }
       else if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); toolHelp(); }
       else if (e.key === 'Escape') { clearSelection(); }
