@@ -4160,7 +4160,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const cotes = select('imp-cotes', [['tous', 'Les deux côtés'], ['recto', 'Recto seulement'], ['verso', 'Verso seulement']], 'tous');
     const blocLivret = document.createElement('div');
     blocLivret.className = 'imp-reglages';
-    blocLivret.append(field('Reliure', reliure), field('Côtés', cotes, 'Sans recto verso automatique : imprimez les rectos, remettez la pile, puis les versos.'));
+    blocLivret.append(
+      field('Reliure', reliure),
+      field('Côtés', cotes, 'Sans recto verso automatique : imprimez les rectos, remettez la pile, puis les versos.'),
+      note('Les feuilles sortent dans l\'ordre du pliage, pas dans celui des pages : la première porte la dernière page à côté de la première. C\'est normal — imprimées, empilées et pliées en deux, les pages se lisent dans l\'ordre.'),
+      note('Pour le recto verso automatique, choisissez dans votre imprimante « retourner sur les bords courts ». Avec les bords longs, les versos sortiraient à l\'envers.', 'warn'),
+    );
 
     const papier = select('imp-papier', [['doc', 'Comme le document'], ['a4', 'A4'], ['a3', 'A3'], ['letter', 'Letter'], ['legal', 'Legal']], 'doc');
     const echelle = select('imp-echelle', [['ajuster', 'Ajuster à la feuille'], ['reduire', 'Réduire si trop grand'], ['reelle', 'Taille réelle'], ['perso', 'Échelle personnalisée']], 'ajuster');
@@ -4177,13 +4182,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const attente = document.createElement('span'); attente.className = 'attente'; attente.textContent = 'Aperçu…';
     vue.appendChild(attente);
     const chiffres = document.createElement('div'); chiffres.className = 'chiffres';
+    const legende = document.createElement('div'); legende.className = 'chiffres';
     const nav = document.createElement('div'); nav.className = 'imp-nav';
     const prec = document.createElement('button'); prec.type = 'button'; prec.textContent = '‹'; prec.setAttribute('aria-label', 'Feuille précédente');
     const suiv = document.createElement('button'); suiv.type = 'button'; suiv.textContent = '›'; suiv.setAttribute('aria-label', 'Feuille suivante');
     const compte = document.createElement('span');
     nav.append(prec, compte, suiv);
     const bloc = document.createElement('div'); bloc.className = 'imp-apercu';
-    bloc.append(chiffres, vue, nav);
+    bloc.append(chiffres, vue, nav, legende);
 
     let feuille = 0, total = 0, jeton = 0, cacheCle = null, cacheOctets = null, minuteur = null;
     prec.addEventListener('click', () => { if (feuille > 0) { feuille--; dessiner(); } });
@@ -4238,6 +4244,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const mm = t => (t * 25.4 / 72).toFixed(0);
       chiffres.textContent = mm(v1.width) + ' × ' + mm(v1.height) + ' mm'
         + (o.echelle === 'perso' ? '  ·  ' + (o.pourcent || 100) + ' %' : '');
+      legende.textContent = o.disposition === 'livret' ? livretLegende(feuille, retenues().length, o) : '';
+    }
+
+    // Ce que porte la feuille affichée, en clair : « feuille 1, recto, page 8
+    // et page 1 ». Sans quoi l'aperçu a tout l'air d'un désordre.
+    function livretLegende(i, combien, opt) {
+      const N = Math.max(4, Math.ceil(combien / 4) * 4);
+      const j = opt.cotes === 'tous' ? i : opt.cotes === 'recto' ? 2 * i : 2 * i + 1;
+      const t = Math.floor(j / 2);
+      const verso = j % 2 === 1;
+      const paire = verso ? [2 * t + 1, N - 2 - 2 * t] : [N - 1 - 2 * t, 2 * t];
+      const [g, d] = opt.reliure === 'droite' ? [paire[1], paire[0]] : paire;
+      const nom = k => (k + 1 > combien ? 'blanche' : 'page ' + (k + 1));
+      return 'Feuille ' + (t + 1) + ', ' + (verso ? 'verso' : 'recto') + ' · ' + nom(g) + ' et ' + nom(d);
     }
     function majNav() {
       compte.textContent = total ? 'Feuille ' + (feuille + 1) + ' sur ' + total : '';
