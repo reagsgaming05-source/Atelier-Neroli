@@ -8,6 +8,11 @@
 // avec le chemin du fichier double-cliqué : ce document s'ouvre alors
 // directement, à la place de l'exemple.
 //
+// Le moteur d'affichage tourne avec son propre profil, à part de la
+// navigation habituelle : c'est ce qui permet de lui donner des réglages
+// (dont l'impression directe, sans fenêtre du navigateur) même quand Edge ou
+// Chrome est déjà ouvert par ailleurs.
+//
 // Aucun accès réseau : l'outil travaille uniquement en mémoire, sur les
 // documents que vous lui donnez.
 package main
@@ -246,7 +251,8 @@ func main() {
 	dossier := filepath.Dir(page)
 	menageOuvertures(dossier)
 
-	url := adresse(page)
+	// La page sait ainsi que « Imprimer » part directement à l'imprimante.
+	url := adresse(page) + "#impression=directe"
 	ouverture := ""
 	if len(demandes) > 0 {
 		o, err := deposerOuverture(dossier, demandes)
@@ -254,7 +260,7 @@ func main() {
 			alerte(nom, "Le document n'a pas pu être préparé :\n\n"+err.Error())
 		} else {
 			ouverture = filepath.Join(dossier, o)
-			url += "#ouvrir=" + o
+			url += "&ouvrir=" + o
 		}
 	}
 
@@ -267,6 +273,13 @@ func main() {
 		// réseau : rien n'écoute, donc le pare-feu n'a rien à signaler.
 		cmd := exec.Command(nav,
 			"--app="+url,
+			// Profil propre à l'application : ses réglages s'appliquent
+			// même si le navigateur est déjà ouvert, et rien ne se mêle à
+			// la navigation habituelle.
+			"--user-data-dir="+filepath.Join(dossier, "profil"),
+			// « Imprimer » part directement à l'imprimante par défaut de
+			// Windows, sans fenêtre d'aperçu du navigateur.
+			"--kiosk-printing",
 			"--window-size=1500,950",
 			"--no-first-run",
 			"--no-default-browser-check",

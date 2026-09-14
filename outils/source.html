@@ -195,7 +195,7 @@
   .tb-btn.on svg { color: currentColor; }
 
   .filename {
-    position: relative; display: flex; align-items: center; flex: none; height: 30px;
+    position: relative; display: flex; align-items: center; flex: 0 100 auto; min-width: 96px; height: 30px;
     background: var(--survol); border: 1px solid var(--trait);
     border-radius: var(--rond-petit); padding: 0 11px; margin-right: 5px;
     transition: border-color .14s var(--elan), background .14s var(--elan);
@@ -306,6 +306,7 @@
       radial-gradient(120% 70% at 50% -10%, rgba(255, 255, 255, .045), transparent 60%),
       var(--table);
   }
+  .lasso { position: absolute; z-index: 4; border: 1px solid var(--bleu); background: var(--bleu-ombre); border-radius: 3px; pointer-events: none; }
   .canvas.is-file-over::after {
     content: "Déposez pour ajouter ces fichiers";
     position: absolute; inset: 10px; display: grid; place-items: center; z-index: 5;
@@ -465,15 +466,15 @@
   .vue-mode:hover { color: var(--texte); }
   .vue-mode[aria-pressed="true"] { background: var(--relief); color: var(--texte); box-shadow: 0 1px 2px rgba(20, 25, 35, .12); }
 
-  .zoom-lecture { display: flex; align-items: center; gap: 3px; }
+  .zoom-lecture { display: flex; align-items: center; gap: 2px; flex: none; margin-left: 6px; }
   .zoom-lecture button {
-    width: 24px; height: 24px; border-radius: 6px; border: 1px solid transparent; background: transparent;
-    color: var(--texte-2); display: grid; place-items: center; font-size: 14px; line-height: 1;
+    width: 28px; height: 30px; border-radius: 7px; border: 1px solid transparent; background: transparent;
+    color: var(--texte-2); display: grid; place-items: center; font-size: 17px; line-height: 1;
   }
   .zoom-lecture button:hover { background: var(--survol); color: var(--texte); }
   .zoom-lecture select {
-    height: 24px; border-radius: 6px; border: 1px solid var(--trait); background: var(--encre);
-    color: var(--texte); font-family: var(--chiffre); font-size: 11.5px; padding: 0 3px;
+    height: 30px; border-radius: 7px; border: 1px solid var(--trait); background: var(--relief);
+    color: var(--texte); font-family: var(--chiffre); font-size: 12px; padding: 0 4px; min-width: 104px;
   }
   .page-courante { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
   .page-courante input {
@@ -566,7 +567,7 @@
 
   /* ---------- fenêtres ---------- */
   .scrim {
-    position: fixed; inset: 0; z-index: 70; background: var(--voile); display: grid; place-items: center; padding: 24px;
+    position: fixed; inset: 0; z-index: 85; background: var(--voile); display: grid; place-items: center; padding: 24px;
     backdrop-filter: blur(6px); animation: fondu .16s var(--elan);
   }
   @keyframes fondu { from { opacity: 0; } }
@@ -777,6 +778,9 @@
   .imp-nav button:disabled { opacity: .35; cursor: not-allowed; }
   @media (max-width: 720px) { .imp-grille { grid-template-columns: 1fr; } .imp-apercu { position: static; } }
 
+  .imp-destination { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 8px; background: var(--survol); font-size: 13px; }
+  .imp-destination b { font-weight: 500; }
+
   /* ---------- impression ---------- */
   .feuille-impression { display: none; }
   @media print {
@@ -793,13 +797,19 @@
   @media (max-width: 1460px) {
     .editor.en-saisie .ed-head .title { display: none; }
     .tb-btn .lbl { display: none; }
-    .tb-btn.primary .lbl, .pane-foot .lbl, .dz-actions .lbl { display: inline; }
+    .tb-btn.primary .lbl, #btn-print .lbl, .pane-foot .lbl, .dz-actions .lbl { display: inline; }
     .filename input { width: 138px; }
   }
   @media (max-width: 1080px) {
-    .vue-mode .lbl { display: none; }
+    .vue-mode .lbl, #btn-print .lbl { display: none; }
+    .zoom-lecture { margin-left: 0; }
+    .brand .name { display: none; }
     .vue-mode { padding: 0 8px; }
-    .filename input { width: 108px; }
+    .filename input { width: 100px; }
+  }
+  @media (max-width: 960px) {
+    .tb-btn.primary .lbl { display: none; }
+    .filename input { width: 84px; }
   }
   @media (max-width: 900px) {
     body { overflow: auto; height: auto; min-height: 100%; }
@@ -890,6 +900,22 @@
       <span class="lbl">Organiser</span>
     </button>
   </div>
+  <span class="zoom-lecture" id="zoom-lecture" hidden role="group" aria-label="Zoom">
+    <button type="button" id="zoom-moins" title="Réduire (Ctrl −)" aria-label="Réduire">−</button>
+    <select id="zoom-niveau" aria-label="Niveau de zoom" title="Zoom : Ctrl + molette, Ctrl + / Ctrl −, Ctrl 0 pour la page entière">
+      <option value="page">Page entière</option>
+      <option value="largeur">Largeur</option>
+      <option value="0.5">50 %</option>
+      <option value="0.75">75 %</option>
+      <option value="1">100 %</option>
+      <option value="1.25">125 %</option>
+      <option value="1.5">150 %</option>
+      <option value="2">200 %</option>
+      <option value="3">300 %</option>
+      <option value="4">400 %</option>
+    </select>
+    <button type="button" id="zoom-plus" title="Agrandir (Ctrl +)" aria-label="Agrandir">+</button>
+  </span>
   <span class="tb-sep"></span>
   <button class="tb-btn" id="btn-select-all" type="button" disabled title="Tout sélectionner (Ctrl+A)">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="m5.5 8 2 2 3.5-4"/></svg>
@@ -987,20 +1013,6 @@
     <label for="page-num" class="sr-only">Page affichée</label>
     <input type="text" id="page-num" inputmode="numeric" autocomplete="off" value="1">
     <span id="page-total">/ 1</span>
-  </span>
-  <span class="zoom-lecture" id="zoom-lecture" hidden>
-    <button type="button" id="zoom-moins" title="Réduire">−</button>
-    <select id="zoom-niveau" aria-label="Zoom">
-      <option value="largeur">Largeur</option>
-      <option value="page">Page entière</option>
-      <option value="0.5">50 %</option>
-      <option value="0.75">75 %</option>
-      <option value="1">100 %</option>
-      <option value="1.25">125 %</option>
-      <option value="1.5">150 %</option>
-      <option value="2">200 %</option>
-    </select>
-    <button type="button" id="zoom-plus" title="Agrandir">+</button>
   </span>
   <label class="zoom" id="zoom-tuiles">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="4" height="4" rx="1"/><rect x="9.5" y="2.5" width="4" height="4" rx="1"/><rect x="2.5" y="9.5" width="4" height="4" rx="1"/><rect x="9.5" y="9.5" width="4" height="4" rx="1"/></svg>
@@ -1137,7 +1149,7 @@
     security: null,
     flatten: false,
     // On ouvre sur le document ; la table de montage est le second mode.
-    vue: 'lecture', zoomLecture: 'largeur',
+    vue: 'lecture', zoomLecture: 'page', impressionDirecte: false,
   };
   const dims = new Map();       // "srcId:index" -> {w,h,baseRot}
   const thumbs = new Map();     // "srcId:index" -> {status, url}
@@ -3996,9 +4008,15 @@
       // Assez fin pour que le texte reste net sur le papier, sans faire
       // enfler la page au point de la bloquer sur un gros document.
       const ppp = doc.numPages > 12 ? 200 : 300;
+      // Chaque feuille annonce sa taille au moteur d'impression : sans fenêtre
+      // de réglage, c'est ce qui décide du papier et de l'orientation.
+      const formats = new Map();   // « largeur hauteur » en mm -> nom de page CSS
       for (let i = 1; i <= doc.numPages; i++) {
         setBusy('Préparation de l\'impression…', (i - 1) / doc.numPages);
         const pg = await doc.getPage(i);
+        const v1 = pg.getViewport({ scale: 1 });
+        const format = (v1.width * 25.4 / 72).toFixed(1) + 'mm ' + (v1.height * 25.4 / 72).toFixed(1) + 'mm';
+        if (!formats.has(format)) formats.set(format, 'feuille' + formats.size);
         const vp = pg.getViewport({ scale: ppp / 72 });
         const cv = document.createElement('canvas');
         cv.width = Math.max(1, Math.ceil(vp.width));
@@ -4009,11 +4027,17 @@
         pg.cleanup();
         const f = document.createElement('div');
         f.className = 'page-impression';
+        f.style.setProperty('page', formats.get(format));
         const img = document.createElement('img');
         img.alt = '';
         img.src = cv.toDataURL('image/jpeg', 0.92);
         f.appendChild(img);
         hote.appendChild(f);
+      }
+      {
+        const style = document.createElement('style');
+        style.textContent = Array.from(formats, ([taille, nom]) => '@page ' + nom + ' { size: ' + taille + '; margin: 0; }').join('\n');
+        hote.appendChild(style);
       }
     } catch (e) {
       console.error(e);
@@ -4098,8 +4122,22 @@
       field('Reliure', reliure),
       field('Côtés', cotes, 'Sans recto verso automatique : imprimez les rectos, remettez la pile, puis les versos.'),
       note('Les feuilles sortent dans l\'ordre du pliage, pas dans celui des pages : la première porte la dernière page à côté de la première. C\'est normal — imprimées, empilées et pliées en deux, les pages se lisent dans l\'ordre.'),
-      note('Pour le recto verso automatique, choisissez dans votre imprimante « retourner sur les bords courts ». Avec les bords longs, les versos sortiraient à l\'envers.', 'warn'),
+      note(state.impressionDirecte
+        ? 'Pour le recto verso automatique, l\'imprimante doit avoir « retourner sur les bords courts » dans ses réglages par défaut Windows (Paramètres › Imprimantes › Préférences d\'impression). Avec les bords longs, les versos sortiraient à l\'envers.'
+        : 'Pour le recto verso automatique, choisissez dans votre imprimante « retourner sur les bords courts ». Avec les bords longs, les versos sortiraient à l\'envers.', 'warn'),
     );
+
+    // Où part l'impression : l'application l'envoie directement à
+    // l'imprimante par défaut de Windows ; la version navigateur passe par
+    // la fenêtre du navigateur, qui demande l'imprimante.
+    const destination = document.createElement('div');
+    destination.className = 'imp-destination';
+    const destNom = document.createElement('b');
+    destNom.textContent = state.impressionDirecte ? 'Imprimante par défaut de Windows' : 'Choisie à l\'étape suivante';
+    destination.appendChild(destNom);
+    const champDestination = field('Imprimante', destination, state.impressionDirecte
+      ? 'Envoi direct, sans autre fenêtre. Recto verso, couleur et bac suivent les réglages par défaut de cette imprimante dans Windows.'
+      : 'Le navigateur vous demandera l\'imprimante et ses réglages.');
 
     const papier = select('imp-papier', [['doc', 'Comme le document'], ['a4', 'A4'], ['a3', 'A3'], ['letter', 'Letter'], ['legal', 'Legal']], 'doc');
     const echelle = select('imp-echelle', [['ajuster', 'Ajuster à la feuille'], ['reduire', 'Réduire si trop grand'], ['reelle', 'Taille réelle'], ['perso', 'Échelle personnalisée']], 'ajuster');
@@ -4269,6 +4307,7 @@
         const grille = document.createElement('div'); grille.className = 'imp-grille';
         const gauche = document.createElement('div'); gauche.className = 'imp-reglages';
         gauche.append(
+          champDestination,
           field('Pages à imprimer', seg), champPlage,
           field('Dimensionnement et gestion des pages', modes),
           blocNup, blocLivret,
@@ -5323,7 +5362,9 @@
     done.addEventListener('click', closeEditor);
     const bandeau = document.createElement('div'); bandeau.className = 'ed-bandeau';
     const spacer2 = document.createElement('span'); spacer2.className = 'tb-spacer';
-    head.append(title, nav, spacer, bandeau, spacer2, zoomSel, done);
+    const imprimer = edBtn(IC.print, 'Imprimer (Ctrl+P)', dialogImprimer);
+    imprimer.id = 'ed-print';
+    head.append(title, nav, spacer, bandeau, spacer2, imprimer, zoomSel, done);
 
     const body = document.createElement('div'); body.className = 'ed-body';
     const rail = document.createElement('div'); rail.className = 'ed-rail';
@@ -7064,6 +7105,8 @@
   // Editor keyboard + double-click to edit text
   document.addEventListener('keydown', e => {
     if (!ed.root || ed.root.hidden) return;
+    // Une fenêtre ouverte par-dessus (imprimer…) garde son clavier.
+    if (openDlg) return;
     // Pendant une saisie, Suppr efface le texte selectionne et Echap valide :
     // la zone de saisie garde la main sur son clavier.
     if (ed.saisie) return;
@@ -7080,6 +7123,7 @@
     } else if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); edGo(-1); }
     else if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); edGo(1); }
     else if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); edRenderPage(); }
+    else if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); dialogImprimer(); }
   }, true);
 
   // =====================================================================
@@ -7245,11 +7289,15 @@
   // fichier dans l'adresse : #ouvrir=ouverture-….js. Une page file:// n'a pas
   // le droit de lire un fichier voisin, mais elle peut le charger comme script.
   const OUVERTURE = /^ouverture-[a-f0-9]{24}\.js$/;
+  function optionLancement(nom) {
+    const m = new RegExp('(?:^#|&)' + nom + '=([^&]+)').exec(location.hash);
+    return m ? m[1] : null;
+  }
   function fichierDemande() {
-    const m = /(?:^#|&)ouvrir=([^&]+)/.exec(location.hash);
+    const m = optionLancement('ouvrir');
     if (!m) return null;
     let nom = '';
-    try { nom = decodeURIComponent(m[1]); } catch (_) { return null; }
+    try { nom = decodeURIComponent(m); } catch (_) { return null; }
     // Seul un nom de cette forme est accepté : jamais un chemin, jamais une adresse.
     return OUVERTURE.test(nom) ? nom : null;
   }
@@ -7357,7 +7405,7 @@
     // --- lecture ou table de montage
     try { const v = localStorage.getItem('blonay-vue'); if (v === 'organiser' || v === 'lecture') state.vue = v; } catch (_) {}
     $$('.vue-mode').forEach(b => b.addEventListener('click', () => changerVue(b.dataset.vue)));
-    const NIVEAUX = ['largeur', 'page', '0.5', '0.75', '1', '1.25', '1.5', '2'];
+    const NIVEAUX = ['page', 'largeur', '0.5', '0.75', '1', '1.25', '1.5', '2', '3', '4'];
     const poserZoom = v => {
       state.zoomLecture = v;
       el.zoomNiveau.value = v;
@@ -7380,6 +7428,17 @@
     };
     el.zoomMoins.addEventListener('click', () => pas(-1));
     el.zoomPlus.addEventListener('click', () => pas(1));
+    // Ctrl + molette zoome le document, pas la page entière du navigateur.
+    // Un pavé tactile en envoie une rafale : un pas tous les 120 ms suffit.
+    let molette = 0;
+    el.canvas.addEventListener('wheel', e => {
+      if (!(e.ctrlKey || e.metaKey) || state.vue !== 'lecture' || !state.pages.length) return;
+      e.preventDefault();
+      const t = Date.now();
+      if (t - molette < 120) return;
+      molette = t;
+      pas(e.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
     el.canvas.addEventListener('scroll', () => { if (state.vue === 'lecture') majPageCourante(); }, { passive: true });
     const allerPage = () => { lectureAller(el.pageNum.value); el.pageNum.blur(); };
     el.pageNum.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); allerPage(); } });
@@ -7529,6 +7588,62 @@
     document.addEventListener('dragover', e => { if (isFileDrag(e)) e.preventDefault(); });
     document.addEventListener('drop', e => { if (isFileDrag(e)) { e.preventDefault(); if (!el.canvas.contains(e.target)) addFiles(e.dataTransfer.files); } });
 
+    // --- sélection au lasso : comme sur le bureau, on trace un rectangle sur
+    // le vide de la table et les pages qu'il touche sont prises. Avec Ctrl ou
+    // Maj, le tracé s'ajoute à la sélection en cours ; un simple clic sur le
+    // vide la défait.
+    const lasso = { actif: false, trace: false, x0: 0, y0: 0, el: null, base: null, ajoute: false };
+    const lassoPos = e => {
+      const r = el.canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left + el.canvas.scrollLeft, y: e.clientY - r.top + el.canvas.scrollTop };
+    };
+    el.canvas.addEventListener('mousedown', e => {
+      if (e.button !== 0 || state.vue !== 'organiser' || !state.pages.length) return;
+      if (e.target.closest('.tile, .chip, button, input, select, textarea, a, label')) return;
+      const p = lassoPos(e);
+      Object.assign(lasso, { actif: true, trace: false, x0: p.x, y0: p.y, base: new Set(state.selected), ajoute: e.ctrlKey || e.metaKey || e.shiftKey });
+      e.preventDefault(); // pas de sélection de texte pendant le tracé
+    });
+    document.addEventListener('mousemove', e => {
+      if (!lasso.actif) return;
+      const p = lassoPos(e);
+      if (!lasso.trace) {
+        if (Math.abs(p.x - lasso.x0) < 4 && Math.abs(p.y - lasso.y0) < 4) return;
+        lasso.trace = true;
+        lasso.el = document.createElement('div'); lasso.el.className = 'lasso';
+        el.canvas.appendChild(lasso.el);
+      }
+      // Près du bord, la table défile toute seule.
+      const r = el.canvas.getBoundingClientRect();
+      if (e.clientY > r.bottom - 28) el.canvas.scrollTop += 14; else if (e.clientY < r.top + 28) el.canvas.scrollTop -= 14;
+      const q = lassoPos(e);
+      const x = Math.min(q.x, lasso.x0), y = Math.min(q.y, lasso.y0), w = Math.abs(q.x - lasso.x0), h = Math.abs(q.y - lasso.y0);
+      Object.assign(lasso.el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+      const voulu = new Set(lasso.ajoute ? lasso.base : []);
+      state.pages.forEach(pg => {
+        const t = tiles.get(pg.id);
+        if (!t) return;
+        const b = (t.querySelector('.thumb') || t).getBoundingClientRect();
+        const bx = b.left - r.left + el.canvas.scrollLeft, by = b.top - r.top + el.canvas.scrollTop;
+        if (bx < x + w && bx + b.width > x && by < y + h && by + b.height > y) {
+          if (lasso.ajoute && lasso.base.has(pg.id)) voulu.delete(pg.id); else voulu.add(pg.id);
+        }
+      });
+      if (voulu.size !== state.selected.size || Array.from(voulu).some(i => !state.selected.has(i))) {
+        state.selected.clear();
+        voulu.forEach(i => state.selected.add(i));
+        updateSelectionUI();
+      }
+    });
+    const finLasso = e => {
+      if (!lasso.actif) return;
+      lasso.actif = false;
+      if (lasso.el) { lasso.el.remove(); lasso.el = null; }
+      else if (e && e.type === 'mouseup' && !lasso.ajoute && state.selected.size) clearSelection();
+    };
+    document.addEventListener('mouseup', finLasso);
+    window.addEventListener('blur', finLasso);
+
     // --- global keys
     document.addEventListener('keydown', e => {
       if (ed.root && !ed.root.hidden) return;
@@ -7544,6 +7659,9 @@
       else if (mod && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); if (state.pages.length && !state.busy) dialogImprimer(); }
       else if (mod && e.key === '1') { e.preventDefault(); changerVue('lecture'); }
       else if (mod && e.key === '2') { e.preventDefault(); changerVue('organiser'); }
+      else if (mod && state.vue === 'lecture' && (e.key === '+' || e.key === '=')) { e.preventDefault(); pas(1); }
+      else if (mod && state.vue === 'lecture' && e.key === '-') { e.preventDefault(); pas(-1); }
+      else if (mod && state.vue === 'lecture' && e.key === '0') { e.preventDefault(); poserZoom('page'); }
       else if (mod && (e.key === 'f' || e.key === 'F')) { if (state.pages.length) { e.preventDefault(); toolSearch(); } }
       else if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); toolHelp(); }
       else if (e.key === 'Escape') { clearSelection(); }
@@ -7557,6 +7675,9 @@
 
     renderTools();
     render();
+    // Lancée par l'exécutable, la page imprime directement : le moteur
+    // d'affichage n'ouvre pas sa propre fenêtre d'impression.
+    state.impressionDirecte = optionLancement('impression') === 'directe';
     // Un document demandé au lancement prend la place de l'exemple. Demandé
     // plus tard, sur une page déjà ouverte, il s'ajoute comme par le bouton Ouvrir.
     ouvrirAuLancement().then(demande => { if (!demande) loadSample(); });

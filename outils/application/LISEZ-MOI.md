@@ -39,13 +39,31 @@ document reçu ouvre toujours sa propre fenêtre, même si une fenêtre de
 l'application est déjà ouverte ; sans document, un second lancement ramène la
 fenêtre existante.
 
+### Impression directe
+
+Le moteur d'affichage est lancé avec `--kiosk-printing` : `window.print()`
+part directement à l'imprimante par défaut de Windows, sans fenêtre d'aperçu
+du navigateur. Comme le navigateur ne pose plus de question, c'est la page
+qui annonce la taille de chaque feuille (`@page … { size }` nommée par
+feuille dans `imprimerEnImages`) : c'est ce qui décide du papier et de
+l'orientation, y compris pour un livret à l'italienne. Le lanceur le signale
+à la page par `#impression=directe`, et le dialogue d'impression adapte ses
+textes (imprimante par défaut, recto verso à régler dans Windows).
+
+Ces réglages ne s'appliquent qu'au démarrage d'un processus : si Edge ou
+Chrome tournait déjà avec son profil habituel, il les ignorerait. Le moteur
+tourne donc avec son propre profil, `profil/` dans le dossier de
+l'application (`--user-data-dir`), ce qui les rend fiables et tient l'outil à
+l'écart de la navigation habituelle.
+
 ### Pare-feu
 
 Le moteur d'affichage est démarré avec ses fonctions de découverte réseau
-désactivées, et sans profil séparé. C'est ce qui évite la fenêtre du pare-feu
-Windows : un profil neuf fait démarrer la découverte de périphériques locaux,
-qui ouvre un port d'écoute et déclenche la demande d'autorisation. Sans elle,
-rien n'écoute, le pare-feu n'a rien à signaler.
+désactivées (`--media-router=0`, `--disable-features=MediaRouter,…`). Un
+profil neuf ferait sinon démarrer la découverte de périphériques locaux, qui
+ouvre un port d'écoute et déclenche la demande d'autorisation du pare-feu
+Windows. Avec un profil propre, ces réglages sont justement ceux du processus
+lancé : rien n'écoute, le pare-feu n'a rien à signaler.
 
 ### Avertissement de Windows
 
