@@ -197,6 +197,9 @@ le fichier HTML (Tesseract, logiciel libre, exécuté en WebAssembly dans le nav
 
 Mesuré sur 102 pièces réelles : la seconde lecture confirme 413 champs sur 510, ne contredit
 aucun champ correct, et retrouve seule 102 n°, 102 dates, 102 comptes et 101 totaux sur 102.
+Avec le troisième lecteur (version portable) : 418 champs confirmés, 4 corrections d'office,
+0 divergence à trancher ; et sans aucune couche texte (PDF image), les lecteurs OCR seuls
+retrouvent 99 montants, 99 dates et 99 comptes sur 102 (contre 83 montants avec un seul OCR).
 Le libellé reste le champ où la couche texte et l'OCR se complètent le mieux (« chœur », « 7-11S »
 et les dates sont mieux lus par l'OCR ; les mentions manuscrites ne sont lues par aucun des deux
 et sont signalées en orange).
