@@ -60,9 +60,22 @@ function fabriquerPdf(n) {
   const texte = octets.toString('latin1');
   const pages = (texte.match(/\/Type\s*\/Page[^s]/g) || []).length;
   console.log('export :', sortie, octets.length, 'octets,', pages, 'page(s) |', dernier);
-  const ok = title === 'Blonay PDF' && JSON.stringify(menu) === JSON.stringify(['Fichier', 'Affichage', 'Aide'])
+  let ok = title === 'Blonay PDF' && JSON.stringify(menu) === JSON.stringify(['Fichier', 'Affichage', 'Aide'])
     && info.bureau && info.docs.length === 1 && /essai\.pdf/.test(info.docs[0]) && !info.exemple && info.imprimantes
     && octets.slice(0, 5).toString() === '%PDF-' && pages === 3 && /Enregistré/.test(dernier);
+  // un second double-clic (seconde instance) ouvre SA fenêtre, sans toucher à la première
+  const pdf2 = path.join(dossier, 'autre.pdf');
+  fs.writeFileSync(pdf2, fabriquerPdf(2));
+  const { spawn } = require('child_process');
+  const seconde = exe ? spawn(exe, [pdf2], { env, stdio: 'ignore' }) : spawn(require('electron'), [path.join(__dirname), pdf2, '--no-sandbox'], { env, stdio: 'ignore' });
+  seconde.on('error', () => {});
+  const win2 = await app.waitForEvent('window', { timeout: 60000 });
+  await win2.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });
+  await win2.waitForFunction(() => document.querySelectorAll('#pages .tile').length === 2, null, { timeout: 60000 });
+  const docs2 = await win2.evaluate(() => Array.from(document.querySelectorAll('#doc-list .doc-name')).map((e) => e.textContent));
+  const docs1 = await win.evaluate(() => Array.from(document.querySelectorAll('#doc-list .doc-name')).map((e) => e.textContent));
+  console.log('seconde fenêtre :', JSON.stringify(docs2), '| première inchangée :', JSON.stringify(docs1), '| fenêtres :', app.windows().length);
+  ok = ok && app.windows().length === 2 && docs2.length === 1 && /autre\.pdf/.test(docs2[0]) && docs1.length === 1 && /essai\.pdf/.test(docs1[0]);
   await app.close();
   fs.rmSync(dossier, { recursive: true, force: true });
   console.log(ok ? 'SMOKE OK' : 'SMOKE ÉCHEC');

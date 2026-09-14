@@ -109,13 +109,19 @@ Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le r
 mémorisés (vue, zoom, thème, taille des vignettes) vont dans le sous-dossier `data/` à côté de
 l'exécutable.
 
-La fenêtre a son menu — *Fichier* (Ouvrir, Exporter le PDF, Imprimer, dossier des données),
-*Affichage* (Lire, Organiser, zoom, thème, plein écran), *Aide* (raccourcis, à propos).
-« Exporter » ouvre la boîte « Enregistrer sous » de Windows. « Imprimer » connaît vos
-imprimantes et envoie directement — imprimante choisie, recto verso, copies, livret,
-plusieurs pages par feuille — sans autre fenêtre. Un double-clic sur un PDF (l'application
-étant le programme par défaut) l'ouvre dans la fenêtre. Fermer avec des modifications non
-exportées demande d'abord confirmation.
+La fenêtre a son menu — *Fichier* (Ouvrir, Ajouter au document, Nouvelle fenêtre,
+Enregistrer le PDF, Imprimer, dossier des données), *Affichage* (Lire, Organiser, zoom, thème,
+plein écran), *Aide* (raccourcis, à propos). « Enregistrer le PDF » ouvre la boîte
+« Enregistrer sous » de Windows. « Imprimer » connaît vos imprimantes et envoie directement —
+imprimante choisie, recto verso, copies, livret, plusieurs pages par feuille, échelle
+(ajuster, taille réelle, réduire les pages hors format, pourcentage), source de papier selon
+le format de la page — sans autre fenêtre ; « Propriétés… » passe par la fenêtre d'impression
+de Windows et les réglages du pilote.
+
+Chaque PDF double-cliqué s'ouvre dans **sa propre fenêtre**, comme dans Acrobat : deux
+documents ouverts depuis le bureau restent deux documents. Les combiner est un choix :
+*Fichier › Ajouter au document…*, ou le bouton « Ajouter un document » dans la fenêtre.
+Fermer avec des modifications non enregistrées demande d'abord confirmation.
 
 Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.

@@ -1,12 +1,16 @@
 /*
  * Blonay PDF – application fenêtrée (Electron).
  *
- * La fenêtre charge la page autonome (app/index.html, produite par `npm run build`
+ * Chaque fenêtre charge la page autonome (app/index.html, produite par `npm run build`
  * dans le dossier parent). Rien n'est installé, rien n'est écrit dans le registre :
  * les réglages mémorisés (vue, zoom, thème, taille des vignettes) vont dans le
  * sous-dossier `data/` à côté de l'exécutable, comme pour Décompte DGEO et Caisse
  * écoles. Aucune connexion réseau n'est ouverte par l'application : les documents
- * sont lus, modifiés et réassemblés dans cette fenêtre.
+ * sont lus, modifiés et réassemblés dans la fenêtre.
+ *
+ * Un document double-cliqué ouvre sa propre fenêtre, comme dans Acrobat : deux
+ * PDF ouverts depuis le bureau sont deux documents indépendants. Les combiner est
+ * un choix explicite (« Ajouter au document… », ou le bouton Ouvrir dans la page).
  */
 const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain } = require('electron');
 const path = require('path');
@@ -46,21 +50,22 @@ function lire(chemins) {
   return out;
 }
 
-let mainWindow = null;
-let fichiersInitiaux = fichiersDe(process.argv);
+const fenetres = new Set();
+const fenetreActive = () => BrowserWindow.getFocusedWindow() || Array.from(fenetres).pop() || null;
+const fenetreDe = (sender) => BrowserWindow.fromWebContents(sender);
 
-// Une seule instance : un second double-clic sur un PDF l'ouvre dans la fenêtre existante.
+// Une seule instance : un nouveau double-clic sur un PDF ouvre une nouvelle fenêtre
+// dans l'application déjà lancée — un document à part, jamais ajouté au précédent.
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', (_e, argv) => {
-  if (!mainWindow) return;
-  if (mainWindow.isMinimized()) mainWindow.restore();
-  mainWindow.focus();
   const liste = lire(fichiersDe(argv));
-  if (liste.length) mainWindow.webContents.send('blonay:ouvrir', liste);
+  if (liste.length) { createWindow(liste); return; }
+  const w = fenetreActive();
+  if (w) { if (w.isMinimized()) w.restore(); w.focus(); }
 });
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
+function createWindow(fichiers) {
+  const win = new BrowserWindow({
     width: 1500,
     height: 950,
     minWidth: 880,
@@ -78,25 +83,27 @@ function createWindow() {
       additionalArguments: ['--blonay-version=' + app.getVersion()],
     },
   });
-  mainWindow.once('ready-to-show', () => mainWindow.show());
-  mainWindow.on('page-title-updated', (ev) => ev.preventDefault());
-  mainWindow.loadFile(path.join(__dirname, 'app', 'index.html'));
+  win.blonayFichiers = fichiers || [];
+  fenetres.add(win);
+  win.once('ready-to-show', () => win.show());
+  win.on('page-title-updated', (ev) => ev.preventDefault());
+  win.loadFile(path.join(__dirname, 'app', 'index.html'));
 
   // Rien ne s'ouvre en dehors de la fenêtre, et la page ne navigue jamais ailleurs.
-  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  mainWindow.webContents.on('will-navigate', (ev) => ev.preventDefault());
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (ev) => ev.preventDefault());
 
   // Fermeture : la question de l'application, pas celle d'un navigateur.
   let quitter = false;
-  mainWindow.webContents.on('will-prevent-unload', (ev) => ev.preventDefault());
-  mainWindow.on('close', (ev) => {
+  win.webContents.on('will-prevent-unload', (ev) => ev.preventDefault());
+  win.on('close', (ev) => {
     if (quitter) return;
     ev.preventDefault();
     (async () => {
       let modifie = false;
-      try { modifie = await mainWindow.webContents.executeJavaScript("!!document.querySelector('#summary .mod')", true); } catch (e) { /* page absente */ }
-      if (!modifie) { quitter = true; mainWindow.close(); return; }
-      const { response } = await dialog.showMessageBox(mainWindow, {
+      try { modifie = await win.webContents.executeJavaScript("!!document.querySelector('#summary .mod')", true); } catch (e) { /* page absente */ }
+      if (!modifie) { quitter = true; win.close(); return; }
+      const { response } = await dialog.showMessageBox(win, {
         type: 'warning',
         buttons: ['Revenir au document', 'Quitter sans exporter'],
         defaultId: 0,
@@ -106,16 +113,17 @@ function createWindow() {
         detail: 'En quittant maintenant, vous les perdez.',
         noLink: true,
       });
-      if (response === 1) { quitter = true; mainWindow.close(); }
+      if (response === 1) { quitter = true; win.close(); }
     })();
   });
-  mainWindow.on('closed', () => { mainWindow = null; });
+  win.on('closed', () => { fenetres.delete(win); });
+  return win;
 }
 
 // Enregistrer : toujours la boîte « Enregistrer sous » de Windows, jamais en silence
 // dans « Téléchargements ». (En test de fumée, BLONAY_SMOKE_DIR fixe le dossier.)
 function setupDownloads() {
-  session.defaultSession.on('will-download', (_ev, item) => {
+  session.defaultSession.on('will-download', (_ev, item, contents) => {
     const nom = item.getFilename();
     const ext = path.extname(nom).toLowerCase().replace('.', '');
     const filtres = { pdf: 'Document PDF', zip: 'Archive ZIP', png: 'Image PNG', jpg: 'Image JPEG', txt: 'Texte' };
@@ -126,8 +134,8 @@ function setupDownloads() {
       filters: [...(filtres[ext] ? [{ name: filtres[ext], extensions: [ext] }] : []), { name: 'Tous les fichiers', extensions: ['*'] }],
     });
     item.once('done', (_e, etat) => {
-      if (!mainWindow) return;
-      mainWindow.webContents.send('blonay:enregistre', etat === 'completed' ? { chemin: item.getSavePath() } : { annule: true });
+      if (!contents || contents.isDestroyed()) return;
+      contents.send('blonay:enregistre', etat === 'completed' ? { chemin: item.getSavePath() } : { annule: true });
     });
   });
 }
@@ -142,17 +150,22 @@ function setupNetwork() {
 }
 
 function setupIpc() {
-  ipcMain.handle('blonay:fichiers-initiaux', () => { const l = lire(fichiersInitiaux); fichiersInitiaux = []; return l; });
-  ipcMain.handle('blonay:imprimantes', async () => {
-    if (!mainWindow) return [];
-    const liste = await mainWindow.webContents.getPrintersAsync();
+  // Les documents de cette fenêtre-là, remis une fois.
+  ipcMain.handle('blonay:fichiers-initiaux', (e) => {
+    const w = fenetreDe(e.sender);
+    const l = (w && w.blonayFichiers) || [];
+    if (w) w.blonayFichiers = [];
+    return l;
+  });
+  ipcMain.handle('blonay:imprimantes', async (e) => {
+    const liste = await e.sender.getPrintersAsync();
     return liste.map((p) => ({ name: p.name, displayName: p.displayName || p.name, isDefault: !!p.isDefault }));
   });
-  // Impression directe : l'imprimante choisie, le recto verso, les copies, la taille de feuille.
-  ipcMain.handle('blonay:imprimer', (_e, o) => new Promise((resolve) => {
-    if (!mainWindow) { resolve({ ok: false, erreur: 'fenêtre fermée' }); return; }
+  // Impression directe (imprimante choisie, recto verso, copies, taille de feuille) —
+  // ou, avec « dialogue », la fenêtre d'impression de Windows et ses Propriétés.
+  ipcMain.handle('blonay:imprimer', (e, o) => new Promise((resolve) => {
     const opts = {
-      silent: true, printBackground: true, color: true,
+      silent: !(o && o.dialogue), printBackground: true, color: true,
       copies: Math.max(1, Math.min(99, parseInt(o && o.copies, 10) || 1)),
       landscape: !!(o && o.paysage),
       duplexMode: ['simplex', 'shortEdge', 'longEdge'].includes(o && o.duplex) ? o.duplex : 'simplex',
@@ -161,23 +174,42 @@ function setupIpc() {
     if (o && o.imprimante) opts.deviceName = o.imprimante;
     if (o && o.largeurMicrons > 0 && o.hauteurMicrons > 0) opts.pageSize = { width: o.largeurMicrons, height: o.hauteurMicrons };
     try {
-      mainWindow.webContents.print(opts, (ok, erreur) => resolve({ ok: !!ok, erreur: ok ? '' : String(erreur || '') }));
-    } catch (e) { resolve({ ok: false, erreur: e && e.message ? e.message : String(e) }); }
+      e.sender.print(opts, (ok, erreur) => resolve({ ok: !!ok, erreur: ok ? '' : String(erreur || '') }));
+    } catch (err) { resolve({ ok: false, erreur: err && err.message ? err.message : String(err) }); }
   }));
 }
 
-const envoyer = (nom) => { if (mainWindow) mainWindow.webContents.send('blonay:commande', nom); };
+const envoyer = (nom) => { const w = fenetreActive(); if (w) w.webContents.send('blonay:commande', nom); };
 
-async function ouvrirDocuments() {
-  if (!mainWindow) return;
-  const r = await dialog.showOpenDialog(mainWindow, {
+async function choisirDocuments(win) {
+  const r = await dialog.showOpenDialog(win, {
     title: 'Ouvrir',
     properties: ['openFile', 'multiSelections'],
     filters: [{ name: 'PDF et images', extensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp'] }, { name: 'Tous les fichiers', extensions: ['*'] }],
   });
-  if (r.canceled || !r.filePaths.length) return;
-  const liste = lire(r.filePaths);
-  if (liste.length) mainWindow.webContents.send('blonay:ouvrir', liste);
+  return r.canceled ? [] : lire(r.filePaths);
+}
+
+// Ouvrir… : un document à part. Si la fenêtre courante en a déjà un, une
+// nouvelle fenêtre ; sinon, celle-ci.
+async function ouvrirDocuments() {
+  const win = fenetreActive();
+  const liste = await choisirDocuments(win);
+  if (!liste.length) return;
+  let occupee = false;
+  if (win) {
+    try { occupee = await win.webContents.executeJavaScript("document.querySelectorAll('#pages .tile').length > 0 && !document.querySelector('#doc-list .badge')", true); } catch (e) { /* page absente */ }
+  }
+  if (win && !occupee) win.webContents.send('blonay:ouvrir', liste);
+  else createWindow(liste);
+}
+
+// Ajouter au document… : les combiner, dans la fenêtre courante.
+async function ajouterDocuments() {
+  const win = fenetreActive();
+  if (!win) return;
+  const liste = await choisirDocuments(win);
+  if (liste.length) win.webContents.send('blonay:ouvrir', liste);
 }
 
 function buildMenu() {
@@ -186,11 +218,15 @@ function buildMenu() {
       label: 'Fichier',
       submenu: [
         { label: 'Ouvrir…', accelerator: 'CmdOrCtrl+O', click: ouvrirDocuments },
-        { label: 'Exporter le PDF…', accelerator: 'CmdOrCtrl+S', click: () => envoyer('exporter') },
+        { label: 'Ajouter au document…', accelerator: 'CmdOrCtrl+Shift+O', click: ajouterDocuments },
+        { label: 'Nouvelle fenêtre', accelerator: 'CmdOrCtrl+N', click: () => createWindow([]) },
+        { type: 'separator' },
+        { label: 'Enregistrer le PDF…', accelerator: 'CmdOrCtrl+S', click: () => envoyer('exporter') },
         { label: 'Imprimer…', accelerator: 'CmdOrCtrl+P', click: () => envoyer('imprimer') },
         { type: 'separator' },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
         { type: 'separator' },
+        { label: 'Fermer la fenêtre', accelerator: 'CmdOrCtrl+W', role: 'close' },
         { label: 'Quitter', accelerator: 'Alt+F4', role: 'quit' },
       ],
     },
@@ -215,7 +251,7 @@ function buildMenu() {
         { type: 'separator' },
         {
           label: 'À propos de ' + APP_TITLE,
-          click: () => dialog.showMessageBox(mainWindow, {
+          click: () => dialog.showMessageBox(fenetreActive(), {
             type: 'info',
             title: 'À propos de ' + APP_TITLE,
             message: APP_TITLE + ' ' + app.getVersion(),
@@ -237,7 +273,7 @@ app.whenReady().then(() => {
   setupDownloads();
   setupIpc();
   buildMenu();
-  createWindow();
+  createWindow(lire(fichiersDe(process.argv)));
 });
 
 app.on('window-all-closed', () => app.quit());

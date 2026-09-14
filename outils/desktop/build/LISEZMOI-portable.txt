@@ -13,10 +13,13 @@ sous-dossier « data » à côté de l'exécutable.
 
 Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un PDF, « Ouvrir avec »,
 « Choisir une autre application », puis désignez BlonayPDF.exe et cochez « Toujours ».
+Chaque PDF double-cliqué s'ouvre dans sa propre fenêtre ; pour combiner plusieurs
+documents, Fichier › Ajouter au document… ou le bouton « Ajouter un document ».
 
 Imprimer (Fichier › Imprimer) : l'application connaît vos imprimantes et envoie
 directement — imprimante choisie, recto verso, copies, livret, plusieurs pages par
-feuille — sans autre fenêtre.
+feuille, échelle — sans autre fenêtre. « Propriétés… » ouvre la fenêtre d'impression de
+Windows, avec les réglages du pilote (bac, qualité, options).
 
 Premier lancement : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (l'exécutable n'est pas signé). Cliquez sur « Informations complémentaires » puis
