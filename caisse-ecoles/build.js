@@ -61,7 +61,9 @@ function inline(marker, code) {
 // personnes (fichier non versionné, voir tools/build-vocab.js).
 // CAISSE_SANS_NOMS=1 force une version sans les noms de personnes : c'est celle qui est
 // versionnée dans dist/ (le dépôt est public). Voir README, « Base de référence intégrée ».
-const hasNames = !process.env.CAISSE_SANS_NOMS && fs.existsSync(src('vocabulaire-noms.js'));
+// (option de ligne de commande --sans-noms ou variable CAISSE_SANS_NOMS=1)
+const sansNoms = process.argv.includes('--sans-noms') || !!process.env.CAISSE_SANS_NOMS;
+const hasNames = !sansNoms && fs.existsSync(src('vocabulaire-noms.js'));
 const vocabCode = scriptTag(read(src('vocabulaire.js'))) +
   (hasNames ? '\n' + scriptTag(read(src('vocabulaire-noms.js'))) : '');
 

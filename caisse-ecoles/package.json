@@ -7,7 +7,7 @@
     "build": "node build.js",
     "test": "node --test \"test/*.test.js\"",
     "vocab": "node tools/build-vocab.js",
-    "build:public": "CAISSE_SANS_NOMS=1 node build.js"
+    "build:public": "node build.js --sans-noms"
   },
   "dependencies": {
     "@tesseract.js-data/fra": "^1.0.0",
