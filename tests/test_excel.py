@@ -61,5 +61,15 @@ def test_camp_template_and_date_range():
     assert ws["B12"].value == "Hébergement" and ws["J13"].value == "=MROUND(SUM(J12:J12),0.05)"
 
 
+def test_signature_date_from_dossier():
+    d = make("course", [DecompteRow(rubrique="Transport", libelle="pce 1", mode="direct", cout_direct=5.5)])
+    d.date_decompte = "16.12.2025"
+    ws = load(build_workbook(d, today=dt.date(2026, 1, 1)))
+    assert ws["I16"].value == dt.datetime(2025, 12, 16)
+    d.date_decompte = "pas une date"
+    ws = load(build_workbook(d, today=dt.date(2026, 1, 1)))
+    assert ws["I16"].value == dt.datetime(2026, 1, 1)
+
+
 def test_output_filename():
     assert output_filename(make("course", [])) == "ANS100325.xlsx"

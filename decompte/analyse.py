@@ -1,6 +1,7 @@
 """Pipeline complet : PDF → pages → formulaire + pièces → propositions → lignes."""
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import re
 import unicodedata
@@ -96,6 +97,7 @@ def analyse_pdf(
         pieces=pieces,
         warnings=warnings,
         ocr_engine=engine,
+        date_decompte=dt.date.today().strftime("%d.%m.%Y"),
         **form,
     )
     if not pieces:

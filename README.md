@@ -61,6 +61,8 @@ Mode serveur local (interface dans le navigateur, optionnel) : `./run.sh --web -
 2. **Dossier & effectifs** : les champs lus sur le formulaire sont pré-remplis (classe,
    enseignant-e, activité, dates, nombre d'élèves, enseignants DGEO…). Les champs
    manuscrits sont souvent illisibles : **c'est vous qui fixez les effectifs**.
+   La **date du décompte** (écrite en bas du fichier Excel, à côté de « Date : ») est
+   pré-remplie à la date du jour et se choisit avec le calendrier.
    - *Acc. titrés* (part État, colonne F) = enseignants DGEO + enseignants J&S.
    - *Acc. non titrés* (colonne D) = moniteurs J+S + autres accompagnants.
 3. **Pièces** : chaque pièce détectée s'affiche avec son aperçu (cliquez pour voir la page

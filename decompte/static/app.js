@@ -84,6 +84,7 @@
       field("Nom de l'activité", "activite"),
       field("Date début (jj.mm.aaaa)", "date_debut"),
       field("Date fin (jj.mm.aaaa)", "date_fin"),
+      field("Date du décompte (bas de l'Excel)", "date_decompte", { placeholder: "jj.mm.aaaa" }),
       field("Budget accordé (info)", "budget", { type: "number" }),
     );
     const e = $("#effectifs"); e.innerHTML = "";

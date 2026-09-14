@@ -183,6 +183,7 @@ class Dossier(BaseModel):
     telephone: str = ""
     date_debut: Optional[str] = None  # jj.mm.aaaa
     date_fin: Optional[str] = None
+    date_decompte: Optional[str] = None  # date de signature écrite en bas de l'Excel (défaut : aujourd'hui)
     budget: Optional[float] = None
     effectifs: Effectifs = Field(default_factory=Effectifs)
     noms_enseignants: list[str] = Field(default_factory=list)

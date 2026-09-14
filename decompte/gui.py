@@ -6,9 +6,12 @@ fil d'arrière-plan avec une barre de progression.
 """
 from __future__ import annotations
 
+import calendar
+import datetime as dt
 import logging
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -48,6 +51,7 @@ NON_REMB = {"recepisse": "Récépissé (bulletin de versement) : pas une pièce 
             "recu_carte": "Reçu de paiement par carte : seul le ticket fait foi",
             "taux_change": "Pièce « taux de change » : sert uniquement à la conversion"}
 
+DATE_FIELDS = ("date_debut", "date_fin", "date_decompte")
 THUMB = (230, 170)
 ACCENT = "#1f6f8b"
 MUTED = "#5d6b7a"
@@ -80,6 +84,19 @@ def parse_int(s: str, default: int = 0) -> int:
         return max(0, int(float(s.strip() or default)))
     except ValueError:
         return default
+
+
+def parse_date_str(s: str) -> Optional[dt.date]:
+    m = re.match(r"\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s*$", s or "")
+    if not m:
+        return None
+    d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    if y < 100:
+        y += 2000
+    try:
+        return dt.date(y, mo, d)
+    except ValueError:
+        return None
 
 
 def open_file(path: str) -> None:
@@ -233,13 +250,19 @@ class App(tk.Tk):
         specs = [
             ("numero", "N° de dossier (course / camp n°)"), ("classe", "Classe(s)"), ("enseignant", "Enseignant-e responsable"),
             ("activite", "Nom de l'activité"), ("date_debut", "Date début (jj.mm.aaaa)"), ("date_fin", "Date fin (jj.mm.aaaa)"),
-            ("budget", "Budget accordé (information)"),
+            ("date_decompte", "Date du décompte (signature, en bas de l'Excel)"), ("budget", "Budget accordé (information)"),
         ]
         r, c = 1, 0
         for key, label in specs:
             ttk.Label(t, text=label, style="Muted.TLabel").grid(row=r, column=c, sticky="w", padx=(0, 12))
             var = tk.StringVar()
-            ttk.Entry(t, textvariable=var, width=32).grid(row=r + 1, column=c, sticky="we", padx=(0, 12), pady=(0, 8))
+            if key in DATE_FIELDS:
+                cell = ttk.Frame(t)
+                cell.grid(row=r + 1, column=c, sticky="we", padx=(0, 12), pady=(0, 8))
+                ttk.Entry(cell, textvariable=var, width=14).pack(side="left", fill="x", expand=True)
+                ttk.Button(cell, text="▾ Calendrier", width=12, command=lambda v=var, l=label: self.pick_date(v, l)).pack(side="left", padx=(4, 0))
+            else:
+                ttk.Entry(t, textvariable=var, width=32).grid(row=r + 1, column=c, sticky="we", padx=(0, 12), pady=(0, 8))
             self.dfields[key] = var
             var.trace_add("write", lambda *_, k=key, v=var: self._on_dossier_field(k, v.get()))
             c += 1
@@ -573,7 +596,7 @@ class App(tk.Tk):
             return
         if key == "budget":
             self.dossier.budget = parse_float(value)
-        elif key in ("date_debut", "date_fin"):
+        elif key in DATE_FIELDS:
             setattr(self.dossier, key, value.strip() or None)
         else:
             setattr(self.dossier, key, value.strip())
@@ -635,6 +658,9 @@ class App(tk.Tk):
     def open_viewer(self, piece: Optional[Piece]) -> None:
         if self.dossier:
             PageViewer(self, piece)
+
+    def pick_date(self, var: tk.StringVar, title: str) -> None:
+        DatePicker(self, parse_date_str(var.get()), lambda d: var.set(d.strftime("%d.%m.%Y")), title)
 
     # ------------------------------------------------------------ erreurs
     def _tk_error(self, exc, val, tb) -> None:  # noqa: ANN001
@@ -803,6 +829,75 @@ class PieceCard(ttk.Frame):
             ttk.Label(self.notes, text=f"Exclue : {p.exclusion_reason}", style="CardBad.TLabel", wraplength=900, justify="left").pack(anchor="w")
         for n in p.notes:
             ttk.Label(self.notes, text=f"• {n}", style="CardMuted.TLabel", wraplength=900, justify="left").pack(anchor="w")
+
+
+# ---------------------------------------------------------------------------
+# Calendrier
+# ---------------------------------------------------------------------------
+
+MONTHS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+
+
+class DatePicker(tk.Toplevel):
+    """Petit calendrier pour choisir une date (lundi → dimanche)."""
+
+    def __init__(self, master, initial: Optional[dt.date], on_pick: Callable[[dt.date], None], title: str = "Choisir une date"):
+        super().__init__(master)
+        self.title(title)
+        self.transient(master)
+        self.resizable(False, False)
+        self.on_pick = on_pick
+        self.selected = initial
+        base = initial or dt.date.today()
+        self.year, self.month = base.year, base.month
+        head = ttk.Frame(self, padding=(8, 8, 8, 4))
+        head.pack(fill="x")
+        ttk.Button(head, text="◀", width=3, command=lambda: self._shift(-1)).pack(side="left")
+        self.lbl = ttk.Label(head, text="", font=master.font_bold, anchor="center")
+        self.lbl.pack(side="left", fill="x", expand=True)
+        ttk.Button(head, text="▶", width=3, command=lambda: self._shift(1)).pack(side="right")
+        self.grid_frame = ttk.Frame(self, padding=(8, 0, 8, 4))
+        self.grid_frame.pack()
+        foot = ttk.Frame(self, padding=(8, 4, 8, 8))
+        foot.pack(fill="x")
+        ttk.Button(foot, text="Aujourd'hui", command=lambda: self._pick(dt.date.today())).pack(side="left")
+        ttk.Button(foot, text="Annuler", command=self.destroy).pack(side="right")
+        self._render()
+        self.update_idletasks()
+        x = master.winfo_pointerx() - 40
+        y = master.winfo_pointery() + 12
+        self.geometry(f"+{max(0, x)}+{max(0, y)}")
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.grab_set()
+
+    def _shift(self, delta: int) -> None:
+        m = self.month + delta
+        if m < 1:
+            self.month, self.year = 12, self.year - 1
+        elif m > 12:
+            self.month, self.year = 1, self.year + 1
+        else:
+            self.month = m
+        self._render()
+
+    def _render(self) -> None:
+        for w in self.grid_frame.winfo_children():
+            w.destroy()
+        self.lbl.configure(text=f"{MONTHS_FR[self.month - 1]} {self.year}")
+        for i, d in enumerate(["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"]):
+            ttk.Label(self.grid_frame, text=d, style="Muted.TLabel", anchor="center", width=4).grid(row=0, column=i)
+        today = dt.date.today()
+        for r, week in enumerate(calendar.monthcalendar(self.year, self.month), start=1):
+            for c, day in enumerate(week):
+                if day == 0:
+                    continue
+                date = dt.date(self.year, self.month, day)
+                text = f"[{day}]" if date == self.selected else (f"·{day}" if date == today else str(day))
+                ttk.Button(self.grid_frame, text=text, width=4, command=lambda d=date: self._pick(d)).grid(row=r, column=c, padx=1, pady=1)
+
+    def _pick(self, date: dt.date) -> None:
+        self.on_pick(date)
+        self.destroy()
 
 
 # ---------------------------------------------------------------------------

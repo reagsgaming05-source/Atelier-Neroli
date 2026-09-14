@@ -161,7 +161,7 @@ def build_workbook(dossier: Dossier, today: dt.date | None = None) -> bytes:
     date_row = _find_date_label_row(ws, total_row + 1)
     if date_row:
         cell = ws.cell(date_row, 9)
-        cell.value = today or dt.date.today()
+        cell.value = _parse_date(dossier.date_decompte) or today or dt.date.today()
         cell.number_format = DATE_FMT
 
     wb.calculation = CalcProperties(fullCalcOnLoad=True)
