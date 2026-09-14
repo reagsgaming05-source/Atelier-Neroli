@@ -5,3 +5,8 @@ caisse-ecoles/src/vocabulaire-noms.js
 caisse-ecoles/test/out/
 *.log
 .DS_Store
+# Application fenêtrée (Electron) : dépendances, application copiée et paquets construits
+caisse-ecoles/desktop/node_modules/
+caisse-ecoles/desktop/app/
+caisse-ecoles/desktop/dist/
+caisse-ecoles/desktop/.electron-cache/

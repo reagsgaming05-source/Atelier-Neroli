@@ -1,0 +1,53 @@
+{
+  "name": "caisse-ecoles-desktop",
+  "version": "1.0.0",
+  "description": "Caisse écoles – application fenêtrée (version portable, sans installation)",
+  "main": "main.js",
+  "private": true,
+  "author": "Atelier Neroli",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/reagsgaming05-source/Atelier-Neroli.git" },
+  "scripts": {
+    "prepare-app": "node prepare-app.js",
+    "start": "npm run prepare-app && electron .",
+    "dist:win": "npm run prepare-app && electron-builder --win dir",
+    "dist:linux": "npm run prepare-app && electron-builder --linux dir",
+    "smoke": "node smoke-test.js"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8",
+    "playwright-core": "^1.49.1"
+  },
+  "build": {
+    "appId": "ch.atelier-neroli.caisse-ecoles",
+    "productName": "CaisseEcoles",
+    "artifactName": "${productName}-${version}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**",
+      "!app/README.md"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "dir"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "dir"
+      ],
+      "icon": "build/icon.png"
+    },
+    "electronDownload": {
+      "cache": ".electron-cache"
+    }
+  }
+}

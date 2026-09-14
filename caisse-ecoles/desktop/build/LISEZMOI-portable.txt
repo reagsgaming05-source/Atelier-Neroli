@@ -1,0 +1,21 @@
+CAISSE ÉCOLES — version portable Windows
+========================================
+
+1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau, Documents…).
+2. Double-cliquez sur CaisseEcoles.exe : la fenêtre de l'application s'ouvre.
+3. Indiquez le solde à nouveau, glissez les PDF des pièces, vérifiez les lignes orange,
+   puis « Générer le fichier Excel ».
+
+Aucune installation : tout est inclus dans le dossier (lecture des PDF, seconde lecture
+par OCR local, génération du fichier Excel). Aucun navigateur n'est utilisé. Aucune donnée
+ne quitte votre poste. Les réglages mémorisés (compte caisse, vocabulaire appris, dernier
+solde) sont enregistrés dans le sous-dossier « data » à côté de l'exécutable.
+
+Noms de personnes : cette version ne contient aucun nom (le dépôt est public). Pour que
+l'application corrige les noms des enseignant-e-s, posez le fichier vocabulaire-noms.js
+(remis séparément) à côté de CaisseEcoles.exe ; il est lu au démarrage. Sinon les noms
+s'apprennent en chargeant un classeur existant.
+
+Premier lancement : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
+(l'exécutable n'est pas signé). Cliquez sur « Informations complémentaires » puis
+« Exécuter quand même ». Si l'antivirus bloque le fichier, ajoutez le dossier en exception.

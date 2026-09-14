@@ -12,7 +12,35 @@ Le compte caisse au **DOIT** de la pièce donne un **Débit** (entrée en caisse
 caisse à l'**AVOIR** donne un **Crédit** (sortie de caisse). La colonne *Compte* reçoit le
 compte de contrepartie.
 
-## Utilisation (PC de l'État, sans installation)
+## Version portable Windows (recommandée) — application fenêtrée, aucune installation
+
+1. Téléchargez **`CaisseEcoles-windows.zip`** depuis la page *Releases* du dépôt (version
+   « Caisse écoles — Windows portable »).
+2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
+3. Double-cliquez sur **`CaisseEcoles.exe`** : la fenêtre de l'application s'ouvre.
+
+Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le registre ni dans
+*Program Files*, aucun navigateur n'est sollicité, aucune donnée ne quitte le PC. Les réglages
+mémorisés (compte caisse, vocabulaire appris, dernier solde) vont dans le sous-dossier `data/`
+à côté de l'exécutable.
+
+**Noms de personnes** : le dépôt étant public, la version portable ne contient aucun nom. Posez
+le fichier `vocabulaire-noms.js` (remis séparément, jamais publié) à côté de `CaisseEcoles.exe` :
+il est lu au démarrage (menu *Aide → À propos* indique s'il a été trouvé). Sans lui, les noms
+s'apprennent en chargeant un classeur existant.
+
+Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
+(exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
+
+L'exécutable est construit automatiquement par GitHub Actions
+(`.github/workflows/build-caisse-windows.yml`) : tests, construction de l'application autonome,
+empaquetage Electron (`desktop/`), test de fumée de l'exécutable (fenêtre, moteur de lecture,
+OCR embarqué), puis publication du zip.
+
+## Utilisation (fichier HTML seul, sans installation)
+
+La même application existe en un seul fichier HTML, pour un PC où l'exécutable ne peut pas être
+lancé :
 
 1. Copier `dist/Caisse-ecoles.html` sur le PC (clé USB, courriel, téléchargement depuis GitHub).
 2. Double-cliquer dessus : il s'ouvre dans le navigateur (Edge, Chrome, Firefox). Rien n'est
@@ -211,6 +239,9 @@ Un test automatique vérifie qu'aucun nom ne se glisse dans le fichier versionn�
 cd caisse-ecoles
 npm install          # pdf.js + ExcelJS
 npm run build        # -> dist/Caisse-ecoles.html (fichier autonome)
+cd desktop && npm install && npm start          # application fenêtrée depuis les sources (Electron)
+cd desktop && npm run dist:win                  # dossier portable Windows dist/win-unpacked/ (sur Windows)
+cd desktop && node smoke-test.js [chemin/exe]   # test de fumée de la fenêtre
 npm test             # tests unitaires (parser, Excel)
 ```
 
@@ -227,6 +258,7 @@ Structure :
 - `src/app.js`, `src/index.html`, `src/app.css` – interface
 - `src/ocr.js` – seconde lecture par OCR local : prétraitement, zones, confrontation des lectures, moteur embarqué
 - `build.js` – assemble tout (avec pdf.js, ExcelJS, tesseract.js et le modèle français) dans `dist/Caisse-ecoles.html`
+- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre, menu, dossier `data/`, fichier des noms), `preload.js`, `smoke-test.js`, `build/` (icône, LISEZMOI portable)
 
 ## Limites
 
