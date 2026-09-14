@@ -8,16 +8,38 @@ par l'État de Vaud), avec le détail du calcul dans chaque libellé.
 **Tout se passe sur votre poste** : aucune donnée n'est envoyée sur Internet
 (lecture des scans par Tesseract OCR, interface dans votre navigateur en `127.0.0.1`).
 
-## Installation (Windows)
+## Version portable Windows (recommandée) — aucune installation
+
+1. Téléchargez **`DecompteDGEO-windows.zip`** depuis la page *Releases* du dépôt
+   (version « Décompte DGEO — Windows portable »).
+2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
+3. Double-cliquez sur **`DecompteDGEO.exe`** : une fenêtre noire s'ouvre (le serveur local),
+   puis le navigateur affiche l'application sur <http://127.0.0.1:8765/>. Fermez la
+   fenêtre noire pour arrêter.
+
+Python et Tesseract OCR (avec les langues français / allemand / anglais) sont **inclus dans
+le dossier** : rien à installer, rien n'est écrit dans le registre ni dans *Program Files*.
+Les dossiers analysés vont dans le sous-dossier `data/` à côté de l'exécutable.
+
+Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre
+ordinateur » (exécutable non signé) : cliquez sur *Informations complémentaires* puis
+*Exécuter quand même*. Si un antivirus bloque le fichier, ajoutez le dossier en exception.
+
+L'exécutable est construit automatiquement par GitHub Actions
+(`.github/workflows/build-windows.yml`) : PyInstaller + l'installateur Tesseract
+d'UB Mannheim extrait avec 7-Zip + `fra`/`deu` de `tessdata_fast`, puis testé
+(`build/smoke_test.py`) avant publication.
+
+## Installation depuis les sources (Windows)
 
 1. **Python 3.10 ou plus récent** : <https://www.python.org/downloads/windows/> — cochez
    « *Add python.exe to PATH* » pendant l'installation.
 2. **Tesseract OCR** (lecture des scans) : installateur Windows
    <https://github.com/UB-Mannheim/tesseract/wiki> — pendant l'installation, dans
    *Additional language data*, cochez **French** (et *German* si vous avez des tickets
-   en allemand). Si Tesseract n'est pas dans le PATH, ajoutez son dossier
-   (`C:\Program Files\Tesseract-OCR`) à la variable d'environnement `PATH`, ou définissez
-   `TESSERACT_CMD` (voir plus bas).
+   en allemand). Si Tesseract n'est pas dans le PATH, définissez la variable
+   d'environnement `TESSERACT_CMD` (chemin de `tesseract.exe`), ou copiez son dossier
+   sous le nom `tesseract/` à côté de `run.bat` : il est détecté automatiquement.
 3. Téléchargez ce dépôt (bouton *Code → Download ZIP*) et décompressez-le.
 4. Double-cliquez sur **`run.bat`** : la première fois, l'environnement Python et les
    dépendances s'installent (une minute), puis le navigateur s'ouvre sur
@@ -31,8 +53,7 @@ brew install tesseract tesseract-lang      # macOS (Homebrew)
 ./run.sh
 ```
 
-Options : `./run.sh --port 9000 --no-browser`. Si Tesseract est installé ailleurs :
-`set TESSERACT_CMD=C:\chemin\vers\tesseract.exe` (Windows) avant `run.bat`.
+Options : `./run.sh --port 9000 --no-browser`.
 
 ## Utilisation
 
@@ -86,6 +107,8 @@ python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 python -m pytest            # tests unitaires (les tests sur vrais dossiers sont sautés sans PDF dans tests/fixtures/)
 python -m decompte          # serveur local
+pyinstaller build/decompte.spec --noconfirm   # dossier portable dist/DecompteDGEO/ (ajouter tesseract/ à côté)
+python build/smoke_test.py  # test de fumée contre un serveur lancé
 ```
 
 Structure : `decompte/ocr.py` (rendu + OCR + orientation) → `segment.py` (découpage des

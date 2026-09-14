@@ -9,8 +9,10 @@ Stratégie, 100 % locale :
 from __future__ import annotations
 
 import logging
+import os
 import re
 import shutil
+import sys
 from pathlib import Path
 
 import pymupdf
@@ -31,14 +33,50 @@ except ImportError:  # pragma: no cover
     pytesseract = None
 
 
+def app_dir() -> Path:
+    """Dossier de l'application : celui de l'exécutable (version portable) ou du dépôt."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[1]
+
+
+def configure_tesseract() -> str | None:
+    """Utilise Tesseract embarqué (dossier `tesseract/` à côté de l'exécutable) ou `TESSERACT_CMD`.
+
+    Retourne le chemin retenu, ou None pour laisser pytesseract chercher dans le PATH."""
+    if pytesseract is None:
+        return None
+    cmd = os.environ.get("TESSERACT_CMD")
+    if not cmd:
+        base = app_dir()
+        for cand in (
+            base / "tesseract" / "tesseract.exe", base / "tesseract" / "tesseract",
+            base / "_internal" / "tesseract" / "tesseract.exe", base / "_internal" / "tesseract" / "tesseract",
+        ):
+            if cand.exists():
+                cmd = str(cand)
+                break
+    if not cmd:
+        return None
+    pytesseract.pytesseract.tesseract_cmd = cmd
+    tessdata = Path(cmd).parent / "tessdata"
+    if tessdata.is_dir():
+        os.environ.setdefault("TESSDATA_PREFIX", str(tessdata))
+    return cmd
+
+
+TESSERACT_CMD = configure_tesseract()
+
+
 def tesseract_available() -> bool:
     if pytesseract is None:
         return False
-    if shutil.which("tesseract") is None:
-        try:
-            pytesseract.get_tesseract_version()
-        except Exception:
-            return False
+    if TESSERACT_CMD is None and shutil.which("tesseract") is None:
+        return False
+    try:
+        pytesseract.get_tesseract_version()
+    except Exception:
+        return False
     return True
 
 

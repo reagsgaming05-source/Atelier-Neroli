@@ -16,14 +16,14 @@ from . import __version__
 from .analyse import analyse_pdf
 from .excel import build_workbook, output_filename
 from .models import Dossier
-from .ocr import tesseract_available
+from .ocr import TESSERACT_CMD, app_dir, tesseract_available
 from .rules import compute_rows, compute_total, propose
 
 log = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
-DATA_DIR = Path(os.environ.get("DECOMPTE_DATA", Path.cwd() / "data"))
+DATA_DIR = Path(os.environ.get("DECOMPTE_DATA", app_dir() / "data"))
 
 app = FastAPI(title="Décompte DGEO", version=__version__)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -61,7 +61,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"version": __version__, "tesseract": tesseract_available(), "data_dir": str(DATA_DIR)}
+    return {"version": __version__, "tesseract": tesseract_available(), "tesseract_cmd": TESSERACT_CMD, "data_dir": str(DATA_DIR)}
 
 
 @app.post("/api/analyse")

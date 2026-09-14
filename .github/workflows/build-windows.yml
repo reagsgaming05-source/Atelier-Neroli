@@ -1,0 +1,100 @@
+name: Build Windows portable
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+    paths-ignore: ["**.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dépendances Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Tests unitaires
+        run: |
+          pip install pytest
+          python -m pytest tests -q --ignore=tests/test_samples.py
+
+      - name: Tesseract portable (installateur UB Mannheim extrait avec 7-Zip + langues fra/deu)
+        shell: pwsh
+        run: |
+          $rel = Invoke-RestMethod "https://api.github.com/repos/UB-Mannheim/tesseract/releases/latest"
+          $asset = $rel.assets | Where-Object { $_.name -like "*w64*.exe" } | Select-Object -First 1
+          if (-not $asset) { $asset = $rel.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1 }
+          if (-not $asset) { throw "Installateur Tesseract introuvable dans la release $($rel.tag_name)" }
+          Write-Host "Tesseract $($rel.tag_name) : $($asset.browser_download_url)"
+          Invoke-WebRequest $asset.browser_download_url -OutFile tesseract-setup.exe
+          7z x tesseract-setup.exe -otesseract-extract -y | Out-Null
+          $exe = Get-ChildItem tesseract-extract -Recurse -Filter tesseract.exe | Select-Object -First 1
+          if (-not $exe) { throw "tesseract.exe introuvable après extraction" }
+          New-Item -ItemType Directory -Force -Path tesseract | Out-Null
+          Copy-Item "$($exe.DirectoryName)\*" tesseract -Recurse -Force
+          Get-ChildItem tesseract -Directory | Where-Object { $_.Name -like '$PLUGINSDIR' -or $_.Name -eq 'doc' -or $_.Name -eq 'html' } | Remove-Item -Recurse -Force
+          New-Item -ItemType Directory -Force -Path tesseract\tessdata | Out-Null
+          foreach ($l in "fra","deu","eng") {
+            Invoke-WebRequest "https://github.com/tesseract-ocr/tessdata_fast/raw/main/$l.traineddata" -OutFile "tesseract\tessdata\$l.traineddata"
+          }
+          if (-not (Test-Path tesseract\tessdata\osd.traineddata)) {
+            Invoke-WebRequest "https://github.com/tesseract-ocr/tessdata/raw/main/osd.traineddata" -OutFile "tesseract\tessdata\osd.traineddata"
+          }
+          & tesseract\tesseract.exe --version
+          & tesseract\tesseract.exe --list-langs
+          "Tesseract $($rel.tag_name) — https://github.com/UB-Mannheim/tesseract (Apache 2.0)" | Out-File tesseract\VERSION.txt
+
+      - name: PyInstaller
+        run: pyinstaller build/decompte.spec --noconfirm --clean
+
+      - name: Assembler le dossier portable
+        shell: pwsh
+        run: |
+          Copy-Item tesseract dist\DecompteDGEO\tesseract -Recurse
+          Copy-Item README.md dist\DecompteDGEO\LISEZMOI.md
+          Copy-Item build\LISEZMOI-portable.txt dist\DecompteDGEO\LISEZMOI-portable.txt
+          Get-ChildItem dist\DecompteDGEO | Select-Object Name, Length
+
+      - name: Test de fumée de l'exécutable
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist\DecompteDGEO\DecompteDGEO.exe" -ArgumentList "--no-browser","--port","8765" -PassThru -RedirectStandardOutput exe.log -RedirectStandardError exe.err
+          $ok = $false
+          foreach ($i in 1..60) {
+            Start-Sleep -Seconds 1
+            try { Invoke-RestMethod "http://127.0.0.1:8765/api/health" | Out-Null; $ok = $true; break } catch {}
+          }
+          if (-not $ok) { Get-Content exe.log, exe.err; throw "L'exécutable ne répond pas" }
+          try { python build\smoke_test.py http://127.0.0.1:8765 } finally { Stop-Process -Id $p.Id -Force; Get-Content exe.log }
+
+      - name: Archive zip
+        shell: pwsh
+        run: Compress-Archive -Path dist\DecompteDGEO -DestinationPath DecompteDGEO-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DecompteDGEO-windows
+          path: DecompteDGEO-windows.zip
+
+      - name: Publier la version portable (pré-release « windows-latest »)
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-latest
+          name: "Décompte DGEO — Windows portable (dernière version)"
+          prerelease: true
+          body: |
+            Version portable Windows : décompressez le zip, puis double-cliquez sur `DecompteDGEO.exe`.
+            Aucune installation (Python et Tesseract OCR sont inclus). Construit automatiquement depuis le commit ${{ github.sha }}.
+          files: DecompteDGEO-windows.zip

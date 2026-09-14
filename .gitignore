@@ -7,3 +7,7 @@ data/
 tests/fixtures/*.pdf
 tests/fixtures/*.xlsx
 *.log
+
+# Construction PyInstaller
+dist/
+build/DecompteDGEO/
