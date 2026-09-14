@@ -5,7 +5,7 @@ const LIB = path.join(__dirname, 'libs');
 const src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8');
 const HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="color-scheme" content="dark light">\n</head>\n<body>\n';
 const TAIL = '</body>\n</html>\n';
-const OUT = '/home/user/Atelier-Neroli/outils';
+const OUT = __dirname;
 
 // Règles de sécurité : la page n'a le droit de contacter personne. Ce n'est pas
 // une promesse mais une contrainte appliquée par le navigateur lui-même.
