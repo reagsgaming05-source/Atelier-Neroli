@@ -3548,7 +3548,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
         if (info.noRaw && /[^0-9\s]/.test(String(info.noRaw))) {
           out.no = agreed.value; out.noRaw = String(agreed.value);
           note('no', `N° ${agreed.value} retenu d'après ${label(agreed.srcs)} (couche texte : « ${String(info.noRaw).trim()} »)`);
-        } else {
+        } else if (agreed.conf >= 80) {
           doubt('no', `N° lu ${info.no} dans la couche texte mais ${agreed.value} par ${label(agreed.srcs)} : à vérifier`, set('no', agreed.value));
         }
       } else if (best && best.conf >= 80 && R.length === 1) {
@@ -3811,8 +3811,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     });
   }
 
-  // Zones numériques (pour le moteur historique, qui ne lit bien que les chiffres imprimés)
+  // Zones numériques ; le moteur historique (oem 0) n'est fiable que sur le total et la date
+  // (mesuré : 101/106 et 103/106 sans lecture fausse, contre 91/106 sur le n° avec des erreurs
+  // sûres d'elles) : on ne lui confie que celles-là.
   const NUMERIC_ZONES = ['no', 'doit', 'somme', 'avoir', 'total', 'date'];
+  const LEGACY_ZONES = ['somme', 'total', 'date'];
 
   /**
    * Relecture des zones d'une pièce par le lecteur natif. recognize(png, { psm, oem, lang, dpi })
@@ -3825,7 +3828,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     // les zones sont envoyées ensemble : le processus principal en lit plusieurs en parallèle
     const jobs = [];
     for (const z of zonesFor(info)) {
-      if (opts.numericOnly && !NUMERIC_ZONES.includes(z.name)) continue;
+      if (opts.numericOnly && !(opts.oem === 0 ? LEGACY_ZONES : NUMERIC_ZONES).includes(z.name)) continue;
       const px = zonePixels(z.rect, raw.width, raw.height);
       if (!px) continue;
       const src = z.pre ? getPre() : raw;
@@ -3899,6 +3902,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     readZonesHiRes,
     zonesForField,
     NUMERIC_ZONES,
+    LEGACY_ZONES,
   };
 });
 
