@@ -1,0 +1,11 @@
+# Fins de ligne : LF partout, y compris sur un poste Windows — les scripts
+# de construction et les tests lisent la source par repères.
+*.html text eol=lf
+*.js   text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+*.yml  text eol=lf
+*.sh   text eol=lf
+*.go   text eol=lf
+*.ico  binary
+*.png  binary

@@ -2,7 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 const LIB = path.join(__dirname, 'libs');
-const src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8');
+// Quel que soit le poste (Windows convertit les fins de ligne au passage),
+// on travaille en LF : les repères de ce script en dépendent.
+const src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8').replace(/\r\n/g, '\n');
 const HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="color-scheme" content="dark light">\n</head>\n<body>\n';
 const TAIL = '</body>\n</html>\n';
 const OUT = __dirname;
@@ -32,6 +34,7 @@ fs.writeFileSync(path.join(OUT, 'blonay-pdf.html'), HEAD + src + TAIL);
 // Une séquence <!-- ou </script dans le code fait dérailler l'analyseur HTML.
 // Les échapper ne change pas le programme : "<\\!--" vaut "<!--" en JavaScript.
 const read = p => fs.readFileSync(path.join(LIB, p), 'utf8')
+  .replace(/\r\n/g, '\n')
   .replace(/<!--/g, '<\\!--')
   .replace(/<\/script/gi, '<\\/script');
 const worker = read('pdfjs-dist-3.11.174/build/pdf.worker.min.js');
