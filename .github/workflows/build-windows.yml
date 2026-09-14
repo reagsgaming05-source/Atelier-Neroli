@@ -32,12 +32,24 @@ jobs:
       - name: Tesseract portable (installateur UB Mannheim extrait avec 7-Zip + langues fra/deu)
         shell: pwsh
         run: |
-          $rel = Invoke-RestMethod "https://api.github.com/repos/UB-Mannheim/tesseract/releases/latest"
+          function Get-WithRetry([string]$Url, [string]$Out) {
+            foreach ($try in 1..5) {
+              try { Invoke-WebRequest $Url -OutFile $Out -TimeoutSec 300; return }
+              catch { Write-Host "Tentative $try/5 échouée pour $Url : $($_.Exception.Message)"; Start-Sleep -Seconds (10 * $try) }
+            }
+            throw "Téléchargement impossible : $Url"
+          }
+          $rel = $null
+          foreach ($try in 1..5) {
+            try { $rel = Invoke-RestMethod "https://api.github.com/repos/UB-Mannheim/tesseract/releases/latest"; break }
+            catch { Write-Host "API GitHub, tentative $try/5 : $($_.Exception.Message)"; Start-Sleep -Seconds (10 * $try) }
+          }
+          if (-not $rel) { throw "API GitHub injoignable" }
           $asset = $rel.assets | Where-Object { $_.name -like "*w64*.exe" } | Select-Object -First 1
           if (-not $asset) { $asset = $rel.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1 }
           if (-not $asset) { throw "Installateur Tesseract introuvable dans la release $($rel.tag_name)" }
           Write-Host "Tesseract $($rel.tag_name) : $($asset.browser_download_url)"
-          Invoke-WebRequest $asset.browser_download_url -OutFile tesseract-setup.exe
+          Get-WithRetry $asset.browser_download_url tesseract-setup.exe
           7z x tesseract-setup.exe -otesseract-extract -y | Out-Null
           $exe = Get-ChildItem tesseract-extract -Recurse -Filter tesseract.exe | Select-Object -First 1
           if (-not $exe) { throw "tesseract.exe introuvable après extraction" }
@@ -46,10 +58,10 @@ jobs:
           Get-ChildItem tesseract -Directory | Where-Object { $_.Name -like '$PLUGINSDIR' -or $_.Name -eq 'doc' -or $_.Name -eq 'html' } | Remove-Item -Recurse -Force
           New-Item -ItemType Directory -Force -Path tesseract\tessdata | Out-Null
           foreach ($l in "fra","deu","eng") {
-            Invoke-WebRequest "https://github.com/tesseract-ocr/tessdata_fast/raw/main/$l.traineddata" -OutFile "tesseract\tessdata\$l.traineddata"
+            Get-WithRetry "https://github.com/tesseract-ocr/tessdata_fast/raw/main/$l.traineddata" "tesseract\tessdata\$l.traineddata"
           }
           if (-not (Test-Path tesseract\tessdata\osd.traineddata)) {
-            Invoke-WebRequest "https://github.com/tesseract-ocr/tessdata/raw/main/osd.traineddata" -OutFile "tesseract\tessdata\osd.traineddata"
+            Get-WithRetry "https://github.com/tesseract-ocr/tessdata/raw/main/osd.traineddata" "tesseract\tessdata\osd.traineddata"
           }
           & tesseract\tesseract.exe --version
           & tesseract\tesseract.exe --list-langs
