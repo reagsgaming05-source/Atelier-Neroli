@@ -21,6 +21,24 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
 L'icône et les informations du fichier sont ensuite posées avec `resedit`
 (paquet npm), à partir de `icon.ico`.
 
+### Ouverture d'un document
+
+Quand l'application est le programme par défaut des PDF, Windows la lance
+avec le chemin du fichier double-cliqué. Une page `file://` n'a pas le droit
+de lire un fichier voisin (`fetch` est refusé), mais elle peut le charger
+comme script. Le lanceur dépose donc le document, encodé, dans un fichier
+`ouverture-<aléa>.js` à côté de la page, et ouvre la page avec
+`#ouvrir=<ce nom>`. La page (`ouvrirAuLancement` dans `source.html`) n'accepte
+qu'un nom de cette forme exacte, jamais un chemin ni une adresse, charge le
+script, ouvre le document à la place de l'exemple et nettoie l'adresse. La
+version hors ligne autorise pour cela `file:` dans `script-src`.
+
+Le lanceur attend deux minutes, puis vide et supprime le fichier d'ouverture ;
+les restes d'un lancement interrompu sont nettoyés au lancement suivant. Un
+document reçu ouvre toujours sa propre fenêtre, même si une fenêtre de
+l'application est déjà ouverte ; sans document, un second lancement ramène la
+fenêtre existante.
+
 ### Pare-feu
 
 Le moteur d'affichage est démarré avec ses fonctions de découverte réseau

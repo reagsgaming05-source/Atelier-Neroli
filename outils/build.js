@@ -11,9 +11,12 @@ const OUT = '/home/user/Atelier-Neroli/outils';
 // une promesse mais une contrainte appliquée par le navigateur lui-même.
 // La version en ligne n'en reçoit pas : elle charge ses composants depuis un CDN
 // et la plateforme qui l'héberge applique déjà les siennes.
-const csp = extra => '<meta http-equiv="Content-Security-Policy" content="'
+// « voisin » : la page, ouverte depuis le disque, peut charger un script posé
+// à côté d'elle — le fichier d'ouverture que le lanceur dépose quand on
+// double-clique un PDF (voir ouvrirAuLancement). Jamais pour le site.
+const csp = (extra, voisin) => '<meta http-equiv="Content-Security-Policy" content="'
   + "default-src 'none'; "
-  + "script-src 'unsafe-inline' blob:" + (extra ? " 'self'" : '') + '; '
+  + "script-src 'unsafe-inline' blob:" + (extra ? " 'self'" : '') + (voisin ? ' file:' : '') + '; '
   + "worker-src blob:" + (extra ? " 'self'" : '') + '; '
   + "style-src 'unsafe-inline'; "
   + 'img-src data: blob:' + (extra ? " 'self'" : '') + '; '
@@ -32,7 +35,7 @@ const read = p => fs.readFileSync(path.join(LIB, p), 'utf8')
   .replace(/<!--/g, '<\\!--')
   .replace(/<\/script/gi, '<\\/script');
 const worker = read('pdfjs-dist-3.11.174/build/pdf.worker.min.js');
-const cspOffline = csp(false);
+const cspOffline = csp(false, true);
 const inline = [
   '<script id="blonay-worker" type="text/plain">\n' + worker + '\n</script>',
   '<script>window.__blonayWorker = URL.createObjectURL(new Blob([document.getElementById("blonay-worker").textContent], { type: "text/javascript" }));</script>',
@@ -86,7 +89,7 @@ fs.writeFileSync(path.join(SITE, 'index.html'), SITE_HEAD + siteBody + pwaTail +
 const APPDIR = path.join(OUT, 'application', 'lanceur');
 const APP_HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n'
   + '<meta charset="utf-8">\n'
-  + csp(true)
+  + csp(true, true)
   + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
   + '<meta name="color-scheme" content="dark light">\n'
   + '<title>Blonay PDF</title>\n'

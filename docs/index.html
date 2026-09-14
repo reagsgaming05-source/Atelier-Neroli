@@ -1829,6 +1829,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // =====================================================================
   const feuilles = new Map();       // id de page -> élément
   const peintes = new Map();        // id de page -> clé du rendu déjà fait
+  const enCours = new Map();        // id de page -> rendu pdf.js en train de peindre
   let lectureObs = null;
   let lectureZ = 1;                 // facteur réellement appliqué
 
@@ -1878,6 +1879,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const cle = lectureCle(p);
     if (peintes.get(p.id) === cle) return;
     peintes.set(p.id, cle);
+    // Une toile ne peut porter qu'un rendu à la fois : si la page change
+    // pendant qu'on la peint (second document ajouté, zoom), l'ancien rendu
+    // est annulé plutôt que refusé par pdf.js.
+    const ancien = enCours.get(p.id);
+    if (ancien) { enCours.delete(p.id); ancien.cancel(); }
     const g = pageGeom(p);
     const cv = f.querySelector('canvas');
     // Assez fin pour un écran fin, sans faire exploser la mémoire sur un
@@ -1893,11 +1899,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       cv.height = Math.max(1, Math.ceil(vp.height));
       const cx = cv.getContext('2d', { alpha: false });
       cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
-      await page.render({ canvasContext: cx, viewport: vp }).promise;
+      const tache = page.render({ canvasContext: cx, viewport: vp });
+      enCours.set(p.id, tache);
+      try { await tache.promise; }
+      finally { if (enCours.get(p.id) === tache) enCours.delete(p.id); }
       page.cleanup();
       const att = f.querySelector('.attente');
       if (att) att.hidden = true;
     } catch (e) {
+      if (e && e.name === 'RenderingCancelledException') return;
       peintes.delete(p.id);
       console.warn('Lecture :', e);
     }
@@ -7303,6 +7313,56 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   // =====================================================================
+  //  Ouverture au lancement
+  // =====================================================================
+  // Quand l'outil est le programme par défaut des PDF, un double-clic sur un
+  // fichier démarre le lanceur avec son chemin. Le lanceur dépose alors le
+  // document, encodé, dans un petit fichier à côté de la page, et nomme ce
+  // fichier dans l'adresse : #ouvrir=ouverture-….js. Une page file:// n'a pas
+  // le droit de lire un fichier voisin, mais elle peut le charger comme script.
+  const OUVERTURE = /^ouverture-[a-f0-9]{24}\.js$/;
+  function fichierDemande() {
+    const m = /(?:^#|&)ouvrir=([^&]+)/.exec(location.hash);
+    if (!m) return null;
+    let nom = '';
+    try { nom = decodeURIComponent(m[1]); } catch (_) { return null; }
+    // Seul un nom de cette forme est accepté : jamais un chemin, jamais une adresse.
+    return OUVERTURE.test(nom) ? nom : null;
+  }
+  async function ouvrirAuLancement() {
+    const nom = fichierDemande();
+    if (!nom) return false;
+    // L'adresse est nettoyée tout de suite : le fichier d'ouverture ne vit
+    // que quelques instants, un rechargement ne doit pas le redemander.
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+    setBusy('Ouverture du document…');
+    const liste = await new Promise(resolve => {
+      const s = document.createElement('script');
+      s.src = nom;
+      s.onload = () => { const l = window.__blonayOuvrir; delete window.__blonayOuvrir; s.remove(); resolve(Array.isArray(l) ? l : null); };
+      s.onerror = () => { s.remove(); resolve(null); };
+      document.head.appendChild(s);
+    });
+    if (!liste) {
+      setBusy('');
+      toast('Le document à ouvrir n\'a pas été trouvé. Ouvrez-le avec le bouton Ouvrir.', 'warn');
+      return true;
+    }
+    const fichiers = [];
+    for (const f of liste) {
+      if (!f || typeof f.nom !== 'string' || typeof f.b64 !== 'string') continue;
+      try {
+        const r = await fetch('data:application/octet-stream;base64,' + f.b64);
+        fichiers.push(new File([await r.arrayBuffer()], f.nom, { type: /\.pdf$/i.test(f.nom) ? 'application/pdf' : '' }));
+      } catch (e) { console.error(e); }
+    }
+    setBusy('');
+    if (fichiers.length) await addFiles(fichiers);
+    else toast('Le document à ouvrir n\'a pas pu être lu.', 'error');
+    return true;
+  }
+
+  // =====================================================================
   //  Theme
   // =====================================================================
   function applyTheme(mode) {
@@ -7573,7 +7633,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
     renderTools();
     render();
-    loadSample();
+    // Un document demandé au lancement prend la place de l'exemple. Demandé
+    // plus tard, sur une page déjà ouverte, il s'ajoute comme par le bouton Ouvrir.
+    ouvrirAuLancement().then(demande => { if (!demande) loadSample(); });
+    window.addEventListener('hashchange', () => { ouvrirAuLancement(); });
   }
 
   const origRender = render;
