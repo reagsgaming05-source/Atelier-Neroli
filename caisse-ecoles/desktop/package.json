@@ -6,7 +6,10 @@
   "private": true,
   "author": "Atelier Neroli",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/reagsgaming05-source/Atelier-Neroli.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reagsgaming05-source/Atelier-Neroli.git"
+  },
   "scripts": {
     "prepare-app": "node prepare-app.js",
     "start": "npm run prepare-app && electron .",
@@ -30,6 +33,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "native-ocr.js",
       "app/**",
       "!app/README.md"
     ],

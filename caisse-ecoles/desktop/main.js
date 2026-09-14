@@ -29,6 +29,16 @@ function setupUserData() {
 }
 setupUserData();
 
+// Journal du processus principal (data/caisse.log) : démarrage, erreurs, lecteur natif.
+// Comme decompte.log de Décompte DGEO, pour comprendre un problème sur un poste.
+function logLine(msg) {
+  const line = `${new Date().toISOString()} ${msg}\n`;
+  try { fs.appendFileSync(path.join(app.getPath('userData'), 'caisse.log'), line); } catch (e) { /* ignore */ }
+  if (!app.isPackaged) process.stdout.write(line);
+}
+process.on('uncaughtException', (e) => { logLine(`ERREUR ${e && e.stack ? e.stack : e}`); });
+process.on('unhandledRejection', (e) => { logLine(`ERREUR (promesse) ${e && e.stack ? e.stack : e}`); });
+
 // Une seule instance de l'application
 if (!app.requestSingleInstanceLock()) app.quit();
 
@@ -60,7 +70,7 @@ function createWindow() {
       additionalArguments: [`--caisse-names=${namesFile() || ''}`, `--caisse-version=${app.getVersion()}`],
     },
   });
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.once('ready-to-show', () => { mainWindow.show(); logLine('interface démarrée'); });
   mainWindow.on('page-title-updated', (ev) => ev.preventDefault());
   mainWindow.loadFile(path.join(__dirname, 'app', 'Caisse-ecoles.html'));
 
@@ -143,11 +153,13 @@ app.on('second-instance', () => {
 // Troisième lecteur (Tesseract natif) au service de la page
 ipcMain.handle('ocr:info', () => {
   const t = nativeOcr.detect(PORTABLE_DIR);
+  logLine(t ? `Tesseract natif : ${t.version} (${t.cmd})${t.legacy ? ' + moteur historique' : ''}` : 'Tesseract natif : non trouvé');
   return t ? { available: true, version: t.version, legacy: t.legacy, cmd: t.cmd } : { available: false };
 });
 ipcMain.handle('ocr:recognize', (ev, png, opts) => nativeOcr.recognize(png, opts, PORTABLE_DIR));
 
 app.whenReady().then(() => {
+  logLine(`${APP_TITLE} ${app.getVersion()} – Electron ${process.versions.electron} – ${process.platform} – données : ${app.getPath('userData')}`);
   setupDownloads();
   buildMenu();
   createWindow();

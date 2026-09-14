@@ -94,8 +94,11 @@ jobs:
         env:
           SMOKE_NATIVE: "1"
         run: |
-          node smoke-test.js dist\CaisseEcoles\CaisseEcoles.exe
-          Remove-Item dist\CaisseEcoles\data -Recurse -Force -ErrorAction SilentlyContinue
+          try { node smoke-test.js dist\CaisseEcoles\CaisseEcoles.exe }
+          finally {
+            Get-Content dist\CaisseEcoles\data\caisse.log -ErrorAction SilentlyContinue
+            Remove-Item dist\CaisseEcoles\data -Recurse -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Archive zip
         working-directory: caisse-ecoles/desktop
