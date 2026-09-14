@@ -154,6 +154,15 @@
       html = 'Aucune base de référence intégrée : chargez un classeur pour améliorer la lecture des libellés.';
     }
     if (added) html += ` <span style="color:#2563eb">+ ${added} élément(s) appris sur ce PC.</span>`;
+    // Logique comptable des libellés (voir TYPE_LOGIC dans parser.js)
+    const logic = P.TYPE_LOGIC || {};
+    const list = (side) => {
+      const seen = new Set();
+      return Object.keys(logic).filter((k) => logic[k] === side).map((k) => k.split(' ')[0]).filter((k) => !seen.has(k) && seen.add(k)).join(', ');
+    };
+    html += `<div style="margin-top:6px"><b>Logique des libellés</b> : ${escapeHtml(list('debit'))} = entrée en caisse (débit) · ` +
+      `${escapeHtml(list('credit'))} = sortie de caisse (crédit) · DECOMPTE = selon la pièce. ` +
+      `Une pièce remplie à l'envers est remise dans le bon sens et la cellule du montant passe en bleu.</div>`;
     els.vocabInfo.innerHTML = html;
   }
   state.vocab = loadVocab();

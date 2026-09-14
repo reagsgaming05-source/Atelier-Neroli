@@ -181,19 +181,50 @@ test('libellé sans type ni personne : doutes sur le libellé', () => {
   assert.match(msgs, /Aucun nom de personne/);
 });
 
-test('sens contraire au classeur : doute sur le montant', () => {
+test('logique du libellé : REMBOURSEMENT sort de la caisse, PARTICIPATION y entre, même si la pièce est remplie à l\'envers', () => {
+  assert.equal(P.sideFromType('REMBOURSEMENT'), 'credit');
+  assert.equal(P.sideFromType('PARTICIPATION DES PARENTS'), 'debit');
+  assert.equal(P.sideFromType('RECETTE'), 'debit');
+  assert.equal(P.sideFromType('DECOMPTE'), null);
+  // REMBOURSEMENT avec la caisse au DOIT (pièce à l'envers) -> crédit quand même, signalé en note, pas en doute
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '9100.104', somme: 'CHF 12.00', avoir: '50000.3652.00' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT frais', 'A. Berger'], date: '01.03.2025' }) };
+  const e = P.parseDocument([page], { caisse: '9100.104' }).entries[0];
+  assert.equal(e.credit, 12);
+  assert.equal(e.debit, null);
+  assert.equal(e.compte, '50000.3652.00');
+  assert.deepEqual(e.warnings, [], e.warnings.join('|'));
+  assert.ok(e.flags.montant.some((f) => f.level === 'note' && /Sens fixé par le libellé.*REMBOURSEMENT.*envers/.test(f.message)), JSON.stringify(e.flags.montant));
+  // PARTICIPATION DES PARENTS avec la caisse à l'AVOIR -> débit
+  const p2 = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '117', lines: [{ doit: '51000.4392.00', somme: "CHF 1'280.00", avoir: '9100.104' }], total: "CHF 1'280.00", libelle: ['PARTICIPATION DES PARENTS classe 3P/6', 'A. Berger'], date: '04.06.2025' }) };
+  const e2 = P.parseDocument([p2], { caisse: '9100.104' }).entries[0];
+  assert.equal(e2.debit, 1280);
+  assert.equal(e2.credit, null);
+  assert.deepEqual(e2.warnings, [], e2.warnings.join('|'));
+  // type lu approximativement : la logique s'applique mais reste un doute, avec retour possible
+  const p3 = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '13', lines: [{ doit: '9100.104', somme: 'CHF 12.00', avoir: '50000.3652.00' }], total: 'CHF 12.00', libelle: ['REMBOURSMENT frais', 'A. Berger'], date: '01.03.2025' }) };
+  const e3 = P.parseDocument([p3], { caisse: '9100.104' }).entries[0];
+  assert.equal(e3.credit, 12);
+  const d3 = e3.flags.montant.find((f) => f.level === 'doubt' && /approximativement/.test(f.message));
+  assert.ok(d3, JSON.stringify(e3.flags.montant));
+  assert.deepEqual(d3.action, { type: 'swap', side: 'debit' });
+  // pièce cohérente : rien à signaler
+  const ok = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '50000.3652.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT frais', 'A. Berger'], date: '01.03.2025' }) };
+  const e4 = P.parseDocument([ok], { caisse: '9100.104' }).entries[0];
+  assert.deepEqual(e4.warnings, []);
+  assert.deepEqual(e4.notes, []);
+});
+
+test('sens contraire au classeur pour un type sans logique fixe (DECOMPTE) : doute sur le montant', () => {
   const history = [];
-  for (let i = 0; i < 6; i++) history.push({ no: i + 1, compte: '50000.3652.00', libelle: `REMBOURSEMENT - Frais ${i} - A. Berger`, debit: null, credit: 20 });
+  for (let i = 0; i < 6; i++) history.push({ no: i + 1, compte: '51000.3662.00', libelle: `DECOMPTE - Course ${i} - A. Berger`, debit: null, credit: 20 });
   const vocab = P.learnVocabulary(history);
   const idx = P.buildIndex(vocab);
-  assert.deepEqual(idx.expectedSide.get('REMBOURSEMENT'), { side: 'credit', n: 6 });
-  // une pièce REMBOURSEMENT avec la caisse au DOIT (entrée) contredit le classeur
-  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '9100.104', somme: 'CHF 12.00', avoir: '50000.3652.00' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT frais', 'A. Berger'], date: '01.03.2025' }) };
+  assert.deepEqual(idx.expectedSide.get('DECOMPTE'), { side: 'credit', n: 6 });
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '9100.104', somme: 'CHF 12.00', avoir: '51000.3662.00' }], total: 'CHF 12.00', libelle: ['DECOMPTE course', 'A. Berger'], date: '01.03.2025' }) };
   const e = P.parseDocument([page], { caisse: '9100.104', vocabulary: vocab }).entries[0];
   assert.equal(e.debit, 12);
-  assert.ok(e.flags.montant.some((f) => /Sens inhabituel.*REMBOURSEMENT/.test(f.message)), e.warnings.join('|'));
-  // le même sens que le classeur ne déclenche rien
-  const ok = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '50000.3652.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT frais', 'A. Berger'], date: '01.03.2025' }) };
+  assert.ok(e.flags.montant.some((f) => /Sens inhabituel.*DECOMPTE/.test(f.message)), e.warnings.join('|'));
+  const ok = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.3662.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['DECOMPTE course', 'A. Berger'], date: '01.03.2025' }) };
   const e2 = P.parseDocument([ok], { caisse: '9100.104', vocabulary: vocab }).entries[0];
   assert.deepEqual(e2.warnings, []);
 });

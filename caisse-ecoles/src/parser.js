@@ -43,9 +43,33 @@
   ];
 
   // Types qui, par nature, font entrer de l'argent dans la caisse (débit du compte caisse)
-  const INFLOW_TYPES = ['RECETTE', 'RETRAIT', 'PARTICIPATION DES PARENTS', 'PARTICIPATION PARENTS', 'PARTICIPATION', 'ENCAISSEMENT', 'VENTE', 'DON', 'SUBVENTION', 'COTISATION', 'VERSEMENT'];
-  // Types qui font sortir de l'argent (crédit du compte caisse)
-  const OUTFLOW_TYPES = ['REMBOURSEMENT', 'AVANCE', 'PAIEMENT', 'ACHAT', 'FRAIS', 'CADEAU', 'CADEAUX', 'PRIX'];
+  // Logique comptable des libellés : le type d'écriture fixe le sens du mouvement de caisse,
+  // quoi qu'indique la position du compte caisse sur la pièce (pièce remplie à l'envers,
+  // colonne mal lue). Un REMBOURSEMENT fait toujours sortir de l'argent, une PARTICIPATION
+  // en fait toujours entrer. Les types absents de cette table (DECOMPTE…) vont dans les deux
+  // sens : c'est la pièce qui décide.
+  const TYPE_LOGIC = {
+    // sortie de caisse -> crédit
+    REMBOURSEMENT: 'credit',
+    AVANCE: 'credit',
+    PAIEMENT: 'credit',
+    ACHAT: 'credit',
+    FRAIS: 'credit',
+    CADEAU: 'credit',
+    CADEAUX: 'credit',
+    PRIX: 'credit',
+    // entrée en caisse -> débit
+    'PARTICIPATION DES PARENTS': 'debit',
+    'PARTICIPATION PARENTS': 'debit',
+    PARTICIPATION: 'debit',
+    RECETTE: 'debit',
+    RETRAIT: 'debit', // retrait bancaire qui alimente la caisse
+    ENCAISSEMENT: 'debit',
+    VENTE: 'debit',
+    SUBVENTION: 'debit',
+  };
+  // Types au sens seulement probable : utilisés en dernier recours, toujours avec un doute.
+  const TYPE_GUESS = { DON: 'debit', COTISATION: 'debit', VERSEMENT: 'debit' };
 
   // Vocabulaire de base (mots courants des libellés d'une caisse d'école). Complété à
   // l'exécution par le vocabulaire appris dans le classeur de l'utilisateur.
@@ -271,8 +295,9 @@
       if (clean.length >= 2 && clean === clean.toUpperCase()) upper.push(w);
       else break;
     }
-    if (!upper.length) return { type: null, rest: line };
+    if (!upper.length) return { type: null, rest: line, exact: false };
     let typeRaw = upper.join(' ');
+    const read = typeRaw;
     let rest = words.slice(upper.length).join(' ');
     const canon = canonicalType(typeRaw);
     if (canon) typeRaw = canon;
@@ -284,11 +309,16 @@
         rest = words.slice(1).join(' ');
       }
     }
-    return { type: typeRaw, rest: rest.trim() };
+    // exact : le type a été lu tel quel (pas de correction approximative)
+    return { type: typeRaw, rest: rest.trim(), exact: typeKey(read) === typeRaw || typeKey(upper[0]) === typeRaw };
+  }
+
+  function typeKey(raw) {
+    return stripAccents(raw).toUpperCase().replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   function canonicalType(raw) {
-    const key = stripAccents(raw).toUpperCase().replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
+    const key = typeKey(raw);
     if (!key) return null;
     let best = null;
     let bestDist = Infinity;
@@ -968,7 +998,7 @@
       person = fixInitials(lines.pop(), index);
     }
     const first = lines.shift() || '';
-    const { type, rest } = splitType(first);
+    const { type, rest, exact: typeExact } = splitType(first);
     let description = cleanDescription([rest, ...lines].filter(Boolean).join(' '));
     if (index) {
       const c = correctDescription(description, index);
@@ -1037,6 +1067,11 @@
     let side = null; // 'debit' = entrée en caisse, 'credit' = sortie
     let compte = null;
     let candidates = [];
+    const sideFr = (x) => (x === 'debit' ? 'Débit (entrée en caisse)' : 'Crédit (sortie de caisse)');
+    const swap = (attendu) => ({ type: 'swap', side: attendu });
+    // Logique comptable du libellé (REMBOURSEMENT = sortie, PARTICIPATION = entrée…)
+    const logicSide = sideFromType(type);
+    const typeSure = !!logicSide && !!typeExact;
 
     if (doitCaisse && !avoirCaisse) {
       side = 'debit';
@@ -1047,15 +1082,28 @@
     } else if (doitCaisse && avoirCaisse) {
       doubt('compte', `Le compte caisse ${caisse} figure au DOIT et à l'AVOIR : compte à corriger`);
       candidates = doitOther.concat(avoirOther);
-      side = guessSideFromType(type);
+      side = logicSide || guessSideFromType(type);
       if (!side) doubt('montant', 'Sens de l\'écriture (débit/crédit) à vérifier');
+      else if (typeSure) note('montant', `Sens fixé par le libellé : « ${type} » = ${sideFr(side)}`);
       else doubt('montant', `Sens de l'écriture (${side === 'debit' ? 'débit' : 'crédit'}) déduit du type « ${type} » : à vérifier`);
     } else {
       if (!doitAcc.length && !avoirAcc.length) doubt('compte', 'Aucun n° de compte reconnu');
       else doubt('compte', `Le compte caisse ${caisse} n'apparaît pas sur la pièce : sens et compte à vérifier`);
       candidates = doitOther.concat(avoirOther);
-      side = guessSideFromType(type);
-      doubt('montant', side ? `Sens de l'écriture (${side === 'debit' ? 'débit' : 'crédit'}) déduit du type : à vérifier` : 'Sens de l\'écriture (débit/crédit) inconnu');
+      side = logicSide || guessSideFromType(type);
+      if (!side) doubt('montant', 'Sens de l\'écriture (débit/crédit) inconnu');
+      else if (typeSure) note('montant', `Sens fixé par le libellé : « ${type} » = ${sideFr(side)}`);
+      else doubt('montant', `Sens de l'écriture (${side === 'debit' ? 'débit' : 'crédit'}) déduit du type : à vérifier`);
+    }
+
+    // La logique du libellé prime sur la position lue du compte caisse : une pièce remplie
+    // à l'envers (ou une colonne mal lue) ne doit pas inverser le mouvement de caisse.
+    if (logicSide && side && side !== logicSide) {
+      const lu = side;
+      side = logicSide;
+      const msg = `Sens fixé par le libellé : « ${type} » = ${sideFr(logicSide)}, alors que la pièce place le compte caisse ${lu === 'debit' ? 'au DOIT' : 'à l\'AVOIR'} (pièce remplie à l'envers ?)`;
+      if (typeSure) note('montant', msg);
+      else doubt('montant', `${msg} – type d'écriture lu approximativement : à vérifier`, swap(lu));
     }
 
     const readCandidates = uniq(candidates); // comptes réellement lus sur la pièce
@@ -1077,13 +1125,12 @@
       doubt('compte', 'Compte de contrepartie non reconnu');
     }
 
-    // Contrôle croisé du sens : type d'écriture et nature du compte
-    if (side && compte) {
+    // Contrôle croisé du sens pour les types sans logique fixe (DECOMPTE…) : habitudes du
+    // classeur par type d'écriture et par compte, nature du compte
+    if (side && compte && !logicSide) {
       const key = stripAccents(type || '').toUpperCase();
       const exp = index && index.expectedSide ? index.expectedSide.get(key) : null;
-      const sideFr = (x) => (x === 'debit' ? 'Débit (entrée en caisse)' : 'Crédit (sortie de caisse)');
       const expAcc = index && index.expectedSideByAccount ? index.expectedSideByAccount.get(compte) : null;
-      const swap = (attendu) => ({ type: 'swap', side: attendu });
       if (exp && exp.side !== side) {
         doubt('montant', `Sens inhabituel : ${sideFr(side)} alors que les ${exp.n} écritures « ${type} » du classeur sont toutes en ${exp.side === 'debit' ? 'débit' : 'crédit'} : à vérifier sur la pièce`, swap(exp.side));
       } else if (expAcc && expAcc.side !== side) {
@@ -1197,12 +1244,23 @@
     return index.persons.some((p) => p.key === key && p.initials === initials);
   }
 
-  function guessSideFromType(type) {
+  /** Sens fixé par la logique comptable du libellé, ou null si le type va dans les deux sens. */
+  function sideFromType(type) {
     if (!type) return null;
-    const t = stripAccents(type).toUpperCase();
-    if (INFLOW_TYPES.some((k) => t.startsWith(k))) return 'debit';
-    if (OUTFLOW_TYPES.some((k) => t.startsWith(k))) return 'credit';
-    return null;
+    const t = stripAccents(type).toUpperCase().trim();
+    if (TYPE_LOGIC[t]) return TYPE_LOGIC[t];
+    const k = Object.keys(TYPE_LOGIC).find((key) => t.startsWith(key + ' '));
+    return k ? TYPE_LOGIC[k] : null;
+  }
+
+  /** Sens seulement probable (dernier recours, toujours accompagné d'un doute). */
+  function guessSideFromType(type) {
+    const sure = sideFromType(type);
+    if (sure) return sure;
+    if (!type) return null;
+    const t = stripAccents(type).toUpperCase().trim();
+    const k = Object.keys(TYPE_GUESS).find((key) => t === key || t.startsWith(key + ' '));
+    return k ? TYPE_GUESS[k] : null;
   }
 
   /* ------------------------------------------------------------------ */
@@ -1463,6 +1521,8 @@
   return {
     DEFAULT_CAISSE,
     KNOWN_TYPES,
+    TYPE_LOGIC,
+    sideFromType,
     BASE_LEXICON,
     normalizeAmount,
     normalizeAccount,

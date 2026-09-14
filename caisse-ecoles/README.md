@@ -61,10 +61,9 @@ Les fautes d'OCR courantes sont corrigées (`10'OOO.OQ` → 10 000.00, `51000. 3
 Doutes signalés (ce qui déclenche l'orange) :
 
 - **Montant** : illisible, différent entre la colonne SOMME et le Total, nul ou inhabituellement
-  élevé ; sens débit/crédit
-  déduit au lieu d'être lu, contraire au sens habituel du type dans le classeur (par exemple un
-  REMBOURSEMENT en entrée de caisse), ou opposé à la nature du compte (compte de recettes `.4xxx`
-  en sortie).
+  élevé ; pour les types sans logique fixe (DECOMPTE…), sens débit/crédit déduit au lieu d'être
+  lu, contraire au sens habituel du type ou du compte dans le classeur, ou opposé à la nature du
+  compte (compte de recettes `.4xxx` en sortie).
 - **Compte** : plusieurs comptes possibles sur la pièce, aucun compte lu, compte caisse des deux
   côtés ou absent, compte jamais utilisé jusqu'ici (avec les comptes connus voisins proposés).
 - **Numéro** : absent, dupliqué, déjà présent dans le classeur, ou hors séquence par rapport à
@@ -125,8 +124,24 @@ Une lecture de scan n'est jamais certaine à 100 %. Trois garde-fous se complèt
    camp peut aller dans les deux sens, aucune règle ne le signale ; le rapprochement, si). Elle
    nomme les pièces et propose d'inverser leur sens en un clic, après vérification sur la pièce.
 
-Les pièces sont parfois remplies à l'envers (compte caisse du mauvais côté du formulaire).
-L'application lit ce qui est écrit, le signale, et propose de corriger le sens en un clic.
+### Logique des libellés
+
+Le type d'écriture en tête du libellé fixe le sens du mouvement de caisse, quoi qu'indique la
+position du compte caisse sur la pièce :
+
+| Sens | Types |
+|---|---|
+| Sortie de caisse (crédit) | REMBOURSEMENT, AVANCE, PAIEMENT, ACHAT, FRAIS, CADEAU, PRIX |
+| Entrée en caisse (débit) | PARTICIPATION (DES PARENTS), RECETTE, RETRAIT (bancaire), ENCAISSEMENT, VENTE, SUBVENTION |
+| Selon la pièce | DECOMPTE (et tout autre type) |
+
+Une pièce remplie à l'envers (compte caisse du mauvais côté du formulaire) est donc remise dans
+le bon sens automatiquement ; la cellule du montant passe en bleu avec l'explication. Si le type
+lui-même a été lu approximativement (`REMBOURSMENT`), la logique s'applique mais la cellule reste
+orange, avec un bouton pour revenir au sens lu. Pour un DECOMPTE, qui va dans les deux sens, c'est
+la pièce qui décide, puis le rapprochement de caisse qui tranche. Le classeur 2025 confirme cette
+logique : 123 remboursements et 37 avances, tous en sortie ; 18 participations, 8 recettes et
+7 retraits, tous en entrée.
 
 ## Base de référence intégrée
 

@@ -35,11 +35,11 @@ test('findDate reconnaît jj.mm.aaaa et jj.mm.aa', () => {
 });
 
 test('splitType reconnaît et corrige le type en tête du libellé', () => {
-  assert.deepEqual(P.splitType('REMBOURSEMENT collation chœur 7-11S'), { type: 'REMBOURSEMENT', rest: 'collation chœur 7-11S' });
-  assert.deepEqual(P.splitType("REMBOURSMENT soirée numérique à l'école"), { type: 'REMBOURSEMENT', rest: "soirée numérique à l'école" });
-  assert.deepEqual(P.splitType('PARTICIPATION DES PARENTS'), { type: 'PARTICIPATION DES PARENTS', rest: '' });
-  assert.deepEqual(P.splitType('DECOMPTE échange linguistique 11VP/4'), { type: 'DECOMPTE', rest: 'échange linguistique 11VP/4' });
-  assert.deepEqual(P.splitType('Cours de ski'), { type: null, rest: 'Cours de ski' });
+  assert.deepEqual(P.splitType('REMBOURSEMENT collation chœur 7-11S'), { type: 'REMBOURSEMENT', rest: 'collation chœur 7-11S', exact: true });
+  assert.deepEqual(P.splitType("REMBOURSMENT soirée numérique à l'école"), { type: 'REMBOURSEMENT', rest: "soirée numérique à l'école", exact: false });
+  assert.deepEqual(P.splitType('PARTICIPATION DES PARENTS'), { type: 'PARTICIPATION DES PARENTS', rest: '', exact: true });
+  assert.deepEqual(P.splitType('DECOMPTE échange linguistique 11VP/4'), { type: 'DECOMPTE', rest: 'échange linguistique 11VP/4', exact: true });
+  assert.deepEqual(P.splitType('Cours de ski'), { type: null, rest: 'Cours de ski', exact: false });
 });
 
 test('formatLibelle compose "TYPE - Description - Personne"', () => {
