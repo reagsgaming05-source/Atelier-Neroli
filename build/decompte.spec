@@ -13,6 +13,7 @@ hidden = (
     + collect_submodules("anyio")
     + collect_submodules("pydantic")
     + ["multipart", "python_multipart", "email.mime.multipart", "email.mime.text", "openpyxl.cell._writer"]
+    + ["tkinter", "tkinter.ttk", "tkinter.filedialog", "tkinter.messagebox", "tkinter.font", "PIL.ImageTk", "PIL._tkinter_finder"]
 )
 
 datas = [
@@ -28,7 +29,7 @@ a = Analysis(
     hiddenimports=hidden,
     hookspath=[],
     runtime_hooks=[],
-    excludes=["tkinter", "unittest", "pytest", "IPython", "matplotlib", "scipy", "pandas"],
+    excludes=["unittest", "pytest", "IPython", "matplotlib", "scipy", "pandas"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
