@@ -69,21 +69,35 @@ jobs:
       - name: Test de fumée de l'exécutable (moteur via --web, puis démarrage de la fenêtre)
         shell: pwsh
         run: |
+          $log = "dist\DecompteDGEO\data\decompte.log"
           $p = Start-Process -FilePath "dist\DecompteDGEO\DecompteDGEO.exe" -ArgumentList "--web","--no-browser","--port","8765" -PassThru
-          $ok = $false
-          foreach ($i in 1..60) {
-            Start-Sleep -Seconds 1
-            try { Invoke-RestMethod "http://127.0.0.1:8765/api/health" | Out-Null; $ok = $true; break } catch {}
+          try {
+            $ok = $false
+            foreach ($i in 1..60) {
+              Start-Sleep -Seconds 1
+              try { Invoke-RestMethod "http://127.0.0.1:8765/api/health" | Out-Null; $ok = $true; break } catch {}
+            }
+            if (-not $ok) { throw "L'exécutable (mode --web) ne répond pas" }
+            python build\smoke_test.py http://127.0.0.1:8765
+          } finally {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            Get-Content $log -ErrorAction SilentlyContinue
+            Get-Content dist\DecompteDGEO\data\console.log -ErrorAction SilentlyContinue
           }
-          if (-not $ok) { Get-Content dist\DecompteDGEO\data\decompte.log -ErrorAction SilentlyContinue; throw "L'exécutable (mode --web) ne répond pas" }
-          try { python build\smoke_test.py http://127.0.0.1:8765 } finally { Stop-Process -Id $p.Id -Force }
-          # l'application fenêtrée doit démarrer et rester ouverte (pas de crash au lancement)
+          # l'application fenêtrée doit démarrer (marqueur dans le journal) et rester ouverte
           $g = Start-Process -FilePath "dist\DecompteDGEO\DecompteDGEO.exe" -PassThru
-          Start-Sleep -Seconds 8
-          if ($g.HasExited) { Get-Content dist\DecompteDGEO\data\decompte.log -ErrorAction SilentlyContinue; throw "L'application fenêtrée s'est arrêtée (code $($g.ExitCode))" }
-          Write-Host "Fenêtre démarrée (PID $($g.Id)) : OK"
-          Stop-Process -Id $g.Id -Force
-          Remove-Item dist\DecompteDGEO\data -Recurse -Force -ErrorAction SilentlyContinue
+          try {
+            Start-Sleep -Seconds 10
+            if ($g.HasExited) { throw "L'application fenêtrée s'est arrêtée (code $($g.ExitCode))" }
+            $started = (Get-Content $log -ErrorAction SilentlyContinue | Select-String "interface démarrée")
+            if (-not $started) { throw "La fenêtre n'a pas signalé son démarrage" }
+            Write-Host "Fenêtre démarrée (PID $($g.Id)) : OK"
+          } finally {
+            Stop-Process -Id $g.Id -Force -ErrorAction SilentlyContinue
+            Get-Content $log -ErrorAction SilentlyContinue
+            Get-Content dist\DecompteDGEO\data\console.log -ErrorAction SilentlyContinue
+            Remove-Item dist\DecompteDGEO\data -Recurse -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Archive zip
         shell: pwsh

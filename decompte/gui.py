@@ -905,8 +905,11 @@ def main(argv: list[str] | None = None) -> None:
             ctypes.windll.shcore.SetProcessDpiAwareness(1)  # type: ignore[attr-defined]
         except Exception:  # noqa: BLE001
             pass
-    from .entry import setup_logging
+    if not logging.getLogger().handlers:
+        from .entry import setup_logging
 
-    setup_logging(DATA_DIR)
+        setup_logging(DATA_DIR)
     app = App(argv)
+    app.update_idletasks()
+    log.info("interface démarrée (fenêtre affichée) — version %s", __version__)
     app.mainloop()
