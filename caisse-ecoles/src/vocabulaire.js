@@ -3,7 +3,7 @@
  * comptes et sens habituels par type d'écriture.
  *
  * Source : caisse.xlsx – 267 écriture(s), année(s) 2025
- * Généré le 2026-09-11 par tools/build-vocab.js – ne pas modifier à la main.
+ * Généré le 2026-09-14 par tools/build-vocab.js – ne pas modifier à la main.
  * Aucune donnée personnelle : les noms sont dans vocabulaire-noms.js (non versionné).
  */
 (function (root, factory) {
@@ -654,7 +654,174 @@
         "n": 1
       }
     ],
+    "accountSides": [
+      {
+        "compte": "51000.3662.00",
+        "side": "credit",
+        "n": 71
+      },
+      {
+        "compte": "50000.3652.00",
+        "side": "credit",
+        "n": 19
+      },
+      {
+        "compte": "51000.4392.20",
+        "side": "debit",
+        "n": 15
+      },
+      {
+        "compte": "51000.3185.00",
+        "side": "credit",
+        "n": 15
+      },
+      {
+        "compte": "51000.3170.05",
+        "side": "credit",
+        "n": 14
+      },
+      {
+        "compte": "51000.3662.50",
+        "side": "credit",
+        "n": 13
+      },
+      {
+        "compte": "51000.3662.00",
+        "side": "debit",
+        "n": 12
+      },
+      {
+        "compte": "51000.3151.00",
+        "side": "credit",
+        "n": 11
+      },
+      {
+        "compte": "51000.3199.00",
+        "side": "credit",
+        "n": 11
+      },
+      {
+        "compte": "9206.101",
+        "side": "credit",
+        "n": 10
+      },
+      {
+        "compte": "9111.100",
+        "side": "debit",
+        "n": 7
+      },
+      {
+        "compte": "52000.3662.00",
+        "side": "credit",
+        "n": 7
+      },
+      {
+        "compte": "9206.101",
+        "side": "debit",
+        "n": 6
+      },
+      {
+        "compte": "52000.3662.40",
+        "side": "credit",
+        "n": 5
+      },
+      {
+        "compte": "52000.3662.10",
+        "side": "credit",
+        "n": 5
+      },
+      {
+        "compte": "51000.3662.30",
+        "side": "credit",
+        "n": 5
+      },
+      {
+        "compte": "35303.3152",
+        "side": "credit",
+        "n": 5
+      },
+      {
+        "compte": "52000.3662.00",
+        "side": "debit",
+        "n": 4
+      },
+      {
+        "compte": "35302.3152",
+        "side": "credit",
+        "n": 4
+      },
+      {
+        "compte": "35308.3151",
+        "side": "credit",
+        "n": 3
+      },
+      {
+        "compte": "51000.3170.10",
+        "side": "credit",
+        "n": 3
+      },
+      {
+        "compte": "51000.4392.00",
+        "side": "debit",
+        "n": 3
+      },
+      {
+        "compte": "51000.3662.30",
+        "side": "debit",
+        "n": 3
+      },
+      {
+        "compte": "50000.3114.00",
+        "side": "credit",
+        "n": 3
+      },
+      {
+        "compte": "52000.4390.30",
+        "side": "debit",
+        "n": 2
+      },
+      {
+        "compte": "52000.3112.00",
+        "side": "credit",
+        "n": 2
+      },
+      {
+        "compte": "52000.3662.10",
+        "side": "debit",
+        "n": 2
+      },
+      {
+        "compte": "50000.3170.00",
+        "side": "credit",
+        "n": 2
+      },
+      {
+        "compte": "51000.3662.20",
+        "side": "credit",
+        "n": 1
+      },
+      {
+        "compte": "52000.3662.30",
+        "side": "credit",
+        "n": 1
+      },
+      {
+        "compte": "50000.3061.00",
+        "side": "credit",
+        "n": 1
+      },
+      {
+        "compte": "9206.104",
+        "side": "credit",
+        "n": 1
+      },
+      {
+        "compte": "51000.3112.00",
+        "side": "credit",
+        "n": 1
+      }
+    ],
     "source": "caisse.xlsx – 267 écriture(s), année(s) 2025",
-    "generated": "2026-09-11"
+    "generated": "2026-09-14"
   };
 });

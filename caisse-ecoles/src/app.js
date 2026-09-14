@@ -94,6 +94,12 @@
     previewFields: $('previewFields'),
     accountsList: $('accountsList'),
     totals: $('totals'),
+    checkTable: $('checkTable'),
+    checkBalance: $('checkBalance'),
+    checkDate: $('checkDate'),
+    balanceResult: $('balanceResult'),
+    btnReview: $('btnReview'),
+    btnReport: $('btnReport'),
     excelNotices: $('excelNotices'),
     btnExcel: $('btnExcel'),
     excelHint: $('excelHint'),
@@ -588,9 +594,10 @@
 
   function rowMessages(e) {
     const status = rowStatus(e);
-    // Une ligne en ordre n'affiche pas le détail des corrections : elles restent visibles
-    // par la cellule bleue, son info-bulle, et le détail quand la ligne est sélectionnée.
-    const showNotes = status !== 'ok' || e.id === state.selectedId;
+    // Une ligne en ordre n'affiche pas le détail des corrections : elles restent visibles par la
+    // cellule bleue et son info-bulle. Le contenu ne dépend pas de la sélection, sinon cliquer
+    // sur un bouton de la ligne le détruirait avant que le clic ne soit traité.
+    const showNotes = status !== 'ok';
     const open = [];
     for (const f of FIELDS) if (fieldDoubt(e, f)) for (const x of e.flags[f]) if (x.level === 'doubt') open.push(x.message);
     const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
@@ -598,6 +605,11 @@
       .concat(showNotes ? (e.notes || []).map((m) => `<li class="note">${escapeHtml(m)}</li>`) : []);
     if (!items.length) return '';
     let html = `<ul>${items.join('')}</ul>`;
+    const swap = fieldDoubt(e, 'montant') && (e.flags.montant || []).map((f) => f.action).find((a) => a && a.type === 'swap');
+    if (swap) {
+      html += `<div style="margin-top:4px">Si la pièce a été remplie à l'envers : ` +
+        `<button type="button" class="small" data-action="swap" data-side="${swap.side}">Passer en ${swap.side === 'debit' ? 'Débit (entrée)' : 'Crédit (sortie)'}</button></div>`;
+    }
     const cands = (e.candidates || []).filter((a) => a !== e.compte);
     if ((e.candidates || []).length > 1 && cands.length) {
       html += `<div style="margin-top:4px">Compte : ` +
@@ -711,7 +723,10 @@
         tr2.dataset.id = id;
         tr.insertAdjacentElement('afterend', tr2);
       }
-      tr2.innerHTML = `<td colspan="10">${msgs}</td>`;
+      // Ne reconstruire que si le contenu change réellement : sinon un simple clic sur un
+      // bouton de cette ligne détruirait ce bouton avant que le clic ne soit traité.
+      const html = `<td colspan="10">${msgs}</td>`;
+      if (tr2.innerHTML !== html) tr2.innerHTML = html;
     } else if (tr2) {
       tr2.remove();
     }
@@ -747,6 +762,7 @@
     e.edited = true;
     updateRowStatus(id);
     renderTotals();
+    renderChecks();
   });
 
   els.body.addEventListener('change', (ev) => {
@@ -771,9 +787,31 @@
   els.body.addEventListener('click', (ev) => {
     const btn = ev.target.closest('button[data-action="delete"]');
     const useBtn = ev.target.closest('button[data-action="use-account"]');
+    const swapBtn = ev.target.closest('button[data-action="swap"]');
     const tr = ev.target.closest('tr');
     if (!tr) return;
     const id = Number(tr.dataset.id);
+    if (swapBtn) {
+      const e = state.entries.find((x) => x.id === id);
+      if (e) {
+        const montant = e.debit != null ? e.debit : e.credit;
+        if (swapBtn.dataset.side === 'debit') { e.debit = montant; e.credit = null; } else { e.credit = montant; e.debit = null; }
+        e.edited = true;
+        e.resolved = Object.assign({}, e.resolved, { montant: true });
+        // mise à jour de la seule ligne concernée, pour ne pas détruire les autres boutons
+        const row = els.body.querySelector(`tr.entry[data-id="${id}"]`);
+        if (row) {
+          const dInp = row.querySelector('input[data-field="debit"]');
+          const cInp = row.querySelector('input[data-field="credit"]');
+          if (dInp) dInp.value = fmtInput(e.debit);
+          if (cInp) cInp.value = fmtInput(e.credit);
+        }
+        updateRowStatus(id);
+        renderTotals();
+        renderChecks();
+      }
+      return;
+    }
     if (useBtn) {
       const e = state.entries.find((x) => x.id === id);
       if (e) {
@@ -823,18 +861,27 @@
   });
 
   els.btnCheckAll.addEventListener('click', () => {
+    const reste = state.entries.filter((e) => rowStatus(e) === 'warn');
+    if (reste.length) {
+      const nos = reste.map((e) => e.no == null ? '?' : e.no).join(', ');
+      const ok = confirm(
+        `Attention : ${reste.length} ligne(s) portent encore une alerte de lecture.\n\n` +
+        `Pièces concernées : ${nos}\n\n` +
+        `Les marquer toutes vérifiées sans les regarder revient à accepter ces lectures telles quelles. ` +
+        `Une erreur de sens ou de montant passerait alors dans le fichier Excel.\n\n` +
+        `Voulez-vous plutôt les contrôler une par une (Annuler), ou tout valider quand même (OK) ?`);
+      if (!ok) { gotoNextDoubt(null); return; }
+    }
     state.entries.forEach((e) => { e.checked = true; e.edited = true; });
     renderTable();
+    renderChecks();
   });
 
   els.filterDoubt.addEventListener('change', () => renderTable());
 
   function selectEntry(id) {
-    const prev = state.selectedId;
     state.selectedId = id;
     els.body.querySelectorAll('tr.entry').forEach((r) => r.classList.toggle('selected', Number(r.dataset.id) === id));
-    if (prev != null) updateRowStatus(prev);
-    updateRowStatus(id);
     const tr = els.body.querySelector(`tr.entry[data-id="${id}"]`);
     if (tr) tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
     renderPreview();
@@ -991,6 +1038,252 @@
     }
   });
 
+  /* ---------------- Contrôle pièce par pièce ---------------- */
+  const review = { open: false, id: null, el: null, token: 0 };
+
+  function reviewList() {
+    return state.entries.filter((e) => e.page);
+  }
+
+  function openReview(startId) {
+    const list = reviewList();
+    if (!list.length) { alert('Aucune pièce à contrôler.'); return; }
+    review.open = true;
+    review.id = startId != null && list.some((e) => e.id === startId) ? startId : list[0].id;
+    if (!review.el) {
+      review.el = document.createElement('div');
+      review.el.className = 'review';
+      review.el.innerHTML =
+        '<header>' +
+        '<span class="title">Contrôle des pièces</span>' +
+        '<span class="progress" id="rvProgress"></span>' +
+        '<span class="spacer"></span>' +
+        '<button type="button" id="rvPrev">◀ Précédente</button>' +
+        '<button type="button" id="rvNextDoubt">Prochaine à vérifier</button>' +
+        '<button type="button" class="primary" id="rvOk">✓ Correct → suivante</button>' +
+        '<button type="button" id="rvClose">Fermer</button>' +
+        '</header>' +
+        '<div class="body"><div class="sheet" id="rvSheet"></div><div class="side" id="rvSide"></div></div>';
+      document.body.appendChild(review.el);
+      $('rvClose').addEventListener('click', closeReview);
+      $('rvPrev').addEventListener('click', () => moveReview(-1));
+      $('rvOk').addEventListener('click', () => { markReviewed(true); moveReview(1); });
+      $('rvNextDoubt').addEventListener('click', () => gotoReviewDoubt());
+      review.el.addEventListener('input', (ev) => {
+        const f = ev.target.dataset && ev.target.dataset.rvField;
+        if (!f) return;
+        const e = state.entries.find((x) => x.id === review.id);
+        if (!e) return;
+        const val = ev.target.value;
+        if (f === 'no') e.no = val.trim() === '' ? null : (/^\d+$/.test(val.trim()) ? parseInt(val, 10) : val.trim());
+        else if (f === 'date') e.date = P.displayToIso(val);
+        else if (f === 'compte') e.compte = val.trim();
+        else if (f === 'libelle') e.libelle = val;
+        else if (f === 'debit' || f === 'credit') e[f] = val.trim() === '' ? null : P.round2(Number(val.replace(',', '.')));
+        e.edited = true;
+        const champ = { no: 'no', date: 'date', compte: 'compte', libelle: 'libelle', debit: 'montant', credit: 'montant' }[f];
+        if (champ) e.resolved = Object.assign({}, e.resolved, { [champ]: true });
+        renderReviewMessages();
+      });
+      document.addEventListener('keydown', (ev) => {
+        if (!review.open) return;
+        if (ev.key === 'Escape') { closeReview(); return; }
+        if (ev.target && /^(INPUT|TEXTAREA)$/.test(ev.target.tagName)) return;
+        if (ev.key === 'ArrowRight' || ev.key === ' ') { ev.preventDefault(); markReviewed(true); moveReview(1); }
+        else if (ev.key === 'ArrowLeft') { ev.preventDefault(); moveReview(-1); }
+      });
+    }
+    review.el.style.display = 'flex';
+    renderReview();
+  }
+
+  function closeReview() {
+    review.open = false;
+    if (review.el) review.el.style.display = 'none';
+    renderTable();
+    renderTotals();
+    renderChecks();
+    renderPreview();
+  }
+
+  function markReviewed(ok) {
+    const e = state.entries.find((x) => x.id === review.id);
+    if (!e) return;
+    e.seen = true;
+    if (ok && rowStatus(e) !== 'err') e.checked = true;
+  }
+
+  function moveReview(step) {
+    const list = reviewList();
+    const i = list.findIndex((e) => e.id === review.id);
+    const j = i + step;
+    if (j < 0) return;
+    if (j >= list.length) { closeReview(); alert('Toutes les pièces ont été parcourues.'); return; }
+    review.id = list[j].id;
+    renderReview();
+  }
+
+  function gotoReviewDoubt() {
+    const list = reviewList();
+    const i = list.findIndex((e) => e.id === review.id);
+    for (let k = 1; k <= list.length; k++) {
+      const e = list[(i + k) % list.length];
+      if (rowStatus(e) !== 'ok') { review.id = e.id; renderReview(); return; }
+    }
+    alert('Aucune pièce ne porte encore d\'alerte.');
+  }
+
+  function renderReviewMessages() {
+    const e = state.entries.find((x) => x.id === review.id);
+    if (!e) return;
+    const box = $('rvMsgs');
+    if (!box) return;
+    const open = [];
+    for (const f of FIELDS) if (fieldDoubt(e, f)) for (const x of e.flags[f]) if (x.level === 'doubt') open.push(x.message);
+    const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
+      .concat(uniqList(open).map((m) => `<li>${escapeHtml(m)}</li>`))
+      .concat((e.notes || []).map((m) => `<li class="note">${escapeHtml(m)}</li>`));
+    box.innerHTML = items.length ? `<ul>${items.join('')}</ul>` : '<div style="color:var(--ok)">✓ Lue sans ambiguïté</div>';
+    review.el.querySelectorAll('input[data-rv-field]').forEach((inp) => {
+      const map = { no: 'no', date: 'date', compte: 'compte', libelle: 'libelle', debit: 'montant', credit: 'montant' };
+      inp.classList.toggle('doubt', fieldDoubt(e, map[inp.dataset.rvField]));
+    });
+  }
+
+  async function renderReview() {
+    const e = state.entries.find((x) => x.id === review.id);
+    if (!e) return;
+    e.seen = true;
+    const list = reviewList();
+    const i = list.findIndex((x) => x.id === review.id);
+    const restant = state.entries.filter((x) => x.page && !x.seen).length;
+    $('rvProgress').textContent = `Pièce ${i + 1} / ${list.length} – ${restant} pas encore affichée(s)`;
+    const ref = pageRef(e.page);
+    $('rvSide').innerHTML =
+      `<div class="f"><label>N° de pièce</label><input type="text" data-rv-field="no" value="${escapeHtml(e.no == null ? '' : e.no)}"></div>` +
+      `<div class="f"><label>Date</label><input type="text" data-rv-field="date" value="${escapeHtml(P.isoToDisplay(e.date))}" placeholder="jj.mm.aaaa"></div>` +
+      `<div class="f"><label>Compte de contrepartie</label><input type="text" data-rv-field="compte" list="accountsList" value="${escapeHtml(e.compte)}"></div>` +
+      `<div class="f"><label>Libellé</label><input type="text" data-rv-field="libelle" value="${escapeHtml(e.libelle)}"></div>` +
+      `<div class="f amount"><div><label>Débit (entrée)</label><input type="number" step="0.01" data-rv-field="debit" value="${fmtInput(e.debit)}"></div>` +
+      `<div><label>Crédit (sortie)</label><input type="number" step="0.01" data-rv-field="credit" value="${fmtInput(e.credit)}"></div></div>` +
+      `<div class="msgs" id="rvMsgs"></div>` +
+      (e.candidates && e.candidates.length > 1 ? `<div class="legend">Comptes lus sur la pièce : ${e.candidates.map((a) => `<button type="button" class="small" data-rv-account="${escapeHtml(a)}">${escapeHtml(a)}</button>`).join(' ')}</div>` : '') +
+      `<div class="actions"><button type="button" class="primary" id="rvOk2">✓ Correct → suivante</button>` +
+      `<button type="button" id="rvSwap">↔ Inverser débit / crédit</button></div>` +
+      `<div class="legend" style="margin-top:6px">La pièce est parfois remplie à l'envers (compte caisse du mauvais côté) : l'application lit ce qui est écrit et le signale, à vous de trancher.</div>` +
+      `<div class="legend" style="margin-top:10px">Raccourcis : <b>→</b> ou <b>Espace</b> valide et passe à la suivante, <b>←</b> revient, <b>Échap</b> ferme.</div>`;
+    $('rvOk2').addEventListener('click', () => { markReviewed(true); moveReview(1); });
+    $('rvSwap').addEventListener('click', () => {
+      const d = e.debit; e.debit = e.credit; e.credit = d;
+      e.edited = true;
+      e.resolved = Object.assign({}, e.resolved, { montant: true });
+      renderReview();
+    });
+    $('rvSide').querySelectorAll('button[data-rv-account]').forEach((b) => b.addEventListener('click', () => {
+      e.compte = b.dataset.rvAccount;
+      e.edited = true;
+      e.resolved = Object.assign({}, e.resolved, { compte: true });
+      renderReview();
+    }));
+    renderReviewMessages();
+    // image de la pièce
+    const token = ++review.token;
+    const sheet = $('rvSheet');
+    sheet.innerHTML = '<span style="color:var(--muted);padding:20px">Chargement de la pièce…</span>';
+    try {
+      const page = await ref.doc.doc.getPage(ref.pageInDoc);
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: 1400 / base.width });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(vp.width);
+      canvas.height = Math.round(vp.height * 0.66);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      if (token !== review.token) return;
+      sheet.innerHTML = '';
+      sheet.appendChild(canvas);
+      const zones = zonesFor(e);
+      if (zones.length) {
+        const ov = document.createElement('canvas');
+        ov.width = canvas.width; ov.height = canvas.height;
+        const octx = ov.getContext('2d');
+        const scale = canvas.width / ref.pageWidth;
+        for (const z of zones) {
+          if (!z.box) continue;
+          const x = z.box.x * scale - 5, y = z.box.y * scale - 4, w = z.box.w * scale + 10, h = z.box.h * scale + 8;
+          octx.lineWidth = z.level === 'doubt' ? 4 : 2;
+          octx.strokeStyle = z.level === 'doubt' ? 'rgba(217,119,6,0.95)' : 'rgba(37,99,235,0.55)';
+          if (z.level === 'doubt') { octx.fillStyle = 'rgba(251,191,36,0.20)'; octx.fillRect(x, y, w, h); }
+          octx.strokeRect(x, y, w, h);
+          octx.font = 'bold 16px Segoe UI, Arial, sans-serif';
+          octx.fillStyle = z.level === 'doubt' ? '#b45309' : '#1d4ed8';
+          octx.fillText(z.label, x + 2, Math.max(15, y - 5));
+        }
+        ov.className = 'overlay';
+        ov.style.width = '100%';
+        sheet.appendChild(ov);
+      }
+    } catch (err) {
+      console.error(err);
+      if (token === review.token) sheet.innerHTML = `<span style="color:var(--err);padding:20px">Aperçu indisponible : ${escapeHtml(err.message || err)}</span>`;
+    }
+  }
+
+  els.btnReview.addEventListener('click', () => openReview(state.selectedId));
+
+  /**
+   * Rapport de contrôle : récapitulatif du lot et détail des pièces signalées,
+   * à imprimer ou à conserver avec les pièces.
+   */
+  els.btnReport.addEventListener('click', () => {
+    const c = lotChecks();
+    const t = X.computeTotals(currentOpening(), allEntriesForExcel());
+    const op = currentOpening();
+    const esc = escapeHtml;
+    const ligne = (e) => {
+      const msgs = [];
+      for (const f of FIELDS) if (fieldDoubt(e, f)) for (const x of e.flags[f]) if (x.level === 'doubt') msgs.push(x.message);
+      return `<tr><td>${esc(e.no == null ? '?' : e.no)}</td><td>${esc(P.isoToDisplay(e.date))}</td><td>${esc(e.compte)}</td>` +
+        `<td>${esc(e.libelle)}</td><td class="n">${e.debit != null ? fmtCHF(e.debit) : ''}</td><td class="n">${e.credit != null ? fmtCHF(e.credit) : ''}</td>` +
+        `<td>${esc(e.page ? pageLabel(e.page) : 'manuel')}</td><td>${esc(uniqList(msgs).join(' ; '))}</td></tr>`;
+    };
+    const signalees = state.entries.filter((e) => rowStatus(e) !== 'ok');
+    const soldeSaisi = els.checkBalance.value.trim();
+    const ecart = soldeSaisi === '' ? null : P.round2(t.end - Number(soldeSaisi.replace(',', '.')));
+    const html =
+      `<!doctype html><meta charset="utf-8"><title>Rapport de contrôle – caisse</title>` +
+      `<style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;margin:24px;color:#111}` +
+      `h1{font-size:17px;margin:0 0 4px}h2{font-size:13px;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:#555}` +
+      `table{border-collapse:collapse;width:100%}td,th{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}` +
+      `th{background:#eee}td.n{text-align:right;white-space:nowrap}dl{display:grid;grid-template-columns:260px 1fr;gap:3px 10px;margin:0}` +
+      `dt{color:#555}dd{margin:0;font-weight:bold}.ko{color:#b3261e}.ok{color:#1e7f4f}@media print{body{margin:10mm}}</style>` +
+      `<h1>Rapport de contrôle de la caisse</h1><div>Édité le ${esc(P.isoToDisplay(new Date().toISOString().slice(0, 10)))}` +
+      (state.docs.length ? ` – pièces : ${esc(state.docs.map((d) => d.name).join(', '))}` : '') + `</div>` +
+      `<h2>Récapitulatif</h2><dl>` +
+      `<dt>Solde à nouveau${op.date ? ' au ' + esc(P.isoToDisplay(op.date)) : ''}</dt><dd>${esc(fmtCHF(op.amount))}</dd>` +
+      `<dt>Pièces lues dans ce lot</dt><dd>${c.count}</dd>` +
+      `<dt>Total des débits (entrées)</dt><dd>${esc(fmtCHF(t.debits))}</dd>` +
+      `<dt>Total des crédits (sorties)</dt><dd>${esc(fmtCHF(t.credits))}</dd>` +
+      `<dt>Solde calculé</dt><dd>${esc(fmtCHF(t.end))}</dd>` +
+      (ecart == null ? '' : `<dt>Solde réel compté</dt><dd>${esc(fmtCHF(Number(soldeSaisi.replace(',', '.'))))}</dd>` +
+        `<dt>Écart</dt><dd class="${Math.abs(ecart) < 0.005 ? 'ok' : 'ko'}">${esc(fmtCHF(ecart))}${Math.abs(ecart) < 0.005 ? ' (rapprochement correct)' : ' (à expliquer)'}</dd>`) +
+      `<dt>Numéros manquants</dt><dd class="${c.manquants.length ? 'ko' : 'ok'}">${c.manquants.length ? esc(c.manquants.join(', ')) : 'aucun'}</dd>` +
+      `<dt>Numéros en double</dt><dd class="${c.doublons.length ? 'ko' : 'ok'}">${c.doublons.length ? esc(c.doublons.join(', ')) : 'aucun'}</dd>` +
+      `<dt>Pièces affichées à l'écran</dt><dd>${c.count - c.jamaisVues.length} sur ${c.count}</dd>` +
+      `<dt>Lignes encore signalées</dt><dd class="${signalees.length ? 'ko' : 'ok'}">${signalees.length}</dd>` +
+      `</dl>` +
+      (signalees.length ? `<h2>Pièces signalées</h2><table><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Page</th><th>Motif</th></tr>` +
+        signalees.map(ligne).join('') + `</table>` : '<h2>Pièces signalées</h2><div class="ok">Aucune.</div>') +
+      `<h2>Toutes les écritures du lot</h2><table><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Page</th><th>Motif</th></tr>` +
+      state.entries.map(ligne).join('') + `</table>`;
+    const w = window.open('', '_blank');
+    if (!w) { alert('Le navigateur a bloqué l\'ouverture du rapport. Autorisez les fenêtres surgissantes pour cette page.'); return; }
+    w.document.write(html);
+    w.document.close();
+  });
+
   /* ---------------- Étape 4 : totaux + Excel ---------------- */
   function allEntriesForExcel() {
     const news = state.entries.slice().sort((a, b) => {
@@ -1003,6 +1296,94 @@
     return existingEntries().map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
       .concat(news.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
   }
+
+  /**
+   * Contrôles du lot : séquence des numéros, doublons, lignes non contrôlées.
+   * Sert à la fois au tableau de l'étape 4 et au refus de générer un fichier douteux.
+   */
+  function lotChecks() {
+    const news = state.entries;
+    const nos = news.map((e) => Number(e.no)).filter((n) => !isNaN(n));
+    const counts = new Map();
+    for (const n of nos) counts.set(n, (counts.get(n) || 0) + 1);
+    const doublons = Array.from(counts.entries()).filter(([, c]) => c > 1).map(([n]) => n).sort((a, b) => a - b);
+    const manquants = [];
+    if (nos.length) {
+      for (let n = Math.min.apply(null, nos); n <= Math.max.apply(null, nos); n++) if (!counts.has(n)) manquants.push(n);
+    }
+    const existNos = new Set(existingEntries().map((e) => Number(e.no)).filter((n) => !isNaN(n)));
+    const dejaLa = nos.filter((n) => existNos.has(n));
+    const sansNo = news.filter((e) => e.no == null || e.no === '').length;
+    const aVerifier = news.filter((e) => rowStatus(e) === 'warn');
+    const incompletes = news.filter((e) => rowStatus(e) === 'err');
+    const jamaisVues = news.filter((e) => !e.seen && !e.checked && !e.edited && !e.manual);
+    return { doublons, manquants, dejaLa: uniqList(dejaLa), sansNo, aVerifier, incompletes, jamaisVues, count: news.length };
+  }
+
+  function renderChecks() {
+    const c = lotChecks();
+    const t = X.computeTotals(currentOpening(), allEntriesForExcel());
+    const line = (k, v, level, action) =>
+      `<tr class="${level}"><td class="k">${k}</td><td class="v">${v}${action || ''}</td></tr>`;
+    const btn = (label, act) => ` <button type="button" class="small" data-check="${act}">${label}</button>`;
+    const rows = [];
+    rows.push(line('Pièces lues dans ce lot', `${c.count}`, 'ok'));
+    rows.push(c.manquants.length
+      ? line('Numéros manquants dans la suite', `${c.manquants.length} : ${c.manquants.slice(0, 20).join(', ')}${c.manquants.length > 20 ? '…' : ''}`, 'err')
+      : line('Suite des numéros', 'complète, sans trou', 'ok'));
+    rows.push(c.doublons.length
+      ? line('Numéros en double', `${c.doublons.join(', ')}`, 'err', btn('Voir', 'dup'))
+      : line('Numéros en double', 'aucun', 'ok'));
+    if (c.dejaLa.length) rows.push(line('Numéros déjà dans le classeur', c.dejaLa.join(', '), 'err'));
+    if (c.sansNo) rows.push(line('Pièces sans numéro', String(c.sansNo), 'err'));
+    rows.push(c.incompletes.length
+      ? line('Lignes incomplètes', String(c.incompletes.length), 'err', btn('Voir', 'err'))
+      : line('Lignes incomplètes', 'aucune', 'ok'));
+    rows.push(c.aVerifier.length
+      ? line('Lignes à vérifier', String(c.aVerifier.length), 'warn', btn('Voir', 'warn'))
+      : line('Lignes à vérifier', 'aucune', 'ok'));
+    rows.push(c.jamaisVues.length
+      ? line('Pièces jamais affichées', `${c.jamaisVues.length} sur ${c.count}`, 'warn', btn('Contrôler', 'review'))
+      : line('Pièces affichées au moins une fois', `${c.count} sur ${c.count}`, 'ok'));
+    rows.push(line('Total des débits', fmtCHF(t.debits), 'ok'));
+    rows.push(line('Total des crédits', fmtCHF(t.credits), 'ok'));
+    rows.push(line('Solde calculé', fmtCHF(t.end), 'ok'));
+    els.checkTable.innerHTML = rows.join('');
+    renderBalanceCheck();
+  }
+
+  function renderBalanceCheck() {
+    const v = els.checkBalance.value.trim();
+    if (v === '') { els.balanceResult.innerHTML = ''; return; }
+    const reel = Number(v.replace(',', '.'));
+    if (!isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
+    const t = X.computeTotals(currentOpening(), allEntriesForExcel());
+    const ecart = P.round2(t.end - reel);
+    if (Math.abs(ecart) < 0.005) {
+      els.balanceResult.innerHTML = `<div class="balance-box ok">✓ Le solde calculé correspond exactement au solde réel : <b>${escapeHtml(fmtCHF(t.end))}</b>. Les écritures de ce lot sont cohérentes.</div>`;
+    } else {
+      els.balanceResult.innerHTML = `<div class="balance-box err">✖ Écart de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> : le calcul donne ${escapeHtml(fmtCHF(t.end))}, vous avez compté ${escapeHtml(fmtCHF(reel))}.` +
+        `<br>Une écriture a probablement été mal lue. Cherchez d'abord :` +
+        `<ul style="margin:6px 0 0 0"><li>un montant de <b>${escapeHtml(fmtCHF(Math.abs(ecart) / 2))}</b> pris dans le mauvais sens (débit au lieu de crédit ou l'inverse) ;</li>` +
+        `<li>une pièce de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> oubliée ou comptée deux fois ;</li>` +
+        `<li>les numéros manquants ou en double signalés à gauche.</li></ul></div>`;
+    }
+  }
+
+  els.checkBalance.addEventListener('input', renderBalanceCheck);
+
+  els.checkTable.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-check]');
+    if (!b) return;
+    const c = lotChecks();
+    if (b.dataset.check === 'review') { openReview(c.jamaisVues[0] ? c.jamaisVues[0].id : null); return; }
+    const list = b.dataset.check === 'dup'
+      ? state.entries.filter((e) => c.doublons.includes(Number(e.no)))
+      : b.dataset.check === 'err' ? c.incompletes : c.aVerifier;
+    if (!list.length) return;
+    els.step3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    selectEntry(list[0].id);
+  });
 
   function renderTotals() {
     const opening = currentOpening();
@@ -1025,6 +1406,7 @@
     if (!has) return;
     renderTable();
     renderTotals();
+    renderChecks();
     renderPreview();
     els.excelHint.textContent = `Fichier : ${X.suggestFileName(allEntriesForExcel(), currentOpening())}`;
   }
@@ -1064,25 +1446,44 @@
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
-    const errs = state.entries.filter((e) => rowIssues(e).length);
-    if (errs.length) {
-      notice(els.excelNotices, 'err', `${errs.length} écriture(s) incomplète(s) (✖) : complétez-les avant de générer le fichier.`);
+    const c = lotChecks();
+    if (c.incompletes.length) {
+      notice(els.excelNotices, 'err', `${c.incompletes.length} écriture(s) incomplète(s) (✖) : complétez-les avant de générer le fichier.`);
+      selectEntry(c.incompletes[0].id);
       return;
     }
-    const warns = state.entries.filter((e) => rowStatus(e) === 'warn');
-    if (warns.length && !confirm(`${warns.length} écriture(s) sont encore marquées « à vérifier ». Générer le fichier quand même ?`)) return;
+    // Anomalies de séquence : très probablement un numéro mal lu, donc une pièce perdue ou doublée
+    const graves = [];
+    if (c.manquants.length) graves.push(`• numéros absents de la suite : ${c.manquants.slice(0, 25).join(', ')}${c.manquants.length > 25 ? '…' : ''}`);
+    if (c.doublons.length) graves.push(`• numéros en double : ${c.doublons.join(', ')}`);
+    if (c.dejaLa.length) graves.push(`• numéros déjà présents dans le classeur : ${c.dejaLa.join(', ')}`);
+    if (c.sansNo) graves.push(`• ${c.sansNo} pièce(s) sans numéro`);
+    if (graves.length) {
+      const ok = confirm(
+        'La suite des numéros de pièces n\'est pas continue :\n\n' + graves.join('\n') +
+        '\n\nC\'est le signe habituel d\'un numéro mal lu : une pièce peut manquer ou être comptée deux fois, ' +
+        'et le solde final serait alors faux.\n\nGénérer le fichier quand même ?');
+      if (!ok) return;
+    }
+    if (c.aVerifier.length) {
+      const ok = confirm(
+        `${c.aVerifier.length} ligne(s) portent encore une alerte de lecture (pièces ${c.aVerifier.map((e) => e.no == null ? '?' : e.no).join(', ')}).\n\n` +
+        'Générer le fichier quand même ?');
+      if (!ok) { gotoNextDoubt(null); return; }
+    }
+    if (c.jamaisVues.length > 0 && c.jamaisVues.length === c.count) {
+      if (!confirm(`Aucune des ${c.count} pièces n'a été affichée à l'écran. Générer le fichier sans les avoir contrôlées ?`)) { openReview(null); return; }
+    }
+    const soldeSaisi = els.checkBalance.value.trim();
+    if (soldeSaisi !== '') {
+      const t0 = X.computeTotals(currentOpening(), allEntriesForExcel());
+      const ecart = P.round2(t0.end - Number(soldeSaisi.replace(',', '.')));
+      if (Math.abs(ecart) >= 0.005 && !confirm(`Le solde calculé (${fmtCHF(t0.end)}) ne correspond pas au solde réel saisi : écart de ${fmtCHF(Math.abs(ecart))}.\n\nGénérer le fichier malgré cet écart ?`)) return;
+    }
     if (state.mode === 'new' && !els.openingDate.value) {
       if (!confirm('Aucune date de solde à nouveau n\'est indiquée. Continuer ?')) return;
     }
-    // Numéros en double ?
     const all = allEntriesForExcel();
-    const seen = new Map();
-    const dups = [];
-    for (const e of all) {
-      const k = String(e.no);
-      if (seen.has(k)) dups.push(k); else seen.set(k, true);
-    }
-    if (dups.length && !confirm(`Numéros de pièce en double dans le classeur : ${Array.from(new Set(dups)).join(', ')}. Continuer ?`)) return;
 
     els.btnExcel.disabled = true;
     try {

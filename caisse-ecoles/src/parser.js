@@ -214,16 +214,32 @@
   function findDate(text) {
     if (!text) return null;
     const t = String(text).replace(/[OoQ]/g, '0').replace(/[Il|!]/g, '1');
-    const re = /(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{4}|\d{2})(?!\d)/g;
-    let m;
-    while ((m = re.exec(t))) {
-      const d = parseInt(m[1], 10);
-      const mo = parseInt(m[2], 10);
-      let y = parseInt(m[3], 10);
-      if (m[3].length === 2) y += 2000;
+    const valide = (jj, mm, aa, len2) => {
+      const d = parseInt(jj, 10);
+      const mo = parseInt(mm, 10);
+      let y = parseInt(aa, 10);
+      if (len2) y += 2000;
       if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12 && y >= 2000 && y <= 2100) {
         return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       }
+      return null;
+    };
+    // forme normale : jj.mm.aaaa, jj/mm/aa, jj-mm-aaaa
+    const re = /(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{4}|\d{2})(?!\d)/g;
+    let m;
+    while ((m = re.exec(t))) {
+      const iso = valide(m[1], m[2], m[3], m[3].length === 2);
+      if (iso) return iso;
+    }
+    // l'OCR perd parfois un séparateur : « 11 12. 2025 ». On l'accepte si l'année a
+    // quatre chiffres et qu'au moins un vrai séparateur subsiste, pour éviter de prendre
+    // une suite de nombres quelconque pour une date.
+    const re2 = /(\d{1,2})\s*([./\-]|\s)\s*(\d{1,2})\s*([./\-]|\s)\s*(\d{4})(?!\d)/g;
+    while ((m = re2.exec(t))) {
+      const ponctuel = /[./\-]/.test(m[2]) || /[./\-]/.test(m[4]);
+      if (!ponctuel) continue;
+      const iso = valide(m[1], m[3], m[5], false);
+      if (iso) return iso;
     }
     return null;
   }
@@ -286,7 +302,29 @@
   }
 
   // "A. Dupraz", "Ch. Marendaz", "A.-L. Delacroix", "F.N. Ravel", "J. Tissot (donné à ...)", "Mme Dupont"
-  const PERSON_RE = /^((?:[A-ZÀ-Ý][a-zà-ÿ]{0,3}\.\s*-?\s*)+)\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+)*)(.*)$/;
+  // L'initiale peut avoir été lue « l » ou « 1 » à la place de « I » (confusion fréquente).
+  const PERSON_RE = /^((?:[A-ZÀ-Ýl1][a-zà-ÿ]{0,3}\.\s*-?\s*)+)\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+)*)(.*)$/;
+
+  /**
+   * Remet en majuscule une initiale lue en minuscule (« l. Scoziero »). Le « l » minuscule et le
+   * « 1 » sont souvent un « I » mal lu : on ne tranche que si les noms connus le confirment,
+   * sinon on garde la lettre lue, simplement en majuscule.
+   */
+  function fixInitials(person, index) {
+    let t = String(person || '').replace(/(^|[\s.\-])([a-zà-ÿ])(?=\.)/g, (m, before, c) => before + c.toUpperCase());
+    t = t.replace(/(^|[\s.\-])1(?=\.)/g, (m, before) => before + 'I');
+    if (!index || !index.persons || !index.persons.length) return t;
+    const m = PERSON_RE.exec(t.trim());
+    if (!m) return t;
+    const initials = m[1].replace(/\s+/g, '');
+    const key = wordKey(m[2]);
+    const connus = index.persons.filter((p) => p.key === key);
+    if (!connus.length || connus.some((p) => p.initials === initials)) return t;
+    // même nom de famille, initiales proches (I/L/1 confondus) : on retient celles du classeur
+    const norm = (x) => x.replace(/[IL1]/g, 'I');
+    const match = connus.find((p) => norm(p.initials) === norm(initials));
+    return match ? `${match.initials.replace(/\.(?=[A-Z])/g, '. ')} ${m[2]}${m[3] || ''}`.replace(/\s+/g, ' ').trim() : t;
+  }
 
   function looksLikePerson(line) {
     const t = String(line || '').trim();
@@ -338,7 +376,7 @@
   const CLASS_TOKEN_RE = /^\d{1,2}(?:-\d{1,2})?(?:VP|VG|P|S)(?:\/\d{1,2})?$/;
 
   function emptyVocabulary() {
-    return { words: [], persons: [], classTokens: [], accounts: [], typeAccounts: [], typeSides: [] };
+    return { words: [], persons: [], classTokens: [], accounts: [], typeAccounts: [], typeSides: [], accountSides: [] };
   }
 
   /**
@@ -352,6 +390,7 @@
     const accounts = new Set();
     const typeAccounts = [];
     const typeSides = [];
+    const accountSides = [];
     for (const e of entries || []) {
       const lib = String(e.libelle || '').trim();
       if (!lib || /^solde/i.test(lib)) continue;
@@ -361,11 +400,12 @@
       let type = null;
       if (parts.length) type = splitType(parts[0]).type;
       if (type && compte) typeAccounts.push({ type, compte });
-      if (type) {
+      {
         const d = Number(e.debit) || 0;
         const c = Number(e.credit) || 0;
-        if (d && !c) typeSides.push({ type, side: 'debit' });
-        else if (c && !d) typeSides.push({ type, side: 'credit' });
+        const side = d && !c ? 'debit' : (c && !d ? 'credit' : null);
+        if (side && type) typeSides.push({ type, side });
+        if (side && compte) accountSides.push({ compte, side });
       }
       let body = parts;
       if (parts.length >= 2 && looksLikePerson(parts[parts.length - 1])) {
@@ -395,6 +435,7 @@
       accounts: Array.from(accounts),
       typeAccounts,
       typeSides,
+      accountSides,
     };
   }
 
@@ -415,6 +456,7 @@
       accounts: uniq((a.accounts || []).concat(b.accounts || [])),
       typeAccounts,
       typeSides: (a.typeSides || []).concat(b.typeSides || []),
+      accountSides: (a.accountSides || []).concat(b.accountSides || []),
     };
   }
 
@@ -447,7 +489,23 @@
       if (c.credit === 0) expectedSide.set(k, { side: 'debit', n });
       else if (c.debit === 0) expectedSide.set(k, { side: 'credit', n });
     }
-    return { words, classTokens, persons, accounts: new Set(vocab.accounts || []), expectedSide };
+    // Sens attendu par compte : un compte dont toutes les écritures du classeur vont dans le
+    // même sens (sur un nombre suffisant) sert aussi de contrôle.
+    const accCounts = new Map();
+    for (const t of vocab.accountSides || []) {
+      const k = t.compte;
+      if (!k) continue;
+      if (!accCounts.has(k)) accCounts.set(k, { debit: 0, credit: 0 });
+      accCounts.get(k)[t.side] += t.n || 1;
+    }
+    const expectedSideByAccount = new Map();
+    for (const [k, c] of accCounts) {
+      const n = c.debit + c.credit;
+      if (n < MIN_SIDE_SAMPLES) continue;
+      if (c.credit === 0) expectedSideByAccount.set(k, { side: 'debit', n });
+      else if (c.debit === 0) expectedSideByAccount.set(k, { side: 'credit', n });
+    }
+    return { words, classTokens, persons, accounts: new Set(vocab.accounts || []), expectedSide, expectedSideByAccount };
   }
 
   // Nombre minimal d'écritures du classeur pour retenir un sens comme constant
@@ -666,6 +724,31 @@
     return words.filter((w) => re.test(stripAccents(w.str).trim()));
   }
 
+  /**
+   * Un n° de compte peut être coupé en deux lignes par le scanner (« 51000.3151. » puis « 00 »),
+   * ce qui donnerait un compte tronqué. On recolle un fragment court de chiffres à la ligne
+   * précédente quand celle-ci ressemble à un compte inachevé.
+   */
+  function mergeAccountFragments(lines, issues, colName) {
+    const out = [];
+    for (const l of lines) {
+      const prev = out.length ? out[out.length - 1] : null;
+      const frag = /^[\s.]*([0-9OoQIl|!]{1,2})[\s.]*$/.exec(l.text);
+      if (prev && frag) {
+        const before = normalizeAccount(prev.text);
+        const merged = normalizeAccount(prev.text + frag[1]);
+        if (merged && merged !== before) {
+          if (issues) issues.push(`Compte ${colName.toUpperCase()} lu sur deux lignes (« ${prev.text} » + « ${l.text.trim()} ») : ${merged} retenu`);
+          prev.text = prev.text + frag[1];
+          prev.words = prev.words.concat(l.words);
+          continue;
+        }
+      }
+      out.push({ y: l.y, h: l.h, x: l.x, text: l.text, words: l.words.slice() });
+    }
+    return out;
+  }
+
   // Rectangle englobant d'une liste de mots (coordonnées page, origine en haut à gauche)
   function boxOf(words) {
     if (!words || !words.length) return null;
@@ -769,17 +852,23 @@
     const sommes = [];
     const bandWords = words.filter((w) => inBand(w, yHeader, yLibelle));
     const colWords = { doit: [], somme: [], avoir: [] };
+    const accountIssues = [];
     for (const c of ['doit', 'somme', 'avoir']) {
       colWords[c] = bandWords.filter((w) => col(w.x) === c);
-      const lines = groupLines(colWords[c]);
+      const lines = c === 'somme' ? groupLines(colWords[c]) : mergeAccountFragments(groupLines(colWords[c]), accountIssues, c);
       for (const l of lines) {
         if (c === 'somme') {
-          const a = normalizeAmount(l.text);
-          sommes.push({ raw: l.text, value: a, lenient: a == null ? normalizeAmount(l.text, true) : null });
+          // un montant nul n'existe pas sur une pièce : c'est une lecture ratée (« CHFQ'OOO.OO »)
+          let a = normalizeAmount(l.text);
+          if (a === 0) a = null;
+          let len = a == null ? normalizeAmount(l.text, true) : null;
+          if (len === 0) len = null;
+          sommes.push({ raw: l.text, value: a, lenient: len });
         } else {
           const acc = normalizeAccount(l.text);
           if (acc) (c === 'doit' ? doit : avoir).push(acc);
         }
+        // (la fusion des fragments est faite juste après, sur le texte des lignes)
       }
     }
 
@@ -795,7 +884,11 @@
         const l = groupLines(tw)[0];
         totalRaw = l.text;
         total = normalizeAmount(l.text);
-        if (total == null) totalLenient = normalizeAmount(l.text, true);
+        if (total === 0) total = null;
+        if (total == null) {
+          totalLenient = normalizeAmount(l.text, true);
+          if (totalLenient === 0) totalLenient = null;
+        }
       }
     }
 
@@ -845,6 +938,8 @@
       dateRaw,
       hasTotalWord: !!wTotal,
       hasLibelleWord: !!wLibelle,
+      accountIssues,
+      datesBelow: below.map((l) => l.text).filter((t) => findDate(t)),
       boxes,
     };
   }
@@ -863,13 +958,15 @@
     const flags = { no: [], date: [], compte: [], libelle: [], montant: [] };
     const warnings = [];
     const notes = [];
-    const doubt = (field, message) => { warnings.push(message); if (flags[field]) flags[field].push({ level: 'doubt', message }); };
+    const doubt = (field, message, action) => { warnings.push(message); if (flags[field]) flags[field].push({ level: 'doubt', message, action }); };
     const note = (field, message) => { notes.push(message); if (flags[field]) flags[field].push({ level: 'note', message }); };
 
     // ---- Libellé
     const lines = info.libelleLines.slice();
     let person = null;
-    if (lines.length >= 2 && looksLikePerson(lines[lines.length - 1])) person = lines.pop();
+    if (lines.length >= 2 && looksLikePerson(lines[lines.length - 1])) {
+      person = fixInitials(lines.pop(), index);
+    }
     const first = lines.shift() || '';
     const { type, rest } = splitType(first);
     let description = cleanDescription([rest, ...lines].filter(Boolean).join(' '));
@@ -985,14 +1082,23 @@
       const key = stripAccents(type || '').toUpperCase();
       const exp = index && index.expectedSide ? index.expectedSide.get(key) : null;
       const sideFr = (x) => (x === 'debit' ? 'Débit (entrée en caisse)' : 'Crédit (sortie de caisse)');
+      const expAcc = index && index.expectedSideByAccount ? index.expectedSideByAccount.get(compte) : null;
+      const swap = (attendu) => ({ type: 'swap', side: attendu });
       if (exp && exp.side !== side) {
-        doubt('montant', `Sens inhabituel : ${sideFr(side)} alors que les ${exp.n} écritures « ${type} » du classeur sont toutes en ${exp.side === 'debit' ? 'débit' : 'crédit'} : à vérifier`);
+        doubt('montant', `Sens inhabituel : ${sideFr(side)} alors que les ${exp.n} écritures « ${type} » du classeur sont toutes en ${exp.side === 'debit' ? 'débit' : 'crédit'} : à vérifier sur la pièce`, swap(exp.side));
+      } else if (expAcc && expAcc.side !== side) {
+        doubt('montant', `Sens inhabituel : ${sideFr(side)} alors que les ${expAcc.n} écritures du compte ${compte} dans le classeur sont toutes en ${expAcc.side === 'debit' ? 'débit' : 'crédit'} : à vérifier sur la pièce`, swap(expAcc.side));
       } else {
         const accSide = expectedSideFromAccount(compte);
-        if (accSide && accSide !== side) doubt('montant', `Sens inhabituel : ${sideFr(side)} sur un compte de recettes (${compte}) : à vérifier`);
+        if (accSide && accSide !== side) doubt('montant', `Sens inhabituel : ${sideFr(side)} sur un compte de recettes (${compte}) : à vérifier sur la pièce`, swap(accSide));
       }
     }
 
+    for (const m of info.accountIssues || []) note('compte', m);
+    if (info.datesBelow && info.datesBelow.length > 1) {
+      const vues = uniq(info.datesBelow.map((t) => findDate(t)).filter(Boolean));
+      if (vues.length > 1) doubt('date', `Plusieurs dates sous le tableau (${vues.map(isoToDisplay).join(', ')}) : ${isoToDisplay(info.date)} retenue, à vérifier`);
+    }
     if (!info.date) doubt('date', 'Date non reconnue');
     if (info.no == null) doubt('no', 'Numéro de pièce non reconnu');
     else if (info.noRaw && /[^0-9\s]/.test(String(info.noRaw))) doubt('no', `Numéro lu « ${String(info.noRaw).trim()} » interprété ${info.no} : à vérifier`);
@@ -1214,18 +1320,9 @@
         }
       }
     }
-    // Numéro incohérent avec l'ordre des pages (les pièces sont scannées dans l'ordre)
-    const byPage = entries.filter((e) => e.no != null).slice().sort((a, b) => a.page - b.page || (a.part || 0) - (b.part || 0));
-    for (let i = 1; i < byPage.length; i++) {
-      const prev = byPage[i - 1];
-      const cur = byPage[i];
-      if (cur.no !== prev.no + 1) {
-        const msg = cur.no < prev.no
-          ? `Numéro ${cur.no} lu après la pièce n° ${prev.no} (ordre des pages) : numéro à vérifier`
-          : `Numéro ${cur.no} lu, ${prev.no + 1} attendu d'après l'ordre des pages : numéro à vérifier (ou pièce manquante)`;
-        addDoubt(cur, 'no', msg);
-      }
-    }
+    // L'ordre des pages n'est pas un indice fiable : les classeurs contiennent des copies de
+    // pièces antérieures jointes comme justificatifs. Les trous et les doublons de numéros sont
+    // contrôlés globalement (voir le récapitulatif de contrôle), ce qui est plus sûr.
     sortEntries(entries);
     let lastDate = null;
     for (const e of entries) {
@@ -1237,12 +1334,11 @@
     for (const e of entries) if (e.date) { const y = e.date.slice(0, 4); years.set(y, (years.get(y) || 0) + 1); }
     let mainYear = null; let mainN = 0;
     for (const [y, n] of years) if (n > mainN) { mainYear = y; mainN = n; }
-    let prevDated = null;
+    // Les pièces ne sont pas toujours saisies dans l'ordre chronologique : seule une année
+    // différente du reste du lot est signalée.
     for (const e of entries) {
       if (!e.date) continue;
       if (mainYear && entries.length >= 3 && e.date.slice(0, 4) !== mainYear) addDoubt(e, 'date', `Année ${e.date.slice(0, 4)} différente des autres pièces (${mainYear}) : date à vérifier`);
-      if (prevDated && e.date < prevDated.date) addDoubt(e, 'date', `Date ${isoToDisplay(e.date)} antérieure à la pièce n° ${prevDated.no} (${isoToDisplay(prevDated.date)}) : à vérifier`);
-      prevDated = e;
     }
 
     const nos = entries.filter((e) => e.no != null).map((e) => e.no);
@@ -1327,6 +1423,7 @@
     canonicalType,
     looksLikePerson,
     formatLibelle,
+    fixInitials,
     cleanDescription,
     learnVocabulary,
     mergeVocabulary,

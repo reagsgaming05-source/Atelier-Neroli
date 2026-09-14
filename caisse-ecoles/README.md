@@ -37,8 +37,12 @@ compte de contrepartie.
    tous ses doutes sont traités. Trois aides pour aller vite : la case *Afficher seulement les
    lignes à vérifier*, le bouton *✓ Vérifié → suivante*, et le raccourci **Ctrl + Entrée** qui
    valide la ligne affichée et saute à la suivante. On peut aussi ajouter une écriture manuelle.
-6. **Étape 4 – Excel** : *Générer le fichier Excel* télécharge `Caisse écoles AAAA.xlsx`.
-   L'ouvrir dans Excel et l'enregistrer à la place du classeur.
+6. **Étape 4 – Contrôle et fichier Excel** : le tableau de contrôle récapitule le lot (suite des
+   numéros, doublons, lignes à vérifier, pièces jamais affichées, totaux). Inscrire le **solde réel
+   compté en caisse** : l'application affiche l'écart avec le solde calculé et indique quoi chercher.
+   *Générer le fichier Excel* télécharge `Caisse écoles AAAA.xlsx` ; toute anomalie restante demande
+   une confirmation explicite. *Rapport de contrôle* ouvre un récapitulatif imprimable à conserver
+   avec les pièces.
 
 Les copies de pièces jointes à d'autres pièces (même numéro, même montant) sont ignorées
 automatiquement, y compris d'un fichier à l'autre ; les numéros manquants dans la séquence sont
@@ -87,8 +91,14 @@ Précision de la lecture :
   sont tolérés ;
 - chaque correction est indiquée par une cellule bleue, avec le détail au survol et sous la ligne
   quand elle est sélectionnée ;
-- le sens attendu de chaque type d'écriture est appris du classeur (un type n'est utilisé comme
-  règle que si ses écritures vont toutes dans le même sens, sur au moins cinq occurrences).
+- le sens attendu est appris du classeur, par type d'écriture **et par compte** (une règle n'est
+  retenue que si toutes les écritures concernées vont dans le même sens, sur au moins cinq
+  occurrences) ;
+- un n° de compte coupé en deux lignes par le scanner est recollé (`51000.3151.` + `00`) ;
+- une date dont l'OCR a perdu un séparateur est reconnue (`11 12. 2025` → 11.12.2025) ;
+- une initiale lue en minuscule (`l. Sandoz`) est tranchée d'après les noms connus, sans
+  transformer un vrai `L.` en `I.` ;
+- un montant lu à zéro est traité comme illisible, le Total faisant foi.
 
 Le montant retenu est le **Total** en bas de la pièce. La colonne SOMME, souvent laissée vide,
 sert uniquement à confirmer ce total, ou à le remplacer quand il est absent ou illisible : son
@@ -96,6 +106,23 @@ absence ne déclenche donc aucun doute.
 
 Sur le lot d'exemple de 33 pièces, trois lignes sont signalées et trente passent en vert, sans
 écart sur les dates, numéros, montants, sens et comptes par rapport au classeur de référence.
+
+## Ce qui garantit un fichier juste
+
+Une lecture de scan n'est jamais certaine à 100 %. Trois garde-fous se complètent :
+
+1. **Les alertes par cellule** (orange) signalent ce qui n'a pas pu être confirmé, en particulier
+   un sens débit/crédit contraire aux habitudes du classeur. Sur un lot réel de 68 pièces, les deux
+   seules erreurs étaient toutes deux signalées, pour quatre alertes au total.
+2. **Le contrôle pièce par pièce** (bouton *Contrôler les pièces une par une*) affiche chaque pièce
+   en grand avec ses champs à côté ; les flèches du clavier enchaînent les validations. Le tableau
+   de contrôle indique combien de pièces n'ont jamais été affichées.
+3. **Le rapprochement de caisse** : le solde calculé est comparé au solde réel compté. C'est le
+   contrôle final, celui qui révèle toute écriture mal lue, y compris celles qu'aucune règle ne
+   pouvait détecter.
+
+Les pièces sont parfois remplies à l'envers (compte caisse du mauvais côté du formulaire).
+L'application lit ce qui est écrit, le signale, et propose de corriger le sens en un clic.
 
 ## Base de référence intégrée
 

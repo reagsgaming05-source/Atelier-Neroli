@@ -21,11 +21,11 @@ const input = process.argv[2] || path.join(root, 'samples', 'caisse.xlsx');
 const SEP = String.fromCharCode(1);
 
 function compact(vocab) {
-  const agg = (list, key) => {
+  const agg = (list, by, key) => {
     const m = new Map();
     for (const it of list || []) {
-      const k = `${it.type}${SEP}${it[key]}`;
-      if (!m.has(k)) m.set(k, { type: it.type, [key]: it[key], n: 0 });
+      const k = `${it[by]}${SEP}${it[key]}`;
+      if (!m.has(k)) m.set(k, { [by]: it[by], [key]: it[key], n: 0 });
       m.get(k).n += it.n || 1;
     }
     return Array.from(m.values()).sort((a, b) => b.n - a.n);
@@ -34,8 +34,9 @@ function compact(vocab) {
     words: vocab.words.slice().sort((a, b) => a.localeCompare(b, 'fr')),
     classTokens: vocab.classTokens.slice().sort((a, b) => a.localeCompare(b, 'fr', { numeric: true })),
     accounts: vocab.accounts.slice().sort(),
-    typeAccounts: agg(vocab.typeAccounts, 'compte'),
-    typeSides: agg(vocab.typeSides, 'side'),
+    typeAccounts: agg(vocab.typeAccounts, 'type', 'compte'),
+    typeSides: agg(vocab.typeSides, 'type', 'side'),
+    accountSides: agg(vocab.accountSides, 'compte', 'side'),
   };
 }
 
@@ -81,7 +82,8 @@ function moduleFile(global, data, header) {
     " * DONNÉES PERSONNELLES : ce fichier n'est pas versionné et ne doit pas être publié."));
 
   console.log(`OK – base intégrée : ${base.words.length} mots, ${base.classTokens.length} classes, ` +
-    `${base.accounts.length} comptes, ${base.typeAccounts.length} paires type/compte, ${base.typeSides.length} sens par type`);
+    `${base.accounts.length} comptes, ${base.typeAccounts.length} paires type/compte, ` +
+    `${base.typeSides.length} sens par type, ${base.accountSides.length} sens par compte`);
   console.log(`     noms (fichier séparé, non versionné) : ${persons.persons.length}`);
   console.log(`     source : ${source}`);
 })().catch((e) => { console.error(e); process.exit(1); });

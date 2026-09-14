@@ -208,20 +208,49 @@ test('compte de recettes au crédit : doute, même sans classeur', () => {
   assert.ok(e.flags.montant.some((f) => /compte de recettes/.test(f.message)), e.warnings.join('|'));
 });
 
-test('numéro hors séquence par rapport à l\'ordre des pages', () => {
+test('trou dans la suite des numéros : signalé globalement, sans alerte de ligne', () => {
+  // Les classeurs contiennent des copies de pièces antérieures : l'ordre des pages n'est pas
+  // un indice fiable. Seuls les trous et les doublons sont signalés, au niveau du lot.
   const mk = (p, no, d) => ({ pageNumber: p, width: 595, height: 842, words: makeForm({ no, lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Desaules'], date: d }) });
   const res = P.parseDocument([mk(1, '10', '01.03.2025'), mk(2, '11', '02.03.2025'), mk(3, '15', '03.03.2025')], { caisse: '9100.104' });
-  const e15 = res.entries.find((x) => x.no === 15);
-  assert.ok(e15.flags.no.some((f) => /ordre des pages/.test(f.message)), e15.warnings.join('|'));
-  assert.ok(res.entries.find((x) => x.no === 11).flags.no.length === 0);
+  assert.ok(res.warnings.some((w) => /manquants : 12, 13, 14/.test(w)), res.warnings.join('|'));
+  for (const e of res.entries) assert.deepEqual(e.flags.no, [], `alerte inattendue sur la pièce ${e.no}`);
+  // une pièce antérieure jointe en annexe ne déclenche aucune alerte
+  const res2 = P.parseDocument([mk(1, '75', '01.03.2025'), mk(2, '76', '02.03.2025'), mk(3, '57', '03.03.2025')], { caisse: '9100.104' });
+  assert.deepEqual(res2.entries.find((x) => x.no === 57).flags.no, []);
 });
 
-test('date antérieure à la pièce précédente ou d\'une autre année', () => {
+test('date d\'une autre année signalée ; ordre non chronologique toléré', () => {
   const mk = (p, no, d) => ({ pageNumber: p, width: 595, height: 842, words: makeForm({ no, lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Desaules'], date: d }) });
   const res = P.parseDocument([mk(1, '10', '01.03.2025'), mk(2, '11', '02.03.2025'), mk(3, '12', '15.01.2025'), mk(4, '13', '20.03.2024')], { caisse: '9100.104' });
-  assert.ok(res.entries.find((x) => x.no === 12).flags.date.some((f) => /antérieure/.test(f.message)));
+  // les pièces ne sont pas toujours saisies dans l'ordre : pas d'alerte
+  assert.deepEqual(res.entries.find((x) => x.no === 12).flags.date, []);
   const e13 = res.entries.find((x) => x.no === 13);
   assert.ok(e13.flags.date.some((f) => /Année 2024/.test(f.message)));
+});
+
+test('date dont un séparateur a été perdu par l\'OCR', () => {
+  assert.equal(P.findDate('11 12. 2025'), '2025-12-11');
+  assert.equal(P.findDate('20 05. 2025'), '2025-05-20');
+  assert.equal(P.findDate('11 12 2025'), null, 'sans aucun séparateur, on ne devine pas');
+  assert.equal(P.findDate('5P/6 - 20 élèves'), null);
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.3199.00', somme: 'CHF 384.45', avoir: '9100.104' }], total: 'CHF 384.45', libelle: ['REMBOURSEMENT bouteilles', 'C. Baumann'], date: '11 12. 2025' }) };
+  const e = P.parseDocument([page], { caisse: '9100.104' }).entries[0];
+  assert.equal(e.date, '2025-12-11');
+  assert.deepEqual(e.flags.date, []);
+});
+
+test('initiale « I » lue « l » : tranchée d\'après les noms connus', () => {
+  const idx = P.buildIndex(P.mergeVocabulary(P.emptyVocabulary(), { persons: ['I. Sandoz', 'L. Girard'] }));
+  assert.equal(P.fixInitials('l. Sandoz', idx), 'I. Sandoz');
+  assert.equal(P.fixInitials('l. Girard', idx), 'L. Girard', 'un vrai L ne doit pas devenir I');
+  assert.equal(P.fixInitials('l. Inconnu', idx), 'L. Inconnu', 'sans référence, on garde la lettre lue');
+  assert.equal(P.looksLikePerson('l. Sandoz'), true, 'le nom doit être détecté malgré la minuscule');
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '79', lines: [{ doit: '9206.101', somme: 'CHF 337.45', avoir: '9100.104' }], total: 'CHF 337.45', libelle: ['REMBOURSEMENT matériel', 'l. Sandoz'], date: '08.05.2025' }) };
+  const vocab = P.mergeVocabulary(P.emptyVocabulary(), { persons: ['I. Sandoz'], accounts: ['9206.101'] });
+  const e = P.parseDocument([page], { caisse: '9100.104', vocabulary: vocab }).entries[0];
+  assert.match(e.libelle, / - I\. Sandoz$/);
+  assert.ok(!e.warnings.some((w) => /nom de personne/.test(w)));
 });
 
 test('mots suspects : seulement ceux qui ressemblent à une erreur de lecture', () => {

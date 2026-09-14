@@ -198,6 +198,49 @@ table.entries tr.entry.warn-row td.status { background: var(--warn-soft); }
 .zoom-inner canvas.overlay { position: absolute; left: 0; top: 0; }
 .zoom-hint { color: #e2e8f0; font-size: 13px; }
 
+/* Contrôle du lot */
+.control-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin: 6px 0 14px; }
+@media (max-width: 900px) { .control-grid { grid-template-columns: 1fr; } }
+.ctl-title { font-size: 13px; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+table.checks { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.checks td { padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.checks td.k { color: var(--muted); width: 45%; }
+table.checks td.v { font-weight: 600; }
+table.checks tr.ok td.v { color: var(--ok); }
+table.checks tr.warn td.v { color: var(--warn); }
+table.checks tr.err td.v { color: var(--err); }
+table.checks button { margin-left: 6px; }
+.balance-box { padding: 10px 12px; border-radius: 6px; font-size: 14px; }
+.balance-box.ok { background: var(--ok-soft); color: var(--ok); }
+.balance-box.err { background: var(--err-soft); color: var(--err); }
+.balance-box b { font-size: 17px; }
+
+/* Contrôle pièce par pièce */
+.review { position: fixed; inset: 0; background: #f3f5f8; z-index: 60; display: flex; flex-direction: column; }
+.review header { background: var(--accent); color: #fff; padding: 10px 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.review header .title { font-weight: 600; }
+.review header .spacer { flex: 1; }
+.review header button { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.35); }
+.review header button:hover { background: rgba(255,255,255,0.28); }
+.review header button.primary { background: #fff; color: var(--accent); border-color: #fff; }
+.review .body { flex: 1; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr); gap: 16px; padding: 16px; overflow: hidden; }
+@media (max-width: 1000px) { .review .body { grid-template-columns: 1fr; overflow: auto; } }
+.review .sheet { background: #fff; border-radius: 8px; box-shadow: var(--shadow); overflow: auto; position: relative; display: flex; align-items: flex-start; justify-content: center; }
+.review .sheet canvas { width: 100%; height: auto; display: block; }
+.review .sheet canvas.overlay { position: absolute; left: 0; top: 0; }
+.review .side { background: #fff; border-radius: 8px; box-shadow: var(--shadow); padding: 16px; overflow: auto; }
+.review .side .f { margin-bottom: 10px; }
+.review .side .f label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.review .side .f input { width: 100%; font-size: 15px; padding: 7px 9px; }
+.review .side .f input.doubt { background: #fff1d6; border-color: #e0a100; }
+.review .side .f.amount { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.review .msgs { font-size: 13px; margin: 10px 0; }
+.review .msgs ul { margin: 4px 0; padding-left: 18px; color: var(--warn); }
+.review .msgs ul li.note { color: var(--muted); }
+.review .progress { font-size: 13px; }
+.review .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.review .actions button { font-size: 15px; padding: 9px 16px; }
+
 </style>
 </head>
 <body>
@@ -281,6 +324,7 @@ table.entries tr.entry.warn-row td.status { background: var(--warn-soft); }
       <button type="button" id="btnCheckAll" class="small">Tout marquer vérifié</button>
       <label class="legend" style="display:flex;align-items:center;gap:6px;margin-left:8px"><input type="checkbox" id="filterDoubt"> Afficher seulement les lignes à vérifier</label>
       <button type="button" id="btnNextDoubt" class="small">Aller à la prochaine ligne à vérifier ▼</button>
+      <button type="button" id="btnReview" class="small primary">🔍 Contrôler les pièces une par une</button>
       <span class="spacer"></span>
       <span class="legend" id="rowSummary"></span>
     </div>
@@ -318,11 +362,33 @@ table.entries tr.entry.warn-row td.status { background: var(--warn-soft); }
   </section>
 
   <section class="card hidden" id="step4">
-    <h2><span class="n">4</span> Fichier Excel</h2>
+    <h2><span class="n">4</span> Contrôle et fichier Excel</h2>
     <div class="totals" id="totals"></div>
+    <div class="control-grid">
+      <div>
+        <h3 class="ctl-title">Contrôle du lot</h3>
+        <table class="checks" id="checkTable"></table>
+      </div>
+      <div>
+        <h3 class="ctl-title">Rapprochement de la caisse</h3>
+        <div class="legend" style="margin-bottom:8px">Comptez l'argent en caisse (ou reprenez le solde du dernier décompte) et inscrivez-le ici : l'application compare avec le solde calculé. C'est le contrôle qui garantit qu'aucune écriture n'a été mal lue.</div>
+        <div class="row">
+          <div class="field">
+            <label for="checkBalance">Solde réel en caisse (CHF)</label>
+            <input type="number" id="checkBalance" step="0.05" placeholder="ex. 4825.55" style="width:160px">
+          </div>
+          <div class="field">
+            <label for="checkDate">à la date du (facultatif)</label>
+            <input type="date" id="checkDate">
+          </div>
+        </div>
+        <div id="balanceResult" style="margin-top:10px"></div>
+      </div>
+    </div>
     <div id="excelNotices"></div>
     <div class="toolbar">
       <button type="button" class="primary" id="btnExcel">Générer le fichier Excel</button>
+      <button type="button" id="btnReport">Rapport de contrôle</button>
       <span class="legend" id="excelHint"></span>
     </div>
   </section>
@@ -433,7 +499,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
  * comptes et sens habituels par type d'écriture.
  *
  * Source : caisse.xlsx – 267 écriture(s), année(s) 2025
- * Généré le 2026-09-11 par tools/build-vocab.js – ne pas modifier à la main.
+ * Généré le 2026-09-14 par tools/build-vocab.js – ne pas modifier à la main.
  * Aucune donnée personnelle : les noms sont dans vocabulaire-noms.js (non versionné).
  */
 (function (root, factory) {
@@ -1084,8 +1150,175 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         "n": 1
       }
     ],
+    "accountSides": [
+      {
+        "compte": "51000.3662.00",
+        "side": "credit",
+        "n": 71
+      },
+      {
+        "compte": "50000.3652.00",
+        "side": "credit",
+        "n": 19
+      },
+      {
+        "compte": "51000.4392.20",
+        "side": "debit",
+        "n": 15
+      },
+      {
+        "compte": "51000.3185.00",
+        "side": "credit",
+        "n": 15
+      },
+      {
+        "compte": "51000.3170.05",
+        "side": "credit",
+        "n": 14
+      },
+      {
+        "compte": "51000.3662.50",
+        "side": "credit",
+        "n": 13
+      },
+      {
+        "compte": "51000.3662.00",
+        "side": "debit",
+        "n": 12
+      },
+      {
+        "compte": "51000.3151.00",
+        "side": "credit",
+        "n": 11
+      },
+      {
+        "compte": "51000.3199.00",
+        "side": "credit",
+        "n": 11
+      },
+      {
+        "compte": "9206.101",
+        "side": "credit",
+        "n": 10
+      },
+      {
+        "compte": "9111.100",
+        "side": "debit",
+        "n": 7
+      },
+      {
+        "compte": "52000.3662.00",
+        "side": "credit",
+        "n": 7
+      },
+      {
+        "compte": "9206.101",
+        "side": "debit",
+        "n": 6
+      },
+      {
+        "compte": "52000.3662.40",
+        "side": "credit",
+        "n": 5
+      },
+      {
+        "compte": "52000.3662.10",
+        "side": "credit",
+        "n": 5
+      },
+      {
+        "compte": "51000.3662.30",
+        "side": "credit",
+        "n": 5
+      },
+      {
+        "compte": "35303.3152",
+        "side": "credit",
+        "n": 5
+      },
+      {
+        "compte": "52000.3662.00",
+        "side": "debit",
+        "n": 4
+      },
+      {
+        "compte": "35302.3152",
+        "side": "credit",
+        "n": 4
+      },
+      {
+        "compte": "35308.3151",
+        "side": "credit",
+        "n": 3
+      },
+      {
+        "compte": "51000.3170.10",
+        "side": "credit",
+        "n": 3
+      },
+      {
+        "compte": "51000.4392.00",
+        "side": "debit",
+        "n": 3
+      },
+      {
+        "compte": "51000.3662.30",
+        "side": "debit",
+        "n": 3
+      },
+      {
+        "compte": "50000.3114.00",
+        "side": "credit",
+        "n": 3
+      },
+      {
+        "compte": "52000.4390.30",
+        "side": "debit",
+        "n": 2
+      },
+      {
+        "compte": "52000.3112.00",
+        "side": "credit",
+        "n": 2
+      },
+      {
+        "compte": "52000.3662.10",
+        "side": "debit",
+        "n": 2
+      },
+      {
+        "compte": "50000.3170.00",
+        "side": "credit",
+        "n": 2
+      },
+      {
+        "compte": "51000.3662.20",
+        "side": "credit",
+        "n": 1
+      },
+      {
+        "compte": "52000.3662.30",
+        "side": "credit",
+        "n": 1
+      },
+      {
+        "compte": "50000.3061.00",
+        "side": "credit",
+        "n": 1
+      },
+      {
+        "compte": "9206.104",
+        "side": "credit",
+        "n": 1
+      },
+      {
+        "compte": "51000.3112.00",
+        "side": "credit",
+        "n": 1
+      }
+    ],
     "source": "caisse.xlsx – 267 écriture(s), année(s) 2025",
-    "generated": "2026-09-11"
+    "generated": "2026-09-14"
   };
 });
 
@@ -1307,16 +1540,32 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function findDate(text) {
     if (!text) return null;
     const t = String(text).replace(/[OoQ]/g, '0').replace(/[Il|!]/g, '1');
-    const re = /(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{4}|\d{2})(?!\d)/g;
-    let m;
-    while ((m = re.exec(t))) {
-      const d = parseInt(m[1], 10);
-      const mo = parseInt(m[2], 10);
-      let y = parseInt(m[3], 10);
-      if (m[3].length === 2) y += 2000;
+    const valide = (jj, mm, aa, len2) => {
+      const d = parseInt(jj, 10);
+      const mo = parseInt(mm, 10);
+      let y = parseInt(aa, 10);
+      if (len2) y += 2000;
       if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12 && y >= 2000 && y <= 2100) {
         return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       }
+      return null;
+    };
+    // forme normale : jj.mm.aaaa, jj/mm/aa, jj-mm-aaaa
+    const re = /(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{4}|\d{2})(?!\d)/g;
+    let m;
+    while ((m = re.exec(t))) {
+      const iso = valide(m[1], m[2], m[3], m[3].length === 2);
+      if (iso) return iso;
+    }
+    // l'OCR perd parfois un séparateur : « 11 12. 2025 ». On l'accepte si l'année a
+    // quatre chiffres et qu'au moins un vrai séparateur subsiste, pour éviter de prendre
+    // une suite de nombres quelconque pour une date.
+    const re2 = /(\d{1,2})\s*([./\-]|\s)\s*(\d{1,2})\s*([./\-]|\s)\s*(\d{4})(?!\d)/g;
+    while ((m = re2.exec(t))) {
+      const ponctuel = /[./\-]/.test(m[2]) || /[./\-]/.test(m[4]);
+      if (!ponctuel) continue;
+      const iso = valide(m[1], m[3], m[5], false);
+      if (iso) return iso;
     }
     return null;
   }
@@ -1379,7 +1628,29 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   // "A. Dupraz", "Ch. Marendaz", "A.-L. Delacroix", "F.N. Ravel", "J. Tissot (donné à ...)", "Mme Dupont"
-  const PERSON_RE = /^((?:[A-ZÀ-Ý][a-zà-ÿ]{0,3}\.\s*-?\s*)+)\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+)*)(.*)$/;
+  // L'initiale peut avoir été lue « l » ou « 1 » à la place de « I » (confusion fréquente).
+  const PERSON_RE = /^((?:[A-ZÀ-Ýl1][a-zà-ÿ]{0,3}\.\s*-?\s*)+)\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+)*)(.*)$/;
+
+  /**
+   * Remet en majuscule une initiale lue en minuscule (« l. Scoziero »). Le « l » minuscule et le
+   * « 1 » sont souvent un « I » mal lu : on ne tranche que si les noms connus le confirment,
+   * sinon on garde la lettre lue, simplement en majuscule.
+   */
+  function fixInitials(person, index) {
+    let t = String(person || '').replace(/(^|[\s.\-])([a-zà-ÿ])(?=\.)/g, (m, before, c) => before + c.toUpperCase());
+    t = t.replace(/(^|[\s.\-])1(?=\.)/g, (m, before) => before + 'I');
+    if (!index || !index.persons || !index.persons.length) return t;
+    const m = PERSON_RE.exec(t.trim());
+    if (!m) return t;
+    const initials = m[1].replace(/\s+/g, '');
+    const key = wordKey(m[2]);
+    const connus = index.persons.filter((p) => p.key === key);
+    if (!connus.length || connus.some((p) => p.initials === initials)) return t;
+    // même nom de famille, initiales proches (I/L/1 confondus) : on retient celles du classeur
+    const norm = (x) => x.replace(/[IL1]/g, 'I');
+    const match = connus.find((p) => norm(p.initials) === norm(initials));
+    return match ? `${match.initials.replace(/\.(?=[A-Z])/g, '. ')} ${m[2]}${m[3] || ''}`.replace(/\s+/g, ' ').trim() : t;
+  }
 
   function looksLikePerson(line) {
     const t = String(line || '').trim();
@@ -1431,7 +1702,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const CLASS_TOKEN_RE = /^\d{1,2}(?:-\d{1,2})?(?:VP|VG|P|S)(?:\/\d{1,2})?$/;
 
   function emptyVocabulary() {
-    return { words: [], persons: [], classTokens: [], accounts: [], typeAccounts: [], typeSides: [] };
+    return { words: [], persons: [], classTokens: [], accounts: [], typeAccounts: [], typeSides: [], accountSides: [] };
   }
 
   /**
@@ -1445,6 +1716,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const accounts = new Set();
     const typeAccounts = [];
     const typeSides = [];
+    const accountSides = [];
     for (const e of entries || []) {
       const lib = String(e.libelle || '').trim();
       if (!lib || /^solde/i.test(lib)) continue;
@@ -1454,11 +1726,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       let type = null;
       if (parts.length) type = splitType(parts[0]).type;
       if (type && compte) typeAccounts.push({ type, compte });
-      if (type) {
+      {
         const d = Number(e.debit) || 0;
         const c = Number(e.credit) || 0;
-        if (d && !c) typeSides.push({ type, side: 'debit' });
-        else if (c && !d) typeSides.push({ type, side: 'credit' });
+        const side = d && !c ? 'debit' : (c && !d ? 'credit' : null);
+        if (side && type) typeSides.push({ type, side });
+        if (side && compte) accountSides.push({ compte, side });
       }
       let body = parts;
       if (parts.length >= 2 && looksLikePerson(parts[parts.length - 1])) {
@@ -1488,6 +1761,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       accounts: Array.from(accounts),
       typeAccounts,
       typeSides,
+      accountSides,
     };
   }
 
@@ -1508,6 +1782,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       accounts: uniq((a.accounts || []).concat(b.accounts || [])),
       typeAccounts,
       typeSides: (a.typeSides || []).concat(b.typeSides || []),
+      accountSides: (a.accountSides || []).concat(b.accountSides || []),
     };
   }
 
@@ -1540,7 +1815,23 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (c.credit === 0) expectedSide.set(k, { side: 'debit', n });
       else if (c.debit === 0) expectedSide.set(k, { side: 'credit', n });
     }
-    return { words, classTokens, persons, accounts: new Set(vocab.accounts || []), expectedSide };
+    // Sens attendu par compte : un compte dont toutes les écritures du classeur vont dans le
+    // même sens (sur un nombre suffisant) sert aussi de contrôle.
+    const accCounts = new Map();
+    for (const t of vocab.accountSides || []) {
+      const k = t.compte;
+      if (!k) continue;
+      if (!accCounts.has(k)) accCounts.set(k, { debit: 0, credit: 0 });
+      accCounts.get(k)[t.side] += t.n || 1;
+    }
+    const expectedSideByAccount = new Map();
+    for (const [k, c] of accCounts) {
+      const n = c.debit + c.credit;
+      if (n < MIN_SIDE_SAMPLES) continue;
+      if (c.credit === 0) expectedSideByAccount.set(k, { side: 'debit', n });
+      else if (c.debit === 0) expectedSideByAccount.set(k, { side: 'credit', n });
+    }
+    return { words, classTokens, persons, accounts: new Set(vocab.accounts || []), expectedSide, expectedSideByAccount };
   }
 
   // Nombre minimal d'écritures du classeur pour retenir un sens comme constant
@@ -1759,6 +2050,31 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return words.filter((w) => re.test(stripAccents(w.str).trim()));
   }
 
+  /**
+   * Un n° de compte peut être coupé en deux lignes par le scanner (« 51000.3151. » puis « 00 »),
+   * ce qui donnerait un compte tronqué. On recolle un fragment court de chiffres à la ligne
+   * précédente quand celle-ci ressemble à un compte inachevé.
+   */
+  function mergeAccountFragments(lines, issues, colName) {
+    const out = [];
+    for (const l of lines) {
+      const prev = out.length ? out[out.length - 1] : null;
+      const frag = /^[\s.]*([0-9OoQIl|!]{1,2})[\s.]*$/.exec(l.text);
+      if (prev && frag) {
+        const before = normalizeAccount(prev.text);
+        const merged = normalizeAccount(prev.text + frag[1]);
+        if (merged && merged !== before) {
+          if (issues) issues.push(`Compte ${colName.toUpperCase()} lu sur deux lignes (« ${prev.text} » + « ${l.text.trim()} ») : ${merged} retenu`);
+          prev.text = prev.text + frag[1];
+          prev.words = prev.words.concat(l.words);
+          continue;
+        }
+      }
+      out.push({ y: l.y, h: l.h, x: l.x, text: l.text, words: l.words.slice() });
+    }
+    return out;
+  }
+
   // Rectangle englobant d'une liste de mots (coordonnées page, origine en haut à gauche)
   function boxOf(words) {
     if (!words || !words.length) return null;
@@ -1862,17 +2178,23 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const sommes = [];
     const bandWords = words.filter((w) => inBand(w, yHeader, yLibelle));
     const colWords = { doit: [], somme: [], avoir: [] };
+    const accountIssues = [];
     for (const c of ['doit', 'somme', 'avoir']) {
       colWords[c] = bandWords.filter((w) => col(w.x) === c);
-      const lines = groupLines(colWords[c]);
+      const lines = c === 'somme' ? groupLines(colWords[c]) : mergeAccountFragments(groupLines(colWords[c]), accountIssues, c);
       for (const l of lines) {
         if (c === 'somme') {
-          const a = normalizeAmount(l.text);
-          sommes.push({ raw: l.text, value: a, lenient: a == null ? normalizeAmount(l.text, true) : null });
+          // un montant nul n'existe pas sur une pièce : c'est une lecture ratée (« CHFQ'OOO.OO »)
+          let a = normalizeAmount(l.text);
+          if (a === 0) a = null;
+          let len = a == null ? normalizeAmount(l.text, true) : null;
+          if (len === 0) len = null;
+          sommes.push({ raw: l.text, value: a, lenient: len });
         } else {
           const acc = normalizeAccount(l.text);
           if (acc) (c === 'doit' ? doit : avoir).push(acc);
         }
+        // (la fusion des fragments est faite juste après, sur le texte des lignes)
       }
     }
 
@@ -1888,7 +2210,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const l = groupLines(tw)[0];
         totalRaw = l.text;
         total = normalizeAmount(l.text);
-        if (total == null) totalLenient = normalizeAmount(l.text, true);
+        if (total === 0) total = null;
+        if (total == null) {
+          totalLenient = normalizeAmount(l.text, true);
+          if (totalLenient === 0) totalLenient = null;
+        }
       }
     }
 
@@ -1938,6 +2264,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       dateRaw,
       hasTotalWord: !!wTotal,
       hasLibelleWord: !!wLibelle,
+      accountIssues,
+      datesBelow: below.map((l) => l.text).filter((t) => findDate(t)),
       boxes,
     };
   }
@@ -1956,13 +2284,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const flags = { no: [], date: [], compte: [], libelle: [], montant: [] };
     const warnings = [];
     const notes = [];
-    const doubt = (field, message) => { warnings.push(message); if (flags[field]) flags[field].push({ level: 'doubt', message }); };
+    const doubt = (field, message, action) => { warnings.push(message); if (flags[field]) flags[field].push({ level: 'doubt', message, action }); };
     const note = (field, message) => { notes.push(message); if (flags[field]) flags[field].push({ level: 'note', message }); };
 
     // ---- Libellé
     const lines = info.libelleLines.slice();
     let person = null;
-    if (lines.length >= 2 && looksLikePerson(lines[lines.length - 1])) person = lines.pop();
+    if (lines.length >= 2 && looksLikePerson(lines[lines.length - 1])) {
+      person = fixInitials(lines.pop(), index);
+    }
     const first = lines.shift() || '';
     const { type, rest } = splitType(first);
     let description = cleanDescription([rest, ...lines].filter(Boolean).join(' '));
@@ -2078,14 +2408,23 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const key = stripAccents(type || '').toUpperCase();
       const exp = index && index.expectedSide ? index.expectedSide.get(key) : null;
       const sideFr = (x) => (x === 'debit' ? 'Débit (entrée en caisse)' : 'Crédit (sortie de caisse)');
+      const expAcc = index && index.expectedSideByAccount ? index.expectedSideByAccount.get(compte) : null;
+      const swap = (attendu) => ({ type: 'swap', side: attendu });
       if (exp && exp.side !== side) {
-        doubt('montant', `Sens inhabituel : ${sideFr(side)} alors que les ${exp.n} écritures « ${type} » du classeur sont toutes en ${exp.side === 'debit' ? 'débit' : 'crédit'} : à vérifier`);
+        doubt('montant', `Sens inhabituel : ${sideFr(side)} alors que les ${exp.n} écritures « ${type} » du classeur sont toutes en ${exp.side === 'debit' ? 'débit' : 'crédit'} : à vérifier sur la pièce`, swap(exp.side));
+      } else if (expAcc && expAcc.side !== side) {
+        doubt('montant', `Sens inhabituel : ${sideFr(side)} alors que les ${expAcc.n} écritures du compte ${compte} dans le classeur sont toutes en ${expAcc.side === 'debit' ? 'débit' : 'crédit'} : à vérifier sur la pièce`, swap(expAcc.side));
       } else {
         const accSide = expectedSideFromAccount(compte);
-        if (accSide && accSide !== side) doubt('montant', `Sens inhabituel : ${sideFr(side)} sur un compte de recettes (${compte}) : à vérifier`);
+        if (accSide && accSide !== side) doubt('montant', `Sens inhabituel : ${sideFr(side)} sur un compte de recettes (${compte}) : à vérifier sur la pièce`, swap(accSide));
       }
     }
 
+    for (const m of info.accountIssues || []) note('compte', m);
+    if (info.datesBelow && info.datesBelow.length > 1) {
+      const vues = uniq(info.datesBelow.map((t) => findDate(t)).filter(Boolean));
+      if (vues.length > 1) doubt('date', `Plusieurs dates sous le tableau (${vues.map(isoToDisplay).join(', ')}) : ${isoToDisplay(info.date)} retenue, à vérifier`);
+    }
     if (!info.date) doubt('date', 'Date non reconnue');
     if (info.no == null) doubt('no', 'Numéro de pièce non reconnu');
     else if (info.noRaw && /[^0-9\s]/.test(String(info.noRaw))) doubt('no', `Numéro lu « ${String(info.noRaw).trim()} » interprété ${info.no} : à vérifier`);
@@ -2307,18 +2646,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         }
       }
     }
-    // Numéro incohérent avec l'ordre des pages (les pièces sont scannées dans l'ordre)
-    const byPage = entries.filter((e) => e.no != null).slice().sort((a, b) => a.page - b.page || (a.part || 0) - (b.part || 0));
-    for (let i = 1; i < byPage.length; i++) {
-      const prev = byPage[i - 1];
-      const cur = byPage[i];
-      if (cur.no !== prev.no + 1) {
-        const msg = cur.no < prev.no
-          ? `Numéro ${cur.no} lu après la pièce n° ${prev.no} (ordre des pages) : numéro à vérifier`
-          : `Numéro ${cur.no} lu, ${prev.no + 1} attendu d'après l'ordre des pages : numéro à vérifier (ou pièce manquante)`;
-        addDoubt(cur, 'no', msg);
-      }
-    }
+    // L'ordre des pages n'est pas un indice fiable : les classeurs contiennent des copies de
+    // pièces antérieures jointes comme justificatifs. Les trous et les doublons de numéros sont
+    // contrôlés globalement (voir le récapitulatif de contrôle), ce qui est plus sûr.
     sortEntries(entries);
     let lastDate = null;
     for (const e of entries) {
@@ -2330,12 +2660,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     for (const e of entries) if (e.date) { const y = e.date.slice(0, 4); years.set(y, (years.get(y) || 0) + 1); }
     let mainYear = null; let mainN = 0;
     for (const [y, n] of years) if (n > mainN) { mainYear = y; mainN = n; }
-    let prevDated = null;
+    // Les pièces ne sont pas toujours saisies dans l'ordre chronologique : seule une année
+    // différente du reste du lot est signalée.
     for (const e of entries) {
       if (!e.date) continue;
       if (mainYear && entries.length >= 3 && e.date.slice(0, 4) !== mainYear) addDoubt(e, 'date', `Année ${e.date.slice(0, 4)} différente des autres pièces (${mainYear}) : date à vérifier`);
-      if (prevDated && e.date < prevDated.date) addDoubt(e, 'date', `Date ${isoToDisplay(e.date)} antérieure à la pièce n° ${prevDated.no} (${isoToDisplay(prevDated.date)}) : à vérifier`);
-      prevDated = e;
     }
 
     const nos = entries.filter((e) => e.no != null).map((e) => e.no);
@@ -2420,6 +2749,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     canonicalType,
     looksLikePerson,
     formatLibelle,
+    fixInitials,
     cleanDescription,
     learnVocabulary,
     mergeVocabulary,
@@ -2859,6 +3189,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     previewFields: $('previewFields'),
     accountsList: $('accountsList'),
     totals: $('totals'),
+    checkTable: $('checkTable'),
+    checkBalance: $('checkBalance'),
+    checkDate: $('checkDate'),
+    balanceResult: $('balanceResult'),
+    btnReview: $('btnReview'),
+    btnReport: $('btnReport'),
     excelNotices: $('excelNotices'),
     btnExcel: $('btnExcel'),
     excelHint: $('excelHint'),
@@ -3353,9 +3689,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   function rowMessages(e) {
     const status = rowStatus(e);
-    // Une ligne en ordre n'affiche pas le détail des corrections : elles restent visibles
-    // par la cellule bleue, son info-bulle, et le détail quand la ligne est sélectionnée.
-    const showNotes = status !== 'ok' || e.id === state.selectedId;
+    // Une ligne en ordre n'affiche pas le détail des corrections : elles restent visibles par la
+    // cellule bleue et son info-bulle. Le contenu ne dépend pas de la sélection, sinon cliquer
+    // sur un bouton de la ligne le détruirait avant que le clic ne soit traité.
+    const showNotes = status !== 'ok';
     const open = [];
     for (const f of FIELDS) if (fieldDoubt(e, f)) for (const x of e.flags[f]) if (x.level === 'doubt') open.push(x.message);
     const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
@@ -3363,6 +3700,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       .concat(showNotes ? (e.notes || []).map((m) => `<li class="note">${escapeHtml(m)}</li>`) : []);
     if (!items.length) return '';
     let html = `<ul>${items.join('')}</ul>`;
+    const swap = fieldDoubt(e, 'montant') && (e.flags.montant || []).map((f) => f.action).find((a) => a && a.type === 'swap');
+    if (swap) {
+      html += `<div style="margin-top:4px">Si la pièce a été remplie à l'envers : ` +
+        `<button type="button" class="small" data-action="swap" data-side="${swap.side}">Passer en ${swap.side === 'debit' ? 'Débit (entrée)' : 'Crédit (sortie)'}</button></div>`;
+    }
     const cands = (e.candidates || []).filter((a) => a !== e.compte);
     if ((e.candidates || []).length > 1 && cands.length) {
       html += `<div style="margin-top:4px">Compte : ` +
@@ -3476,7 +3818,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         tr2.dataset.id = id;
         tr.insertAdjacentElement('afterend', tr2);
       }
-      tr2.innerHTML = `<td colspan="10">${msgs}</td>`;
+      // Ne reconstruire que si le contenu change réellement : sinon un simple clic sur un
+      // bouton de cette ligne détruirait ce bouton avant que le clic ne soit traité.
+      const html = `<td colspan="10">${msgs}</td>`;
+      if (tr2.innerHTML !== html) tr2.innerHTML = html;
     } else if (tr2) {
       tr2.remove();
     }
@@ -3512,6 +3857,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     e.edited = true;
     updateRowStatus(id);
     renderTotals();
+    renderChecks();
   });
 
   els.body.addEventListener('change', (ev) => {
@@ -3536,9 +3882,31 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   els.body.addEventListener('click', (ev) => {
     const btn = ev.target.closest('button[data-action="delete"]');
     const useBtn = ev.target.closest('button[data-action="use-account"]');
+    const swapBtn = ev.target.closest('button[data-action="swap"]');
     const tr = ev.target.closest('tr');
     if (!tr) return;
     const id = Number(tr.dataset.id);
+    if (swapBtn) {
+      const e = state.entries.find((x) => x.id === id);
+      if (e) {
+        const montant = e.debit != null ? e.debit : e.credit;
+        if (swapBtn.dataset.side === 'debit') { e.debit = montant; e.credit = null; } else { e.credit = montant; e.debit = null; }
+        e.edited = true;
+        e.resolved = Object.assign({}, e.resolved, { montant: true });
+        // mise à jour de la seule ligne concernée, pour ne pas détruire les autres boutons
+        const row = els.body.querySelector(`tr.entry[data-id="${id}"]`);
+        if (row) {
+          const dInp = row.querySelector('input[data-field="debit"]');
+          const cInp = row.querySelector('input[data-field="credit"]');
+          if (dInp) dInp.value = fmtInput(e.debit);
+          if (cInp) cInp.value = fmtInput(e.credit);
+        }
+        updateRowStatus(id);
+        renderTotals();
+        renderChecks();
+      }
+      return;
+    }
     if (useBtn) {
       const e = state.entries.find((x) => x.id === id);
       if (e) {
@@ -3588,18 +3956,27 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   });
 
   els.btnCheckAll.addEventListener('click', () => {
+    const reste = state.entries.filter((e) => rowStatus(e) === 'warn');
+    if (reste.length) {
+      const nos = reste.map((e) => e.no == null ? '?' : e.no).join(', ');
+      const ok = confirm(
+        `Attention : ${reste.length} ligne(s) portent encore une alerte de lecture.\n\n` +
+        `Pièces concernées : ${nos}\n\n` +
+        `Les marquer toutes vérifiées sans les regarder revient à accepter ces lectures telles quelles. ` +
+        `Une erreur de sens ou de montant passerait alors dans le fichier Excel.\n\n` +
+        `Voulez-vous plutôt les contrôler une par une (Annuler), ou tout valider quand même (OK) ?`);
+      if (!ok) { gotoNextDoubt(null); return; }
+    }
     state.entries.forEach((e) => { e.checked = true; e.edited = true; });
     renderTable();
+    renderChecks();
   });
 
   els.filterDoubt.addEventListener('change', () => renderTable());
 
   function selectEntry(id) {
-    const prev = state.selectedId;
     state.selectedId = id;
     els.body.querySelectorAll('tr.entry').forEach((r) => r.classList.toggle('selected', Number(r.dataset.id) === id));
-    if (prev != null) updateRowStatus(prev);
-    updateRowStatus(id);
     const tr = els.body.querySelector(`tr.entry[data-id="${id}"]`);
     if (tr) tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
     renderPreview();
@@ -3756,6 +4133,252 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
   });
 
+  /* ---------------- Contrôle pièce par pièce ---------------- */
+  const review = { open: false, id: null, el: null, token: 0 };
+
+  function reviewList() {
+    return state.entries.filter((e) => e.page);
+  }
+
+  function openReview(startId) {
+    const list = reviewList();
+    if (!list.length) { alert('Aucune pièce à contrôler.'); return; }
+    review.open = true;
+    review.id = startId != null && list.some((e) => e.id === startId) ? startId : list[0].id;
+    if (!review.el) {
+      review.el = document.createElement('div');
+      review.el.className = 'review';
+      review.el.innerHTML =
+        '<header>' +
+        '<span class="title">Contrôle des pièces</span>' +
+        '<span class="progress" id="rvProgress"></span>' +
+        '<span class="spacer"></span>' +
+        '<button type="button" id="rvPrev">◀ Précédente</button>' +
+        '<button type="button" id="rvNextDoubt">Prochaine à vérifier</button>' +
+        '<button type="button" class="primary" id="rvOk">✓ Correct → suivante</button>' +
+        '<button type="button" id="rvClose">Fermer</button>' +
+        '</header>' +
+        '<div class="body"><div class="sheet" id="rvSheet"></div><div class="side" id="rvSide"></div></div>';
+      document.body.appendChild(review.el);
+      $('rvClose').addEventListener('click', closeReview);
+      $('rvPrev').addEventListener('click', () => moveReview(-1));
+      $('rvOk').addEventListener('click', () => { markReviewed(true); moveReview(1); });
+      $('rvNextDoubt').addEventListener('click', () => gotoReviewDoubt());
+      review.el.addEventListener('input', (ev) => {
+        const f = ev.target.dataset && ev.target.dataset.rvField;
+        if (!f) return;
+        const e = state.entries.find((x) => x.id === review.id);
+        if (!e) return;
+        const val = ev.target.value;
+        if (f === 'no') e.no = val.trim() === '' ? null : (/^\d+$/.test(val.trim()) ? parseInt(val, 10) : val.trim());
+        else if (f === 'date') e.date = P.displayToIso(val);
+        else if (f === 'compte') e.compte = val.trim();
+        else if (f === 'libelle') e.libelle = val;
+        else if (f === 'debit' || f === 'credit') e[f] = val.trim() === '' ? null : P.round2(Number(val.replace(',', '.')));
+        e.edited = true;
+        const champ = { no: 'no', date: 'date', compte: 'compte', libelle: 'libelle', debit: 'montant', credit: 'montant' }[f];
+        if (champ) e.resolved = Object.assign({}, e.resolved, { [champ]: true });
+        renderReviewMessages();
+      });
+      document.addEventListener('keydown', (ev) => {
+        if (!review.open) return;
+        if (ev.key === 'Escape') { closeReview(); return; }
+        if (ev.target && /^(INPUT|TEXTAREA)$/.test(ev.target.tagName)) return;
+        if (ev.key === 'ArrowRight' || ev.key === ' ') { ev.preventDefault(); markReviewed(true); moveReview(1); }
+        else if (ev.key === 'ArrowLeft') { ev.preventDefault(); moveReview(-1); }
+      });
+    }
+    review.el.style.display = 'flex';
+    renderReview();
+  }
+
+  function closeReview() {
+    review.open = false;
+    if (review.el) review.el.style.display = 'none';
+    renderTable();
+    renderTotals();
+    renderChecks();
+    renderPreview();
+  }
+
+  function markReviewed(ok) {
+    const e = state.entries.find((x) => x.id === review.id);
+    if (!e) return;
+    e.seen = true;
+    if (ok && rowStatus(e) !== 'err') e.checked = true;
+  }
+
+  function moveReview(step) {
+    const list = reviewList();
+    const i = list.findIndex((e) => e.id === review.id);
+    const j = i + step;
+    if (j < 0) return;
+    if (j >= list.length) { closeReview(); alert('Toutes les pièces ont été parcourues.'); return; }
+    review.id = list[j].id;
+    renderReview();
+  }
+
+  function gotoReviewDoubt() {
+    const list = reviewList();
+    const i = list.findIndex((e) => e.id === review.id);
+    for (let k = 1; k <= list.length; k++) {
+      const e = list[(i + k) % list.length];
+      if (rowStatus(e) !== 'ok') { review.id = e.id; renderReview(); return; }
+    }
+    alert('Aucune pièce ne porte encore d\'alerte.');
+  }
+
+  function renderReviewMessages() {
+    const e = state.entries.find((x) => x.id === review.id);
+    if (!e) return;
+    const box = $('rvMsgs');
+    if (!box) return;
+    const open = [];
+    for (const f of FIELDS) if (fieldDoubt(e, f)) for (const x of e.flags[f]) if (x.level === 'doubt') open.push(x.message);
+    const items = rowIssues(e).map((m) => `<li class="err">${escapeHtml(m)}</li>`)
+      .concat(uniqList(open).map((m) => `<li>${escapeHtml(m)}</li>`))
+      .concat((e.notes || []).map((m) => `<li class="note">${escapeHtml(m)}</li>`));
+    box.innerHTML = items.length ? `<ul>${items.join('')}</ul>` : '<div style="color:var(--ok)">✓ Lue sans ambiguïté</div>';
+    review.el.querySelectorAll('input[data-rv-field]').forEach((inp) => {
+      const map = { no: 'no', date: 'date', compte: 'compte', libelle: 'libelle', debit: 'montant', credit: 'montant' };
+      inp.classList.toggle('doubt', fieldDoubt(e, map[inp.dataset.rvField]));
+    });
+  }
+
+  async function renderReview() {
+    const e = state.entries.find((x) => x.id === review.id);
+    if (!e) return;
+    e.seen = true;
+    const list = reviewList();
+    const i = list.findIndex((x) => x.id === review.id);
+    const restant = state.entries.filter((x) => x.page && !x.seen).length;
+    $('rvProgress').textContent = `Pièce ${i + 1} / ${list.length} – ${restant} pas encore affichée(s)`;
+    const ref = pageRef(e.page);
+    $('rvSide').innerHTML =
+      `<div class="f"><label>N° de pièce</label><input type="text" data-rv-field="no" value="${escapeHtml(e.no == null ? '' : e.no)}"></div>` +
+      `<div class="f"><label>Date</label><input type="text" data-rv-field="date" value="${escapeHtml(P.isoToDisplay(e.date))}" placeholder="jj.mm.aaaa"></div>` +
+      `<div class="f"><label>Compte de contrepartie</label><input type="text" data-rv-field="compte" list="accountsList" value="${escapeHtml(e.compte)}"></div>` +
+      `<div class="f"><label>Libellé</label><input type="text" data-rv-field="libelle" value="${escapeHtml(e.libelle)}"></div>` +
+      `<div class="f amount"><div><label>Débit (entrée)</label><input type="number" step="0.01" data-rv-field="debit" value="${fmtInput(e.debit)}"></div>` +
+      `<div><label>Crédit (sortie)</label><input type="number" step="0.01" data-rv-field="credit" value="${fmtInput(e.credit)}"></div></div>` +
+      `<div class="msgs" id="rvMsgs"></div>` +
+      (e.candidates && e.candidates.length > 1 ? `<div class="legend">Comptes lus sur la pièce : ${e.candidates.map((a) => `<button type="button" class="small" data-rv-account="${escapeHtml(a)}">${escapeHtml(a)}</button>`).join(' ')}</div>` : '') +
+      `<div class="actions"><button type="button" class="primary" id="rvOk2">✓ Correct → suivante</button>` +
+      `<button type="button" id="rvSwap">↔ Inverser débit / crédit</button></div>` +
+      `<div class="legend" style="margin-top:6px">La pièce est parfois remplie à l'envers (compte caisse du mauvais côté) : l'application lit ce qui est écrit et le signale, à vous de trancher.</div>` +
+      `<div class="legend" style="margin-top:10px">Raccourcis : <b>→</b> ou <b>Espace</b> valide et passe à la suivante, <b>←</b> revient, <b>Échap</b> ferme.</div>`;
+    $('rvOk2').addEventListener('click', () => { markReviewed(true); moveReview(1); });
+    $('rvSwap').addEventListener('click', () => {
+      const d = e.debit; e.debit = e.credit; e.credit = d;
+      e.edited = true;
+      e.resolved = Object.assign({}, e.resolved, { montant: true });
+      renderReview();
+    });
+    $('rvSide').querySelectorAll('button[data-rv-account]').forEach((b) => b.addEventListener('click', () => {
+      e.compte = b.dataset.rvAccount;
+      e.edited = true;
+      e.resolved = Object.assign({}, e.resolved, { compte: true });
+      renderReview();
+    }));
+    renderReviewMessages();
+    // image de la pièce
+    const token = ++review.token;
+    const sheet = $('rvSheet');
+    sheet.innerHTML = '<span style="color:var(--muted);padding:20px">Chargement de la pièce…</span>';
+    try {
+      const page = await ref.doc.doc.getPage(ref.pageInDoc);
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: 1400 / base.width });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(vp.width);
+      canvas.height = Math.round(vp.height * 0.66);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      if (token !== review.token) return;
+      sheet.innerHTML = '';
+      sheet.appendChild(canvas);
+      const zones = zonesFor(e);
+      if (zones.length) {
+        const ov = document.createElement('canvas');
+        ov.width = canvas.width; ov.height = canvas.height;
+        const octx = ov.getContext('2d');
+        const scale = canvas.width / ref.pageWidth;
+        for (const z of zones) {
+          if (!z.box) continue;
+          const x = z.box.x * scale - 5, y = z.box.y * scale - 4, w = z.box.w * scale + 10, h = z.box.h * scale + 8;
+          octx.lineWidth = z.level === 'doubt' ? 4 : 2;
+          octx.strokeStyle = z.level === 'doubt' ? 'rgba(217,119,6,0.95)' : 'rgba(37,99,235,0.55)';
+          if (z.level === 'doubt') { octx.fillStyle = 'rgba(251,191,36,0.20)'; octx.fillRect(x, y, w, h); }
+          octx.strokeRect(x, y, w, h);
+          octx.font = 'bold 16px Segoe UI, Arial, sans-serif';
+          octx.fillStyle = z.level === 'doubt' ? '#b45309' : '#1d4ed8';
+          octx.fillText(z.label, x + 2, Math.max(15, y - 5));
+        }
+        ov.className = 'overlay';
+        ov.style.width = '100%';
+        sheet.appendChild(ov);
+      }
+    } catch (err) {
+      console.error(err);
+      if (token === review.token) sheet.innerHTML = `<span style="color:var(--err);padding:20px">Aperçu indisponible : ${escapeHtml(err.message || err)}</span>`;
+    }
+  }
+
+  els.btnReview.addEventListener('click', () => openReview(state.selectedId));
+
+  /**
+   * Rapport de contrôle : récapitulatif du lot et détail des pièces signalées,
+   * à imprimer ou à conserver avec les pièces.
+   */
+  els.btnReport.addEventListener('click', () => {
+    const c = lotChecks();
+    const t = X.computeTotals(currentOpening(), allEntriesForExcel());
+    const op = currentOpening();
+    const esc = escapeHtml;
+    const ligne = (e) => {
+      const msgs = [];
+      for (const f of FIELDS) if (fieldDoubt(e, f)) for (const x of e.flags[f]) if (x.level === 'doubt') msgs.push(x.message);
+      return `<tr><td>${esc(e.no == null ? '?' : e.no)}</td><td>${esc(P.isoToDisplay(e.date))}</td><td>${esc(e.compte)}</td>` +
+        `<td>${esc(e.libelle)}</td><td class="n">${e.debit != null ? fmtCHF(e.debit) : ''}</td><td class="n">${e.credit != null ? fmtCHF(e.credit) : ''}</td>` +
+        `<td>${esc(e.page ? pageLabel(e.page) : 'manuel')}</td><td>${esc(uniqList(msgs).join(' ; '))}</td></tr>`;
+    };
+    const signalees = state.entries.filter((e) => rowStatus(e) !== 'ok');
+    const soldeSaisi = els.checkBalance.value.trim();
+    const ecart = soldeSaisi === '' ? null : P.round2(t.end - Number(soldeSaisi.replace(',', '.')));
+    const html =
+      `<!doctype html><meta charset="utf-8"><title>Rapport de contrôle – caisse</title>` +
+      `<style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;margin:24px;color:#111}` +
+      `h1{font-size:17px;margin:0 0 4px}h2{font-size:13px;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:#555}` +
+      `table{border-collapse:collapse;width:100%}td,th{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}` +
+      `th{background:#eee}td.n{text-align:right;white-space:nowrap}dl{display:grid;grid-template-columns:260px 1fr;gap:3px 10px;margin:0}` +
+      `dt{color:#555}dd{margin:0;font-weight:bold}.ko{color:#b3261e}.ok{color:#1e7f4f}@media print{body{margin:10mm}}</style>` +
+      `<h1>Rapport de contrôle de la caisse</h1><div>Édité le ${esc(P.isoToDisplay(new Date().toISOString().slice(0, 10)))}` +
+      (state.docs.length ? ` – pièces : ${esc(state.docs.map((d) => d.name).join(', '))}` : '') + `</div>` +
+      `<h2>Récapitulatif</h2><dl>` +
+      `<dt>Solde à nouveau${op.date ? ' au ' + esc(P.isoToDisplay(op.date)) : ''}</dt><dd>${esc(fmtCHF(op.amount))}</dd>` +
+      `<dt>Pièces lues dans ce lot</dt><dd>${c.count}</dd>` +
+      `<dt>Total des débits (entrées)</dt><dd>${esc(fmtCHF(t.debits))}</dd>` +
+      `<dt>Total des crédits (sorties)</dt><dd>${esc(fmtCHF(t.credits))}</dd>` +
+      `<dt>Solde calculé</dt><dd>${esc(fmtCHF(t.end))}</dd>` +
+      (ecart == null ? '' : `<dt>Solde réel compté</dt><dd>${esc(fmtCHF(Number(soldeSaisi.replace(',', '.'))))}</dd>` +
+        `<dt>Écart</dt><dd class="${Math.abs(ecart) < 0.005 ? 'ok' : 'ko'}">${esc(fmtCHF(ecart))}${Math.abs(ecart) < 0.005 ? ' (rapprochement correct)' : ' (à expliquer)'}</dd>`) +
+      `<dt>Numéros manquants</dt><dd class="${c.manquants.length ? 'ko' : 'ok'}">${c.manquants.length ? esc(c.manquants.join(', ')) : 'aucun'}</dd>` +
+      `<dt>Numéros en double</dt><dd class="${c.doublons.length ? 'ko' : 'ok'}">${c.doublons.length ? esc(c.doublons.join(', ')) : 'aucun'}</dd>` +
+      `<dt>Pièces affichées à l'écran</dt><dd>${c.count - c.jamaisVues.length} sur ${c.count}</dd>` +
+      `<dt>Lignes encore signalées</dt><dd class="${signalees.length ? 'ko' : 'ok'}">${signalees.length}</dd>` +
+      `</dl>` +
+      (signalees.length ? `<h2>Pièces signalées</h2><table><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Page</th><th>Motif</th></tr>` +
+        signalees.map(ligne).join('') + `</table>` : '<h2>Pièces signalées</h2><div class="ok">Aucune.</div>') +
+      `<h2>Toutes les écritures du lot</h2><table><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Page</th><th>Motif</th></tr>` +
+      state.entries.map(ligne).join('') + `</table>`;
+    const w = window.open('', '_blank');
+    if (!w) { alert('Le navigateur a bloqué l\'ouverture du rapport. Autorisez les fenêtres surgissantes pour cette page.'); return; }
+    w.document.write(html);
+    w.document.close();
+  });
+
   /* ---------------- Étape 4 : totaux + Excel ---------------- */
   function allEntriesForExcel() {
     const news = state.entries.slice().sort((a, b) => {
@@ -3768,6 +4391,94 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return existingEntries().map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
       .concat(news.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
   }
+
+  /**
+   * Contrôles du lot : séquence des numéros, doublons, lignes non contrôlées.
+   * Sert à la fois au tableau de l'étape 4 et au refus de générer un fichier douteux.
+   */
+  function lotChecks() {
+    const news = state.entries;
+    const nos = news.map((e) => Number(e.no)).filter((n) => !isNaN(n));
+    const counts = new Map();
+    for (const n of nos) counts.set(n, (counts.get(n) || 0) + 1);
+    const doublons = Array.from(counts.entries()).filter(([, c]) => c > 1).map(([n]) => n).sort((a, b) => a - b);
+    const manquants = [];
+    if (nos.length) {
+      for (let n = Math.min.apply(null, nos); n <= Math.max.apply(null, nos); n++) if (!counts.has(n)) manquants.push(n);
+    }
+    const existNos = new Set(existingEntries().map((e) => Number(e.no)).filter((n) => !isNaN(n)));
+    const dejaLa = nos.filter((n) => existNos.has(n));
+    const sansNo = news.filter((e) => e.no == null || e.no === '').length;
+    const aVerifier = news.filter((e) => rowStatus(e) === 'warn');
+    const incompletes = news.filter((e) => rowStatus(e) === 'err');
+    const jamaisVues = news.filter((e) => !e.seen && !e.checked && !e.edited && !e.manual);
+    return { doublons, manquants, dejaLa: uniqList(dejaLa), sansNo, aVerifier, incompletes, jamaisVues, count: news.length };
+  }
+
+  function renderChecks() {
+    const c = lotChecks();
+    const t = X.computeTotals(currentOpening(), allEntriesForExcel());
+    const line = (k, v, level, action) =>
+      `<tr class="${level}"><td class="k">${k}</td><td class="v">${v}${action || ''}</td></tr>`;
+    const btn = (label, act) => ` <button type="button" class="small" data-check="${act}">${label}</button>`;
+    const rows = [];
+    rows.push(line('Pièces lues dans ce lot', `${c.count}`, 'ok'));
+    rows.push(c.manquants.length
+      ? line('Numéros manquants dans la suite', `${c.manquants.length} : ${c.manquants.slice(0, 20).join(', ')}${c.manquants.length > 20 ? '…' : ''}`, 'err')
+      : line('Suite des numéros', 'complète, sans trou', 'ok'));
+    rows.push(c.doublons.length
+      ? line('Numéros en double', `${c.doublons.join(', ')}`, 'err', btn('Voir', 'dup'))
+      : line('Numéros en double', 'aucun', 'ok'));
+    if (c.dejaLa.length) rows.push(line('Numéros déjà dans le classeur', c.dejaLa.join(', '), 'err'));
+    if (c.sansNo) rows.push(line('Pièces sans numéro', String(c.sansNo), 'err'));
+    rows.push(c.incompletes.length
+      ? line('Lignes incomplètes', String(c.incompletes.length), 'err', btn('Voir', 'err'))
+      : line('Lignes incomplètes', 'aucune', 'ok'));
+    rows.push(c.aVerifier.length
+      ? line('Lignes à vérifier', String(c.aVerifier.length), 'warn', btn('Voir', 'warn'))
+      : line('Lignes à vérifier', 'aucune', 'ok'));
+    rows.push(c.jamaisVues.length
+      ? line('Pièces jamais affichées', `${c.jamaisVues.length} sur ${c.count}`, 'warn', btn('Contrôler', 'review'))
+      : line('Pièces affichées au moins une fois', `${c.count} sur ${c.count}`, 'ok'));
+    rows.push(line('Total des débits', fmtCHF(t.debits), 'ok'));
+    rows.push(line('Total des crédits', fmtCHF(t.credits), 'ok'));
+    rows.push(line('Solde calculé', fmtCHF(t.end), 'ok'));
+    els.checkTable.innerHTML = rows.join('');
+    renderBalanceCheck();
+  }
+
+  function renderBalanceCheck() {
+    const v = els.checkBalance.value.trim();
+    if (v === '') { els.balanceResult.innerHTML = ''; return; }
+    const reel = Number(v.replace(',', '.'));
+    if (!isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
+    const t = X.computeTotals(currentOpening(), allEntriesForExcel());
+    const ecart = P.round2(t.end - reel);
+    if (Math.abs(ecart) < 0.005) {
+      els.balanceResult.innerHTML = `<div class="balance-box ok">✓ Le solde calculé correspond exactement au solde réel : <b>${escapeHtml(fmtCHF(t.end))}</b>. Les écritures de ce lot sont cohérentes.</div>`;
+    } else {
+      els.balanceResult.innerHTML = `<div class="balance-box err">✖ Écart de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> : le calcul donne ${escapeHtml(fmtCHF(t.end))}, vous avez compté ${escapeHtml(fmtCHF(reel))}.` +
+        `<br>Une écriture a probablement été mal lue. Cherchez d'abord :` +
+        `<ul style="margin:6px 0 0 0"><li>un montant de <b>${escapeHtml(fmtCHF(Math.abs(ecart) / 2))}</b> pris dans le mauvais sens (débit au lieu de crédit ou l'inverse) ;</li>` +
+        `<li>une pièce de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> oubliée ou comptée deux fois ;</li>` +
+        `<li>les numéros manquants ou en double signalés à gauche.</li></ul></div>`;
+    }
+  }
+
+  els.checkBalance.addEventListener('input', renderBalanceCheck);
+
+  els.checkTable.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-check]');
+    if (!b) return;
+    const c = lotChecks();
+    if (b.dataset.check === 'review') { openReview(c.jamaisVues[0] ? c.jamaisVues[0].id : null); return; }
+    const list = b.dataset.check === 'dup'
+      ? state.entries.filter((e) => c.doublons.includes(Number(e.no)))
+      : b.dataset.check === 'err' ? c.incompletes : c.aVerifier;
+    if (!list.length) return;
+    els.step3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    selectEntry(list[0].id);
+  });
 
   function renderTotals() {
     const opening = currentOpening();
@@ -3790,6 +4501,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (!has) return;
     renderTable();
     renderTotals();
+    renderChecks();
     renderPreview();
     els.excelHint.textContent = `Fichier : ${X.suggestFileName(allEntriesForExcel(), currentOpening())}`;
   }
@@ -3829,25 +4541,44 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
-    const errs = state.entries.filter((e) => rowIssues(e).length);
-    if (errs.length) {
-      notice(els.excelNotices, 'err', `${errs.length} écriture(s) incomplète(s) (✖) : complétez-les avant de générer le fichier.`);
+    const c = lotChecks();
+    if (c.incompletes.length) {
+      notice(els.excelNotices, 'err', `${c.incompletes.length} écriture(s) incomplète(s) (✖) : complétez-les avant de générer le fichier.`);
+      selectEntry(c.incompletes[0].id);
       return;
     }
-    const warns = state.entries.filter((e) => rowStatus(e) === 'warn');
-    if (warns.length && !confirm(`${warns.length} écriture(s) sont encore marquées « à vérifier ». Générer le fichier quand même ?`)) return;
+    // Anomalies de séquence : très probablement un numéro mal lu, donc une pièce perdue ou doublée
+    const graves = [];
+    if (c.manquants.length) graves.push(`• numéros absents de la suite : ${c.manquants.slice(0, 25).join(', ')}${c.manquants.length > 25 ? '…' : ''}`);
+    if (c.doublons.length) graves.push(`• numéros en double : ${c.doublons.join(', ')}`);
+    if (c.dejaLa.length) graves.push(`• numéros déjà présents dans le classeur : ${c.dejaLa.join(', ')}`);
+    if (c.sansNo) graves.push(`• ${c.sansNo} pièce(s) sans numéro`);
+    if (graves.length) {
+      const ok = confirm(
+        'La suite des numéros de pièces n\'est pas continue :\n\n' + graves.join('\n') +
+        '\n\nC\'est le signe habituel d\'un numéro mal lu : une pièce peut manquer ou être comptée deux fois, ' +
+        'et le solde final serait alors faux.\n\nGénérer le fichier quand même ?');
+      if (!ok) return;
+    }
+    if (c.aVerifier.length) {
+      const ok = confirm(
+        `${c.aVerifier.length} ligne(s) portent encore une alerte de lecture (pièces ${c.aVerifier.map((e) => e.no == null ? '?' : e.no).join(', ')}).\n\n` +
+        'Générer le fichier quand même ?');
+      if (!ok) { gotoNextDoubt(null); return; }
+    }
+    if (c.jamaisVues.length > 0 && c.jamaisVues.length === c.count) {
+      if (!confirm(`Aucune des ${c.count} pièces n'a été affichée à l'écran. Générer le fichier sans les avoir contrôlées ?`)) { openReview(null); return; }
+    }
+    const soldeSaisi = els.checkBalance.value.trim();
+    if (soldeSaisi !== '') {
+      const t0 = X.computeTotals(currentOpening(), allEntriesForExcel());
+      const ecart = P.round2(t0.end - Number(soldeSaisi.replace(',', '.')));
+      if (Math.abs(ecart) >= 0.005 && !confirm(`Le solde calculé (${fmtCHF(t0.end)}) ne correspond pas au solde réel saisi : écart de ${fmtCHF(Math.abs(ecart))}.\n\nGénérer le fichier malgré cet écart ?`)) return;
+    }
     if (state.mode === 'new' && !els.openingDate.value) {
       if (!confirm('Aucune date de solde à nouveau n\'est indiquée. Continuer ?')) return;
     }
-    // Numéros en double ?
     const all = allEntriesForExcel();
-    const seen = new Map();
-    const dups = [];
-    for (const e of all) {
-      const k = String(e.no);
-      if (seen.has(k)) dups.push(k); else seen.set(k, true);
-    }
-    if (dups.length && !confirm(`Numéros de pièce en double dans le classeur : ${Array.from(new Set(dups)).join(', ')}. Continuer ?`)) return;
 
     els.btnExcel.disabled = true;
     try {

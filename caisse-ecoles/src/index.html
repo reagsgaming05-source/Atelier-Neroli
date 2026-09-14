@@ -87,6 +87,7 @@
       <button type="button" id="btnCheckAll" class="small">Tout marquer vérifié</button>
       <label class="legend" style="display:flex;align-items:center;gap:6px;margin-left:8px"><input type="checkbox" id="filterDoubt"> Afficher seulement les lignes à vérifier</label>
       <button type="button" id="btnNextDoubt" class="small">Aller à la prochaine ligne à vérifier ▼</button>
+      <button type="button" id="btnReview" class="small primary">🔍 Contrôler les pièces une par une</button>
       <span class="spacer"></span>
       <span class="legend" id="rowSummary"></span>
     </div>
@@ -124,11 +125,33 @@
   </section>
 
   <section class="card hidden" id="step4">
-    <h2><span class="n">4</span> Fichier Excel</h2>
+    <h2><span class="n">4</span> Contrôle et fichier Excel</h2>
     <div class="totals" id="totals"></div>
+    <div class="control-grid">
+      <div>
+        <h3 class="ctl-title">Contrôle du lot</h3>
+        <table class="checks" id="checkTable"></table>
+      </div>
+      <div>
+        <h3 class="ctl-title">Rapprochement de la caisse</h3>
+        <div class="legend" style="margin-bottom:8px">Comptez l'argent en caisse (ou reprenez le solde du dernier décompte) et inscrivez-le ici : l'application compare avec le solde calculé. C'est le contrôle qui garantit qu'aucune écriture n'a été mal lue.</div>
+        <div class="row">
+          <div class="field">
+            <label for="checkBalance">Solde réel en caisse (CHF)</label>
+            <input type="number" id="checkBalance" step="0.05" placeholder="ex. 4825.55" style="width:160px">
+          </div>
+          <div class="field">
+            <label for="checkDate">à la date du (facultatif)</label>
+            <input type="date" id="checkDate">
+          </div>
+        </div>
+        <div id="balanceResult" style="margin-top:10px"></div>
+      </div>
+    </div>
     <div id="excelNotices"></div>
     <div class="toolbar">
       <button type="button" class="primary" id="btnExcel">Générer le fichier Excel</button>
+      <button type="button" id="btnReport">Rapport de contrôle</button>
       <span class="legend" id="excelHint"></span>
     </div>
   </section>
