@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Décompte DGEO</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div>
+    <h1>Décompte DGEO — courses d'école &amp; camps</h1>
+    <div class="sub">Part à charge de l'État de Vaud pour les accompagnants titrés · traitement 100 % local</div>
+  </div>
+  <div class="status" id="status">…</div>
+</header>
+<main>
+  <section id="sec-upload">
+    <h2><span class="step">1</span> Dossier PDF scanné</h2>
+    <p class="hint">Déposez le décompte complet (formulaire + toutes les pièces). Le logiciel lit les tickets, ignore les récépissés et propose la part État. Vous validez ensuite les effectifs et chaque pièce.</p>
+    <div class="drop" id="drop">
+      <strong>Glissez le PDF ici</strong> ou cliquez pour choisir un fichier<br>
+      <span id="fname" class="legend"></span>
+      <input type="file" id="file" accept="application/pdf" hidden>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label class="f">Type d'activité
+        <select id="type-select">
+          <option value="">Détection automatique</option>
+          <option value="course">Course d'école</option>
+          <option value="camp">Camp</option>
+        </select>
+      </label>
+      <button class="primary" id="btn-analyse" disabled>Analyser le dossier</button>
+      <div class="progress" id="progress"><div class="spinner"></div><span>Lecture OCR des pages en cours… (quelques secondes par page)</span></div>
+    </div>
+    <div id="upload-error"></div>
+  </section>
+
+  <section id="sec-dossier" hidden>
+    <h2><span class="step">2</span> Dossier &amp; effectifs</h2>
+    <div class="grid" id="dossier-fields"></div>
+    <h3 style="font-size:13.5px;margin:16px 0 6px">Effectifs <span class="legend">— c'est vous qui fixez qui est titré : enseignants DGEO + enseignants J&amp;S = <b>acc. titrés</b> (part État) ; moniteurs J+S + autres = acc. non titrés</span></h3>
+    <div class="effectifs" id="effectifs"></div>
+    <div class="calc" id="effectifs-calc" style="margin-top:10px"></div>
+    <div id="noms" class="hint" style="margin-top:8px"></div>
+    <div class="warnings" id="warnings"></div>
+  </section>
+
+  <section id="sec-pieces" hidden>
+    <h2><span class="step">3</span> Pièces justificatives <span class="legend" id="pieces-count"></span></h2>
+    <p class="hint">Vérifiez chaque pièce sur l'aperçu (cliquez pour agrandir). <b>Saisie directe</b> : tarifs adultes retenus sur le billet (jusqu'à N titrés, plein tarif puis demi-tarif). <b>Règle de trois</b> : montant global réparti selon les effectifs dans l'Excel. Les récépissés et reçus de carte sont exclus automatiquement.</p>
+    <div class="pieces" id="pieces"></div>
+    <div class="actions"><button id="btn-add-piece">+ Ajouter une pièce manquante</button></div>
+  </section>
+
+  <section id="sec-rows" hidden>
+    <h2><span class="step">4</span> Lignes du décompte DGEO</h2>
+    <p class="hint">Ces lignes seront écrites dans le modèle Excel (avec ses formules). Vous pouvez retoucher un libellé ou un montant ; « Recalculer » régénère tout depuis les pièces.</p>
+    <div class="rows"><table id="rows-table">
+      <thead><tr><th style="width:130px">Rubrique</th><th>Libellé (détail du calcul)</th><th class="num">Coût total (H)</th><th class="num">Part État saisie (I)</th><th class="num">À charge de l'État (J)</th></tr></thead>
+      <tbody></tbody>
+      <tfoot><tr><td colspan="4" style="text-align:right">Total du remboursement demandé à la DGEO (arrondi à 0.05)</td><td class="num total" id="total">–</td></tr></tfoot>
+    </table></div>
+    <div class="actions">
+      <button id="btn-recompute">↻ Recalculer depuis les pièces</button>
+      <button class="primary" id="btn-excel">⬇ Générer le fichier Excel</button>
+      <span class="legend" id="rows-state"></span>
+    </div>
+  </section>
+  <footer class="note">Les PDF analysés sont conservés localement dans le dossier <span class="kbd">data/</span> à côté du programme.</footer>
+</main>
+
+<div class="viewer" id="viewer">
+  <div class="panel">
+    <div class="bar">
+      <b id="viewer-title"></b>
+      <span class="sp"></span>
+      <button class="small" id="viewer-prev">◀ Page préc.</button>
+      <button class="small" id="viewer-next">Page suiv. ▶</button>
+      <button class="small" id="viewer-close">Fermer ✕</button>
+    </div>
+    <div class="content">
+      <div class="img-wrap" id="viewer-wrap"><img id="viewer-img" alt="page"><div class="hl" id="viewer-hl" hidden></div></div>
+      <aside><div class="legend" style="margin-bottom:6px">Texte lu (OCR)</div><div class="mono" id="viewer-text" style="max-height:none"></div></aside>
+    </div>
+  </div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

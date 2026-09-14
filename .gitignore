@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Données de travail (dossiers scannés = données personnelles) : jamais dans le dépôt
+data/
+tests/fixtures/*.pdf
+tests/fixtures/*.xlsx
+*.log
