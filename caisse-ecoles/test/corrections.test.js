@@ -277,3 +277,24 @@ test('boxOf donne la zone lue pour l\'aperçu', () => {
   assert.ok(info.boxes.libelle.y > info.boxes.doit.y, 'le libellé est sous les comptes');
   assert.ok(info.boxes.date.y > info.boxes.total.y, 'la date est sous le total');
 });
+
+test('explainGap : retrouve les pièces prises dans le mauvais sens qui expliquent un écart', () => {
+  const entries = [
+    { id: 1, no: 48, debit: null, credit: 760.8 },
+    { id: 2, no: 117, debit: null, credit: 1280 },
+    { id: 3, no: 118, debit: null, credit: 1216 },
+    { id: 4, no: 5, debit: 100, credit: null },
+    { id: 5, no: 6, debit: null, credit: 12.6 },
+    { id: 6, no: 7, debit: null, credit: 50 },
+  ];
+  // solde calculé trop bas de 6513.60 : trois pièces au crédit qui devaient être au débit
+  const three = P.explainGap(entries, -6513.6);
+  assert.deepEqual(three.map((x) => [x.kind, x.entries.map((e) => e.no)]), [['swap', [48, 117, 118]]]);
+  // une seule pièce
+  assert.deepEqual(P.explainGap(entries, -2560).map((x) => x.entries.map((e) => e.no)), [[117]]);
+  // écriture comptée deux fois, ou deux pièces inversées
+  const two = P.explainGap(entries, 100);
+  assert.deepEqual(two.map((x) => [x.kind, x.entries.map((e) => e.no)]), [['double', [5]], ['swap', [5, 7]]]);
+  assert.deepEqual(P.explainGap(entries, 0.03), []);
+  assert.deepEqual(P.explainGap(entries, 0), []);
+});

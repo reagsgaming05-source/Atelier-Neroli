@@ -784,6 +784,26 @@
     }
   });
 
+  // Passe le montant d'une écriture de l'autre côté (débit <-> crédit). Ne met à jour que la
+  // ligne concernée, pour ne pas détruire les boutons des autres lignes.
+  function applySwap(id, side) {
+    const e = state.entries.find((x) => x.id === id);
+    if (!e) return;
+    const montant = e.debit != null ? e.debit : e.credit;
+    if (montant == null) return;
+    if (side === 'debit') { e.debit = montant; e.credit = null; } else { e.credit = montant; e.debit = null; }
+    e.edited = true;
+    e.resolved = Object.assign({}, e.resolved, { montant: true });
+    const row = els.body.querySelector(`tr.entry[data-id="${id}"]`);
+    if (row) {
+      const dInp = row.querySelector('input[data-field="debit"]');
+      const cInp = row.querySelector('input[data-field="credit"]');
+      if (dInp) dInp.value = fmtInput(e.debit);
+      if (cInp) cInp.value = fmtInput(e.credit);
+    }
+    updateRowStatus(id);
+  }
+
   els.body.addEventListener('click', (ev) => {
     const btn = ev.target.closest('button[data-action="delete"]');
     const useBtn = ev.target.closest('button[data-action="use-account"]');
@@ -792,24 +812,9 @@
     if (!tr) return;
     const id = Number(tr.dataset.id);
     if (swapBtn) {
-      const e = state.entries.find((x) => x.id === id);
-      if (e) {
-        const montant = e.debit != null ? e.debit : e.credit;
-        if (swapBtn.dataset.side === 'debit') { e.debit = montant; e.credit = null; } else { e.credit = montant; e.debit = null; }
-        e.edited = true;
-        e.resolved = Object.assign({}, e.resolved, { montant: true });
-        // mise à jour de la seule ligne concernée, pour ne pas détruire les autres boutons
-        const row = els.body.querySelector(`tr.entry[data-id="${id}"]`);
-        if (row) {
-          const dInp = row.querySelector('input[data-field="debit"]');
-          const cInp = row.querySelector('input[data-field="credit"]');
-          if (dInp) dInp.value = fmtInput(e.debit);
-          if (cInp) cInp.value = fmtInput(e.credit);
-        }
-        updateRowStatus(id);
-        renderTotals();
-        renderChecks();
-      }
+      applySwap(id, swapBtn.dataset.side);
+      renderTotals();
+      renderChecks();
       return;
     }
     if (useBtn) {
@@ -1362,13 +1367,49 @@
     if (Math.abs(ecart) < 0.005) {
       els.balanceResult.innerHTML = `<div class="balance-box ok">✓ Le solde calculé correspond exactement au solde réel : <b>${escapeHtml(fmtCHF(t.end))}</b>. Les écritures de ce lot sont cohérentes.</div>`;
     } else {
-      els.balanceResult.innerHTML = `<div class="balance-box err">✖ Écart de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> : le calcul donne ${escapeHtml(fmtCHF(t.end))}, vous avez compté ${escapeHtml(fmtCHF(reel))}.` +
-        `<br>Une écriture a probablement été mal lue. Cherchez d'abord :` +
-        `<ul style="margin:6px 0 0 0"><li>un montant de <b>${escapeHtml(fmtCHF(Math.abs(ecart) / 2))}</b> pris dans le mauvais sens (débit au lieu de crédit ou l'inverse) ;</li>` +
-        `<li>une pièce de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> oubliée ou comptée deux fois ;</li>` +
-        `<li>les numéros manquants ou en double signalés à gauche.</li></ul></div>`;
+      const props = P.explainGap(state.entries, ecart, 5);
+      let html = `<div class="balance-box err">✖ Écart de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> : le calcul donne ${escapeHtml(fmtCHF(t.end))}, vous avez compté ${escapeHtml(fmtCHF(reel))}.`;
+      if (props.length) {
+        html += `<br><b>Explication${props.length > 1 ? 's' : ''} possible${props.length > 1 ? 's' : ''}</b> (les pièces ci-dessous expliquent exactement l'écart) :<ul style="margin:6px 0 0 0">`;
+        for (const pr of props) {
+          const desc = pr.entries.map((e) => `n° ${e.no != null ? e.no : '?'} (${fmtCHF(e.debit != null ? e.debit : e.credit)}${e.debit != null ? ' au débit' : ' au crédit'})`).join(', ');
+          const ids = pr.entries.map((e) => e.id).join(',');
+          if (pr.kind === 'double') {
+            html += `<li>la pièce ${escapeHtml(desc)} semble comptée deux fois <button type="button" class="small" data-fix="see" data-ids="${ids}">Voir</button></li>`;
+          } else {
+            html += `<li>${pr.entries.length > 1 ? 'les pièces' : 'la pièce'} ${escapeHtml(desc)} ${pr.entries.length > 1 ? 'prises' : 'prise'} dans le mauvais sens ` +
+              `<button type="button" class="small" data-fix="swap" data-ids="${ids}">Inverser le sens ${pr.entries.length > 1 ? 'de ces ' + pr.entries.length + ' pièces' : 'de cette pièce'}</button> ` +
+              `<button type="button" class="small" data-fix="see" data-ids="${ids}">Voir</button></li>`;
+          }
+        }
+        html += `</ul><div style="margin-top:6px">Vérifiez sur ${props.length > 1 ? 'les pièces' : 'la pièce'} avant de corriger : une pièce remplie à l'envers (caisse dans la mauvaise colonne) donne exactement ce genre d'écart.</div>`;
+      } else {
+        html += `<br>Aucune combinaison simple n'explique cet écart. Cherchez :` +
+          `<ul style="margin:6px 0 0 0"><li>les numéros manquants ou en double signalés à gauche (une pièce oubliée ou lue deux fois) ;</li>` +
+          `<li>un montant mal lu : comparez les montants signalés en orange avec le Total de la pièce ;</li>` +
+          `<li>une pièce d'une autre année glissée dans le lot.</li></ul>`;
+      }
+      els.balanceResult.innerHTML = html + '</div>';
     }
   }
+
+  els.balanceResult.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-fix]');
+    if (!b) return;
+    const ids = String(b.dataset.ids || '').split(',').map(Number).filter((n) => n);
+    if (!ids.length) return;
+    if (b.dataset.fix === 'swap') {
+      for (const id of ids) {
+        const e = state.entries.find((x) => x.id === id);
+        if (e) applySwap(id, e.debit != null ? 'credit' : 'debit');
+      }
+      renderTotals();
+      renderChecks();
+      return;
+    }
+    els.step3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    selectEntry(ids[0]);
+  });
 
   els.checkBalance.addEventListener('input', renderBalanceCheck);
 

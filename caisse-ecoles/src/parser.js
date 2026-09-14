@@ -1403,6 +1403,56 @@
   }
 
   /**
+   * Explique un écart entre le solde calculé et le solde réel compté.
+   * ecart = solde calculé − solde réel (en francs). Cherche :
+   *  - une écriture comptée deux fois (son montant vaut l'écart) ;
+   *  - jusqu'à trois écritures prises dans le mauvais sens (débit au lieu de crédit ou
+   *    l'inverse) : inverser une écriture au débit baisse le solde de 2 × montant,
+   *    inverser une écriture au crédit le monte de 2 × montant.
+   * Renvoie des propositions, les plus simples d'abord (au plus `limit`).
+   */
+  function explainGap(entries, ecart, limit) {
+    const max = limit || 5;
+    const cents = Math.round((Number(ecart) || 0) * 100);
+    if (!cents) return [];
+    const list = (entries || []).map((e) => {
+      const d = Math.round((Number(e.debit) || 0) * 100);
+      const c = Math.round((Number(e.credit) || 0) * 100);
+      return { e, amount: d || c, effect: 2 * (d - c) };
+    }).filter((x) => x.amount > 0);
+    const out = [];
+    for (const x of list) if (x.effect === 2 * cents) out.push({ kind: 'double', entries: [x.e] });
+    const seen = new Set();
+    const key = (xs) => xs.map((x) => list.indexOf(x)).sort((a, b) => a - b).join(',');
+    const add = (xs) => {
+      const k = key(xs);
+      if (seen.has(k)) return;
+      seen.add(k);
+      out.push({ kind: 'swap', entries: xs.map((x) => x.e) });
+    };
+    const byEffect = new Map();
+    list.forEach((x, i) => { if (!byEffect.has(x.effect)) byEffect.set(x.effect, []); byEffect.get(x.effect).push(i); });
+    // une seule écriture
+    for (const i of byEffect.get(cents) || []) add([list[i]]);
+    // deux écritures
+    if (out.length < max) {
+      for (let i = 0; i < list.length; i++) {
+        for (const j of byEffect.get(cents - list[i].effect) || []) if (j > i) add([list[i], list[j]]);
+        if (out.length >= max) break;
+      }
+    }
+    // trois écritures, seulement si rien de plus simple n'explique l'écart
+    if (!out.length) {
+      for (let i = 0; i < list.length && out.length < max; i++) {
+        for (let j = i + 1; j < list.length && out.length < max; j++) {
+          for (const k of byEffect.get(cents - list[i].effect - list[j].effect) || []) if (k > j) add([list[i], list[j], list[k]]);
+        }
+      }
+    }
+    return out.slice(0, max);
+  }
+
+  /**
    * Extrait le type d'un libellé du journal ("REMBOURSEMENT - ... - X. Y") pour l'historique.
    */
   function typeFromLibelle(libelle) {
@@ -1448,6 +1498,7 @@
     parseDocument,
     detectCaisseAccount,
     typeFromLibelle,
+    explainGap,
     levenshtein,
     round2,
   };

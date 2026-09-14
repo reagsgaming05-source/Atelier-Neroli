@@ -39,7 +39,8 @@ compte de contrepartie.
    valide la ligne affichée et saute à la suivante. On peut aussi ajouter une écriture manuelle.
 6. **Étape 4 – Contrôle et fichier Excel** : le tableau de contrôle récapitule le lot (suite des
    numéros, doublons, lignes à vérifier, pièces jamais affichées, totaux). Inscrire le **solde réel
-   compté en caisse** : l'application affiche l'écart avec le solde calculé et indique quoi chercher.
+   compté en caisse** : l'application affiche l'écart avec le solde calculé, nomme les pièces qui
+   l'expliquent exactement (sens inversé, pièce comptée deux fois) et propose la correction.
    *Générer le fichier Excel* télécharge `Caisse écoles AAAA.xlsx` ; toute anomalie restante demande
    une confirmation explicite. *Rapport de contrôle* ouvre un récapitulatif imprimable à conserver
    avec les pièces.
@@ -119,7 +120,10 @@ Une lecture de scan n'est jamais certaine à 100 %. Trois garde-fous se complèt
    de contrôle indique combien de pièces n'ont jamais été affichées.
 3. **Le rapprochement de caisse** : le solde calculé est comparé au solde réel compté. C'est le
    contrôle final, celui qui révèle toute écriture mal lue, y compris celles qu'aucune règle ne
-   pouvait détecter.
+   pouvait détecter. En cas d'écart, l'application cherche elle-même ce qui l'explique exactement :
+   une pièce comptée deux fois, ou jusqu'à trois pièces prises dans le mauvais sens (un décompte de
+   camp peut aller dans les deux sens, aucune règle ne le signale ; le rapprochement, si). Elle
+   nomme les pièces et propose d'inverser leur sens en un clic, après vérification sur la pièce.
 
 Les pièces sont parfois remplies à l'envers (compte caisse du mauvais côté du formulaire).
 L'application lit ce qui est écrit, le signale, et propose de corriger le sens en un clic.
