@@ -4632,7 +4632,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   };
 
   // Mesure la quantité d'encre d'une page, bords exclus, bruit isolé écarté.
-  async function mesurerEncre(p, reglages) {
+  // « masque » : les pixels du mobilier de page (en-tête, pied de page, logo,
+  // repérés parce qu'ils se répètent à l'identique sur les autres pages), qui
+  // ne comptent pas comme de l'encre.
+  async function mesurerEncre(p, reglages, masque) {
     const src = srcById(p.src);
     const g = pageGeom(p);
     const page = await src.pdfjs.getPage(p.index + 1);
@@ -4665,6 +4668,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const cible = Math.floor(W * H * 0.92);
     for (let l = 0; l < 256; l++) { cumul += hist[l]; if (cumul >= cible) { blanc = l; break; } }
     const seuilEncre = Math.max(8, blanc - reglages.ecart);
+    const m = masque && masque.length === W * H ? masque : null;
 
     // Regroupement par blocs : une poussière isolée ne suffit pas à noircir un bloc.
     const B = 3, bw = Math.floor(W / B), bh = Math.floor(H / B);
@@ -4676,7 +4680,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         let n = 0;
         for (let y = 0; y < B; y++) {
           const ligne = (by * B + y) * W + bx * B;
-          for (let x = 0; x < B; x++) if (lum[ligne + x] < seuilEncre) n++;
+          for (let x = 0; x < B; x++) if (lum[ligne + x] < seuilEncre && !(m && m[ligne + x])) n++;
         }
         if (n >= 4) { grille[by * bw + bx] = 1; bruts++; }
       }
@@ -4701,7 +4705,71 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return {
       ratio: blocsEncres / totalBlocs, brut: bruts / totalBlocs, blanc,
       apercu: apercu.toDataURL('image/jpeg', 0.6),
+      lum, W, H, seuilEncre,
     };
+  }
+
+  // Le texte d'une page avec ses positions, et pour chaque élément une
+  // signature qui ne change pas d'une page à l'autre quand c'est le même
+  // en-tête ou pied de page : le texte, chiffres effacés (« Page 3 » et
+  // « Page 4 » sont le même pied de page), à la même place.
+  async function elementsTexte(p) {
+    const src = srcById(p.src);
+    if (!src) return [];
+    const page = await src.pdfjs.getPage(p.index + 1);
+    const tc = await page.getTextContent();
+    return tc.items.filter(it => it.str && it.str.trim()).map(it => ({
+      lettres: it.str.replace(/\s/g, '').length,
+      sig: it.str.replace(/\d+/g, '#').replace(/\s+/g, ' ').trim() + '@' + Math.round(it.transform[4] / 4) + ',' + Math.round(it.transform[5] / 4),
+    }));
+  }
+
+  // Le mobilier de page : ce qui se retrouve à l'identique sur la plupart des
+  // pages d'un même document — en-tête, pied de page, logo, cadre, numéro de
+  // page. Ça ne porte aucune information propre à la page : une page qui n'a
+  // que cela est vide. Repéré au pixel près sur un échantillon de pages,
+  // donc un corps de texte, différent d'une page à l'autre, n'y entre pas.
+  const MOBILIER = { part: 0.7, echantillon: 24 };
+  async function reperer_mobilier(pages, reglages, textes, avancement) {
+    const n = pages.length;
+    if (n < 2) return null;
+    const pas = Math.max(1, n / MOBILIER.echantillon);
+    const choisies = [];
+    for (let k = 0; k < n && choisies.length < MOBILIER.echantillon; k += pas) choisies.push(pages[Math.floor(k)]);
+    let compte = null, W = 0, H = 0;
+    const sigs = new Map();
+    for (let i = 0; i < choisies.length; i++) {
+      const p = choisies[i];
+      if (avancement) avancement(i, choisies.length);
+      const r = await mesurerEncre(p, reglages);
+      if (!compte) { W = r.W; H = r.H; compte = new Uint16Array(W * H); }
+      if (r.W !== W || r.H !== H) continue;
+      for (let j = 0; j < compte.length; j++) if (r.lum[j] < r.seuilEncre) compte[j]++;
+      const items = await elementsTexte(p);
+      textes.set(pkey(p), items);
+      new Set(items.map(it => it.sig)).forEach(sg => sigs.set(sg, (sigs.get(sg) || 0) + 1));
+    }
+    const quorum = Math.ceil(MOBILIER.part * choisies.length);
+    const masque = new Uint8Array(W * H);
+    let pixels = 0;
+    for (let j = 0; j < compte.length; j++) if (compte[j] >= quorum) { masque[j] = 1; pixels++; }
+    // Élargi d'un pixel : le lissage des bords ne doit pas laisser un liseré.
+    if (pixels) {
+      const large = new Uint8Array(masque);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (!masque[y * W + x]) continue;
+          if (x > 0) large[y * W + x - 1] = 1;
+          if (x < W - 1) large[y * W + x + 1] = 1;
+          if (y > 0) large[(y - 1) * W + x] = 1;
+          if (y < H - 1) large[(y + 1) * W + x] = 1;
+        }
+      }
+      masque.set(large);
+    }
+    const meubles = new Set();
+    sigs.forEach((c, sg) => { if (c >= quorum) meubles.add(sg); });
+    return { masque: pixels ? masque : null, meubles, pixels };
   }
 
   function toolPagesVides() {
@@ -4719,16 +4787,42 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       cases.clear();
       const mesures = [];
       let rates = 0;
+
+      // Le mobilier se repère par document et par format de page : un
+      // en-tête n'a de sens que parmi des pages qui se ressemblent.
+      const groupes = new Map();
+      state.pages.forEach(p => {
+        const g = pageGeom(p);
+        const cle = p.src + '|' + Math.round(g.Wd) + '|' + Math.round(g.Hd) + '|' + g.total;
+        if (!groupes.has(cle)) groupes.set(cle, { pages: [], mobilier: null });
+        groupes.get(cle).pages.push(p);
+      });
+      const textes = new Map();
+      for (const gr of groupes.values()) {
+        if (mien !== jeton) return;
+        if (gr.pages.length < 2) continue;
+        try {
+          gr.mobilier = await reperer_mobilier(gr.pages, reglages, textes, (i, n) => { info.textContent = 'Rep\u00e9rage des en-t\u00eates et pieds de page\u2026 ' + (i + 1) + ' sur ' + n; });
+        } catch (e) { console.error(e); }
+      }
+      const groupeDe = p => { const g = pageGeom(p); return groupes.get(p.src + '|' + Math.round(g.Wd) + '|' + Math.round(g.Hd) + '|' + g.total); };
+
       for (let i = 0; i < state.pages.length; i++) {
         if (mien !== jeton) return;
         const p = state.pages[i];
         info.textContent = 'Analyse\u2026 page ' + (i + 1) + ' sur ' + state.pages.length;
+        const gr = groupeDe(p);
+        const mob = gr && gr.mobilier;
         let mesure = null;
-        try { mesure = await mesurerEncre(p, reglages); } catch (e) { console.error(e); rates++; }
+        try { mesure = await mesurerEncre(p, reglages, mob && mob.masque); } catch (e) { console.error(e); rates++; }
         if (!mesure) continue;
-        const texte = (await getPageText(p)).replace(/\s/g, '');
-        mesures.push({ p, i, mesure, lettres: texte.length,
-          vide: mesure.ratio <= reglages.seuil && texte.length <= reglages.lettres });
+        mesure.lum = null;
+        let items = textes.get(pkey(p));
+        if (!items) { try { items = await elementsTexte(p); } catch (e) { console.error(e); items = []; } }
+        const lettres = items.reduce((t, it) => t + (mob && mob.meubles.has(it.sig) ? 0 : it.lettres), 0);
+        const mobilier = !!(mob && (mob.masque || mob.meubles.size));
+        mesures.push({ p, i, mesure, lettres, mobilier,
+          vide: mesure.ratio <= reglages.seuil && lettres <= reglages.lettres });
         if (i % 3 === 0) await nextFrame();
       }
       if (mien !== jeton) return;
@@ -4763,9 +4857,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const sous = document.createElement('div'); sous.className = 's';
         const src = srcById(m.p.id) || srcById(m.p.src);
         const marques = m.mesure.ratio === 0
-          ? (m.mesure.brut > 0 ? 'aucune marque, seulement du grain' : 'parfaitement vide')
+          ? (m.lettres > 0 ? 'marques infimes' : m.mesure.brut > 0 ? 'aucune marque, seulement du grain' : 'parfaitement vide')
           : 'marques : ' + (m.mesure.ratio * 100).toFixed(2) + ' %';
         sous.textContent = marques + (m.lettres ? ' \u00b7 ' + plural(m.lettres, 'caract\u00e8re', 'caract\u00e8res') : ' \u00b7 aucun texte')
+          + (m.mobilier ? ' \u00b7 hors en-t\u00eate et pied de page' : '')
           + (src ? ' \u00b7 ' + baseName(src.name) + ' p. ' + (m.p.index + 1) : '');
         g.append(n, sous);
         ligne.append(c, img, g);
@@ -4782,7 +4877,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         b.append(field('Sensibilité', sensi, 'Strict ne retient que les pages sans la moindre marque. Normal tolère un numéro de page. Tolérant accepte un pied de page court et le grain d\'un scanner.'));
         b.append(info);
         b.append(liste);
-        b.append(note('Les bords sont ignorés, et le grain isolé d\'un scanner ne compte pas : seules les marques qui se tiennent, comme de l\'écriture, sont mesurées.'));
+        b.append(note('Les bords sont ignorés, et le grain isolé d\'un scanner ne compte pas : seules les marques qui se tiennent, comme de l\'écriture, sont mesurées. Ce qui se répète à l\'identique sur les pages d\'un document — en-tête, pied de page, logo, numéro de page — ne compte pas non plus : une page qui ne porte que cela est vide.'));
       },
       onOpen: () => {},
       actions: [
