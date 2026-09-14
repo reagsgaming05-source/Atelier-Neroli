@@ -4,7 +4,7 @@
  *    à côté de l'exécutable (facultatif, données personnelles jamais publiées) ;
  *  - window.CaisseDesktop  : informations sur l'application fenêtrée.
  */
-const { contextBridge } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 const fs = require('fs');
 
 const arg = process.argv.find((a) => a.startsWith('--caisse-names='));
@@ -27,3 +27,10 @@ if (namesPath) {
 if (names) contextBridge.exposeInMainWorld('CaisseVocabNoms', names);
 const verArg = process.argv.find((a) => a.startsWith('--caisse-version='));
 contextBridge.exposeInMainWorld('CaisseDesktop', { version: verArg ? verArg.slice('--caisse-version='.length) : '', electron: process.versions.electron, namesLoaded: !!names });
+
+// Troisième lecteur : Tesseract natif, via le processus principal
+contextBridge.exposeInMainWorld('CaisseNative', {
+  ocrInfo: () => ipcRenderer.invoke('ocr:info'),
+  // png : Uint8Array ; opts : { psm, oem, dpi } ; renvoie [{ text, conf, x0, y0, x1, y1 }]
+  ocrRecognize: (png, opts) => ipcRenderer.invoke('ocr:recognize', png, opts),
+});

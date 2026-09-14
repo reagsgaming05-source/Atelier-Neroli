@@ -171,7 +171,7 @@ la pièce qui décide, puis le rapprochement de caisse qui tranche. Le classeur 
 logique : 123 remboursements et 37 avances, tous en sortie ; 18 participations, 8 recettes et
 7 retraits, tous en entrée.
 
-## Seconde lecture par OCR local
+## Lectures croisées : OCR local, Tesseract natif, moteur historique
 
 La couche texte du PDF (produite par le copieur) est lue instantanément ; c'est elle qui remplit le
 tableau. Ensuite, si l'option *Seconde lecture par OCR local* est cochée (étape 1, par défaut),
@@ -203,6 +203,33 @@ et sont signalées en orange).
 
 L'OCR ne lit pas l'écriture manuscrite : ces mentions restent à saisir, et l'application les
 signale (*Libellé illisible par endroits*).
+
+### Troisième lecteur (version portable Windows)
+
+L'application fenêtrée embarque en plus **Tesseract natif** (dossier `tesseract/` à côté de
+l'exécutable, comme pour Décompte DGEO) avec deux modèles français : `fra` (tessdata_best,
+flottant, le plus précis) et `fra_leg` (modèle combiné, pour le **moteur historique** qui relit
+les zones numériques). Chaque zone est donc lue par trois ou quatre lecteurs indépendants, et
+les lectures sont **votées** champ par champ (`src/ocr.js`, `crossRead`) :
+
+- une valeur soutenue par deux lectures est confirmée (liseré vert) ;
+- la couche texte n'est corrigée d'office (bleu) que si les lectures OCR concordent entre elles
+  **et** que la correction est plausible : compte connu à la place d'un compte inconnu, total
+  cohérent avec la colonne SOMME, n° dont la lecture texte contenait des caractères parasites,
+  date dont la lecture texte était abîmée ;
+- sinon la divergence reste orange, avec un bouton *Prendre …* ;
+- quand les lectures divergent, les zones concernées sont **relues à 360 dpi** par le lecteur
+  natif avant le vote.
+
+Les lecteurs travaillent en parallèle (worker WebAssembly + processus natifs) : comptez une à
+deux secondes par pièce. Sans dossier `tesseract/` (fichier HTML seul), l'application se limite
+à la double lecture.
+
+### Mémoire des corrections
+
+Une correction faite à la main (compte, n°, mot du libellé, ou un choix parmi les propositions)
+est mémorisée sur ce PC. La même lecture corrigée deux fois de la même façon est ensuite
+corrigée d'office, en bleu, avec la mention *d'après vos corrections précédentes*.
 
 ## Base de référence intégrée
 
@@ -258,7 +285,7 @@ Structure :
 - `src/app.js`, `src/index.html`, `src/app.css` – interface
 - `src/ocr.js` – seconde lecture par OCR local : prétraitement, zones, confrontation des lectures, moteur embarqué
 - `build.js` – assemble tout (avec pdf.js, ExcelJS, tesseract.js et le modèle français) dans `dist/Caisse-ecoles.html`
-- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre, menu, dossier `data/`, fichier des noms), `preload.js`, `smoke-test.js`, `build/` (icône, LISEZMOI portable)
+- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre, menu, dossier `data/`, fichier des noms), `preload.js`, `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
 
 ## Limites
 

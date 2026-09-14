@@ -41,18 +41,58 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run dist:win
 
+      - name: Tesseract portable (troisième lecteur) – installateur UB Mannheim extrait avec 7-Zip, modèles français
+        working-directory: caisse-ecoles/desktop
+        shell: pwsh
+        run: |
+          function Get-WithRetry([string]$Url, [string]$Out) {
+            foreach ($try in 1..5) {
+              try { Invoke-WebRequest $Url -OutFile $Out -TimeoutSec 300; return }
+              catch { Write-Host "Tentative $try/5 échouée pour $Url : $($_.Exception.Message)"; Start-Sleep -Seconds (10 * $try) }
+            }
+            throw "Téléchargement impossible : $Url"
+          }
+          $rel = $null
+          foreach ($try in 1..5) {
+            try { $rel = Invoke-RestMethod "https://api.github.com/repos/UB-Mannheim/tesseract/releases/latest"; break }
+            catch { Write-Host "API GitHub, tentative $try/5 : $($_.Exception.Message)"; Start-Sleep -Seconds (10 * $try) }
+          }
+          if (-not $rel) { throw "API GitHub injoignable" }
+          $asset = $rel.assets | Where-Object { $_.name -like "*w64*.exe" } | Select-Object -First 1
+          if (-not $asset) { $asset = $rel.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1 }
+          if (-not $asset) { throw "Installateur Tesseract introuvable dans la release $($rel.tag_name)" }
+          Write-Host "Tesseract $($rel.tag_name) : $($asset.browser_download_url)"
+          Get-WithRetry $asset.browser_download_url tesseract-setup.exe
+          7z x tesseract-setup.exe -otesseract-extract -y | Out-Null
+          $exe = Get-ChildItem tesseract-extract -Recurse -Filter tesseract.exe | Select-Object -First 1
+          if (-not $exe) { throw "tesseract.exe introuvable après extraction" }
+          New-Item -ItemType Directory -Force -Path tesseract | Out-Null
+          Copy-Item "$($exe.DirectoryName)\*" tesseract -Recurse -Force
+          Get-ChildItem tesseract -Directory | Where-Object { $_.Name -like '$PLUGINSDIR' -or $_.Name -eq 'doc' -or $_.Name -eq 'html' -or $_.Name -eq 'tessdata' } | Remove-Item -Recurse -Force
+          # modèles : fra = LSTM flottant de tessdata_best (le plus précis) ; fra_leg = modèle combiné
+          # (moteur historique + LSTM) de tessdata, pour le moteur historique sur les chiffres
+          New-Item -ItemType Directory -Force -Path tesseract\tessdata | Out-Null
+          Get-WithRetry "https://github.com/tesseract-ocr/tessdata_best/raw/main/fra.traineddata" "tesseract\tessdata\fra.traineddata"
+          Get-WithRetry "https://github.com/tesseract-ocr/tessdata/raw/main/fra.traineddata" "tesseract\tessdata\fra_leg.traineddata"
+          & tesseract\tesseract.exe --version
+          & tesseract\tesseract.exe --list-langs --tessdata-dir tesseract\tessdata
+          "Tesseract $($rel.tag_name) — https://github.com/UB-Mannheim/tesseract (Apache 2.0)`nModèles : tessdata_best/fra (fra), tessdata/fra (fra_leg) — https://github.com/tesseract-ocr (Apache 2.0)" | Out-File tesseract\VERSION.txt
+
       - name: Assembler le dossier portable
         working-directory: caisse-ecoles/desktop
         shell: pwsh
         run: |
           Rename-Item dist\win-unpacked CaisseEcoles
+          Copy-Item tesseract dist\CaisseEcoles\tesseract -Recurse
           Copy-Item ..\README.md dist\CaisseEcoles\LISEZMOI.md
           Copy-Item build\LISEZMOI-portable.txt dist\CaisseEcoles\LISEZMOI-portable.txt
           Get-ChildItem dist\CaisseEcoles | Select-Object Name, Length
 
-      - name: Test de fumée de l'exécutable (fenêtre, moteur de lecture, OCR embarqué)
+      - name: Test de fumée de l'exécutable (fenêtre, moteur de lecture, OCR embarqué, Tesseract natif)
         working-directory: caisse-ecoles/desktop
         shell: pwsh
+        env:
+          SMOKE_NATIVE: "1"
         run: |
           node smoke-test.js dist\CaisseEcoles\CaisseEcoles.exe
           Remove-Item dist\CaisseEcoles\data -Recurse -Force -ErrorAction SilentlyContinue
@@ -76,7 +116,7 @@ jobs:
           prerelease: true
           body: |
             Version portable Windows : décompressez le zip, puis double-cliquez sur `CaisseEcoles.exe`.
-            Aucune installation, aucun navigateur : tout est inclus (lecture des PDF, seconde lecture par OCR local, génération du fichier Excel).
+            Aucune installation, aucun navigateur : tout est inclus (lecture des PDF, lectures croisées par OCR local et Tesseract natif, génération du fichier Excel).
             Cette version ne contient aucun nom de personne : posez `vocabulaire-noms.js` (remis séparément) à côté de l'exécutable.
             Construit automatiquement depuis le commit ${{ github.sha }}.
           files: CaisseEcoles-windows.zip

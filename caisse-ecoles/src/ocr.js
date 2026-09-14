@@ -211,12 +211,12 @@
 
   // Caractères qui n'apparaissent jamais dans un libellé correctement lu
   const GARBAGE_CHARS = /[\^£<>*~$#{}\[\]\\|¦§¤©®°µ¬¢]/;
-  const LETTER = /[A-Za-z\u00C0-\u017F]/;
+  const LETTER = /[A-Za-zÀ-ſ]/;
 
   /** Jeton de la couche texte probablement mal lu. */
   function suspiciousToken(tok, index) {
     if (GARBAGE_CHARS.test(tok)) return true;
-    if (!/[A-Za-z0-9\u00C0-\u017F]/.test(tok)) return !PUNCT_OK.test(tok);
+    if (!/[A-Za-z0-9À-ſ]/.test(tok)) return !PUNCT_OK.test(tok);
     // mot inconnu du vocabulaire qui ressemble à une erreur de lecture (parser.unknownWords :
     // ignore les dates, classes, sigles et mots courts)
     if (index && LETTER.test(tok) && P.unknownWords(tok, index).length) return true;
@@ -224,11 +224,11 @@
   }
 
   /** Jeton OCR utilisable comme remplacement : propre et sûr. */
-  function cleanToken(tok, conf, index) {
-    if (conf < 70) return false;
+  function cleanToken(tok, conf, index, minConf) {
+    if (conf < (minConf == null ? 70 : minConf)) return false;
     if (GARBAGE_CHARS.test(tok)) return false;
-    if (!/[A-Za-z0-9\u00C0-\u017F]/.test(tok)) return PUNCT_OK.test(tok);
-    if (index && LETTER.test(tok) && P.unknownWords(tok, index).length) return false;
+    if (!/[A-Za-z0-9À-ſ]/.test(tok)) return PUNCT_OK.test(tok);
+    if (index && LETTER.test(tok) && !/\d/.test(tok) && P.unknownWords(tok, index).length) return false;
     return true;
   }
 
@@ -260,14 +260,25 @@
     return Math.abs(a.y - b.y) <= Math.max(ha, hb) * 0.7;
   }
 
+  const normText = (s) => String(s || '').normalize('NFC').toLowerCase().replace(/[^a-z0-9À-ſ]+/g, '');
+
   /**
-   * Libellé de la couche texte (mots positionnés) corrigé par les mots de l'OCR local :
-   * chaque jeton douteux est remplacé par le ou les mots OCR qui occupent la même place.
-   * Renvoie { lines, replacements: [{ from, to }] }.
+   * Mots OCR d'un lecteur qui occupent la place d'un jeton de la couche texte, dans l'ordre.
+   * used : mots déjà consommés (par lecteur).
    */
-  function mergeLibelle(aWords, bWords, index) {
-    const b = cleanWords(bWords);
-    const used = new Set();
+  function candidatesAt(words, tok, used) {
+    return words.filter((w) => !used.has(w) && sameLine(w, tok) && overlapX(w, tok) > Math.min(w.w, tok.w) * 0.3).sort((p, q) => p.x - q.x);
+  }
+
+  /**
+   * Libellé de la couche texte (mots positionnés) corrigé par un ou plusieurs lecteurs OCR :
+   * chaque jeton douteux est remplacé par les mots OCR qui occupent la même place, quand deux
+   * lecteurs sont d'accord, ou qu'un seul lecteur propose un texte propre et sûr.
+   * readers : liste de listes de mots OCR (points PDF). Renvoie { lines, replacements }.
+   */
+  function mergeLibelle(aWords, readers, index) {
+    const lists = (Array.isArray(readers) && readers.length && Array.isArray(readers[0]) ? readers : [readers || []]).map((r) => cleanWords(r));
+    const used = lists.map(() => new Set());
     const replacements = [];
     const lines = [];
     for (const line of P.groupLines(aWords)) {
@@ -280,17 +291,31 @@
         if (!suspiciousToken(t.str, index)) {
           // jeton déjà couvert par un mot OCR retenu pour un jeton voisin (« 0^. » + « 05.25 »
           // remplacés ensemble par « 02.05.25 ») : on ne le répète pas
-          const covered = Array.from(used).some((w) => sameLine(w, t) && overlapX(w, t) > t.w * 0.5);
+          const covered = used.some((u) => Array.from(u).some((w) => sameLine(w, t) && overlapX(w, t) > t.w * 0.5));
           if (!covered) outToks.push(t.str);
           continue;
         }
-        const near = b.filter((w) => !used.has(w) && sameLine(w, t) && overlapX(w, t) > Math.min(w.w, t.w) * 0.3)
-          .sort((p, q) => p.x - q.x);
-        if (near.length && near.every((w) => cleanToken(w.str, w.conf, index))) {
-          near.forEach((w) => used.add(w));
-          const to = near.map((w) => w.str).join(' ');
-          replacements.push({ from: t.str, to });
-          outToks.push(to);
+        // propositions de chaque lecteur
+        const props = lists.map((words, i) => {
+          const near = candidatesAt(words, t, used[i]);
+          if (!near.length) return null;
+          return { i, near, text: near.map((w) => w.str).join(' '), conf: Math.min.apply(null, near.map((w) => w.conf)), clean: near.every((w) => cleanToken(w.str, w.conf, index, 0)) };
+        }).filter(Boolean);
+        let chosen = null;
+        // deux lecteurs d'accord (texte normalisé identique) et propre
+        for (const pr of props) {
+          const agree = props.filter((q) => q !== pr && normText(q.text) === normText(pr.text));
+          if (agree.length && pr.clean) { chosen = pr; break; }
+        }
+        // sinon un seul lecteur, propre et sûr (confiance ≥ 70, ou ≥ 60 s'il est seul)
+        if (!chosen) {
+          const single = props.filter((pr) => pr.clean && pr.conf >= (props.length > 1 ? 70 : 70)).sort((p, q) => q.conf - p.conf)[0];
+          if (single) chosen = single;
+        }
+        if (chosen) {
+          for (const pr of props) if (normText(pr.text) === normText(chosen.text)) pr.near.forEach((w) => used[pr.i].add(w));
+          replacements.push({ from: t.str, to: chosen.text });
+          outToks.push(chosen.text);
         } else {
           outToks.push(t.str);
         }
@@ -301,37 +326,14 @@
     return { lines, replacements };
   }
 
-  const normText = (s) => String(s || '').normalize('NFC').toLowerCase().replace(/[^a-z0-9À-ſ]+/g, '');
-
   /* ------------------------------------------------------------------ */
-  /* Confrontation des deux lectures                                        */
+  /* Confrontation des lectures (vote)                                      */
   /* ------------------------------------------------------------------ */
 
-  /**
-   * info  : résultat d'analyzePage sur la couche texte (peut être partiel).
-   * reads : mots OCR par zone { no, doit, somme, avoir, total, date, libelle } (points PDF).
-   * ctx   : { index } (base de référence : comptes et vocabulaire connus).
-   * Renvoie une copie de info complétée/corrigée, avec crossFlags (constats par champ) et
-   * crossChecked = true.
-   */
-  function crossRead(info, reads, ctx) {
-    ctx = ctx || {};
-    const index = ctx.index || null;
-    const known = new Set(index && index.accounts ? Array.from(index.accounts) : []);
-    if (ctx.caisse) known.add(ctx.caisse);
-    known.add(P.DEFAULT_CAISSE);
-    // Page sans couche texte (info issue d'une première passe OCR) : les relectures par zone,
-    // plus précises, priment sur la première passe.
-    const primaryB = info.source === 'ocr';
-    const out = Object.assign({}, info, { crossFlags: [], crossChecked: true });
-    const flags = out.crossFlags;
-    const ok = (field, message) => flags.push({ field, level: 'ok', message });
-    const note = (field, message) => flags.push({ field, level: 'note', message });
-    const doubt = (field, message, action) => flags.push({ field, level: 'doubt', message, action });
-    const set = (field, value) => ({ type: 'set', field, value });
-    const fmt = (v) => Number(v).toFixed(2);
-
-    const B = {
+  /** Valeurs lues par un lecteur OCR dans ses zones. */
+  function readerValues(reads) {
+    reads = reads || {};
+    return {
       no: reads.no ? readNo(reads.no) : null,
       total: reads.total ? (readAmounts(reads.total)[0] || null) : null,
       sommes: reads.somme ? readAmounts(reads.somme) : [],
@@ -340,107 +342,218 @@
       date: reads.date ? readDate(reads.date) : null,
       libelle: reads.libelle || [],
     };
+  }
+
+  /**
+   * Vote sur une valeur : votes = [{ src, value, conf }] (value null = rien lu).
+   * Renvoie { agreed: valeur soutenue par ≥ 2 lecteurs (la plus soutenue), supporters, best :
+   * meilleure valeur OCR isolée }.
+   */
+  function vote(votes) {
+    const groups = new Map();
+    for (const v of votes) {
+      if (v.value == null) continue;
+      const k = String(v.value);
+      if (!groups.has(k)) groups.set(k, { value: v.value, srcs: [], conf: 0 });
+      const g = groups.get(k);
+      g.srcs.push(v.src);
+      g.conf = Math.max(g.conf, v.conf || 0);
+    }
+    let agreed = null;
+    for (const g of groups.values()) if (g.srcs.length >= 2 && (!agreed || g.srcs.length > agreed.srcs.length)) agreed = g;
+    const best = Array.from(groups.values()).filter((g) => !g.srcs.includes('A')).sort((p, q) => q.conf - p.conf)[0] || null;
+    return { agreed, best, groups };
+  }
+
+  /**
+   * info    : résultat d'analyzePage sur la couche texte (lecteur A, peut être partiel).
+   * readers : mots OCR par zone d'un lecteur { no, doit, … }, ou liste de lecteurs
+   *           [{ name, reads }] (OCR local, Tesseract natif, relecture haute résolution…).
+   * ctx     : { index, caisse }.
+   * Renvoie une copie de info complétée/corrigée, avec crossFlags (constats par champ) et
+   * crossChecked = true. Règles : une valeur soutenue par deux lectures est confirmée ; la
+   * couche texte n'est corrigée que si les lectures OCR concordent entre elles et que la
+   * correction est plausible (compte connu, total cohérent avec les sommes, n° mal lu) ;
+   * sinon la divergence est signalée avec la valeur proposée.
+   */
+  function crossRead(info, readers, ctx) {
+    ctx = ctx || {};
+    const index = ctx.index || null;
+    const known = new Set(index && index.accounts ? Array.from(index.accounts) : []);
+    if (ctx.caisse) known.add(ctx.caisse);
+    known.add(P.DEFAULT_CAISSE);
+    const list = Array.isArray(readers) ? readers : [{ name: 'OCR local', reads: readers || {} }];
+    const R = list.map((r) => ({ name: r.name || 'OCR', v: readerValues(r.reads) }));
+    const names = (srcs) => srcs.filter((x) => x !== 'A').map((x) => R[Number(x)].name);
+    const primaryB = info.source === 'ocr';
+    const out = Object.assign({}, info, { crossFlags: [], crossChecked: true, readerCount: R.length });
+    const flags = out.crossFlags;
+    const ok = (field, message) => flags.push({ field, level: 'ok', message });
+    const note = (field, message) => flags.push({ field, level: 'note', message });
+    const doubt = (field, message, action) => flags.push({ field, level: 'doubt', message, action });
+    const set = (field, value) => ({ type: 'set', field, value });
+    const fmt = (v) => Number(v).toFixed(2);
+    const label = (srcs) => `${srcs.length} lecture${srcs.length > 1 ? 's' : ''} (${srcs.map((x) => (x === 'A' ? 'couche texte' : R[Number(x)].name)).join(', ')})`;
 
     // ---- Numéro
-    if (B.no) {
-      if (primaryB && info.no !== B.no.value && B.no.conf >= 60) { out.no = B.no.value; out.noRaw = String(B.no.value); }
-      if (info.no == null || (primaryB && out.no === B.no.value && info.no !== B.no.value)) {
-        out.no = B.no.value; out.noRaw = String(B.no.value);
-        note('no', `N° ${B.no.value} lu par la seconde lecture (OCR local)`);
-      } else if (info.no === B.no.value) {
-        ok('no', 'N° confirmé par la seconde lecture');
-      } else if (B.no.conf >= 85 && info.noRaw && /[^0-9\s]/.test(String(info.noRaw))) {
-        note('no', `N° ${B.no.value} retenu d'après la seconde lecture (couche texte : « ${String(info.noRaw).trim()} »)`);
-        out.no = B.no.value; out.noRaw = String(B.no.value);
-      } else if (B.no.conf >= 80) {
-        doubt('no', `Deux lectures différentes du n° : ${info.no} (couche texte) et ${B.no.value} (OCR local) : à vérifier`, set('no', B.no.value));
+    {
+      const votes = [{ src: 'A', value: info.no, conf: 100 }].concat(R.map((r, i) => ({ src: String(i), value: r.v.no ? r.v.no.value : null, conf: r.v.no ? r.v.no.conf : 0 })));
+      const { agreed, best } = vote(votes);
+      if (info.no == null || primaryB) {
+        const pick = agreed || best;
+        if (pick && (info.no == null || pick.value !== info.no)) {
+          out.no = pick.value; out.noRaw = String(pick.value);
+          if (agreed && !agreed.srcs.includes('A')) ok('no', `N° ${pick.value} lu par ${label(agreed.srcs)}`);
+          else note('no', `N° ${pick.value} lu par ${label(pick.srcs)}`);
+        } else if (agreed && agreed.srcs.includes('A')) ok('no', `N° confirmé par ${label(agreed.srcs)}`);
+      } else if (agreed && agreed.srcs.includes('A')) {
+        ok('no', `N° confirmé par ${label(agreed.srcs)}`);
+      } else if (agreed) {
+        // les lectures OCR concordent contre la couche texte
+        if (info.noRaw && /[^0-9\s]/.test(String(info.noRaw))) {
+          out.no = agreed.value; out.noRaw = String(agreed.value);
+          note('no', `N° ${agreed.value} retenu d'après ${label(agreed.srcs)} (couche texte : « ${String(info.noRaw).trim()} »)`);
+        } else {
+          doubt('no', `N° lu ${info.no} dans la couche texte mais ${agreed.value} par ${label(agreed.srcs)} : à vérifier`, set('no', agreed.value));
+        }
+      } else if (best && best.conf >= 80 && R.length === 1) {
+        doubt('no', `Deux lectures différentes du n° : ${info.no} (couche texte) et ${best.value} (${names(best.srcs).join(', ')}) : à vérifier`, set('no', best.value));
       }
     }
 
     // ---- Montant : le Total fait foi, les SOMME confirment
-    const bAmount = B.total || (B.sommes.length === 1 ? B.sommes[0] : null);
-    const bValues = uniq([B.total].concat(B.sommes).filter(Boolean).map((a) => a.value));
-    const aSommes = (info.sommes || []).map((s) => s.value).filter((v) => v != null);
-    if (primaryB && bAmount && bAmount.conf >= 60 && info.total !== bAmount.value) {
-      out.total = bAmount.value; out.totalRaw = bAmount.raw;
-      if (B.sommes.length) out.sommes = B.sommes.map((a) => ({ value: a.value, raw: a.raw }));
-      note('montant', `Total ${fmt(bAmount.value)} lu par relecture ciblée (OCR local)`);
-    } else if (info.total != null) {
-      if (bValues.includes(info.total)) ok('montant', 'Montant confirmé par la seconde lecture');
-      else if (bAmount && bAmount.conf >= 50) doubt('montant', `Deux lectures différentes du montant : ${fmt(info.total)} (couche texte) et ${fmt(bAmount.value)} (OCR local) : à vérifier`, set('montant', bAmount.value));
-    } else if (bAmount) {
-      const lenient = info.totalLenient != null ? info.totalLenient : null;
-      if (aSommes.includes(bAmount.value) || lenient === bAmount.value) {
-        out.total = bAmount.value; out.totalRaw = bAmount.raw;
-        ok('montant', `Montant ${fmt(bAmount.value)} confirmé par la seconde lecture`);
-      } else if (!aSommes.length && bAmount.conf >= 60) {
-        out.total = bAmount.value; out.totalRaw = bAmount.raw;
-        note('montant', `Total ${fmt(bAmount.value)} lu par la seconde lecture (OCR local) : illisible dans la couche texte`);
+    {
+      const aSommes = (info.sommes || []).map((s) => s.value).filter((v) => v != null);
+      const sumOf = (vals) => (vals.length ? P.round2(vals.reduce((x, y) => x + y, 0)) : null);
+      const votes = [{ src: 'A', value: info.total, conf: 100 }].concat(R.map((r, i) => {
+        const t = r.v.total || (r.v.sommes.length === 1 ? r.v.sommes[0] : null);
+        return { src: String(i), value: t ? t.value : null, conf: t ? t.conf : 0 };
+      }));
+      const { agreed, best } = vote(votes);
+      const sommesAll = aSommes.concat(R.flatMap((r) => r.v.sommes.map((x) => x.value)));
+      const plausible = (v) => sommesAll.includes(v) || R.some((r) => sumOf(r.v.sommes.map((x) => x.value)) === v) || sumOf(aSommes) === v;
+      if (info.total != null && !primaryB) {
+        if (agreed && agreed.srcs.includes('A')) ok('montant', `Montant confirmé par ${label(agreed.srcs)}`);
+        else if (!agreed && R.some((r) => r.v.sommes.some((x) => x.value === info.total))) ok('montant', 'Montant confirmé par la seconde lecture (colonne SOMME)');
+        else if (agreed && plausible(agreed.value) && !plausible(info.total)) {
+          out.total = agreed.value; out.totalRaw = String(agreed.value);
+          note('montant', `Montant ${fmt(agreed.value)} retenu d'après ${label(agreed.srcs)}, cohérent avec la colonne SOMME (couche texte : ${fmt(info.total)})`);
+        } else if (agreed) {
+          doubt('montant', `Montant lu ${fmt(info.total)} dans la couche texte mais ${fmt(agreed.value)} par ${label(agreed.srcs)} : à vérifier`, set('montant', agreed.value));
+        } else if (best && best.conf >= 50 && R.length === 1) {
+          doubt('montant', `Deux lectures différentes du montant : ${fmt(info.total)} (couche texte) et ${fmt(best.value)} (${names(best.srcs).join(', ')}) : à vérifier`, set('montant', best.value));
+        }
       } else {
-        doubt('montant', `Total ${fmt(bAmount.value)} lu par l'OCR local${aSommes.length ? `, différent de la somme ${aSommes.map(fmt).join(', ')} de la couche texte` : ' (lecture peu sûre)'} : à vérifier`, set('montant', bAmount.value));
+        const pick = agreed || best;
+        if (pick && pick.value !== info.total) {
+          const lenient = info.totalLenient != null ? info.totalLenient : null;
+          if ((agreed && !agreed.srcs.includes('A')) || plausible(pick.value) || lenient === pick.value) {
+            out.total = pick.value; out.totalRaw = String(pick.value);
+            if (R.length > 1 || plausible(pick.value)) ok('montant', `Montant ${fmt(pick.value)} lu par ${label(pick.srcs)}${plausible(pick.value) ? ', cohérent avec la colonne SOMME' : ''}`);
+            else note('montant', `Total ${fmt(pick.value)} lu par ${label(pick.srcs)} : illisible dans la couche texte`);
+          } else if (pick.conf >= 60 && (!aSommes.length || primaryB)) {
+            out.total = pick.value; out.totalRaw = String(pick.value);
+            note('montant', `Total ${fmt(pick.value)} lu par ${label(pick.srcs)} : illisible dans la couche texte`);
+          } else {
+            doubt('montant', `Total ${fmt(pick.value)} lu par ${label(pick.srcs)}${aSommes.length ? `, différent de la somme ${aSommes.map(fmt).join(', ')} de la couche texte` : ' (lecture peu sûre)'} : à vérifier`, set('montant', pick.value));
+          }
+        } else if (agreed && agreed.srcs.includes('A')) ok('montant', `Montant confirmé par ${label(agreed.srcs)}`);
       }
-    } else if (info.total == null && !aSommes.length && B.sommes.length > 1) {
-      doubt('montant', `Plusieurs sommes lues par l'OCR local (${B.sommes.map((s) => fmt(s.value)).join(', ')}) et aucun total : à vérifier`);
     }
 
-    // ---- Comptes
-    const aAcc = uniq((info.doit || []).concat(info.avoir || []));
-    const bDoit = uniq(B.doit.map((a) => a.value));
-    const bAvoir = uniq(B.avoir.map((a) => a.value));
-    const bAcc = uniq(bDoit.concat(bAvoir));
-    if ((!aAcc.length || primaryB) && bAcc.length) {
-      if (aAcc.length !== bAcc.length || aAcc.some((a) => !bAcc.includes(a))) {
-        out.doit = bDoit; out.avoir = bAvoir;
-        note('compte', `Comptes lus par la seconde lecture (OCR local) : ${bAcc.join(', ')}`);
-      } else ok('compte', 'Comptes confirmés par la seconde lecture');
-    } else if (aAcc.length && bAcc.length) {
-      const onlyA = aAcc.filter((a) => !bAcc.includes(a));
-      const onlyB = bAcc.filter((a) => !aAcc.includes(a));
-      if (!onlyA.length && !onlyB.length) ok('compte', 'Comptes confirmés par la seconde lecture');
-      else if (onlyA.length && onlyB.length) {
-        // Divergence : on ne s'inquiète que si la lecture OCR est un compte connu, ou si
-        // celle de la couche texte ne l'est pas (les erreurs OCR donnent des comptes inconnus).
-        const bKnown = onlyB.filter((a) => known.has(a));
-        const aUnknown = onlyA.filter((a) => !known.has(a));
-        if (bKnown.length || aUnknown.length) {
-          doubt('compte', `Deux lectures différentes du compte : ${onlyA.join(', ')} (couche texte) et ${onlyB.join(', ')} (OCR local) : à vérifier`, set('compte', (bKnown[0] || onlyB[0])));
+    // ---- Comptes (ensemble des comptes DOIT + AVOIR)
+    {
+      const aAcc = uniq((info.doit || []).concat(info.avoir || []));
+      const sets = R.map((r) => ({ doit: uniq(r.v.doit.map((a) => a.value)), avoir: uniq(r.v.avoir.map((a) => a.value)) }));
+      const key = (arr) => arr.slice().sort().join(',');
+      const votes = [{ src: 'A', value: aAcc.length ? key(aAcc) : null, conf: 100 }].concat(sets.map((st, i) => { const all = uniq(st.doit.concat(st.avoir)); return { src: String(i), value: all.length ? key(all) : null, conf: 100 }; }));
+      const { agreed, best } = vote(votes);
+      const setOf = (k) => k.split(',');
+      const allKnown = (arr) => arr.every((a) => known.has(a));
+      if (!aAcc.length || primaryB) {
+        const pick = agreed || best;
+        if (pick && pick.value !== votes[0].value) {
+          const i = Number(pick.srcs.find((x) => x !== 'A'));
+          out.doit = sets[i].doit; out.avoir = sets[i].avoir;
+          if (agreed && !agreed.srcs.includes('A')) ok('compte', `Comptes lus par ${label(agreed.srcs)} : ${setOf(pick.value).join(', ')}`);
+          else note('compte', `Comptes lus par ${label(pick.srcs)} : ${setOf(pick.value).join(', ')}`);
+        } else if (agreed && agreed.srcs.includes('A')) ok('compte', `Comptes confirmés par ${label(agreed.srcs)}`);
+      } else if (agreed && agreed.srcs.includes('A')) {
+        ok('compte', `Comptes confirmés par ${label(agreed.srcs)}`);
+      } else {
+        // divergence : on compare compte par compte
+        const alt = agreed || best;
+        if (alt) {
+          const bAcc = setOf(alt.value);
+          const onlyA = aAcc.filter((a) => !bAcc.includes(a));
+          const onlyB = bAcc.filter((a) => !aAcc.includes(a));
+          if (!onlyA.length && !onlyB.length) ok('compte', `Comptes confirmés par ${label(alt.srcs)}`);
+          else if (onlyA.length && onlyB.length) {
+            const aUnknown = onlyA.filter((a) => !known.has(a));
+            const bKnown = onlyB.filter((a) => known.has(a));
+            if (agreed && aUnknown.length && allKnown(onlyB) && onlyA.length === onlyB.length) {
+              // les lectures OCR concordent sur des comptes connus, la couche texte donne un compte inconnu
+              const i = Number(agreed.srcs.find((x) => x !== 'A'));
+              out.doit = sets[i].doit; out.avoir = sets[i].avoir;
+              note('compte', `Compte ${onlyB.join(', ')} retenu d'après ${label(agreed.srcs)} (couche texte : ${onlyA.join(', ')}, inconnu)`);
+            } else if (bKnown.length || aUnknown.length) {
+              doubt('compte', `Compte lu ${onlyA.join(', ')} dans la couche texte mais ${onlyB.join(', ')} par ${label(alt.srcs)} : à vérifier`, set('compte', (bKnown[0] || onlyB[0])));
+            }
+          } else if (onlyB.length && agreed && onlyB.some((a) => known.has(a))) {
+            doubt('compte', `Compte supplémentaire lu par ${label(agreed.srcs)} : ${onlyB.join(', ')} : à vérifier`);
+          }
         }
-      } else if (onlyB.length && onlyB.some((a) => known.has(a))) {
-        doubt('compte', `Compte supplémentaire lu par l'OCR local : ${onlyB.join(', ')} : à vérifier`);
       }
     }
 
     // ---- Date
-    if (B.date) {
-      if (!info.date || (primaryB && info.date !== B.date.value && B.date.conf >= 60)) {
-        out.date = B.date.value; out.dateRaw = B.date.raw;
-        note('date', `Date ${P.isoToDisplay(B.date.value)} lue par la seconde lecture (OCR local)`);
-      } else if (info.date === B.date.value) {
-        ok('date', 'Date confirmée par la seconde lecture');
-      } else {
-        doubt('date', `Deux lectures différentes de la date : ${P.isoToDisplay(info.date)} (couche texte) et ${P.isoToDisplay(B.date.value)} (OCR local) : à vérifier`, set('date', B.date.value));
+    {
+      const votes = [{ src: 'A', value: info.date, conf: 100 }].concat(R.map((r, i) => ({ src: String(i), value: r.v.date ? r.v.date.value : null, conf: r.v.date ? r.v.date.conf : 0 })));
+      const { agreed, best } = vote(votes);
+      const disp = P.isoToDisplay;
+      if (!info.date || primaryB) {
+        const pick = agreed || best;
+        if (pick && pick.value !== info.date) {
+          out.date = pick.value; out.dateRaw = String(pick.value);
+          if (agreed && !agreed.srcs.includes('A')) ok('date', `Date ${disp(pick.value)} lue par ${label(agreed.srcs)}`);
+          else note('date', `Date ${disp(pick.value)} lue par ${label(pick.srcs)}`);
+        } else if (agreed && agreed.srcs.includes('A')) ok('date', `Date confirmée par ${label(agreed.srcs)}`);
+      } else if (agreed && agreed.srcs.includes('A')) {
+        ok('date', `Date confirmée par ${label(agreed.srcs)}`);
+      } else if (agreed) {
+        const damaged = info.dateRaw && !/^\s*\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s*$/.test(String(info.dateRaw));
+        if (damaged) {
+          out.date = agreed.value; out.dateRaw = String(agreed.value);
+          note('date', `Date ${disp(agreed.value)} retenue d'après ${label(agreed.srcs)} (couche texte : « ${String(info.dateRaw).trim()} »)`);
+        } else {
+          doubt('date', `Date lue ${disp(info.date)} dans la couche texte mais ${disp(agreed.value)} par ${label(agreed.srcs)} : à vérifier`, set('date', agreed.value));
+        }
+      } else if (best && R.length === 1) {
+        doubt('date', `Deux lectures différentes de la date : ${disp(info.date)} (couche texte) et ${disp(best.value)} (${names(best.srcs).join(', ')}) : à vérifier`, set('date', best.value));
       }
     }
 
     // ---- Libellé
-    if (B.libelle.length) {
-      const bLines = P.groupLines(cleanWords(B.libelle)).map((l) => l.text).filter((t) => /[A-Za-z0-9]/.test(t));
-      if (!(info.libelleLines || []).length || primaryB) {
-        if (bLines.length) out.libelleLines = bLines;
-        if (!(info.libelleLines || []).length) note('libelle', 'Libellé lu par la seconde lecture (OCR local)');
-      } else if (info.libelleWords && info.libelleWords.length) {
-        const m = mergeLibelle(info.libelleWords, B.libelle, index);
-        if (m.replacements.length) {
-          out.libelleLines = m.lines;
-          note('libelle', `Libellé corrigé par la seconde lecture : ${m.replacements.map((r) => `« ${r.from} » → « ${r.to} »`).join(', ')}`);
-        } else if (normText(info.libelleLines.join(' ')) === normText(bLines.join(' '))) {
-          ok('libelle', 'Libellé confirmé par la seconde lecture');
+    {
+      const lists = R.map((r) => r.v.libelle).filter((l) => l && l.length);
+      if (lists.length) {
+        const bLines = P.groupLines(cleanWords(lists[0])).map((l) => l.text).filter((t) => /[A-Za-z0-9]/.test(t));
+        if (!(info.libelleLines || []).length || primaryB) {
+          if (bLines.length) out.libelleLines = bLines;
+          if (!(info.libelleLines || []).length) note('libelle', `Libellé lu par ${R[0].name}`);
+        } else if (info.libelleWords && info.libelleWords.length) {
+          const m = mergeLibelle(info.libelleWords, lists, index);
+          if (m.replacements.length) {
+            out.libelleLines = m.lines;
+            note('libelle', `Libellé corrigé par les lectures OCR : ${m.replacements.map((r) => `« ${r.from} » → « ${r.to} »`).join(', ')}`);
+          } else if (lists.some((l) => normText(info.libelleLines.join(' ')) === normText(P.groupLines(cleanWords(l)).map((x) => x.text).join(' ')))) {
+            ok('libelle', 'Libellé confirmé par une lecture OCR');
+          }
         }
       }
     }
     return out;
   }
-
 
   /* ------------------------------------------------------------------ */
   /* Navigateur : moteur Tesseract embarqué, rendu des pages                */
@@ -542,6 +655,81 @@
     return reads;
   }
 
+  /** Mots d'un lecteur natif (TSV : text, conf, x0, y0, x1, y1 en pixels du découpage) -> points PDF. */
+  function itemsFromNative(words, scale, dx, dy) {
+    scale = scale || SCALE;
+    const out = [];
+    for (const w of words || []) {
+      const str = String(w.text || '').trim();
+      if (!str) continue;
+      out.push({ str, conf: Math.round(w.conf || 0), x: (w.x0 + (dx || 0)) / scale, y: (w.y1 + (dy || 0)) / scale, w: (w.x1 - w.x0) / scale, h: (w.y1 - w.y0) / scale });
+    }
+    return out;
+  }
+
+  function canvasPng(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) { reject(new Error('image vide')); return; }
+        blob.arrayBuffer().then((buf) => resolve(new Uint8Array(buf)), reject);
+      }, 'image/png');
+    });
+  }
+
+  // Zones numériques (pour le moteur historique, qui ne lit bien que les chiffres imprimés)
+  const NUMERIC_ZONES = ['no', 'doit', 'somme', 'avoir', 'total', 'date'];
+
+  /**
+   * Relecture des zones d'une pièce par le lecteur natif. recognize(png, { psm, oem, lang, dpi })
+   * renvoie des mots TSV. opts : { oem, lang, numericOnly }.
+   */
+  async function readZonesNative(recognize, raw, info, getPre, opts) {
+    opts = opts || {};
+    const reads = {};
+    const pad = PAD * SCALE;
+    // les zones sont envoyées ensemble : le processus principal en lit plusieurs en parallèle
+    const jobs = [];
+    for (const z of zonesFor(info)) {
+      if (opts.numericOnly && !NUMERIC_ZONES.includes(z.name)) continue;
+      const px = zonePixels(z.rect, raw.width, raw.height);
+      if (!px) continue;
+      const src = z.pre ? getPre() : raw;
+      jobs.push(canvasPng(cropCanvas(src, px, pad))
+        .then((png) => recognize(png, { psm: z.psm, oem: opts.oem == null ? 1 : opts.oem, lang: opts.lang || 'fra', dpi: Math.round(72 * SCALE) }))
+        .then((words) => { reads[z.name] = itemsFromNative(words, SCALE, px.x - pad, px.y - pad); }));
+    }
+    await Promise.all(jobs);
+    return reads;
+  }
+
+  /**
+   * Relecture à haute résolution (5 × 72 = 360 dpi, image brute) de zones précises, par le
+   * lecteur natif : utilisée quand les lectures divergent.
+   */
+  async function readZonesHiRes(recognize, pdfPage, info, zoneNames, opts) {
+    opts = opts || {};
+    const scale = 5;
+    const raw = await renderPage(pdfPage, scale);
+    const reads = {};
+    const pad = PAD * scale;
+    const jobs = [];
+    for (const z of zonesFor(info)) {
+      if (!zoneNames.includes(z.name)) continue;
+      const px = zonePixels(z.rect, raw.width, raw.height, scale);
+      if (!px) continue;
+      jobs.push(canvasPng(cropCanvas(raw, px, pad))
+        .then((png) => recognize(png, { psm: z.psm, oem: opts.oem == null ? 1 : opts.oem, lang: opts.lang || 'fra', dpi: 72 * scale }))
+        .then((words) => { reads[z.name] = itemsFromNative(words, scale, px.x - pad, px.y - pad); }));
+    }
+    await Promise.all(jobs);
+    return reads;
+  }
+
+  /** Zones à relire pour un champ dont les lectures divergent. */
+  function zonesForField(field) {
+    return { no: ['no'], montant: ['total', 'somme'], compte: ['doit', 'avoir'], date: ['date'] }[field] || [];
+  }
+
   /** Première passe sur une page sans couche texte : tous les mots de la page (image prétraitée). */
   async function readFullPage(engine, getPre) {
     const blocks = await engine.recognize(getPre(), 11);
@@ -562,6 +750,8 @@
     readDate,
     mergeLibelle,
     suspiciousToken,
+    readerValues,
+    vote,
     crossRead,
     available,
     createEngine,
@@ -569,5 +759,10 @@
     preprocessCanvas,
     readZones,
     readFullPage,
+    itemsFromNative,
+    readZonesNative,
+    readZonesHiRes,
+    zonesForField,
+    NUMERIC_ZONES,
   };
 });

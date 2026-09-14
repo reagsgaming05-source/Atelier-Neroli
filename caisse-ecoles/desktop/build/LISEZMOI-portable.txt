@@ -6,8 +6,8 @@ CAISSE ÉCOLES — version portable Windows
 3. Indiquez le solde à nouveau, glissez les PDF des pièces, vérifiez les lignes orange,
    puis « Générer le fichier Excel ».
 
-Aucune installation : tout est inclus dans le dossier (lecture des PDF, seconde lecture
-par OCR local, génération du fichier Excel). Aucun navigateur n'est utilisé. Aucune donnée
+Aucune installation : tout est inclus dans le dossier (lecture des PDF, lectures croisées
+par OCR local et Tesseract natif — dossier tesseract/ —, génération du fichier Excel). Aucun navigateur n'est utilisé. Aucune donnée
 ne quitte votre poste. Les réglages mémorisés (compte caisse, vocabulaire appris, dernier
 solde) sont enregistrés dans le sous-dossier « data » à côté de l'exécutable.
 

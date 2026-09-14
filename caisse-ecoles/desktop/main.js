@@ -7,9 +7,10 @@
  * vont dans le sous-dossier `data/` à côté de l'exécutable, comme pour Décompte DGEO.
  * Aucune connexion réseau n'est ouverte par l'application.
  */
-const { app, BrowserWindow, Menu, dialog, shell, session } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const nativeOcr = require('./native-ocr.js');
 
 const APP_TITLE = 'Caisse écoles';
 const PORTABLE_DIR = path.dirname(process.execPath);
@@ -123,7 +124,8 @@ function buildMenu() {
                 'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (lecture des PDF, ' +
                 'seconde lecture par OCR local et génération du fichier Excel se font dans cette fenêtre).\n\n' +
                 `Dossier des données : ${app.getPath('userData')}\n` +
-                `Noms de personnes : ${names ? names : 'aucun fichier vocabulaire-noms.js (les noms s\'apprennent depuis un classeur)'}\n\n` +
+                `Noms de personnes : ${names ? names : 'aucun fichier vocabulaire-noms.js (les noms s\'apprennent depuis un classeur)'}\n` +
+                `Troisième lecteur (Tesseract natif) : ${(() => { const t = nativeOcr.detect(PORTABLE_DIR); return t ? `${t.version}${t.legacy ? ' + moteur historique' : ''}` : 'non trouvé (dossier tesseract/ absent)'; })()}\n\n` +
                 `Electron ${process.versions.electron} – Chromium ${process.versions.chrome}`,
             });
           },
@@ -137,6 +139,13 @@ function buildMenu() {
 app.on('second-instance', () => {
   if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
 });
+
+// Troisième lecteur (Tesseract natif) au service de la page
+ipcMain.handle('ocr:info', () => {
+  const t = nativeOcr.detect(PORTABLE_DIR);
+  return t ? { available: true, version: t.version, legacy: t.legacy, cmd: t.cmd } : { available: false };
+});
+ipcMain.handle('ocr:recognize', (ev, png, opts) => nativeOcr.recognize(png, opts, PORTABLE_DIR));
 
 app.whenReady().then(() => {
   setupDownloads();

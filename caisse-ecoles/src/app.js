@@ -58,7 +58,7 @@
     fullPage: false,
     vocab: null, // vocabulaire appris (classeur + mémoire locale)
     // seconde lecture par OCR local : relectures par zone, indexées par « doc:page:partie »
-    ocr: { status: 'idle', engine: null, reads: new Map(), doneKeys: new Set(), done: 0, total: 0, run: 0, error: null },
+    ocr: { status: 'idle', engine: null, reads: new Map(), doneKeys: new Set(), done: 0, total: 0, run: 0, error: null, native: null },
   };
 
   const $ = (id) => document.getElementById(id);
@@ -559,6 +559,8 @@
         edited: false,
       };
     });
+    const learned = learnedCorrections();
+    if (Object.keys(learned).length) for (const e of entries) if (!e.edited && !e.manual) applyLearnedCorrections(e, learned);
     state.entries = entries.concat(manual);
     state.duplicates = res.duplicates;
     state.docWarnings = res.warnings;
@@ -589,6 +591,70 @@
     }
   }
 
+
+  /* ---------------- Mémoire des corrections ---------------- */
+  // Les corrections faites à la main (compte, n°, date, mot du libellé) sont mémorisées sur ce PC.
+  // Une même lecture corrigée deux fois de la même façon est corrigée d'office ensuite (en bleu).
+  const CORR_KEY = 'caisse.corrections';
+  const CORR_MAX = 500;
+  function loadCorrections() {
+    try { const raw = localStorage.getItem(CORR_KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; }
+  }
+  function saveCorrections(list) {
+    try { localStorage.setItem(CORR_KEY, JSON.stringify(list.slice(-CORR_MAX))); } catch (e) { /* ignore */ }
+  }
+  /** Enregistre une correction { field, from, to } (valeurs textuelles). */
+  function rememberCorrection(field, from, to) {
+    from = String(from == null ? '' : from).trim(); to = String(to == null ? '' : to).trim();
+    if (!from || !to || from === to) return;
+    const list = loadCorrections();
+    list.push({ field, from, to, t: Date.now() });
+    saveCorrections(list);
+  }
+  /** Corrections apprises : { field: Map(from -> to) } pour celles vues au moins deux fois. */
+  function learnedCorrections() {
+    const counts = new Map();
+    for (const c of loadCorrections()) {
+      const k = `${c.field}\u0001${c.from}\u0001${c.to}`;
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+    const out = {};
+    for (const [k, n] of counts) {
+      if (n < 2) continue;
+      const [field, from, to] = k.split('\u0001');
+      out[field] = out[field] || new Map();
+      out[field].set(from, to);
+    }
+    return out;
+  }
+  /** Applique les corrections apprises à une écriture fraîchement lue (avant affichage). */
+  function applyLearnedCorrections(e, learned) {
+    const note = (field, msg) => { e.notes.push(msg); if (e.flags && e.flags[field]) e.flags[field].push({ level: 'note', message: msg }); };
+    if (learned.compte && e.compte && learned.compte.has(e.compte)) {
+      const to = learned.compte.get(e.compte);
+      note('compte', `Compte ${e.compte} → ${to} d'après vos corrections précédentes`);
+      e.compte = to;
+    }
+    if (learned.no && e.no != null && learned.no.has(String(e.no))) {
+      const to = Number(learned.no.get(String(e.no)));
+      if (!isNaN(to)) { note('no', `N° ${e.no} → ${to} d'après vos corrections précédentes`); e.no = to; }
+    }
+    if (learned.mot && e.libelle) {
+      const parts = e.libelle.split(' ');
+      const changed = [];
+      const out = parts.map((w) => { if (learned.mot.has(w)) { changed.push(`« ${w} » → « ${learned.mot.get(w)} »`); return learned.mot.get(w); } return w; });
+      if (changed.length) { e.libelle = out.join(' '); note('libelle', `Libellé corrigé d'après vos corrections précédentes : ${changed.join(', ')}`); }
+    }
+  }
+  /** Compare l'ancienne et la nouvelle valeur d'un champ édité pour en tirer des corrections. */
+  function noteEdit(e, field, before, after) {
+    if (field === 'compte' || field === 'no') { rememberCorrection(field, before, after); return; }
+    if (field === 'libelle') {
+      const a = String(before || '').split(' '); const b = String(after || '').split(' ');
+      if (a.length !== b.length) return; // un mot changé à la fois : sinon on n'apprend rien
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i] && a[i].length >= 3 && b[i].length >= 2) rememberCorrection('mot', a[i], b[i]);
+    }
+  }
 
   /* ---------------- Seconde lecture par OCR local ---------------- */
   // Après l'analyse instantanée de la couche texte, chaque pièce est relue sur son image par le
@@ -626,7 +692,8 @@
       return;
     }
     if (o.status === 'running') {
-      box.innerHTML = `<span>🔎 Seconde lecture par OCR local (sur ce PC) : <b>${o.done} / ${o.total}</b> page(s)…</span><progress max="${o.total}" value="${o.done}"></progress><span class="legend">Les écritures sont déjà utilisables ; les confirmations arrivent à la fin.</span>`;
+      const who = o.native && o.native.available ? `OCR local + Tesseract natif${o.native.legacy ? ' + moteur historique' : ''}` : 'OCR local';
+      box.innerHTML = `<span>🔎 Lectures croisées (${escapeHtml(who)}, sur ce PC) : <b>${o.done} / ${o.total}</b> page(s)…</span><progress max="${o.total}" value="${o.done}"></progress><span class="legend">Les écritures sont déjà utilisables ; les confirmations arrivent à la fin.</span>`;
       return;
     }
     if (o.status === 'done') {
@@ -643,12 +710,14 @@
       for (const f of FIELDS) {
         const list = (e.flags && e.flags[f]) || [];
         if (list.some((x) => x.level === 'ok')) confirmed++;
-        if (list.some((x) => x.level === 'doubt' && /OCR local|seconde lecture/i.test(x.message))) diverg++;
-        if (list.some((x) => x.level === 'note' && /seconde lecture|OCR local/i.test(x.message))) added++;
+        if (list.some((x) => x.level === 'doubt' && /OCR|lecture/i.test(x.message))) diverg++;
+        if (list.some((x) => x.level === 'note' && /OCR|lecture/i.test(x.message))) added++;
       }
     }
     const ocrPages = state.pages.filter((p) => p.source === 'ocr').length;
-    return `✓ Seconde lecture terminée sur ${entries} pièce(s) : <b>${confirmed}</b> champ(s) confirmé(s) (liseré vert)` +
+    const o = state.ocr;
+    const who = o.native && o.native.available ? `3 lectures${o.native.legacy ? ' + moteur historique sur les chiffres' : ''}` : '2 lectures';
+    return `✓ Lectures croisées terminées (${who}) sur ${entries} pièce(s) : <b>${confirmed}</b> champ(s) confirmé(s) (liseré vert)` +
       (added ? `, <b>${added}</b> complété(s) ou corrigé(s) (bleu)` : '') +
       (diverg ? `, <b style="color:#b45309">${diverg}</b> divergence(s) à trancher (orange)` : ', aucune divergence') +
       (ocrPages ? `, ${ocrPages} page(s) scannée(s) sans texte lue(s) par l'OCR` : '') + '.';
@@ -669,6 +738,11 @@
     }
     if (!todo.length) { finishCrossReading(run, false); return; }
     o.status = 'running'; o.total = todo.length; o.done = 0; setOcrStatus();
+    if (o.native == null) {
+      try { o.native = window.CaisseNative ? await window.CaisseNative.ocrInfo() : { available: false }; } catch (e) { o.native = { available: false }; }
+    }
+    const nativeRec = o.native.available ? (png, opts) => window.CaisseNative.ocrRecognize(png, opts) : null;
+    const index = P.buildIndex(state.vocab || P.emptyVocabulary());
     try {
       if (!o.engine) o.engine = await O.createEngine();
     } catch (e) {
@@ -706,7 +780,25 @@
         for (const part of P.splitForms(page)) {
           const info = P.analyzePage(part);
           if (!info) continue;
-          o.reads.set(ocrKey(p.docId, p.pageInDoc, part.part), await O.readZones(o.engine, raw, info, getPre));
+          // les lecteurs travaillent en même temps : OCR local (worker) et Tesseract natif (processus)
+          const jobs = [O.readZones(o.engine, raw, info, getPre).then((reads) => ({ name: 'OCR local', reads }))];
+          if (nativeRec) {
+            jobs.push(O.readZonesNative(nativeRec, raw, info, getPre, { oem: 1 }).then((reads) => ({ name: 'Tesseract natif', reads })).catch((e) => { console.warn('Lecteur natif', e); return null; }));
+            if (o.native.legacy) jobs.push(O.readZonesNative(nativeRec, raw, info, getPre, { oem: 0, lang: 'fra_leg', numericOnly: true }).then((reads) => ({ name: 'moteur historique', reads })).catch((e) => { console.warn('Moteur historique', e); return null; }));
+          }
+          const readers = (await Promise.all(jobs)).filter(Boolean);
+          if (nativeRec && readers.length > 1) {
+            try {
+              // lectures divergentes : relecture à 360 dpi des zones concernées
+              const probe = O.crossRead(info, readers, { index, caisse: getCaisse() });
+              const fields = probe.crossFlags.filter((f) => f.level === 'doubt' && f.action && f.action.type === 'set').map((f) => f.field);
+              const zones = Array.from(new Set(fields.flatMap((f) => O.zonesForField(f))));
+              if (zones.length) readers.push({ name: 'Tesseract natif 360 dpi', reads: await O.readZonesHiRes(nativeRec, pdfPage, info, zones, { oem: 1 }) });
+            } catch (e) {
+              console.warn('Lecteur natif', e);
+            }
+          }
+          o.reads.set(ocrKey(p.docId, p.pageInDoc, part.part), readers);
         }
         o.doneKeys.add(key);
       } catch (e) {
@@ -741,9 +833,9 @@
     if (!e) return;
     const row = els.body.querySelector(`tr.entry[data-id="${id}"]`);
     const setInput = (f, v) => { const inp = row && row.querySelector(`input[data-field="${f}"]`); if (inp) inp.value = v; };
-    if (field === 'no') { e.no = Number(value); setInput('no', e.no); }
+    if (field === 'no') { rememberCorrection('no', e.no, value); e.no = Number(value); setInput('no', e.no); }
     else if (field === 'date') { e.date = value; setInput('date', P.isoToDisplay(value)); }
-    else if (field === 'compte') { e.compte = value; setInput('compte', value); }
+    else if (field === 'compte') { rememberCorrection('compte', e.compte, value); e.compte = value; setInput('compte', value); }
     else if (field === 'montant') {
       const v = Number(value);
       if (e.credit != null && e.debit == null) { e.credit = v; setInput('credit', fmtInput(v)); } else { e.debit = v; e.credit = null; setInput('debit', fmtInput(v)); setInput('credit', ''); }
@@ -972,8 +1064,20 @@
     renderChecks();
   });
 
+  // valeur lue avant la modification, pour la mémoire des corrections
+  els.body.addEventListener('focusin', (ev) => {
+    const input = ev.target;
+    if (input.dataset && input.dataset.field && input.dataset.orig == null) input.dataset.orig = input.value;
+  });
+
   els.body.addEventListener('change', (ev) => {
     const input = ev.target;
+    if (['no', 'compte', 'libelle'].includes(input.dataset.field) && input.dataset.orig != null) {
+      const tr0 = input.closest('tr');
+      const e0 = state.entries.find((x) => x.id === Number(tr0.dataset.id));
+      if (e0) noteEdit(e0, input.dataset.field, input.dataset.orig, input.value);
+      input.dataset.orig = input.value;
+    }
     if (input.dataset.field === 'checked') {
       const id = Number(input.closest('tr').dataset.id);
       const e = state.entries.find((x) => x.id === id);
@@ -1034,6 +1138,7 @@
     if (useBtn) {
       const e = state.entries.find((x) => x.id === id);
       if (e) {
+        rememberCorrection('compte', e.compte, useBtn.dataset.account);
         e.compte = useBtn.dataset.account;
         e.edited = true;
         e.resolved = Object.assign({}, e.resolved, { compte: true });
