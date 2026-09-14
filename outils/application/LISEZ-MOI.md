@@ -6,10 +6,39 @@ Deux façons d'obtenir une fenêtre d'application, sans onglet ni barre d'adress
 
 `lanceur/` contient un petit programme Go qui embarque l'outil complet, le
 dépose dans le dossier de l'utilisateur au premier lancement, puis l'affiche
-avec le moteur déjà présent sur le poste, sans aucune interface de navigateur
-et dans un espace séparé de la navigation habituelle.
+dans sa propre fenêtre Windows.
 
-L'exécutable pèse 2,5 Mo. Construction :
+### La fenêtre de l'application
+
+`fenetre.go` ouvre une fenêtre Windows ordinaire (classe `webview`, icône de
+l'exécutable, titre « Blonay PDF ») avec le moteur WebView2 dedans — celui
+que Windows 10 et 11 embarquent — grâce à `github.com/jchv/go-webview2`, en
+Go pur, compilé depuis Linux. Aucun navigateur n'apparaît, ni dans la
+fenêtre ni dans la barre des tâches.
+
+- Un document reçu (double-clic sur un PDF) est remis à la page avant son
+  premier script (`Init` → `window.__blonayOuvrir`), sans copie sur le disque,
+  jusqu'à 48 Mo encodés ; au-delà, par le fichier d'ouverture décrit plus bas.
+- « Exporter » appelle la boîte « Enregistrer sous » de Windows
+  (`GetSaveFileNameW`) via les fonctions liées `blonayEnregistrerDebut`,
+  `…Bout` (4 Mo par morceau), `…Fin` et `…Abandon` ; la page écrit dans un
+  `.part` renommé à la fin. Si la boîte fait défaut, la page se rabat sur le
+  téléchargement du moteur.
+- Fermer la fenêtre passe par la page (`WM_CLOSE` intercepté par une
+  sous-classe de la procédure de fenêtre) : `window.__blonayFermer()` laisse
+  partir tout de suite s'il n'y a rien à défendre, sinon demande, et répond
+  par `blonayQuitter(true|false)`. Sans réponse en deux secondes, la fenêtre
+  se ferme quand même.
+- Le moteur reçoit ses réglages par `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`
+  (`--kiosk-printing` pour l'impression directe, découverte réseau coupée),
+  et son profil vit dans `profil-webview/` à côté de la page.
+
+Sans WebView2 sur le poste, `fenetreNative` rend la main et le lanceur
+ouvre Edge ou Chrome en mode application, comme avant. Cette partie n'est
+compilable et vérifiable que pour Windows ; le repli est exercé par les
+tests sous Linux.
+
+L'exécutable pèse 3,9 Mo. Construction :
 
 ```sh
 gzip -9 -c ../blonay-pdf-hors-ligne.html > lanceur/blonay-pdf.html.gz

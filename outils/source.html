@@ -1149,7 +1149,7 @@
     security: null,
     flatten: false,
     // On ouvre sur le document ; la table de montage est le second mode.
-    vue: 'lecture', zoomLecture: 'page', impressionDirecte: false,
+    vue: 'lecture', zoomLecture: 'page', impressionDirecte: false, messageBusy: '',
   };
   const dims = new Map();       // "srcId:index" -> {w,h,baseRot}
   const thumbs = new Map();     // "srcId:index" -> {status, url}
@@ -1176,7 +1176,10 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.toast.classList.remove('show'), kind === 'error' ? 7000 : 3600);
   }
-  function setLast(text) { el.last.textContent = text || ''; }
+  function setLast(text) {
+    if (state.busy) { state.messageBusy = text || ''; return; }
+    el.last.textContent = text || '';
+  }
   const plural = (n, one, many) => n + ' ' + (n > 1 ? many : one);
   function fmtSize(bytes) {
     if (bytes < 1024) return bytes + ' o';
@@ -1199,13 +1202,18 @@
     return pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear();
   }
   function setBusy(text, pct) {
+    if (text && !state.busy) state.messageBusy = '';
     state.busy = !!text;
     if (text) {
       el.last.replaceChildren();
       const sp = document.createElement('span'); sp.className = 'spinner';
       const tx = document.createElement('span'); tx.textContent = text;
       el.last.append(sp, tx);
-    } else setLast('');
+    } else {
+      // Le message posé pendant le travail prend la place du sablier.
+      el.last.textContent = state.messageBusy || '';
+      state.messageBusy = '';
+    }
     el.progress.hidden = !(text && typeof pct === 'number');
     if (text && typeof pct === 'number') el.progressBar.style.width = Math.round(pct * 100) + '%';
     syncButtons();
@@ -3795,9 +3803,44 @@
       .replace(/-{2,}/g, '-').replace(/\s+/g, ' ').trim();
     return n || 'document.pdf';
   }
+  // La fenêtre de l'application propose la boîte « Enregistrer sous » de
+  // Windows et écrit le fichier elle-même, par morceaux. Si la boîte manque
+  // à l'appel, on revient au téléchargement du moteur.
+  function b64Octets(tampon) {
+    const u8 = new Uint8Array(tampon);
+    let bin = '';
+    for (let i = 0; i < u8.length; i += 32768) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+    return btoa(bin);
+  }
+  async function enregistrerNatif(blob, filename) {
+    let debut = null;
+    try { debut = await window.blonayEnregistrerDebut(filename); } catch (e) { console.warn('Enregistrer :', e); return 'repli'; }
+    if (!debut || debut.erreur) { console.warn('Enregistrer :', debut && debut.erreur); return 'repli'; }
+    if (debut.annule) { toast('Enregistrement annulé.', 'warn'); return 'annule'; }
+    const jeton = debut.jeton;
+    try {
+      const MORCEAU = 4 << 20;
+      for (let pos = 0; pos < blob.size; pos += MORCEAU) {
+        await window.blonayEnregistrerBout(jeton, b64Octets(await blob.slice(pos, pos + MORCEAU).arrayBuffer()));
+      }
+      const chemin = await window.blonayEnregistrerFin(jeton);
+      toast(filename + ' enregistré (' + fmtSize(blob.size) + ')');
+      setLast('Enregistré : ' + chemin);
+      return 'ok';
+    } catch (e) {
+      console.error(e);
+      try { await window.blonayEnregistrerAbandon(jeton); } catch (_) {}
+      toast('L\'enregistrement a échoué : ' + (e && e.message ? e.message : e), 'error');
+      return 'echec';
+    }
+  }
+
   async function deliver(data, filename, mime) {
     filename = asciiName(filename);
     const blob = data instanceof Blob ? data : new Blob([data], { type: mime || 'application/pdf' });
+    if (typeof window.blonayEnregistrerDebut === 'function') {
+      if ((await enregistrerNatif(blob, filename)) !== 'repli') return;
+    }
     const dl = await downloadsReady;
     if (dl) {
       try {
@@ -7397,13 +7440,19 @@
     return OUVERTURE.test(nom) ? nom : null;
   }
   async function ouvrirAuLancement() {
+    // La fenêtre de l'application remet le document directement, avant le
+    // premier script de la page : rien à charger.
+    let liste = null;
+    if (Array.isArray(window.__blonayOuvrir)) { liste = window.__blonayOuvrir; delete window.__blonayOuvrir; }
     const nom = fichierDemande();
-    if (!nom) return false;
-    // L'adresse est nettoyée tout de suite : le fichier d'ouverture ne vit
-    // que quelques instants, un rechargement ne doit pas le redemander.
-    try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+    if (!liste && !nom) return false;
+    if (nom) {
+      // L'adresse est nettoyée tout de suite : le fichier d'ouverture ne vit
+      // que quelques instants, un rechargement ne doit pas le redemander.
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+    }
     setBusy('Ouverture du document…');
-    const liste = await new Promise(resolve => {
+    if (!liste) liste = await new Promise(resolve => {
       const s = document.createElement('script');
       s.src = nom;
       s.onload = () => { const l = window.__blonayOuvrir; delete window.__blonayOuvrir; s.remove(); resolve(Array.isArray(l) ? l : null); };
@@ -7773,6 +7822,23 @@
     // Lancée par l'exécutable, la page imprime directement : le moteur
     // d'affichage n'ouvre pas sa propre fenêtre d'impression.
     state.impressionDirecte = optionLancement('impression') === 'directe';
+    // La fenêtre de l'application ne se ferme pas d'un coup : elle demande
+    // ici. Rien à défendre, on part ; sinon, la question, et la réponse
+    // repart par blonayQuitter(true) pour partir, (false) pour rester.
+    window.__blonayFermer = () => {
+      const quitter = oui => { try { if (typeof window.blonayQuitter === 'function') window.blonayQuitter(!!oui); } catch (_) {} };
+      if (!(state.touched && state.pages.length)) { quitter(true); return; }
+      let decide = false;
+      dialog({
+        title: 'Quitter Blonay PDF', icon: IC.info,
+        build: b => { b.append(note('Des modifications n\'ont pas été exportées. En quittant maintenant, vous les perdez.', 'warn')); },
+        onClose: () => { if (!decide) quitter(false); },
+        actions: [
+          { label: 'Revenir au document', onClick: c => c() },
+          { label: 'Quitter sans exporter', primary: true, onClick: c => { decide = true; quitter(true); c(); } },
+        ],
+      });
+    };
     // Un document demandé au lancement prend la place de l'exemple. Demandé
     // plus tard, sur une page déjà ouverte, il s'ajoute comme par le bouton Ouvrir.
     ouvrirAuLancement().then(demande => { if (!demande) loadSample(); });

@@ -17,3 +17,6 @@ func ouvrirParDefaut(chemin string) error {
 func alerte(titre, texte string) {
 	println(titre + " : " + texte)
 }
+
+// La fenêtre native n'existe que sur Windows.
+func fenetreNative(page, url string, pieces []piece) bool { return false }

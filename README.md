@@ -97,6 +97,37 @@ Les deux sont produits à partir d'une source unique par `outils/build.js`.
 
 La reconnaissance de texte sur documents scannés (OCR) n'est pas disponible.
 
+## Version portable Windows (recommandée) — aucune installation
+
+1. Téléchargez **`BlonayPDF-windows.zip`** depuis la page *Releases* du dépôt.
+2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
+3. Double-cliquez sur **`Blonay PDF.exe`** : la fenêtre de l'application s'ouvre.
+
+C'est une application fenêtrée autonome : sa propre fenêtre Windows, son icône,
+sans onglet ni barre d'adresse, sans navigateur dans la barre des tâches. Rien
+n'est installé, rien n'est écrit dans le registre ni dans *Program Files*. Le
+moteur d'affichage est le composant WebView2 livré avec Windows 10 et 11 ;
+s'il manquait sur le poste, l'application s'ouvre dans une fenêtre d'Edge ou
+de Chrome, sans rien perdre de ses fonctions.
+
+« Exporter le PDF » ouvre la boîte « Enregistrer sous » de Windows ;
+« Imprimer » envoie directement à l'imprimante par défaut. Un double-clic sur
+un PDF (l'application étant le programme par défaut) ouvre ce document. Fermer
+la fenêtre avec des modifications non exportées demande d'abord confirmation.
+Le journal `blonay.log` s'écrit à côté de l'exécutable, en cas de problème.
+
+Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé
+votre ordinateur » (exécutable non signé) : cliquez sur *Informations
+complémentaires* puis *Exécuter quand même*. Cocher « Débloquer » dans les
+propriétés du zip avant de le décompresser évite ce message.
+
+L'exécutable est construit automatiquement par GitHub Actions
+(`.github/workflows/build-windows.yml`) : compilation croisée depuis Linux,
+icône posée, exécutable vérifié, puis publié sur *Releases* à chaque étiquette
+`v*` (et en artefact du passage à chaque poussée sur `main`). Localement :
+`sh outils/recuperer-libs.sh`, `node outils/build.js`, puis
+`sh outils/application/lanceur/construire.sh`.
+
 ## L'installer comme une vraie application
 
 Le dossier `docs/` contient la même application, accompagnée d'un manifeste, de

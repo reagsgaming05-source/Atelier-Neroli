@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -59,6 +60,10 @@ const tailleMax = 200 << 20
 // Le temps laissé à la page pour lire le fichier d'ouverture avant qu'il
 // soit effacé. Large : un poste lent qui démarre Edge à froid doit y tenir.
 const delaiEffacement = 2 * time.Minute
+
+// Jusqu'à cette taille (encodée), un document est remis directement à la
+// fenêtre de l'application ; au-delà, il passe par le fichier d'ouverture.
+const injectionMax = 48 << 20
 
 // Emplacements habituels des navigateurs sur Windows.
 func navigateurs() []string {
@@ -167,22 +172,35 @@ type piece struct {
 	B64 string `json:"b64"`
 }
 
-// Dépose les documents demandés, encodés, dans un fichier d'ouverture à côté
-// de la page, et renvoie son nom. Une page file:// n'a pas le droit de lire
-// un fichier voisin, mais elle peut le charger comme script : c'est ce que
-// fait l'outil quand son adresse porte #ouvrir=<nom>.
-func deposerOuverture(dossier string, chemins []string) (string, error) {
+// Les documents demandés, lus et encodés.
+func lirePieces(chemins []string) ([]piece, error) {
 	pieces := make([]piece, 0, len(chemins))
 	for _, c := range chemins {
 		contenu, err := os.ReadFile(c)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if len(contenu) > tailleMax {
-			return "", fmt.Errorf("%s dépasse %d Mo", filepath.Base(c), tailleMax>>20)
+			return nil, fmt.Errorf("%s dépasse %d Mo", filepath.Base(c), tailleMax>>20)
 		}
 		pieces = append(pieces, piece{Nom: filepath.Base(c), B64: base64.StdEncoding.EncodeToString(contenu)})
 	}
+	return pieces, nil
+}
+
+func taillePieces(pieces []piece) int {
+	t := 0
+	for _, p := range pieces {
+		t += len(p.B64)
+	}
+	return t
+}
+
+// Dépose les documents demandés, encodés, dans un fichier d'ouverture à côté
+// de la page, et renvoie son nom. Une page file:// n'a pas le droit de lire
+// un fichier voisin, mais elle peut le charger comme script : c'est ce que
+// fait l'outil quand son adresse porte #ouvrir=<nom>.
+func deposerOuverture(dossier string, pieces []piece) (string, error) {
 	js, err := json.Marshal(pieces)
 	if err != nil {
 		return "", err
@@ -249,18 +267,45 @@ func main() {
 		return
 	}
 	dossier := filepath.Dir(page)
+	ouvrirJournal(dossier)
+	log.Printf("lancement, %d document(s) demandé(s)", len(demandes))
 	menageOuvertures(dossier)
 
 	// La page sait ainsi que « Imprimer » part directement à l'imprimante.
 	url := adresse(page) + "#impression=directe"
-	ouverture := ""
+	var pieces []piece
 	if len(demandes) > 0 {
-		o, err := deposerOuverture(dossier, demandes)
+		var err error
+		if pieces, err = lirePieces(demandes); err != nil {
+			log.Printf("document non lu : %v", err)
+			alerte(nom, "Le document n'a pas pu être préparé :\n\n"+err.Error())
+			pieces = nil
+		}
+	}
+
+	// D'abord la fenêtre de l'application elle-même. Un document modeste
+	// lui est remis directement ; un gros passe par le fichier d'ouverture.
+	if len(pieces) == 0 || taillePieces(pieces) <= injectionMax {
+		if fenetreNative(page, url, pieces) {
+			log.Printf("fenêtre fermée")
+			return
+		}
+	}
+	log.Printf("fenêtre de l'application indisponible : repli sur le navigateur")
+
+	// Sans elle : le moteur d'affichage, en mode application.
+	ouverture := ""
+	if len(pieces) > 0 {
+		o, err := deposerOuverture(dossier, pieces)
 		if err != nil {
 			alerte(nom, "Le document n'a pas pu être préparé :\n\n"+err.Error())
 		} else {
 			ouverture = filepath.Join(dossier, o)
 			url += "&ouvrir=" + o
+			if fenetreNative(page, url, nil) {
+				effacer(ouverture)
+				return
+			}
 		}
 	}
 
@@ -297,6 +342,7 @@ func main() {
 		)
 		cacher(cmd)
 		if err := cmd.Start(); err == nil {
+			log.Printf("navigateur lancé : %s", filepath.Base(nav))
 			lance = true
 			break
 		}

@@ -22,8 +22,9 @@ var (
 	procMessageBox    = user32.NewProc("MessageBoxW")
 )
 
-// Les fenêtres du moteur d'affichage portent cette classe.
-const classeFenetre = "Chrome_WidgetWin_1"
+// Les fenêtres de l'application : la fenêtre native (classe « webview »)
+// ou, à défaut, celle du moteur d'affichage lancé en mode application.
+var classesFenetre = map[string]bool{"webview": true, "Chrome_WidgetWin_1": true}
 
 func texte(proc *syscall.LazyProc, h uintptr, taille int) string {
 	tampon := make([]uint16, taille)
@@ -38,7 +39,7 @@ func fenetreOuverte(titre string) uintptr {
 		if visible, _, _ := procIsVisible.Call(h); visible == 0 {
 			return 1
 		}
-		if texte(procGetClassName, h, 128) != classeFenetre {
+		if !classesFenetre[texte(procGetClassName, h, 128)] {
 			return 1
 		}
 		// Le titre de la fenêtre est celui de la page ; certains moteurs
