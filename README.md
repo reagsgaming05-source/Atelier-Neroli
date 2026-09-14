@@ -97,36 +97,68 @@ Les deux sont produits à partir d'une source unique par `outils/build.js`.
 
 La reconnaissance de texte sur documents scannés (OCR) n'est pas disponible.
 
-## Version portable Windows (recommandée) — aucune installation
+## Version portable Windows (recommandée) — application fenêtrée, aucune installation
 
-1. Téléchargez **`BlonayPDF-windows.zip`** depuis la page *Releases* du dépôt.
+1. Téléchargez **`BlonayPDF-windows.zip`** depuis la page *Releases* du dépôt (version
+   « Blonay PDF — Windows portable (dernière version) »).
 2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
-3. Double-cliquez sur **`Blonay PDF.exe`** : la fenêtre de l'application s'ouvre.
+3. Double-cliquez sur **`BlonayPDF.exe`** : la fenêtre de l'application s'ouvre.
 
-C'est une application fenêtrée autonome : sa propre fenêtre Windows, son icône,
-sans onglet ni barre d'adresse, sans navigateur dans la barre des tâches. Rien
-n'est installé, rien n'est écrit dans le registre ni dans *Program Files*. Le
-moteur d'affichage est le composant WebView2 livré avec Windows 10 et 11 ;
-s'il manquait sur le poste, l'application s'ouvre dans une fenêtre d'Edge ou
-de Chrome, sans rien perdre de ses fonctions.
+Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le registre ni dans
+*Program Files*, aucun navigateur n'est sollicité, aucune donnée ne quitte le PC. Les réglages
+mémorisés (vue, zoom, thème, taille des vignettes) vont dans le sous-dossier `data/` à côté de
+l'exécutable.
 
-« Exporter le PDF » ouvre la boîte « Enregistrer sous » de Windows ;
-« Imprimer » envoie directement à l'imprimante par défaut. Un double-clic sur
-un PDF (l'application étant le programme par défaut) ouvre ce document. Fermer
-la fenêtre avec des modifications non exportées demande d'abord confirmation.
-Le journal `blonay.log` s'écrit à côté de l'exécutable, en cas de problème.
+La fenêtre a son menu — *Fichier* (Ouvrir, Exporter le PDF, Imprimer, dossier des données),
+*Affichage* (Lire, Organiser, zoom, thème, plein écran), *Aide* (raccourcis, à propos).
+« Exporter » ouvre la boîte « Enregistrer sous » de Windows. « Imprimer » connaît vos
+imprimantes et envoie directement — imprimante choisie, recto verso, copies, livret,
+plusieurs pages par feuille — sans autre fenêtre. Un double-clic sur un PDF (l'application
+étant le programme par défaut) l'ouvre dans la fenêtre. Fermer avec des modifications non
+exportées demande d'abord confirmation.
 
-Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé
-votre ordinateur » (exécutable non signé) : cliquez sur *Informations
-complémentaires* puis *Exécuter quand même*. Cocher « Débloquer » dans les
-propriétés du zip avant de le décompresser évite ce message.
+Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
+(exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
 
 L'exécutable est construit automatiquement par GitHub Actions
-(`.github/workflows/build-windows.yml`) : compilation croisée depuis Linux,
-icône posée, exécutable vérifié, puis publié sur *Releases* à chaque étiquette
-`v*` (et en artefact du passage à chaque poussée sur `main`). Localement :
-`sh outils/recuperer-libs.sh`, `node outils/build.js`, puis
-`sh outils/application/lanceur/construire.sh`.
+(`.github/workflows/build-blonaypdf-windows.yml`) à chaque poussée : tests unitaires,
+construction de la page autonome, empaquetage Electron (`outils/desktop/`), test de fumée de
+l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, export d'un vrai PDF), puis
+publication du zip dans la pré-release à tag fixe `blonaypdf-windows-latest`.
+
+### Utilisation
+
+- **Ouvrir** : *Fichier › Ouvrir*, glisser-déposer dans la fenêtre, ou double-clic sur un PDF.
+  Plusieurs documents s'ouvrent ensemble et se fusionnent à l'export.
+- **Lire** (Ctrl+1) : le document page à page, zoom de 50 à 400 % (Ctrl + molette, Ctrl +/−,
+  Ctrl 0 pour la page entière), recherche (Ctrl+F).
+- **Organiser** (Ctrl+2) : glisser les pages, sélection au lasso, pivoter, supprimer, dupliquer,
+  insérer des pages vierges, retirer les pages vides d'un scan, diviser, redimensionner.
+- **Corriger et annoter** : double-clic sur une page ouvre l'éditeur — correction du texte en
+  place, texte, surlignage, cadres, dessin, signature, image, caviardage, champs à remplir.
+- **Exporter** (Ctrl+S) : le PDF assemblé, avec ou sans aplatissement, mot de passe possible.
+- **Imprimer** (Ctrl+P) : pages, livret, plusieurs pages par feuille, papier, échelle,
+  imprimante, recto verso, copies ; aperçu en direct.
+
+### Développement
+
+```bash
+cd outils
+npm ci                # (aucune dépendance de la page elle-même)
+npm run libs          # pdf.js, pdf-lib, JSZip depuis npm, dans outils/libs/
+npm test              # tests unitaires (node --test), sous Windows comme sous Linux
+npm run build         # source.html → blonay-pdf.html, blonay-pdf-hors-ligne.html, docs/, lanceur/
+cd desktop
+npm ci
+npm start             # la fenêtre, depuis les sources
+npm run smoke         # test de fumée (Playwright pilote Electron)
+npm run dist:win      # dossier portable dist/win-unpacked (BlonayPDF.exe)
+```
+
+`outils/source.html` est la seule source : `build.js` en tire les versions livrées. Les tests
+de `outils/test/` valident le code réellement livré, extrait de la source. Le lanceur Go en
+un seul fichier (`outils/application/lanceur/`, fenêtre WebView2, 4 Mo) reste disponible en
+solution de repli : `sh outils/application/lanceur/construire.sh`.
 
 ## L'installer comme une vraie application
 

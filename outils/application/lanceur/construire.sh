@@ -2,7 +2,7 @@
 # Construit l'application Windows portable à partir de la page produite par
 # outils/build.js, et l'archive prête à distribuer :
 #   sh outils/application/lanceur/construire.sh
-# Résultat : Blonay PDF.exe ici, et BlonayPDF-windows.zip à la racine du dépôt
+# Résultat : Blonay PDF.exe ici, et BlonayPDF-leger-windows.zip à la racine du dépôt
 # (le même que publie GitHub Actions sur la page Releases).
 set -e
 cd "$(dirname "$0")"
@@ -21,6 +21,6 @@ rm -rf "$RACINE/dist" && mkdir -p "$RACINE/dist/Blonay PDF"
 cp "Blonay PDF.exe" "$RACINE/dist/Blonay PDF/"
 cp ../../blonay-pdf-hors-ligne.html "$RACINE/dist/Blonay PDF/Blonay PDF (si les .exe sont bloques).html"
 cp LISEZ-MOI.txt "$RACINE/dist/Blonay PDF/LISEZ-MOI.txt"
-rm -f "$RACINE/BlonayPDF-windows.zip"
-(cd "$RACINE/dist" && zip -q -r ../BlonayPDF-windows.zip "Blonay PDF")
-ls -la "$RACINE/BlonayPDF-windows.zip"
+rm -f "$RACINE/BlonayPDF-leger-windows.zip"
+(cd "$RACINE/dist" && zip -q -r ../BlonayPDF-leger-windows.zip "Blonay PDF")
+ls -la "$RACINE/BlonayPDF-leger-windows.zip"

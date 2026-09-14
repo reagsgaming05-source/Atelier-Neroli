@@ -1225,7 +1225,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     security: null,
     flatten: false,
     // On ouvre sur le document ; la table de montage est le second mode.
-    vue: 'lecture', zoomLecture: 'page', impressionDirecte: false, messageBusy: '',
+    vue: 'lecture', zoomLecture: 'page', impressionDirecte: false, bureau: false, messageBusy: '',
   };
   const dims = new Map();       // "srcId:index" -> {w,h,baseRot}
   const thumbs = new Map();     // "srcId:index" -> {status, url}
@@ -3914,6 +3914,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   async function deliver(data, filename, mime) {
     filename = asciiName(filename);
     const blob = data instanceof Blob ? data : new Blob([data], { type: mime || 'application/pdf' });
+    if (state.bureau) { fallbackDownload(blob, filename); return; }
     if (typeof window.blonayEnregistrerDebut === 'function') {
       if ((await enregistrerNatif(blob, filename)) !== 'repli') return;
     }
@@ -3975,6 +3976,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return [a, b];
   };
 
+  // L'ordre d'un cahier piqué à cheval : pour n pages (complétées à un
+  // multiple de quatre), les paires [gauche, droite] de chaque côté de
+  // feuille — recto puis verso — telles qu'un pliage les remet dans l'ordre.
+  function livretOrdre(n) {
+    const N = Math.max(4, Math.ceil(n / 4) * 4);
+    const cotes = [];
+    for (let i = 0; i < N / 4; i++) {
+      cotes.push([N - 1 - 2 * i, 2 * i]);        // recto de la feuille
+      cotes.push([2 * i + 1, N - 2 - 2 * i]);    // verso
+    }
+    return cotes;
+  }
+
   async function imposerPdf(octets, o) {
     const { PDFDocument, rgb } = PDFLib;
     // Rien à changer : on garde le document tel quel, au point près.
@@ -4025,12 +4039,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       // et les deux pages viennent s'y loger côte à côte — comme dans
       // Acrobat. La feuille n'est jamais doublée.
       const f = orienter(o.papier === 'doc' ? base : (PAPIERS[o.papier] || PAPIERS.a4), 'paysage');
-      const N = Math.max(4, Math.ceil(n / 4) * 4);
-      const cotes = [];
-      for (let i = 0; i < N / 4; i++) {
-        cotes.push([N - 1 - 2 * i, 2 * i]);        // recto de la feuille
-        cotes.push([2 * i + 1, N - 2 - 2 * i]);    // verso
-      }
+      const cotes = livretOrdre(n);
       cotes.filter((_, i) => o.cotes === 'tous' || (o.cotes === 'recto' ? i % 2 === 0 : i % 2 === 1))
         .forEach(paire => {
           const [g, d] = o.reliure === 'droite' ? [paire[1], paire[0]] : paire;
@@ -4112,24 +4121,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     // refuse d'y lancer l'impression, quelle que soit la façon dont la page
     // est servie. On imprime donc le document assemblé rendu page par page :
     // ce qui part à l'imprimante est bien ce qui a été mis en page.
-    await imprimerEnImages(octets, pages.length);
+    await imprimerEnImages(octets, pages.length, o);
   }
 
   // Le document assemblé, rendu page par page, dans une feuille que seule
   // l'imprimante voit. Marche partout, y compris depuis un simple fichier.
-  async function imprimerEnImages(octets, combien) {
+  async function imprimerEnImages(octets, combien, o) {
     setBusy('Préparation de l\'impression…', 0);
     const hote = document.createElement('div');
     hote.className = 'feuille-impression';
     let doc = null;
+    // Chaque feuille annonce sa taille au moteur d'impression : sans fenêtre
+    // de réglage, c'est ce qui décide du papier et de l'orientation.
+    const formats = new Map();   // « largeur hauteur » en mm -> nom de page CSS
     try {
       doc = await pdfjs.getDocument({ data: octets.slice(0) }).promise;
       // Assez fin pour que le texte reste net sur le papier, sans faire
       // enfler la page au point de la bloquer sur un gros document.
       const ppp = doc.numPages > 12 ? 200 : 300;
-      // Chaque feuille annonce sa taille au moteur d'impression : sans fenêtre
-      // de réglage, c'est ce qui décide du papier et de l'orientation.
-      const formats = new Map();   // « largeur hauteur » en mm -> nom de page CSS
       for (let i = 1; i <= doc.numPages; i++) {
         setBusy('Préparation de l\'impression…', (i - 1) / doc.numPages);
         const pg = await doc.getPage(i);
@@ -4172,6 +4181,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       hote.remove();
       window.removeEventListener('afterprint', finir);
     };
+    if (state.bureau) {
+      // La fenêtre de l'application imprime elle-même : l'imprimante
+      // choisie, le recto verso, les copies, la taille de la feuille.
+      const [wmm, hmm] = (formats.keys().next().value || '210mm 297mm').split(' ').map(parseFloat);
+      window.BlonayDesktop.imprimer({
+        imprimante: (o && o.imprimante) || '', duplex: (o && o.duplex) || 'simplex', copies: (o && o.copies) || 1,
+        paysage: wmm > hmm, largeurMicrons: Math.round(Math.min(wmm, hmm) * 1000), hauteurMicrons: Math.round(Math.max(wmm, hmm) * 1000),
+      }).then(r => {
+        if (r && r.ok) setLast(plural(combien, 'page envoyée', 'pages envoyées') + ' à l\'impression');
+        else toast('L\'impression a échoué : ' + ((r && r.erreur) || 'imprimante indisponible'), 'error');
+      }).catch(e => toast('L\'impression a échoué : ' + (e && e.message ? e.message : e), 'error'))
+        .finally(() => setTimeout(finir, 300));
+      return;
+    }
     window.addEventListener('afterprint', finir);
     setTimeout(() => {
       try { window.print(); } catch (e) { console.warn('Impression :', e); }
@@ -4241,7 +4264,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       field('Reliure', reliure),
       field('Côtés', cotes, 'Sans recto verso automatique : imprimez les rectos, remettez la pile, puis les versos.'),
       note('Les feuilles sortent dans l\'ordre du pliage, pas dans celui des pages : la première porte la dernière page à côté de la première. C\'est normal — imprimées, empilées et pliées en deux, les pages se lisent dans l\'ordre.'),
-      note(state.impressionDirecte
+      note(state.bureau
+        ? 'Pour un livret, « Recto verso, bords courts » ci-dessus. Avec les bords longs, les versos sortiraient à l\'envers.'
+        : state.impressionDirecte
         ? 'Pour le recto verso automatique, l\'imprimante doit avoir « retourner sur les bords courts » dans ses réglages par défaut Windows (Paramètres › Imprimantes › Préférences d\'impression). Avec les bords longs, les versos sortiraient à l\'envers.'
         : 'Pour le recto verso automatique, choisissez dans votre imprimante « retourner sur les bords courts ». Avec les bords longs, les versos sortiraient à l\'envers.', 'warn'),
     );
@@ -4249,14 +4274,35 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     // Où part l'impression : l'application l'envoie directement à
     // l'imprimante par défaut de Windows ; la version navigateur passe par
     // la fenêtre du navigateur, qui demande l'imprimante.
-    const destination = document.createElement('div');
-    destination.className = 'imp-destination';
-    const destNom = document.createElement('b');
-    destNom.textContent = state.impressionDirecte ? 'Imprimante par défaut de Windows' : 'Choisie à l\'étape suivante';
-    destination.appendChild(destNom);
-    const champDestination = field('Imprimante', destination, state.impressionDirecte
-      ? 'Envoi direct, sans autre fenêtre. Recto verso, couleur et bac suivent les réglages par défaut de cette imprimante dans Windows.'
-      : 'Le navigateur vous demandera l\'imprimante et ses réglages.');
+    const bureau = state.bureau ? window.BlonayDesktop : null;
+    const imprimante = select('imp-imprimante', [['', 'Imprimante par défaut de Windows']], '');
+    const duplex = select('imp-duplex', [['simplex', 'Recto seulement'], ['longEdge', 'Recto verso, bords longs'], ['shortEdge', 'Recto verso, bords courts']], 'simplex');
+    const copies = input('imp-copies', 'number', 1, { min: 1, max: 99 });
+    let champDestination, champDuplex = null, champCopies = null;
+    if (bureau) {
+      champDestination = field('Imprimante', imprimante, 'Envoi direct à cette imprimante, sans autre fenêtre.');
+      champDuplex = field('Recto verso', duplex);
+      champCopies = field('Copies', copies);
+      bureau.imprimantes().then(liste => {
+        if (!Array.isArray(liste) || !liste.length) return;
+        imprimante.replaceChildren();
+        liste.forEach(p => {
+          const op = document.createElement('option');
+          op.value = p.name; op.textContent = p.displayName || p.name;
+          if (p.isDefault) op.selected = true;
+          imprimante.appendChild(op);
+        });
+      }).catch(e => console.warn('Imprimantes :', e));
+    } else {
+      const destination = document.createElement('div');
+      destination.className = 'imp-destination';
+      const destNom = document.createElement('b');
+      destNom.textContent = state.impressionDirecte ? 'Imprimante par défaut de Windows' : 'Choisie à l\'étape suivante';
+      destination.appendChild(destNom);
+      champDestination = field('Imprimante', destination, state.impressionDirecte
+        ? 'Envoi direct, sans autre fenêtre. Recto verso, couleur et bac suivent les réglages par défaut de cette imprimante dans Windows.'
+        : 'Le navigateur vous demandera l\'imprimante et ses réglages.');
+    }
 
     const papier = select('imp-papier', [['doc', 'Comme le document'], ['a4', 'A4'], ['a3', 'A3'], ['letter', 'Letter'], ['legal', 'Legal']], 'doc');
     const echelle = select('imp-echelle', [['ajuster', 'Ajuster à la feuille'], ['reduire', 'Réduire si trop grand'], ['reelle', 'Taille réelle'], ['perso', 'Échelle personnalisée']], 'ajuster');
@@ -4341,11 +4387,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     // Ce que porte la feuille affichée, en clair : « feuille 1, recto, page 8
     // et page 1 ». Sans quoi l'aperçu a tout l'air d'un désordre.
     function livretLegende(i, combien, opt) {
-      const N = Math.max(4, Math.ceil(combien / 4) * 4);
       const j = opt.cotes === 'tous' ? i : opt.cotes === 'recto' ? 2 * i : 2 * i + 1;
       const t = Math.floor(j / 2);
       const verso = j % 2 === 1;
-      const paire = verso ? [2 * t + 1, N - 2 - 2 * t] : [N - 1 - 2 * t, 2 * t];
+      const paire = livretOrdre(combien)[j] || [0, 0];
       const [g, d] = opt.reliure === 'droite' ? [paire[1], paire[0]] : paire;
       const nom = k => (k + 1 > combien ? 'blanche' : 'page ' + (k + 1));
       return 'Feuille ' + (t + 1) + ', ' + (verso ? 'verso' : 'recto') + ' · ' + nom(g) + ' et ' + nom(d);
@@ -4398,6 +4443,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       // sous-ensemble et l'échelle libre n'y ont pas de sens.
       champFaces.hidden = o.disposition === 'livret';
       inverse.hidden = o.disposition === 'livret';
+      if (o.disposition === 'livret' && duplex.value === 'simplex') duplex.value = 'shortEdge';
       clearTimeout(minuteur);
       minuteur = setTimeout(reconstruire, 220);
     }
@@ -4409,6 +4455,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const lancer = quoi => close => {
       const pages = retenues();
       if (!pages.length) { toast('Cette plage ne désigne aucune page.', 'warn'); return; }
+      o.imprimante = imprimante.value;
+      o.duplex = duplex.value;
+      o.copies = clampInt(copies.value, 1, 99) || 1;
       clearTimeout(minuteur);
       jeton++;
       if (doc) { try { doc.destroy(); } catch (_) {} doc = null; }
@@ -4434,6 +4483,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           field('Orientation', orientation),
           champFaces, inverse,
         );
+        if (champDuplex) gauche.append(champDuplex, champCopies);
         grille.append(gauche, bloc);
         b.append(grille);
         rafraichir();
@@ -7540,18 +7590,26 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       toast('Le document à ouvrir n\'a pas été trouvé. Ouvrez-le avec le bouton Ouvrir.', 'warn');
       return true;
     }
+    await ouvrirListe(liste);
+    return true;
+  }
+  // Une liste de documents { nom, b64 } ou { nom, octets } — venue du fichier
+  // d'ouverture, de la fenêtre de l'application ou de son menu Ouvrir.
+  async function ouvrirListe(liste) {
     const fichiers = [];
-    for (const f of liste) {
-      if (!f || typeof f.nom !== 'string' || typeof f.b64 !== 'string') continue;
+    for (const f of liste || []) {
+      if (!f || typeof f.nom !== 'string') continue;
       try {
-        const r = await fetch('data:application/octet-stream;base64,' + f.b64);
-        fichiers.push(new File([await r.arrayBuffer()], f.nom, { type: /\.pdf$/i.test(f.nom) ? 'application/pdf' : '' }));
+        let octets = null;
+        if (typeof f.b64 === 'string') octets = await (await fetch('data:application/octet-stream;base64,' + f.b64)).arrayBuffer();
+        else if (f.octets) octets = f.octets;
+        if (!octets) continue;
+        fichiers.push(new File([octets], f.nom, { type: /\.pdf$/i.test(f.nom) ? 'application/pdf' : '' }));
       } catch (e) { console.error(e); }
     }
     setBusy('');
     if (fichiers.length) await addFiles(fichiers);
     else toast('Le document à ouvrir n\'a pas pu être lu.', 'error');
-    return true;
   }
 
   // =====================================================================
@@ -7915,10 +7973,38 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         ],
       });
     };
-    // Un document demandé au lancement prend la place de l'exemple. Demandé
-    // plus tard, sur une page déjà ouverte, il s'ajoute comme par le bouton Ouvrir.
-    ouvrirAuLancement().then(demande => { if (!demande) loadSample(); });
-    window.addEventListener('hashchange', () => { ouvrirAuLancement(); });
+    // La fenêtre de l'application (Electron) parle à la page par
+    // window.BlonayDesktop : les documents reçus, les commandes de son menu,
+    // le résultat d'un enregistrement.
+    const bureau = window.BlonayDesktop || null;
+    state.bureau = !!bureau;
+    if (bureau) {
+      const commandeBureau = nom => {
+        if (nom === 'exporter') { if (state.pages.length && !state.busy) exportPages(state.pages, safeBase(el.filename.value) + '.pdf'); }
+        else if (nom === 'imprimer') { if (state.pages.length && !state.busy) dialogImprimer(); }
+        else if (nom === 'ouvrir') openPicker();
+        else if (nom === 'lecture' || nom === 'organiser') changerVue(nom);
+        else if (nom === 'zoom-plus') { if (state.vue === 'lecture') pas(1); }
+        else if (nom === 'zoom-moins') { if (state.vue === 'lecture') pas(-1); }
+        else if (nom === 'zoom-page') { if (state.vue === 'lecture') poserZoom('page'); }
+        else if (nom === 'theme') el.btnTheme.click();
+        else if (nom === 'raccourcis') toolHelp();
+      };
+      try {
+        bureau.onOuvrir(liste => { ouvrirListe(liste); });
+        bureau.onCommande(commandeBureau);
+        bureau.onEnregistre(r => {
+          if (r && r.chemin) { toast(r.chemin.replace(/^.*[\\/]/, '') + ' enregistré'); setLast('Enregistré : ' + r.chemin); }
+          else if (r && r.annule) toast('Enregistrement annulé.', 'warn');
+        });
+      } catch (e) { console.error(e); }
+      bureau.fichiersInitiaux().then(l => { if (l && l.length) ouvrirListe(l); else loadSample(); }).catch(() => loadSample());
+    } else {
+      // Un document demandé au lancement prend la place de l'exemple. Demandé
+      // plus tard, sur une page déjà ouverte, il s'ajoute comme par le bouton Ouvrir.
+      ouvrirAuLancement().then(demande => { if (!demande) loadSample(); });
+      window.addEventListener('hashchange', () => { ouvrirAuLancement(); });
+    }
   }
 
   const origRender = render;

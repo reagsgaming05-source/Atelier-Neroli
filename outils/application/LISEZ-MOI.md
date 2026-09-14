@@ -1,8 +1,12 @@
 # Application de bureau
 
-Deux façons d'obtenir une fenêtre d'application, sans onglet ni barre d'adresse.
+L'application livrée aux collègues est la version portable Electron de
+`outils/desktop/` (`BlonayPDF.exe`, menu Fichier / Affichage / Aide, données
+dans `data/` à côté de l'exécutable, construite et publiée par GitHub Actions
+sur la pré-release `blonaypdf-windows-latest`) : voir le README à la racine.
+Ce dossier décrit les deux autres façons d'obtenir une fenêtre d'application.
 
-## Lanceur en un seul fichier (livré)
+## Lanceur en un seul fichier (repli, 4 Mo)
 
 `lanceur/` contient un petit programme Go qui embarque l'outil complet, le
 dépose dans le dossier de l'utilisateur au premier lancement, puis l'affiche

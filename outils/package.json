@@ -1,0 +1,14 @@
+{
+  "name": "blonay-pdf",
+  "version": "1.0.0",
+  "description": "Blonay PDF – logiciel PDF complet, entièrement local (organiser, corriger, annoter, imprimer)",
+  "private": true,
+  "author": "Atelier Neroli",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/reagsgaming05-source/Atelier-Neroli.git" },
+  "scripts": {
+    "libs": "node recuperer-libs.js",
+    "build": "node build.js",
+    "test": "node --test \"test/*.test.js\""
+  }
+}
