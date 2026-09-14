@@ -5,21 +5,20 @@ justificatives), repère ce qui concerne les **accompagnants titrés** et rempli
 automatiquement le fichier Excel « Décompte DGEO » (part à rembourser à la commune
 par l'État de Vaud), avec le détail du calcul dans chaque libellé.
 
-**Tout se passe sur votre poste** : aucune donnée n'est envoyée sur Internet
-(lecture des scans par Tesseract OCR, interface dans votre navigateur en `127.0.0.1`).
+**Application fenêtrée autonome** : aucune donnée n'est envoyée sur Internet, aucun
+navigateur n'est utilisé (interface native embarquée, lecture des scans par Tesseract OCR).
 
 ## Version portable Windows (recommandée) — aucune installation
 
 1. Téléchargez **`DecompteDGEO-windows.zip`** depuis la page *Releases* du dépôt
    (version « Décompte DGEO — Windows portable »).
 2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
-3. Double-cliquez sur **`DecompteDGEO.exe`** : une fenêtre noire s'ouvre (le serveur local),
-   puis le navigateur affiche l'application sur <http://127.0.0.1:8765/>. Fermez la
-   fenêtre noire pour arrêter.
+3. Double-cliquez sur **`DecompteDGEO.exe`** : la fenêtre de l'application s'ouvre.
 
-Python et Tesseract OCR (avec les langues français / allemand / anglais) sont **inclus dans
-le dossier** : rien à installer, rien n'est écrit dans le registre ni dans *Program Files*.
-Les dossiers analysés vont dans le sous-dossier `data/` à côté de l'exécutable.
+Python, l'interface et Tesseract OCR (avec les langues français / allemand / anglais) sont
+**inclus dans le dossier** : rien à installer, rien n'est écrit dans le registre ni dans
+*Program Files*, aucun navigateur n'est sollicité. Les dossiers analysés vont dans le
+sous-dossier `data/` à côté de l'exécutable (avec le journal `decompte.log`).
 
 Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre
 ordinateur » (exécutable non signé) : cliquez sur *Informations complémentaires* puis
@@ -42,8 +41,7 @@ d'UB Mannheim extrait avec 7-Zip + `fra`/`deu` de `tessdata_fast`, puis testé
    sous le nom `tesseract/` à côté de `run.bat` : il est détecté automatiquement.
 3. Téléchargez ce dépôt (bouton *Code → Download ZIP*) et décompressez-le.
 4. Double-cliquez sur **`run.bat`** : la première fois, l'environnement Python et les
-   dépendances s'installent (une minute), puis le navigateur s'ouvre sur
-   <http://127.0.0.1:8765/>.
+   dépendances s'installent (une minute), puis la fenêtre de l'application s'ouvre.
 
 ### macOS / Linux
 
@@ -53,12 +51,13 @@ brew install tesseract tesseract-lang      # macOS (Homebrew)
 ./run.sh
 ```
 
-Options : `./run.sh --port 9000 --no-browser`.
+Mode serveur local (interface dans le navigateur, optionnel) : `./run.sh --web --port 9000`.
 
 ## Utilisation
 
-1. **Déposez le PDF** du dossier complet (formulaire de décompte de la commune + pièces
-   numérotées). Le type (course d'école / camp) est détecté ; vous pouvez le forcer.
+1. **Ouvrez le PDF** du dossier complet (formulaire de décompte de la commune + pièces
+   numérotées) avec le bouton « Ouvrir un dossier PDF… ». Le type (course d'école / camp)
+   est détecté ; vous pouvez le changer dans l'onglet 1.
 2. **Dossier & effectifs** : les champs lus sur le formulaire sont pré-remplis (classe,
    enseignant-e, activité, dates, nombre d'élèves, enseignants DGEO…). Les champs
    manuscrits sont souvent illisibles : **c'est vous qui fixez les effectifs**.
@@ -106,11 +105,12 @@ Le logiciel corrige aussi les quantités mal lues sur un billet grâce au nombre
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 python -m pytest            # tests unitaires (les tests sur vrais dossiers sont sautés sans PDF dans tests/fixtures/)
-python -m decompte          # serveur local
+python -m decompte          # application fenêtrée (python -m decompte --web : serveur local)
 pyinstaller build/decompte.spec --noconfirm   # dossier portable dist/DecompteDGEO/ (ajouter tesseract/ à côté)
 python build/smoke_test.py  # test de fumée contre un serveur lancé
 ```
 
 Structure : `decompte/ocr.py` (rendu + OCR + orientation) → `segment.py` (découpage des
 pièces) → `forms.py` (formulaire) / `pieces.py` (tickets, factures) → `rules.py` (règles
-de calcul) → `excel.py` (modèles `templates/`) ; `app.py` + `static/` (interface).
+de calcul) → `excel.py` (modèles `templates/`) ; `gui.py` (application fenêtrée Tkinter) ;
+`app.py` + `static/` (interface web optionnelle, `--web`).

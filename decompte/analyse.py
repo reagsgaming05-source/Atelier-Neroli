@@ -63,9 +63,10 @@ def analyse_pdf(
     filename: str = "",
     pages: list[PageData] | None = None,
     engine: str = "",
+    progress=None,
 ) -> Dossier:
     if pages is None:
-        pages, engine = load_pages(pdf_path, work_dir)
+        pages, engine = load_pages(pdf_path, work_dir, progress=progress)
     form_pages: list[PageData] = []
     for p in pages:
         if not p.words:

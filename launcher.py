@@ -2,7 +2,7 @@
 import multiprocessing
 import sys
 
-from decompte.cli import main
+from decompte.entry import main
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()

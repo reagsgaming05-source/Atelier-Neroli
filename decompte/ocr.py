@@ -14,6 +14,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
+from typing import Callable
 
 import pymupdf
 from PIL import Image
@@ -219,10 +220,15 @@ def ocr_page_best_rotation(img: Image.Image, langs: str) -> tuple[Image.Image, l
 # ---------------------------------------------------------------------------
 
 
-def load_pages(pdf_path: str | Path, out_dir: str | Path, dpi: int = DPI) -> tuple[list[PageData], str]:
+ProgressCb = Callable[[int, int], None]
+
+
+def load_pages(
+    pdf_path: str | Path, out_dir: str | Path, dpi: int = DPI, progress: ProgressCb | None = None
+) -> tuple[list[PageData], str]:
     """Extrait chaque page : image redressée (JPEG) + mots avec coordonnées.
 
-    Retourne (pages, moteur utilisé)."""
+    `progress(page_en_cours, nb_pages)` est appelé avant chaque page. Retourne (pages, moteur utilisé)."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     doc = pymupdf.open(str(pdf_path))
@@ -233,6 +239,8 @@ def load_pages(pdf_path: str | Path, out_dir: str | Path, dpi: int = DPI) -> tup
     scale = dpi / 72.0
     for idx, page in enumerate(doc):
         num = idx + 1
+        if progress:
+            progress(num, len(doc))
         img = render_page(page, dpi)
         rotation = 0
         if is_native_text_page(page):

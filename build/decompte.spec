@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller : `pyinstaller build/decompte.spec --noconfirm` → dist/DecompteDGEO/ (dossier portable)."""
+"""PyInstaller : `pyinstaller build/decompte.spec --noconfirm` → dist/DecompteDGEO/ (dossier portable).
+
+L'exécutable ouvre l'application fenêtrée (Tkinter, embarqué) ; `--web` lance l'ancien serveur local."""
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_submodules
@@ -39,6 +41,7 @@ exe = EXE(
     debug=False,
     strip=False,
     upx=False,
-    console=True,
+    console=False,  # application fenêtrée : pas de console noire
+    icon=str(ROOT / "build" / "icon.ico"),
 )
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="DecompteDGEO")

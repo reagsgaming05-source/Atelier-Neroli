@@ -2,13 +2,14 @@ DÉCOMPTE DGEO — version portable Windows
 =========================================
 
 1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau, Documents…).
-2. Double-cliquez sur DecompteDGEO.exe : une fenêtre noire s'ouvre (le serveur local),
-   puis votre navigateur affiche l'application sur http://127.0.0.1:8765/
-3. Pour arrêter : fermez la fenêtre noire.
+2. Double-cliquez sur DecompteDGEO.exe : la fenêtre de l'application s'ouvre.
+3. « Ouvrir un dossier PDF… », vérifiez les effectifs et les pièces, puis
+   « Générer le fichier Excel… ».
 
-Aucune installation : Python et Tesseract OCR sont inclus dans le dossier.
-Aucune donnée ne quitte votre poste (tout tourne en 127.0.0.1).
-Les dossiers analysés sont enregistrés dans le sous-dossier « data » à côté de l'exécutable.
+Aucune installation : Python, l'interface et Tesseract OCR sont inclus dans le dossier.
+Aucun navigateur n'est utilisé. Aucune donnée ne quitte votre poste.
+Les dossiers analysés sont enregistrés dans le sous-dossier « data » à côté de l'exécutable
+(ainsi que le journal decompte.log en cas de problème).
 
 Premier lancement : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (l'exécutable n'est pas signé). Cliquez sur « Informations complémentaires » puis
