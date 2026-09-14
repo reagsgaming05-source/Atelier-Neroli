@@ -1,6 +1,7 @@
 /*
  * Interface de l'application (navigateur). Dépend de :
- *   window.pdfjsLib (pdf.js), window.ExcelJS, window.CaisseParser, window.CaisseExcel
+ *   window.pdfjsLib (pdf.js), window.ExcelJS, window.CaisseParser, window.CaisseExcel,
+ *   window.CaisseOCR (facultatif : seconde lecture par OCR local)
  */
 (function () {
   'use strict';
@@ -8,6 +9,7 @@
   const P = window.CaisseParser;
   const X = window.CaisseExcel;
   const pdfjsLib = window.pdfjsLib;
+  const O = window.CaisseOCR || null; // seconde lecture par OCR local (src/ocr.js)
   // Base de référence intégrée à l'application (générée depuis un classeur, voir
   // tools/build-vocab.js). Les noms de personnes sont dans un module séparé.
   const BASE_VOCAB = (function () {
@@ -55,6 +57,8 @@
     loading: false,
     fullPage: false,
     vocab: null, // vocabulaire appris (classeur + mémoire locale)
+    // seconde lecture par OCR local : relectures par zone, indexées par « doc:page:partie »
+    ocr: { status: 'idle', engine: null, reads: new Map(), doneKeys: new Set(), done: 0, total: 0, run: 0, error: null },
   };
 
   const $ = (id) => document.getElementById(id);
@@ -73,6 +77,8 @@
     pdfFile: $('pdfFile'),
     btnPickPdf: $('btnPickPdf'),
     pdfProgress: $('pdfProgress'),
+    optOcr: $('optOcr'),
+    ocrStatus: $('ocrStatus'),
     pdfListBox: $('pdfListBox'),
     pdfList: $('pdfList'),
     btnSortFiles: $('btnSortFiles'),
@@ -362,6 +368,7 @@
     reparse();
     renderFileList();
     refreshAll();
+    startCrossReading();
   }
 
   function rebuildPages() {
@@ -370,7 +377,7 @@
     for (const d of state.docs) {
       d.pieceCount = 0;
       for (const p of d.pages) {
-        const page = { pageNumber: n++, docId: d.id, pageInDoc: p.pageInDoc, width: p.width, height: p.height, words: p.words };
+        const page = { pageNumber: n++, docId: d.id, pageInDoc: p.pageInDoc, width: p.width, height: p.height, words: p.words, source: p.source || 'text' };
         d.pieceCount += P.countForms(page);
         pages.push(page);
       }
@@ -498,6 +505,7 @@
       history,
       vocabulary: state.vocab,
       existingNumbers: existing.map((e) => Number(e.no)).filter((n) => !isNaN(n)),
+      refine: state.ocr.reads.size ? refineWithOcr : null,
     });
 
     const sourceKey = (globalPage) => {
@@ -520,6 +528,7 @@
         old.notes = (e.notes || []).slice();
         old.flags = e.flags;
         old.candidates = e.candidates;
+        old.crossChecked = !!e.crossChecked;
         if (!old.edited) old.resolved = {};
         old.raw = e.raw;
         if (!old.edited) {
@@ -543,6 +552,7 @@
         flags: e.flags,
         resolved: {},
         candidates: e.candidates,
+        crossChecked: !!e.crossChecked,
         raw: e.raw,
         checked: e.warnings.length === 0,
         manual: false,
@@ -577,6 +587,185 @@
         `Si l'une d'elles est une pièce comptable, elle a été scannée sans reconnaissance de texte : ajoutez-la à la main (« Ajouter une écriture manuelle »). Voir : ${list}` +
         (res.emptyPages.length > 40 ? ' …' : ''));
     }
+  }
+
+
+  /* ---------------- Seconde lecture par OCR local ---------------- */
+  // Après l'analyse instantanée de la couche texte, chaque pièce est relue sur son image par le
+  // moteur OCR embarqué (voir src/ocr.js). Les relectures sont conservées par page et
+  // réinjectées dans l'analyse (parseDocument({ refine })) : champs confirmés, complétés ou
+  // contestés. Les pages sans couche texte sont d'abord lues entièrement.
+  function ocrKey(docId, pageInDoc, part) { return `${docId}:${pageInDoc}:${part || ''}`; }
+
+  function refineWithOcr(info, part, ctx) {
+    const p = state.pages.find((x) => x.pageNumber === part.pageNumber);
+    if (!p) return info;
+    const reads = state.ocr.reads.get(ocrKey(p.docId, p.pageInDoc, part.part));
+    return reads ? O.crossRead(info, reads, ctx) : info;
+  }
+
+  function ocrEnabled() {
+    return !!O && !!els.optOcr && els.optOcr.checked;
+  }
+
+  function setPageWords(p, words, source) {
+    const d = state.docs.find((x) => x.id === p.docId);
+    const dp = d && d.pages.find((x) => x.pageInDoc === p.pageInDoc);
+    if (dp) { dp.words = words; dp.source = source; }
+  }
+
+  function setOcrStatus(extraHtml) {
+    const o = state.ocr;
+    const box = els.ocrStatus;
+    if (!box) return;
+    box.classList.remove('hidden', 'ok', 'warn');
+    if (o.status === 'idle' || o.status === 'off') { box.classList.add('hidden'); return; }
+    if (o.status === 'unavailable') {
+      box.classList.add('warn');
+      box.innerHTML = `Seconde lecture (OCR local) indisponible dans ce navigateur${o.error ? ' : ' + escapeHtml(o.error) : ''}. L'application fonctionne avec la couche texte seule.`;
+      return;
+    }
+    if (o.status === 'running') {
+      box.innerHTML = `<span>🔎 Seconde lecture par OCR local (sur ce PC) : <b>${o.done} / ${o.total}</b> page(s)…</span><progress max="${o.total}" value="${o.done}"></progress><span class="legend">Les écritures sont déjà utilisables ; les confirmations arrivent à la fin.</span>`;
+      return;
+    }
+    if (o.status === 'done') {
+      box.classList.add('ok');
+      box.innerHTML = extraHtml || '';
+    }
+  }
+
+  function ocrSummaryHtml() {
+    let confirmed = 0; let diverg = 0; let added = 0; let entries = 0;
+    for (const e of state.entries) {
+      if (!e.crossChecked) continue;
+      entries++;
+      for (const f of FIELDS) {
+        const list = (e.flags && e.flags[f]) || [];
+        if (list.some((x) => x.level === 'ok')) confirmed++;
+        if (list.some((x) => x.level === 'doubt' && /OCR local|seconde lecture/i.test(x.message))) diverg++;
+        if (list.some((x) => x.level === 'note' && /seconde lecture|OCR local/i.test(x.message))) added++;
+      }
+    }
+    const ocrPages = state.pages.filter((p) => p.source === 'ocr').length;
+    return `✓ Seconde lecture terminée sur ${entries} pièce(s) : <b>${confirmed}</b> champ(s) confirmé(s) (liseré vert)` +
+      (added ? `, <b>${added}</b> complété(s) ou corrigé(s) (bleu)` : '') +
+      (diverg ? `, <b style="color:#b45309">${diverg}</b> divergence(s) à trancher (orange)` : ', aucune divergence') +
+      (ocrPages ? `, ${ocrPages} page(s) scannée(s) sans texte lue(s) par l'OCR` : '') + '.';
+  }
+
+  async function startCrossReading() {
+    const o = state.ocr;
+    if (!ocrEnabled()) { o.status = 'off'; setOcrStatus(); return; }
+    if (!O.available()) { o.status = 'unavailable'; o.error = 'moteur non embarqué ou WebAssembly indisponible'; setOcrStatus(); return; }
+    const run = ++o.run;
+    const todo = [];
+    for (const p of state.pages) {
+      const isForm = P.countForms(p) > 0;
+      const empty = !p.words.length;
+      if (!isForm && !empty) continue; // justificatifs avec texte : rien à relire
+      if (o.doneKeys.has(`${p.docId}:${p.pageInDoc}`)) continue;
+      todo.push({ p, empty });
+    }
+    if (!todo.length) { finishCrossReading(run, false); return; }
+    o.status = 'running'; o.total = todo.length; o.done = 0; setOcrStatus();
+    try {
+      if (!o.engine) o.engine = await O.createEngine();
+    } catch (e) {
+      console.warn('OCR local', e);
+      o.status = 'unavailable'; o.error = e && e.message ? e.message : String(e); setOcrStatus();
+      return;
+    }
+    if (run !== o.run) return;
+    let wordsChanged = false;
+    for (const { p, empty } of todo) {
+      if (run !== o.run) return; // relance entre-temps (fichiers ajoutés ou retirés)
+      const key = `${p.docId}:${p.pageInDoc}`;
+      try {
+        const ref = pageRef(p.pageNumber);
+        if (!ref) continue;
+        const pdfPage = await ref.doc.doc.getPage(p.pageInDoc);
+        const raw = await O.renderPage(pdfPage, O.SCALE);
+        let pre = null;
+        const getPre = () => pre || (pre = O.preprocessCanvas(raw));
+        let page = p;
+        if (empty) {
+          // page scannée sans reconnaissance de texte : est-ce une pièce ?
+          const words = await O.readFullPage(o.engine, getPre);
+          const probe = Object.assign({}, p, { words, source: 'ocr' });
+          if (P.countForms(probe) > 0) {
+            setPageWords(p, words, 'ocr');
+            page = probe;
+            wordsChanged = true;
+          } else {
+            o.doneKeys.add(key);
+            o.done++; setOcrStatus();
+            continue;
+          }
+        }
+        for (const part of P.splitForms(page)) {
+          const info = P.analyzePage(part);
+          if (!info) continue;
+          o.reads.set(ocrKey(p.docId, p.pageInDoc, part.part), await O.readZones(o.engine, raw, info, getPre));
+        }
+        o.doneKeys.add(key);
+      } catch (e) {
+        console.warn('Seconde lecture, page ' + p.pageNumber, e);
+      }
+      o.done++; setOcrStatus();
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    if (run !== o.run) return;
+    finishCrossReading(run, wordsChanged);
+  }
+
+  function finishCrossReading(run, wordsChanged) {
+    const o = state.ocr;
+    if (run !== o.run) return;
+    // ne pas reconstruire le tableau pendant une saisie
+    const active = document.activeElement;
+    if (active && els.body.contains(active) && active.tagName === 'INPUT') {
+      setTimeout(() => finishCrossReading(run, wordsChanged), 1500);
+      return;
+    }
+    if (wordsChanged) rebuildPages();
+    o.status = 'done';
+    reparse();
+    refreshAll();
+    setOcrStatus(ocrSummaryHtml());
+  }
+
+  /** Applique une valeur proposée par la seconde lecture à un champ (ne touche que la ligne). */
+  function applyFieldValue(id, field, value) {
+    const e = state.entries.find((x) => x.id === id);
+    if (!e) return;
+    const row = els.body.querySelector(`tr.entry[data-id="${id}"]`);
+    const setInput = (f, v) => { const inp = row && row.querySelector(`input[data-field="${f}"]`); if (inp) inp.value = v; };
+    if (field === 'no') { e.no = Number(value); setInput('no', e.no); }
+    else if (field === 'date') { e.date = value; setInput('date', P.isoToDisplay(value)); }
+    else if (field === 'compte') { e.compte = value; setInput('compte', value); }
+    else if (field === 'montant') {
+      const v = Number(value);
+      if (e.credit != null && e.debit == null) { e.credit = v; setInput('credit', fmtInput(v)); } else { e.debit = v; e.credit = null; setInput('debit', fmtInput(v)); setInput('credit', ''); }
+    } else return;
+    e.edited = true;
+    e.resolved = Object.assign({}, e.resolved, { [field]: true });
+    updateRowStatus(id);
+  }
+
+  // réglage mémorisé sur ce PC
+  if (els.optOcr) {
+    try { if (localStorage.getItem('caisse.ocr') === '0') els.optOcr.checked = false; } catch (e) { /* ignore */ }
+    if (!O || !O.available()) {
+      els.optOcr.checked = false;
+      els.optOcr.disabled = true;
+      els.optOcr.parentElement.title = 'Moteur OCR non disponible dans cette version ou ce navigateur';
+    }
+    els.optOcr.addEventListener('change', () => {
+      try { localStorage.setItem('caisse.ocr', els.optOcr.checked ? '1' : '0'); } catch (e) { /* ignore */ }
+      if (els.optOcr.checked && state.pages.length) startCrossReading();
+      else if (!els.optOcr.checked) { state.ocr.run++; state.ocr.status = 'off'; setOcrStatus(); }
+    });
   }
 
   /* ---------------- Étape 3 : tableau ---------------- */
@@ -619,6 +808,14 @@
       html += `<div style="margin-top:4px">Si la pièce a été remplie à l'envers : ` +
         `<button type="button" class="small" data-action="swap" data-side="${swap.side}">Passer en ${swap.side === 'debit' ? 'Débit (entrée)' : 'Crédit (sortie)'}</button></div>`;
     }
+    const sets = [];
+    for (const f of FIELDS) if (fieldDoubt(e, f)) for (const x of e.flags[f]) if (x.level === 'doubt' && x.action && x.action.type === 'set') sets.push(x.action);
+    if (sets.length) {
+      html += `<div style="margin-top:4px">Seconde lecture : ` + sets.map((a) => {
+        const shown = a.field === 'date' ? P.isoToDisplay(a.value) : a.field === 'montant' ? fmtCHF(a.value) : String(a.value);
+        return `<button type="button" class="small" data-action="set" data-field="${a.field}" data-value="${escapeHtml(String(a.value))}">Prendre ${escapeHtml(shown)}</button>`;
+      }).join('') + `</div>`;
+    }
     const cands = (e.candidates || []).filter((a) => a !== e.compte);
     if ((e.candidates || []).length > 1 && cands.length) {
       html += `<div style="margin-top:4px">Compte : ` +
@@ -640,6 +837,7 @@
       return { cls: 'doubt', title: list.filter((f) => f.level === 'doubt').map((f) => f.message).join('\n') };
     }
     if (list.some((f) => f.level === 'note')) return { cls: 'fixed', title: list.filter((f) => f.level === 'note').map((f) => f.message).join('\n') };
+    if (list.some((f) => f.level === 'ok')) return { cls: 'sure', title: list.filter((f) => f.level === 'ok').map((f) => f.message).join('\n') };
     return { cls: '', title: '' };
   }
 
@@ -817,9 +1015,16 @@
     const btn = ev.target.closest('button[data-action="delete"]');
     const useBtn = ev.target.closest('button[data-action="use-account"]');
     const swapBtn = ev.target.closest('button[data-action="swap"]');
+    const setBtn = ev.target.closest('button[data-action="set"]');
     const tr = ev.target.closest('tr');
     if (!tr) return;
     const id = Number(tr.dataset.id);
+    if (setBtn) {
+      applyFieldValue(id, setBtn.dataset.field, setBtn.dataset.value);
+      renderTotals();
+      renderChecks();
+      return;
+    }
     if (swapBtn) {
       applySwap(id, swapBtn.dataset.side);
       renderTotals();
@@ -1288,6 +1493,7 @@
       `<dt>Pièces affichées à l'écran</dt><dd>${c.count - c.jamaisVues.length} sur ${c.count}</dd>` +
       `<dt>Lignes encore signalées</dt><dd class="${signalees.length ? 'ko' : 'ok'}">${signalees.length}</dd>` +
       `</dl>` +
+      (state.ocr.status === 'done' ? `<h2>Seconde lecture (OCR local)</h2><div>${ocrSummaryHtml()}</div>` : '') +
       (signalees.length ? `<h2>Pièces signalées</h2><table><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Page</th><th>Motif</th></tr>` +
         signalees.map(ligne).join('') + `</table>` : '<h2>Pièces signalées</h2><div class="ok">Aucune.</div>') +
       `<h2>Toutes les écritures du lot</h2><table><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Page</th><th>Motif</th></tr>` +
@@ -1492,7 +1698,7 @@
   }
 
   // Accès pour les tests automatisés
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry };
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';

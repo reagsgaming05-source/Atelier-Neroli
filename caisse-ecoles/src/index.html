@@ -48,6 +48,12 @@
       </div>
       <div class="legend">Le compte caisse détermine le sens de l'écriture : caisse au <b>DOIT</b> &rarr; Débit (entrée), caisse à l'<b>AVOIR</b> &rarr; Crédit (sortie).</div>
     </div>
+    <div class="row" style="margin-top:10px">
+      <label class="legend" style="display:flex;align-items:flex-start;gap:8px"><input type="checkbox" id="optOcr" checked style="margin-top:3px">
+        <span><b>Seconde lecture par OCR local</b> (recommandé) : chaque pièce est relue sur l'image par un moteur de reconnaissance embarqué dans ce fichier.
+        Les champs lus deux fois à l'identique sont confirmés (liseré vert), les divergences passent en orange, et une pièce scannée sans texte est lue quand même.
+        Tout se passe sur ce PC, sans réseau ; comptez environ une seconde par pièce.</span></label>
+    </div>
     <div class="legend" id="vocabInfo" style="margin-top:10px"></div>
   </section>
 
@@ -69,6 +75,7 @@
       <table class="files" id="pdfList"></table>
     </div>
     <div class="info" id="pdfInfo"></div>
+    <div class="ocr-status hidden" id="ocrStatus"></div>
     <div id="pdfNotices"></div>
   </section>
 
@@ -162,8 +169,13 @@
 <!--INLINE_PDFJS-->
 <!--INLINE_PDFJS_WORKER-->
 <!--INLINE_EXCELJS-->
+<!--INLINE_TESSERACT-->
+<!--INLINE_TESSERACT_WORKER-->
+<!--INLINE_TESSERACT_CORE-->
+<!--INLINE_TESSERACT_LANG-->
 <!--INLINE_VOCAB-->
 <!--INLINE_PARSER-->
+<!--INLINE_OCR-->
 <!--INLINE_EXCEL-->
 <!--INLINE_APP-->
 </body>

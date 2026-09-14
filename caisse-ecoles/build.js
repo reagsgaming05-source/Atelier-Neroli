@@ -30,6 +30,22 @@ const pdfjs = read(vendor('pdfjs-dist/legacy/build/pdf.min.js'));
 const pdfjsWorker = read(vendor('pdfjs-dist/legacy/build/pdf.worker.min.js'));
 const exceljs = read(vendor('exceljs/dist/exceljs.min.js'));
 const pkgPdf = require(vendor('pdfjs-dist/package.json')).version;
+
+// Seconde lecture par OCR local : tesseract.js (bibliothèque + worker), moteur wasm (SIMD,
+// LSTM seul) et modèle de langue français (tessdata_best entier, 0,7 Mo compressé). Le tout
+// est embarqué dans la page ; le worker ne charge rien de l'extérieur (voir src/ocr.js).
+const tess = read(vendor('tesseract.js/dist/tesseract.min.js'));
+let tessWorker = read(vendor('tesseract.js/dist/worker.min.js'));
+// Correctif tesseract.js 7.0.0 : une langue fournie sous forme { code, data } est initialisée
+// avec ses données au lieu de son code. Si le motif disparaît (autre version), la construction
+// échoue plutôt que d'embarquer un worker qui ne fonctionne pas.
+const tessBug = 'return"string"==typeof t?t:t.data})).join("+")';
+if (!tessWorker.includes(tessBug)) throw new Error('Motif du correctif tesseract.js introuvable dans worker.min.js');
+tessWorker = tessWorker.replace(tessBug, () => 'return"string"==typeof t?t:t.code})).join("+")');
+const tessCore = read(vendor('tesseract.js-core/tesseract-core-simd-lstm.wasm.js'));
+const tessLang = fs.readFileSync(vendor('@tesseract.js-data/fra/4.0.0_best_int/fra.traineddata.gz')).toString('base64');
+const pkgTess = require(vendor('tesseract.js/package.json')).version;
+const pkgTessCore = require(vendor('tesseract.js-core/package.json')).version;
 const pkgXl = require(vendor('exceljs/package.json')).version;
 
 let html = read(src('index.html'));
@@ -53,8 +69,13 @@ inline('<!--INLINE_CSS-->', `<style>\n${read(src('app.css'))}\n</style>`);
 inline('<!--INLINE_PDFJS-->', `<!-- pdf.js ${pkgPdf} (Apache-2.0) -->\n` + scriptTag(pdfjs));
 inline('<!--INLINE_PDFJS_WORKER-->', scriptTag(pdfjsWorker, 'type="text/plain" id="pdfjs-worker-src"'));
 inline('<!--INLINE_EXCELJS-->', `<!-- ExcelJS ${pkgXl} (MIT) -->\n` + scriptTag(exceljs));
+inline('<!--INLINE_TESSERACT-->', `<!-- tesseract.js ${pkgTess} et tesseract.js-core ${pkgTessCore} (Apache-2.0), modèle fra de tessdata_best (Apache-2.0) -->\n` + scriptTag(tess));
+inline('<!--INLINE_TESSERACT_WORKER-->', scriptTag(tessWorker, 'type="text/plain" id="tess-worker-src"'));
+inline('<!--INLINE_TESSERACT_CORE-->', scriptTag(tessCore, 'type="text/plain" id="tess-core-src"'));
+inline('<!--INLINE_TESSERACT_LANG-->', scriptTag(tessLang, 'type="text/plain" id="tess-lang-src"'));
 inline('<!--INLINE_VOCAB-->', vocabCode);
 inline('<!--INLINE_PARSER-->', scriptTag(read(src('parser.js'))));
+inline('<!--INLINE_OCR-->', scriptTag(read(src('ocr.js'))));
 inline('<!--INLINE_EXCEL-->', scriptTag(read(src('excel.js'))));
 inline('<!--INLINE_APP-->', scriptTag(read(src('app.js'))));
 if (/<!--INLINE_[A-Z_]+-->/.test(html)) throw new Error('Marqueur non remplacé dans index.html');

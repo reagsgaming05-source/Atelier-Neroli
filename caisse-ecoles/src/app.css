@@ -177,6 +177,12 @@ table.entries td.page .fbadge { display: inline-block; background: var(--accent-
 .chip.fixed { background: #e3ecfb; color: #2563eb; }
 table.entries input.doubt, table.entries input.doubt:focus { background: #fff1d6; border-color: #e0a100; box-shadow: inset 3px 0 0 #e0a100; }
 table.entries input.fixed { background: #e8f0fd; border-color: #8ab0ee; }
+table.entries input.sure { box-shadow: inset 3px 0 0 #16a34a; }
+.review .side .f input.sure { box-shadow: inset 3px 0 0 #16a34a; }
+.ocr-status { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: #f1f5f9; font-size: 13px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ocr-status progress { width: 160px; margin: 0; }
+.ocr-status.ok { background: #ecfdf5; }
+.ocr-status.warn { background: #fff7ed; }
 table.entries tr.entry.selected input.doubt { background: #ffe9bf; }
 table.entries tr.entry.hidden-row, table.entries tr.msgs.hidden-row { display: none; }
 table.entries tr.entry.warn-row td.status { background: var(--warn-soft); }

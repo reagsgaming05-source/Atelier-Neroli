@@ -143,6 +143,39 @@ la pièce qui décide, puis le rapprochement de caisse qui tranche. Le classeur 
 logique : 123 remboursements et 37 avances, tous en sortie ; 18 participations, 8 recettes et
 7 retraits, tous en entrée.
 
+## Seconde lecture par OCR local
+
+La couche texte du PDF (produite par le copieur) est lue instantanément ; c'est elle qui remplit le
+tableau. Ensuite, si l'option *Seconde lecture par OCR local* est cochée (étape 1, par défaut),
+chaque pièce est relue sur son image par un moteur de reconnaissance de caractères embarqué dans
+le fichier HTML (Tesseract, logiciel libre, exécuté en WebAssembly dans le navigateur) :
+
+- **rien ne sort du PC** : ni réseau, ni service externe, ni installation ; le moteur et le
+  modèle de langue français sont dans le fichier (environ 5 Mo de plus) ;
+- chaque page est rendue à 216 dpi, puis les zones du formulaire sont relues une à une :
+  n° de pièce, colonnes DOIT / SOMME / AVOIR, Total, date, bloc libellé. Les champs numériques
+  sont lus sur l'image brute (mode le plus fiable mesuré), le libellé sur une image dont les
+  traits du tableau ont été effacés ;
+- **confrontation champ par champ** avec la couche texte : lu deux fois à l'identique → champ
+  confirmé (liseré vert) ; illisible dans la couche texte mais lu par l'OCR → complété (bleu) ;
+  lectures différentes → orange, avec un bouton *Prendre …* pour retenir la seconde lecture ;
+  jeton illisible du libellé (« 0^. 05.25 ») → remplacé par le mot OCR situé au même endroit ;
+- une **page scannée sans reconnaissance de texte** (PDF image) est d'abord lue entièrement par
+  l'OCR : si c'est une pièce, elle entre dans le lot comme les autres, avec les relectures par
+  zone ;
+- le tableau est utilisable dès la lecture de la couche texte ; la seconde lecture tourne en
+  arrière-plan (environ une seconde par pièce) et ses constats arrivent à la fin, sans toucher
+  aux corrections déjà saisies.
+
+Mesuré sur 102 pièces réelles : la seconde lecture confirme 413 champs sur 510, ne contredit
+aucun champ correct, et retrouve seule 102 n°, 102 dates, 102 comptes et 101 totaux sur 102.
+Le libellé reste le champ où la couche texte et l'OCR se complètent le mieux (« chœur », « 7-11S »
+et les dates sont mieux lus par l'OCR ; les mentions manuscrites ne sont lues par aucun des deux
+et sont signalées en orange).
+
+L'OCR ne lit pas l'écriture manuscrite : ces mentions restent à saisir, et l'application les
+signale (*Libellé illisible par endroits*).
+
 ## Base de référence intégrée
 
 L'application embarque le vocabulaire d'un classeur de référence : mots des libellés,
@@ -192,7 +225,8 @@ Structure :
 - `tools/build-vocab.js` – génère cette base depuis un classeur
 - `src/excel.js` – lecture d'un classeur existant et génération du classeur au format du modèle
 - `src/app.js`, `src/index.html`, `src/app.css` – interface
-- `build.js` – assemble tout (avec pdf.js et ExcelJS) dans `dist/Caisse-ecoles.html`
+- `src/ocr.js` – seconde lecture par OCR local : prétraitement, zones, confrontation des lectures, moteur embarqué
+- `build.js` – assemble tout (avec pdf.js, ExcelJS, tesseract.js et le modèle français) dans `dist/Caisse-ecoles.html`
 
 ## Limites
 

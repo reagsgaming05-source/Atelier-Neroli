@@ -822,7 +822,7 @@
     for (let i = 0; i < cuts.length; i++) {
       const y0 = cuts[i] - 30;
       const y1 = i + 1 < cuts.length ? cuts[i + 1] - 30 : Infinity;
-      parts.push({ pageNumber: page.pageNumber, part: i + 1, width: page.width, height: page.height, words: words.filter((w) => w.y >= y0 && w.y < y1) });
+      parts.push({ pageNumber: page.pageNumber, part: i + 1, source: page.source, width: page.width, height: page.height, words: words.filter((w) => w.y >= y0 && w.y < y1) });
     }
     return parts;
   }
@@ -955,6 +955,7 @@
     return {
       pageNumber: page.pageNumber,
       part: page.part || null,
+      source: page.source || 'text', // 'text' : couche texte du PDF ; 'ocr' : première passe OCR
       no,
       noRaw,
       doit,
@@ -964,6 +965,7 @@
       totalRaw,
       totalLenient,
       libelleLines,
+      libelleWords: libWords,
       date,
       dateRaw,
       hasTotalWord: !!wTotal,
@@ -971,6 +973,8 @@
       accountIssues,
       datesBelow: below.map((l) => l.text).filter((t) => findDate(t)),
       boxes,
+      // géométrie du formulaire (points PDF) : frontières de colonnes et bandes horizontales
+      layout: { width: W, height: H, b1, b2, yHeader, yLibelle, yTotal },
     };
   }
 
@@ -1010,6 +1014,10 @@
     }
     if (!info.libelleLines.length) doubt('libelle', 'Libellé non reconnu');
     else {
+      // caractères qui n'existent pas dans un libellé : lecture ratée, souvent une mention
+      // manuscrite ajoutée sur la pièce
+      const illisibles = description.split(/\s+/).filter((t) => /[\^£<>*~$#{}\[\]\\|¦§¤©®µ¬¢]/.test(t));
+      if (illisibles.length) doubt('libelle', `Libellé illisible par endroits (« ${illisibles.join(' ')} ») : à compléter d'après la pièce (mention manuscrite ?)`);
       if (!type) doubt('libelle', `Libellé sans type d'écriture en tête (REMBOURSEMENT, AVANCE…) : « ${first} »`);
       else if (!KNOWN_TYPES.includes(type)) doubt('libelle', `Type d'écriture inhabituel : « ${type} »`);
       if (!person) doubt('libelle', 'Aucun nom de personne trouvé en fin de libellé');
@@ -1150,10 +1158,19 @@
     if (info.no == null) doubt('no', 'Numéro de pièce non reconnu');
     else if (info.noRaw && /[^0-9\s]/.test(String(info.noRaw))) doubt('no', `Numéro lu « ${String(info.noRaw).trim()} » interprété ${info.no} : à vérifier`);
 
+    // Constats de la lecture croisée (ocr.js) : confirmations, compléments, divergences
+    for (const f of info.crossFlags || []) {
+      if (!flags[f.field]) continue;
+      if (f.level === 'doubt') doubt(f.field, f.message, f.action);
+      else if (f.level === 'note') note(f.field, f.message);
+      else flags[f.field].push({ level: 'ok', message: f.message });
+    }
+
     return {
       no: info.no,
       page: info.pageNumber,
       part: info.part,
+      crossChecked: !!info.crossChecked,
       date: info.date,
       compte,
       type,
@@ -1286,7 +1303,10 @@
     for (const p of pages) {
       if (!p.words || !p.words.length) { emptyPages.push(p.pageNumber); continue; }
       for (const part of splitForms(p)) {
-        const info = analyzePage(part);
+        let info = analyzePage(part);
+        // Lecture croisée (seconde lecture par OCR local) : le module ocr.js peut compléter,
+        // confirmer ou contester les champs lus dans la couche texte.
+        if (info && options.refine) info = options.refine(info, part, { index, caisse }) || info;
         if (info) infos.push(info);
       }
     }

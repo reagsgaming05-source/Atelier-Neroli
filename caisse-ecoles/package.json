@@ -10,7 +10,9 @@
     "build:public": "CAISSE_SANS_NOMS=1 node build.js"
   },
   "dependencies": {
+    "@tesseract.js-data/fra": "^1.0.0",
     "exceljs": "4.4.0",
-    "pdfjs-dist": "3.11.174"
+    "pdfjs-dist": "3.11.174",
+    "tesseract.js": "^7.0.0"
   }
 }
