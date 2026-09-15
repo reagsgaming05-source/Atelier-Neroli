@@ -441,6 +441,45 @@
 
   /* ---------- lecture : le document, en continu ---------- */
   .lecture { display: flex; flex-direction: column; align-items: center; gap: 18px; padding-bottom: 24px; }
+  .lecture .rangee { display: flex; gap: 18px; align-items: flex-start; justify-content: center; flex: none; }
+  .zoom-lecture button svg { width: 15px; height: 15px; }
+  .zoom-lecture button[aria-pressed="true"] { background: var(--survol); color: var(--bleu-vif); }
+  /* ---------- signets ---------- */
+  .signets { list-style: none; margin: 0; padding: 2px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .signet { display: flex; align-items: center; gap: 2px; min-width: 0; }
+  .signet .sg {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px;
+    border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--texte); font-size: 12.5px; text-align: left;
+    transition: background .14s var(--elan);
+  }
+  .signet .sg:hover { background: var(--survol); }
+  .signet .sg.actif { border-color: var(--bleu); background: var(--relief); }
+  .signet .sg .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .signet .sg .p { flex: none; font-family: var(--chiffre); font-size: 11px; color: var(--texte-3); }
+  .signet .sg-x { flex: none; width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--texte-3); display: grid; place-items: center; opacity: 0; }
+  .signet:hover .sg-x, .signet .sg-x:focus-visible { opacity: 1; }
+  .signet .sg-x:hover { background: var(--rouge-ombre); color: var(--rouge); }
+  .signet .sg-x svg { width: 11px; height: 11px; }
+  .tab { padding: 0 4px; }
+  /* ---------- tampons et signatures ---------- */
+  .tampons { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .tampon-item, .signature-item { position: relative; min-width: 0; }
+  .tampon-choix {
+    width: 100%; height: 44px; padding: 0 10px; border: 2px solid currentColor; border-radius: 7px; background: transparent;
+    font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background .14s var(--elan);
+  }
+  .tampon-choix:hover { background: var(--survol); }
+  .tampon-item .oubli, .signature-item .oubli {
+    position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 50%;
+    border: 1px solid var(--trait); background: var(--relief); color: var(--texte-3); display: grid; place-items: center;
+  }
+  .tampon-item .oubli:hover, .signature-item .oubli:hover { background: var(--rouge-ombre); color: var(--rouge); }
+  .tampon-item .oubli svg, .signature-item .oubli svg { width: 10px; height: 10px; }
+  .signatures { display: flex; flex-wrap: wrap; gap: 12px; }
+  .signature-choix { height: 56px; padding: 4px 10px; border: 1px solid var(--trait); border-radius: 8px; background: #fff; }
+  .signature-choix:hover { border-color: var(--bleu); }
+  .signature-choix img { height: 100%; width: auto; max-width: 220px; display: block; }
   .feuille-vue {
     position: relative; flex: none; background: var(--papier);
     box-shadow: var(--ombre-feuille); border-radius: 2px;
@@ -928,6 +967,9 @@
       <option value="4">400 %</option>
     </select>
     <button type="button" id="zoom-plus" title="Agrandir (Ctrl +)" aria-label="Agrandir">+</button>
+    <button type="button" id="vue-deux" title="Deux pages côte à côte, comme un livre ouvert" aria-label="Deux pages côte à côte" aria-pressed="false">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="1.5" y="3" width="5.5" height="10" rx="1"/><rect x="9" y="3" width="5.5" height="10" rx="1"/></svg>
+    </button>
   </span>
   <span class="tb-sep"></span>
   <button class="tb-btn" id="btn-select-all" type="button" disabled title="Tout sélectionner (Ctrl+A)">
@@ -969,6 +1011,10 @@
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.8 2.6a3.5 3.5 0 0 0-4.6 4.3l-4 4a1.3 1.3 0 0 0 1.9 1.9l4-4a3.5 3.5 0 0 0 4.3-4.6L10.2 6 9 4.8z"/></svg>
         Outils
       </button>
+      <button class="tab" id="tab-plan" role="tab" aria-selected="false" aria-controls="pane-plan" type="button" title="Signets : le plan du document">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h8v11l-4-3-4 3z"/></svg>
+        Plan
+      </button>
     </div>
 
     <div class="pane" id="pane-docs" role="tabpanel" aria-labelledby="tab-docs">
@@ -999,6 +1045,18 @@
 
     <div class="pane" id="pane-tools" role="tabpanel" aria-labelledby="tab-tools" hidden>
       <div id="tool-groups"></div>
+    </div>
+
+    <div class="pane" id="pane-plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
+      <div class="panel-head"><span>Signets</span><span class="count" id="signet-count">0</span></div>
+      <ul class="signets" id="signets"></ul>
+      <p class="docs-empty" id="signets-vide">Aucun signet. Ajoutez-en pour retrouver un chapitre ou une pièce d'un clic ; ils sont enregistrés dans le PDF exporté et repris par Acrobat.</p>
+      <div class="pane-foot">
+        <button class="tb-btn" id="btn-signet" type="button" title="Un signet vers la page affichée (ou la première sélectionnée)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+          <span class="lbl">Ajouter un signet</span>
+        </button>
+      </div>
     </div>
   </aside>
 
@@ -1226,6 +1284,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     flatten: false,
     // On ouvre sur le document ; la table de montage est le second mode.
     vue: 'lecture', zoomLecture: 'page', impressionDirecte: false, bureau: false, messageBusy: '',
+    // Le plan du document : des signets, chacun vers une page, avec ses sous-signets.
+    signets: [],
+    // Lecture : une page après l'autre, ou deux côte à côte comme un livre ouvert.
+    dispo: 'une',
+    // Les annotations partent comme de vrais commentaires PDF (modifiables
+    // dans Acrobat) ; « figer » les fond dans la page.
+    figerAnnotations: false,
   };
   const dims = new Map();       // "srcId:index" -> {w,h,baseRot}
   const thumbs = new Map();     // "srcId:index" -> {status, url}
@@ -1381,6 +1446,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       security: state.security && JSON.parse(JSON.stringify(state.security)),
       flatten: state.flatten,
       touched: state.touched,
+      signets: JSON.parse(JSON.stringify(state.signets || [])),
+      figerAnnotations: state.figerAnnotations,
     };
   }
   function restore(h) {
@@ -1393,6 +1460,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     state.security = h.security;
     state.flatten = h.flatten;
     state.touched = h.touched;
+    state.signets = h.signets || [];
+    state.figerAnnotations = !!h.figerAnnotations;
     state.selected.clear();
   }
   function snapshot() {
@@ -1484,6 +1553,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const fresh = [];
     for (let i = 0; i < src.count; i++) fresh.push({ id: ++uid, src: src.id, index: i, rot: 0, ann: [] });
     state.pages.push(...fresh);
+    // Le plan du document, s'il en a un, devient nos signets.
+    try { const plan = await lireSignets(src, fresh); if (plan.length) state.signets.push(...plan); } catch (e) { console.warn('Signets :', e); }
     // L'exemple cède la place au premier document ouvert par l'utilisateur,
     // même s'il finissait de se charger à ce moment-là. Les pages produites par
     // l'outil, elles, s'ajoutent normalement.
@@ -1705,6 +1776,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     print: ['M4.5 6V2.5h7V6', 'M3 6h10a1 1 0 0 1 1 1v4h-2.5', 'M3 11H1.5', 'M4.5 9.5h7v4h-7z'],
     vide: ['M3 2.5h7l3 3v8H3z', 'M10 2.5V5.5h3', 'M5.5 11.5h5'],
     editText: ['M2.5 5V3.5h7V5', 'M6 3.5v7M4.5 10.5h3', 'M9.5 13.5l4.5-4.5-1.5-1.5L8 12v1.5z'],
+    signet: ['M4 2.5h8v11l-4-3-4 3z'],
+    deux: ['M1.5 3h5.5v10H1.5z', 'M9 3h5.5v10H9z'],
+    compare: ['M8 2v12', 'M2.5 4h4v8h-4z', 'M9.5 4h4v8h-4z', 'M4.5 7h0M11.5 9h0'],
+    dossier: ['M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v6.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5z', 'M5 9.5h6'],
+    lots: ['M2.5 3.5h5v5h-5z', 'M8.5 3.5h5v5h-5z', 'M2.5 9.5h5v4h-5z', 'M8.5 9.5h5v4h-5z'],
+    tableau: ['M2.5 3.5h11v9h-11z', 'M2.5 6.5h11M2.5 9.5h11', 'M6 3.5v9M10 3.5v9'],
+    ocr: ['M2.5 5.5v-2h2M11.5 3.5h2v2M13.5 10.5v2h-2M4.5 12.5h-2v-2', 'M5.5 8h5', 'M8 6v4'],
+    remplacer: ['M3 5.5h7l-2-2M13 10.5H6l2 2'],
   };
 
   // =====================================================================
@@ -1762,6 +1841,25 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         });
         gEl.appendChild(t);
       });
+      return gEl;
+    }
+    if (a.type === 'tampon') {
+      const gEl = document.createElementNS(SVGNS, 'g');
+      gEl.setAttribute('data-ann', a.id);
+      const r = document.createElementNS(SVGNS, 'rect');
+      r.setAttribute('x', a.x); r.setAttribute('y', a.y);
+      r.setAttribute('width', Math.max(0, a.w)); r.setAttribute('height', Math.max(0, a.h));
+      r.setAttribute('rx', a.size * 0.25);
+      r.setAttribute('fill', 'none'); r.setAttribute('stroke', a.color); r.setAttribute('stroke-width', a.size * 0.09);
+      gEl.appendChild(r);
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', a.x + a.w / 2); t.setAttribute('y', a.y + a.h / 2 + a.size * 0.35);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('font-size', a.size); t.setAttribute('font-weight', '700');
+      t.setAttribute('font-family', 'Helvetica, Arial, sans-serif');
+      t.setAttribute('fill', a.color);
+      t.textContent = a.text;
+      gEl.appendChild(t);
       return gEl;
     }
     if (a.type === 'text') {
@@ -1841,6 +1939,216 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   // =====================================================================
+  //  Signets : le plan du document
+  //  -------------------------------------------------------------------
+  //  Les signets d'un PDF ouvert deviennent les nôtres ; on en ajoute, on
+  //  les renomme, on les retire ; ils repartent dans le PDF exporté, où
+  //  Acrobat et les autres visionneuses les montrent dans leur volet.
+  // =====================================================================
+  async function lireSignets(src, pagesDeSrc) {
+    let plan = [];
+    try { plan = await src.pdfjs.getOutline(); } catch (_) { plan = null; }
+    if (!plan || !plan.length) return [];
+    const doc = src.pdfjs;
+    const indexDe = async dest => {
+      try {
+        let d = dest;
+        if (typeof d === 'string') d = await doc.getDestination(d);
+        if (!Array.isArray(d) || !d.length) return -1;
+        if (typeof d[0] === 'number') return d[0];
+        return await doc.getPageIndex(d[0]);
+      } catch (_) { return -1; }
+    };
+    let compte = 0;
+    const conv = async (items, prof) => {
+      const out = [];
+      for (const it of items) {
+        if (++compte > 800) break;
+        const i = await indexDe(it.dest);
+        const enfants = prof < 8 && it.items && it.items.length ? await conv(it.items, prof + 1) : [];
+        const page = i >= 0 && pagesDeSrc[i] ? pagesDeSrc[i].id : null;
+        if (page != null) out.push({ id: ++uid, titre: String(it.title || '').replace(/\s+/g, ' ').trim() || 'Sans titre', page, enfants });
+        else out.push(...enfants);
+      }
+      return out;
+    };
+    return conv(plan, 0);
+  }
+  // Un signet dont la page a disparu s'efface ; ses sous-signets remontent.
+  function purgerSignets() {
+    const vivantes = new Set(state.pages.map(p => p.id));
+    const filtre = liste => {
+      const r = [];
+      (liste || []).forEach(s => {
+        const enf = filtre(s.enfants);
+        if (vivantes.has(s.page)) { s.enfants = enf; r.push(s); } else r.push(...enf);
+      });
+      return r;
+    };
+    state.signets = filtre(state.signets);
+  }
+  function signetsPlats(liste, prof, out) {
+    (liste || []).forEach(s => { out.push({ s, prof }); signetsPlats(s.enfants, prof + 1, out); });
+    return out;
+  }
+  function trouverSignet(id, liste) {
+    for (const s of liste || []) { if (s.id === id) return s; const t = trouverSignet(id, s.enfants); if (t) return t; }
+    return null;
+  }
+  let signetActif = null;
+  function renderSignets() {
+    if (!el.signets) return;
+    el.signets.replaceChildren();
+    const plats = signetsPlats(state.signets, 0, []);
+    el.signetsVide.hidden = plats.length > 0;
+    el.signetCount.textContent = plats.length;
+    el.btnSignet.disabled = !state.pages.length;
+    plats.forEach(({ s, prof }) => {
+      const li = document.createElement('li'); li.className = 'signet';
+      li.style.paddingLeft = (prof * 14) + 'px';
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'sg' + (signetActif === s.id ? ' actif' : '');
+      b.dataset.signet = s.id;
+      b.title = 'Aller à la page ' + (pageIndex(s.page) + 1) + ' · double-clic pour renommer';
+      const t = document.createElement('span'); t.className = 't'; t.textContent = s.titre;
+      const pn = document.createElement('span'); pn.className = 'p'; pn.textContent = 'p. ' + (pageIndex(s.page) + 1);
+      b.append(t, pn);
+      b.addEventListener('click', () => { signetActif = s.id; allerPage(s.page); renderSignets(); });
+      b.addEventListener('dblclick', () => renommerSignet(s));
+      const x = document.createElement('button');
+      x.type = 'button'; x.className = 'sg-x'; x.title = 'Retirer ce signet';
+      x.setAttribute('aria-label', x.title);
+      x.appendChild(icon(IC.x, { sw: 1.8 }));
+      x.addEventListener('click', e => { e.stopPropagation(); retirerSignet(s.id); });
+      li.append(b, x);
+      el.signets.appendChild(li);
+    });
+  }
+  function allerPage(pageId) {
+    const i = pageIndex(pageId);
+    if (i < 0) return;
+    if (state.vue === 'lecture') { lectureAller(i + 1); return; }
+    state.selected.clear(); state.selected.add(pageId); state.anchor = pageId;
+    updateSelectionUI();
+    const t = tiles.get(pageId);
+    if (t) t.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  // La page « courante » : celle qu'on lit, ou la première sélectionnée.
+  function pageCouranteId() {
+    if (!state.pages.length) return null;
+    if (state.vue === 'lecture') {
+      const n = clampInt(el.pageNum.value, 1, state.pages.length) || 1;
+      return state.pages[n - 1].id;
+    }
+    const sel = selectedInOrder();
+    return sel.length ? sel[0] : state.pages[0].id;
+  }
+  function retirerSignet(id) {
+    snapshot();
+    const filtre = liste => (liste || []).filter(s => { if (s.id === id) return false; s.enfants = filtre(s.enfants); return true; });
+    state.signets = filtre(state.signets);
+    state.touched = true;
+    if (signetActif === id) signetActif = null;
+    renderSignets();
+    setLast('Signet retiré · Ctrl+Z pour annuler');
+  }
+  // Un signet se range à sa place dans l'ordre des pages.
+  function insererSignet(liste, s) {
+    const i = liste.findIndex(x => pageIndex(x.page) > pageIndex(s.page));
+    if (i < 0) liste.push(s); else liste.splice(i, 0, s);
+  }
+  async function ajouterSignet(pageId, titreVoulu) {
+    const pid = pageId != null ? pageId : pageCouranteId();
+    if (pid == null) return;
+    const p = state.pages.find(x => x.id === pid);
+    if (!p) return;
+    let defaut = titreVoulu || '';
+    if (!defaut) {
+      try {
+        const t = await getPageText(p);
+        defaut = (t.split('\n').map(l => l.trim()).find(l => l.length >= 3) || '').slice(0, 70);
+      } catch (_) {}
+    }
+    const titre = input('sg-titre', 'text', defaut || ('Page ' + (pageIndex(pid) + 1)));
+    const parent = signetActif != null ? trouverSignet(signetActif, state.signets) : null;
+    const sous = parent ? checkbox('sg-sous', 'Placer sous « ' + parent.titre.slice(0, 40) + ' »', false) : null;
+    dialog({
+      title: 'Ajouter un signet', icon: IC.signet,
+      build: b => {
+        b.append(field('Titre', titre, 'Pour la page ' + (pageIndex(pid) + 1) + '. Les signets sont enregistrés dans le PDF exporté.'));
+        if (sous) b.append(sous);
+      },
+      actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Ajouter', primary: true, onClick: close => {
+        const t = titre.value.trim();
+        if (!t) { toast('Donnez un titre au signet.', 'warn'); return; }
+        snapshot();
+        const s = { id: ++uid, titre: t, page: pid, enfants: [] };
+        if (sous && sous.input.checked) insererSignet(parent.enfants, s);
+        else insererSignet(state.signets, s);
+        signetActif = s.id; state.touched = true;
+        close();
+        renderSignets();
+        setLast('Signet ajouté : ' + t);
+      } }],
+    });
+  }
+  function renommerSignet(s) {
+    const titre = input('sg-titre', 'text', s.titre);
+    dialog({
+      title: 'Renommer le signet', icon: IC.signet,
+      build: b => b.append(field('Titre', titre)),
+      actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Renommer', primary: true, onClick: close => {
+        const t = titre.value.trim();
+        if (!t) return;
+        snapshot(); s.titre = t; state.touched = true;
+        close(); renderSignets();
+      } }],
+    });
+  }
+  // Les signets écrits dans le PDF : un arbre d'objets Outline, comme le
+  // décrit la norme, chacun visant sa page.
+  function poserSignets(out, mapped, signets) {
+    const { PDFName, PDFHexString, PDFNumber } = PDFLib;
+    const ctx = out.context;
+    const refDe = new Map();
+    mapped.forEach(({ p, page }) => refDe.set(p.id, page.ref));
+    const filtre = liste => {
+      const r = [];
+      (liste || []).forEach(s => {
+        const enf = filtre(s.enfants);
+        if (refDe.has(s.page)) r.push({ titre: s.titre, ref: refDe.get(s.page), enfants: enf });
+        else r.push(...enf);
+      });
+      return r;
+    };
+    const arbre = filtre(signets);
+    try { out.catalog.delete(PDFName.of('Outlines')); } catch (_) {}
+    if (!arbre.length) return 0;
+    const compter = l => l.reduce((n, s) => n + 1 + compter(s.enfants), 0);
+    const construire = (liste, parent) => {
+      const refs = liste.map(() => ctx.nextRef());
+      liste.forEach((s, i) => {
+        const d = ctx.obj({ Title: PDFHexString.fromText(s.titre), Parent: parent, Dest: [s.ref, 'Fit'] });
+        if (i > 0) d.set(PDFName.of('Prev'), refs[i - 1]);
+        if (i < liste.length - 1) d.set(PDFName.of('Next'), refs[i + 1]);
+        if (s.enfants.length) {
+          const [f, l] = construire(s.enfants, refs[i]);
+          d.set(PDFName.of('First'), f); d.set(PDFName.of('Last'), l);
+          d.set(PDFName.of('Count'), PDFNumber.of(compter(s.enfants)));
+        }
+        ctx.assign(refs[i], d);
+      });
+      return [refs[0], refs[refs.length - 1]];
+    };
+    const racine = ctx.nextRef();
+    const [f, l] = construire(arbre, racine);
+    ctx.assign(racine, ctx.obj({ Type: 'Outlines', First: f, Last: l, Count: PDFNumber.of(compter(arbre)) }));
+    out.catalog.set(PDFName.of('Outlines'), racine);
+    out.catalog.set(PDFName.of('PageMode'), PDFName.of('UseOutlines'));
+    return compter(arbre);
+  }
+
+  // =====================================================================
   //  Lecture : le document en continu
   //  -------------------------------------------------------------------
   //  À l'ouverture, on tombe sur le document lui-même, page après page,
@@ -1856,7 +2164,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function lectureEchelle() {
     const g0 = state.pages.length ? pageGeom(state.pages[0]) : null;
     if (!g0) return 1;
-    const dispo = Math.max(120, (el.canvas.clientWidth || 800) - 64);
+    const total = Math.max(120, (el.canvas.clientWidth || 800) - 64);
+    // Deux pages côte à côte se partagent la largeur, gouttière déduite.
+    const dispo = lectureDeux() ? (total - 18) / 2 : total;
     const haut = Math.max(160, (el.canvas.clientHeight || 600) - 64);
     let large = 0, grand = 0;
     state.pages.forEach(p => { const g = pageGeom(p); large = Math.max(large, g.Wd); grand = Math.max(grand, g.Hd); });
@@ -1865,6 +2175,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (v === 'page') return Math.max(0.1, Math.min(4, Math.min(dispo / (large || g0.Wd), haut / (grand || g0.Hd))));
     return Math.max(0.1, Math.min(4, parseFloat(v) || 1));
   }
+
+  const lectureDeux = () => state.dispo === 'deux' && state.pages.length > 1;
 
   function lectureCle(p) {
     return [pkey(p), p.rot, Math.round(lectureZ * 100), p.ann.length,
@@ -1956,6 +2268,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       feuilles.delete(id); peintes.delete(id);
     });
     const frag = document.createDocumentFragment();
+    const deux = lectureDeux();
+    el.lecture.classList.toggle('deux', deux);
+    let rangee = null;
     state.pages.forEach((p, i) => {
       const f = lectureFeuille(p);
       const g = pageGeom(p);
@@ -1969,7 +2284,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         if (att) att.hidden = false;
         peintes.delete(p.id);
       }
-      frag.appendChild(f);
+      if (!deux) { frag.appendChild(f); return; }
+      // Comme un livre ouvert : la couverture seule, puis les pages deux
+      // par deux, la paire vers la gauche, l'impaire vers la droite.
+      if (i === 0 || i % 2 === 1) { rangee = document.createElement('div'); rangee.className = 'rangee'; frag.appendChild(rangee); }
+      rangee.appendChild(f);
     });
     el.lecture.replaceChildren(frag);
     // Les premières pages sans attendre le défilement.
@@ -2199,6 +2518,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (state.stamp) items.push({ label: 'En-tête / pied de page', value: 'actif', clear: () => { snapshot(); state.stamp = null; render(); } });
     if (state.security) items.push({ label: 'Mot de passe', value: state.security.userPassword ? 'à l\'ouverture' : 'autorisations', clear: () => { snapshot(); state.security = null; render(); } });
     if (state.flatten) items.push({ label: 'Aplatir', value: 'à l\'export', clear: () => { snapshot(); state.flatten = false; render(); } });
+    if (state.figerAnnotations) items.push({ label: 'Annotations', value: 'figées', clear: () => { snapshot(); state.figerAnnotations = false; render(); } });
     const m = state.meta;
     if (m.title || m.author || m.subject || m.keywords) items.push({ label: 'Propriétés', value: m.title || m.author || 'définies', clear: () => { snapshot(); state.meta = { title: '', author: '', subject: '', keywords: '' }; render(); } });
     const anyForm = state.sources.some(s => s.formValues && Object.keys(s.formValues).length);
@@ -2303,6 +2623,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
     if (!state.filenameDirty) el.filename.value = defaultBase();
     renderSources();
+    purgerSignets();
+    renderSignets();
     renderChips();
     updateSelectionUI();
   }
@@ -3538,11 +3860,126 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return x;
   }
 
+  // Ce qui, à l'export, devient un vrai commentaire PDF — que le
+  // destinataire retrouve, déplace ou retire dans Acrobat — plutôt qu'un
+  // dessin fondu dans la page. À moins d'avoir demandé à tout figer.
+  const TYPES_REELS = ['highlight', 'box', 'draw', 'text', 'tampon'];
+  const annotationsReelles = () => !state.figerAnnotations;
+  const enCommentaire = an => annotationsReelles() && TYPES_REELS.indexOf(an.type) >= 0;
+
+  // Un rectangle aux coins arrondis, en chemin SVG (repère y vers le bas).
+  function cheminArrondi(w, h, r) {
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    return 'M' + r + ' 0H' + (w - r) + 'A' + r + ' ' + r + ' 0 0 1 ' + w + ' ' + r + 'V' + (h - r) + 'A' + r + ' ' + r + ' 0 0 1 ' + (w - r) + ' ' + h
+      + 'H' + r + 'A' + r + ' ' + r + ' 0 0 1 0 ' + (h - r) + 'V' + r + 'A' + r + ' ' + r + ' 0 0 1 ' + r + ' 0Z';
+  }
+  // Le même, en opérateurs de flux PDF (repère y vers le haut).
+  function opsArrondi(w, h, r) {
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    const k = 0.5523 * r, f = n => (+n.toFixed(2));
+    return [f(r) + ' 0 m', f(w - r) + ' 0 l', f(w - r + k) + ' 0 ' + f(w) + ' ' + f(r - k) + ' ' + f(w) + ' ' + f(r) + ' c',
+      f(w) + ' ' + f(h - r) + ' l', f(w) + ' ' + f(h - r + k) + ' ' + f(w - r + k) + ' ' + f(h) + ' ' + f(w - r) + ' ' + f(h) + ' c',
+      f(r) + ' ' + f(h) + ' l', f(r - k) + ' ' + f(h) + ' 0 ' + f(h - r + k) + ' 0 ' + f(h - r) + ' c',
+      '0 ' + f(r) + ' l', '0 ' + f(r - k) + ' ' + f(r - k) + ' 0 ' + f(r) + ' 0 c', 'h'].join(' ');
+  }
+  async function dessinerTampon(doc, page, p, fonts, an) {
+    const g = pageGeom(p);
+    const coin = toUser(an.x, an.y, g);
+    page.drawSvgPath(cheminArrondi(an.w, an.h, an.size * 0.25), {
+      x: coin.x, y: coin.y, borderColor: pdfColor(an.color), borderWidth: an.size * 0.09, rotate: PDFLib.degrees(g.total),
+    });
+    const font = await getFont(doc, fonts, 'Helvetica', true, false);
+    drawDisplayText(page, g, { text: an.text, x: an.x + an.w / 2, y: an.y + an.h / 2 + an.size * 0.35, size: an.size, font, color: an.color, align: 'center' });
+  }
+
+  // Les vrais commentaires PDF : surlignage, cadre, dessin, texte libre,
+  // tampon. Chacun porte son apparence (le dessin qu'en fait n'importe
+  // quelle visionneuse, sans rien avoir à deviner) et ses propriétés
+  // normalisées, pour qu'Acrobat sache le modifier.
+  async function poserAnnotationsReelles(doc, page, p, fonts) {
+    const { PDFName, PDFString, PDFHexString } = PDFLib;
+    const ctx = doc.context;
+    const g = pageGeom(p);
+    const quand = PDFString.fromDate(new Date());
+    // L'apparence est dessinée droite, telle qu'on la voit ; sa matrice la
+    // tourne comme la page.
+    const matrice = g.total === 90 ? [0, 1, -1, 0] : g.total === 180 ? [-1, 0, 0, -1] : g.total === 270 ? [0, -1, 1, 0] : [1, 0, 0, 1];
+    const rvb = hex => lireHex(hex).map(v => +(v / 255).toFixed(3));
+    const n = v => +(+v).toFixed(2);
+    const apparence = (contenu, w, h, ressources) => ctx.register(ctx.stream(contenu, {
+      Type: 'XObject', Subtype: 'Form', FormType: 1, BBox: [0, 0, n(w), n(h)], Matrix: matrice.concat([0, 0]), Resources: ressources || {},
+    }));
+    const poser = (an, dict, ap, bb) => {
+      const r = rectToUser(bb, g);
+      Object.assign(dict, {
+        Type: 'Annot', Rect: [n(r.x), n(r.y), n(r.x + r.w), n(r.y + r.h)], F: 4, P: page.ref, M: quand,
+        NM: PDFString.of('blonay-' + an.id), AP: { N: ap },
+      });
+      page.node.addAnnot(ctx.register(ctx.obj(dict)));
+    };
+    let compte = 0;
+    for (const an of p.ann) {
+      if (!enCommentaire(an)) continue;
+      try {
+        if (an.type === 'highlight') {
+          const op = an.opacity == null ? 0.35 : an.opacity;
+          const c = rvb(an.color || '#FFE066');
+          const ap = apparence('/GS gs ' + c.join(' ') + ' rg 0 0 ' + n(an.w) + ' ' + n(an.h) + ' re f', an.w, an.h,
+            { ExtGState: { GS: { Type: 'ExtGState', CA: op, ca: op, BM: 'Multiply' } } });
+          const r = rectToUser(an, g);
+          poser(an, { Subtype: 'Highlight', C: c, CA: op, Contents: PDFHexString.fromText(''),
+            QuadPoints: [n(r.x), n(r.y + r.h), n(r.x + r.w), n(r.y + r.h), n(r.x), n(r.y), n(r.x + r.w), n(r.y)].map(n) }, ap, an);
+        } else if (an.type === 'box') {
+          const lw = an.width || 1.5, c = rvb(an.color || '#000000');
+          const ap = apparence(c.join(' ') + ' RG ' + n(lw) + ' w ' + n(lw / 2) + ' ' + n(lw / 2) + ' ' + n(an.w - lw) + ' ' + n(an.h - lw) + ' re S', an.w, an.h);
+          poser(an, { Subtype: 'Square', C: c, BS: { W: n(lw), S: 'S' }, Contents: PDFHexString.fromText('') }, ap, an);
+        } else if (an.type === 'draw') {
+          const pts = an.pts || [];
+          if (pts.length < 2) continue;
+          const lw = an.width || 2, m = lw / 2 + 1, c = rvb(an.color || '#000000');
+          const bb0 = annBounds(an);
+          const bb = { x: bb0.x - m, y: bb0.y - m, w: bb0.w + 2 * m, h: bb0.h + 2 * m };
+          const local = pts.map(q => n(q[0] - bb.x) + ' ' + n(bb.h - (q[1] - bb.y)));
+          const ap = apparence(c.join(' ') + ' RG ' + n(lw) + ' w 1 J 1 j ' + local[0] + ' m ' + local.slice(1).map(q => q + ' l').join(' ') + ' S', bb.w, bb.h);
+          const enUser = [];
+          pts.forEach(q => { const u = toUser(q[0], q[1], g); enUser.push(n(u.x), n(u.y)); });
+          poser(an, { Subtype: 'Ink', C: c, BS: { W: n(lw) }, InkList: [enUser], Contents: PDFHexString.fromText('') }, ap, bb);
+        } else if (an.type === 'text') {
+          const font = await getFont(doc, fonts, an.font, an.bold, an.italic);
+          const c = rvb(an.color || '#000000');
+          const lh = an.size * 1.25;
+          const lignes = (an.lines || []).map((line, i) => {
+            const t = winAnsi(line);
+            return t ? '1 0 0 1 0 ' + n(an.h - (lh * i + an.size * 0.95)) + ' Tm ' + font.encodeText(t).toString() + ' Tj' : '';
+          }).filter(Boolean);
+          const ap = apparence('BT /F1 ' + n(an.size) + ' Tf ' + c.join(' ') + ' rg ' + lignes.join(' ') + ' ET', an.w, an.h, { Font: { F1: font.ref } });
+          poser(an, { Subtype: 'FreeText', Contents: PDFHexString.fromText(an.text || ''), DA: PDFString.of('/Helv ' + n(an.size) + ' Tf ' + c.join(' ') + ' rg'),
+            Q: 0, Border: [0, 0, 0], C: [1, 1, 1], CA: 1 }, ap, an);
+        } else if (an.type === 'tampon') {
+          const font = await getFont(doc, fonts, 'Helvetica', true, false);
+          const c = rvb(an.color || '#C8102E');
+          const t = winAnsi(an.text || '');
+          const tw = t ? font.widthOfTextAtSize(t, an.size) : 0;
+          const lw = an.size * 0.09;
+          const contenu = c.join(' ') + ' RG ' + n(lw) + ' w q 1 0 0 1 ' + n(lw / 2) + ' ' + n(lw / 2) + ' cm ' + opsArrondi(an.w - lw, an.h - lw, an.size * 0.25) + ' S Q'
+            + (t ? ' BT /F1 ' + n(an.size) + ' Tf ' + c.join(' ') + ' rg 1 0 0 1 ' + n((an.w - tw) / 2) + ' ' + n(an.h / 2 - an.size * 0.35) + ' Tm ' + font.encodeText(t).toString() + ' Tj ET' : '');
+          const ap = apparence(contenu, an.w, an.h, { Font: { F1: font.ref } });
+          poser(an, { Subtype: 'Stamp', Name: 'BlonayTampon', Contents: PDFHexString.fromText(an.text || ''), C: c, CA: 1 }, ap, an);
+        }
+        compte++;
+      } catch (e) { console.warn('Commentaire PDF :', e); }
+    }
+    return compte;
+  }
+
   async function drawAnnotations(doc, page, p, fonts, images, enPlace) {
     const g = pageGeom(p);
     for (const an of p.ann) {
       // Déjà réécrite dans le flux : il ne faut surtout pas la recouvrir.
       if (enPlace && an.type === 'edit' && enPlace.has(an.id)) continue;
+      // Un vrai commentaire PDF : posé à part, jamais fondu dans la page.
+      if (enCommentaire(an)) continue;
+      if (an.type === 'tampon') { await dessinerTampon(doc, page, p, fonts, an); continue; }
       if (an.type === 'highlight' || an.type === 'redact' || an.type === 'box') {
         const r = rectToUser(an, g);
         if (r.w <= 0 || r.h <= 0) continue;
@@ -3696,8 +4133,17 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   async function paintAnnotationsOnCanvas(ctx, p, g, s) {
     for (const an of p.ann) {
+      if (enCommentaire(an)) continue;
       ctx.save();
-      if (an.type === 'highlight' || an.type === 'redact' || an.type === 'box') {
+      if (an.type === 'tampon') {
+        ctx.strokeStyle = an.color; ctx.lineWidth = an.size * 0.09 * s;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(an.x * s, an.y * s, an.w * s, an.h * s, an.size * 0.25 * s); else ctx.rect(an.x * s, an.y * s, an.w * s, an.h * s);
+        ctx.stroke();
+        ctx.fillStyle = an.color; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+        ctx.font = '700 ' + (an.size * s) + 'px Helvetica, Arial, sans-serif';
+        ctx.fillText(an.text || '', (an.x + an.w / 2) * s, (an.y + an.h / 2 + an.size * 0.35) * s);
+      } else if (an.type === 'highlight' || an.type === 'redact' || an.type === 'box') {
         if (an.type === 'box') { ctx.strokeStyle = an.color; ctx.lineWidth = (an.width || 1.5) * s; ctx.strokeRect(an.x * s, an.y * s, an.w * s, an.h * s); }
         else {
           ctx.globalAlpha = an.type === 'highlight' ? (an.opacity == null ? 0.35 : an.opacity) : 1;
@@ -3848,6 +4294,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         await drawAnnotations(out, page, p, fonts, images, enPlace);
       }
       await poserChamps(out, page, p, fonts, nomsPris);
+      await poserAnnotationsReelles(out, page, p, fonts);
       await drawWatermark(out, page, p, fonts);
       const num = (state.stamp ? state.stamp.start : 1) + i;
       await drawStamp(out, page, p, fonts, {
@@ -3856,6 +4303,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       });
       if (i % 12 === 0) onProgress(i / mapped.length, 'Assemblage… ' + (i + 1) + '/' + mapped.length);
     }
+
+    poserSignets(out, mapped, state.signets);
 
     const m = state.meta;
     out.setCreator(APP);
@@ -5379,16 +5828,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   function toolFlatten() {
     const flat = checkbox('fl-flat', 'Aplatir les champs de formulaire à l\'export', state.flatten);
+    const figer = checkbox('fl-annots', 'Figer aussi les annotations dans la page (surlignages, cadres, dessins, textes, tampons)', state.figerAnnotations);
     dialog({
       title: 'Aplatir le document', icon: IC.flat,
       build: b => {
         b.append(flat);
         b.append(note('Les champs de formulaire deviennent du contenu fixe : les valeurs restent visibles mais ne sont plus modifiables.'));
-        b.append(note('Les annotations ajoutées ici sont toujours fusionnées dans la page. Une page caviardée est convertie en image à l\'export pour supprimer réellement le texte masqué.'));
+        b.append(figer);
+        b.append(note('Par défaut, les annotations partent comme de vrais commentaires PDF : dans Acrobat ou un navigateur, le destinataire les voit, peut les déplacer, les modifier ou les retirer. Figées, elles font partie de la page comme de l\'encre. Les corrections de texte, les images, les signatures et les caviardages sont toujours fondus dans la page ; une page caviardée est convertie en image pour supprimer réellement le texte masqué.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Appliquer', primary: true, onClick: close => {
-        snapshot(); state.flatten = flat.input.checked; state.touched = true; render(); close();
-        setLast(state.flatten ? 'Aplatissement activé' : 'Aplatissement désactivé');
+        snapshot(); state.flatten = flat.input.checked; state.figerAnnotations = figer.input.checked; state.touched = true; render(); close();
+        setLast((state.flatten ? 'Champs aplatis à l\'export' : 'Champs conservés') + ' · annotations ' + (state.figerAnnotations ? 'figées' : 'modifiables'));
       } }],
     });
   }
@@ -5717,6 +6168,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       ['redact', IC.redact, 'Caviarder'],
       ['champ', IC.champ, 'Ajouter un champ à remplir'],
       ['|'],
+      ['tampon', IC.stamp, 'Tampon : Reçu le, Payé, Copie conforme, Visé…'],
       ['sign', IC.pencil, 'Signer'],
       ['image', IC.image, 'Insérer une image'],
     ];
@@ -5729,6 +6181,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       b.addEventListener('click', () => {
         if (t[0] === 'sign') { edSignature(); return; }
         if (t[0] === 'image') { edPickImage(); return; }
+        if (t[0] === 'tampon') { edTampons(); return; }
         ed.tool = t[0]; ed.sel = null; edSyncTools(); edDrawOverlay();
         if (t[0] === 'edittext') {
           setBusy('Repérage du texte…');
@@ -5806,6 +6259,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       edittext: 'Cliquez dans un paragraphe : le curseur se pose à cet endroit. Entrée revient à la ligne, Échap valide.',
       redact: 'Faites glisser sur la zone à masquer. La page sera convertie en image à l\'export pour supprimer le texte en dessous.',
       champ: 'Faites glisser pour tracer un champ à remplir, de la taille voulue. L\'outil reste actif : tracez-en autant que nécessaire, puis prenez la flèche pour les déplacer.',
+      tampon: 'Cliquez sur la page à l\'endroit où poser le tampon. Il se déplace ensuite avec la flèche.',
     };
     $('#ed-foot').textContent = hints[ed.tool] || '';
     edSide();
@@ -6702,6 +7156,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     e.preventDefault();
     if (t === 'edittext') { edModifierTexte(pt, { cx: e.clientX, cy: e.clientY }); return; }
     if (t === 'text') { edCreateText(pt); return; }
+    if (t === 'tampon') { edPoserTampon(pt); return; }
     if (t === 'draw') { edStart('draw', pt, e); return; }
     edStart('rect', pt, e);
   }
@@ -6758,6 +7213,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const voulue = Math.max(4, gst.orig.h + dy);
         if (a.type === 'edit') { a.h0 = voulue; recalcAnn(a); }
         else if (a.type === 'text') { a.h = voulue; recalcAnn(a); }
+        else if (a.type === 'tampon') { a.size = Math.max(6, Math.min(96, gst.orig.size * (a.w / Math.max(1, gst.orig.w)))); tamponMesure(a); }
         else a.h = voulue;
       }
       edDrawOverlay();
@@ -7257,6 +7713,119 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     inp.click();
   }
 
+  // =====================================================================
+  //  Tampons : Reçu le, Payé, Copie conforme… et les vôtres, mémorisés
+  // =====================================================================
+  const TAMPONS_BASE = [
+    ['Reçu le {date}', '#1D4ED8'], ['Payé le {date}', '#C8102E'], ['Traité le {date}', '#0D7A3F'],
+    ['Copie conforme', '#1D4ED8'], ['Visé', '#0D7A3F'], ['Approuvé', '#0D7A3F'], ['Refusé', '#C8102E'],
+    ['Confidentiel', '#C8102E'], ['Urgent', '#C8102E'], ['Original', '#1D4ED8'], ['Brouillon', '#6E7681'], ['Pour information', '#6E7681'],
+  ];
+  const STYLE_TAMPON = { famille: 'Helvetica, Arial, sans-serif', poids: '700', penche: 'normal' };
+  function tamponMesure(a) {
+    const tw = mesurerTexte(a.text || '', a.size, STYLE_TAMPON);
+    a.w = tw + a.size * 1.2;
+    a.h = a.size * 1.7;
+    return a;
+  }
+  const tamponTexte = t => String(t || '').replace(/\{date\}/gi, todayStr());
+  function tamponsMemo() {
+    try { const l = JSON.parse(localStorage.getItem('blonay-tampons') || '[]'); return Array.isArray(l) ? l.filter(t => t && typeof t.text === 'string' && t.text.trim()) : []; } catch (_) { return []; }
+  }
+  function tamponsEcrire(liste) { try { localStorage.setItem('blonay-tampons', JSON.stringify(liste.slice(0, 40))); } catch (_) {} }
+  function tamponMemoriser(t) {
+    const liste = tamponsMemo().filter(x => x.text !== t.text);
+    liste.unshift({ text: t.text, color: t.color || '#C8102E', size: t.size || 14 });
+    tamponsEcrire(liste);
+  }
+  function edPoserTampon(pt) {
+    const m = ed.tampon;
+    if (!m) { edTampons(); return; }
+    const p = edPage();
+    const g = pageGeom(p);
+    const a = tamponMesure({ id: -1, type: 'tampon', x: 0, y: 0, w: 0, h: 0, text: tamponTexte(m.text), textModele: m.text, color: m.color, size: m.size });
+    a.x = Math.max(0, Math.min(g.Wd - a.w, pt.x - a.w / 2));
+    a.y = Math.max(0, Math.min(g.Hd - a.h, pt.y - a.h / 2));
+    edCommit(a);
+    setLast('Tampon posé : ' + a.text + ' · déplacez-le avec la flèche');
+  }
+  function edTampons() {
+    const grille = document.createElement('div'); grille.className = 'tampons';
+    const taille = select('tp-taille', [['10', 'Petit — 10 pt'], ['14', 'Normal — 14 pt'], ['18', 'Grand — 18 pt'], ['24', 'Très grand — 24 pt']], String((ed.tampon && ed.tampon.size) || 14));
+    const couleur = select('tp-couleur', [['', 'Couleur du tampon'], ['#C8102E', 'Rouge'], ['#1D4ED8', 'Bleu'], ['#0D7A3F', 'Vert'], ['#111111', 'Noir'], ['#6E7681', 'Gris']], '');
+    let api = null;
+    const choisir = t => {
+      ed.tampon = { text: t.text, color: couleur.value || t.color, size: parseInt(taille.value, 10) || t.size || 14 };
+      ed.tool = 'tampon'; ed.sel = null;
+      if (api) api.close();
+      edSyncTools(); edDrawOverlay();
+      setLast('Tampon « ' + tamponTexte(t.text) + ' » : cliquez sur la page pour le poser.');
+    };
+    const remplir = () => {
+      grille.replaceChildren();
+      const perso = tamponsMemo();
+      const tous = perso.map(t => Object.assign({ perso: true }, t)).concat(TAMPONS_BASE.map(([text, color]) => ({ text, color, size: 14 })));
+      tous.forEach(t => {
+        const item = document.createElement('div'); item.className = 'tampon-item';
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'tampon-choix'; b.style.color = t.color;
+        b.textContent = tamponTexte(t.text);
+        b.title = t.perso ? 'Votre tampon' : 'Tampon';
+        b.addEventListener('click', () => choisir(t));
+        item.appendChild(b);
+        if (t.perso) {
+          const x = document.createElement('button');
+          x.type = 'button'; x.className = 'oubli'; x.title = 'Oublier ce tampon'; x.setAttribute('aria-label', x.title);
+          x.appendChild(icon(IC.x, { sw: 2 }));
+          x.addEventListener('click', e => { e.stopPropagation(); tamponsEcrire(perso.filter(q => q.text !== t.text)); remplir(); });
+          item.appendChild(x);
+        }
+        grille.appendChild(item);
+      });
+    };
+    remplir();
+    const neuf = input('tp-neuf', 'text', '');
+    neuf.placeholder = 'Texte du tampon — {date} pour la date du jour';
+    const neufCouleur = input('tp-neuf-couleur', 'color', '#C8102E');
+    const garder = document.createElement('button');
+    garder.type = 'button'; garder.className = 'tb-btn'; garder.style.border = '1px solid var(--trait)';
+    garder.textContent = 'Mémoriser';
+    garder.addEventListener('click', () => {
+      const t = neuf.value.trim();
+      if (!t) { toast('Écrivez d\'abord le texte du tampon.', 'warn'); return; }
+      tamponMemoriser({ text: t, color: neufCouleur.value, size: parseInt(taille.value, 10) || 14 });
+      neuf.value = '';
+      remplir();
+    });
+    const poserNeuf = document.createElement('button');
+    poserNeuf.type = 'button'; poserNeuf.className = 'tb-btn primary';
+    poserNeuf.textContent = 'Poser sans mémoriser';
+    poserNeuf.addEventListener('click', () => {
+      const t = neuf.value.trim();
+      if (!t) { toast('Écrivez d\'abord le texte du tampon.', 'warn'); return; }
+      choisir({ text: t, color: neufCouleur.value, size: parseInt(taille.value, 10) || 14 });
+    });
+    api = dialog({
+      title: 'Poser un tampon', icon: IC.stamp, wide: true, submitOnEnter: false,
+      build: b => {
+        b.append(rowOf([field('Taille', taille), field('Couleur', couleur)], true));
+        b.append(grille);
+        b.append(groupOf('Votre tampon', [
+          field('Texte', neuf, '{date} est remplacé par la date du jour au moment de poser le tampon.'),
+          rowOf([field('Couleur', neufCouleur), garder, poserNeuf], true),
+        ]));
+        b.append(note('Les tampons mémorisés restent sur cet ordinateur (dossier data/ de l\'application), jamais dans le PDF. Cliquez un tampon puis cliquez sur la page pour le poser.'));
+      },
+      actions: [{ label: 'Fermer', onClick: c => c() }],
+    });
+  }
+
+  // Les signatures mémorisées sur cet ordinateur.
+  function signaturesMemo() {
+    try { const l = JSON.parse(localStorage.getItem('blonay-signatures') || '[]'); return Array.isArray(l) ? l.filter(x => x && typeof x.data === 'string' && x.w > 0 && x.h > 0) : []; } catch (_) { return []; }
+  }
+  function signaturesEcrire(liste) { try { localStorage.setItem('blonay-signatures', JSON.stringify(liste.slice(0, 6))); } catch (e) { console.warn('Signatures :', e); } }
+
   function edSignature() {
     const wrap = document.createElement('div');
     const cv = document.createElement('canvas');
@@ -7272,12 +7841,37 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     cv.addEventListener('pointerup', () => { drawing = false; });
     wrap.appendChild(cv);
     const colorSel = segmented('sg-color', [['#0B2545', 'Bleu'], ['#111111', 'Noir']], '#0B2545', v => { ctx.strokeStyle = v; });
-    dialog({
+    const garder = checkbox('sg-garder', 'Mémoriser cette signature sur cet ordinateur', true);
+    const memo = document.createElement('div'); memo.className = 'signatures';
+    let api = null;
+    const remplirMemo = () => {
+      memo.replaceChildren();
+      const liste = signaturesMemo();
+      memo.hidden = !liste.length;
+      liste.forEach((sg, i) => {
+        const item = document.createElement('div'); item.className = 'signature-item';
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'signature-choix'; b.title = 'Insérer cette signature';
+        const im = document.createElement('img'); im.src = sg.data; im.alt = 'Signature mémorisée ' + (i + 1);
+        b.appendChild(im);
+        b.addEventListener('click', () => { if (api) api.close(); edPlaceImage(sg.data, sg.w, sg.h, 170); setLast('Signature insérée : placez-la où vous voulez.'); });
+        const x = document.createElement('button');
+        x.type = 'button'; x.className = 'oubli'; x.title = 'Oublier cette signature'; x.setAttribute('aria-label', x.title);
+        x.appendChild(icon(IC.x, { sw: 2 }));
+        x.addEventListener('click', e => { e.stopPropagation(); signaturesEcrire(liste.filter((_, j) => j !== i)); remplirMemo(); });
+        item.append(b, x);
+        memo.appendChild(item);
+      });
+    };
+    remplirMemo();
+    api = dialog({
       title: 'Signer', icon: IC.pencil, wide: true,
       build: b => {
-        b.append(note('Tracez votre signature avec la souris, le doigt ou le stylet.'));
+        if (!memo.hidden) b.append(groupOf('Vos signatures mémorisées — cliquez pour insérer', [memo]));
+        b.append(note(memo.hidden ? 'Tracez votre signature avec la souris, le doigt ou le stylet.' : 'Ou tracez-en une nouvelle :'));
         b.append(wrap);
-        b.append(field('Couleur', colorSel));
+        b.append(rowOf([field('Couleur', colorSel), garder], true));
+        b.append(note('Une signature mémorisée reste sur cet ordinateur (dossier data/ de l\'application) ; elle n\'est jamais écrite dans un PDF sans que vous l\'y posiez.'));
       },
       actions: [
         { label: 'Effacer', onClick: () => { ctx.clearRect(0, 0, cv.width, cv.height); any = false; } },
@@ -7297,6 +7891,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           out.width = maxX - minX; out.height = maxY - minY;
           out.getContext('2d').drawImage(cv, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
           const data = out.toDataURL('image/png');
+          if (garder.input.checked) signaturesEcrire([{ data, w: out.width, h: out.height, quand: Date.now() }].concat(signaturesMemo().filter(x => x.data !== data)));
           close();
           edPlaceImage(data, out.width, out.height, 170);
           setLast('Signature insérée : placez-la où vous voulez.');
@@ -7325,11 +7920,28 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const isRect = sel ? (sel.type === 'highlight' || sel.type === 'box' || sel.type === 'redact') : (ed.tool === 'highlight' || ed.tool === 'box' || ed.tool === 'redact');
     const isDraw = sel ? sel.type === 'draw' : ed.tool === 'draw';
     const isImg = sel && sel.type === 'image';
+    const isTampon = sel ? sel.type === 'tampon' : ed.tool === 'tampon';
     const texteModifiable = isText || (isEdit && !!sel);
 
     const change = fn => { if (sel) { snapshot(); state.touched = true; } fn(); edDrawOverlay(true); };
 
     if (isChamp) { edSideChamp(sel, p, change); return; }
+    if (isTampon && sel) {
+      const t = input('ed-tampon-texte', 'text', sel.text);
+      t.addEventListener('input', () => change(() => { sel.text = t.value; tamponMesure(sel); }));
+      const c = input('ed-color', 'color', sel.color);
+      c.addEventListener('input', () => change(() => { sel.color = c.value; }));
+      const sz = input('ed-size', 'number', Math.round(sel.size * 10) / 10, { min: 6, max: 96, step: 1 });
+      sz.addEventListener('change', () => change(() => { sel.size = Math.min(96, Math.max(6, parseFloat(sz.value) || 14)); tamponMesure(sel); }));
+      ed.side.append(field('Texte', t), field('Couleur', c), field('Taille (pt)', sz));
+      const memo = document.createElement('button');
+      memo.type = 'button'; memo.className = 'tb-btn'; memo.style.border = '1px solid var(--trait)'; memo.style.justifyContent = 'center';
+      memo.textContent = 'Mémoriser ce tampon';
+      memo.addEventListener('click', () => { tamponMemoriser({ text: sel.textModele || sel.text, color: sel.color, size: sel.size }); toast('Tampon mémorisé : vous le retrouverez dans la liste des tampons.'); });
+      ed.side.appendChild(memo);
+    } else if (isTampon) {
+      ed.side.appendChild(note('Cliquez sur la page pour poser le tampon choisi. Pour en choisir un autre, cliquez à nouveau l\'outil Tampon.'));
+    }
 
     if (isEdit && !sel) {
       ed.side.appendChild(note('Cliquez dans un paragraphe encadré : le curseur se pose là où vous avez cliqué et vous écrivez directement sur la page, avec ses polices, son interligne et sa justification d\'origine.'));
@@ -7572,7 +8184,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       ] },
       { title: 'Protéger', items: [
         { id: 'password', name: 'Mot de passe', sub: 'Chiffrement et autorisations', icon: IC.lock, need: 'pages', run: toolPassword, active: () => !!state.security },
-        { id: 'flatten', name: 'Aplatir', sub: 'Figer les champs de formulaire', icon: IC.flat, need: 'pages', run: toolFlatten, active: () => state.flatten },
+        { id: 'flatten', name: 'Aplatir', sub: 'Figer les champs et les annotations', icon: IC.flat, need: 'pages', run: toolFlatten, active: () => state.flatten || state.figerAnnotations },
       ] },
       { title: 'Document', items: [
         { id: 'props', name: 'Propriétés', sub: 'Titre, auteur, mots-clés', icon: IC.info, need: 'pages', run: toolProperties, active: () => !!(state.meta.title || state.meta.author || state.meta.subject || state.meta.keywords) },
@@ -7801,6 +8413,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       zoomTuiles: $('#zoom-tuiles'), zoomLecture: $('#zoom-lecture'), zoomNiveau: $('#zoom-niveau'),
       zoomMoins: $('#zoom-moins'), zoomPlus: $('#zoom-plus'),
       pageCourante: $('#page-courante'), pageNum: $('#page-num'), pageTotal: $('#page-total'),
+      vueDeux: $('#vue-deux'),
+      signets: $('#signets'), signetsVide: $('#signets-vide'), signetCount: $('#signet-count'), btnSignet: $('#btn-signet'),
     });
 
     let theme = 'light';
@@ -7813,7 +8427,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     el.btnHelp.addEventListener('click', toolHelp);
 
     // tabs
-    const tabs = [[$('#tab-docs'), $('#pane-docs')], [$('#tab-tools'), $('#pane-tools')]];
+    const tabs = [[$('#tab-docs'), $('#pane-docs')], [$('#tab-tools'), $('#pane-tools')], [$('#tab-plan'), $('#pane-plan')]];
     tabs.forEach(([tab, pane]) => {
       tab.addEventListener('click', () => {
         tabs.forEach(([t, p]) => { t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); p.hidden = p !== pane; });
@@ -7859,6 +8473,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     };
     el.zoomMoins.addEventListener('click', () => pas(-1));
     el.zoomPlus.addEventListener('click', () => pas(1));
+    // Une page, ou deux côte à côte.
+    const poserDispo = v => {
+      state.dispo = v === 'deux' ? 'deux' : 'une';
+      el.vueDeux.setAttribute('aria-pressed', state.dispo === 'deux' ? 'true' : 'false');
+      try { localStorage.setItem('blonay-dispo', state.dispo); } catch (_) {}
+      if (state.vue === 'lecture' && state.pages.length) lectureRendu();
+    };
+    try { if (localStorage.getItem('blonay-dispo') === 'deux') { state.dispo = 'deux'; el.vueDeux.setAttribute('aria-pressed', 'true'); } } catch (_) {}
+    el.vueDeux.addEventListener('click', () => poserDispo(state.dispo === 'deux' ? 'une' : 'deux'));
+    el.btnSignet.addEventListener('click', () => ajouterSignet());
     // Ctrl + molette zoome le document, pas la page entière du navigateur.
     // Un pavé tactile en envoie une rafale : un pas tous les 120 ms suffit.
     let molette = 0;
@@ -7879,7 +8503,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     window.addEventListener('resize', () => {
       if (state.vue !== 'lecture' || !state.pages.length) return;
       clearTimeout(redim);
-      redim = setTimeout(() => { if (state.zoomLecture === 'largeur' || state.zoomLecture === 'page') lectureRendu(); }, 180);
+      redim = setTimeout(() => { if (state.zoomLecture === 'largeur' || state.zoomLecture === 'page' || lectureDeux()) lectureRendu(); }, 180);
     });
     el.filename.addEventListener('input', () => { state.filenameDirty = el.filename.value.trim() !== ''; });
     el.filename.addEventListener('blur', () => { if (!el.filename.value.trim()) { state.filenameDirty = false; el.filename.value = defaultBase(); } });
@@ -8140,6 +8764,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         else if (nom === 'zoom-plus') { if (state.vue === 'lecture') pas(1); }
         else if (nom === 'zoom-moins') { if (state.vue === 'lecture') pas(-1); }
         else if (nom === 'zoom-page') { if (state.vue === 'lecture') poserZoom('page'); }
+        else if (nom === 'deux-pages') { changerVue('lecture'); poserDispo(state.dispo === 'deux' ? 'une' : 'deux'); }
+        else if (nom === 'signet') { if (state.pages.length) ajouterSignet(); }
         else if (nom === 'theme') el.btnTheme.click();
         else if (nom === 'raccourcis') toolHelp();
       };

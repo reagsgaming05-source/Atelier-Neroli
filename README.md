@@ -123,6 +123,10 @@ documents ouverts depuis le bureau restent deux documents. Les combiner est un c
 *Fichier › Ajouter au document…*, ou le bouton « Ajouter un document » dans la fenêtre.
 Fermer avec des modifications non enregistrées demande d'abord confirmation.
 
+L'ancienne version (avant les dix ajouts de la version 2) reste disponible telle quelle dans
+la release **« Blonay PDF — version 1 »** (`BlonayPDF-v1-windows.zip`, tag `blonaypdf-v1`) :
+si quelque chose ne va pas dans la nouvelle, décompressez celle-là à côté et continuez.
+
 Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
 
