@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('BlonayDesktop', {
   chrome: process.versions.chrome,
   fichiersInitiaux: () => ipcRenderer.invoke('blonay:fichiers-initiaux'),
   onOuvrir: (cb) => ipcRenderer.on('blonay:ouvrir', (_e, liste) => cb(liste)),
+  onOuvrirOnglet: (cb) => ipcRenderer.on('blonay:ouvrir-onglet', (_e, liste) => cb(liste)),
   onCommande: (cb) => ipcRenderer.on('blonay:commande', (_e, nom) => cb(nom)),
   onEnregistre: (cb) => ipcRenderer.on('blonay:enregistre', (_e, r) => cb(r)),
   imprimantes: () => ipcRenderer.invoke('blonay:imprimantes'),

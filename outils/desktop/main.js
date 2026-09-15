@@ -101,7 +101,7 @@ function createWindow(fichiers) {
     ev.preventDefault();
     (async () => {
       let modifie = false;
-      try { modifie = await win.webContents.executeJavaScript("!!document.querySelector('#summary .mod')", true); } catch (e) { /* page absente */ }
+      try { modifie = await win.webContents.executeJavaScript("!!document.querySelector('#summary .mod') || !!document.querySelector('.onglet .mod')", true); } catch (e) { /* page absente */ }
       if (!modifie) { quitter = true; win.close(); return; }
       const { response } = await dialog.showMessageBox(win, {
         type: 'warning',
@@ -190,17 +190,13 @@ async function choisirDocuments(win) {
   return r.canceled ? [] : lire(r.filePaths);
 }
 
-// Ouvrir… : un document à part. Si la fenêtre courante en a déjà un, une
-// nouvelle fenêtre ; sinon, celle-ci.
+// Ouvrir… : un document à part, dans un nouvel onglet de la fenêtre courante
+// si elle porte déjà un document (la page en décide) ; sans fenêtre, une nouvelle.
 async function ouvrirDocuments() {
   const win = fenetreActive();
   const liste = await choisirDocuments(win);
   if (!liste.length) return;
-  let occupee = false;
-  if (win) {
-    try { occupee = await win.webContents.executeJavaScript("document.querySelectorAll('#pages .tile').length > 0 && !document.querySelector('#doc-list .badge')", true); } catch (e) { /* page absente */ }
-  }
-  if (win && !occupee) win.webContents.send('blonay:ouvrir', liste);
+  if (win) win.webContents.send('blonay:ouvrir-onglet', liste);
   else createWindow(liste);
 }
 
@@ -219,6 +215,7 @@ function buildMenu() {
       submenu: [
         { label: 'Ouvrir…', accelerator: 'CmdOrCtrl+O', click: ouvrirDocuments },
         { label: 'Ajouter au document…', accelerator: 'CmdOrCtrl+Shift+O', click: ajouterDocuments },
+        { label: 'Nouvel onglet', accelerator: 'CmdOrCtrl+T', click: () => envoyer('nouvel-onglet') },
         { label: 'Nouvelle fenêtre', accelerator: 'CmdOrCtrl+N', click: () => createWindow([]) },
         { type: 'separator' },
         { label: 'Enregistrer le PDF…', accelerator: 'CmdOrCtrl+S', click: () => envoyer('exporter') },
@@ -226,7 +223,8 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
         { type: 'separator' },
-        { label: 'Fermer la fenêtre', accelerator: 'CmdOrCtrl+W', role: 'close' },
+        { label: 'Fermer l\'onglet', accelerator: 'CmdOrCtrl+W', click: () => envoyer('fermer-onglet') },
+        { label: 'Fermer la fenêtre', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
         { label: 'Quitter', accelerator: 'Alt+F4', role: 'quit' },
       ],
     },
@@ -235,6 +233,10 @@ function buildMenu() {
       submenu: [
         { label: 'Lire', accelerator: 'CmdOrCtrl+1', click: () => envoyer('lecture') },
         { label: 'Organiser les pages', accelerator: 'CmdOrCtrl+2', click: () => envoyer('organiser') },
+        { label: 'Deux pages côte à côte', accelerator: 'CmdOrCtrl+Shift+2', click: () => envoyer('deux-pages') },
+        { type: 'separator' },
+        { label: 'Onglet suivant', accelerator: 'Ctrl+Tab', click: () => envoyer('onglet-suivant') },
+        { label: 'Onglet précédent', accelerator: 'Ctrl+Shift+Tab', click: () => envoyer('onglet-precedent') },
         { type: 'separator' },
         { label: 'Agrandir', accelerator: 'CmdOrCtrl+=', click: () => envoyer('zoom-plus') },
         { label: 'Réduire', accelerator: 'CmdOrCtrl+-', click: () => envoyer('zoom-moins') },
@@ -242,6 +244,21 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Thème clair ou sombre', click: () => envoyer('theme') },
         { label: 'Plein écran', role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Outils',
+      submenu: [
+        { label: 'Éditeur de page', click: () => envoyer('editeur') },
+        { label: 'Rechercher, remplacer, caviarder…', accelerator: 'CmdOrCtrl+F', click: () => envoyer('rechercher') },
+        { label: 'Ajouter un signet', accelerator: 'CmdOrCtrl+B', click: () => envoyer('signet') },
+        { type: 'separator' },
+        { label: 'Reconnaître le texte (OCR)…', click: () => envoyer('ocr') },
+        { label: 'Comparer deux versions…', click: () => envoyer('comparer') },
+        { label: 'Copier un tableau vers Excel…', click: () => envoyer('tableau') },
+        { type: 'separator' },
+        { label: 'Constituer un dossier de pièces…', click: () => envoyer('dossier') },
+        { label: 'Traiter plusieurs fichiers…', click: () => envoyer('lots') },
       ],
     },
     {

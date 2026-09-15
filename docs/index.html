@@ -223,7 +223,30 @@
   .filename .ext { font-family: var(--chiffre); font-size: 12.5px; color: var(--texte-3); }
 
   /* ---------- espace de travail ---------- */
-  .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 272px minmax(0, 1fr); }
+  .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 272px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  /* ---------- onglets : plusieurs documents dans la fenêtre ---------- */
+  .onglets {
+    grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 3px; padding: 6px 10px 0; min-width: 0;
+    background: var(--feutre); border-bottom: 1px solid var(--trait); overflow-x: auto; overflow-y: hidden;
+  }
+  .onglets[hidden] { display: none; }
+  .onglet {
+    display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 6px 0 12px; max-width: 240px; min-width: 0; flex: none;
+    border: 1px solid var(--trait); border-bottom: 0; border-radius: 8px 8px 0 0; background: var(--encre); color: var(--texte-2);
+    font-size: 12.5px; cursor: default; transition: background .14s var(--elan), color .14s var(--elan);
+  }
+  .onglet .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .onglet .mod { color: var(--ambre); font-weight: 700; flex: none; }
+  .onglet:hover { color: var(--texte); }
+  .onglet[aria-selected="true"] { background: var(--relief); color: var(--texte); box-shadow: inset 0 2px 0 var(--bleu); }
+  .onglet:focus-visible { outline: 2px solid var(--bleu); outline-offset: -2px; }
+  .onglet.cible { outline: 2px solid var(--bleu); outline-offset: -2px; background: var(--bleu-ombre); color: var(--texte); }
+  .onglet .x { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: var(--texte-3); display: grid; place-items: center; flex: none; }
+  .onglet .x:hover { background: var(--rouge-ombre); color: var(--rouge); }
+  .onglet .x svg { width: 10px; height: 10px; }
+  .onglet-plus { width: 30px; height: 30px; border: 1px dashed var(--trait); border-radius: 8px 8px 0 0; background: transparent; color: var(--texte-3); display: grid; place-items: center; flex: none; margin-bottom: 1px; }
+  .onglet-plus:hover { color: var(--texte); border-color: var(--texte-3); }
+  .onglet-plus svg { width: 13px; height: 13px; }
   .side {
     display: flex; flex-direction: column; min-height: 0;
     background: var(--feutre); border-right: 1px solid var(--trait);
@@ -1013,6 +1036,7 @@
 </header>
 
 <main class="workspace" id="app-main" hidden>
+  <div class="onglets" id="onglets" hidden role="tablist" aria-label="Documents ouverts dans cette fenêtre"></div>
   <aside class="side" aria-label="Panneau latéral">
     <div class="tabs" role="tablist">
       <button class="tab" id="tab-docs" role="tab" aria-selected="true" aria-controls="pane-docs" type="button">
@@ -2204,6 +2228,146 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   // =====================================================================
+  //  Onglets : plusieurs documents dans une même fenêtre
+  //  -------------------------------------------------------------------
+  //  Chaque onglet a son document, son historique, son nom de fichier ;
+  //  une page glissée sur un autre onglet y déménage.
+  // =====================================================================
+  const onglets = [];
+  let ongletActif = null;
+  const ongletCourant = () => onglets.find(o => o.id === ongletActif) || null;
+  function titreEtat(e) {
+    const srcs = (e.sources || []).filter(s => !s.genere);
+    if (!srcs.length) return 'Nouveau document';
+    const nom = baseName(srcs[0].name);
+    return srcs.length > 1 ? nom + ' +' + (srcs.length - 1) : nom;
+  }
+  function renderOnglets() {
+    if (!el.onglets) return;
+    const montrer = onglets.length > 1 || state.pages.length > 0;
+    el.onglets.hidden = !montrer;
+    el.onglets.replaceChildren();
+    if (!montrer) return;
+    onglets.forEach(o => {
+      const e = o.id === ongletActif ? prendreEtat() : o.etat;
+      const t = document.createElement('div');
+      t.className = 'onglet'; t.setAttribute('role', 'tab'); t.tabIndex = 0;
+      t.dataset.onglet = o.id;
+      t.setAttribute('aria-selected', o.id === ongletActif ? 'true' : 'false');
+      const titre = titreEtat(e);
+      const modifie = !!(e.touched && e.pages.length);
+      t.title = titre + (modifie ? ' · modifié' : '');
+      const sp = document.createElement('span'); sp.className = 't'; sp.textContent = titre;
+      t.appendChild(sp);
+      if (modifie) { const m = document.createElement('span'); m.className = 'mod'; m.textContent = '\u2022'; m.title = 'Modifié'; t.appendChild(m); }
+      const x = document.createElement('button');
+      x.type = 'button'; x.className = 'x'; x.title = 'Fermer cet onglet (Ctrl+W)'; x.setAttribute('aria-label', 'Fermer ' + titre);
+      x.appendChild(icon(IC.x, { sw: 2 }));
+      x.addEventListener('click', ev => { ev.stopPropagation(); fermerOnglet(o.id); });
+      t.appendChild(x);
+      t.addEventListener('click', () => activerOnglet(o.id));
+      t.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); activerOnglet(o.id); } });
+      el.onglets.appendChild(t);
+    });
+    const plus = document.createElement('button');
+    plus.type = 'button'; plus.className = 'onglet-plus'; plus.id = 'onglet-plus';
+    plus.title = 'Nouvel onglet (Ctrl+T)'; plus.setAttribute('aria-label', 'Nouvel onglet');
+    plus.appendChild(icon(IC.plus, { sw: 1.8 }));
+    plus.addEventListener('click', () => nouvelOnglet());
+    el.onglets.appendChild(plus);
+  }
+  function quitterDocument() {
+    if (ed.root && !ed.root.hidden) closeEditor();
+    if (openDlg) openDlg.close();
+    const courant = ongletCourant();
+    if (courant) courant.etat = prendreEtat();
+  }
+  function nouvelOnglet(fichiers) {
+    quitterDocument();
+    const o = { id: ++uid, etat: etatVierge() };
+    onglets.push(o);
+    ongletActif = o.id;
+    poserEtat(o.etat);
+    render();
+    el.canvas.scrollTop = 0;
+    if (fichiers && fichiers.length) addFiles(fichiers);
+    return o;
+  }
+  function activerOnglet(id) {
+    if (id === ongletActif) return;
+    const cible = onglets.find(o => o.id === id);
+    if (!cible) return;
+    quitterDocument();
+    ongletActif = id;
+    poserEtat(cible.etat);
+    render();
+    el.canvas.scrollTop = 0;
+  }
+  function ongletVoisin(sens) {
+    if (onglets.length < 2) return;
+    const i = onglets.findIndex(o => o.id === ongletActif);
+    activerOnglet(onglets[(i + sens + onglets.length) % onglets.length].id);
+  }
+  function fermerOnglet(id) {
+    const o = onglets.find(x => x.id === id);
+    if (!o) return;
+    const e = o.id === ongletActif ? prendreEtat() : o.etat;
+    const faire = () => {
+      const i = onglets.indexOf(o);
+      if (i < 0) return;
+      onglets.splice(i, 1);
+      if (o.id !== ongletActif) { renderOnglets(); return; }
+      if (ed.root && !ed.root.hidden) closeEditor();
+      const suivant = onglets[Math.min(i, onglets.length - 1)];
+      if (suivant) { ongletActif = suivant.id; poserEtat(suivant.etat); }
+      else { const n = { id: ++uid, etat: etatVierge() }; onglets.push(n); ongletActif = n.id; poserEtat(n.etat); }
+      render();
+      el.canvas.scrollTop = 0;
+    };
+    if (!(e.touched && e.pages.length)) { faire(); return; }
+    dialog({
+      title: 'Fermer « ' + titreEtat(e) + ' »', icon: IC.info,
+      build: b => b.append(note('Des modifications n\'ont pas été exportées. En fermant cet onglet, vous les perdez.', 'warn')),
+      actions: [
+        { label: 'Revenir au document', onClick: c => c() },
+        { label: 'Fermer sans exporter', primary: true, onClick: c => { c(); faire(); } },
+      ],
+    });
+  }
+  // Ouvrir : dans un nouvel onglet dès que celui-ci porte un vrai document.
+  const ongletOccupe = () => state.pages.length > 0 && state.sources.some(s => !s.isSample);
+  function ouvrirDansOnglet(fichiers) {
+    const liste = Array.from(fichiers || []);
+    if (!liste.length) return;
+    if (ongletOccupe()) nouvelOnglet(liste); else addFiles(liste);
+  }
+  // Des pages glissées sur un autre onglet y déménagent — en copie, pour
+  // que l'historique de chaque onglet reste le sien.
+  function deplacerPagesVersOnglet(ids, ongletId) {
+    const cible = onglets.find(o => o.id === ongletId);
+    if (!cible || ongletId === ongletActif || !ids.length) return;
+    const set = new Set(ids);
+    const moving = state.pages.filter(p => set.has(p.id));
+    if (!moving.length) return;
+    snapshot();
+    const e = cible.etat;
+    moving.forEach(p => {
+      const src = srcById(p.src);
+      // Le même fichier déjà ouvert là-bas : on s'y rattache plutôt que de
+      // le lister deux fois.
+      let la = src && e.sources.find(s => s.id === src.id || (s.name === src.name && s.bytes.byteLength === src.bytes.byteLength));
+      if (src && !la) { la = src; e.sources.push(src); }
+      e.pages.push({ id: ++uid, src: la ? la.id : p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a, { id: ++uid })), piece: p.piece || null, ocr: p.ocr || null });
+    });
+    e.touched = true;
+    state.pages = state.pages.filter(p => !set.has(p.id));
+    state.touched = true;
+    render();
+    setLast(plural(moving.length, 'page déplacée', 'pages déplacées') + ' vers « ' + titreEtat(e) + ' »');
+  }
+  const modifieQuelquePart = () => onglets.some(o => { const e = o.id === ongletActif ? state : o.etat; return !!(e && e.touched && e.pages.length); });
+
+  // =====================================================================
   //  Lecture : le document en continu
   //  -------------------------------------------------------------------
   //  À l'ouverture, on tombe sur le document lui-même, page après page,
@@ -2683,6 +2847,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     purgerSignets();
     renderSignets();
     renderChips();
+    renderOnglets();
     updateSelectionUI();
   }
 
@@ -9236,7 +9401,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
   // Une liste de documents { nom, b64 } ou { nom, octets } — venue du fichier
   // d'ouverture, de la fenêtre de l'application ou de son menu Ouvrir.
-  async function ouvrirListe(liste) {
+  async function ouvrirListe(liste, opts) {
     const fichiers = [];
     for (const f of liste || []) {
       if (!f || typeof f.nom !== 'string') continue;
@@ -9249,8 +9414,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       } catch (e) { console.error(e); }
     }
     setBusy('');
-    if (fichiers.length) await addFiles(fichiers);
-    else toast('Le document à ouvrir n\'a pas pu être lu.', 'error');
+    if (!fichiers.length) { toast('Le document à ouvrir n\'a pas pu être lu.', 'error'); return; }
+    if (opts && opts.onglet && ongletOccupe()) nouvelOnglet(fichiers);
+    else await addFiles(fichiers);
   }
 
   // =====================================================================
@@ -9291,7 +9457,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       pageCourante: $('#page-courante'), pageNum: $('#page-num'), pageTotal: $('#page-total'),
       vueDeux: $('#vue-deux'),
       signets: $('#signets'), signetsVide: $('#signets-vide'), signetCount: $('#signet-count'), btnSignet: $('#btn-signet'),
+      onglets: $('#onglets'),
     });
+    // Le premier onglet : le document de cette fenêtre.
+    onglets.push({ id: ++uid, etat: null });
+    ongletActif = onglets[0].id;
 
     let theme = 'light';
     try { theme = localStorage.getItem('blonay-theme') || 'light'; } catch (_) {}
@@ -9310,12 +9480,35 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       });
     });
 
-    const openPicker = () => { el.fileInput.value = ''; el.fileInput.click(); };
-    el.btnOpen.addEventListener('click', openPicker);
-    el.btnAdd.addEventListener('click', openPicker);
-    el.btnChoose.addEventListener('click', openPicker);
+    // « Ouvrir » ouvre un document à part (nouvel onglet si celui-ci en a
+    // déjà un) ; « Ajouter un document » le combine au document en cours.
+    let modeOuverture = '';
+    const openPicker = mode => { modeOuverture = mode || ''; el.fileInput.value = ''; el.fileInput.click(); };
+    el.btnOpen.addEventListener('click', () => openPicker('onglet'));
+    el.btnAdd.addEventListener('click', () => openPicker(''));
+    el.btnChoose.addEventListener('click', () => openPicker(''));
     el.btnSample.addEventListener('click', loadSample);
-    el.fileInput.addEventListener('change', () => addFiles(el.fileInput.files));
+    el.fileInput.addEventListener('change', () => { if (modeOuverture === 'onglet') ouvrirDansOnglet(el.fileInput.files); else addFiles(el.fileInput.files); });
+    // Des pages glissées sur un onglet y déménagent.
+    el.onglets.addEventListener('dragover', e => {
+      if (!drag.ids.length) return;
+      const t = e.target.closest('.onglet');
+      $$('.onglet.cible', el.onglets).forEach(x => { if (x !== t) x.classList.remove('cible'); });
+      if (!t || +t.dataset.onglet === ongletActif) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      t.classList.add('cible');
+    });
+    el.onglets.addEventListener('dragleave', e => { if (!el.onglets.contains(e.relatedTarget)) $$('.onglet.cible', el.onglets).forEach(x => x.classList.remove('cible')); });
+    el.onglets.addEventListener('drop', e => {
+      const t = e.target.closest('.onglet');
+      $$('.onglet.cible', el.onglets).forEach(x => x.classList.remove('cible'));
+      if (!t || !drag.ids.length) return;
+      e.preventDefault();
+      const ids = drag.ids.slice();
+      endDrag();
+      deplacerPagesVersOnglet(ids, +t.dataset.onglet);
+    });
     el.btnUndo.addEventListener('click', undo);
     el.btnRedo.addEventListener('click', redoAction);
     el.btnSearch.addEventListener('click', toolSearch);
@@ -9585,7 +9778,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (mod && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); }
       else if (mod && ((e.key === 'y' || e.key === 'Y') || (e.shiftKey && (e.key === 'z' || e.key === 'Z')))) { e.preventDefault(); redoAction(); }
       else if (mod && (e.key === 'a' || e.key === 'A') && state.pages.length) { e.preventDefault(); selectAll(); }
-      else if (mod && (e.key === 'o' || e.key === 'O')) { e.preventDefault(); openPicker(); }
+      else if (mod && (e.key === 'o' || e.key === 'O')) { e.preventDefault(); openPicker(e.shiftKey ? '' : 'onglet'); }
+      else if (mod && (e.key === 't' || e.key === 'T')) { e.preventDefault(); nouvelOnglet(); }
+      else if (mod && (e.key === 'w' || e.key === 'W')) { e.preventDefault(); fermerOnglet(ongletActif); }
+      else if (mod && e.key === 'Tab') { e.preventDefault(); ongletVoisin(e.shiftKey ? -1 : 1); }
+      else if (mod && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); if (state.pages.length) ajouterSignet(); }
       else if (mod && (e.key === 's' || e.key === 'S')) { e.preventDefault(); if (state.pages.length && !state.busy) exportPages(state.pages, safeBase(el.filename.value) + '.pdf'); }
       else if (mod && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); if (state.pages.length && !state.busy) dialogImprimer(); }
       else if (mod && e.key === '1') { e.preventDefault(); changerVue('lecture'); }
@@ -9601,7 +9798,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     });
 
     window.addEventListener('beforeunload', e => {
-      if (state.touched && state.pages.length) { e.preventDefault(); e.returnValue = ''; }
+      if (modifieQuelquePart()) { e.preventDefault(); e.returnValue = ''; }
     });
 
     renderTools();
@@ -9614,7 +9811,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     // repart par blonayQuitter(true) pour partir, (false) pour rester.
     window.__blonayFermer = () => {
       const quitter = oui => { try { if (typeof window.blonayQuitter === 'function') window.blonayQuitter(!!oui); } catch (_) {} };
-      if (!(state.touched && state.pages.length)) { quitter(true); return; }
+      if (!modifieQuelquePart()) { quitter(true); return; }
       let decide = false;
       dialog({
         title: 'Quitter Blonay PDF', icon: IC.info,
@@ -9635,7 +9832,17 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const commandeBureau = nom => {
         if (nom === 'exporter') { if (state.pages.length && !state.busy) exportPages(state.pages, safeBase(el.filename.value) + '.pdf'); }
         else if (nom === 'imprimer') { if (state.pages.length && !state.busy) dialogImprimer(); }
-        else if (nom === 'ouvrir') openPicker();
+        else if (nom === 'ouvrir') openPicker('onglet');
+        else if (nom === 'ajouter') openPicker('');
+        else if (nom === 'nouvel-onglet') nouvelOnglet();
+        else if (nom === 'fermer-onglet') fermerOnglet(ongletActif);
+        else if (nom === 'onglet-suivant') ongletVoisin(1);
+        else if (nom === 'onglet-precedent') ongletVoisin(-1);
+        else if (nom === 'rechercher') { if (state.pages.length) toolSearch(); }
+        else if (nom === 'dossier') { if (state.pages.length) toolDossier(); }
+        else if (nom === 'lots') toolLots();
+        else if (nom === 'tableau') { if (state.pages.length) toolTableau(); }
+        else if (nom === 'editeur') { if (state.pages.length) openEditor(pageCouranteId()); }
         else if (nom === 'lecture' || nom === 'organiser') changerVue(nom);
         else if (nom === 'zoom-plus') { if (state.vue === 'lecture') pas(1); }
         else if (nom === 'zoom-moins') { if (state.vue === 'lecture') pas(-1); }
@@ -9647,6 +9854,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       };
       try {
         bureau.onOuvrir(liste => { ouvrirListe(liste); });
+        if (bureau.onOuvrirOnglet) bureau.onOuvrirOnglet(liste => { ouvrirListe(liste, { onglet: true }); });
         bureau.onCommande(commandeBureau);
         bureau.onEnregistre(r => {
           if (r && r.chemin) { toast(r.chemin.replace(/^.*[\\/]/, '') + ' enregistré'); setLast('Enregistré : ' + r.chemin); }
