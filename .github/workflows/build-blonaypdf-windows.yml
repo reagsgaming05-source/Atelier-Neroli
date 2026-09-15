@@ -70,7 +70,8 @@ jobs:
           name: BlonayPDF-windows
           path: BlonayPDF-windows.zip
 
-      - name: Conserver la version 1 (release « blonaypdf-v1 », créée une seule fois)
+      - name: Retrouver la version 1 (le zip publié avant les dix ajouts), une seule fois
+        id: v1
         if: github.event_name == 'push'
         shell: pwsh
         env:
@@ -80,14 +81,26 @@ jobs:
           $ErrorActionPreference = 'Continue'
           $PSNativeCommandUseErrorActionPreference = $false
           gh release view blonaypdf-v1 *> $null
-          if ($LASTEXITCODE -eq 0) { Write-Host "La release blonaypdf-v1 existe déjà : rien à faire." ; exit 0 }
+          if ($LASTEXITCODE -eq 0) { Write-Host "La release blonaypdf-v1 existe déjà : rien à faire." ; "creer=false" >> $env:GITHUB_OUTPUT ; exit 0 }
           gh release download blonaypdf-windows-latest -p BlonayPDF-windows.zip -O BlonayPDF-v1-windows.zip
-          if ($LASTEXITCODE -ne 0) { throw "Impossible de récupérer le zip de la version 1 depuis blonaypdf-windows-latest." }
-          gh release create blonaypdf-v1 BlonayPDF-v1-windows.zip `
-            --target 0ed7dac09ea1b2ac101842bb5de278607ef82a0e `
-            --title "Blonay PDF — version 1 (avant les dix ajouts)" `
-            --notes "Version conservée telle quelle : l'application portable Windows avant les dix ajouts de la version 2 (signets, tampons mémorisés, annotations PDF, dossier de pièces, copier vers Excel, rechercher-remplacer, traitement par lots, onglets, OCR, comparaison). Décompressez BlonayPDF-v1-windows.zip puis lancez BlonayPDF.exe. Construite depuis le commit 0ed7dac."
-          if ($LASTEXITCODE -ne 0) { throw "Création de la release blonaypdf-v1 impossible." }
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path BlonayPDF-v1-windows.zip)) { throw "Impossible de récupérer le zip de la version 1 depuis blonaypdf-windows-latest." }
+          Write-Host ("Zip de la version 1 : " + (Get-Item BlonayPDF-v1-windows.zip).Length + " octets")
+          "creer=true" >> $env:GITHUB_OUTPUT
+
+      - name: Conserver la version 1 (release « blonaypdf-v1 »)
+        if: github.event_name == 'push' && steps.v1.outputs.creer == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: blonaypdf-v1
+          target_commitish: 0ed7dac09ea1b2ac101842bb5de278607ef82a0e
+          name: "Blonay PDF — version 1 (avant les dix ajouts)"
+          prerelease: false
+          body: |
+            Version conservée telle quelle : l'application portable Windows avant les dix ajouts de la version 2
+            (signets, tampons mémorisés, commentaires PDF, dossier de pièces, tableau vers Excel, remplacer partout,
+            traitement par lots, onglets, OCR, comparaison). Décompressez `BlonayPDF-v1-windows.zip` puis lancez `BlonayPDF.exe`.
+            Construite depuis le commit 0ed7dac.
+          files: outils/BlonayPDF-v1-windows.zip
 
       - name: Publier la version portable (pré-release « blonaypdf-windows-latest »)
         if: github.event_name == 'push'
