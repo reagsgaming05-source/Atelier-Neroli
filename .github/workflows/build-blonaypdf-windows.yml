@@ -99,6 +99,8 @@ jobs:
           body: |
             Version portable Windows : décompressez le zip, puis double-cliquez sur `BlonayPDF.exe`.
             Aucune installation, aucun navigateur : tout est inclus (lecture, organisation, correction du texte, annotations, formulaires, impression directe avec livret).
+            Version 2 : reconnaissance de texte locale (OCR, français et allemand), dossier de pièces, remplacer et caviarder partout, tableau vers Excel, tampons et signatures mémorisés, traitement par lots, vrais commentaires PDF, comparaison de deux versions, signets et lecture deux pages, onglets.
+            La version 1 reste disponible telle quelle dans la release « Blonay PDF — version 1 » (`blonaypdf-v1`).
             Aucune donnée ne quitte le PC. Voir `LISEZMOI-portable.txt` dans le dossier.
             Construit automatiquement depuis le commit ${{ github.sha }}.
           files: BlonayPDF-windows.zip
