@@ -460,6 +460,10 @@
   .signet .sg-x:hover { background: var(--rouge-ombre); color: var(--rouge); }
   .signet .sg-x svg { width: 11px; height: 11px; }
   .tab { padding: 0 4px; }
+  .apercu-tableau { max-height: 320px; overflow: auto; border: 1px solid var(--trait); border-radius: var(--rond-petit); background: var(--encre); }
+  .apercu-tableau table { border-collapse: collapse; font-size: 12px; font-family: var(--chiffre); min-width: 100%; }
+  .apercu-tableau td { border: 1px solid var(--trait); padding: 3px 7px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+  .apercu-tableau tr:first-child td { font-weight: 600; background: var(--survol); }
   /* ---------- tampons et signatures ---------- */
   .tampons { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
   .tampon-item, .signature-item { position: relative; min-width: 0; }
@@ -851,6 +855,10 @@
     .tb-btn.primary .lbl, #btn-print .lbl, #btn-open .lbl, .pane-foot .lbl, .dz-actions .lbl { display: inline; }
     .filename input { width: 138px; }
   }
+  @media (max-width: 1320px) {
+    #btn-open .lbl { display: none; }
+    .zoom-lecture select { min-width: 92px; }
+  }
   @media (max-width: 1080px) {
     .vue-mode .lbl, #btn-print .lbl, #btn-open .lbl { display: none; }
     .zoom-lecture { margin-left: 0; }
@@ -1228,6 +1236,28 @@
     // dans Acrobat) ; « figer » les fond dans la page.
     figerAnnotations: false,
   };
+  // Ce qui fait un document ouvert — le reste de l'état (vue, zoom, thème)
+  // est commun. Un traitement par lots, un onglet : chacun a le sien.
+  const CHAMPS_DOC = ['sources', 'pages', 'selected', 'anchor', 'history', 'redo', 'touched', 'hueIdx', 'filenameDirty',
+    'meta', 'watermark', 'stamp', 'security', 'flatten', 'signets', 'figerAnnotations'];
+  function etatVierge() {
+    return {
+      sources: [], pages: [], selected: new Set(), anchor: null, history: [], redo: [], touched: false, hueIdx: 0, filenameDirty: false,
+      meta: { title: '', author: '', subject: '', keywords: '' }, watermark: null, stamp: null, security: null, flatten: false,
+      signets: [], figerAnnotations: false, nomFichier: '',
+    };
+  }
+  function prendreEtat() {
+    const e = {};
+    CHAMPS_DOC.forEach(k => { e[k] = state[k]; });
+    e.nomFichier = el.filename ? el.filename.value : '';
+    return e;
+  }
+  function poserEtat(e) {
+    CHAMPS_DOC.forEach(k => { state[k] = e[k]; });
+    if (el.filename) el.filename.value = e.nomFichier || '';
+    signetActif = null;
+  }
   const dims = new Map();       // "srcId:index" -> {w,h,baseRot}
   const thumbs = new Map();     // "srcId:index" -> {status, url}
   const textCache = new Map();  // "srcId:index" -> string
@@ -1373,7 +1403,7 @@
   // =====================================================================
   function capture() {
     return {
-      pages: state.pages.map(p => ({ id: p.id, src: p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a)) })),
+      pages: state.pages.map(p => ({ id: p.id, src: p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a)), piece: p.piece || null, ocr: p.ocr || null })),
       sources: state.sources.slice(),
       formValues: state.sources.map(s => Object.assign({}, s.formValues || {})),
       meta: Object.assign({}, state.meta),
@@ -1731,7 +1761,28 @@
     svg.setAttribute('preserveAspectRatio', 'none');
     svg.classList.add('ann-layer');
     p.ann.forEach(a => { const n = annNode(a, forEditor); if (n) svg.appendChild(n); });
+    const m = mentionNode(p, g);
+    if (m) svg.appendChild(m);
     return svg;
+  }
+  // La mention « Pièce n° 3 » d'un dossier, en haut à droite de la page.
+  const MENTION = { size: 9, marge: 28, haut: 26 };
+  function mentionNode(p, g) {
+    if (!p.piece) return null;
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', g.Wd - MENTION.marge); t.setAttribute('y', MENTION.haut);
+    t.setAttribute('text-anchor', 'end');
+    t.setAttribute('font-size', MENTION.size); t.setAttribute('font-weight', '700');
+    t.setAttribute('font-family', 'Helvetica, Arial, sans-serif');
+    t.setAttribute('fill', '#333333');
+    t.textContent = p.piece;
+    return t;
+  }
+  async function dessinerMention(doc, page, p, fonts) {
+    if (!p.piece) return;
+    const g = pageGeom(p);
+    const font = await getFont(doc, fonts, 'Helvetica', true, false);
+    drawDisplayText(page, g, { text: p.piece, x: g.Wd - MENTION.marge, y: MENTION.haut, size: MENTION.size, font, color: '#333333', align: 'right' });
   }
   function annNode(a, forEditor) {
     if (a.type === 'edit') {
@@ -2115,7 +2166,7 @@
   const lectureDeux = () => state.dispo === 'deux' && state.pages.length > 1;
 
   function lectureCle(p) {
-    return [pkey(p), p.rot, Math.round(lectureZ * 100), p.ann.length,
+    return [pkey(p), p.rot, Math.round(lectureZ * 100), p.ann.length, p.piece || '',
       p.ann.map(a => a.id + ':' + Math.round((a.x || 0) * 10) + ':' + (a.text || '').length).join()].join('|');
   }
 
@@ -2181,7 +2232,7 @@
     }
     const vieux = f.querySelector('.ann-layer');
     if (vieux) vieux.remove();
-    if (p.ann.length) f.appendChild(annSvg(p, g, false));
+    if (p.ann.length || p.piece) f.appendChild(annSvg(p, g, false));
   }
 
   function lectureRendu() {
@@ -2428,6 +2479,7 @@
       const g = document.createElement('div');
       const name = document.createElement('div'); name.className = 'doc-name'; name.textContent = src.name;
       if (src.isSample) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'Exemple'; name.appendChild(b); }
+      if (src.genere) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'Généré'; name.appendChild(b); }
       if (src.encrypted) { const b = document.createElement('span'); b.className = 'badge lock'; b.textContent = 'Protégé'; name.appendChild(b); }
       if (src.formFields && src.formFields.length) { const b = document.createElement('span'); b.className = 'badge form'; b.textContent = 'Formulaire'; name.appendChild(b); }
       const meta = document.createElement('div'); meta.className = 'doc-meta';
@@ -2517,6 +2569,7 @@
   }
 
   function render() {
+    if (state.silencieux) return;
     const alive = new Set(state.pages.map(p => p.id));
     Array.from(state.selected).forEach(id => { if (!alive.has(id)) state.selected.delete(id); });
     Array.from(tiles.keys()).forEach(id => { if (!alive.has(id)) { const t = tiles.get(id); if (thumbObserver && t) thumbObserver.unobserve(t); tiles.delete(id); } });
@@ -2611,7 +2664,7 @@
     state.pages.forEach(p => {
       next.push(p);
       if (set.has(p.id)) {
-        const c = { id: ++uid, src: p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a, { id: ++uid })) };
+        const c = { id: ++uid, src: p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a, { id: ++uid })), piece: p.piece || null, ocr: p.ocr || null };
         next.push(c); created.push(c.id);
       }
     });
@@ -3396,14 +3449,21 @@
     }
     const an = { i: prem.i, n: der.i + der.n - prem.i, dx: prem.dx, dy: prem.dy };
     if (P < an.i || finV > an.i + an.n) return fxNon('changement a cheval');
-    const ancienBout = vieux.slice(an.i, an.i + an.n);
-    const nouveauBout = ancienBout.slice(0, P - an.i) + milieu + ancienBout.slice(finV - an.i);
+    let ancienBout = vieux.slice(an.i, an.i + an.n);
+    let nouveauBout = ancienBout.slice(0, P - an.i) + milieu + ancienBout.slice(finV - an.i);
 
     // Quel affichage du flux porte ce morceau ?
     const u = toUser(an.dx, an.dy, g);
     const sh = shows.find(z => Math.abs(z.y - u.y) < 0.8 && u.x >= z.x - 0.8 && u.x <= z.x + z.large + 0.8);
     if (!sh) return fxNon('aucun affichage en ' + u.x.toFixed(1) + ',' + u.y.toFixed(1));
     if (!sh.pol || !sh.crochets) return fxNon('affichage sans police');
+    // L'espace ajoutée en fin de ligne pour lier deux lignes n'existe pas
+    // dans le flux : on la laisse de côté, tant que le changement ne la touche pas.
+    const queue = /\s+$/.exec(ancienBout);
+    if (queue && sh.texte.indexOf(ancienBout) < 0 && finV <= an.i + an.n - queue[0].length) {
+      ancienBout = ancienBout.slice(0, -queue[0].length);
+      nouveauBout = nouveauBout.slice(0, -queue[0].length);
+    }
     const k = sh.texte.indexOf(ancienBout);
     if (k < 0) return fxNon('bout introuvable : ' + JSON.stringify(ancienBout) + ' dans ' + JSON.stringify(sh.texte));
     if (sh.texte.indexOf(ancienBout, k + 1) >= 0) return fxNon('bout ambigu');
@@ -3479,6 +3539,61 @@
 
   // Réécrit dans le flux de la page tout ce qui peut l'être ; rend la liste
   // des corrections ainsi faites, qu'il ne faudra donc pas recouvrir.
+  // Quand une correction ne peut pas être réécrite sur place, le texte
+  // d'origine est au moins effacé du flux sous le recouvrement : chaque
+  // morceau ancré devient un blanc de même largeur, le reste de la ligne ne
+  // bouge pas, et plus rien n'est à retrouver par copier-coller.
+  function fxEffacerTous(annots, shows, g, exclus) {
+    const parShow = new Map();
+    annots.forEach(a => {
+      const o = a.origine;
+      if (!o || !o.ancres.length) return;
+      const plages = [];
+      for (const an of o.ancres) {
+        const bout = o.texte.slice(an.i, an.i + an.n).replace(/^\s+|\s+$/g, '');
+        if (!bout) continue;
+        const u = toUser(an.dx, an.dy, g);
+        const sh = shows.find(z => Math.abs(z.y - u.y) < 0.8 && u.x >= z.x - 0.8 && u.x <= z.x + z.large + 0.8);
+        if (!sh || !sh.pol || !sh.crochets || exclus.has(sh)) return;
+        const k = sh.texte.indexOf(bout);
+        if (k < 0 || sh.texte.indexOf(bout, k + 1) >= 0) return;
+        plages.push([sh, k, k + bout.length]);
+      }
+      // Tout le bloc ou rien : un effacement à moitié serait pire.
+      plages.forEach(([sh, d, f]) => { if (!parShow.has(sh)) parShow.set(sh, []); parShow.get(sh).push([d, f]); });
+    });
+    const out = [];
+    for (const [sh, plages] of parShow) {
+      plages.sort((p, q) => p[0] - q[0]);
+      const fondues = [];
+      plages.forEach(pl => { const d = fondues[fondues.length - 1]; if (d && pl[0] <= d[1]) d[1] = Math.max(d[1], pl[1]); else fondues.push(pl.slice()); });
+      const unite = sh.Tfs * sh.Th;
+      if (!unite) continue;
+      const parts = [];
+      let pos = 0, total = 0, bon = true;
+      const pousser = (texte, blanc) => {
+        if (!texte) return;
+        const w = fxLargeur(sh.pol, texte, sh);
+        if (w == null) { bon = false; return; }
+        total += w;
+        if (blanc) { parts.push((-w * 1000 / unite).toFixed(3)); return; }
+        const hex = fxEncoder(sh.pol, texte);
+        if (hex == null) { bon = false; return; }
+        parts.push('<' + hex + '>');
+      };
+      fondues.forEach(([d, f]) => { pousser(sh.texte.slice(pos, d), false); pousser(sh.texte.slice(d, f), true); pos = f; });
+      pousser(sh.texte.slice(pos), false);
+      if (!bon) continue;
+      const reste = sh.large - total;
+      if (Math.abs(reste) > 0.001) parts.push((-reste * 1000 / unite).toFixed(3));
+      const morceau = '[' + parts.join(' ') + '] TJ';
+      const octets = [];
+      for (let i = 0; i < morceau.length; i++) octets.push(morceau.charCodeAt(i));
+      out.push({ a: sh.crochets[0], b: sh.crochets[1], octets, show: sh });
+    }
+    return out;
+  }
+
   function fxRetoucher(doc, page, p, cache) {
     const faits = new Set();
     const cibles = (p.ann || []).filter(a => a.type === 'edit' && !a.efface && a.origine);
@@ -3491,16 +3606,29 @@
     } catch (e) { console.warn('Lecture du flux :', e); return faits; }
     const g = pageGeom(p);
     const remplacements = [];
+    const recouvertes = [];
     cibles.forEach(a => {
       let r = null;
       try { r = fxEdit(a, shows, g); } catch (e) { console.warn('Retouche dans le flux :', e); }
       if (r) { remplacements.push.apply(remplacements, r); faits.add(a.id); }
+      else recouvertes.push(a);
     });
     if (remplacements.length) {
       const tries = remplacements.slice().sort((x, y) => x.a - y.a);
       for (let i = 1; i < tries.length; i++) {
         if (tries[i].a < tries[i - 1].b) { console.warn('Retouches qui se chevauchent : on recouvre.'); return new Set(); }
       }
+    }
+    // Les blocs recouverts : leur texte d'origine s'efface, sauf dans un
+    // affichage déjà réécrit sur place.
+    if (recouvertes.length) {
+      const pris = new Set();
+      shows.forEach(sh => { if (sh.crochets && remplacements.some(r => r.a === sh.crochets[0])) pris.add(sh); });
+      let effacements = [];
+      try { effacements = fxEffacerTous(recouvertes, shows, g, pris); } catch (e) { console.warn('Effacement dans le flux :', e); }
+      effacements.forEach(e => remplacements.push({ a: e.a, b: e.b, octets: e.octets }));
+    }
+    if (remplacements.length) {
       try { flux.ecrire(fxAppliquer(flux.octets, remplacements)); }
       catch (e) { console.warn('Écriture du flux :', e); return new Set(); }
     }
@@ -4063,7 +4191,15 @@
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     await page.render({ canvasContext: ctx, viewport: vp }).promise;
     page.cleanup();
-    await paintAnnotationsOnCanvas(ctx, p, g, canvas.width / g.Wd);
+    const s = canvas.width / g.Wd;
+    await paintAnnotationsOnCanvas(ctx, p, g, s);
+    if (p.piece) {
+      ctx.save();
+      ctx.fillStyle = '#333333'; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+      ctx.font = '700 ' + (MENTION.size * s) + 'px Helvetica, Arial, sans-serif';
+      ctx.fillText(p.piece, (g.Wd - MENTION.marge) * s, MENTION.haut * s);
+      ctx.restore();
+    }
     return { canvas, g };
   }
 
@@ -4231,6 +4367,7 @@
       }
       await poserChamps(out, page, p, fonts, nomsPris);
       await poserAnnotationsReelles(out, page, p, fonts);
+      if (!raster) await dessinerMention(out, page, p, fonts);
       await drawWatermark(out, page, p, fonts);
       const num = (state.stamp ? state.stamp.start : 1) + i;
       await drawStamp(out, page, p, fonts, {
@@ -5329,6 +5466,66 @@
     return { masque: pixels ? masque : null, meubles, pixels };
   }
 
+  // La détection elle-même, sans fenêtre : ce qu'en fait l'outil, et ce
+  // que refait le traitement par lots.
+  async function detecterPagesVides(pages, reglages, avancement, annule) {
+    const dire = msg => { if (avancement) avancement(msg); };
+    const stop = () => !!(annule && annule());
+    const mesures = [];
+    let rates = 0;
+
+    // Le mobilier se repère par document et par format de page : un
+    // en-tête n'a de sens que parmi des pages qui se ressemblent.
+    const groupes = new Map();
+    pages.forEach(p => {
+      const g = pageGeom(p);
+      const cle = p.src + '|' + Math.round(g.Wd) + '|' + Math.round(g.Hd) + '|' + g.total;
+      if (!groupes.has(cle)) groupes.set(cle, { pages: [], mobilier: null });
+      groupes.get(cle).pages.push(p);
+    });
+    const textes = new Map();
+    for (const gr of groupes.values()) {
+      if (stop()) return null;
+      if (gr.pages.length < 2) continue;
+      try {
+        gr.mobilier = await reperer_mobilier(gr.pages, reglages, textes, (i, n) => dire('Repérage des en-têtes et pieds de page… ' + (i + 1) + ' sur ' + n));
+      } catch (e) { console.error(e); }
+    }
+    const groupeDe = p => { const g = pageGeom(p); return groupes.get(p.src + '|' + Math.round(g.Wd) + '|' + Math.round(g.Hd) + '|' + g.total); };
+
+    for (let i = 0; i < pages.length; i++) {
+      if (stop()) return null;
+      const p = pages[i];
+      dire('Analyse… page ' + (i + 1) + ' sur ' + pages.length);
+      const gr = groupeDe(p);
+      const mob = gr && gr.mobilier;
+      let mesure = null;
+      try { mesure = await mesurerEncre(p, reglages, mob && mob.masque); } catch (e) { console.error(e); rates++; }
+      if (!mesure) continue;
+      mesure.lum = null;
+      let items = textes.get(pkey(p));
+      if (!items) { try { items = await elementsTexte(p); } catch (e) { console.error(e); items = []; } }
+      let lettres = items.reduce((t, it) => t + (mob && mob.meubles.has(it.sig) ? 0 : it.lettres), 0);
+      // Une page reconnue par l'OCR porte du texte, même si elle est une image.
+      if (!items.length && p.ocr && p.ocr.mots) lettres += p.ocr.mots.reduce((t, m) => t + m.t.length, 0);
+      const mobilier = !!(mob && (mob.masque || mob.meubles.size));
+      mesures.push({ p, i, mesure, lettres, mobilier,
+        vide: mesure.ratio <= reglages.seuil && lettres <= reglages.lettres });
+      if (i % 3 === 0) await nextFrame();
+    }
+    if (stop()) return null;
+
+    const vides = mesures.filter(m => m.vide);
+    // « Presque vide » veut dire : la page ne porte qu'une marque ou deux,
+    // un tampon, un titre seul. Une photo ou un scan en couvre bien
+    // davantage et n'a rien à faire dans cette liste, même si c'est la
+    // page la moins chargée du document.
+    const autres = mesures.filter(m => !m.vide && m.mesure.ratio <= PRESQUE_VIDE.ratio && m.lettres <= PRESQUE_VIDE.lettres)
+      .sort((a, b) => (a.mesure.ratio - b.mesure.ratio) || (a.lettres - b.lettres))
+      .slice(0, 8);
+    return { mesures, vides, autres, rates };
+  }
+
   function toolPagesVides() {
     let mode = 'normal';
     const sensi = segmented('pv-sensi', [['strict', 'Strict'], ['normal', 'Normal'], ['tolerant', 'Tolérant']], mode, v => { mode = v; analyser(); });
@@ -5342,64 +5539,17 @@
       const reglages = SENSIBILITE[mode];
       liste.replaceChildren();
       cases.clear();
-      const mesures = [];
-      let rates = 0;
-
-      // Le mobilier se repère par document et par format de page : un
-      // en-tête n'a de sens que parmi des pages qui se ressemblent.
-      const groupes = new Map();
-      state.pages.forEach(p => {
-        const g = pageGeom(p);
-        const cle = p.src + '|' + Math.round(g.Wd) + '|' + Math.round(g.Hd) + '|' + g.total;
-        if (!groupes.has(cle)) groupes.set(cle, { pages: [], mobilier: null });
-        groupes.get(cle).pages.push(p);
-      });
-      const textes = new Map();
-      for (const gr of groupes.values()) {
-        if (mien !== jeton) return;
-        if (gr.pages.length < 2) continue;
-        try {
-          gr.mobilier = await reperer_mobilier(gr.pages, reglages, textes, (i, n) => { info.textContent = 'Rep\u00e9rage des en-t\u00eates et pieds de page\u2026 ' + (i + 1) + ' sur ' + n; });
-        } catch (e) { console.error(e); }
-      }
-      const groupeDe = p => { const g = pageGeom(p); return groupes.get(p.src + '|' + Math.round(g.Wd) + '|' + Math.round(g.Hd) + '|' + g.total); };
-
-      for (let i = 0; i < state.pages.length; i++) {
-        if (mien !== jeton) return;
-        const p = state.pages[i];
-        info.textContent = 'Analyse\u2026 page ' + (i + 1) + ' sur ' + state.pages.length;
-        const gr = groupeDe(p);
-        const mob = gr && gr.mobilier;
-        let mesure = null;
-        try { mesure = await mesurerEncre(p, reglages, mob && mob.masque); } catch (e) { console.error(e); rates++; }
-        if (!mesure) continue;
-        mesure.lum = null;
-        let items = textes.get(pkey(p));
-        if (!items) { try { items = await elementsTexte(p); } catch (e) { console.error(e); items = []; } }
-        const lettres = items.reduce((t, it) => t + (mob && mob.meubles.has(it.sig) ? 0 : it.lettres), 0);
-        const mobilier = !!(mob && (mob.masque || mob.meubles.size));
-        mesures.push({ p, i, mesure, lettres, mobilier,
-          vide: mesure.ratio <= reglages.seuil && lettres <= reglages.lettres });
-        if (i % 3 === 0) await nextFrame();
-      }
-      if (mien !== jeton) return;
-
-      const vides = mesures.filter(m => m.vide);
-      // « Presque vide » veut dire : la page ne porte qu'une marque ou deux,
-      // un tampon, un titre seul. Une photo ou un scan en couvre bien
-      // davantage et n'a rien à faire dans cette liste, même si c'est la
-      // page la moins chargée du document.
-      const autres = mesures.filter(m => !m.vide && m.mesure.ratio <= PRESQUE_VIDE.ratio && m.lettres <= PRESQUE_VIDE.lettres)
-        .sort((a, b) => (a.mesure.ratio - b.mesure.ratio) || (a.lettres - b.lettres))
-        .slice(0, 8);
+      const r = await detecterPagesVides(state.pages, reglages, msg => { info.textContent = msg; }, () => mien !== jeton);
+      if (!r || mien !== jeton) return;
+      const { vides, autres, rates } = r;
 
       info.textContent = (vides.length
-        ? plural(vides.length, 'page vide d\u00e9tect\u00e9e', 'pages vides d\u00e9tect\u00e9es') + ' sur ' + state.pages.length + ', d\u00e9j\u00e0 coch\u00e9e' + (vides.length > 1 ? 's' : '') + '.'
-        : 'Aucune page enti\u00e8rement vide sur ' + plural(state.pages.length, 'page', 'pages') + '.')
+        ? plural(vides.length, 'page vide détectée', 'pages vides détectées') + ' sur ' + state.pages.length + ', déjà cochée' + (vides.length > 1 ? 's' : '') + '.'
+        : 'Aucune page entièrement vide sur ' + plural(state.pages.length, 'page', 'pages') + '.')
         + (autres.length
-          ? ' ' + plural(autres.length, 'page ne porte presque rien', 'pages ne portent presque rien') + ' : cochez celles \u00e0 retirer.'
+          ? ' ' + plural(autres.length, 'page ne porte presque rien', 'pages ne portent presque rien') + ' : cochez celles à retirer.'
           : (vides.length ? '' : ' Toutes portent du texte ou une image.'))
-        + (rates ? ' ' + plural(rates, 'page n\'a pas pu \u00eatre analys\u00e9e', 'pages n\'ont pas pu \u00eatre analys\u00e9es') + '.' : '');
+        + (rates ? ' ' + plural(rates, 'page n\'a pas pu être analysée', 'pages n\'ont pas pu être analysées') + '.' : '');
 
       const ajouter = (m, coche, titre) => {
         const ligne = document.createElement('div'); ligne.className = 'list-item';
@@ -5410,15 +5560,15 @@
         img.style.width = '34px'; img.style.border = '1px solid var(--trait)'; img.style.background = '#fff';
         const g = document.createElement('div'); g.className = 'g';
         const n = document.createElement('div'); n.className = 'n';
-        n.textContent = 'Page ' + (m.i + 1) + (titre ? ' \u00b7 ' + titre : '');
+        n.textContent = 'Page ' + (m.i + 1) + (titre ? ' · ' + titre : '');
         const sous = document.createElement('div'); sous.className = 's';
         const src = srcById(m.p.id) || srcById(m.p.src);
         const marques = m.mesure.ratio === 0
           ? (m.lettres > 0 ? 'marques infimes' : m.mesure.brut > 0 ? 'aucune marque, seulement du grain' : 'parfaitement vide')
           : 'marques : ' + (m.mesure.ratio * 100).toFixed(2) + ' %';
-        sous.textContent = marques + (m.lettres ? ' \u00b7 ' + plural(m.lettres, 'caract\u00e8re', 'caract\u00e8res') : ' \u00b7 aucun texte')
-          + (m.mobilier ? ' \u00b7 hors en-t\u00eate et pied de page' : '')
-          + (src ? ' \u00b7 ' + baseName(src.name) + ' p. ' + (m.p.index + 1) : '');
+        sous.textContent = marques + (m.lettres ? ' · ' + plural(m.lettres, 'caractère', 'caractères') : ' · aucun texte')
+          + (m.mobilier ? ' · hors en-tête et pied de page' : '')
+          + (src ? ' · ' + baseName(src.name) + ' p. ' + (m.p.index + 1) : '');
         g.append(n, sous);
         ligne.append(c, img, g);
         liste.appendChild(ligne);
@@ -5451,6 +5601,352 @@
       ],
     });
     analyser();
+  }
+
+  // =====================================================================
+  //  Constituer un dossier de pièces
+  //  -------------------------------------------------------------------
+  //  Chaque document ouvert devient une pièce numérotée : un intercalaire
+  //  devant, la mention « Pièce n° » sur ses pages, une pagination
+  //  continue, un sommaire en tête et un signet par pièce.
+  // =====================================================================
+  function piecesDuDocument() {
+    const ordre = [];
+    const parSrc = new Map();
+    state.pages.forEach(p => {
+      if (!parSrc.has(p.src)) { parSrc.set(p.src, []); ordre.push(p.src); }
+      parSrc.get(p.src).push(p);
+    });
+    return ordre.map(id => srcById(id)).filter(Boolean).filter(src => !src.genere)
+      .map(src => ({ src, pages: parSrc.get(src.id), titre: baseName(src.name) }));
+  }
+  const couperTexte = (font, texte, taille, largeur) => {
+    let t = winAnsi(texte);
+    if (font.widthOfTextAtSize(t, taille) <= largeur) return t;
+    while (t.length > 1 && font.widthOfTextAtSize(t + '\u2026', taille) > largeur) t = t.slice(0, -1);
+    return t.replace(/\s+$/, '') + '\u2026';
+  };
+  const replierPdf = (font, texte, taille, largeur, max) => {
+    const out = [];
+    let ligne = '';
+    winAnsi(texte).split(/\s+/).forEach(mot => {
+      const essai = ligne ? ligne + ' ' + mot : mot;
+      if (!ligne || font.widthOfTextAtSize(essai, taille) <= largeur) ligne = essai;
+      else { out.push(ligne); ligne = mot; }
+    });
+    if (ligne) out.push(ligne);
+    if (out.length > max) { out.length = max; out[max - 1] = couperTexte(font, out[max - 1] + '\u2026', taille, largeur); }
+    return out;
+  };
+  // Le sommaire et les intercalaires : un petit PDF fabriqué sur place.
+  async function fabriquerPagesDossier(o) {
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const doc = await PDFDocument.create();
+    const reg = await doc.embedFont(StandardFonts.Helvetica);
+    const gras = await doc.embedFont(StandardFonts.HelveticaBold);
+    const W = 595.28, H = 841.89, marge = 60;
+    const gris = rgb(0.42, 0.45, 0.5), noir = rgb(0.08, 0.09, 0.11), bleu = rgb(0.15, 0.39, 0.79);
+    const PAR_PAGE = 32;
+    if (o.sommaire) {
+      const nbPages = Math.max(1, Math.ceil(o.pieces.length / PAR_PAGE));
+      for (let k = 0; k < nbPages; k++) {
+        const pg = doc.addPage([W, H]);
+        let y = H - 80;
+        if (k === 0) {
+          pg.drawText('Sommaire', { x: marge, y, size: 24, font: gras, color: noir });
+          y -= 30;
+          pg.drawText(couperTexte(reg, o.titre, 12, W - 2 * marge), { x: marge, y, size: 12, font: reg, color: gris });
+          y -= 18;
+          pg.drawText(winAnsi(plural(o.pieces.length, 'pi\u00e8ce', 'pi\u00e8ces') + ' \u00b7 ' + plural(o.totalPages, 'page', 'pages') + ' \u00b7 ' + todayStr()), { x: marge, y, size: 10, font: reg, color: gris });
+          y -= 14;
+        } else {
+          pg.drawText('Sommaire (suite)', { x: marge, y, size: 16, font: gras, color: noir });
+          y -= 16;
+        }
+        pg.drawRectangle({ x: marge, y: y - 6, width: W - 2 * marge, height: 1.2, color: bleu });
+        y -= 30;
+        o.pieces.slice(k * PAR_PAGE, (k + 1) * PAR_PAGE).forEach(pc => {
+          const num = winAnsi('Pi\u00e8ce n\u00b0 ' + pc.n);
+          pg.drawText(num, { x: marge, y, size: 11, font: gras, color: noir });
+          const pageTxt = 'p. ' + pc.debut;
+          const wp = reg.widthOfTextAtSize(pageTxt, 11);
+          pg.drawText(pageTxt, { x: W - marge - wp, y, size: 11, font: reg, color: noir });
+          const xT = marge + 78;
+          const titre = couperTexte(reg, pc.titre, 11, W - marge - wp - 14 - xT);
+          pg.drawText(titre, { x: xT, y, size: 11, font: reg, color: noir });
+          // les points de conduite
+          const xFin = W - marge - wp - 8, xDeb = xT + reg.widthOfTextAtSize(titre, 11) + 6;
+          for (let x = xDeb; x < xFin; x += 5) pg.drawCircle({ x, y: y + 2, size: 0.55, color: gris });
+          y -= 22;
+        });
+        pg.drawText(winAnsi(o.titre), { x: marge, y: 40, size: 9, font: reg, color: gris });
+      }
+    }
+    if (o.intercalaires) {
+      o.pieces.forEach(pc => {
+        const pg = doc.addPage([W, H]);
+        const sur = winAnsi('PI\u00c8CE N\u00b0');
+        pg.drawText(sur, { x: (W - gras.widthOfTextAtSize(sur, 16)) / 2, y: H - 300, size: 16, font: gras, color: bleu });
+        const n = String(pc.n);
+        pg.drawText(n, { x: (W - gras.widthOfTextAtSize(n, 120)) / 2, y: H - 420, size: 120, font: gras, color: noir });
+        let y = H - 480;
+        replierPdf(gras, pc.titre, 20, W - 2 * marge, 3).forEach(l => {
+          pg.drawText(l, { x: (W - gras.widthOfTextAtSize(l, 20)) / 2, y, size: 20, font: gras, color: noir });
+          y -= 28;
+        });
+        const sous = winAnsi(plural(pc.pages.length, 'page', 'pages') + (o.numerotation ? ' \u00b7 pages ' + (pc.debut + (o.intercalaires ? 1 : 0)) + ' \u00e0 ' + (pc.debut + pc.pages.length - (o.intercalaires ? 0 : 1)) : ''));
+        pg.drawText(sous, { x: (W - reg.widthOfTextAtSize(sous, 11)) / 2, y: y - 6, size: 11, font: reg, color: gris });
+        pg.drawText(winAnsi(o.titre), { x: marge, y: 40, size: 9, font: reg, color: gris });
+      });
+    }
+    return doc.save();
+  }
+  function toolDossier() {
+    const pieces = piecesDuDocument();
+    if (!pieces.length) { toast('Ouvrez d\'abord les documents qui composent le dossier.', 'warn'); return; }
+    const titre = input('do-titre', 'text', 'Dossier du ' + todayStr());
+    const inter = checkbox('do-inter', 'Un intercalaire devant chaque pièce (page de titre « Pièce n° »)', true);
+    const mention = checkbox('do-mention', 'La mention « Pièce n° … » en haut à droite de chaque page', true);
+    const numero = checkbox('do-num', 'Une pagination continue en pied de page', true);
+    const sommaire = checkbox('do-som', 'Un sommaire en tête du dossier (pièces et pages)', true);
+    const signets = checkbox('do-signets', 'Un signet par pièce', true);
+    const liste = document.createElement('div'); liste.className = 'list';
+    const titres = [];
+    pieces.forEach((pc, k) => {
+      const ligne = document.createElement('div'); ligne.className = 'list-item';
+      const n = document.createElement('span'); n.className = 'p'; n.style.flex = 'none'; n.style.fontFamily = 'var(--chiffre)'; n.style.color = 'var(--bleu-vif)';
+      n.textContent = 'Pièce n° ' + (k + 1);
+      const g = document.createElement('div'); g.className = 'g';
+      const t = input('do-piece-' + k, 'text', pc.titre);
+      t.style.width = '100%';
+      const sfx = document.createElement('div'); sfx.className = 's';
+      sfx.textContent = plural(pc.pages.length, 'page', 'pages') + ' · ' + pc.src.name;
+      g.append(t, sfx);
+      ligne.append(n, g);
+      liste.appendChild(ligne);
+      titres.push(t);
+    });
+    dialog({
+      title: 'Constituer un dossier de pièces', icon: IC.dossier, wide: true, submitOnEnter: false,
+      build: b => {
+        b.append(field('Titre du dossier', titre));
+        b.append(groupOf('Les pièces, dans l\'ordre des pages', [liste]));
+        b.append(inter, mention, numero, sommaire, signets);
+        b.append(note('Chaque document ouvert devient une pièce ; ses pages sont regroupées. Le sommaire indique la page où commence chaque pièce : constituez le dossier en dernier, une fois les pages en ordre. Ctrl+Z défait le tout.'));
+      },
+      actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Constituer le dossier', primary: true, onClick: async close => {
+        close();
+        setBusy('Constitution du dossier…', 0);
+        try {
+          const o = {
+            titre: titre.value.trim() || ('Dossier du ' + todayStr()),
+            intercalaires: inter.input.checked, mention: mention.input.checked, numerotation: numero.input.checked,
+            sommaire: sommaire.input.checked, signets: signets.input.checked,
+            pieces: pieces.map((pc, k) => ({ n: k + 1, titre: titres[k].value.trim() || pc.titre, pages: pc.pages, src: pc.src })),
+          };
+          const ns = o.sommaire ? Math.max(1, Math.ceil(o.pieces.length / 32)) : 0;
+          let debut = ns + 1;
+          o.pieces.forEach(pc => { pc.debut = debut; debut += (o.intercalaires ? 1 : 0) + pc.pages.length; });
+          o.totalPages = debut - 1;
+          snapshot();
+          let gPages = [];
+          if (o.sommaire || o.intercalaires) {
+            const bytes = await fabriquerPagesDossier(o);
+            const genere = await addPdfSource('Sommaire et intercalaires', bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), { silent: true });
+            genere.genere = true;
+            gPages = state.pages.filter(p => p.src === genere.id);
+          }
+          const ordre = [];
+          let gi = 0;
+          const somPages = gPages.slice(0, ns); gi = ns;
+          ordre.push(...somPages);
+          o.pieces.forEach(pc => {
+            if (o.intercalaires) ordre.push(gPages[gi++]);
+            ordre.push(...pc.pages);
+            if (o.mention) pc.pages.forEach(p => { p.piece = 'Pièce n° ' + pc.n; });
+          });
+          // les pages d'autres sources générées (un dossier précédent) suivent
+          state.pages.forEach(p => { if (ordre.indexOf(p) < 0 && gPages.indexOf(p) < 0) ordre.push(p); });
+          state.pages = ordre;
+          if (o.numerotation) {
+            state.stamp = Object.assign({
+              headerLeft: '', headerCenter: '', headerRight: '', footerLeft: '', footerCenter: '', footerRight: '',
+              font: 'Helvetica', bold: false, size: 9, color: '#444444', margin: 28, start: 1, skipFirst: false, batesPrefix: '', batesDigits: 4,
+            }, state.stamp || {}, { footerCenter: '{p} / {n}' });
+          }
+          if (o.signets) {
+            if (somPages.length) insererSignet(state.signets, { id: ++uid, titre: 'Sommaire', page: somPages[0].id, enfants: [] });
+            o.pieces.forEach((pc, k) => {
+              const premiere = o.intercalaires ? gPages[ns + k] : pc.pages[0];
+              if (premiere) insererSignet(state.signets, { id: ++uid, titre: 'Pièce n° ' + pc.n + ' — ' + pc.titre, page: premiere.id, enfants: [] });
+            });
+          }
+          state.filenameDirty = true;
+          el.filename.value = safeBase(o.titre);
+          state.touched = true;
+          state.selected.clear();
+          render();
+          setLast('Dossier constitué : ' + plural(o.pieces.length, 'pièce', 'pièces') + ', ' + plural(state.pages.length, 'page', 'pages') + ' · Ctrl+Z pour défaire');
+        } catch (e) { console.error(e); toast('Le dossier n\'a pas pu être constitué : ' + e.message, 'error'); }
+        finally { setBusy(''); }
+      } }],
+    });
+  }
+
+  // =====================================================================
+  //  Traitement par lots
+  //  -------------------------------------------------------------------
+  //  Le même traitement sur une série de fichiers, sans les ouvrir un par
+  //  un : chacun passe par un document de travail à part, le document en
+  //  cours n'est pas touché, et les résultats partent dans une archive.
+  // =====================================================================
+  const LOTS = [
+    ['vides', 'Retirer les pages vides'],
+    ['compresser', 'Réduire la taille (150 ppp)'],
+    ['numeroter', 'Numéroter les pages (pied de page)'],
+    ['proteger', 'Protéger par mot de passe'],
+    ['images', 'Convertir les images en PDF'],
+    ['separer', 'Séparer : une page par fichier'],
+    ['texte', 'Extraire le texte (.txt)'],
+  ];
+  async function traiterLots(fichiers, op, params, avancement) {
+    const sorties = [], rapport = [];
+    const sauve = prendreEtat();
+    state.silencieux = true;
+    try {
+      for (let i = 0; i < fichiers.length; i++) {
+        const f = fichiers[i];
+        const base = safeBase(baseName(f.name));
+        if (avancement) avancement(f.name, i, fichiers.length);
+        poserEtat(etatVierge());
+        try {
+          if (op === 'images' && !isImage(f)) { rapport.push(f.name + ' : pas une image, laissé de côté'); continue; }
+          await addFiles([f]);
+          if (!state.pages.length) { rapport.push(f.name + ' : illisible'); continue; }
+          if (op === 'vides') {
+            const r = await detecterPagesVides(state.pages, SENSIBILITE.normal, null, null);
+            const ids = new Set((r ? r.vides : []).map(m => m.p.id));
+            const restantes = state.pages.filter(p => !ids.has(p.id));
+            if (!restantes.length) { rapport.push(f.name + ' : toutes les pages sont vides, rien à garder'); continue; }
+            sorties.push({ nom: base + '-sans-vides.pdf', octets: await buildPdf(restantes, { noInPlace: ids.size > 0 }) });
+            rapport.push(f.name + ' : ' + (ids.size ? plural(ids.size, 'page vide retirée', 'pages vides retirées') : 'aucune page vide'));
+          } else if (op === 'compresser') {
+            const avant = state.sources.reduce((a, s) => a + s.bytes.byteLength, 0);
+            const octets = await buildPdf(state.pages, { rasterize: true, dpi: 150, quality: 0.72, noInPlace: true });
+            sorties.push({ nom: base + '-leger.pdf', octets });
+            rapport.push(f.name + ' : ' + fmtSize(avant) + ' → ' + fmtSize(octets.length));
+          } else if (op === 'numeroter') {
+            state.stamp = { headerLeft: '', headerCenter: '', headerRight: '', footerLeft: '', footerCenter: '{p} / {n}', footerRight: '',
+              font: 'Helvetica', bold: false, size: 9, color: '#444444', margin: 28, start: 1, skipFirst: false, batesPrefix: '', batesDigits: 4 };
+            sorties.push({ nom: base + '-numerote.pdf', octets: await buildPdf(state.pages) });
+            rapport.push(f.name + ' : ' + plural(state.pages.length, 'page numérotée', 'pages numérotées'));
+          } else if (op === 'proteger') {
+            state.security = { userPassword: params.pw || '', ownerPassword: params.pwo || params.pw || '', permissions: {} };
+            sorties.push({ nom: base + '-protege.pdf', octets: await buildPdf(state.pages) });
+            rapport.push(f.name + ' : protégé');
+          } else if (op === 'images') {
+            sorties.push({ nom: base + '.pdf', octets: await buildPdf(state.pages) });
+            rapport.push(f.name + ' : converti en PDF');
+          } else if (op === 'separer') {
+            const n = state.pages.length;
+            for (let k = 0; k < n; k++) sorties.push({ nom: base + '-' + pad(k + 1, String(n).length) + '.pdf', octets: await buildPdf([state.pages[k]], { noInPlace: true }) });
+            rapport.push(f.name + ' : ' + plural(n, 'fichier', 'fichiers'));
+          } else if (op === 'texte') {
+            const parts = [];
+            for (let k = 0; k < state.pages.length; k++) parts.push('--- Page ' + (k + 1) + ' ---\n' + ((await getPageText(state.pages[k])) || '(aucun texte)'));
+            sorties.push({ nom: base + '.txt', octets: new TextEncoder().encode(parts.join('\n\n')) });
+            rapport.push(f.name + ' : texte extrait');
+          }
+        } catch (e) { console.error(e); rapport.push(f.name + ' : échec (' + (e && e.message ? e.message : e) + ')'); }
+      }
+    } finally {
+      poserEtat(sauve);
+      state.silencieux = false;
+      render();
+    }
+    return { sorties, rapport };
+  }
+  function toolLots() {
+    const fichiers = [];
+    const liste = document.createElement('div'); liste.className = 'list';
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.multiple = true; inp.id = 'lots-fichiers'; inp.className = 'sr-only'; inp.tabIndex = -1;
+    inp.accept = 'application/pdf,.pdf,image/png,image/jpeg,image/webp';
+    const choisir = document.createElement('button');
+    choisir.type = 'button'; choisir.className = 'tb-btn'; choisir.style.border = '1px solid var(--trait)';
+    choisir.textContent = 'Choisir les fichiers…';
+    choisir.addEventListener('click', () => { inp.value = ''; inp.click(); });
+    const info = note('Aucun fichier choisi.');
+    const remplir = () => {
+      liste.replaceChildren();
+      fichiers.forEach((f, i) => {
+        const ligne = document.createElement('div'); ligne.className = 'list-item';
+        const g = document.createElement('div'); g.className = 'g';
+        const n = document.createElement('div'); n.className = 'n'; n.textContent = f.name;
+        const sz = document.createElement('div'); sz.className = 's'; sz.textContent = fmtSize(f.size);
+        g.append(n, sz);
+        const x = document.createElement('button');
+        x.type = 'button'; x.className = 'doc-rm'; x.title = 'Retirer'; x.setAttribute('aria-label', 'Retirer ' + f.name);
+        x.style.opacity = '1';
+        x.appendChild(icon(IC.x, { sw: 1.7 }));
+        x.addEventListener('click', () => { fichiers.splice(i, 1); remplir(); });
+        ligne.append(g, x);
+        liste.appendChild(ligne);
+      });
+      info.textContent = fichiers.length ? plural(fichiers.length, 'fichier', 'fichiers') + ' · ' + fmtSize(fichiers.reduce((a, f) => a + f.size, 0)) : 'Aucun fichier choisi.';
+    };
+    inp.addEventListener('change', () => {
+      Array.from(inp.files || []).forEach(f => { if ((isPdf(f) || isImage(f)) && !fichiers.some(x => x.name === f.name && x.size === f.size)) fichiers.push(f); });
+      remplir();
+    });
+    const op = select('lots-op', LOTS, 'vides');
+    const pw = input('lots-pw', 'password', ''), pwo = input('lots-pwo', 'password', '');
+    const pwWrap = rowOf([field('Mot de passe d\'ouverture', pw), field('Mot de passe propriétaire', pwo, 'Facultatif')]);
+    pwWrap.hidden = true;
+    op.addEventListener('change', () => { pwWrap.hidden = op.value !== 'proteger'; });
+    dialog({
+      title: 'Traiter plusieurs fichiers', icon: IC.lots, wide: true, submitOnEnter: false,
+      build: b => {
+        b.append(rowOf([choisir, info], true));
+        b.append(inp);
+        b.append(liste);
+        b.append(field('Traitement', op));
+        b.append(pwWrap);
+        b.append(note('Chaque fichier est traité à part, le document ouvert n\'est pas touché. Les résultats sont réunis dans une archive ZIP (un seul fichier : enregistré tel quel).'));
+      },
+      actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Lancer', primary: true, onClick: async close => {
+        if (!fichiers.length) { toast('Choisissez d\'abord les fichiers à traiter.', 'warn'); return; }
+        if (op.value === 'proteger' && !FEAT.encrypt) { toast('Le chiffrement n\'est pas disponible ici.', 'error'); return; }
+        if (op.value === 'proteger' && !pw.value && !pwo.value) { toast('Indiquez au moins un mot de passe.', 'warn'); return; }
+        close();
+        const quoi = op.value;
+        setBusy('Traitement du lot…', 0);
+        try {
+          const r = await traiterLots(fichiers.slice(), quoi, { pw: pw.value, pwo: pwo.value }, (nom, i, n) => setBusy('Lot : ' + nom + ' (' + (i + 1) + '/' + n + ')', i / n));
+          const jour = new Date().toISOString().slice(0, 10);
+          if (!r.sorties.length) toast('Aucun fichier produit. ' + r.rapport.join(' · '), 'warn');
+          else if (r.sorties.length === 1 || !FEAT.zip) {
+            for (const f of r.sorties) await deliver(f.octets, f.nom, /\.txt$/.test(f.nom) ? 'text/plain' : 'application/pdf');
+          } else {
+            const zip = new JSZip();
+            r.sorties.forEach(f => zip.file(f.nom, f.octets));
+            const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+            await deliver(blob, 'lot-' + quoi + '-' + jour + '.zip', 'application/zip');
+          }
+          setLast('Lot traité : ' + plural(r.sorties.length, 'fichier produit', 'fichiers produits'));
+          dialog({
+            title: 'Lot traité', icon: IC.lots,
+            build: b => {
+              b.append(note(plural(r.sorties.length, 'fichier produit', 'fichiers produits') + (r.sorties.length > 1 && FEAT.zip ? ', réunis dans une archive ZIP.' : '.')));
+              const ul = document.createElement('div'); ul.className = 'list';
+              r.rapport.forEach(t => { const d = document.createElement('div'); d.className = 'list-item'; d.textContent = t; ul.appendChild(d); });
+              b.append(ul);
+            },
+          });
+        } catch (e) { console.error(e); toast('Échec du traitement : ' + e.message, 'error'); }
+        finally { setBusy(''); }
+      } }],
+    });
   }
 
   function toolImages() {
@@ -5940,21 +6436,167 @@
     });
   }
 
+  // Le texte d'une page avec, pour chaque morceau, sa place sur la page :
+  // de quoi retrouver où se trouve une occurrence pour la caviarder.
+  async function texteAvecPositions(p) {
+    const src = srcById(p.src);
+    const g = pageGeom(p);
+    let texte = '', last = null;
+    const morceaux = [];
+    if (src) {
+      try {
+        const page = await src.pdfjs.getPage(p.index + 1);
+        const vp = page.getViewport({ scale: 1, rotation: g.total });
+        const tc = await page.getTextContent();
+        tc.items.forEach(it => {
+          if (!it.str) return;
+          const m = pdfjs.Util.transform(vp.transform, it.transform);
+          const size = Math.hypot(m[2], m[3]) || Math.abs(m[3]) || 10;
+          const w = it.width > 0 ? it.width : size * it.str.length * 0.5;
+          if (last && Math.abs(m[5] - last.base) > 2) texte += '\n';
+          else if (texte && !/\s$/.test(texte) && last && m[4] - last.fin > size * 0.12) texte += ' ';
+          const i0 = texte.length;
+          texte += it.str;
+          morceaux.push({ i0, i1: texte.length, x: m[4], base: m[5], w, size });
+          last = { base: m[5], fin: m[4] + w };
+        });
+        page.cleanup();
+      } catch (e) { console.warn('Texte :', e); }
+    }
+    if (!morceaux.length && p.ocr && p.ocr.mots) {
+      p.ocr.mots.forEach(m => {
+        if (last && Math.abs((m.y + m.h) - last.base) > m.h * 0.6) texte += '\n'; else if (texte) texte += ' ';
+        const i0 = texte.length;
+        texte += m.t;
+        morceaux.push({ i0, i1: texte.length, x: m.x, base: m.y + m.h * 0.8, w: m.w, size: m.h * 1.05 });
+        last = { base: m.y + m.h, fin: m.x + m.w };
+      });
+    }
+    return { texte, morceaux };
+  }
+  // Les rectangles (repère affiché) couverts par les caractères [i0, i1[.
+  function rectsOccurrence(morceaux, i0, i1) {
+    const out = [];
+    morceaux.forEach(m => {
+      if (m.i1 <= i0 || m.i0 >= i1) return;
+      const n = Math.max(1, m.i1 - m.i0);
+      const fa = Math.max(0, i0 - m.i0) / n, fb = Math.min(n, i1 - m.i0) / n;
+      if (fb <= fa) return;
+      out.push({ x: m.x + m.w * fa, y: m.base - m.size * 0.85, w: m.w * (fb - fa), h: m.size * 1.1 });
+    });
+    return out;
+  }
+  const regexDe = (terme, casse) => new RegExp(String(terme).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), casse ? 'g' : 'gi');
+
+  // Caviarder partout : chaque occurrence est couverte d'un rectangle noir,
+  // et la page convertie en image à l'export — le texte disparaît vraiment.
+  async function caviarderPartout(terme, casse, avancement) {
+    const rx = regexDe(terme, casse);
+    let occurrences = 0, pages = 0;
+    const ajouts = [];
+    for (let i = 0; i < state.pages.length; i++) {
+      const p = state.pages[i];
+      if (avancement) avancement(i, state.pages.length);
+      const { texte, morceaux } = await texteAvecPositions(p);
+      rx.lastIndex = 0;
+      let m, n = 0;
+      const rects = [];
+      while ((m = rx.exec(texte)) && n < 2000) {
+        if (!m[0].length) { rx.lastIndex++; continue; }
+        rectsOccurrence(morceaux, m.index, m.index + m[0].length).forEach(r => rects.push(r));
+        n++;
+      }
+      if (!n) continue;
+      pages++; occurrences += n;
+      rects.forEach(r => ajouts.push({ p, a: { id: -1, type: 'redact', x: r.x - 1, y: r.y - 0.5, w: r.w + 2, h: r.h + 1, color: '#000000', opacity: 1, width: 1 } }));
+      if (i % 4 === 0) await nextFrame();
+    }
+    if (!occurrences) return { occurrences: 0, pages: 0 };
+    snapshot();
+    ajouts.forEach(({ p, a }) => { a.id = ++uid; p.ann.push(a); });
+    state.touched = true;
+    render();
+    return { occurrences, pages };
+  }
+
+  // Remplacer partout : chaque bloc où le terme apparaît devient une
+  // retouche, exactement comme si on l'avait corrigé à la main dans
+  // l'éditeur — même fond relevé, mêmes polices, même mise en page.
+  async function remplacerPartout(terme, nouveau, casse, avancement) {
+    const rx = regexDe(terme, casse);
+    let occurrences = 0, pages = 0;
+    const neufs = [], touchees = [];
+    const remplacerDans = a => {
+      let n = 0;
+      const texte = runsTexte(a.runs);
+      const coups = [];
+      rx.lastIndex = 0;
+      let m;
+      while ((m = rx.exec(texte)) && coups.length < 500) { if (!m[0].length) { rx.lastIndex++; continue; } coups.push([m.index, m.index + m[0].length]); }
+      // de la fin vers le début : les positions précédentes ne bougent pas
+      coups.reverse().forEach(([d, f]) => {
+        let premier = true;
+        runsAppliquer(a, d, f, c => { c.t = premier ? nouveau : ''; premier = false; });
+        n++;
+      });
+      if (n) recalcRuns(a);
+      return n;
+    };
+    for (let i = 0; i < state.pages.length; i++) {
+      const p = state.pages[i];
+      if (avancement) avancement(i, state.pages.length);
+      const texte = await getPageText(p);
+      rx.lastIndex = 0;
+      const dejaDedans = (p.ann || []).filter(x => x.type === 'edit' && rx.test(runsTexte(x.runs || [])));
+      rx.lastIndex = 0;
+      if (!rx.test(texte) && !dejaDedans.length) continue;
+      let n = 0;
+      // Un bloc déjà corrigé se corrige dans sa retouche, pas par-dessus.
+      const copies = dejaDedans.map(x => { const c = Object.assign({}, x, { runs: x.runs.map(r => Object.assign({}, r)) }); const k = remplacerDans(c); return k ? { p, avant: x, apres: c, k } : null; }).filter(Boolean);
+      copies.forEach(c => { n += c.k; touchees.push(c); });
+      const blocs = (await edLignesDe(p)).blocs;
+      for (const b of blocs) {
+        rx.lastIndex = 0;
+        if (!rx.test(b.text)) continue;
+        const couvert = (p.ann || []).some(x => x.type === 'edit' && x.x < b.x + b.w && x.x + x.w > b.x && x.y < b.y + b.h && x.y + annHauteur(x) > b.y);
+        if (couvert) continue;
+        try {
+          const a = await edFabriquerRetouche(p, b, blocs);
+          const k = remplacerDans(a);
+          if (k) { n += k; neufs.push({ p, a }); }
+        } catch (e) { console.warn('Remplacement :', e); }
+      }
+      if (n) { pages++; occurrences += n; }
+      await nextFrame();
+    }
+    if (!occurrences) return { occurrences: 0, pages: 0 };
+    snapshot();
+    touchees.forEach(({ p, avant, apres }) => { Object.assign(avant, apres); });
+    neufs.forEach(({ p, a }) => { a.id = ++uid; p.ann.push(a); });
+    state.touched = true;
+    render();
+    return { occurrences, pages };
+  }
+
   function toolSearch() {
     const q = input('se-q', 'text', '');
     q.placeholder = 'Mot ou expression à rechercher';
+    const rempl = input('se-r', 'text', '');
+    rempl.placeholder = 'Texte de remplacement';
+    const casse = checkbox('se-casse', 'Respecter la casse', false);
     const results = document.createElement('div'); results.className = 'list';
     const info = note('');
-    let token = 0;
+    let token = 0, total = 0;
     async function run() {
       const term = q.value.trim();
       const my = ++token;
       results.replaceChildren();
       state.pages.forEach(p => { const t = tiles.get(p.id); if (t) t.classList.remove('hit'); });
-      if (term.length < 2) { info.textContent = 'Saisissez au moins deux caractères.'; return; }
+      total = 0;
+      if (term.length < 2) { info.textContent = 'Saisissez au moins deux caractères.'; majBoutons(); return; }
       info.textContent = 'Recherche…';
       let found = 0;
-      const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      const rx = regexDe(term, casse.input.checked);
       for (let i = 0; i < state.pages.length; i++) {
         if (my !== token) return;
         const p = state.pages[i];
@@ -5963,6 +6605,7 @@
         const m = rx.exec(text);
         if (!m) continue;
         found++;
+        total += (text.match(rx) || []).length;
         const t = tiles.get(p.id); if (t) t.classList.add('hit');
         const from = Math.max(0, m.index - 40);
         const snippet = (from ? '…' : '') + text.slice(from, m.index) + '§§' + m[0] + '§§' + text.slice(m.index + m[0].length, m.index + m[0].length + 60) + '…';
@@ -5985,16 +6628,217 @@
         if (i % 6 === 0) await nextFrame();
       }
       if (my !== token) return;
-      info.textContent = found ? plural(found, 'page contient', 'pages contiennent') + ' « ' + term + ' »' : 'Aucun résultat pour « ' + term + ' ».';
+      info.textContent = found ? plural(total, 'occurrence', 'occurrences') + ' sur ' + plural(found, 'page', 'pages') + ' pour « ' + term + ' »' : 'Aucun résultat pour « ' + term + ' ».';
+      majBoutons();
     }
     let deb = null;
     q.addEventListener('input', () => { clearTimeout(deb); deb = setTimeout(run, 260); });
-    dialog({
-      title: 'Rechercher du texte', icon: IC.search, wide: true, submitOnEnter: false,
-      build: b => { b.append(field('Recherche', q)); b.append(info); b.append(results); },
-      onClose: () => { state.pages.forEach(p => { const t = tiles.get(p.id); if (t) t.classList.remove('hit'); }); },
-      actions: [{ label: 'Fermer', primary: true, onClick: c => c() }],
+    casse.input.addEventListener('change', run);
+    let api = null;
+    const majBoutons = () => {
+      if (!api) return;
+      const bR = api.foot.querySelector('#se-remplacer'), bC = api.foot.querySelector('#se-caviarder');
+      if (bR) { bR.disabled = !total; bR.textContent = total ? 'Remplacer tout (' + total + ')' : 'Remplacer tout'; }
+      if (bC) { bC.disabled = !total; bC.textContent = total ? 'Caviarder tout (' + total + ')' : 'Caviarder tout'; }
+    };
+    api = dialog({
+      title: 'Rechercher, remplacer, caviarder', icon: IC.search, wide: true, submitOnEnter: false,
+      build: b => {
+        b.append(rowOf([field('Recherche', q), field('Remplacer par', rempl)]));
+        b.append(casse);
+        b.append(info);
+        b.append(results);
+        b.append(note('Remplacer tout corrige chaque bloc concerné comme dans l\'éditeur : mêmes polices, même mise en page, fond relevé. Caviarder tout masque chaque occurrence d\'un rectangle noir ; la page est convertie en image à l\'export, le texte masqué disparaît vraiment.'));
+      },
+      onClose: () => { token++; state.pages.forEach(p => { const t = tiles.get(p.id); if (t) t.classList.remove('hit'); }); },
+      actions: [
+        { label: 'Fermer', onClick: c => c() },
+        { id: 'se-caviarder', label: 'Caviarder tout', onClick: async close => {
+          const term = q.value.trim();
+          if (term.length < 2 || !total) return;
+          token++; close();
+          setBusy('Caviardage de « ' + term + ' »…', 0);
+          try {
+            const r = await caviarderPartout(term, casse.input.checked, (i, n) => setBusy('Caviardage… page ' + (i + 1) + '/' + n, i / n));
+            setLast(r.occurrences ? plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + ' sur ' + plural(r.pages, 'page', 'pages') + ' · Ctrl+Z pour annuler' : 'Aucune occurrence trouvée sur la page.');
+            if (r.occurrences) toast(plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + '. Les pages concernées seront converties en image à l\'export.');
+          } catch (e) { console.error(e); toast('Échec du caviardage : ' + e.message, 'error'); }
+          finally { setBusy(''); }
+        } },
+        { id: 'se-remplacer', label: 'Remplacer tout', primary: true, onClick: async close => {
+          const term = q.value.trim();
+          if (term.length < 2 || !total) return;
+          token++; close();
+          setBusy('Remplacement de « ' + term + ' »…', 0);
+          try {
+            const r = await remplacerPartout(term, rempl.value, casse.input.checked, (i, n) => setBusy('Remplacement… page ' + (i + 1) + '/' + n, i / n));
+            setLast(r.occurrences ? plural(r.occurrences, 'occurrence remplacée', 'occurrences remplacées') + ' sur ' + plural(r.pages, 'page', 'pages') + ' · Ctrl+Z pour annuler' : 'Rien à remplacer : le texte n\'est pas modifiable (scan sans OCR ?).');
+            if (!r.occurrences) toast('Aucun bloc modifiable ne contient « ' + term + ' ». Sur un scan, lancez d\'abord la reconnaissance de texte.', 'warn');
+          } catch (e) { console.error(e); toast('Échec du remplacement : ' + e.message, 'error'); }
+          finally { setBusy(''); }
+        } },
+      ],
     });
+    majBoutons();
+  }
+
+  // =====================================================================
+  //  Copier un tableau vers Excel
+  //  -------------------------------------------------------------------
+  //  Les morceaux de texte de la page sont rangés en rangées (même ligne de
+  //  base) puis en colonnes : une colonne s'arrête là où une bande verticale
+  //  blanche traverse toutes les rangées du tableau. Le résultat se colle
+  //  dans Excel cellule par cellule.
+  // =====================================================================
+  function tableauDepuisMorceaux(morceaux) {
+    const items = (morceaux || []).filter(m => m && m.str && m.str.trim())
+      .map(m => ({ str: m.str.replace(/\s+/g, ' '), x: m.x, x1: m.x + (m.w > 0 ? m.w : (m.size || 10) * m.str.length * 0.5), base: m.base, size: m.size || 10 }));
+    if (!items.length) return { lignes: [], colonnes: 0 };
+    items.sort((a, b) => (a.base - b.base) || (a.x - b.x));
+    const rangees = [];
+    let R = null;
+    items.forEach(m => {
+      if (R && Math.abs(m.base - R.base) <= Math.max(1.5, Math.min(m.size, R.size) * 0.45)) { R.items.push(m); return; }
+      R = { base: m.base, size: m.size, items: [m] };
+      rangees.push(R);
+    });
+    const tailles = items.map(m => m.size).sort((a, b) => a - b);
+    const corps = tailles[Math.floor(tailles.length / 2)] || 10;
+    rangees.forEach(r => {
+      r.items.sort((a, b) => a.x - b.x);
+      const cellules = [];
+      let C = null;
+      r.items.forEach(m => {
+        if (C && m.x - C.x1 <= Math.max(2, m.size * 0.9)) {
+          const blanc = m.x - C.x1 > m.size * 0.12 && !/\s$/.test(C.str) && !/^\s/.test(m.str);
+          C.str += (blanc ? ' ' : '') + m.str; C.x1 = Math.max(C.x1, m.x1);
+          return;
+        }
+        C = { str: m.str, x: m.x, x1: m.x1 };
+        cellules.push(C);
+      });
+      r.cellules = cellules.map(c => ({ str: c.str.trim(), x: c.x, x1: c.x1 })).filter(c => c.str);
+    });
+    // Les gouttières se cherchent sur les rangées qui ont au moins deux
+    // cellules : un paragraphe qui court sur toute la largeur n'est pas
+    // une rangée du tableau et ne doit pas boucher les colonnes.
+    const tableau = rangees.filter(r => r.cellules.length >= 2);
+    const toutes = [];
+    (tableau.length ? tableau : rangees).forEach(r => r.cellules.forEach(c => toutes.push(c)));
+    if (!toutes.length) return { lignes: [], colonnes: 0 };
+    const xmin = Math.floor(Math.min.apply(null, toutes.map(c => c.x)));
+    const xmax = Math.ceil(Math.max.apply(null, toutes.map(c => c.x1)));
+    const n = Math.max(1, xmax - xmin + 1);
+    const couv = new Uint16Array(n);
+    toutes.forEach(c => {
+      for (let i = Math.max(0, Math.floor(c.x - xmin)); i <= Math.min(n - 1, Math.ceil(c.x1 - xmin)); i++) couv[i]++;
+    });
+    const mini = Math.max(3, corps * 0.45);
+    const bornes = [xmin - 1];
+    let i = 0;
+    while (i < n) {
+      if (couv[i]) { i++; continue; }
+      let j = i;
+      while (j < n && !couv[j]) j++;
+      if (i > 0 && j < n && j - i >= mini) bornes.push(xmin + (i + j) / 2);
+      i = j;
+    }
+    bornes.push(xmax + 1);
+    const nc = bornes.length - 1;
+    const colonneDe = c => {
+      const cx = (c.x + c.x1) / 2;
+      for (let k = 0; k < nc; k++) if (cx >= bornes[k] && cx < bornes[k + 1]) return k;
+      return cx < bornes[0] ? 0 : nc - 1;
+    };
+    const lignes = rangees.map(r => {
+      const row = new Array(nc).fill('');
+      r.cellules.forEach(c => { const k = colonneDe(c); row[k] = row[k] ? row[k] + ' ' + c.str : c.str; });
+      return row;
+    }).filter(row => row.some(Boolean));
+    return { lignes, colonnes: nc };
+  }
+  const tableauTsv = lignes => lignes.map(r => r.map(c => String(c).replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\r\n');
+  const tableauCsv = lignes => '\ufeff' + lignes.map(r => r.map(c => {
+    const t = String(c);
+    return /[;"\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  }).join(';')).join('\r\n');
+  async function copierTexte(t) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(t); return true; } } catch (_) {}
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (_) { return false; }
+  }
+  async function morceauxDePage(p) {
+    const src = srcById(p.src);
+    const g = pageGeom(p);
+    const out = [];
+    try {
+      const page = await src.pdfjs.getPage(p.index + 1);
+      const vp = page.getViewport({ scale: 1, rotation: g.total });
+      const tc = await page.getTextContent();
+      tc.items.forEach(it => {
+        if (!it.str || !it.str.trim()) return;
+        const m = pdfjs.Util.transform(vp.transform, it.transform);
+        const size = Math.hypot(m[2], m[3]) || Math.abs(m[3]) || 10;
+        out.push({ str: it.str, x: m[4], base: m[5], w: it.width > 0 ? it.width : size * it.str.length * 0.5, size });
+      });
+      page.cleanup();
+    } catch (e) { console.warn('Tableau :', e); }
+    if (!out.length && p.ocr && p.ocr.mots) p.ocr.mots.forEach(m => out.push({ str: m.t, x: m.x, base: m.y + m.h * 0.8, w: m.w, size: m.h * 1.05 }));
+    return out;
+  }
+  function toolTableau() {
+    const courante = pageCouranteId();
+    const choix = select('tb-page', state.pages.map((p, i) => [String(p.id), 'Page ' + (i + 1)]), String(courante));
+    const info = note('');
+    const apercu = document.createElement('div'); apercu.className = 'apercu-tableau';
+    let lignes = [];
+    async function analyser() {
+      const p = state.pages.find(x => x.id === +choix.value);
+      if (!p) return;
+      info.textContent = 'Lecture de la page…';
+      apercu.replaceChildren();
+      const r = tableauDepuisMorceaux(await morceauxDePage(p));
+      lignes = r.lignes;
+      if (!lignes.length) { info.textContent = 'Aucun texte sur cette page. Sur un scan, lancez d\'abord la reconnaissance de texte.'; return; }
+      info.textContent = plural(lignes.length, 'ligne', 'lignes') + ' × ' + plural(r.colonnes, 'colonne', 'colonnes') + (r.colonnes < 2 ? ' — aucune colonne repérée : chaque ligne ira dans une seule cellule.' : '');
+      const t = document.createElement('table');
+      lignes.slice(0, 60).forEach(row => {
+        const tr = document.createElement('tr');
+        row.forEach(c => { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); });
+        t.appendChild(tr);
+      });
+      apercu.appendChild(t);
+      if (lignes.length > 60) apercu.appendChild(note('… et ' + (lignes.length - 60) + ' autres lignes.'));
+    }
+    choix.addEventListener('change', analyser);
+    dialog({
+      title: 'Copier un tableau vers Excel', icon: IC.tableau, wide: true, submitOnEnter: false,
+      build: b => {
+        b.append(field('Page', choix, 'Les colonnes sont repérées d\'après les blancs qui traversent les lignes du tableau.'));
+        b.append(info);
+        b.append(apercu);
+      },
+      actions: [
+        { label: 'Fermer', onClick: c => c() },
+        { label: 'Enregistrer en CSV', onClick: async () => {
+          if (!lignes.length) { toast('Rien à enregistrer.', 'warn'); return; }
+          await deliver(tableauCsv(lignes), safeBase(el.filename.value) + '-tableau.csv', 'text/csv;charset=utf-8');
+        } },
+        { label: 'Copier pour Excel', primary: true, onClick: async close => {
+          if (!lignes.length) { toast('Rien à copier.', 'warn'); return; }
+          const ok = await copierTexte(tableauTsv(lignes));
+          if (ok) { close(); toast(plural(lignes.length, 'ligne copiée', 'lignes copiées') + ' : collez dans Excel (Ctrl+V), une cellule par colonne.'); setLast('Tableau copié'); }
+          else toast('Le presse-papiers est inaccessible ici : enregistrez plutôt le CSV.', 'warn');
+        } },
+      ],
+    });
+    analyser();
   }
 
   function toolHelp() {
@@ -6222,15 +7066,24 @@
     if (!p) return [];
     const cle = p.id + ':' + p.rot;
     if (ed.lignesCle === cle && ed.lignes) return ed.lignes;
+    const r = await edLignesDe(p);
+    ed.polices = r.polices;
+    ed.lignes = r.blocs;
+    ed.lignesCle = cle;
+    return ed.lignes;
+  }
+  // Les blocs de texte d'une page, quelle qu'elle soit (l'éditeur, mais
+  // aussi remplacer partout, qui passe sur tout le document).
+  async function edLignesDe(p) {
     const src = srcById(p.src);
     const g = pageGeom(p);
     const morceaux = [];
+    let polices = new Map();
     try {
       const page = await src.pdfjs.getPage(p.index + 1);
       const vp = page.getViewport({ scale: 1, rotation: g.total });
       const tc = await page.getTextContent();
-      const polices = await polDeLaPage(page, tc);
-      ed.polices = Array.from(new Set(polices.values()));
+      polices = await polDeLaPage(page, tc);
       tc.items.forEach(it => {
         if (!it.str || !it.str.trim()) return;
         const m = pdfjs.Util.transform(vp.transform, it.transform);
@@ -6243,10 +7096,14 @@
         });
       });
       page.cleanup();
+      // Une page reconnue par l'OCR : ses mots font des morceaux comme les
+      // autres, et se corrigent de la même façon (le fond est relevé sur
+      // l'image, le texte corrigé écrit par-dessus).
+      if (!morceaux.length && p.ocr && p.ocr.mots) {
+        p.ocr.mots.forEach(m => morceaux.push({ str: m.t, x: m.x, base: m.y + m.h * 0.8, size: Math.max(4, m.h * 1.05), w: m.w, pol: null }));
+      }
     } catch (e) { console.error(e); }
-    ed.lignes = edParagraphes(morceaux, g);
-    ed.lignesCle = cle;
-    return ed.lignes;
+    return { blocs: edParagraphes(morceaux, g), polices: Array.from(new Set(polices.values())) };
   }
 
   function edNouvelleLigne(m) {
@@ -6518,8 +7375,8 @@
   // Rendu net d'une zone de la page. À la taille d'affichage, une lettre de
   // dix points ne fait qu'un pixel d'épaisseur : son cœur n'atteint jamais
   // sa vraie densité et la couleur relevée ressortirait délavée.
-  async function edZoneNette(zone, corps) {
-    const p = edPage();
+  async function edZoneNette(zone, corps, pageVoulue) {
+    const p = pageVoulue || edPage();
     const src = srcById(p.src);
     const g = pageGeom(p);
     const echelle = Math.min(6, Math.max(2.5, 36 / Math.max(4, corps || 11)));
@@ -6769,8 +7626,9 @@
   // rangée), au texte voisin sur la même ligne, ou aux marges du texte de
   // la page. C'est elle qui dit si la ligne est centrée ou calée à droite,
   // et jusqu'où elle peut grandir sans se replier.
-  async function edPlaceLigne(cible, lignes, fond) {
-    const g = pageGeom(edPage());
+  async function edPlaceLigne(cible, lignes, fond, pageVoulue) {
+    const p = pageVoulue || edPage();
+    const g = pageGeom(p);
     const fin = cible.x + cible.w;
     let gauche = cible.x, droite = Math.max(0, g.Wd - fin);
     lignes.forEach(l => {
@@ -6781,7 +7639,7 @@
     try {
       const bande = { x: Math.max(0, cible.x - gauche - 2), y: cible.y, w: 0, h: cible.h };
       bande.w = Math.min(g.Wd, fin + droite + 2) - bande.x;
-      const net = await edZoneNette(bande, cible.size);
+      const net = await edZoneNette(bande, cible.size, p);
       const k = net.echelle, W = net.cv.width;
       const d = net.cv.getContext('2d').getImageData(0, 0, W, net.cv.height).data;
       const ref = [parseInt(fond.slice(1, 3), 16), parseInt(fond.slice(3, 5), 16), parseInt(fond.slice(5, 7), 16)];
@@ -6815,7 +7673,15 @@
       toast(lignes.length ? 'Cliquez sur un paragraphe encadré.' : 'Aucun texte modifiable sur cette page. Un scan doit d\'abord être reconnu par un logiciel d\'OCR.', 'warn');
       return;
     }
-    let net = await edZoneNette({ x: cible.x, y: cible.y, w: cible.w, h: cible.h }, cible.size);
+    const a = await edFabriquerRetouche(edPage(), cible, lignes);
+    edCommit(a);
+    edEditRuns(a, { nouveau: true, point });
+  }
+
+  // La retouche d'un bloc : son fond relevé, ses morceaux avec leur
+  // police et leur couleur, sa mise en page d'origine — prête à être posée.
+  async function edFabriquerRetouche(p, cible, lignes) {
+    let net = await edZoneNette({ x: cible.x, y: cible.y, w: cible.w, h: cible.h }, cible.size, p);
     let couleurs = edCouleurs({ x: cible.x, y: cible.y, w: cible.w, h: cible.h }, net);
     if (!couleurs.encre) couleurs.encre = '#111111';
     // Une ligne seule — cellule d'un tableau, titre, libellé — se juge à la
@@ -6825,7 +7691,7 @@
     let aligne = cible.aligne;
     let zone = { x: cible.x, y: cible.y, w: cible.w, h: cible.h };
     if ((cible.lignesBouts || []).length === 1 && aligne !== 'justifie') {
-      const place = await edPlaceLigne(cible, lignes, couleurs.fond || '#FFFFFF');
+      const place = await edPlaceLigne(cible, lignes, couleurs.fond || '#FFFFFF', p);
       const tol = Math.max(2, cible.size * 0.25);
       if (place.gauche > 1.5 && Math.abs(place.gauche - place.droite) <= tol) aligne = 'centre';
       else if (place.droite <= Math.max(6, cible.size * 0.6) && place.gauche > place.droite * 3 + 4) aligne = 'droite';
@@ -6836,7 +7702,7 @@
       const aD = aligne === 'droite' ? 0 : Math.min(plafond, Math.max(0, place.droite - 1));
       if (aG || aD) {
         zone = { x: cible.x - aG, y: cible.y, w: cible.w + aG + aD, h: cible.h };
-        net = await edZoneNette(zone, cible.size);
+        net = await edZoneNette(zone, cible.size, p);
         const c2 = edCouleurs(zone, net);
         if (c2 && c2.fond) couleurs = Object.assign({}, couleurs, { fond: c2.fond });
       }
@@ -6894,8 +7760,7 @@
     });
     a.origine = { texte: a.text, ancres, styles };
     edPoserOrigine(a, cible);
-    edCommit(a);
-    edEditRuns(a, { nouveau: true, point });
+    return a;
   }
 
   async function edRenderPage() {
@@ -6963,6 +7828,8 @@
         svg.appendChild(hit);
       }
     });
+    const mention = mentionNode(p, pageGeom(p));
+    if (mention) { mention.style.pointerEvents = 'none'; svg.appendChild(mention); }
     svg.classList.toggle('texte', ed.tool === 'edittext');
     if (ed.tool === 'edittext' && ed.lignes && ed.lignesCle === p.id + ':' + p.rot) {
       ed.lignes.forEach((l, i) => {
@@ -7960,7 +8827,7 @@
       ed.side.appendChild(eff);
       ed.side.appendChild(note(sel.efface
         ? 'La page sera convertie en image à l\'export : le texte d\'origine disparaît réellement, mais la page n\'est plus sélectionnable.'
-        : 'Quand la correction tient dans la place disponible, elle est écrite directement dans la page : le texte d\'origine disparaît pour de bon, sans rectangle. Sinon il est recouvert, et reste retrouvable par copier-coller.',
+        : 'Quand la correction tient dans la place disponible, elle est écrite directement dans la page : le texte d\'origine disparaît pour de bon, sans rectangle. Sinon elle est posée par-dessus, et le texte d\'origine est effacé dessous.',
         sel.efface ? 'warn' : null));
     }
     if (isDraw || (isRect && (sel ? sel.type === 'box' : ed.tool === 'box'))) {
@@ -8101,6 +8968,7 @@
         { id: 'images', name: 'Ajouter des images', sub: 'JPEG, PNG, WebP en pages', icon: IC.image, run: toolImages },
         { id: 'vides', name: 'Détecter les pages vides', sub: 'Nettoyer un document scanné', icon: IC.vide, need: 'pages', run: toolPagesVides },
         { id: 'split', name: 'Diviser le document', sub: 'Un ou plusieurs fichiers', icon: IC.split, need: 'pages', run: toolSplit },
+        { id: 'dossier', name: 'Constituer un dossier', sub: 'Intercalaires, pièces numérotées, sommaire', icon: IC.dossier, need: 'pages', run: toolDossier },
         { id: 'resize', name: 'Redimensionner', sub: 'A4, Letter, marges', icon: IC.resize, need: 'pages', run: toolResize },
       ] },
       { title: 'Modifier', items: [
@@ -8124,7 +8992,11 @@
       ] },
       { title: 'Document', items: [
         { id: 'props', name: 'Propriétés', sub: 'Titre, auteur, mots-clés', icon: IC.info, need: 'pages', run: toolProperties, active: () => !!(state.meta.title || state.meta.author || state.meta.subject || state.meta.keywords) },
-        { id: 'search', name: 'Rechercher du texte', sub: 'Dans toutes les pages', icon: IC.search, need: 'pages', run: toolSearch },
+        { id: 'search', name: 'Rechercher, remplacer', sub: 'Ou caviarder, dans tout le document', icon: IC.search, need: 'pages', run: toolSearch },
+        { id: 'tableau', name: 'Copier un tableau', sub: 'Vers Excel, en colonnes', icon: IC.tableau, need: 'pages', run: toolTableau },
+      ] },
+      { title: 'Plusieurs fichiers', items: [
+        { id: 'lots', name: 'Traiter plusieurs fichiers', sub: 'Pages vides, compression, numérotation… en série', icon: IC.lots, run: toolLots },
       ] },
     ];
   }
@@ -8136,7 +9008,7 @@
     edit: '#8C5AE8', filigrane: '#D83790', entete: '#0D9F8F', numeros: '#E68619', form: '#2D9D5F',
     'exp-pdf': '#D7373F', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', compress: '#E68619',
     password: '#D7373F', flatten: '#2680EB',
-    props: '#6E7681', search: '#2680EB',
+    props: '#6E7681', search: '#2680EB', tableau: '#2D9D5F', dossier: '#D83790', lots: '#E68619',
   };
 
   function renderTools() {
