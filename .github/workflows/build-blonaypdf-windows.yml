@@ -91,8 +91,9 @@ jobs:
         if: github.event_name == 'push' && steps.v1.outputs.creer == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          # Le tag blonaypdf-v1 existe déjà dans le dépôt (posé sur le commit 0ed7dac) :
+          # la release s'y attache sans avoir à créer de tag.
           tag_name: blonaypdf-v1
-          target_commitish: 0ed7dac09ea1b2ac101842bb5de278607ef82a0e
           name: "Blonay PDF — version 1 (avant les dix ajouts)"
           prerelease: false
           body: |
