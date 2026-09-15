@@ -1,0 +1,18 @@
+# Bibliothèques récupérées depuis npm par outils/build.js
+outils/libs/
+
+# produit par outils/build.js puis compressé pour être embarqué
+outils/application/lanceur/blonay-pdf.html.gz
+outils/application/lanceur/Blonay PDF.exe
+
+# produits par outils/application/lanceur/construire.sh et par le workflow
+dist/
+BlonayPDF-windows.zip
+BlonayPDF-leger-windows.zip
+
+# dépendances et produits de l'application fenêtrée (outils/desktop)
+outils/node_modules/
+outils/desktop/node_modules/
+outils/desktop/app/
+outils/desktop/dist/
+outils/desktop/.electron-cache/

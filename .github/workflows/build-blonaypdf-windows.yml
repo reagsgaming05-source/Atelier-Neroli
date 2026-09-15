@@ -1,0 +1,120 @@
+name: Blonay PDF – Windows portable
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+    paths: ["outils/**", ".github/workflows/build-blonaypdf-windows.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: outils
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Bibliothèques de la page (pdf.js, pdf-lib, JSZip, depuis npm)
+        run: npm run libs
+
+      - name: Tests unitaires
+        run: npm test
+
+      - name: Application autonome (source unique → versions livrées)
+        run: npm run build
+
+      - name: Dépendances de l'application fenêtrée
+        working-directory: outils/desktop
+        run: npm ci
+
+      - name: Empaqueter (Electron, dossier portable)
+        working-directory: outils/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run dist:win
+
+      - name: Assembler le dossier portable
+        working-directory: outils/desktop
+        shell: pwsh
+        run: |
+          Rename-Item dist\win-unpacked BlonayPDF
+          Copy-Item ..\..\README.md dist\BlonayPDF\LISEZMOI.md
+          Copy-Item build\LISEZMOI-portable.txt dist\BlonayPDF\LISEZMOI-portable.txt
+          Get-ChildItem dist\BlonayPDF | Select-Object Name, Length
+
+      - name: Test de fumée de l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, export)
+        working-directory: outils/desktop
+        shell: pwsh
+        run: |
+          node smoke-test.js dist\BlonayPDF\BlonayPDF.exe
+          Remove-Item dist\BlonayPDF\data -Recurse -Force -ErrorAction SilentlyContinue
+
+      - name: Archive zip
+        working-directory: outils/desktop
+        shell: pwsh
+        run: Compress-Archive -Path dist\BlonayPDF -DestinationPath ..\..\BlonayPDF-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BlonayPDF-windows
+          path: BlonayPDF-windows.zip
+
+      - name: Retrouver la version 1 (le zip publié avant les dix ajouts), une seule fois
+        id: v1
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
+          gh release view blonaypdf-v1 *> $null
+          if ($LASTEXITCODE -eq 0) { Write-Host "La release blonaypdf-v1 existe déjà : rien à faire." ; "creer=false" >> $env:GITHUB_OUTPUT ; exit 0 }
+          gh release download blonaypdf-windows-latest -p BlonayPDF-windows.zip -O BlonayPDF-v1-windows.zip
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path BlonayPDF-v1-windows.zip)) { throw "Impossible de récupérer le zip de la version 1 depuis blonaypdf-windows-latest." }
+          Write-Host ("Zip de la version 1 : " + (Get-Item BlonayPDF-v1-windows.zip).Length + " octets")
+          "creer=true" >> $env:GITHUB_OUTPUT
+
+      - name: Conserver la version 1 (release « blonaypdf-v1 »)
+        if: github.event_name == 'push' && steps.v1.outputs.creer == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          # Le tag blonaypdf-v1 existe déjà dans le dépôt (posé sur le commit 0ed7dac) :
+          # la release s'y attache sans avoir à créer de tag.
+          tag_name: blonaypdf-v1
+          name: "Blonay PDF — version 1 (avant les dix ajouts)"
+          prerelease: false
+          body: |
+            Version conservée telle quelle : l'application portable Windows avant les dix ajouts de la version 2
+            (signets, tampons mémorisés, commentaires PDF, dossier de pièces, tableau vers Excel, remplacer partout,
+            traitement par lots, onglets, OCR, comparaison). Décompressez `BlonayPDF-v1-windows.zip` puis lancez `BlonayPDF.exe`.
+            Construite depuis le commit 0ed7dac.
+          files: outils/BlonayPDF-v1-windows.zip
+
+      - name: Publier la version portable (pré-release « blonaypdf-windows-latest »)
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: blonaypdf-windows-latest
+          name: "Blonay PDF — Windows portable (dernière version)"
+          prerelease: true
+          body: |
+            Version portable Windows : décompressez le zip, puis double-cliquez sur `BlonayPDF.exe`.
+            Aucune installation, aucun navigateur : tout est inclus (lecture, organisation, correction du texte, annotations, formulaires, impression directe avec livret).
+            Version 2 : reconnaissance de texte locale (OCR, français et allemand), dossier de pièces, remplacer et caviarder partout, tableau vers Excel, tampons et signatures mémorisés, traitement par lots, vrais commentaires PDF, comparaison de deux versions, signets et lecture deux pages, onglets.
+            La version 1 reste disponible telle quelle dans la release « Blonay PDF — version 1 » (`blonaypdf-v1`).
+            Aucune donnée ne quitte le PC. Voir `LISEZMOI-portable.txt` dans le dossier.
+            Construit automatiquement depuis le commit ${{ github.sha }}.
+          files: BlonayPDF-windows.zip
