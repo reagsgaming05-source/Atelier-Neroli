@@ -475,6 +475,15 @@
   .signet .sg-x:hover { background: var(--rouge-ombre); color: var(--rouge); }
   .signet .sg-x svg { width: 11px; height: 11px; }
   .tab { padding: 0 4px; }
+  .cmp-grille { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .cmp-page { display: flex; flex-direction: column; gap: 6px; align-items: center; min-width: 0; }
+  .cmp-page canvas { max-width: 100%; height: auto; background: #fff; box-shadow: var(--ombre-feuille); border: 1px solid var(--trait); }
+  .cmp-nom { font-size: 11.5px; color: var(--texte-3); font-family: var(--chiffre); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .cmp-diff { border: 1px solid var(--trait); border-radius: var(--rond-petit); background: var(--encre); padding: 10px 12px; max-height: 220px; overflow-y: auto; }
+  .cmp-chiffres { font-size: 11.5px; color: var(--texte-2); font-family: var(--chiffre); margin-bottom: 6px; }
+  .cmp-texte { margin: 0; font-size: 12.5px; line-height: 1.7; color: var(--texte-2); }
+  .diff-del { background: rgba(215, 55, 63, .18); color: var(--rouge); text-decoration: line-through; border-radius: 3px; }
+  .diff-add { background: rgba(45, 157, 95, .2); color: var(--texte); border-radius: 3px; font-weight: 500; }
   .apercu-tableau { max-height: 320px; overflow: auto; border: 1px solid var(--trait); border-radius: var(--rond-petit); background: var(--encre); }
   .apercu-tableau table { border-collapse: collapse; font-size: 12px; font-family: var(--chiffre); min-width: 100%; }
   .apercu-tableau td { border: 1px solid var(--trait); padding: 3px 7px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
@@ -4524,6 +4533,7 @@
       }
       await poserChamps(out, page, p, fonts, nomsPris);
       await poserAnnotationsReelles(out, page, p, fonts);
+      await poserTexteOcr(out, page, p, fonts);
       if (!raster) await dessinerMention(out, page, p, fonts);
       await drawWatermark(out, page, p, fonts);
       const num = (state.stamp ? state.stamp.start : 1) + i;
@@ -5761,6 +5771,363 @@
   }
 
   // =====================================================================
+  //  Reconnaissance de texte (OCR), entièrement locale
+  //  -------------------------------------------------------------------
+  //  Le moteur tesseract tourne dans un worker de la page, avec les
+  //  modèles français et allemand embarqués : rien ne part nulle part.
+  //  Le texte reconnu sert à la recherche, au remplacement, au tableau,
+  //  à la correction, et repart dans le PDF exporté en texte invisible.
+  // =====================================================================
+  const OCR_CDN = {
+    lib: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js',
+    worker: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
+    core: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0/tesseract-core-simd-lstm.wasm.js',
+  };
+  const ocr = { moteur: null, langues: '', workerUrl: null, embarque: !!document.getElementById('tess-worker-src') };
+  // Un mot reconnu : sa ligne de base et son corps (ceux de sa ligne).
+  const ocrBase = m => (m.b != null ? m.b : m.y + m.h * 0.8);
+  const ocrCorps = m => (m.s > 0 ? m.s : Math.max(4, m.h * 1.05));
+  const ocrDisponible = () => typeof WebAssembly === 'object' && typeof Worker !== 'undefined' && (ocr.embarque || !state.bureau);
+  async function ocrMoteur(langues, avancement) {
+    const cle = langues.join('+');
+    if (ocr.moteur && ocr.langues === cle) return ocr.moteur;
+    if (ocr.moteur) { try { await ocr.moteur.terminate(); } catch (_) {} ocr.moteur = null; }
+    if (!window.Tesseract) {
+      if (ocr.embarque) throw new Error('le moteur de reconnaissance manque dans cette page');
+      await loadScript(OCR_CDN.lib);
+    }
+    const base64Octets = b64 => { const bin = atob(b64); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; };
+    const opts = {
+      cacheMethod: 'none',
+      logger: m => { if (avancement && m && m.status) avancement(m.status, m.progress); },
+      errorHandler: e => console.warn('OCR :', e),
+    };
+    let modeles;
+    if (ocr.embarque) {
+      // Le moteur (wasm) est concaténé devant le script du worker : il n'a
+      // rien à charger de l'extérieur.
+      if (!ocr.workerUrl) ocr.workerUrl = URL.createObjectURL(new Blob([document.getElementById('tess-core-src').textContent, '\n', document.getElementById('tess-worker-src').textContent], { type: 'application/javascript' }));
+      modeles = langues.map(code => {
+        const n = document.getElementById('tess-lang-' + code);
+        if (!n) throw new Error('le modèle de langue « ' + code + ' » manque');
+        return { code, data: base64Octets(n.textContent.replace(/\s+/g, '')) };
+      });
+      Object.assign(opts, { workerPath: ocr.workerUrl, workerBlobURL: false });
+    } else {
+      modeles = langues;
+      Object.assign(opts, { workerPath: OCR_CDN.worker, corePath: OCR_CDN.core });
+    }
+    ocr.moteur = await window.Tesseract.createWorker(modeles, 1, opts);
+    ocr.langues = cle;
+    return ocr.moteur;
+  }
+  // Une page rendue assez fin pour un texte imprimé (≈ 200 ppp), puis lue.
+  async function ocrPage(p, moteur) {
+    const g = pageGeom(p);
+    const src = srcById(p.src);
+    const page = await src.pdfjs.getPage(p.index + 1);
+    const echelle = Math.min(4, Math.max(1.5, 2300 / Math.max(g.Wd, g.Hd)));
+    const vp = page.getViewport({ scale: echelle, rotation: g.total });
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.ceil(vp.width)); cv.height = Math.max(1, Math.ceil(vp.height));
+    const cx = cv.getContext('2d', { alpha: false });
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: cx, viewport: vp }).promise;
+    page.cleanup();
+    const { data } = await moteur.recognize(cv, {}, { blocks: true, text: true });
+    const mots = [], lignes = [];
+    (data.blocks || []).forEach(b => (b.paragraphs || []).forEach(par => (par.lines || []).forEach(l => {
+      const ml = [];
+      // La ligne de base et le corps sont ceux de la ligne : un mot sans
+      // jambage ni hampe garde le même repère que ses voisins.
+      const lb = l.bbox || null, base = l.baseline && l.baseline.has_baseline !== false ? l.baseline : null;
+      const corps = lb ? Math.max(4, (lb.y1 - lb.y0) / echelle) : null;
+      (l.words || []).forEach(w => {
+        const t = String(w.text || '').trim();
+        if (!t || !w.bbox) return;
+        const cx = (w.bbox.x0 + w.bbox.x1) / 2;
+        let b = null;
+        if (base && base.x1 !== base.x0) b = (base.y0 + (base.y1 - base.y0) * (cx - base.x0) / (base.x1 - base.x0)) / echelle;
+        else if (base) b = base.y0 / echelle;
+        else if (lb) b = (lb.y1 - (lb.y1 - lb.y0) * 0.22) / echelle;
+        mots.push({ t, x: w.bbox.x0 / echelle, y: w.bbox.y0 / echelle, w: (w.bbox.x1 - w.bbox.x0) / echelle, h: (w.bbox.y1 - w.bbox.y0) / echelle,
+          b, s: corps ? +Math.min(corps * 0.95, corps).toFixed(2) : null, conf: Math.round(w.confidence || 0) });
+        ml.push(t);
+      });
+      if (ml.length) lignes.push(ml.join(' '));
+    })));
+    return { mots, texte: lignes.join('\n'), conf: Math.round(data.confidence || 0) };
+  }
+  async function pageSansTexte(p) {
+    const src = srcById(p.src);
+    if (!src) return false;
+    try {
+      const page = await src.pdfjs.getPage(p.index + 1);
+      const tc = await page.getTextContent();
+      return !tc.items.some(it => it.str && it.str.trim());
+    } catch (_) { return false; }
+  }
+  // Le texte reconnu, écrit invisible sur la page exportée : le PDF devient
+  // sélectionnable et cherchable, comme après un OCR d'Acrobat.
+  async function poserTexteOcr(doc, page, p, fonts) {
+    if (!p.ocr || !p.ocr.mots || !p.ocr.mots.length) return;
+    if ((p.ann || []).some(a => a.type === 'redact')) return;
+    const g = pageGeom(p);
+    const font = await getFont(doc, fonts, 'Helvetica', false, false);
+    page.pushOperators(PDFLib.setTextRenderingMode(PDFLib.TextRenderingMode.Invisible));
+    p.ocr.mots.forEach(m => {
+      const t = winAnsi(m.t);
+      if (!t) return;
+      const w1 = font.widthOfTextAtSize(t, 1);
+      if (!(w1 > 0)) return;
+      const size = Math.max(3, Math.min(ocrCorps(m) * 1.3, m.w / w1));
+      drawDisplayText(page, g, { text: t, x: m.x, y: ocrBase(m), size, font, color: '#000000', align: 'left' });
+    });
+    page.pushOperators(PDFLib.setTextRenderingMode(PDFLib.TextRenderingMode.Fill));
+  }
+  function toolOcr() {
+    if (!ocrDisponible()) {
+      dialog({ title: 'Reconnaître le texte', icon: IC.ocr, build: b => b.append(note('La reconnaissance de texte n\'est pas disponible dans cette version de la page : utilisez la version hors ligne ou l\'application Windows, qui embarquent le moteur.', 'warn')) });
+      return;
+    }
+    const quoi = select('ocr-quoi', [['sans', 'Les pages sans texte (scans, images)'], ['sel', 'Les pages sélectionnées'], ['toutes', 'Toutes les pages']], state.selected.size ? 'sel' : 'sans');
+    let langueMemo = 'fra';
+    try { langueMemo = localStorage.getItem('blonay-ocr-langue') || 'fra'; } catch (_) {}
+    const langue = select('ocr-langue', [['fra', 'Français'], ['fra+deu', 'Français et allemand'], ['deu', 'Allemand']], langueMemo);
+    dialog({
+      title: 'Reconnaître le texte (OCR)', icon: IC.ocr,
+      build: b => {
+        b.append(rowOf([field('Pages', quoi), field('Langue', langue)]));
+        b.append(note('Le texte reconnu sert à la recherche, au remplacement, au tableau vers Excel et à la correction dans l\'éditeur ; il part dans le PDF exporté, invisible mais sélectionnable et cherchable. Tout se passe sur cet ordinateur : rien n\'est envoyé.'));
+        b.append(note('Comptez quelques secondes par page. Un scan droit, net et bien contrasté se lit mieux.'));
+      },
+      actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Reconnaître', primary: true, onClick: async close => {
+        close();
+        try { localStorage.setItem('blonay-ocr-langue', langue.value); } catch (_) {}
+        const langues = langue.value.split('+');
+        setBusy('Repérage des pages…', 0);
+        let pages = quoi.value === 'sel' ? selectedPages() : state.pages.slice();
+        if (quoi.value === 'sans') {
+          const gardees = [];
+          for (const p of pages) { if (!p.ocr && await pageSansTexte(p)) gardees.push(p); }
+          pages = gardees;
+        }
+        if (!pages.length) { setBusy(''); toast(quoi.value === 'sans' ? 'Toutes les pages portent déjà du texte : rien à reconnaître.' : 'Aucune page à reconnaître.', 'warn'); return; }
+        try {
+          setBusy('Préparation du moteur de reconnaissance…', 0);
+          const moteur = await ocrMoteur(langues, (etat, prog) => setBusy('Préparation… ' + etat, prog || 0));
+          snapshot();
+          let mots = 0, faibles = 0;
+          for (let i = 0; i < pages.length; i++) {
+            const p = pages[i];
+            setBusy('Reconnaissance… page ' + (pageIndex(p.id) + 1) + ' (' + (i + 1) + '/' + pages.length + ')', i / pages.length);
+            const r = await ocrPage(p, moteur);
+            p.ocr = { mots: r.mots, texte: r.texte, conf: r.conf, langues: langue.value, quand: Date.now() };
+            textCache.set(pkey(p), r.texte);
+            mots += r.mots.length;
+            if (r.mots.length && r.conf < 60) faibles++;
+            await nextFrame();
+          }
+          state.touched = true;
+          render();
+          setLast('Texte reconnu : ' + plural(mots, 'mot', 'mots') + ' sur ' + plural(pages.length, 'page', 'pages'));
+          toast(plural(mots, 'mot reconnu', 'mots reconnus') + ' sur ' + plural(pages.length, 'page', 'pages') + '.' + (faibles ? ' ' + plural(faibles, 'page se lit mal', 'pages se lisent mal') + ' : vérifiez le résultat.' : ''), faibles ? 'warn' : null);
+        } catch (e) { console.error(e); toast('La reconnaissance a échoué : ' + (e && e.message ? e.message : e), 'error'); }
+        finally { setBusy(''); }
+      } }],
+    });
+  }
+
+  // =====================================================================
+  //  Comparer deux versions d'un document
+  //  -------------------------------------------------------------------
+  //  Page contre page, côte à côte, et les mots ajoutés ou retirés en
+  //  couleur : ce qui a changé entre le devis reçu hier et celui d'aujourd'hui.
+  // =====================================================================
+  function motsDiff(a, b) {
+    const A = String(a || '').split(/\s+/).filter(Boolean).slice(0, 3000);
+    const B = String(b || '').split(/\s+/).filter(Boolean).slice(0, 3000);
+    const n = A.length, m = B.length;
+    const L = new Uint16Array((n + 1) * (m + 1));
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = m - 1; j >= 0; j--) {
+        L[i * (m + 1) + j] = A[i] === B[j] ? L[(i + 1) * (m + 1) + j + 1] + 1 : Math.max(L[(i + 1) * (m + 1) + j], L[i * (m + 1) + j + 1]);
+      }
+    }
+    const out = [];
+    let i = 0, j = 0;
+    const pousser = (t, mot) => { const d = out[out.length - 1]; if (d && d.t === t) d.mots.push(mot); else out.push({ t, mots: [mot] }); };
+    while (i < n && j < m) {
+      if (A[i] === B[j]) { pousser('=', A[i]); i++; j++; }
+      else if (L[(i + 1) * (m + 1) + j] >= L[i * (m + 1) + j + 1]) { pousser('-', A[i]); i++; }
+      else { pousser('+', B[j]); j++; }
+    }
+    while (i < n) { pousser('-', A[i]); i++; }
+    while (j < m) { pousser('+', B[j]); j++; }
+    const retires = out.filter(x => x.t === '-').reduce((k, x) => k + x.mots.length, 0);
+    const ajoutes = out.filter(x => x.t === '+').reduce((k, x) => k + x.mots.length, 0);
+    return { segments: out, retires, ajoutes };
+  }
+  async function texteDocPage(docjs, i, srcId) {
+    if (srcId != null && textCache.has(key(srcId, i))) { const t = textCache.get(key(srcId, i)); if (t) return t; }
+    try {
+      const page = await docjs.getPage(i + 1);
+      const tc = await page.getTextContent();
+      let out = '', last = null;
+      tc.items.forEach(it => {
+        if (last && it.transform && last.transform && Math.abs(it.transform[5] - last.transform[5]) > 2) out += '\n';
+        else if (out && !/\s$/.test(out)) out += ' ';
+        out += it.str; last = it;
+      });
+      page.cleanup();
+      return out.replace(/[ \t]+/g, ' ').trim();
+    } catch (_) { return ''; }
+  }
+  async function rendreDans(docjs, i, cv, largeur) {
+    const page = await docjs.getPage(i + 1);
+    const vp0 = page.getViewport({ scale: 1 });
+    const k = Math.min(2, window.devicePixelRatio || 1);
+    const vp = page.getViewport({ scale: largeur / vp0.width * k });
+    cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+    cv.style.width = Math.round(vp.width / k) + 'px';
+    const cx = cv.getContext('2d', { alpha: false });
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: cx, viewport: vp }).promise;
+    page.cleanup();
+  }
+  function toolComparer() {
+    const reelles = state.sources.filter(s => !s.genere);
+    if (!reelles.length) { toast('Ouvrez d\'abord un document.', 'warn'); return; }
+    const opts = reelles.map(s => [String(s.id), s.name]);
+    const selA = select('cmp-a', opts, opts[0][0]);
+    const selB = select('cmp-b', opts.concat([['fichier', 'Un autre fichier…']]), opts[1] ? opts[1][0] : 'fichier');
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'application/pdf,.pdf'; inp.id = 'cmp-fichier'; inp.className = 'sr-only'; inp.tabIndex = -1;
+    const choisir = document.createElement('button');
+    choisir.type = 'button'; choisir.className = 'tb-btn'; choisir.style.border = '1px solid var(--trait)';
+    choisir.textContent = 'Choisir le fichier…';
+    choisir.addEventListener('click', () => { inp.value = ''; inp.click(); });
+    const nomB = note('Aucun fichier choisi.');
+    let fichierB = null;
+    inp.addEventListener('change', () => { fichierB = inp.files && inp.files[0] ? inp.files[0] : null; nomB.textContent = fichierB ? fichierB.name : 'Aucun fichier choisi.'; });
+    const wrapB = rowOf([choisir, nomB], true);
+    const majB = () => { wrapB.hidden = selB.value !== 'fichier'; };
+    selB.addEventListener('change', majB); majB();
+    dialog({
+      title: 'Comparer deux versions', icon: IC.compare,
+      build: b => {
+        b.append(field('Version A (avant)', selA));
+        b.append(field('Version B (après)', selB));
+        b.append(wrapB, inp);
+        b.append(note('Les pages sont mises côte à côte, et les mots retirés ou ajoutés sont surlignés. Une page scannée se compare après reconnaissance du texte.'));
+      },
+      actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Comparer', primary: true, onClick: async close => {
+        const srcA = srcById(+selA.value);
+        let docB = null, nomBTexte = '', srcBId = null;
+        if (selB.value === 'fichier') {
+          if (!fichierB) { toast('Choisissez le fichier de la version B.', 'warn'); return; }
+          close();
+          setBusy('Lecture de ' + fichierB.name + '…');
+          try { docB = (await openWithPdfjs(fichierB.name, await fichierB.arrayBuffer(), null)).doc; nomBTexte = fichierB.name; }
+          catch (e) { setBusy(''); toast('Impossible de lire ' + fichierB.name + '.', 'error'); return; }
+        } else {
+          const srcB = srcById(+selB.value);
+          if (!srcA || !srcB) return;
+          if (srcA === srcB) { toast('Choisissez deux versions différentes.', 'warn'); return; }
+          close();
+          docB = srcB.pdfjs; nomBTexte = srcB.name; srcBId = srcB.id;
+        }
+        if (!srcA) { setBusy(''); return; }
+        setBusy('Comparaison…', 0);
+        try {
+          const docA = srcA.pdfjs;
+          const n = Math.max(docA.numPages, docB.numPages);
+          const pages = [];
+          for (let i = 0; i < n; i++) {
+            setBusy('Comparaison… page ' + (i + 1) + '/' + n, i / n);
+            const tA = i < docA.numPages ? await texteDocPage(docA, i, srcA.id) : '';
+            const tB = i < docB.numPages ? await texteDocPage(docB, i, srcBId) : '';
+            const d = motsDiff(tA, tB);
+            pages.push({ i, tA, tB, diff: d, differe: d.retires + d.ajoutes > 0 || (i >= docA.numPages) || (i >= docB.numPages) });
+            if (i % 4 === 0) await nextFrame();
+          }
+          setBusy('');
+          afficherComparaison({ nomA: srcA.name, nomB: nomBTexte, docA, docB, pages });
+        } catch (e) { console.error(e); setBusy(''); toast('La comparaison a échoué : ' + e.message, 'error'); }
+      } }],
+    });
+  }
+  function afficherComparaison(c) {
+    const differentes = c.pages.filter(p => p.differe);
+    let courante = differentes.length ? differentes[0].i : 0;
+    let seulement = true;
+    const resume = note('');
+    const grille = document.createElement('div'); grille.className = 'cmp-grille';
+    const colA = document.createElement('div'); colA.className = 'cmp-page';
+    const colB = document.createElement('div'); colB.className = 'cmp-page';
+    const cvA = document.createElement('canvas'), cvB = document.createElement('canvas');
+    const labA = document.createElement('div'); labA.className = 'cmp-nom';
+    const labB = document.createElement('div'); labB.className = 'cmp-nom';
+    colA.append(labA, cvA); colB.append(labB, cvB);
+    grille.append(colA, colB);
+    const nav = document.createElement('div'); nav.className = 'imp-nav';
+    const prev = document.createElement('button'); prev.type = 'button'; prev.textContent = '\u2039'; prev.title = 'Page précédente';
+    const next = document.createElement('button'); next.type = 'button'; next.textContent = '\u203a'; next.title = 'Page suivante';
+    const ou = document.createElement('span'); ou.id = 'cmp-ou';
+    const filtre = checkbox('cmp-filtre', 'Seulement les pages qui diffèrent', true);
+    filtre.input.addEventListener('change', () => { seulement = filtre.input.checked; majNav(); });
+    nav.append(prev, ou, next);
+    const diff = document.createElement('div'); diff.className = 'cmp-diff';
+    const liste = () => seulement && differentes.length ? differentes.map(p => p.i) : c.pages.map(p => p.i);
+    const majNav = () => {
+      const l = liste();
+      const k = l.indexOf(courante);
+      prev.disabled = k <= 0; next.disabled = k < 0 || k >= l.length - 1;
+      ou.textContent = 'Page ' + (courante + 1) + ' / ' + c.pages.length + (seulement && differentes.length ? ' (' + (k + 1) + ' sur ' + differentes.length + ' différentes)' : '');
+    };
+    let jeton = 0;
+    const montrer = async () => {
+      const mien = ++jeton;
+      majNav();
+      const p = c.pages[courante];
+      labA.textContent = 'A · ' + baseName(c.nomA) + (courante < c.docA.numPages ? '' : ' · page absente');
+      labB.textContent = 'B · ' + baseName(c.nomB) + (courante < c.docB.numPages ? '' : ' · page absente');
+      diff.replaceChildren();
+      const entete = document.createElement('div'); entete.className = 'cmp-chiffres';
+      entete.textContent = p.diff.retires + p.diff.ajoutes
+        ? plural(p.diff.retires, 'mot retiré', 'mots retirés') + ', ' + plural(p.diff.ajoutes, 'mot ajouté', 'mots ajoutés')
+        : (p.tA || p.tB ? 'Texte identique sur cette page.' : 'Aucun texte sur cette page (scan ? lancez la reconnaissance de texte).');
+      diff.appendChild(entete);
+      const corps = document.createElement('p'); corps.className = 'cmp-texte';
+      p.diff.segments.forEach(sg => {
+        const sp = document.createElement('span');
+        if (sg.t === '-') sp.className = 'diff-del'; else if (sg.t === '+') sp.className = 'diff-add';
+        sp.textContent = sg.mots.join(' ') + ' ';
+        corps.appendChild(sp);
+      });
+      diff.appendChild(corps);
+      const largeur = Math.max(160, Math.min(380, (grille.clientWidth || 760) / 2 - 14));
+      try {
+        if (courante < c.docA.numPages) await rendreDans(c.docA, courante, cvA, largeur); else { cvA.width = 1; cvA.height = 1; }
+        if (mien !== jeton) return;
+        if (courante < c.docB.numPages) await rendreDans(c.docB, courante, cvB, largeur); else { cvB.width = 1; cvB.height = 1; }
+      } catch (e) { console.warn('Comparaison :', e); }
+    };
+    prev.addEventListener('click', () => { const l = liste(); const k = l.indexOf(courante); if (k > 0) { courante = l[k - 1]; montrer(); } });
+    next.addEventListener('click', () => { const l = liste(); const k = l.indexOf(courante); if (k >= 0 && k < l.length - 1) { courante = l[k + 1]; montrer(); } });
+    const totalR = c.pages.reduce((k, p) => k + p.diff.retires, 0), totalA = c.pages.reduce((k, p) => k + p.diff.ajoutes, 0);
+    resume.textContent = differentes.length
+      ? plural(differentes.length, 'page diffère', 'pages diffèrent') + ' sur ' + c.pages.length + ' : ' + plural(totalR, 'mot retiré', 'mots retirés') + ', ' + plural(totalA, 'mot ajouté', 'mots ajoutés') + (c.docA.numPages !== c.docB.numPages ? ' · ' + c.docA.numPages + ' pages contre ' + c.docB.numPages : '') + '.'
+      : 'Aucune différence de texte entre les deux versions (' + plural(c.pages.length, 'page', 'pages') + ').';
+    dialog({
+      title: 'Comparaison : ' + baseName(c.nomA) + ' → ' + baseName(c.nomB), icon: IC.compare, wide: true, submitOnEnter: false,
+      build: b => { b.append(resume, rowOf([nav, filtre], true), grille, diff); },
+      actions: [{ label: 'Fermer', primary: true, onClick: cl => cl() }],
+    });
+    setTimeout(montrer, 30);
+  }
+
+  // =====================================================================
   //  Constituer un dossier de pièces
   //  -------------------------------------------------------------------
   //  Chaque document ouvert devient une pièce numérotée : un intercalaire
@@ -6622,11 +6989,12 @@
     }
     if (!morceaux.length && p.ocr && p.ocr.mots) {
       p.ocr.mots.forEach(m => {
-        if (last && Math.abs((m.y + m.h) - last.base) > m.h * 0.6) texte += '\n'; else if (texte) texte += ' ';
+        const base = ocrBase(m), corps = ocrCorps(m);
+        if (last && Math.abs(base - last.base) > corps * 0.5) texte += '\n'; else if (texte) texte += ' ';
         const i0 = texte.length;
         texte += m.t;
-        morceaux.push({ i0, i1: texte.length, x: m.x, base: m.y + m.h * 0.8, w: m.w, size: m.h * 1.05 });
-        last = { base: m.y + m.h, fin: m.x + m.w };
+        morceaux.push({ i0, i1: texte.length, x: m.x, base, w: m.w, size: corps });
+        last = { base, fin: m.x + m.w };
       });
     }
     return { texte, morceaux };
@@ -6890,7 +7258,9 @@
     toutes.forEach(c => {
       for (let i = Math.max(0, Math.floor(c.x - xmin)); i <= Math.min(n - 1, Math.ceil(c.x1 - xmin)); i++) couv[i]++;
     });
-    const mini = Math.max(3, corps * 0.45);
+    // Une vraie gouttière fait au moins la largeur d'une lettre : un blanc
+    // plus étroit n'est qu'un mot un peu court sur une ligne.
+    const mini = Math.max(4, corps * 0.8);
     const bornes = [xmin - 1];
     let i = 0;
     while (i < n) {
@@ -6946,7 +7316,7 @@
       });
       page.cleanup();
     } catch (e) { console.warn('Tableau :', e); }
-    if (!out.length && p.ocr && p.ocr.mots) p.ocr.mots.forEach(m => out.push({ str: m.t, x: m.x, base: m.y + m.h * 0.8, w: m.w, size: m.h * 1.05 }));
+    if (!out.length && p.ocr && p.ocr.mots) p.ocr.mots.forEach(m => out.push({ str: m.t, x: m.x, base: ocrBase(m), w: m.w, size: ocrCorps(m) }));
     return out;
   }
   function toolTableau() {
@@ -7021,9 +7391,26 @@
           ['Double-clic', 'Ouvrir l\'éditeur, où le texte existant se corrige par paragraphe'],
         ])));
         b.append(groupOf('Document', mk([
-          ['Ctrl+O', 'Ouvrir des fichiers'], ['Ctrl+S', 'Exporter le PDF'], ['Ctrl+P', 'Imprimer'], ['Ctrl+F', 'Rechercher du texte'],
+          ['Ctrl+O', 'Ouvrir un document (nouvel onglet)'], ['Ctrl+Maj+O', 'Ajouter au document'], ['Ctrl+S', 'Exporter le PDF'], ['Ctrl+P', 'Imprimer'],
+          ['Ctrl+F', 'Rechercher, remplacer, caviarder'], ['Ctrl+B', 'Ajouter un signet'],
+          ['Ctrl+T', 'Nouvel onglet'], ['Ctrl+W', 'Fermer l\'onglet'], ['Ctrl+Tab', 'Onglet suivant'],
           ['Ctrl+Z', 'Annuler'], ['Ctrl+Y', 'Rétablir'], ['?', 'Cette fenêtre'],
         ])));
+        const nouv = document.createElement('div');
+        nouv.style.display = 'flex'; nouv.style.flexDirection = 'column'; nouv.style.gap = '6px';
+        [
+          'Reconnaître le texte (OCR) : un scan devient cherchable, corrigeable, et le PDF exporté garde ce texte, invisible mais sélectionnable. Français et allemand, tout en local.',
+          'Constituer un dossier de pièces : sommaire, intercalaires « Pièce n° », mention sur chaque page, pagination continue, signets.',
+          'Rechercher, remplacer partout, caviarder partout, sur tout le document.',
+          'Copier un tableau vers Excel : les colonnes sont repérées, on colle dans Excel.',
+          'Tampons (Reçu le, Payé, Copie conforme, Visé…) avec la date du jour, et signatures mémorisées sur ce poste.',
+          'Traiter plusieurs fichiers : pages vides, compression, numérotation, protection, images en PDF, en série.',
+          'Les surlignages, cadres, dessins, textes et tampons partent en vrais commentaires PDF, modifiables dans Acrobat (ou figés, au choix).',
+          'Comparer deux versions : côte à côte, mots retirés et ajoutés en couleur.',
+          'Signets (le plan du document) et lecture deux pages côte à côte.',
+          'Onglets : plusieurs documents dans la fenêtre, une page se glisse d\'un onglet à l\'autre.',
+        ].forEach(t => nouv.appendChild(note(t)));
+        b.append(groupOf('Ce que sait faire la version 2', [nouv]));
         b.append(note('Astuce : tapez un chiffre sur une page sélectionnée au clavier pour la déplacer directement à ce numéro.'));
         const conf = document.createElement('div');
         conf.style.display = 'flex'; conf.style.flexDirection = 'column'; conf.style.gap = '8px';
@@ -7257,7 +7644,7 @@
       // autres, et se corrigent de la même façon (le fond est relevé sur
       // l'image, le texte corrigé écrit par-dessus).
       if (!morceaux.length && p.ocr && p.ocr.mots) {
-        p.ocr.mots.forEach(m => morceaux.push({ str: m.t, x: m.x, base: m.y + m.h * 0.8, size: Math.max(4, m.h * 1.05), w: m.w, pol: null }));
+        p.ocr.mots.forEach(m => morceaux.push({ str: m.t, x: m.x, base: ocrBase(m), size: ocrCorps(m), w: m.w, pol: null }));
       }
     } catch (e) { console.error(e); }
     return { blocs: edParagraphes(morceaux, g), polices: Array.from(new Set(polices.values())) };
@@ -7827,7 +8214,7 @@
     const cible = lignes.find(l => pt.x >= l.x - 2 && pt.x <= l.x + l.w + 2 && pt.y >= l.y - 1 && pt.y <= l.y + l.h + 1);
     if (!cible) {
       setLast(lignes.length ? 'Aucun texte à cet endroit.' : 'Cette page ne contient pas de texte : c\'est une image ou un scan.');
-      toast(lignes.length ? 'Cliquez sur un paragraphe encadré.' : 'Aucun texte modifiable sur cette page. Un scan doit d\'abord être reconnu par un logiciel d\'OCR.', 'warn');
+      toast(lignes.length ? 'Cliquez sur un paragraphe encadré.' : 'Aucun texte modifiable sur cette page : lancez d\'abord Outils › Reconnaître le texte (OCR).', 'warn');
       return;
     }
     const a = await edFabriquerRetouche(edPage(), cible, lignes);
@@ -9151,6 +9538,8 @@
         { id: 'props', name: 'Propriétés', sub: 'Titre, auteur, mots-clés', icon: IC.info, need: 'pages', run: toolProperties, active: () => !!(state.meta.title || state.meta.author || state.meta.subject || state.meta.keywords) },
         { id: 'search', name: 'Rechercher, remplacer', sub: 'Ou caviarder, dans tout le document', icon: IC.search, need: 'pages', run: toolSearch },
         { id: 'tableau', name: 'Copier un tableau', sub: 'Vers Excel, en colonnes', icon: IC.tableau, need: 'pages', run: toolTableau },
+        { id: 'ocr', name: 'Reconnaître le texte', sub: 'OCR local : un scan devient cherchable', icon: IC.ocr, need: 'pages', run: toolOcr, active: () => state.pages.some(p => p.ocr) },
+        { id: 'comparer', name: 'Comparer deux versions', sub: 'Côte à côte, mots ajoutés ou retirés', icon: IC.compare, need: 'pages', run: toolComparer },
       ] },
       { title: 'Plusieurs fichiers', items: [
         { id: 'lots', name: 'Traiter plusieurs fichiers', sub: 'Pages vides, compression, numérotation… en série', icon: IC.lots, run: toolLots },
@@ -9165,7 +9554,7 @@
     edit: '#8C5AE8', filigrane: '#D83790', entete: '#0D9F8F', numeros: '#E68619', form: '#2D9D5F',
     'exp-pdf': '#D7373F', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', compress: '#E68619',
     password: '#D7373F', flatten: '#2680EB',
-    props: '#6E7681', search: '#2680EB', tableau: '#2D9D5F', dossier: '#D83790', lots: '#E68619',
+    props: '#6E7681', search: '#2680EB', tableau: '#2D9D5F', dossier: '#D83790', lots: '#E68619', ocr: '#8C5AE8', comparer: '#0D9F8F',
   };
 
   function renderTools() {
@@ -9766,6 +10155,8 @@
         else if (nom === 'dossier') { if (state.pages.length) toolDossier(); }
         else if (nom === 'lots') toolLots();
         else if (nom === 'tableau') { if (state.pages.length) toolTableau(); }
+        else if (nom === 'ocr') { if (state.pages.length) toolOcr(); }
+        else if (nom === 'comparer') { if (state.pages.length) toolComparer(); }
         else if (nom === 'editeur') { if (state.pages.length) openEditor(pageCouranteId()); }
         else if (nom === 'lecture' || nom === 'organiser') changerVue(nom);
         else if (nom === 'zoom-plus') { if (state.vue === 'lecture') pas(1); }

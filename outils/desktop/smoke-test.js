@@ -60,7 +60,7 @@ function fabriquerPdf(n) {
   const texte = octets.toString('latin1');
   const pages = (texte.match(/\/Type\s*\/Page[^s]/g) || []).length;
   console.log('export :', sortie, octets.length, 'octets,', pages, 'page(s) |', dernier);
-  let ok = title === 'Blonay PDF' && JSON.stringify(menu) === JSON.stringify(['Fichier', 'Affichage', 'Aide'])
+  let ok = title === 'Blonay PDF' && JSON.stringify(menu) === JSON.stringify(['Fichier', 'Affichage', 'Outils', 'Aide'])
     && info.bureau && info.docs.length === 1 && /essai\.pdf/.test(info.docs[0]) && !info.exemple && info.imprimantes
     && octets.slice(0, 5).toString() === '%PDF-' && pages === 3 && /Enregistré/.test(dernier);
   // un second double-clic (seconde instance) ouvre SA fenêtre, sans toucher à la première

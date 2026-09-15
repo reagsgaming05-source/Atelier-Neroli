@@ -73,18 +73,57 @@ demandé à l'ouverture.
 
 - propriétés : titre, auteur, sujet, mots-clés ;
 - recherche de texte dans toutes les pages, avec extrait et accès direct à la
-  page trouvée.
+  page trouvée ; **remplacer partout** (chaque bloc est corrigé comme dans
+  l'éditeur, le texte d'origine effacé du fichier) et **caviarder partout** ;
+- **copier un tableau vers Excel** : les colonnes sont repérées d'après les
+  blancs qui traversent les lignes, le résultat se colle dans Excel (Ctrl+V,
+  une cellule par colonne) ou s'enregistre en CSV ;
+- **reconnaître le texte (OCR)** d'un scan, en français et en allemand,
+  entièrement sur le poste : le texte sert à la recherche, au remplacement,
+  au tableau et à la correction dans l'éditeur, et repart dans le PDF exporté,
+  invisible mais sélectionnable et cherchable ;
+- **comparer deux versions** : pages côte à côte, mots retirés et ajoutés
+  en couleur, page par page.
+
+### Ce que la version 2 ajoute
+
+Dix ajouts, choisis pour le travail de bureau au quotidien :
+
+1. **Reconnaissance de texte (OCR)** locale, français et allemand, scans
+   cherchables à l'export.
+2. **Dossier de pièces** : chaque document devient une pièce numérotée —
+   sommaire, intercalaires « Pièce n° », mention sur chaque page, pagination
+   continue, un signet par pièce.
+3. **Rechercher, remplacer partout, caviarder partout.**
+4. **Copier un tableau vers Excel.**
+5. **Tampons** (Reçu le, Payé, Copie conforme, Visé, Approuvé…) avec la date
+   du jour, tampons personnels et **signatures mémorisés** sur le poste
+   (dossier `data/`, jamais dans un PDF sans les y poser).
+6. **Traiter plusieurs fichiers** : pages vides, compression, numérotation,
+   protection, images en PDF, séparer, extraire le texte — en série, sans
+   toucher au document ouvert ; résultats dans une archive ZIP.
+7. **Vrais commentaires PDF** : surlignages, cadres, dessins, textes libres
+   et tampons partent avec leur apparence en annotations que le destinataire
+   retrouve, déplace ou retire dans Acrobat — ou figés dans la page, au choix
+   (outil Aplatir).
+8. **Comparer deux versions.**
+9. **Signets** : le plan du document, repris du PDF ouvert, complété, exporté ;
+   **lecture deux pages côte à côte**.
+10. **Onglets** : plusieurs documents dans une fenêtre (Ctrl+T, Ctrl+W,
+    Ctrl+Tab), une page se glisse d'un onglet à l'autre. « Ouvrir » ouvre à
+    part ; « Ajouter au document » combine.
 
 ## Les deux fichiers
 
 | Fichier | Poids | Internet |
 | --- | --- | --- |
-| `outils/blonay-pdf.html` | 190 Ko | requis à l'ouverture, pour charger pdf.js, pdf-lib et JSZip |
-| `outils/blonay-pdf-hors-ligne.html` | 2,2 Mo | aucun : les trois bibliothèques sont incluses dans le fichier |
+| `outils/blonay-pdf.html` | 0,5 Mo | requis à l'ouverture, pour charger pdf.js, pdf-lib, JSZip et, à la demande, le moteur OCR |
+| `outils/blonay-pdf-hors-ligne.html` | 9 Mo | aucun : les bibliothèques, le moteur OCR et les modèles français et allemand sont inclus dans le fichier |
 
-Les deux fichiers offrent exactement les mêmes fonctions. La version hors ligne
-convient aux postes sans accès internet ou derrière un filtrage strict. Elle
-utilise les polices du système au lieu de celles de Google Fonts.
+Les deux fichiers offrent les mêmes fonctions. La version hors ligne convient
+aux postes sans accès internet ou derrière un filtrage strict (c'est elle que
+l'application Windows embarque). Elle utilise les polices du système au lieu
+de celles de Google Fonts.
 
 Les deux sont produits à partir d'une source unique par `outils/build.js`.
 
@@ -95,7 +134,8 @@ Les deux sont produits à partir d'une source unique par `outils/build.js`.
    double-cliquant dessus.
 3. Ouvrir ses PDF, travailler, puis cliquer sur « Exporter le PDF ».
 
-La reconnaissance de texte sur documents scannés (OCR) n'est pas disponible.
+La reconnaissance de texte (OCR) se lance depuis *Outils › Reconnaître le
+texte* : elle tourne sur le poste, rien n'est envoyé.
 
 ## Version portable Windows (recommandée) — application fenêtrée, aucune installation
 
@@ -138,14 +178,21 @@ publication du zip dans la pré-release à tag fixe `blonaypdf-windows-latest`.
 
 ### Utilisation
 
-- **Ouvrir** : *Fichier › Ouvrir*, glisser-déposer dans la fenêtre, ou double-clic sur un PDF.
-  Plusieurs documents s'ouvrent ensemble et se fusionnent à l'export.
-- **Lire** (Ctrl+1) : le document page à page, zoom de 50 à 400 % (Ctrl + molette, Ctrl +/−,
-  Ctrl 0 pour la page entière), recherche (Ctrl+F).
+- **Ouvrir** : *Fichier › Ouvrir* (Ctrl+O, dans un nouvel onglet), glisser-déposer dans la
+  fenêtre, ou double-clic sur un PDF (nouvelle fenêtre). *Fichier › Ajouter au document*
+  (Ctrl+Maj+O) combine plusieurs documents, qui se fusionnent à l'export.
+- **Onglets** : Ctrl+T nouvel onglet, Ctrl+W fermer, Ctrl+Tab suivant ; une page glissée sur
+  un autre onglet y déménage.
+- **Lire** (Ctrl+1) : le document page à page ou deux pages côte à côte, zoom de 50 à 400 %
+  (Ctrl + molette, Ctrl +/−, Ctrl 0 pour la page entière), signets (volet *Plan*, Ctrl+B),
+  recherche, remplacement et caviardage (Ctrl+F).
 - **Organiser** (Ctrl+2) : glisser les pages, sélection au lasso, pivoter, supprimer, dupliquer,
   insérer des pages vierges, retirer les pages vides d'un scan, diviser, redimensionner.
 - **Corriger et annoter** : double-clic sur une page ouvre l'éditeur — correction du texte en
-  place, texte, surlignage, cadres, dessin, signature, image, caviardage, champs à remplir.
+  place, texte, surlignage, cadres, dessin, tampons, signature (mémorisable), image,
+  caviardage, champs à remplir. Les annotations partent en vrais commentaires PDF.
+- **Outils** (menu) : reconnaître le texte (OCR), comparer deux versions, copier un tableau
+  vers Excel, constituer un dossier de pièces, traiter plusieurs fichiers.
 - **Exporter** (Ctrl+S) : le PDF assemblé, avec ou sans aplatissement, mot de passe possible.
 - **Imprimer** (Ctrl+P) : pages, livret, plusieurs pages par feuille, papier, échelle,
   imprimante, recto verso, copies ; aperçu en direct.
@@ -155,7 +202,7 @@ publication du zip dans la pré-release à tag fixe `blonaypdf-windows-latest`.
 ```bash
 cd outils
 npm ci                # (aucune dépendance de la page elle-même)
-npm run libs          # pdf.js, pdf-lib, JSZip depuis npm, dans outils/libs/
+npm run libs          # pdf.js, pdf-lib, JSZip, tesseract.js et les modèles fra/deu depuis npm, dans outils/libs/
 npm test              # tests unitaires (node --test), sous Windows comme sous Linux
 npm run build         # source.html → blonay-pdf.html, blonay-pdf-hors-ligne.html, docs/, lanceur/
 cd desktop

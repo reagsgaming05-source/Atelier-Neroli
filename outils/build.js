@@ -18,7 +18,7 @@ const OUT = __dirname;
 // double-clique un PDF (voir ouvrirAuLancement). Jamais pour le site.
 const csp = (extra, voisin) => '<meta http-equiv="Content-Security-Policy" content="'
   + "default-src 'none'; "
-  + "script-src 'unsafe-inline' blob:" + (extra ? " 'self'" : '') + (voisin ? ' file:' : '') + '; '
+  + "script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:" + (extra ? " 'self'" : '') + (voisin ? ' file:' : '') + '; '
   + "worker-src blob:" + (extra ? " 'self'" : '') + '; '
   + "style-src 'unsafe-inline'; "
   + 'img-src data: blob:' + (extra ? " 'self'" : '') + '; '
@@ -38,6 +38,18 @@ const read = p => fs.readFileSync(path.join(LIB, p), 'utf8')
   .replace(/<!--/g, '<\\!--')
   .replace(/<\/script/gi, '<\\/script');
 const worker = read('pdfjs-dist-3.11.174/build/pdf.worker.min.js');
+// Reconnaissance de texte : tesseract.js (bibliothèque + worker), son moteur
+// wasm (SIMD, LSTM seul) et les modèles français et allemand (tessdata_best,
+// entiers). Tout est dans la page : le worker ne charge rien de l'extérieur.
+// Correctif tesseract.js 7.0.0 : une langue fournie sous forme { code, data }
+// est nommée par son code, pas par ses octets.
+const tess = read('tesseract.js-7.0.0/dist/tesseract.min.js');
+let tessWorker = read('tesseract.js-7.0.0/dist/worker.min.js');
+const tessBug = 'return"string"==typeof t?t:t.data})).join("+")';
+if (!tessWorker.includes(tessBug)) throw new Error('Motif du correctif tesseract.js introuvable dans worker.min.js');
+tessWorker = tessWorker.replace(tessBug, () => 'return"string"==typeof t?t:t.code})).join("+")');
+const tessCore = read('tesseract.js-core-7.0.0/tesseract-core-simd-lstm.wasm.js');
+const langue = code => fs.readFileSync(path.join(LIB, 'tesseract.js-data-' + code + '-1.0.0/4.0.0_best_int/' + code + '.traineddata.gz')).toString('base64');
 const cspOffline = csp(false, true);
 const inline = [
   '<script id="blonay-worker" type="text/plain">\n' + worker + '\n</script>',
@@ -45,6 +57,12 @@ const inline = [
   '<script>' + read('pdfjs-dist-3.11.174/build/pdf.min.js') + '</script>',
   '<script>' + read('cantoo-pdf-lib-2.11.0/dist/pdf-lib.min.js') + '</script>',
   '<script>' + read('jszip-3.10.1/dist/jszip.min.js') + '</script>',
+  '<!-- tesseract.js 7.0.0 et tesseract.js-core 7.0.0 (Apache-2.0), modèles fra et deu de tessdata_best (Apache-2.0) -->',
+  '<script>' + tess + '</script>',
+  '<script id="tess-worker-src" type="text/plain">\n' + tessWorker + '\n</script>',
+  '<script id="tess-core-src" type="text/plain">\n' + tessCore + '\n</script>',
+  '<script id="tess-lang-fra" type="text/plain">' + langue('fra') + '</script>',
+  '<script id="tess-lang-deu" type="text/plain">' + langue('deu') + '</script>',
 ].join('\n');
 // Remplacement par fonction : sinon les $& ou $` du code des bibliothèques
 // seraient interprétés comme des motifs et injecteraient le reste de la page.

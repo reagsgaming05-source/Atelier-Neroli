@@ -16,6 +16,15 @@ Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un PDF, « Ouvr
 Chaque PDF double-cliqué s'ouvre dans sa propre fenêtre ; pour combiner plusieurs
 documents, Fichier › Ajouter au document… ou le bouton « Ajouter un document ».
 
+Onglets : Fichier › Ouvrir ouvre chaque document dans son onglet (Ctrl+T nouvel onglet,
+Ctrl+W fermer, Ctrl+Tab suivant) ; une page glissée sur un autre onglet y déménage.
+
+Menu Outils : reconnaître le texte d'un scan (OCR, français et allemand, sur le poste),
+rechercher / remplacer / caviarder partout, copier un tableau vers Excel, comparer deux
+versions, constituer un dossier de pièces (sommaire, intercalaires, pagination, signets),
+traiter plusieurs fichiers d'un coup. Dans l'éditeur : tampons (Reçu le, Payé, Copie
+conforme…) et signatures mémorisées sur ce poste (dossier « data »).
+
 Imprimer (Fichier › Imprimer) : l'application connaît vos imprimantes et envoie
 directement — imprimante choisie, recto verso, copies, livret, plusieurs pages par
 feuille, échelle — sans autre fenêtre. « Propriétés… » ouvre la fenêtre d'impression de

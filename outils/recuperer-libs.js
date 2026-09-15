@@ -1,4 +1,4 @@
-// Récupère depuis npm les trois bibliothèques que build.js embarque dans les
+// Récupère depuis npm les bibliothèques que build.js embarque dans les
 // versions hors ligne, sous libs/<nom>-<version>/ :
 //   node recuperer-libs.js      (ou : npm run libs)
 // Elles ne sont pas suivies par git (voir .gitignore) : ce script les remet,
@@ -6,7 +6,10 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const PAQUETS = [['pdfjs-dist', '3.11.174'], ['@cantoo/pdf-lib', '2.11.0'], ['jszip', '3.10.1']];
+// La reconnaissance de texte (OCR) : tesseract.js, son moteur wasm et les
+// modèles de langue français et allemand (tessdata_best, entiers).
+const PAQUETS = [['pdfjs-dist', '3.11.174'], ['@cantoo/pdf-lib', '2.11.0'], ['jszip', '3.10.1'],
+  ['tesseract.js', '7.0.0'], ['tesseract.js-core', '7.0.0'], ['@tesseract.js-data/fra', '1.0.0'], ['@tesseract.js-data/deu', '1.0.0']];
 const LIBS = path.join(__dirname, 'libs');
 fs.mkdirSync(LIBS, { recursive: true });
 for (const [nom, version] of PAQUETS) {
