@@ -38,6 +38,25 @@ async function attendre(cond, delai, quoi) {
 const lancer = (exe, dossier, env, fichiers) => electron.launch(exe
   ? { executablePath: exe, args: fichiers, env }
   : { args: [path.join(__dirname), ...fichiers, '--no-sandbox'], env });
+// Un plantage : tout l'arbre de processus disparaît d'un coup. Sous Windows,
+// tuer le seul processus principal laisserait ses enfants (GPU, rendu) tenir
+// le dossier de données, et la relance croirait l'application encore ouverte.
+function tuer(app) {
+  const pid = app.process().pid;
+  if (process.platform === 'win32') require('child_process').spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore' });
+  else app.process().kill('SIGKILL');
+}
+// Relancer après le plantage : le système peut mettre quelques secondes à
+// libérer le verrou d'instance unique ; on réessaie, sans rien changer d'autre.
+async function relancer(exe, dossier, env, fichiers) {
+  let derniere = null;
+  for (let essai = 1; essai <= 4; essai++) {
+    await dormir(essai === 1 ? 1500 : 3000);
+    try { return await lancer(exe, dossier, env, fichiers); }
+    catch (e) { derniere = e; console.log('  relance ' + essai + ' : ' + String(e && e.message).split('\n')[0]); }
+  }
+  throw derniere;
+}
 async function fenetrePrete(app) {
   const win = await app.firstWindow();
   win.on('pageerror', (e) => console.log('[pageerror]', e.message));
@@ -121,9 +140,8 @@ async function tournerPage(win, n) {
   const manifeste = JSON.parse(fs.readFileSync(manifestes()[0], 'utf8'));
   console.log('récupération :', manifeste.titre, '|', manifeste.pages.length, 'pages,', manifeste.pages.filter((p) => p.rot === 90).length, 'tournée(s) | fichier :', manifeste.chemin);
   verifier(manifeste.pages.length === 3 && manifeste.pages.filter((p) => p.rot === 90).length === 2 && manifeste.chemin === sortie, 'manifeste de récupération');
-  app.process().kill('SIGKILL');
-  await dormir(1500);
-  app = await lancer(exe, dossier, env, []);
+  tuer(app);
+  app = await relancer(exe, dossier, env, []);
   win = await fenetrePrete(app);
   await win.waitForSelector('#recup-ok', { state: 'visible', timeout: 60000 });
   const proposition = await win.evaluate(() => document.querySelector('.dialog').textContent);
