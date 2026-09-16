@@ -8,6 +8,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const arg = (nom) => { const a = process.argv.find((x) => x.startsWith('--' + nom + '=')); return a ? a.slice(nom.length + 3) : ''; };
 contextBridge.exposeInMainWorld('BlonayDesktop', {
   version: arg('blonay-version'),
+  construction: arg('blonay-construction'),
   electron: process.versions.electron,
   chrome: process.versions.chrome,
   fichiersInitiaux: () => ipcRenderer.invoke('blonay:fichiers-initiaux'),

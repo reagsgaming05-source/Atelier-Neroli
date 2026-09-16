@@ -17,6 +17,9 @@ const path = require('path');
 const fs = require('fs');
 
 const APP_TITLE = 'Blonay PDF';
+// Date et commit de construction, posés par build.js puis prepare-app.js.
+let CONSTRUCTION = '';
+try { CONSTRUCTION = String(JSON.parse(fs.readFileSync(path.join(__dirname, 'app', 'construction.json'), 'utf8')).construction || ''); } catch (e) { /* version de travail */ }
 const PORTABLE_DIR = path.dirname(process.execPath);
 const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
 
@@ -80,7 +83,7 @@ function createWindow(fichiers) {
       nodeIntegration: false,
       sandbox: true,
       spellcheck: false,
-      additionalArguments: ['--blonay-version=' + app.getVersion()],
+      additionalArguments: ['--blonay-version=' + app.getVersion(), '--blonay-construction=' + CONSTRUCTION],
     },
   });
   win.blonayFichiers = fichiers || [];
@@ -271,7 +274,7 @@ function buildMenu() {
           click: () => dialog.showMessageBox(fenetreActive(), {
             type: 'info',
             title: 'À propos de ' + APP_TITLE,
-            message: APP_TITLE + ' ' + app.getVersion(),
+            message: APP_TITLE + ' ' + app.getVersion() + (CONSTRUCTION ? ' — ' + CONSTRUCTION : ' — version de travail'),
             detail: 'Organiser, corriger, annoter, remplir et imprimer des PDF.\n\n' +
               'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (les documents sont lus, ' +
               'modifiés et réassemblés dans cette fenêtre).\n\n' +

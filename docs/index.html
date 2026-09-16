@@ -1445,6 +1445,9 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
   'use strict';
 
   const APP = 'Blonay PDF';
+  const APP_VERSION = '2.0.0';
+  // Renseigné par build.js : date de construction et commit.
+  const APP_CONSTRUCTION = "construite le 16.09.2026, commit c0ad500";
   const CDN = {
     pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
     worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
@@ -1541,16 +1544,18 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
     // Les annotations partent comme de vrais commentaires PDF (modifiables
     // dans Acrobat) ; « figer » les fond dans la page.
     figerAnnotations: false,
+    // Le dossier de pièces constitué, pour tenir son sommaire à jour.
+    dossier: null,
   };
   // Ce qui fait un document ouvert — le reste de l'état (vue, zoom, thème)
   // est commun. Un traitement par lots, un onglet : chacun a le sien.
   const CHAMPS_DOC = ['sources', 'pages', 'selected', 'anchor', 'history', 'redo', 'touched', 'hueIdx', 'filenameDirty',
-    'meta', 'watermark', 'stamp', 'security', 'flatten', 'signets', 'figerAnnotations'];
+    'meta', 'watermark', 'stamp', 'security', 'flatten', 'signets', 'figerAnnotations', 'dossier'];
   function etatVierge() {
     return {
       sources: [], pages: [], selected: new Set(), anchor: null, history: [], redo: [], touched: false, hueIdx: 0, filenameDirty: false,
       meta: { title: '', author: '', subject: '', keywords: '' }, watermark: null, stamp: null, security: null, flatten: false,
-      signets: [], figerAnnotations: false, nomFichier: '',
+      signets: [], figerAnnotations: false, dossier: null, nomFichier: '',
     };
   }
   function prendreEtat() {
@@ -1567,6 +1572,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
   const dims = new Map();       // "srcId:index" -> {w,h,baseRot}
   const thumbs = new Map();     // "srcId:index" -> {status, url}
   const textCache = new Map();  // "srcId:index" -> string
+  const ocrCache = new Set();   // les entrées de textCache venues de l'OCR
   const tiles = new Map();      // pageId -> element
   let uid = 0;
   const drag = { ids: [], to: null, marker: null };
@@ -1709,7 +1715,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
   // =====================================================================
   function capture() {
     return {
-      pages: state.pages.map(p => ({ id: p.id, src: p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a)), piece: p.piece || null, ocr: p.ocr || null })),
+      pages: state.pages.map(p => ({ id: p.id, src: p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a)), piece: p.piece || null, ocr: p.ocr || null, pieceN: p.pieceN || 0, intercalaire: p.intercalaire || 0, sommaire: p.sommaire || 0 })),
       sources: state.sources.slice(),
       formValues: state.sources.map(s => Object.assign({}, s.formValues || {})),
       meta: Object.assign({}, state.meta),
@@ -1720,6 +1726,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
       touched: state.touched,
       signets: JSON.parse(JSON.stringify(state.signets || [])),
       figerAnnotations: state.figerAnnotations,
+      dossier: state.dossier ? JSON.parse(JSON.stringify(state.dossier)) : null,
     };
   }
   function restore(h) {
@@ -1734,7 +1741,16 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
     state.touched = h.touched;
     state.signets = h.signets || [];
     state.figerAnnotations = !!h.figerAnnotations;
+    state.dossier = h.dossier || null;
+    // Le sommaire se revérifie : les pages viennent de changer d'un coup.
+    if (state.dossier) state.dossier.signature = '';
     state.selected.clear();
+    // Le texte reconnu par l'OCR suit les pages : repris avec elles, ou
+    // oublié si l'annulation le retire.
+    const avecOcr = new Map();
+    state.pages.forEach(p => { if (p.ocr && p.ocr.texte != null) avecOcr.set(pkey(p), p.ocr.texte); });
+    Array.from(ocrCache).forEach(k => { if (!avecOcr.has(k)) { textCache.delete(k); ocrCache.delete(k); } });
+    avecOcr.forEach((t, k) => { textCache.set(k, t); ocrCache.add(k); });
   }
   function snapshot() {
     state.history.push(capture());
@@ -2571,7 +2587,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
       // le lister deux fois.
       let la = src && e.sources.find(s => s.id === src.id || (s.name === src.name && s.bytes.byteLength === src.bytes.byteLength));
       if (src && !la) { la = src; e.sources.push(src); }
-      e.pages.push({ id: ++uid, src: la ? la.id : p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a, { id: ++uid })), piece: p.piece || null, ocr: p.ocr || null });
+      e.pages.push({ id: ++uid, src: la ? la.id : p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a, { id: ++uid })), piece: p.piece || null, ocr: p.ocr || null, pieceN: p.pieceN || 0 });
     });
     e.touched = true;
     state.pages = state.pages.filter(p => !set.has(p.id));
@@ -3063,6 +3079,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
     renderChips();
     renderOnglets();
     updateSelectionUI();
+    if (state.dossier) rafraichirSommaire();
   }
 
   function defaultBase() {
@@ -3111,7 +3128,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
     state.pages.forEach(p => {
       next.push(p);
       if (set.has(p.id)) {
-        const c = { id: ++uid, src: p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a, { id: ++uid })), piece: p.piece || null, ocr: p.ocr || null };
+        const c = { id: ++uid, src: p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a, { id: ++uid })), piece: p.piece || null, ocr: p.ocr || null, pieceN: p.pieceN || 0 };
         next.push(c); created.push(c.id);
       }
     });
@@ -4737,6 +4754,102 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
     return doc;
   }
 
+  // =====================================================================
+  //  Liens internes : un sommaire cliquable, un renvoi « voir page 12 »
+  //  doivent suivre les pages quand on réorganise ou fusionne.
+  // =====================================================================
+  // Avant la copie : chaque lien vers une page du document est marqué de
+  // l'index de cette page et débarrassé de sa référence, qui ne survivrait
+  // pas à la copie. Les liens vers l'extérieur ne sont pas touchés.
+  async function marquerLiens(doc, src) {
+    if (doc.__liensMarques) return;
+    doc.__liensMarques = true;
+    const { PDFName, PDFArray, PDFDict, PDFRef, PDFString, PDFHexString, PDFNumber, PDFNull } = PDFLib;
+    const ctx = doc.context;
+    const pages = doc.getPages();
+    const indexDe = new Map();
+    pages.forEach((pg, i) => indexDe.set(pg.ref.toString(), i));
+    const N = k => PDFName.of(k);
+    const resoudre = async dest => {
+      const d = dest instanceof PDFRef ? ctx.lookup(dest) : dest;
+      if (d instanceof PDFString || d instanceof PDFHexString) {
+        // Destination nommée : le lecteur pdf.js sait la résoudre.
+        let nom = '';
+        try { nom = d.decodeText(); } catch (_) { nom = ''; }
+        if (!nom || !src || !src.pdfjs) return null;
+        try {
+          const ex = await src.pdfjs.getDestination(nom);
+          if (!Array.isArray(ex) || !ex.length || !ex[0] || typeof ex[0].num !== 'number') return null;
+          const i = await src.pdfjs.getPageIndex(ex[0]);
+          const reste = ex.slice(1).map(v => (v && typeof v === 'object' && v.name ? PDFName.of(v.name) : typeof v === 'number' ? PDFNumber.of(v) : PDFNull));
+          return { index: i, reste };
+        } catch (_) { return null; }
+      }
+      if (!(d instanceof PDFArray) || !d.size()) return null;
+      const premier = d.get(0);
+      if (premier instanceof PDFNumber) return { index: premier.asNumber(), reste: d.asArray().slice(1) };
+      if (!(premier instanceof PDFRef)) return null;
+      const i = indexDe.get(premier.toString());
+      return i == null ? null : { index: i, reste: d.asArray().slice(1) };
+    };
+    for (const pg of pages) {
+      const annots = pg.node.Annots();
+      if (!annots) continue;
+      for (const item of annots.asArray()) {
+        const a = ctx.lookup(item);
+        if (!(a instanceof PDFDict)) continue;
+        const sub = a.get(N('Subtype'));
+        if (!sub || sub.toString() !== '/Link') continue;
+        let dest = a.get(N('Dest')), viaAction = false;
+        if (!dest) {
+          const act = ctx.lookup(a.get(N('A')));
+          const s = act instanceof PDFDict ? act.get(N('S')) : null;
+          if (s && s.toString() === '/GoTo') { dest = act.get(N('D')); viaAction = true; }
+        }
+        if (!dest) continue;
+        let r = null;
+        try { r = await resoudre(dest); } catch (_) { r = null; }
+        if (!r) continue;
+        a.set(N('BlonayCible'), PDFNumber.of(r.index));
+        a.set(N('BlonayReste'), ctx.obj(r.reste));
+        a.delete(N('Dest'));
+        if (viaAction) a.delete(N('A'));
+      }
+    }
+  }
+  // Après la copie : les marques redeviennent des destinations, vers les
+  // pages du document exporté ; un lien vers une page absente est retiré.
+  function reposerLiens(out, mapped) {
+    const { PDFName, PDFDict } = PDFLib;
+    const ctx = out.context;
+    const N = k => PDFName.of(k);
+    const cible = new Map();
+    mapped.forEach(({ p, page }) => { const k = p.src + ':' + p.index; if (!cible.has(k)) cible.set(k, page.ref); });
+    let poses = 0, retires = 0;
+    mapped.forEach(({ p, page }) => {
+      let annots = null;
+      try { annots = page.node.Annots(); } catch (_) { annots = null; }
+      if (!annots) return;
+      const garde = [];
+      let change = false;
+      annots.asArray().forEach(item => {
+        const a = ctx.lookup(item);
+        if (!(a instanceof PDFDict) || !a.has(N('BlonayCible'))) { garde.push(item); return; }
+        change = true;
+        const idx = a.get(N('BlonayCible')).asNumber();
+        const reste = ctx.lookup(a.get(N('BlonayReste')));
+        a.delete(N('BlonayCible')); a.delete(N('BlonayReste'));
+        const ref = cible.get(p.src + ':' + idx);
+        if (!ref) { retires++; return; }
+        const suite = reste && reste.asArray ? reste.asArray() : [];
+        a.set(N('Dest'), ctx.obj([ref].concat(suite.length ? suite : [N('Fit')])));
+        garde.push(item); poses++;
+      });
+      if (change) page.node.set(N('Annots'), ctx.obj(garde));
+    });
+    return { poses, retires };
+  }
+
   function canExportInPlace(pages) {
     if (state.sources.length !== 1) return false;
     const src = state.sources[0];
@@ -4774,6 +4887,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
         const src = srcById(sid);
         if (!src) throw new Error('Document source introuvable.');
         const doc = await sourceDoc(src, !!(src.formValues && Object.keys(src.formValues).length));
+        try { await marquerLiens(doc, src); } catch (e) { console.warn('Liens :', e); }
         const copied = await out.copyPages(doc, items.map(it => it.p.index));
         items.forEach((it, i) => { placed[it.k] = copied[i]; });
       }
@@ -4793,6 +4907,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
       }
       mapped = pages.map((p, k) => ({ p, page: placed[k] }));
     }
+    try { reposerLiens(out, mapped); } catch (e) { console.warn('Liens :', e); }
 
     const fonts = new Map(), images = new Map();
     // Les noms déjà portés par les formulaires d'origine, pour ne pas les
@@ -5631,16 +5746,18 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
     });
     return w;
   }
+  // Un seul élément ou une liste : les deux se posent.
+  const enListe = nodes => (Array.isArray(nodes) ? nodes : [nodes]).filter(Boolean);
   function rowOf(nodes, tight) {
     const r = document.createElement('div'); r.className = 'row' + (tight ? ' tight' : '');
-    nodes.forEach(n => r.appendChild(n));
+    enListe(nodes).forEach(n => r.appendChild(n));
     return r;
   }
   function groupOf(legend, nodes) {
     const f = document.createElement('fieldset'); f.className = 'group';
     const l = document.createElement('legend'); l.textContent = legend;
     f.appendChild(l);
-    nodes.forEach(n => f.appendChild(n));
+    enListe(nodes).forEach(n => f.appendChild(n));
     return f;
   }
   function note(text, kind) {
@@ -6205,6 +6322,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
             const r = await ocrPage(p, moteur);
             p.ocr = { mots: r.mots, texte: r.texte, conf: r.conf, langues: langue.value, quand: Date.now() };
             textCache.set(pkey(p), r.texte);
+            ocrCache.add(pkey(p));
             mots += r.mots.length;
             if (r.mots.length && r.conf < 60) faibles++;
             await nextFrame();
@@ -6473,7 +6591,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
         o.pieces.slice(k * PAR_PAGE, (k + 1) * PAR_PAGE).forEach(pc => {
           const num = winAnsi('Pi\u00e8ce n\u00b0 ' + pc.n);
           pg.drawText(num, { x: marge, y, size: 11, font: gras, color: noir });
-          const pageTxt = 'p. ' + pc.debut;
+          const pageTxt = pc.debut > 0 ? 'p. ' + pc.debut : '\u2014';
           const wp = reg.widthOfTextAtSize(pageTxt, 11);
           pg.drawText(pageTxt, { x: W - marge - wp, y, size: 11, font: reg, color: noir });
           const xT = marge + 78;
@@ -6499,12 +6617,61 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
           pg.drawText(l, { x: (W - gras.widthOfTextAtSize(l, 20)) / 2, y, size: 20, font: gras, color: noir });
           y -= 28;
         });
-        const sous = winAnsi(plural(pc.pages.length, 'page', 'pages') + (o.numerotation ? ' \u00b7 pages ' + (pc.debut + (o.intercalaires ? 1 : 0)) + ' \u00e0 ' + (pc.debut + pc.pages.length - (o.intercalaires ? 0 : 1)) : ''));
+        const sous = winAnsi(pc.debut > 0
+          ? plural(pc.pages.length, 'page', 'pages') + (o.numerotation && pc.pages.length ? ' \u00b7 pages ' + (pc.debut + (o.intercalaires ? 1 : 0)) + ' \u00e0 ' + (pc.debut + pc.pages.length - (o.intercalaires ? 0 : 1)) : '')
+          : 'pi\u00e8ce retir\u00e9e du dossier');
         pg.drawText(sous, { x: (W - reg.widthOfTextAtSize(sous, 11)) / 2, y: y - 6, size: 11, font: reg, color: gris });
         pg.drawText(winAnsi(o.titre), { x: marge, y: 40, size: 9, font: reg, color: gris });
       });
     }
     return doc.save();
+  }
+  // Le sommaire et les intercalaires suivent le document : dès que l'ordre
+  // des pages change, les pages générées sont refaites avec les bons
+  // numéros. Ce qu'on voit est ce qu'on exporte.
+  let sommaireEnCours = false;
+  async function rafraichirSommaire() {
+    const d = state.dossier;
+    if (!d) return;
+    // Après une annulation, la source générée peut avoir changé d'identité.
+    let ancien = srcById(d.srcId) || state.sources.find(s2 => s2.genere && state.pages.some(p => p.src === s2.id && (p.sommaire || p.intercalaire)));
+    if (!ancien) return;
+    d.srcId = ancien.id;
+    const sig = state.pages.map(p => p.id).join(',');
+    if (sig === d.signature || sommaireEnCours) return;
+    d.signature = sig;
+    sommaireEnCours = true;
+    try {
+      const pieces = d.pieces.map(pc => {
+        const i = state.pages.findIndex(p => p.intercalaire === pc.n || p.pieceN === pc.n);
+        return { n: pc.n, titre: pc.titre, debut: i + 1, pages: new Array(state.pages.filter(p => p.pieceN === pc.n).length) };
+      });
+      const o = { titre: d.titre, intercalaires: d.intercalaires, numerotation: d.numerotation, sommaire: d.sommaire, pieces, totalPages: state.pages.length };
+      const bytes = await fabriquerPagesDossier(o);
+      const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      // Une nouvelle source prend la place de l'ancienne ; les pages gardent
+      // leur identité (signets, mentions, position), seul le contenu change.
+      const miennes = state.pages.filter(p => p.src === ancien.id);
+      const neuf = await addPdfSource(ancien.name, buf, { silent: true });
+      neuf.genere = true; neuf.hue = ancien.hue;
+      state.pages = state.pages.filter(p => p.src !== neuf.id);
+      miennes.forEach(p => { p.src = neuf.id; });
+      state.sources = state.sources.filter(s => s !== ancien);
+      const remapper = h => {
+        if (h.sources) h.sources = h.sources.map(s2 => (s2 === ancien ? neuf : s2));
+        (h.pages || []).forEach(p => { if (p.src === ancien.id) p.src = neuf.id; });
+        if (h.dossier && h.dossier.srcId === ancien.id) h.dossier.srcId = neuf.id;
+      };
+      state.history.forEach(remapper); state.redo.forEach(remapper);
+      d.srcId = neuf.id;
+      miennes.forEach(p => peintes.delete(p.id));
+      render();
+    } catch (e) { console.warn('Sommaire :', e); }
+    finally {
+      sommaireEnCours = false;
+      // Les pages ont encore bougé pendant qu'on refaisait le sommaire ? On recommence.
+      if (state.pages.map(p => p.id).join(',') !== sig) { d.signature = ''; rafraichirSommaire(); }
+    }
   }
   function toolDossier() {
     const pieces = piecesDuDocument();
@@ -6537,7 +6704,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
         b.append(field('Titre du dossier', titre));
         b.append(groupOf('Les pièces, dans l\'ordre des pages', [liste]));
         b.append(inter, mention, numero, sommaire, signets);
-        b.append(note('Chaque document ouvert devient une pièce ; ses pages sont regroupées. Le sommaire indique la page où commence chaque pièce : constituez le dossier en dernier, une fois les pages en ordre. Ctrl+Z défait le tout.'));
+        b.append(note('Chaque document ouvert devient une pièce ; ses pages sont regroupées. Le sommaire et les intercalaires se refont d\'eux-mêmes si vous déplacez ou retirez des pages ensuite. Ctrl+Z défait le tout.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Constituer le dossier', primary: true, onClick: async close => {
         close();
@@ -6564,12 +6731,19 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
           const ordre = [];
           let gi = 0;
           const somPages = gPages.slice(0, ns); gi = ns;
+          somPages.forEach((p, k) => { p.sommaire = k + 1; });
           ordre.push(...somPages);
           o.pieces.forEach(pc => {
-            if (o.intercalaires) ordre.push(gPages[gi++]);
+            if (o.intercalaires) { const inter = gPages[gi++]; inter.intercalaire = pc.n; ordre.push(inter); }
             ordre.push(...pc.pages);
-            if (o.mention) pc.pages.forEach(p => { p.piece = 'Pièce n° ' + pc.n; });
+            pc.pages.forEach(p => { p.pieceN = pc.n; if (o.mention) p.piece = 'Pièce n° ' + pc.n; });
           });
+          // De quoi refaire le sommaire quand les pages bougent.
+          state.dossier = (o.sommaire || o.intercalaires) && gPages.length ? {
+            titre: o.titre, pieces: o.pieces.map(pc => ({ n: pc.n, titre: pc.titre })),
+            intercalaires: o.intercalaires, numerotation: o.numerotation, sommaire: o.sommaire,
+            srcId: gPages[0].src, signature: '',
+          } : null;
           // les pages d'autres sources générées (un dossier précédent) suivent
           state.pages.forEach(p => { if (ordre.indexOf(p) < 0 && gPages.indexOf(p) < 0) ordre.push(p); });
           state.pages = ordre;
@@ -7241,6 +7415,27 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
     });
   }
 
+  // Un morceau de texte dans le repère affiché. Sa direction n'est pas
+  // toujours de gauche à droite : un tableau posé de côté sur la page, un
+  // texte à l'envers. On rend sa boîte, et « vertical » dit qu'il court de
+  // haut en bas (ou de bas en haut : « monte »).
+  function morceauGeom(m, largeur) {
+    const size = Math.hypot(m[2], m[3]) || Math.abs(m[3]) || 10;
+    const dx = m[0], dy = m[1], len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;
+    const w = largeur > 0 ? largeur : size * 0.5;
+    if (Math.abs(ux) >= Math.abs(uy)) {
+      return { x: ux >= 0 ? m[4] : m[4] - w, base: m[5], w, size, vertical: false, envers: ux < 0 };
+    }
+    // Vertical : les lettres se dressent à droite de la ligne de base quand
+    // le texte descend, à gauche quand il monte.
+    const monte = uy < 0;
+    return {
+      x: monte ? m[4] - size * 0.85 : m[4] - size * 0.25, base: m[5], w: size * 1.1, size, vertical: true, monte,
+      y0: Math.min(m[5], m[5] + uy * w), h: Math.abs(uy * w),
+    };
+  }
+
   // Le texte d'une page avec, pour chaque morceau, sa place sur la page :
   // de quoi retrouver où se trouve une occurrence pour la caviarder.
   async function texteAvecPositions(p) {
@@ -7256,14 +7451,15 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
         tc.items.forEach(it => {
           if (!it.str) return;
           const m = pdfjs.Util.transform(vp.transform, it.transform);
-          const size = Math.hypot(m[2], m[3]) || Math.abs(m[3]) || 10;
-          const w = it.width > 0 ? it.width : size * it.str.length * 0.5;
-          if (last && Math.abs(m[5] - last.base) > 2) texte += '\n';
-          else if (texte && !/\s$/.test(texte) && last && m[4] - last.fin > size * 0.12) texte += ' ';
+          const geo = morceauGeom(m, it.width > 0 ? it.width : 0);
+          if (!(it.width > 0)) geo.w = geo.size * it.str.length * 0.5;
+          const memeLigne = last && (geo.vertical ? (last.vertical && Math.abs(geo.x - last.x) <= 2) : (!last.vertical && Math.abs(geo.base - last.base) <= 2));
+          if (last && !memeLigne) texte += '\n';
+          else if (texte && !/\s$/.test(texte) && last && (geo.vertical ? Math.abs(geo.y0 - last.finY) > geo.size * 0.12 : geo.x - last.fin > geo.size * 0.12)) texte += ' ';
           const i0 = texte.length;
           texte += it.str;
-          morceaux.push({ i0, i1: texte.length, x: m[4], base: m[5], w, size });
-          last = { base: m[5], fin: m[4] + w };
+          morceaux.push({ i0, i1: texte.length, x: geo.x, base: geo.base, w: geo.w, size: geo.size, vertical: geo.vertical, monte: geo.monte, y0: geo.y0, h: geo.h });
+          last = { base: geo.base, fin: geo.x + geo.w, x: geo.x, vertical: geo.vertical, finY: geo.vertical ? (geo.monte ? geo.y0 : geo.y0 + geo.h) : 0 };
         });
         page.cleanup();
       } catch (e) { console.warn('Texte :', e); }
@@ -7288,6 +7484,12 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
       const n = Math.max(1, m.i1 - m.i0);
       const fa = Math.max(0, i0 - m.i0) / n, fb = Math.min(n, i1 - m.i0) / n;
       if (fb <= fa) return;
+      if (m.vertical) {
+        // le long de la colonne : vers le bas, ou vers le haut si le texte monte
+        const ya = m.monte ? m.y0 + m.h * (1 - fb) : m.y0 + m.h * fa;
+        out.push({ x: m.x, y: ya, w: m.w, h: m.h * (fb - fa) });
+        return;
+      }
       out.push({ x: m.x + m.w * fa, y: m.base - m.size * 0.85, w: m.w * (fb - fa), h: m.size * 1.1 });
     });
     return out;
@@ -7424,12 +7626,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
           else xs.appendChild(document.createTextNode(chunk));
         });
         b.append(pn, xs);
-        b.addEventListener('click', () => {
-          state.selected.clear(); state.selected.add(p.id);
-          updateSelectionUI();
-          const tile = tiles.get(p.id);
-          if (tile) tile.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        });
+        b.addEventListener('click', () => allerPage(p.id));
         results.appendChild(b);
         if (i % 6 === 0) await nextFrame();
       }
@@ -7592,8 +7789,9 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
       tc.items.forEach(it => {
         if (!it.str || !it.str.trim()) return;
         const m = pdfjs.Util.transform(vp.transform, it.transform);
-        const size = Math.hypot(m[2], m[3]) || Math.abs(m[3]) || 10;
-        out.push({ str: it.str, x: m[4], base: m[5], w: it.width > 0 ? it.width : size * it.str.length * 0.5, size });
+        const geo = morceauGeom(m, it.width > 0 ? it.width : 0);
+        if (geo.vertical || geo.envers) return;
+        out.push({ str: it.str, x: geo.x, base: geo.base, w: it.width > 0 ? it.width : geo.size * it.str.length * 0.5, size: geo.size });
       });
       page.cleanup();
     } catch (e) { console.warn('Tableau :', e); }
@@ -7692,6 +7890,10 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
           'Onglets : plusieurs documents dans la fenêtre, une page se glisse d\'un onglet à l\'autre.',
         ].forEach(t => nouv.appendChild(note(t)));
         b.append(groupOf('Ce que sait faire la version 2', [nouv]));
+        const bureau = window.BlonayDesktop || null;
+        b.append(note(APP + ' ' + APP_VERSION
+          + (/^__/.test(APP_CONSTRUCTION) ? ' · version de travail' : ' · ' + APP_CONSTRUCTION)
+          + (bureau && bureau.construction ? ' · application ' + (bureau.version || '') + ' ' + bureau.construction : '')));
         b.append(note('Astuce : tapez un chiffre sur une page sélectionnée au clavier pour la déplacer directement à ce numéro.'));
         const conf = document.createElement('div');
         conf.style.display = 'flex'; conf.style.flexDirection = 'column'; conf.style.gap = '8px';
@@ -7912,11 +8114,13 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
       tc.items.forEach(it => {
         if (!it.str || !it.str.trim()) return;
         const m = pdfjs.Util.transform(vp.transform, it.transform);
-        const taille = Math.hypot(m[2], m[3]) || Math.abs(m[3]) || 10;
-        if (taille < 1) return;
+        const geo = morceauGeom(m, it.width > 0 ? it.width : 0);
+        if (geo.size < 1) return;
+        // Un texte posé de côté ou à l'envers ne se corrige pas en ligne.
+        if (geo.vertical || geo.envers) return;
         morceaux.push({
-          str: it.str, x: m[4], base: m[5], size: taille,
-          w: it.width > 0 ? it.width : taille * it.str.length * 0.5,
+          str: it.str, x: geo.x, base: geo.base, size: geo.size,
+          w: it.width > 0 ? it.width : geo.size * it.str.length * 0.5,
           pol: polices.get(it.fontName) || null,
         });
       });

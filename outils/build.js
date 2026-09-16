@@ -4,7 +4,19 @@ const path = require('path');
 const LIB = path.join(__dirname, 'libs');
 // Quel que soit le poste (Windows convertit les fins de ligne au passage),
 // on travaille en LF : les repères de ce script en dépendent.
-const src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8').replace(/\r\n/g, '\n');
+let src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8').replace(/\r\n/g, '\n');
+// Date et commit de construction, affichés dans l'aide : on sait quelle
+// version on a sous la main.
+function commitCourt() {
+  const env = process.env.GITHUB_SHA || process.env.BLONAY_COMMIT || '';
+  if (env) return env.slice(0, 7);
+  try { return require('child_process').execSync('git rev-parse --short HEAD', { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch (e) { return ''; }
+}
+const d = new Date();
+const CONSTRUCTION = 'construite le ' + String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear() + (commitCourt() ? ', commit ' + commitCourt() : '');
+if (!src.includes("'__CONSTRUCTION__'")) throw new Error('repère de construction introuvable dans source.html');
+src = src.replace("'__CONSTRUCTION__'", () => JSON.stringify(CONSTRUCTION));
+fs.writeFileSync(path.join(__dirname, 'desktop', 'construction.json'), JSON.stringify({ construction: CONSTRUCTION, commit: commitCourt(), date: d.toISOString() }) + '\n');
 const HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="color-scheme" content="dark light">\n</head>\n<body>\n';
 const TAIL = '</body>\n</html>\n';
 const OUT = __dirname;

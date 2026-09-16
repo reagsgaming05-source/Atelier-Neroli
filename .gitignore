@@ -16,3 +16,4 @@ outils/desktop/node_modules/
 outils/desktop/app/
 outils/desktop/dist/
 outils/desktop/.electron-cache/
+outils/desktop/construction.json

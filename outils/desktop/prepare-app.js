@@ -13,4 +13,7 @@ for (const attendu of ['BlonayDesktop', 'ouvrirListe', 'pdfjsLib']) {
 }
 fs.mkdirSync(path.join(__dirname, 'app'), { recursive: true });
 fs.copyFileSync(src, path.join(__dirname, 'app', 'index.html'));
+// La date et le commit de construction (écrits par build.js), pour « À propos ».
+const info = path.join(__dirname, 'construction.json');
+fs.writeFileSync(path.join(__dirname, 'app', 'construction.json'), fs.existsSync(info) ? fs.readFileSync(info) : '{"construction":""}\n');
 console.log('OK -> desktop/app/index.html (' + (html.length / 1024 / 1024).toFixed(2) + ' Mo)');
