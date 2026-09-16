@@ -461,3 +461,9 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 #recapTable tr.off td { color: var(--muted-2); }
 #recapTable tr.off td.num { color: var(--muted-2); }
 #pKind label { white-space: nowrap; }
+
+/* ---------------------------------------------------------------- espace Décompte DGEO (page posée par l'application fenêtrée) */
+.navbadge { margin-left: auto; background: #f59e0b; color: #1f2937; border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 600; flex: none; }
+@media (max-width: 1500px) { .navbadge { position: absolute; top: 4px; right: 4px; margin: 0; padding: 0 5px; font-size: 10px; } }
+.content.embed { padding: 0; }
+.dgeo-host { height: 100vh; }

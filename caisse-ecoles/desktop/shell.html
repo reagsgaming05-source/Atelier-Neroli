@@ -21,25 +21,12 @@
 <body>
   <nav class="bar">
     <div class="brand"><span class="mark">CB</span><span>Compta Blonay</span></div>
-    <div class="tabs">
-      <button class="tab active" data-tab="caisse"><svg viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>Caisse écoles <span class="st badge" id="caisseBadge"></span></button>
-      <button class="tab" data-tab="dgeo"><svg viewBox="0 0 24 24"><path d="m12 2 8.5 4.5L12 11 3.5 6.5 12 2z"/><path d="m3.5 11.5 8.5 4.5 8.5-4.5M3.5 16.5 12 21l8.5-4.5"/></svg>Décompte DGEO <span class="st" id="dgeoState"></span></button>
-    </div>
     <span class="spacer"></span>
     <span class="local"><svg viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>100 % local · aucune donnée n'est envoyée</span>
   </nav>
   <script>
-    const tabs = document.querySelectorAll('.tab');
-    const setActive = (name) => tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
-    tabs.forEach((t) => t.addEventListener('click', () => { setActive(t.dataset.tab); window.CaisseShell.show(t.dataset.tab); }));
-    const DGEO_STATE = { starting: '(démarre…)', ready: '', off: '(arrêté – cliquer pour relancer)', failed: '(ne répond pas – cliquer pour réessayer)', missing: '(non inclus)' };
-    const apply = (s) => {
-      setActive(s.active);
-      document.getElementById('dgeoState').textContent = s.hasDgeo ? (DGEO_STATE[s.dgeo] || '') : DGEO_STATE.missing;
-      const n = s.decomptes || 0;
-      document.getElementById('caisseBadge').textContent = n ? `${n} décompte${n > 1 ? 's' : ''} à saisir` : '';
-    };
-    window.CaisseShell.onState(apply);
-    window.CaisseShell.state().then(apply);
+    // La barre n'a plus d'onglets : les espaces (Saisie, Pièces scannées, Compter la caisse,
+    // Décompte DGEO) sont dans la barre latérale de la page Caisse écoles.
+    window.CaisseShell.state().then(() => {});
   </script>
 </body></html>

@@ -47,9 +47,10 @@
   </div>
   <nav class="nav" id="appTabs">
     <div class="section">Espaces</div>
-    <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span></button>
+    <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
+    <button type="button" class="apptab" data-panel="panelDgeo" title="Décompte DGEO"><svg class="ico"><use href="#i-layers"/></svg><span class="lbl">Décompte DGEO<small id="dgeoNavState">Courses d'école &amp; camps</small></span></button>
   </nav>
   <div class="foot">
     <span class="pill"><svg class="ico"><use href="#i-shield"/></svg> 100 % local, aucune donnée envoyée</span>
@@ -412,6 +413,15 @@
       </table>
     </div>
     <div id="countNotices"></div>
+  </section>
+</div>
+
+<div id="panelDgeo" class="panel hidden">
+  <div id="dgeoHost" class="dgeo-host"></div>
+  <section class="card" id="dgeoAbout" style="max-width:760px;margin:26px auto">
+    <h2><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</h2>
+    <p>Décompte DGEO analyse le dossier PDF d'une course d'école ou d'un camp (formulaire de couverture et tickets), retient les pièces, calcule la part à charge de l'État pour les accompagnants titrés et produit le décompte Excel.</p>
+    <p>Il fait partie de l'application Windows <b>Compta Blonay</b> (<code>ComptaBlonay.exe</code>), où il s'ouvre ici même, dans cet espace. Dans ce fichier HTML seul, il n'est pas disponible.</p>
   </section>
 </div>
 

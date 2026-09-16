@@ -59,17 +59,24 @@ let mainWindow = null;
 let caisseView = null;
 let dgeoView = null;
 let activeTab = 'caisse';
+let dgeoEmbed = null; // zone (px CSS de la page Caisse écoles) où la page Décompte DGEO s'affiche, ou null
 const TAB_H = 46; // hauteur de la barre d'onglets (shell.html)
 
+// La page Caisse écoles occupe toute la fenêtre sous la barre ; la page Décompte DGEO est posée
+// par-dessus, dans la zone que la barre latérale lui réserve (espace « Décompte DGEO »).
 function layoutViews() {
   if (!mainWindow) return;
   const [w, h] = mainWindow.getContentSize();
-  const bounds = { x: 0, y: TAB_H, width: w, height: Math.max(0, h - TAB_H) };
-  for (const [name, v] of [['caisse', caisseView], ['dgeo', dgeoView]]) {
-    if (!v) continue;
-    v.setBounds(bounds);
-    v.setVisible(name === activeTab);
+  if (caisseView) { caisseView.setBounds({ x: 0, y: TAB_H, width: w, height: Math.max(0, h - TAB_H) }); caisseView.setVisible(true); }
+  if (dgeoView) {
+    if (dgeoEmbed) {
+      const z = caisseView ? caisseView.webContents.getZoomFactor() : 1;
+      const r = (v) => Math.max(0, Math.round(v * z));
+      dgeoView.setBounds({ x: r(dgeoEmbed.x), y: TAB_H + r(dgeoEmbed.y), width: Math.max(1, r(dgeoEmbed.width)), height: Math.max(1, r(dgeoEmbed.height)) });
+      dgeoView.setVisible(true);
+    } else dgeoView.setVisible(false);
   }
+  activeTab = dgeoEmbed ? 'dgeo' : 'caisse';
 }
 
 function caissePreferences() {
@@ -158,10 +165,12 @@ const dgeo = { proc: null, url: null, status: 'off', starting: null };
 
 /** État de la fenêtre pour la barre d'onglets (et le test de fumée). */
 function shellState() {
-  return { active: activeTab, dgeo: dgeo.status, hasDgeo: !!dgeoCommand(), decomptes: loadDecomptes().filter((d) => !d.saisi).length };
+  return { active: activeTab, embedded: !!dgeoEmbed, dgeo: dgeo.status, hasDgeo: !!dgeoCommand(), decomptes: loadDecomptes().filter((d) => !d.saisi).length };
 }
 function pushShellState() {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('shell:state', shellState());
+  const st = shellState();
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('shell:state', st);
+  notifyCaisse('shell:state', st);
 }
 function notifyCaisse(channel, payload) {
   if (caisseView && !caisseView.webContents.isDestroyed()) caisseView.webContents.send(channel, payload);
@@ -261,17 +270,20 @@ async function launchDgeo() {
   return url;
 }
 
-async function showTab(name) {
-  activeTab = name;
+/** Ouvre un espace de la barre latérale de Caisse écoles (menu, raccourcis, anciens appels « onglet »). */
+function openPanel(id) { notifyCaisse('app:panel', id); }
+function showTab(name) { openPanel(name === 'dgeo' ? 'panelDgeo' : 'panelSaisie'); }
+
+// La page Caisse écoles indique où afficher Décompte DGEO (espace ouvert) ou null (autre espace).
+ipcMain.on('dgeo:embed', (ev, rect) => {
+  dgeoEmbed = rect && typeof rect === 'object' ? { x: Number(rect.x) || 0, y: Number(rect.y) || 0, width: Number(rect.width) || 0, height: Number(rect.height) || 0 } : null;
   layoutViews();
   pushShellState();
-  if (name === 'dgeo' && dgeoView) {
-    if (dgeo.status === 'ready') { if (!dgeoView.webContents.getURL().startsWith(dgeo.url)) dgeoView.webContents.loadURL(dgeo.url); return; }
-    if (dgeo.status === 'starting') return; // launchDgeo() affichera la page dès que le serveur répond
-    await launchDgeo(); // non démarré, arrêté ou en échec : nouvel essai
+  if (dgeoEmbed && dgeoView) {
+    if (dgeo.status === 'ready') { if (!dgeoView.webContents.getURL().startsWith(dgeo.url)) dgeoView.webContents.loadURL(dgeo.url); }
+    else if (dgeo.status !== 'starting') launchDgeo(); // non démarré, arrêté ou en échec : nouvel essai
   }
-}
-
+});
 ipcMain.on('shell:tab', (ev, name) => { showTab(name === 'dgeo' ? 'dgeo' : 'caisse'); });
 ipcMain.handle('shell:state', () => shellState());
 
@@ -374,6 +386,7 @@ function zoomActive(delta) {
   if (!v) return;
   const wc = v.webContents;
   wc.setZoomFactor(delta === 0 ? 1 : Math.min(2, Math.max(0.5, wc.getZoomFactor() + delta)));
+  layoutViews();
 }
 
 function buildMenu() {
@@ -399,10 +412,12 @@ function buildMenu() {
       ],
     },
     {
-      label: 'Onglets',
+      label: 'Espaces',
       submenu: [
-        { label: 'Caisse écoles', accelerator: 'CmdOrCtrl+1', click: () => showTab('caisse') },
-        { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+2', click: () => showTab('dgeo') },
+        { label: 'Saisie des pièces', accelerator: 'CmdOrCtrl+1', click: () => openPanel('panelSaisie') },
+        { label: 'Pièces scannées', accelerator: 'CmdOrCtrl+2', click: () => openPanel('panelScan') },
+        { label: 'Compter la caisse', accelerator: 'CmdOrCtrl+3', click: () => openPanel('panelCaisse') },
+        { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+4', click: () => openPanel('panelDgeo') },
       ],
     },
     {

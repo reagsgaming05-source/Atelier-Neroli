@@ -160,13 +160,13 @@ async function findPage(app, pred, timeoutMs) {
       if (dgeoPage) break;
       await new Promise((r) => setTimeout(r, 500));
     }
-    await shell.click('.tab[data-tab="dgeo"]');
+    await win.evaluate(() => window.CaisseApp.showPanel('panelDgeo')); // espace « Décompte DGEO » de la barre latérale
     if (dgeoPage) {
       await dgeoPage.waitForLoadState('domcontentloaded');
       const dt = await dgeoPage.title();
       const st2 = await shell.evaluate(() => window.CaisseShell.state());
       console.log('Décompte DGEO :', dgeoPage.url(), '–', dt, '–', JSON.stringify(st2));
-      ok = ok && /Décompte/i.test(dt + (await dgeoPage.content()).slice(0, 2000)) && st2.dgeo === 'ready' && st2.active === 'dgeo';
+      ok = ok && /Décompte/i.test(dt + (await dgeoPage.content()).slice(0, 2000)) && st2.dgeo === 'ready' && st2.active === 'dgeo' && st2.embedded === true;
 
       // pont : un décompte terminé dans DGEO (fichier Excel généré) est proposé en pièce dans la caisse
       const dossier = { id: 'smoke-dgeo', filename: 'decompte-test.pdf', numero: 'D-TEST-1', type_activite: 'course', type_activite_texte: "Course d'école", activite: 'Lausanne', classe: '5P/3', enseignant: 'A. Berger', telephone: '',
@@ -175,7 +175,7 @@ async function findPage(app, pred, timeoutMs) {
         rows: [{ rubrique: 'Transport', libelle: 'CFF 2 titrés', mode: 'direct', cout_total: null, cout_direct: 24.4, pieces: [] }], total: 24.4, warnings: [], ocr_engine: '' };
       const status = await dgeoPage.evaluate(async (d) => { const r = await fetch('/api/excel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); await r.blob(); return r.status; }, dossier);
       console.log('Excel généré par DGEO :', status);
-      await shell.click('.tab[data-tab="caisse"]');
+      await win.evaluate(() => window.CaisseApp.showPanel('panelSaisie'));
       let bridge = null;
       try {
         await win.waitForFunction(() => document.querySelectorAll('#dgeoPending button[data-dgeo-use="smoke-dgeo"]').length > 0, null, { timeout: 15000 });

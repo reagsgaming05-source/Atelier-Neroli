@@ -5,9 +5,10 @@ Compta Blonay réunit en une seule application deux outils : « Caisse écoles �
 comptables et journal de caisse) et « Décompte DGEO » (courses d'école & camps).
 
 1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau, Documents…).
-2. Double-cliquez sur ComptaBlonay.exe : c'est le seul programme à ouvrir. La fenêtre a deux
-   onglets : « Caisse écoles » et « Décompte DGEO » (le logiciel de décompte complet, démarré
-   avec l'application dans le dossier decompte\ ; il n'y a rien d'autre à lancer).
+2. Double-cliquez sur ComptaBlonay.exe : c'est le seul programme à ouvrir. La barre latérale
+   de gauche donne accès à tous les espaces : Saisie des pièces, Pièces scannées, Compter la
+   caisse et Décompte DGEO (le logiciel de décompte complet, démarré avec l'application dans
+   le dossier decompte\ ; il n'y a rien d'autre à lancer).
 3. Caisse écoles – Saisie des pièces : remplissez la fiche (n°, date, type, objet, classe,
    personne, compte proposé, montant, justificatifs), « Enregistrer la pièce → journal ».
    À la fin de l'année : « Générer le fichier Excel de l'année » et « PDF des pièces ».

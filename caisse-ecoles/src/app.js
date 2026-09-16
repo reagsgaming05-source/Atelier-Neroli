@@ -1811,6 +1811,38 @@
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
     for (const el of document.querySelectorAll('main .panel')) el.classList.toggle('hidden', el.id !== id);
     try { localStorage.setItem('caisse.onglet', id); } catch (e) { /* ignore */ }
+    updateDgeoEmbed();
+  }
+  // Décompte DGEO : dans l'application fenêtrée, sa page est posée par le processus principal dans
+  // la zone de l'espace « Décompte DGEO » (fichier HTML seul : une explication à la place).
+  const dgeoHost = document.getElementById('dgeoHost');
+  const dgeoAbout = document.getElementById('dgeoAbout');
+  const canEmbed = !!(window.CaisseDgeo && window.CaisseDgeo.embed && dgeoHost);
+  if (dgeoAbout && canEmbed) dgeoAbout.classList.add('hidden');
+  if (dgeoHost && !canEmbed) dgeoHost.classList.add('hidden');
+  function updateDgeoEmbed() {
+    if (!canEmbed) return;
+    const panel = document.getElementById('panelDgeo');
+    const active = !!panel && !panel.classList.contains('hidden');
+    const content = document.querySelector('main.content');
+    if (content) content.classList.toggle('embed', active);
+    if (!active) { window.CaisseDgeo.embed(null); return; }
+    const r = dgeoHost.getBoundingClientRect();
+    window.CaisseDgeo.embed({ x: r.left, y: r.top, width: r.width, height: r.height });
+  }
+  if (canEmbed) {
+    window.addEventListener('resize', updateDgeoEmbed);
+    if (window.ResizeObserver) new ResizeObserver(updateDgeoEmbed).observe(dgeoHost);
+    window.CaisseDgeo.onPanel((id) => { if (document.getElementById(id)) showPanel(id); });
+    const DGEO_STATE = { starting: 'démarre…', ready: "Courses d'école & camps", off: 'arrêté – cliquer pour relancer', failed: 'ne répond pas – cliquer pour réessayer', missing: 'non inclus dans ce dossier' };
+    const applyState = (s) => {
+      const el = document.getElementById('dgeoNavState');
+      if (el) el.textContent = s.hasDgeo ? (DGEO_STATE[s.dgeo] || DGEO_STATE.ready) : DGEO_STATE.missing;
+      const b = document.getElementById('navBadgeSaisie');
+      if (b) { b.textContent = s.decomptes ? String(s.decomptes) : ''; b.classList.toggle('hidden', !s.decomptes); }
+    };
+    window.CaisseDgeo.onState(applyState);
+    window.CaisseDgeo.state().then(applyState).catch(() => {});
   }
   if (appTabs) {
     appTabs.addEventListener('click', (ev) => { const b = ev.target.closest('.apptab'); if (b) showPanel(b.dataset.panel); });

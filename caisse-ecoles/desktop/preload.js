@@ -57,4 +57,8 @@ contextBridge.exposeInMainWorld('CaisseDgeo', {
   show: () => ipcRenderer.send('shell:tab', 'dgeo'),
   state: () => ipcRenderer.invoke('shell:state'),
   onNew: (cb) => ipcRenderer.on('dgeo:new', (ev, d) => cb(d)),
+  // affichage de la page Décompte DGEO dans l'espace de la barre latérale : zone { x, y, width, height } (px CSS) ou null
+  embed: (rect) => ipcRenderer.send('dgeo:embed', rect),
+  onState: (cb) => ipcRenderer.on('shell:state', (ev, s) => cb(s)),
+  onPanel: (cb) => ipcRenderer.on('app:panel', (ev, id) => cb(id)),
 });

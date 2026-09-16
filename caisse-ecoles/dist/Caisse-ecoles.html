@@ -471,6 +471,12 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 #recapTable tr.off td.num { color: var(--muted-2); }
 #pKind label { white-space: nowrap; }
 
+/* ---------------------------------------------------------------- espace Décompte DGEO (page posée par l'application fenêtrée) */
+.navbadge { margin-left: auto; background: #f59e0b; color: #1f2937; border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 600; flex: none; }
+@media (max-width: 1500px) { .navbadge { position: absolute; top: 4px; right: 4px; margin: 0; padding: 0 5px; font-size: 10px; } }
+.content.embed { padding: 0; }
+.dgeo-host { height: 100vh; }
+
 </style>
 </head>
 <body>
@@ -513,9 +519,10 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   </div>
   <nav class="nav" id="appTabs">
     <div class="section">Espaces</div>
-    <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span></button>
+    <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
+    <button type="button" class="apptab" data-panel="panelDgeo" title="Décompte DGEO"><svg class="ico"><use href="#i-layers"/></svg><span class="lbl">Décompte DGEO<small id="dgeoNavState">Courses d'école &amp; camps</small></span></button>
   </nav>
   <div class="foot">
     <span class="pill"><svg class="ico"><use href="#i-shield"/></svg> 100 % local, aucune donnée envoyée</span>
@@ -878,6 +885,15 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       </table>
     </div>
     <div id="countNotices"></div>
+  </section>
+</div>
+
+<div id="panelDgeo" class="panel hidden">
+  <div id="dgeoHost" class="dgeo-host"></div>
+  <section class="card" id="dgeoAbout" style="max-width:760px;margin:26px auto">
+    <h2><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</h2>
+    <p>Décompte DGEO analyse le dossier PDF d'une course d'école ou d'un camp (formulaire de couverture et tickets), retient les pièces, calcule la part à charge de l'État pour les accompagnants titrés et produit le décompte Excel.</p>
+    <p>Il fait partie de l'application Windows <b>Compta Blonay</b> (<code>ComptaBlonay.exe</code>), où il s'ouvre ici même, dans cet espace. Dans ce fichier HTML seul, il n'est pas disponible.</p>
   </section>
 </div>
 
@@ -7861,6 +7877,38 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
     for (const el of document.querySelectorAll('main .panel')) el.classList.toggle('hidden', el.id !== id);
     try { localStorage.setItem('caisse.onglet', id); } catch (e) { /* ignore */ }
+    updateDgeoEmbed();
+  }
+  // Décompte DGEO : dans l'application fenêtrée, sa page est posée par le processus principal dans
+  // la zone de l'espace « Décompte DGEO » (fichier HTML seul : une explication à la place).
+  const dgeoHost = document.getElementById('dgeoHost');
+  const dgeoAbout = document.getElementById('dgeoAbout');
+  const canEmbed = !!(window.CaisseDgeo && window.CaisseDgeo.embed && dgeoHost);
+  if (dgeoAbout && canEmbed) dgeoAbout.classList.add('hidden');
+  if (dgeoHost && !canEmbed) dgeoHost.classList.add('hidden');
+  function updateDgeoEmbed() {
+    if (!canEmbed) return;
+    const panel = document.getElementById('panelDgeo');
+    const active = !!panel && !panel.classList.contains('hidden');
+    const content = document.querySelector('main.content');
+    if (content) content.classList.toggle('embed', active);
+    if (!active) { window.CaisseDgeo.embed(null); return; }
+    const r = dgeoHost.getBoundingClientRect();
+    window.CaisseDgeo.embed({ x: r.left, y: r.top, width: r.width, height: r.height });
+  }
+  if (canEmbed) {
+    window.addEventListener('resize', updateDgeoEmbed);
+    if (window.ResizeObserver) new ResizeObserver(updateDgeoEmbed).observe(dgeoHost);
+    window.CaisseDgeo.onPanel((id) => { if (document.getElementById(id)) showPanel(id); });
+    const DGEO_STATE = { starting: 'démarre…', ready: "Courses d'école & camps", off: 'arrêté – cliquer pour relancer', failed: 'ne répond pas – cliquer pour réessayer', missing: 'non inclus dans ce dossier' };
+    const applyState = (s) => {
+      const el = document.getElementById('dgeoNavState');
+      if (el) el.textContent = s.hasDgeo ? (DGEO_STATE[s.dgeo] || DGEO_STATE.ready) : DGEO_STATE.missing;
+      const b = document.getElementById('navBadgeSaisie');
+      if (b) { b.textContent = s.decomptes ? String(s.decomptes) : ''; b.classList.toggle('hidden', !s.decomptes); }
+    };
+    window.CaisseDgeo.onState(applyState);
+    window.CaisseDgeo.state().then(applyState).catch(() => {});
   }
   if (appTabs) {
     appTabs.addEventListener('click', (ev) => { const b = ev.target.closest('.apptab'); if (b) showPanel(b.dataset.panel); });
