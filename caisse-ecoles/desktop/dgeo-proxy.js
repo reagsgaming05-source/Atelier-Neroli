@@ -50,6 +50,26 @@ function buildMultipart(boundary, parts) {
   return Buffer.concat(chunks);
 }
 
+/** Résumé d'un dossier analysé par Décompte DGEO (réponse de /api/analyse), pour l'affichage du formulaire. */
+function summarizeAnalysis(d, filename) {
+  const str = (v) => (v == null ? '' : String(v)).slice(0, 300);
+  const num = (v) => (v == null || v === '' || isNaN(Number(v)) ? null : Number(v));
+  const eff = d.effectifs && typeof d.effectifs === 'object' ? d.effectifs : {};
+  return {
+    id: str(d.id), filename: str(filename), numero: str(d.numero), type_activite: d.type_activite === 'camp' ? 'camp' : 'course', type_activite_texte: str(d.type_activite_texte),
+    activite: str(d.activite), classe: str(d.classe), enseignant: str(d.enseignant), telephone: str(d.telephone), date_debut: str(d.date_debut), date_fin: str(d.date_fin), budget: num(d.budget),
+    effectifs: { eleves: num(eff.eleves) || 0, enseignants_dgeo: num(eff.enseignants_dgeo) || 0, enseignants_js: num(eff.enseignants_js) || 0, moniteurs_js: num(eff.moniteurs_js) || 0, autres: num(eff.autres) || 0 },
+    noms_enseignants: (Array.isArray(d.noms_enseignants) ? d.noms_enseignants : []).slice(0, 20).map(str),
+    noms_accompagnants: (Array.isArray(d.noms_accompagnants) ? d.noms_accompagnants : []).slice(0, 20).map(str),
+    form_expenses: (Array.isArray(d.form_expenses) ? d.form_expenses : []).slice(0, 40).map((e) => ({ categorie: str(e && e.categorie), descriptif: str(e && e.descriptif), pieces: str(e && e.pieces), paye_enseignant: num(e && e.paye_enseignant), paye_commune: num(e && e.paye_commune), cout_total: num(e && e.cout_total) })),
+    form_total: num(d.form_total), total: num(d.total),
+    warnings: (Array.isArray(d.warnings) ? d.warnings : []).slice(0, 20).map(str),
+    pages: (Array.isArray(d.pages) ? d.pages : []).slice(0, 200).map((p) => ({ number: num(p.number), kind: str(p.kind), url: str(p.url), width: num(p.width), height: num(p.height) })),
+    pieces: (Array.isArray(d.pieces) ? d.pieces : []).length,
+    analysedAt: new Date().toISOString(),
+  };
+}
+
 /**
  * Démarre la passerelle : renvoie { port, url, close }.
  * opts.target : URL du serveur de Décompte DGEO ; opts.clean(bytes, filename) : Promise de
@@ -74,6 +94,30 @@ function startProxy(opts) {
       });
       if (body) up.end(body); else req.pipe(up);
     };
+    // envoi du dossier : la réponse (dossier analysé) est lue au passage pour afficher le formulaire dans l'application
+    const forwardAnalyse = (body, filename) => {
+      const headers = Object.assign({}, req.headers, { host: target.host, 'content-length': String(body.length) });
+      delete headers['transfer-encoding'];
+      const up = http.request({ host: target.hostname, port: target.port, method: req.method, path: req.url, headers }, (r) => {
+        const chunks = [];
+        r.on('data', (c) => chunks.push(c));
+        r.on('end', () => {
+          const buf = Buffer.concat(chunks);
+          if (r.statusCode === 200 && opts.onAnalysed && /json/i.test(r.headers['content-type'] || '')) {
+            try { opts.onAnalysed(summarizeAnalysis(JSON.parse(buf.toString('utf8')), filename)); } catch (e) { log(`dossier analysé illisible : ${e.message}`); }
+          }
+          const h = Object.assign({}, r.headers, { 'content-length': String(buf.length) });
+          delete h['transfer-encoding'];
+          res.writeHead(r.statusCode || 502, h);
+          res.end(buf);
+        });
+      });
+      up.on('error', (e) => {
+        if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ detail: `Décompte DGEO injoignable : ${e.message}` }));
+      });
+      up.end(body);
+    };
     if (!isAnalyse) { forward(null); return; }
     const chunks = [];
     req.on('data', (c) => chunks.push(c));
@@ -83,7 +127,8 @@ function startProxy(opts) {
       try {
         const mp = parseMultipart(body, req.headers['content-type']);
         const filePart = mp.parts.find((p) => p.name === 'file');
-        if (!filePart || !opts.clean) { forward(body); return; }
+        if (!filePart) { forward(body); return; }
+        if (!opts.clean) { forwardAnalyse(body, filePart.filename || ''); return; }
         const result = await opts.clean(filePart.data, filePart.filename || '');
         if (result && Array.isArray(result.removed) && result.removed.length && result.bytes) {
           filePart.data = Buffer.from(result.bytes);
@@ -92,7 +137,7 @@ function startProxy(opts) {
           log(`dossier « ${filePart.filename} » transmis tel quel${result && result.reason ? ` (${result.reason})` : ''}`);
         }
         if (opts.onCleaned) opts.onCleaned({ filename: filePart.filename || '', removed: result ? result.removed || [] : [], total: result ? result.total || 0 : 0, reason: result ? result.reason || '' : 'nettoyage indisponible' });
-        forward(buildMultipart(mp.boundary, mp.parts));
+        forwardAnalyse(buildMultipart(mp.boundary, mp.parts), filePart.filename || '');
       } catch (e) {
         log(`passerelle Décompte DGEO : ${e.message} ; dossier transmis tel quel`);
         forward(body);
@@ -103,9 +148,9 @@ function startProxy(opts) {
     server.on('error', reject);
     server.listen(0, '127.0.0.1', () => {
       const port = server.address().port;
-      resolve({ port, url: `http://127.0.0.1:${port}/`, close: () => new Promise((r) => server.close(() => r())) });
+      resolve({ port, url: `http://127.0.0.1:${port}/`, close: () => new Promise((r) => { server.close(() => r()); if (server.closeAllConnections) server.closeAllConnections(); }) });
     });
   });
 }
 
-module.exports = { startProxy, parseMultipart, buildMultipart };
+module.exports = { startProxy, parseMultipart, buildMultipart, summarizeAnalysis };

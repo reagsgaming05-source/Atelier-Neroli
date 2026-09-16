@@ -70,28 +70,37 @@ test('passerelle : /api/analyse nettoyé, le reste transmis tel quel', async () 
       if (req.url.startsWith('/api/analyse')) {
         const mp = X.parseMultipart(body, req.headers['content-type']);
         res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ file: mp.parts.find((p) => p.name === 'file').data.toString(), type: mp.parts.find((p) => p.name === 'type_activite').data.toString() }));
+        res.end(JSON.stringify({ file: mp.parts.find((p) => p.name === 'file').data.toString(), type: mp.parts.find((p) => p.name === 'type_activite').data.toString(), id: 'abc123', activite: 'Labyrinthe aventure', classe: '3P2', enseignant: 'L. Berger', date_debut: '16.06.26', effectifs: { eleves: 21, enseignants_dgeo: 1, autres: 1 }, form_expenses: [{ categorie: 'Transport', descriptif: 'train', pieces: '1', paye_commune: 345 }], form_total: 650, total: 24.4, pages: [{ number: 1, kind: 'form', url: '/api/pages/abc123/1', width: 1000, height: 1400 }, { number: 2, kind: 'pieces', url: '/api/pages/abc123/2' }] }));
       } else { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: true, url: req.url, body: body.toString() })); }
     });
   });
   await new Promise((r) => target.listen(0, '127.0.0.1', r));
-  const cleaned = [];
-  const proxy = await X.startProxy({ target: `http://127.0.0.1:${target.address().port}/`, clean: async (bytes, name) => ({ bytes: Buffer.from('CLEAN'), removed: [1], total: 3, reason: `test ${name}` }), onCleaned: (i) => cleaned.push(i), log: () => {} });
+  const cleaned = []; const analysed = [];
+  const proxy = await X.startProxy({ target: `http://127.0.0.1:${target.address().port}/`, clean: async (bytes, name) => ({ bytes: Buffer.from('CLEAN'), removed: [1], total: 3, reason: `test ${name}` }), onCleaned: (i) => cleaned.push(i), onAnalysed: (i) => analysed.push(i), log: () => {} });
   const post = (path, body, ct) => new Promise((resolve, reject) => {
-    const req = http.request({ host: '127.0.0.1', port: proxy.port, method: 'POST', path, headers: { 'content-type': ct, 'content-length': body.length } }, (r) => { const c = []; r.on('data', (d) => c.push(d)); r.on('end', () => resolve({ status: r.statusCode, body: Buffer.concat(c).toString() })); });
+    const req = http.request({ host: '127.0.0.1', port: proxy.port, method: 'POST', path, headers: { 'content-type': ct, 'content-length': body.length }, agent: false }, (r) => { const c = []; r.on('data', (d) => c.push(d)); r.on('end', () => resolve({ status: r.statusCode, body: Buffer.concat(c).toString() })); });
     req.on('error', reject); req.end(body);
   });
   const boundary = 'XYZ';
   const body = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="d.pdf"\r\nContent-Type: application/pdf\r\n\r\nORIGINAL\r\n--${boundary}\r\nContent-Disposition: form-data; name="type_activite"\r\n\r\ncamp\r\n--${boundary}--\r\n`);
   const a = await post('/api/analyse', body, `multipart/form-data; boundary=${boundary}`);
   assert.equal(a.status, 200);
-  assert.deepEqual(JSON.parse(a.body), { file: 'CLEAN', type: 'camp' });
+  assert.equal(JSON.parse(a.body).file, 'CLEAN', 'fichier nettoyé transmis');
   assert.equal(cleaned.length, 1);
   assert.deepEqual(cleaned[0].removed, [1]);
+  assert.equal(analysed.length, 1);
+  assert.equal(analysed[0].id, 'abc123');
+  assert.equal(analysed[0].filename, 'd.pdf');
+  assert.equal(analysed[0].activite, 'Labyrinthe aventure');
+  assert.equal(analysed[0].effectifs.eleves, 21);
+  assert.equal(analysed[0].form_expenses[0].paye_commune, 345);
+  assert.deepEqual(analysed[0].pages.map((p) => p.kind), ['form', 'pieces']);
+  assert.equal(JSON.parse(a.body).type, 'camp', 'réponse transmise intacte');
   const b = await post('/api/recompute', Buffer.from('{"x":1}'), 'application/json');
   assert.deepEqual(JSON.parse(b.body), { ok: true, url: '/api/recompute', body: '{"x":1}' });
-  const g = await new Promise((resolve, reject) => http.get(`http://127.0.0.1:${proxy.port}/api/health`, (r) => { const c = []; r.on('data', (d) => c.push(d)); r.on('end', () => resolve(JSON.parse(Buffer.concat(c).toString()))); }).on('error', reject));
+  const g = await new Promise((resolve, reject) => http.get(`http://127.0.0.1:${proxy.port}/api/health`, { agent: false }, (r) => { const c = []; r.on('data', (d) => c.push(d)); r.on('end', () => resolve(JSON.parse(Buffer.concat(c).toString()))); }).on('error', reject));
   assert.equal(g.url, '/api/health');
   await proxy.close();
+  if (target.closeAllConnections) target.closeAllConnections();
   await new Promise((r) => target.close(r));
 });

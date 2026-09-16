@@ -70,6 +70,7 @@
     <div class="navnote">
       <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
+      <label class="check legend" style="align-items:flex-start;margin-top:10px"><input type="checkbox" id="optDgeoForm" checked> <span>Afficher le formulaire de décompte de Blonay (page de couverture) à côté de Décompte DGEO, avec ce qui y a été lu.</span></label>
     </div>
   </nav>
   <div class="foot">
@@ -441,7 +442,19 @@
 </div>
 
 <div id="panelDgeo" class="panel hidden">
-  <div id="dgeoHost" class="dgeo-host"></div>
+  <div class="dgeo-split">
+    <div id="dgeoHost" class="dgeo-host"></div>
+    <aside id="dgeoFormPane" class="dgeo-form hidden">
+      <div class="dgeo-form-head">
+        <div class="ttl"><b><svg class="ico sm"><use href="#i-file"/></svg> Formulaire du dossier</b><div class="legend" id="dgeoFormFile"></div></div>
+        <select id="dgeoFormSelect" title="Dossiers analysés (le plus récent en premier)"></select>
+        <button type="button" class="small ghost" id="btnDgeoFormZoom" title="Agrandir le formulaire"><svg class="ico"><use href="#i-search"/></svg></button>
+        <button type="button" class="small ghost" id="btnDgeoFormHide" title="Masquer le formulaire (réglage dans la barre latérale)"><svg class="ico"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="dgeo-form-pages" id="dgeoFormPages"></div>
+      <div class="dgeo-form-fields" id="dgeoFormFields"></div>
+    </aside>
+  </div>
   <section class="card" id="dgeoAbout" style="max-width:760px;margin:26px auto">
     <h2><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</h2>
     <p>Décompte DGEO analyse le dossier PDF d'une course d'école ou d'un camp (formulaire de couverture et tickets), retient les pièces, calcule la part à charge de l'État pour les accompagnants titrés et produit le décompte Excel.</p>

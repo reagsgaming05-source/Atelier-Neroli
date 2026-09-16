@@ -506,6 +506,32 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .navnote .check input { margin-top: 2px; }
 @media (max-width: 1500px) { .navnote { display: none; } }
 
+/* ---------------------------------------------------------------- formulaire du dossier à côté de Décompte DGEO */
+.dgeo-split { display: flex; height: 100vh; }
+.dgeo-split .dgeo-host { flex: 1; min-width: 0; }
+.dgeo-form { width: 460px; flex: none; border-left: 1px solid var(--line); background: #fff; display: flex; flex-direction: column; height: 100vh; overflow: auto; }
+.dgeo-form-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 2; }
+.dgeo-form-head .ttl { flex: 1; min-width: 0; }
+.dgeo-form-head .ttl b { display: flex; align-items: center; gap: 6px; }
+.dgeo-form-head .ttl .legend { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dgeo-form-head select { height: 30px; max-width: 150px; font-size: 12px; padding: 0 26px 0 8px; }
+.dgeo-form-pages { padding: 12px 14px 0; }
+.dgeo-form-pages img { width: 100%; display: block; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; cursor: zoom-in; background: #f1f5f9; }
+.dgeo-form-pages .legend { margin: -4px 0 10px; }
+.dgeo-form-fields { padding: 4px 14px 20px; font-size: 12.5px; }
+.dgeo-form-fields h4 { font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
+.dgeo-form-fields dl { display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; margin: 0; }
+.dgeo-form-fields dt { color: var(--muted); }
+.dgeo-form-fields dd { margin: 0; font-weight: 500; }
+.dgeo-form-fields table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.dgeo-form-fields th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+.dgeo-form-fields td { padding: 5px 6px; border-bottom: 1px solid #eef2f7; vertical-align: top; }
+.dgeo-form-fields td.num, .dgeo-form-fields th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dgeo-form-fields tr.total td { font-weight: 600; border-top: 2px solid var(--line); border-bottom: 0; }
+.dgeo-form-fields .warn { color: var(--warn); }
+.dgeo-form .empty { padding: 30px 18px; text-align: center; color: var(--muted); font-size: 13px; }
+.zoom-overlay img { display: block; max-width: 92vw; max-height: 86vh; border-radius: 8px; }
+
 </style>
 </head>
 <body>
@@ -571,6 +597,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <div class="navnote">
       <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
+      <label class="check legend" style="align-items:flex-start;margin-top:10px"><input type="checkbox" id="optDgeoForm" checked> <span>Afficher le formulaire de décompte de Blonay (page de couverture) à côté de Décompte DGEO, avec ce qui y a été lu.</span></label>
     </div>
   </nav>
   <div class="foot">
@@ -942,7 +969,19 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 </div>
 
 <div id="panelDgeo" class="panel hidden">
-  <div id="dgeoHost" class="dgeo-host"></div>
+  <div class="dgeo-split">
+    <div id="dgeoHost" class="dgeo-host"></div>
+    <aside id="dgeoFormPane" class="dgeo-form hidden">
+      <div class="dgeo-form-head">
+        <div class="ttl"><b><svg class="ico sm"><use href="#i-file"/></svg> Formulaire du dossier</b><div class="legend" id="dgeoFormFile"></div></div>
+        <select id="dgeoFormSelect" title="Dossiers analysés (le plus récent en premier)"></select>
+        <button type="button" class="small ghost" id="btnDgeoFormZoom" title="Agrandir le formulaire"><svg class="ico"><use href="#i-search"/></svg></button>
+        <button type="button" class="small ghost" id="btnDgeoFormHide" title="Masquer le formulaire (réglage dans la barre latérale)"><svg class="ico"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="dgeo-form-pages" id="dgeoFormPages"></div>
+      <div class="dgeo-form-fields" id="dgeoFormFields"></div>
+    </aside>
+  </div>
   <section class="card" id="dgeoAbout" style="max-width:760px;margin:26px auto">
     <h2><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</h2>
     <p>Décompte DGEO analyse le dossier PDF d'une course d'école ou d'un camp (formulaire de couverture et tickets), retient les pièces, calcule la part à charge de l'État pour les accompagnants titrés et produit le décompte Excel.</p>
@@ -8094,6 +8133,69 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
           ? `Dossier « ${info.filename} » : page${n > 1 ? 's' : ''} ${info.removed.join(', ')} sur ${info.total} ignorée${n > 1 ? 's' : ''} (${info.reason}).`
           : `Dossier « ${info.filename} » : ${info.total} page(s) transmise(s) telles quelles (${info.reason}).`;
       });
+    }
+    // formulaire de décompte de Blonay (page de couverture) affiché à côté de Décompte DGEO
+    const formPane = document.getElementById('dgeoFormPane');
+    const formPages = document.getElementById('dgeoFormPages');
+    const formFields = document.getElementById('dgeoFormFields');
+    const formFile = document.getElementById('dgeoFormFile');
+    const formSelect = document.getElementById('dgeoFormSelect');
+    const formOpt = document.getElementById('optDgeoForm');
+    const dossiers = { list: [], current: null };
+    let formOn = true;
+    try { formOn = localStorage.getItem('caisse.dgeoForm') !== '0'; } catch (e) { /* ignore */ }
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const chf = (n) => (n == null ? '–' : (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, "'"));
+    const formPagesOf = (d) => { const f = (d.pages || []).filter((p) => p.kind === 'form'); return f.length ? f : (d.pages || []).slice(0, 1); };
+    function renderForm() {
+      if (!formPane) return;
+      const d = dossiers.list.find((x) => x.id === dossiers.current) || dossiers.list[0] || null;
+      const show = formOn && !!d;
+      formPane.classList.toggle('hidden', !show);
+      if (!show) { updateDgeoEmbed(); return; }
+      dossiers.current = d.id;
+      formFile.textContent = `${d.filename || d.id}${d.analysedAt ? ` · analysé le ${new Date(d.analysedAt).toLocaleDateString('fr-CH')}` : ''}`;
+      formSelect.innerHTML = dossiers.list.map((x) => `<option value="${esc(x.id)}"${x.id === d.id ? ' selected' : ''}>${esc(x.filename || x.id)}</option>`).join('');
+      formSelect.classList.toggle('hidden', dossiers.list.length < 2);
+      const pages = formPagesOf(d);
+      const hasForm = (d.pages || []).some((p) => p.kind === 'form');
+      formPages.innerHTML = pages.length
+        ? pages.map((p) => `<img src="${esc((d.base || '') + String(p.url || '').replace(/^\//, ''))}" alt="Page ${p.number}" data-page="${p.number}" title="Cliquer pour agrandir">`).join('') +
+          `<div class="legend">${hasForm ? `Page${pages.length > 1 ? 's' : ''} ${pages.map((p) => p.number).join(', ')} du dossier (formulaire reconnu par Décompte DGEO)` : 'Première page du dossier (formulaire non reconnu par Décompte DGEO : vérifiez).'}</div>`
+        : '<div class="empty">Aucune page dans ce dossier.</div>';
+      const e = d.effectifs || {};
+      const typeTxt = d.type_activite_texte || (d.type_activite === 'camp' ? 'Camp' : "Course d'école");
+      const dates = d.date_debut ? (d.date_fin && d.date_fin !== d.date_debut ? `${d.date_debut} – ${d.date_fin}` : d.date_debut) : '–';
+      const rows = (d.form_expenses || []).map((x) => `<tr><td>${esc(x.categorie)}</td><td>${esc(x.descriptif)}</td><td>${esc(x.pieces)}</td><td class="num">${chf(x.paye_enseignant)}</td><td class="num">${chf(x.paye_commune)}</td><td class="num">${chf(x.cout_total)}</td></tr>`).join('');
+      formFields.innerHTML =
+        '<h4>Lu sur le formulaire</h4>' +
+        `<dl><dt>Type</dt><dd>${esc(typeTxt)}</dd><dt>Activité</dt><dd>${esc(d.activite || '–')}</dd><dt>Classe(s)</dt><dd>${esc(d.classe || '–')}</dd><dt>Dates</dt><dd>${esc(dates)}</dd>` +
+        `<dt>Responsable</dt><dd>${esc(d.enseignant || '–')}${d.telephone ? ` · ${esc(d.telephone)}` : ''}</dd><dt>Budget</dt><dd>${d.budget != null ? `CHF ${chf(d.budget)}` : '–'}</dd>` +
+        `<dt>Effectifs</dt><dd>${e.eleves || 0} élèves · ${e.enseignants_dgeo || 0} ens. DGEO · ${e.enseignants_js || 0} ens. J+S · ${e.moniteurs_js || 0} moniteurs J+S · ${e.autres || 0} autres</dd>` +
+        `${d.noms_enseignants && d.noms_enseignants.length ? `<dt>Enseignant-e-s</dt><dd>${esc(d.noms_enseignants.join(', '))}</dd>` : ''}${d.noms_accompagnants && d.noms_accompagnants.length ? `<dt>Accompagnants</dt><dd>${esc(d.noms_accompagnants.join(', '))}</dd>` : ''}</dl>` +
+        (rows ? `<h4>Dépenses du formulaire</h4><table><thead><tr><th>Catégorie</th><th>Descriptif</th><th>N° pièce</th><th class="num">Payé ens.</th><th class="num">Payé commune</th><th class="num">Coût total</th></tr></thead><tbody>${rows}` +
+          `<tr class="total"><td colspan="5">Total des dépenses</td><td class="num">${chf(d.form_total)}</td></tr></tbody></table>` : '<h4>Dépenses du formulaire</h4><div class="legend">Aucune ligne de dépense lue.</div>') +
+        `<h4>Décompte</h4><dl><dt>Pièces retenues</dt><dd>${d.pieces || 0}</dd><dt>Part État</dt><dd>${d.total != null ? `CHF ${chf(d.total)}` : '–'}</dd></dl>` +
+        (d.warnings && d.warnings.length ? `<h4>Remarques de Décompte DGEO</h4><ul class="warn" style="margin:0;padding-left:18px">${d.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '');
+      updateDgeoEmbed();
+    }
+    if (formPane) {
+      window.CaisseDgeo.onAnalysed((d) => { dossiers.list = [d].concat(dossiers.list.filter((x) => x.id !== d.id)); dossiers.current = d.id; renderForm(); });
+      if (window.CaisseDgeo.dossiers) window.CaisseDgeo.dossiers().then((list) => { dossiers.list = list || []; dossiers.current = dossiers.list.length ? dossiers.list[0].id : null; renderForm(); }).catch(() => {});
+      formSelect.addEventListener('change', () => { dossiers.current = formSelect.value; renderForm(); });
+      const setFormOn = (on) => { formOn = on; if (formOpt) formOpt.checked = on; try { localStorage.setItem('caisse.dgeoForm', on ? '1' : '0'); } catch (e) { /* ignore */ } renderForm(); };
+      if (formOpt) { formOpt.checked = formOn; formOpt.addEventListener('change', () => setFormOn(formOpt.checked)); }
+      document.getElementById('btnDgeoFormHide').addEventListener('click', () => setFormOn(false));
+      const zoomImg = (src) => {
+        const ov = document.createElement('div'); ov.className = 'zoom-overlay';
+        ov.innerHTML = `<div class="zoom-inner"><img src="${esc(src)}" alt="Formulaire"></div><div class="zoom-hint">Cliquer ou Échap pour fermer</div>`;
+        const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+        const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+        ov.addEventListener('click', close); document.addEventListener('keydown', onKey);
+        document.body.appendChild(ov);
+      };
+      formPages.addEventListener('click', (ev) => { const img = ev.target.closest('img'); if (img) zoomImg(img.src); });
+      document.getElementById('btnDgeoFormZoom').addEventListener('click', () => { const img = formPages.querySelector('img'); if (img) zoomImg(img.src); });
     }
     const skip = document.getElementById('optDgeoSkip');
     if (skip && window.CaisseDgeo.settings) {

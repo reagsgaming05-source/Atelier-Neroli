@@ -1903,6 +1903,69 @@
           : `Dossier « ${info.filename} » : ${info.total} page(s) transmise(s) telles quelles (${info.reason}).`;
       });
     }
+    // formulaire de décompte de Blonay (page de couverture) affiché à côté de Décompte DGEO
+    const formPane = document.getElementById('dgeoFormPane');
+    const formPages = document.getElementById('dgeoFormPages');
+    const formFields = document.getElementById('dgeoFormFields');
+    const formFile = document.getElementById('dgeoFormFile');
+    const formSelect = document.getElementById('dgeoFormSelect');
+    const formOpt = document.getElementById('optDgeoForm');
+    const dossiers = { list: [], current: null };
+    let formOn = true;
+    try { formOn = localStorage.getItem('caisse.dgeoForm') !== '0'; } catch (e) { /* ignore */ }
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const chf = (n) => (n == null ? '–' : (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, "'"));
+    const formPagesOf = (d) => { const f = (d.pages || []).filter((p) => p.kind === 'form'); return f.length ? f : (d.pages || []).slice(0, 1); };
+    function renderForm() {
+      if (!formPane) return;
+      const d = dossiers.list.find((x) => x.id === dossiers.current) || dossiers.list[0] || null;
+      const show = formOn && !!d;
+      formPane.classList.toggle('hidden', !show);
+      if (!show) { updateDgeoEmbed(); return; }
+      dossiers.current = d.id;
+      formFile.textContent = `${d.filename || d.id}${d.analysedAt ? ` · analysé le ${new Date(d.analysedAt).toLocaleDateString('fr-CH')}` : ''}`;
+      formSelect.innerHTML = dossiers.list.map((x) => `<option value="${esc(x.id)}"${x.id === d.id ? ' selected' : ''}>${esc(x.filename || x.id)}</option>`).join('');
+      formSelect.classList.toggle('hidden', dossiers.list.length < 2);
+      const pages = formPagesOf(d);
+      const hasForm = (d.pages || []).some((p) => p.kind === 'form');
+      formPages.innerHTML = pages.length
+        ? pages.map((p) => `<img src="${esc((d.base || '') + String(p.url || '').replace(/^\//, ''))}" alt="Page ${p.number}" data-page="${p.number}" title="Cliquer pour agrandir">`).join('') +
+          `<div class="legend">${hasForm ? `Page${pages.length > 1 ? 's' : ''} ${pages.map((p) => p.number).join(', ')} du dossier (formulaire reconnu par Décompte DGEO)` : 'Première page du dossier (formulaire non reconnu par Décompte DGEO : vérifiez).'}</div>`
+        : '<div class="empty">Aucune page dans ce dossier.</div>';
+      const e = d.effectifs || {};
+      const typeTxt = d.type_activite_texte || (d.type_activite === 'camp' ? 'Camp' : "Course d'école");
+      const dates = d.date_debut ? (d.date_fin && d.date_fin !== d.date_debut ? `${d.date_debut} – ${d.date_fin}` : d.date_debut) : '–';
+      const rows = (d.form_expenses || []).map((x) => `<tr><td>${esc(x.categorie)}</td><td>${esc(x.descriptif)}</td><td>${esc(x.pieces)}</td><td class="num">${chf(x.paye_enseignant)}</td><td class="num">${chf(x.paye_commune)}</td><td class="num">${chf(x.cout_total)}</td></tr>`).join('');
+      formFields.innerHTML =
+        '<h4>Lu sur le formulaire</h4>' +
+        `<dl><dt>Type</dt><dd>${esc(typeTxt)}</dd><dt>Activité</dt><dd>${esc(d.activite || '–')}</dd><dt>Classe(s)</dt><dd>${esc(d.classe || '–')}</dd><dt>Dates</dt><dd>${esc(dates)}</dd>` +
+        `<dt>Responsable</dt><dd>${esc(d.enseignant || '–')}${d.telephone ? ` · ${esc(d.telephone)}` : ''}</dd><dt>Budget</dt><dd>${d.budget != null ? `CHF ${chf(d.budget)}` : '–'}</dd>` +
+        `<dt>Effectifs</dt><dd>${e.eleves || 0} élèves · ${e.enseignants_dgeo || 0} ens. DGEO · ${e.enseignants_js || 0} ens. J+S · ${e.moniteurs_js || 0} moniteurs J+S · ${e.autres || 0} autres</dd>` +
+        `${d.noms_enseignants && d.noms_enseignants.length ? `<dt>Enseignant-e-s</dt><dd>${esc(d.noms_enseignants.join(', '))}</dd>` : ''}${d.noms_accompagnants && d.noms_accompagnants.length ? `<dt>Accompagnants</dt><dd>${esc(d.noms_accompagnants.join(', '))}</dd>` : ''}</dl>` +
+        (rows ? `<h4>Dépenses du formulaire</h4><table><thead><tr><th>Catégorie</th><th>Descriptif</th><th>N° pièce</th><th class="num">Payé ens.</th><th class="num">Payé commune</th><th class="num">Coût total</th></tr></thead><tbody>${rows}` +
+          `<tr class="total"><td colspan="5">Total des dépenses</td><td class="num">${chf(d.form_total)}</td></tr></tbody></table>` : '<h4>Dépenses du formulaire</h4><div class="legend">Aucune ligne de dépense lue.</div>') +
+        `<h4>Décompte</h4><dl><dt>Pièces retenues</dt><dd>${d.pieces || 0}</dd><dt>Part État</dt><dd>${d.total != null ? `CHF ${chf(d.total)}` : '–'}</dd></dl>` +
+        (d.warnings && d.warnings.length ? `<h4>Remarques de Décompte DGEO</h4><ul class="warn" style="margin:0;padding-left:18px">${d.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '');
+      updateDgeoEmbed();
+    }
+    if (formPane) {
+      window.CaisseDgeo.onAnalysed((d) => { dossiers.list = [d].concat(dossiers.list.filter((x) => x.id !== d.id)); dossiers.current = d.id; renderForm(); });
+      if (window.CaisseDgeo.dossiers) window.CaisseDgeo.dossiers().then((list) => { dossiers.list = list || []; dossiers.current = dossiers.list.length ? dossiers.list[0].id : null; renderForm(); }).catch(() => {});
+      formSelect.addEventListener('change', () => { dossiers.current = formSelect.value; renderForm(); });
+      const setFormOn = (on) => { formOn = on; if (formOpt) formOpt.checked = on; try { localStorage.setItem('caisse.dgeoForm', on ? '1' : '0'); } catch (e) { /* ignore */ } renderForm(); };
+      if (formOpt) { formOpt.checked = formOn; formOpt.addEventListener('change', () => setFormOn(formOpt.checked)); }
+      document.getElementById('btnDgeoFormHide').addEventListener('click', () => setFormOn(false));
+      const zoomImg = (src) => {
+        const ov = document.createElement('div'); ov.className = 'zoom-overlay';
+        ov.innerHTML = `<div class="zoom-inner"><img src="${esc(src)}" alt="Formulaire"></div><div class="zoom-hint">Cliquer ou Échap pour fermer</div>`;
+        const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+        const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+        ov.addEventListener('click', close); document.addEventListener('keydown', onKey);
+        document.body.appendChild(ov);
+      };
+      formPages.addEventListener('click', (ev) => { const img = ev.target.closest('img'); if (img) zoomImg(img.src); });
+      document.getElementById('btnDgeoFormZoom').addEventListener('click', () => { const img = formPages.querySelector('img'); if (img) zoomImg(img.src); });
+    }
     const skip = document.getElementById('optDgeoSkip');
     if (skip && window.CaisseDgeo.settings) {
       window.CaisseDgeo.settings().then((s) => { skip.checked = s.dgeoSkipFirst !== false; }).catch(() => {});

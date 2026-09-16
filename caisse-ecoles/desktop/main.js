@@ -239,7 +239,7 @@ async function startDgeo() {
         // passerelle devant Décompte DGEO : le dossier PDF est nettoyé (pièce comptable retirée) avant l'analyse
         dgeo.target = url;
         try {
-          dgeo.proxy = await dgeoProxy.startProxy({ target: url, clean: cleanDossierViaPage, onCleaned: (info) => notifyCaisse('dgeo:cleaned', info), log: logLine });
+          dgeo.proxy = await dgeoProxy.startProxy({ target: url, clean: cleanDossierViaPage, onCleaned: (info) => notifyCaisse('dgeo:cleaned', info), onAnalysed: recordDossier, log: logLine });
           dgeo.url = dgeo.proxy.url;
         } catch (e) { logLine(`passerelle Décompte DGEO indisponible (${e.message}) : accès direct`); dgeo.url = url; }
         dgeo.status = 'ready';
@@ -341,6 +341,25 @@ ipcMain.on('dgeo:clean-result', (ev, r) => {
   pendingClean.delete(r.id);
   resolve({ bytes: r.bytes ? Buffer.from(r.bytes) : null, removed: Array.isArray(r.removed) ? r.removed : [], total: Number(r.total) || 0, reason: String(r.reason || '') });
 });
+
+/* ---------------- Dossiers analysés par Décompte DGEO (formulaire affiché dans l'application) ---------------- */
+// Chaque dossier analysé (réponse de Décompte DGEO) est résumé dans data/caisse/dossiers-dgeo.json :
+// pages (dont le formulaire de couverture, image servie par Décompte DGEO) et champs lus.
+const DOSSIERS_FILE = () => path.join(REG_ROOT(), 'dossiers-dgeo.json');
+function loadDossiers() {
+  try { const a = JSON.parse(fs.readFileSync(DOSSIERS_FILE(), 'utf8')); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+const withBase = (d) => Object.assign({}, d, { base: dgeo.url || '' });
+function recordDossier(info) {
+  if (!info || !info.id) return;
+  const list = loadDossiers().filter((d) => d.id !== info.id);
+  list.unshift(info);
+  fs.mkdirSync(REG_ROOT(), { recursive: true });
+  fs.writeFileSync(DOSSIERS_FILE(), JSON.stringify(list.slice(0, 30), null, 1));
+  logLine(`dossier analysé par Décompte DGEO : ${info.filename} – ${info.activite || '?'} ${info.classe || ''} – ${info.pages.length} page(s), formulaire : ${info.pages.filter((p) => p.kind === 'form').map((p) => p.number).join(', ') || 'non reconnu'}`);
+  notifyCaisse('dgeo:analysed', withBase(info));
+}
+ipcMain.handle('dgeo:dossiers', () => loadDossiers().map(withBase));
 
 /* ---------------- Pont Décompte DGEO → Caisse écoles ---------------- */
 // Quand Décompte DGEO génère son fichier Excel (POST /api/excel sur son serveur local), le dossier

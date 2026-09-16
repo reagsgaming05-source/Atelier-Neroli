@@ -203,6 +203,18 @@ async function findPage(app, pred, timeoutMs) {
       const cleanTxt = await win.evaluate(() => document.getElementById('dgeoCleanInfo').textContent);
       console.log('dossier nettoyé :', JSON.stringify(analysed), '–', cleanTxt);
       ok = ok && analysed.status === 200 && analysed.pages === 1 && /page 1 sur 2 ignorée/.test(cleanTxt);
+      // le formulaire du dossier (ici sa première page) s'affiche à côté de Décompte DGEO, avec les champs lus
+      let formPane = null;
+      try {
+        await win.waitForFunction(() => { const p = document.getElementById('dgeoFormPane'); return p && !p.classList.contains('hidden') && p.querySelector('#dgeoFormPages img'); }, null, { timeout: 15000 });
+        formPane = await win.evaluate(async () => {
+          const img = document.querySelector('#dgeoFormPages img');
+          const loaded = await new Promise((r) => { if (img.complete) r(img.naturalWidth > 0); else { img.onload = () => r(img.naturalWidth > 0); img.onerror = () => r(false); setTimeout(() => r(img.naturalWidth > 0), 8000); } });
+          return { src: img.src.replace(/^http:\/\/127\.0\.0\.1:\d+/, ''), loaded, file: document.getElementById('dgeoFormFile').textContent, fields: document.getElementById('dgeoFormFields').textContent.slice(0, 80), stored: window.CaisseDgeo.dossiers ? (await window.CaisseDgeo.dossiers()).length : null };
+        });
+      } catch (e) { console.log('formulaire du dossier : non affiché', e.message); }
+      console.log('formulaire du dossier :', JSON.stringify(formPane));
+      ok = ok && !!formPane && /^\/api\/pages\//.test(formPane.src) && formPane.loaded && /dossier-test\.pdf/.test(formPane.file) && (formPane.stored === null || formPane.stored >= 1);
       await win.evaluate(() => window.CaisseApp.showPanel('panelSaisie'));
       let bridge = null;
       try {

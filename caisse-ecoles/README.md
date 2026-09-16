@@ -73,6 +73,14 @@ le dossier n'a aucun texte lisible, la première page, réglage sous les raccour
 DGEO dans la barre latérale), puis transmet le reste : Décompte DGEO ne voit que le formulaire de
 couverture et les tickets. La barre latérale indique ce qui a été retiré.
 
+**Formulaire du dossier affiché à côté** : chaque dossier scanné contient le « Formulaire de décompte
+camp & course » de Blonay (page de couverture manuscrite). Après l'analyse, ce formulaire s'affiche
+dans un volet à droite de Décompte DGEO (image redressée, agrandissable) avec ce que Décompte DGEO y a
+lu : type, activité, classe, dates, responsable, budget, effectifs, dépenses par pièce (payé par
+l'enseignant-e, par la commune, coût total), part État, remarques. Les dossiers analysés sont
+retenus (`data/caisse/dossiers-dgeo.json`) et sélectionnables ; le volet se masque d'une case dans la
+barre latérale.
+
 **Pont entre les deux outils** : quand un décompte est terminé dans Décompte DGEO (bouton
 *Générer le fichier Excel*), la fenêtre retient le dossier (n°, course d'école ou camp, classe,
 dates, enseignant-e, montants) dans `data/caisse/decomptes-dgeo.json`. L'onglet *Caisse écoles*

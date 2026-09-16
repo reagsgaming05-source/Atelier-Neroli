@@ -66,6 +66,9 @@ contextBridge.exposeInMainWorld('CaisseDgeo', {
   onClean: (cb) => ipcRenderer.on('dgeo:clean', (ev, req) => cb(req)),
   cleanResult: (r) => ipcRenderer.send('dgeo:clean-result', r),
   onCleaned: (cb) => ipcRenderer.on('dgeo:cleaned', (ev, info) => cb(info)),
+  // dossiers analysés par Décompte DGEO (formulaire de couverture affiché à côté)
+  dossiers: () => ipcRenderer.invoke('dgeo:dossiers'),
+  onAnalysed: (cb) => ipcRenderer.on('dgeo:analysed', (ev, d) => cb(d)),
   settings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patchObj) => ipcRenderer.invoke('settings:set', patchObj),
 });
