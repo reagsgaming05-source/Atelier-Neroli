@@ -121,3 +121,23 @@ def test_parse_fares_line_total_interpretation():
     # « 3 Adulte CHF 45.00 » où 45.00 est le total de ligne : la somme doit retomber sur le total
     fares, _ = parse_fares(["3 Adulte CHF 45.00", "10 Enfant CHF 50.00"], "CHF", 95.0)
     assert [(f.qty, f.unit_price) for f in fares] == [(3, 15.0), (10, 5.0)]
+
+
+MOB_GROUPE = [
+    "MOB GoldenPass", "Montreux - Zweisimmen", "Voyage de groupe 12.06.2025",
+    "18 Elèves CHF 9.00 162.00", "2 Enseignants CHF 26.00 52.00", "1 Accompagnateur CHF 26.00 26.00",
+    "21 Total", "Total CHF 240.00",
+]
+
+
+def test_mob_group_ticket_teacher_fares_are_adult_fares():
+    """Billet de groupe MOB : les tarifs « Enseignant » et « Accompagnateur » sont des tarifs adultes
+    (plein), retenus pour la part État ; les élèves restent des enfants."""
+    p = analyse_block(block(MOB_GROUPE), 5)
+    assert p.kind == "billet"
+    assert p.total == 240.00
+    cats = [(f.category, f.qty, f.unit_price) for f in p.fares]
+    assert ("plein", 2, 26.00) in cats
+    assert ("plein", 1, 26.00) in cats
+    assert ("enfant", 18, 9.00) in cats
+    assert sum(f.qty for f in p.adult_fares()) == 3

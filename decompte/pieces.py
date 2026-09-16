@@ -66,6 +66,7 @@ KIND_KEYWORDS: dict[str, list[str]] = {
         "mobilis", "billet", "ticket", "fahrkarte", "tageskarte", "carte journaliere", "cff", "sbb", "ffs",
         "zones", "2. cl", "1. cl", "prix entier", "demi-tarif", "halbtax", "jeune 6-24", "aller", "retour",
         "einfach", "gruppen", "groupe", "entree", "eintritt", "admission", "tarif", "adulte", "enfant",
+        "enseignant", "accompagnat", "mob ", "goldenpass", "golden pass", "montreux oberland", "voyage de groupe",
     ],
     "facture": [
         "facture", "rechnung", "invoice", "fattura", "debiteur", "payable jusqu", "echeance", "fallig",
@@ -164,7 +165,8 @@ FARE_CATEGORIES: list[tuple[str, re.Pattern]] = [
     ("invite", re.compile(r"invit|inv[il1]t|gratuit|offert|\bfree\b|\bfrei\b|kostenlos|mediation", re.I)),
     ("enfant", re.compile(r"jeune|enfant|\bkind|ecole|ecoles|eleve|etudiant|student|junior|scolaire|schuler|\b6-(?:24|16|15)|\bado\b", re.I)),
     ("demi", re.compile(r"demi|1/2|½|halbtax|\bhalb|reduit|ermassigt|ermaessigt|\bred\.|\babo\b|\bag\b", re.I)),
-    ("plein", re.compile(r"prix entier|plein tarif|tarif entier|adulte|adult|erwachsen|\bentier\b|\bnormal\b|\bstandard\b|\bplein\b|accompagnant|acc\.", re.I)),
+    # « enseignant », « accompagnateur », « maître » : tarifs adultes des billets de groupe (MOB, CFF, TL…)
+    ("plein", re.compile(r"prix entier|plein tarif|tarif entier|adulte|adult|erwachsen|\bentier\b|\bnormal\b|\bstandard\b|\bplein\b|accompagnat|acc\.|enseignant|maitre|maitresse|professeur|\bprof\b|lehrer|lehrperson|begleit", re.I)),
 ]
 
 TOTAL_COUNT_RE = re.compile(r"^\s*(\d{1,3})\s+(total|tot\.?)\s*$", re.I)
