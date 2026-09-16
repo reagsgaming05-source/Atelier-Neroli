@@ -1,4 +1,4 @@
-name: Caisse écoles – Windows portable
+name: Compta Blonay – Windows portable
 
 on:
   push:
@@ -101,12 +101,13 @@ jobs:
         working-directory: caisse-ecoles/desktop
         shell: pwsh
         run: |
-          Rename-Item dist\win-unpacked CaisseEcoles
-          Copy-Item tesseract dist\CaisseEcoles\tesseract -Recurse
-          Copy-Item decompte dist\CaisseEcoles\decompte -Recurse
-          Copy-Item ..\README.md dist\CaisseEcoles\LISEZMOI.md
-          Copy-Item build\LISEZMOI-portable.txt dist\CaisseEcoles\LISEZMOI-portable.txt
-          Get-ChildItem dist\CaisseEcoles | Select-Object Name, Length
+          Rename-Item dist\win-unpacked ComptaBlonay
+          if (-not (Test-Path dist\ComptaBlonay\ComptaBlonay.exe)) { throw "ComptaBlonay.exe introuvable dans le dossier empaqueté" }
+          Copy-Item tesseract dist\ComptaBlonay\tesseract -Recurse
+          Copy-Item decompte dist\ComptaBlonay\decompte -Recurse
+          Copy-Item ..\README.md dist\ComptaBlonay\LISEZMOI.md
+          Copy-Item build\LISEZMOI-portable.txt dist\ComptaBlonay\LISEZMOI-portable.txt
+          Get-ChildItem dist\ComptaBlonay | Select-Object Name, Length
 
       - name: Test de fumée de l'exécutable (fenêtre à onglets, saisie d'une pièce, OCR embarqué, Tesseract natif, Décompte DGEO et pont décompte → pièce)
         working-directory: caisse-ecoles/desktop
@@ -115,32 +116,41 @@ jobs:
           SMOKE_NATIVE: "1"
           SMOKE_DGEO: "1"
         run: |
-          try { node smoke-test.js dist\CaisseEcoles\CaisseEcoles.exe }
+          try { node smoke-test.js dist\ComptaBlonay\ComptaBlonay.exe }
           finally {
-            Get-Content dist\CaisseEcoles\data\caisse.log -ErrorAction SilentlyContinue
-            Remove-Item dist\CaisseEcoles\data -Recurse -Force -ErrorAction SilentlyContinue
+            Get-Content dist\ComptaBlonay\data\caisse.log -ErrorAction SilentlyContinue
+            Remove-Item dist\ComptaBlonay\data -Recurse -Force -ErrorAction SilentlyContinue
           }
 
       - name: Archive zip
         working-directory: caisse-ecoles/desktop
         shell: pwsh
-        run: Compress-Archive -Path dist\CaisseEcoles -DestinationPath ..\..\CaisseEcoles-windows.zip
+        run: Compress-Archive -Path dist\ComptaBlonay -DestinationPath ..\..\ComptaBlonay-windows.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: CaisseEcoles-windows
-          path: CaisseEcoles-windows.zip
+          name: ComptaBlonay-windows
+          path: ComptaBlonay-windows.zip
 
-      - name: Publier la version portable (pré-release « caisse-windows-latest »)
+      # L'application s'appelait « Caisse écoles » (release caisse-windows-latest) : cette ancienne
+      # release et son tag sont retirés pour qu'il n'y ait qu'une version portable publiée.
+      - name: Retirer l'ancienne release « caisse-windows-latest »
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete caisse-windows-latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || echo "ancienne release absente"
+
+      - name: Publier la version portable (pré-release « compta-blonay-windows-latest »)
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: caisse-windows-latest
-          name: "Caisse écoles — Windows portable (dernière version)"
+          tag_name: compta-blonay-windows-latest
+          name: "Compta Blonay — Windows portable (dernière version)"
           prerelease: true
           body: |
-            Version portable Windows : décompressez le zip, puis double-cliquez sur `CaisseEcoles.exe`.
+            Compta Blonay, version portable Windows : décompressez le zip, puis double-cliquez sur `ComptaBlonay.exe`.
             Aucune installation, aucun navigateur : tout est inclus. Une seule application pour les deux outils, en deux onglets : Caisse écoles (saisie des pièces, pièces scannées, journal, Excel, PDF) et Décompte DGEO (courses d'école & camps, démarré avec l'application). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
             Cette version ne contient aucun nom de personne : posez `vocabulaire-noms.js` (remis séparément) à côté de l'exécutable.
             Construit automatiquement depuis le commit ${{ github.sha }}.
-          files: CaisseEcoles-windows.zip
+          files: ComptaBlonay-windows.zip

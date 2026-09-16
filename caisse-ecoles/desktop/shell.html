@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>Caisse écoles</title>
+<html lang="fr"><head><meta charset="utf-8"><title>Compta Blonay</title>
 <style>
   html, body { margin: 0; height: 100%; background: #1f4e79; font-family: "Segoe UI", Arial, sans-serif; overflow: hidden; }
   .tabs { display: flex; align-items: stretch; height: 40px; box-sizing: border-box; padding: 6px 10px 0; gap: 6px; }
@@ -11,13 +11,15 @@
   .tab.active .badge { color: #b45309; }
   .spacer { flex: 1; }
   .brand { color: #dbe7f3; font-size: 12px; align-self: center; opacity: .8; }
+  .logo { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: .3px; align-self: center; margin: 0 14px 0 2px; }
 </style></head>
 <body>
   <nav class="tabs">
+    <span class="logo">Compta Blonay</span>
     <button class="tab active" data-tab="caisse">Caisse écoles <span class="st badge" id="caisseBadge"></span></button>
     <button class="tab" data-tab="dgeo">Décompte DGEO <span class="st" id="dgeoState"></span></button>
     <span class="spacer"></span>
-    <span class="brand">Une seule application, tout se passe sur ce PC – aucune donnée n'est envoyée</span>
+    <span class="brand">Une seule application pour les deux outils – tout se passe sur ce PC, aucune donnée n'est envoyée</span>
   </nav>
   <script>
     const tabs = document.querySelectorAll('.tab');

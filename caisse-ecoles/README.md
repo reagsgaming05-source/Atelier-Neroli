@@ -10,10 +10,11 @@ Application locale, sans installation, en deux onglets :
 - **Pièces scannées (PDF)** : lecture des pièces déjà remplies à la main et scannées, avec
   lectures croisées (couche texte, OCR local, Tesseract natif), et ajout au registre.
 
-La version portable Windows est **une seule application pour les deux outils** : un troisième
-onglet, **Décompte DGEO** (courses d'école & camps), embarque l'autre logiciel du dépôt, démarré
-avec la fenêtre et arrêté avec elle. Un pont relie les deux : chaque décompte terminé dans
-l'onglet Décompte DGEO est proposé dans la caisse comme pièce DECOMPTE pré-remplie.
+La version portable Windows s'appelle **Compta Blonay** : une seule application pour les deux
+outils du dépôt. Un troisième onglet, **Décompte DGEO** (courses d'école & camps), embarque
+l'autre logiciel, démarré avec la fenêtre et arrêté avec elle. Un pont relie les deux : chaque
+décompte terminé dans l'onglet Décompte DGEO est proposé dans la caisse comme pièce DECOMPTE
+pré-remplie.
 
 Le journal de caisse Excel est produit dans le même format que le classeur existant :
 
@@ -25,12 +26,13 @@ Le compte caisse au **DOIT** de la pièce donne un **Débit** (entrée en caisse
 caisse à l'**AVOIR** donne un **Crédit** (sortie de caisse). La colonne *Compte* reçoit le
 compte de contrepartie.
 
-## Version portable Windows (recommandée) — application fenêtrée, aucune installation
+## Version portable Windows « Compta Blonay » (recommandée) — application fenêtrée, aucune installation
 
-1. Téléchargez **`CaisseEcoles-windows.zip`** depuis la page *Releases* du dépôt (version
-   « Caisse écoles — Windows portable »).
+1. Téléchargez **`ComptaBlonay-windows.zip`** depuis la page *Releases* du dépôt (version
+   « Compta Blonay — Windows portable »).
 2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
-3. Double-cliquez sur **`CaisseEcoles.exe`** : la fenêtre de l'application s'ouvre.
+3. Double-cliquez sur **`ComptaBlonay.exe`** : la fenêtre de l'application s'ouvre, avec les
+   onglets *Caisse écoles* et *Décompte DGEO*.
 
 Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le registre ni dans
 *Program Files*, aucun navigateur n'est sollicité, aucune donnée ne quitte le PC. Les réglages
@@ -38,7 +40,7 @@ mémorisés (compte caisse, vocabulaire appris, dernier solde) vont dans le sous
 à côté de l'exécutable.
 
 **Noms de personnes** : le dépôt étant public, la version portable ne contient aucun nom. Posez
-le fichier `vocabulaire-noms.js` (remis séparément, jamais publié) à côté de `CaisseEcoles.exe` :
+le fichier `vocabulaire-noms.js` (remis séparément, jamais publié) à côté de `ComptaBlonay.exe` :
 il est lu au démarrage (menu *Aide → À propos* indique s'il a été trouvé). Sans lui, les noms
 s'apprennent en chargeant un classeur existant.
 
@@ -47,7 +49,7 @@ Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé v
 
 **Décompte DGEO dans la même application** : le zip contient aussi la version portable de
 Décompte DGEO (dossier `decompte/`, prise dans la release « windows-latest » du dépôt). Il n'y a
-qu'un programme à ouvrir, `CaisseEcoles.exe` : au démarrage, il lance en arrière-plan le serveur
+qu'un programme à ouvrir, `ComptaBlonay.exe` : au démarrage, il lance en arrière-plan le serveur
 local de Décompte DGEO sur un port libre (l'onglet indique *démarre…* puis affiche le logiciel
 complet, avec toutes ses fonctions) et l'arrête à la fermeture de la fenêtre. Ses dossiers vont
 dans `data/decompte/`, à côté des registres de la caisse. Si le serveur s'arrête, un clic sur

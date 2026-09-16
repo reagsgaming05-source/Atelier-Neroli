@@ -7,7 +7,7 @@
  * comme pièce DECOMPTE dans la caisse (pont entre les deux outils).
  *
  *   node smoke-test.js                              # source (electron .)
- *   node smoke-test.js chemin/vers/CaisseEcoles.exe # exécutable empaqueté
+ *   node smoke-test.js chemin/vers/ComptaBlonay.exe # exécutable empaqueté
  *   SMOKE_NATIVE=1 : exige le lecteur natif ; SMOKE_DGEO=1 : exige Décompte DGEO
  */
 const path = require('path');
@@ -31,13 +31,14 @@ async function findPage(app, pred, timeoutMs) {
   await win.waitForLoadState('domcontentloaded');
   await win.waitForSelector('#regYear');
   const title = await win.title();
+  const shellTitle = await shell.title();
   const info = await win.evaluate(() => ({
     parser: typeof window.CaisseParser, excel: typeof window.CaisseExcel, ocr: !!(window.CaisseOCR && window.CaisseOCR.available()),
     registre: typeof window.CaisseRegistre, pdf: typeof window.CaissePdf, files: !!window.CaisseFiles,
     desktop: window.CaisseDesktop || null, names: !!(window.CaisseVocabNoms && window.CaisseVocabNoms.persons && window.CaisseVocabNoms.persons.length),
     vocab: (document.getElementById('vocabInfo').textContent || '').slice(0, 80),
   }));
-  console.log('titre :', title);
+  console.log('titre :', shellTitle, '/', title);
   console.log(JSON.stringify(info));
   // lecture d'une pièce synthétique par le moteur (sans PDF : mots positionnés)
   const entry = await win.evaluate(() => {
@@ -51,7 +52,7 @@ async function findPage(app, pred, timeoutMs) {
     return e ? { no: e.no, date: e.date, compte: e.compte, credit: e.credit, libelle: e.libelle } : null;
   });
   console.log('pièce synthétique :', JSON.stringify(entry));
-  let ok = /Caisse écoles/.test(title) && info.parser === 'object' && info.excel === 'object' && info.ocr && info.registre === 'object' && info.pdf === 'object' && info.files
+  let ok = /Compta Blonay/.test(shellTitle) && /Caisse écoles/.test(title) && info.parser === 'object' && info.excel === 'object' && info.ocr && info.registre === 'object' && info.pdf === 'object' && info.files
     && !!entry && entry.credit === 12 && entry.compte === '50000.3652.00';
 
   // saisie d'une pièce dans la fiche -> journal -> fichiers de l'application

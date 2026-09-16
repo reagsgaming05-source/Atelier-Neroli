@@ -1,5 +1,5 @@
 /*
- * Caisse écoles – application fenêtrée (Electron) : une seule application pour les deux outils.
+ * Compta Blonay – application fenêtrée (Electron) : une seule application pour les deux outils.
  *
  * La fenêtre a deux onglets. Le premier charge l'application autonome Caisse écoles
  * (app/Caisse-ecoles.html, produite par `npm run build:public` dans le dossier parent). Le second
@@ -18,7 +18,7 @@ const http = require('http');
 const net = require('net');
 const nativeOcr = require('./native-ocr.js');
 
-const APP_TITLE = 'Caisse écoles';
+const APP_TITLE = 'Compta Blonay';
 const PORTABLE_DIR = path.dirname(process.execPath);
 
 // Dossier de données à côté de l'exécutable (version portable) ; sinon, dossier utilisateur.
@@ -227,7 +227,7 @@ function stopDgeo() {
 async function launchDgeo() {
   if (!dgeoCommand()) {
     dgeo.status = 'missing';
-    if (dgeoView) dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO non inclus', "Le dossier « decompte » (version portable de Décompte DGEO) n'est pas à côté de CaisseEcoles.exe. Téléchargez le zip complet depuis la page Releases."));
+    if (dgeoView) dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO non inclus', "Le dossier « decompte » (version portable de Décompte DGEO) n'est pas à côté de ComptaBlonay.exe. Téléchargez le zip complet depuis la page Releases."));
     pushShellState();
     return null;
   }
@@ -396,8 +396,8 @@ function buildMenu() {
               type: 'info',
               title: `À propos de ${APP_TITLE}`,
               message: `${APP_TITLE} ${app.getVersion()}`,
-              detail: 'Une seule application pour la caisse des écoles (saisie des pièces, pièces scannées, journal, ' +
-                'fichier Excel, PDF des pièces) et pour Décompte DGEO (courses d\'école & camps), dans deux onglets.\n\n' +
+              detail: 'Compta Blonay réunit en une seule application, dans deux onglets, Caisse écoles (saisie des pièces, ' +
+                'pièces scannées, journal, fichier Excel, PDF des pièces) et Décompte DGEO (courses d\'école & camps).\n\n' +
                 'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (lecture des PDF, ' +
                 'lectures croisées par OCR local, génération des fichiers Excel et décomptes se font dans cette fenêtre).\n\n' +
                 `Dossier des données : ${app.getPath('userData')}\n` +

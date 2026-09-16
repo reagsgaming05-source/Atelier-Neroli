@@ -1,7 +1,7 @@
 {
   "name": "caisse-ecoles-desktop",
   "version": "1.0.0",
-  "description": "Caisse écoles – application fenêtrée (version portable, sans installation)",
+  "description": "Compta Blonay – application fenêtrée réunissant Caisse écoles et Décompte DGEO (version portable, sans installation)",
   "main": "main.js",
   "private": true,
   "author": "Atelier Neroli",
@@ -23,8 +23,9 @@
     "playwright-core": "^1.49.1"
   },
   "build": {
-    "appId": "ch.atelier-neroli.caisse-ecoles",
-    "productName": "CaisseEcoles",
+    "appId": "ch.atelier-neroli.compta-blonay",
+    "productName": "Compta Blonay",
+    "executableName": "ComptaBlonay",
     "artifactName": "${productName}-${version}.${ext}",
     "directories": {
       "output": "dist",
