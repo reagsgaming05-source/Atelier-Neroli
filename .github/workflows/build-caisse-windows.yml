@@ -44,6 +44,8 @@ jobs:
       - name: Tesseract portable (troisième lecteur) – installateur UB Mannheim extrait avec 7-Zip, modèles français
         working-directory: caisse-ecoles/desktop
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           function Get-WithRetry([string]$Url, [string]$Out) {
             foreach ($try in 1..5) {
@@ -52,17 +54,24 @@ jobs:
             }
             throw "Téléchargement impossible : $Url"
           }
-          $rel = $null
-          foreach ($try in 1..5) {
-            try { $rel = Invoke-RestMethod "https://api.github.com/repos/UB-Mannheim/tesseract/releases/latest"; break }
-            catch { Write-Host "API GitHub, tentative $try/5 : $($_.Exception.Message)"; Start-Sleep -Seconds (10 * $try) }
+          # Dernière version publiée par UB Mannheim (API GitHub authentifiée avec le jeton du
+          # workflow : sans lui, les exécuteurs partagés dépassent la limite anonyme -> 403) ;
+          # à défaut, une version connue.
+          $tag = "v5.4.0.20240606"
+          $url = "https://github.com/UB-Mannheim/tesseract/releases/download/v5.4.0.20240606/tesseract-ocr-w64-setup-5.4.0.20240606.exe"
+          $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; "X-GitHub-Api-Version" = "2022-11-28"; Accept = "application/vnd.github+json" }
+          foreach ($try in 1..3) {
+            try {
+              $rel = Invoke-RestMethod "https://api.github.com/repos/UB-Mannheim/tesseract/releases/latest" -Headers $headers
+              $asset = $rel.assets | Where-Object { $_.name -like "*w64*.exe" } | Select-Object -First 1
+              if (-not $asset) { $asset = $rel.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1 }
+              if ($asset) { $tag = $rel.tag_name; $url = $asset.browser_download_url }
+              break
+            }
+            catch { Write-Host "API GitHub, tentative $try/3 : $($_.Exception.Message)"; Start-Sleep -Seconds (10 * $try) }
           }
-          if (-not $rel) { throw "API GitHub injoignable" }
-          $asset = $rel.assets | Where-Object { $_.name -like "*w64*.exe" } | Select-Object -First 1
-          if (-not $asset) { $asset = $rel.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1 }
-          if (-not $asset) { throw "Installateur Tesseract introuvable dans la release $($rel.tag_name)" }
-          Write-Host "Tesseract $($rel.tag_name) : $($asset.browser_download_url)"
-          Get-WithRetry $asset.browser_download_url tesseract-setup.exe
+          Write-Host "Tesseract $tag : $url"
+          Get-WithRetry $url tesseract-setup.exe
           7z x tesseract-setup.exe -otesseract-extract -y | Out-Null
           $exe = Get-ChildItem tesseract-extract -Recurse -Filter tesseract.exe | Select-Object -First 1
           if (-not $exe) { throw "tesseract.exe introuvable après extraction" }
@@ -76,7 +85,7 @@ jobs:
           Get-WithRetry "https://github.com/tesseract-ocr/tessdata/raw/main/fra.traineddata" "tesseract\tessdata\fra_leg.traineddata"
           & tesseract\tesseract.exe --version
           & tesseract\tesseract.exe --list-langs --tessdata-dir tesseract\tessdata
-          "Tesseract $($rel.tag_name) — https://github.com/UB-Mannheim/tesseract (Apache 2.0)`nModèles : tessdata_best/fra (fra), tessdata/fra (fra_leg) — https://github.com/tesseract-ocr (Apache 2.0)" | Out-File tesseract\VERSION.txt
+          "Tesseract $tag — https://github.com/UB-Mannheim/tesseract (Apache 2.0)`nModèles : tessdata_best/fra (fra), tessdata/fra (fra_leg) — https://github.com/tesseract-ocr (Apache 2.0)" | Out-File tesseract\VERSION.txt
 
       - name: Décompte DGEO (version portable publiée dans la release « windows-latest »)
         working-directory: caisse-ecoles/desktop
