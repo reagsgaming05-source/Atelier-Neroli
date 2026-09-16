@@ -103,22 +103,6 @@ jobs:
             Construite depuis le commit 0ed7dac.
           files: outils/BlonayPDF-v1-windows.zip
 
-      - name: Replacer le tag blonaypdf-v1 sur le commit de la version 1 (une seule fois)
-        if: github.event_name == 'push'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          $ErrorActionPreference = 'Continue'
-          $PSNativeCommandUseErrorActionPreference = $false
-          $voulu = '0ed7dac09ea1b2ac101842bb5de278607ef82a0e'
-          $actuel = gh api repos/$env:GH_REPO/git/ref/tags/blonaypdf-v1 --jq '.object.sha' 2>$null
-          if ($LASTEXITCODE -ne 0) { Write-Host "Pas de tag blonaypdf-v1 : rien à replacer." ; exit 0 }
-          if ($actuel -eq $voulu) { Write-Host "Le tag blonaypdf-v1 est déjà sur $voulu." ; exit 0 }
-          gh api -X PATCH repos/$env:GH_REPO/git/refs/tags/blonaypdf-v1 -f sha=$voulu -F force=true --jq '.object.sha'
-          if ($LASTEXITCODE -ne 0) { Write-Host "::warning::Le tag blonaypdf-v1 n'a pas pu être déplacé (jeton sans ce droit) ; la release garde son zip de la version 1." }
-
       - name: Publier la version portable (pré-release « blonaypdf-windows-latest »)
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2

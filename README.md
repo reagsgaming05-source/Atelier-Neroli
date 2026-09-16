@@ -164,8 +164,12 @@ documents ouverts depuis le bureau restent deux documents. Les combiner est un c
 Fermer avec des modifications non enregistrées demande d'abord confirmation.
 
 L'ancienne version (avant les dix ajouts de la version 2) reste disponible telle quelle dans
-la release **« Blonay PDF — version 1 »** (`BlonayPDF-v1-windows.zip`, tag `blonaypdf-v1`) :
-si quelque chose ne va pas dans la nouvelle, décompressez celle-là à côté et continuez.
+la release **« Blonay PDF — version 1 »** (`BlonayPDF-v1-windows.zip`) : si quelque chose
+ne va pas dans la nouvelle, décompressez celle-là à côté et continuez. Le zip est celui publié
+le 14 septembre 2026, construit depuis le commit `0ed7dac` ; le tag git `blonaypdf-v1` que
+l'action de release a créé pointe, lui, sur `main`, et le jeton du workflow n'a pas le droit de
+le déplacer. Pour le remettre d'équerre depuis un poste qui a les droits :
+`git push --force origin 0ed7dac09ea1b2ac101842bb5de278607ef82a0e:refs/tags/blonaypdf-v1`.
 
 Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
