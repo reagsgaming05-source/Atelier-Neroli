@@ -7,21 +7,30 @@
   .tab:hover { background: rgba(255,255,255,.22); }
   .tab.active { background: #f6f7fb; color: #1f4e79; }
   .tab .st { font-weight: 400; font-size: 12px; opacity: .8; margin-left: 6px; }
+  .tab .badge { color: #ffd166; opacity: 1; }
+  .tab.active .badge { color: #b45309; }
   .spacer { flex: 1; }
   .brand { color: #dbe7f3; font-size: 12px; align-self: center; opacity: .8; }
 </style></head>
 <body>
   <nav class="tabs">
-    <button class="tab active" data-tab="caisse">Caisse écoles</button>
+    <button class="tab active" data-tab="caisse">Caisse écoles <span class="st badge" id="caisseBadge"></span></button>
     <button class="tab" data-tab="dgeo">Décompte DGEO <span class="st" id="dgeoState"></span></button>
     <span class="spacer"></span>
-    <span class="brand">Tout se passe sur ce PC – aucune donnée n'est envoyée</span>
+    <span class="brand">Une seule application, tout se passe sur ce PC – aucune donnée n'est envoyée</span>
   </nav>
   <script>
     const tabs = document.querySelectorAll('.tab');
     const setActive = (name) => tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
     tabs.forEach((t) => t.addEventListener('click', () => { setActive(t.dataset.tab); window.CaisseShell.show(t.dataset.tab); }));
-    window.CaisseShell.onActive(setActive);
-    window.CaisseShell.state().then((s) => { setActive(s.active); if (!s.hasDgeo) document.getElementById('dgeoState').textContent = '(non inclus)'; });
+    const DGEO_STATE = { starting: '(démarre…)', ready: '', off: '(arrêté – cliquer pour relancer)', failed: '(ne répond pas – cliquer pour réessayer)', missing: '(non inclus)' };
+    const apply = (s) => {
+      setActive(s.active);
+      document.getElementById('dgeoState').textContent = s.hasDgeo ? (DGEO_STATE[s.dgeo] || '') : DGEO_STATE.missing;
+      const n = s.decomptes || 0;
+      document.getElementById('caisseBadge').textContent = n ? `● ${n} décompte${n > 1 ? 's' : ''} à saisir` : '';
+    };
+    window.CaisseShell.onState(apply);
+    window.CaisseShell.state().then(apply);
   </script>
 </body></html>

@@ -108,7 +108,7 @@ jobs:
           Copy-Item build\LISEZMOI-portable.txt dist\CaisseEcoles\LISEZMOI-portable.txt
           Get-ChildItem dist\CaisseEcoles | Select-Object Name, Length
 
-      - name: Test de fumée de l'exécutable (fenêtre à onglets, saisie d'une pièce, OCR embarqué, Tesseract natif, Décompte DGEO)
+      - name: Test de fumée de l'exécutable (fenêtre à onglets, saisie d'une pièce, OCR embarqué, Tesseract natif, Décompte DGEO et pont décompte → pièce)
         working-directory: caisse-ecoles/desktop
         shell: pwsh
         env:
@@ -140,7 +140,7 @@ jobs:
           prerelease: true
           body: |
             Version portable Windows : décompressez le zip, puis double-cliquez sur `CaisseEcoles.exe`.
-            Aucune installation, aucun navigateur : tout est inclus. Deux onglets : Caisse écoles (saisie des pièces, pièces scannées, journal, Excel, PDF) et Décompte DGEO (courses d'école & camps).
+            Aucune installation, aucun navigateur : tout est inclus. Une seule application pour les deux outils, en deux onglets : Caisse écoles (saisie des pièces, pièces scannées, journal, Excel, PDF) et Décompte DGEO (courses d'école & camps, démarré avec l'application). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
             Cette version ne contient aucun nom de personne : posez `vocabulaire-noms.js` (remis séparément) à côté de l'exécutable.
             Construit automatiquement depuis le commit ${{ github.sha }}.
           files: CaisseEcoles-windows.zip

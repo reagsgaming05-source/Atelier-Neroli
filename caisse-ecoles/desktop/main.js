@@ -1,11 +1,14 @@
 /*
- * Caisse écoles – application fenêtrée (Electron).
+ * Caisse écoles – application fenêtrée (Electron) : une seule application pour les deux outils.
  *
- * La fenêtre charge l'application autonome (app/Caisse-ecoles.html, produite par
- * `npm run build:public` dans le dossier parent). Rien n'est installé, rien n'est écrit dans
- * le registre : les réglages mémorisés (compte caisse, vocabulaire appris, dernier solde)
- * vont dans le sous-dossier `data/` à côté de l'exécutable, comme pour Décompte DGEO.
- * Aucune connexion réseau n'est ouverte par l'application.
+ * La fenêtre a deux onglets. Le premier charge l'application autonome Caisse écoles
+ * (app/Caisse-ecoles.html, produite par `npm run build:public` dans le dossier parent). Le second
+ * affiche Décompte DGEO : sa version portable (dossier decompte/ à côté de l'exécutable) est
+ * démarrée en mode --web dès l'ouverture, sur un port local libre, et arrêtée avec la fenêtre.
+ * Les deux outils partagent le dossier de données `data/` à côté de l'exécutable et un pont :
+ * chaque décompte terminé dans Décompte DGEO est proposé comme pièce DECOMPTE dans la caisse.
+ * Rien n'est installé, rien n'est écrit dans le registre Windows, aucune connexion réseau
+ * n'est ouverte vers l'extérieur.
  */
 const { app, BrowserWindow, WebContentsView, Menu, dialog, shell, session, ipcMain } = require('electron');
 const path = require('path');
@@ -109,11 +112,12 @@ function createWindow() {
   });
   caisseView.webContents.once('did-finish-load', () => { if (mainWindow && !mainWindow.isVisible()) { mainWindow.show(); logLine('interface démarrée'); } });
 
-  // Onglet 2 : Décompte DGEO (serveur local embarqué, démarré à la première ouverture)
+  // Onglet 2 : Décompte DGEO (serveur local embarqué, démarré avec l'application)
   dgeoView = new WebContentsView({ webPreferences: { contextIsolation: true, nodeIntegration: false } });
   mainWindow.contentView.addChildView(dgeoView);
   dgeoView.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
-  dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', "L'onglet démarre Décompte DGEO à sa première ouverture."));
+  dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage du logiciel de décompte…', true));
+  launchDgeo();
 
   mainWindow.on('resize', layoutViews);
   mainWindow.on('closed', () => { mainWindow = null; caisseView = null; dgeoView = null; });
@@ -131,6 +135,17 @@ function dgeoPlaceholder(title, message, spinner) {
 // son serveur est lancé en mode --web sur un port libre et affiché dans le second onglet.
 // En développement : DECOMPTE_CMD (ex. « python -m decompte ») avec DECOMPTE_CWD.
 const dgeo = { proc: null, url: null, status: 'off', starting: null };
+
+/** État de la fenêtre pour la barre d'onglets (et le test de fumée). */
+function shellState() {
+  return { active: activeTab, dgeo: dgeo.status, hasDgeo: !!dgeoCommand(), decomptes: loadDecomptes().filter((d) => !d.saisi).length };
+}
+function pushShellState() {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('shell:state', shellState());
+}
+function notifyCaisse(channel, payload) {
+  if (caisseView && !caisseView.webContents.isDestroyed()) caisseView.webContents.send(channel, payload);
+}
 
 function dgeoCommand() {
   if (process.env.DECOMPTE_CMD) {
@@ -179,7 +194,13 @@ async function startDgeo() {
     dgeo.proc = spawn(c.cmd, args, { cwd: c.cwd, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     dgeo.proc.stdout.on('data', (d) => logLine(`[dgeo] ${String(d).trim()}`));
     dgeo.proc.stderr.on('data', (d) => logLine(`[dgeo] ${String(d).trim()}`));
-    dgeo.proc.on('exit', (code) => { logLine(`Décompte DGEO arrêté (code ${code})`); dgeo.proc = null; dgeo.status = dgeo.status === 'ready' ? 'off' : 'failed'; });
+    dgeo.proc.on('exit', (code) => {
+      logLine(`Décompte DGEO arrêté (code ${code})`);
+      dgeo.proc = null;
+      dgeo.status = dgeo.status === 'ready' ? 'off' : 'failed';
+      if (dgeoView && !app.isQuitting) dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO arrêté', "Le logiciel de décompte s'est arrêté. Cliquez sur l'onglet pour le relancer (détails dans data/caisse.log)."));
+      pushShellState();
+    });
     const url = `http://127.0.0.1:${port}/`;
     for (let i = 0; i < 180; i++) {
       if (!dgeo.proc) break;
@@ -202,33 +223,129 @@ function stopDgeo() {
   dgeo.status = 'off';
 }
 
+/** Démarre Décompte DGEO (à l'ouverture de la fenêtre, ou pour le relancer) et affiche sa page dans l'onglet. */
+async function launchDgeo() {
+  if (!dgeoCommand()) {
+    dgeo.status = 'missing';
+    if (dgeoView) dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO non inclus', "Le dossier « decompte » (version portable de Décompte DGEO) n'est pas à côté de CaisseEcoles.exe. Téléchargez le zip complet depuis la page Releases."));
+    pushShellState();
+    return null;
+  }
+  if (dgeo.status !== 'ready' && dgeoView) dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage du logiciel de décompte…', true));
+  pushShellState();
+  const url = await startDgeo();
+  if (!dgeoView) return url;
+  if (url) { if (!dgeoView.webContents.getURL().startsWith(url)) dgeoView.webContents.loadURL(url); }
+  else dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO ne répond pas', "Le serveur local n'a pas démarré. Cliquez sur l'onglet pour réessayer ; détails dans data/caisse.log."));
+  pushShellState();
+  return url;
+}
+
 async function showTab(name) {
   activeTab = name;
   layoutViews();
-  if (mainWindow) mainWindow.webContents.send('shell:active', name);
+  pushShellState();
   if (name === 'dgeo' && dgeoView) {
     if (dgeo.status === 'ready') { if (!dgeoView.webContents.getURL().startsWith(dgeo.url)) dgeoView.webContents.loadURL(dgeo.url); return; }
-    dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage du logiciel de décompte…', true));
-    const url = await startDgeo();
-    if (!dgeoView) return;
-    if (url) dgeoView.webContents.loadURL(url);
-    else if (dgeo.status === 'missing') dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO non inclus', "Le dossier « decompte » (version portable de Décompte DGEO) n'est pas à côté de CaisseEcoles.exe. Téléchargez le zip complet depuis la page Releases."));
-    else dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO ne répond pas', "Le serveur local n'a pas démarré. Voir data/caisse.log."));
+    if (dgeo.status === 'starting') return; // launchDgeo() affichera la page dès que le serveur répond
+    await launchDgeo(); // non démarré, arrêté ou en échec : nouvel essai
   }
 }
 
 ipcMain.on('shell:tab', (ev, name) => { showTab(name === 'dgeo' ? 'dgeo' : 'caisse'); });
-ipcMain.handle('shell:state', () => ({ active: activeTab, dgeo: dgeo.status, hasDgeo: !!dgeoCommand() }));
+ipcMain.handle('shell:state', () => shellState());
+
+/* ---------------- Pont Décompte DGEO → Caisse écoles ---------------- */
+// Quand Décompte DGEO génère son fichier Excel (POST /api/excel sur son serveur local), le dossier
+// envoyé par sa page est retenu dans data/caisse/decomptes-dgeo.json et proposé dans la fiche de
+// saisie de la caisse comme pièce DECOMPTE pré-remplie (classe, période, enseignant-e, montants).
+// Rien n'est modifié dans Décompte DGEO : la fenêtre observe seulement cette requête locale.
+const DECOMPTES_FILE = () => path.join(REG_ROOT(), 'decomptes-dgeo.json');
+function loadDecomptes() {
+  try { const a = JSON.parse(fs.readFileSync(DECOMPTES_FILE(), 'utf8')); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+function saveDecomptes(list) {
+  fs.mkdirSync(REG_ROOT(), { recursive: true });
+  fs.writeFileSync(DECOMPTES_FILE(), JSON.stringify(list.slice(-50), null, 1));
+}
+function summarizeDossier(d) {
+  const str = (v) => (v == null ? '' : String(v)).slice(0, 200);
+  const num = (v) => (v == null || v === '' || isNaN(Number(v)) ? null : Number(v));
+  return {
+    id: str(d.id), numero: str(d.numero), filename: str(d.filename), type_activite: d.type_activite === 'camp' ? 'camp' : 'course',
+    activite: str(d.activite), classe: str(d.classe), enseignant: str(d.enseignant), date_debut: str(d.date_debut), date_fin: str(d.date_fin), date_decompte: str(d.date_decompte),
+    budget: num(d.budget), form_total: num(d.form_total), total: num(d.total),
+    form_expenses: (Array.isArray(d.form_expenses) ? d.form_expenses : []).slice(0, 40).map((e) => ({ categorie: str(e && e.categorie), descriptif: str(e && e.descriptif), paye_enseignant: num(e && e.paye_enseignant), paye_commune: num(e && e.paye_commune), cout_total: num(e && e.cout_total) })),
+    pieces: (Array.isArray(d.pieces) ? d.pieces : []).filter((p) => p && p.include !== false).length,
+    capturedAt: new Date().toISOString(), saisi: false, pieceId: null, excel: null,
+  };
+}
+function recordDecompte(d) {
+  const s = summarizeDossier(d);
+  if (!s.id) return;
+  const list = loadDecomptes();
+  const i = list.findIndex((x) => x.id === s.id && !x.saisi);
+  if (i >= 0) { s.excel = list[i].excel; list[i] = s; } else list.push(s);
+  saveDecomptes(list);
+  logLine(`Décompte DGEO terminé : ${s.numero || s.filename || s.id} – ${s.activite} ${s.classe} – total ${s.total}`);
+  notifyCaisse('dgeo:new', s);
+  pushShellState();
+}
+function setupDgeoBridge() {
+  const bodies = new Map();
+  const filter = { urls: ['http://127.0.0.1/*'] };
+  const isExcel = (details) => !!dgeoView && details.webContentsId === dgeoView.webContents.id && details.method === 'POST' && /\/api\/excel(\?|$)/.test(details.url);
+  session.defaultSession.webRequest.onBeforeRequest(filter, (details, cb) => {
+    if (isExcel(details) && Array.isArray(details.uploadData) && details.uploadData.length) {
+      try { bodies.set(details.id, Buffer.concat(details.uploadData.map((u) => (u.bytes ? Buffer.from(u.bytes) : Buffer.alloc(0)))).toString('utf8')); } catch (e) { logLine(`pont DGEO : ${e.message}`); }
+    }
+    cb({});
+  });
+  session.defaultSession.webRequest.onCompleted(filter, (details) => {
+    const body = bodies.get(details.id);
+    if (body == null) return;
+    bodies.delete(details.id);
+    if (details.statusCode !== 200) return;
+    try { const d = JSON.parse(body); if (d && typeof d === 'object') recordDecompte(d); } catch (e) { logLine(`pont DGEO : dossier illisible (${e.message})`); }
+  });
+  session.defaultSession.webRequest.onErrorOccurred(filter, (details) => { bodies.delete(details.id); });
+}
+ipcMain.handle('dgeo:list', () => loadDecomptes());
+ipcMain.handle('dgeo:mark', (ev, id, info) => {
+  const list = loadDecomptes();
+  const d = list.find((x) => x.id === String(id));
+  if (!d) return false;
+  if (info && typeof info === 'object') { if ('saisi' in info) d.saisi = !!info.saisi; if ('pieceId' in info) d.pieceId = info.pieceId ? String(info.pieceId) : null; }
+  saveDecomptes(list);
+  pushShellState();
+  return true;
+});
+ipcMain.handle('dgeo:forget', (ev, id) => { saveDecomptes(loadDecomptes().filter((x) => x.id !== String(id))); pushShellState(); return true; });
+ipcMain.handle('dgeo:open-excel', (ev, id) => {
+  const d = loadDecomptes().find((x) => x.id === String(id));
+  if (!d || !d.excel || !fs.existsSync(d.excel)) return false;
+  shell.openPath(d.excel);
+  return true;
+});
 
 // Téléchargement (si la boîte « Enregistrer sous » du navigateur n'est pas disponible) :
 // toujours demander où enregistrer, jamais en silence dans « Téléchargements ».
 function setupDownloads() {
-  session.defaultSession.on('will-download', (ev, item) => {
+  session.defaultSession.on('will-download', (ev, item, wc) => {
     item.setSaveDialogOptions({
       title: 'Enregistrer le fichier',
       defaultPath: path.join(app.getPath('documents'), item.getFilename()),
       filters: [{ name: 'Classeur Excel', extensions: ['xlsx'] }, { name: 'Tous les fichiers', extensions: ['*'] }],
     });
+    // fichier Excel d'un décompte DGEO : son emplacement est retenu avec le décompte (pont)
+    if (dgeoView && wc && wc.id === dgeoView.webContents.id) {
+      item.once('done', (e, state) => {
+        if (state !== 'completed') return;
+        const list = loadDecomptes();
+        const d = list.slice().reverse().find((x) => !x.saisi);
+        if (d) { d.excel = item.getSavePath(); saveDecomptes(list); notifyCaisse('dgeo:new', d); }
+      });
+    }
   });
 }
 
@@ -279,13 +396,14 @@ function buildMenu() {
               type: 'info',
               title: `À propos de ${APP_TITLE}`,
               message: `${APP_TITLE} ${app.getVersion()}`,
-              detail: 'Saisie automatique des pièces comptables dans le journal de caisse Excel.\n\n' +
+              detail: 'Une seule application pour la caisse des écoles (saisie des pièces, pièces scannées, journal, ' +
+                'fichier Excel, PDF des pièces) et pour Décompte DGEO (courses d\'école & camps), dans deux onglets.\n\n' +
                 'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (lecture des PDF, ' +
-                'seconde lecture par OCR local et génération du fichier Excel se font dans cette fenêtre).\n\n' +
+                'lectures croisées par OCR local, génération des fichiers Excel et décomptes se font dans cette fenêtre).\n\n' +
                 `Dossier des données : ${app.getPath('userData')}\n` +
                 `Noms de personnes : ${names ? names : 'aucun fichier vocabulaire-noms.js (les noms s\'apprennent depuis un classeur)'}\n` +
                 `Troisième lecteur (Tesseract natif) : ${(() => { const t = nativeOcr.detect(PORTABLE_DIR); return t ? `${t.version}${t.legacy ? ' + moteur historique' : ''}` : 'non trouvé (dossier tesseract/ absent)'; })()}\n\n` +
-                `Décompte DGEO : ${dgeoCommand() ? (dgeo.status === 'ready' ? 'en service' : 'inclus') : 'non inclus'}\n` +
+                `Décompte DGEO : ${dgeoCommand() ? (dgeo.status === 'ready' ? `en service (${dgeo.url})` : dgeo.status === 'starting' ? 'démarrage…' : 'inclus, arrêté') : 'non inclus'}\n` +
                 `Electron ${process.versions.electron} – Chromium ${process.versions.chrome}`,
             });
           },
@@ -369,10 +487,11 @@ ipcMain.handle('ocr:recognize', (ev, png, opts) => nativeOcr.recognize(png, opts
 app.whenReady().then(() => {
   logLine(`${APP_TITLE} ${app.getVersion()} – Electron ${process.versions.electron} – ${process.platform} – données : ${app.getPath('userData')}`);
   setupDownloads();
+  setupDgeoBridge();
   buildMenu();
   createWindow();
 });
 
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', stopDgeo);
+app.on('before-quit', () => { app.isQuitting = true; stopDgeo(); });
 app.on('will-quit', stopDgeo);

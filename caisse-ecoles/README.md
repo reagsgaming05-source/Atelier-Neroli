@@ -10,8 +10,10 @@ Application locale, sans installation, en deux onglets :
 - **Pièces scannées (PDF)** : lecture des pièces déjà remplies à la main et scannées, avec
   lectures croisées (couche texte, OCR local, Tesseract natif), et ajout au registre.
 
-La version portable Windows ajoute un troisième onglet : **Décompte DGEO** (courses d'école &
-camps), l'autre logiciel du dépôt, embarqué et lancé dans la même fenêtre.
+La version portable Windows est **une seule application pour les deux outils** : un troisième
+onglet, **Décompte DGEO** (courses d'école & camps), embarque l'autre logiciel du dépôt, démarré
+avec la fenêtre et arrêté avec elle. Un pont relie les deux : chaque décompte terminé dans
+l'onglet Décompte DGEO est proposé dans la caisse comme pièce DECOMPTE pré-remplie.
 
 Le journal de caisse Excel est produit dans le même format que le classeur existant :
 
@@ -43,16 +45,32 @@ s'apprennent en chargeant un classeur existant.
 Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
 
-**Décompte DGEO dans la même fenêtre** : le zip contient aussi la version portable de Décompte
-DGEO (dossier `decompte/`, prise dans la release « windows-latest » du dépôt). L'onglet
-*Décompte DGEO* démarre son serveur local sur un port libre et l'affiche dans la fenêtre ; ses
-dossiers vont dans `data/decompte/`. Sans le dossier `decompte/`, l'onglet l'indique.
+**Décompte DGEO dans la même application** : le zip contient aussi la version portable de
+Décompte DGEO (dossier `decompte/`, prise dans la release « windows-latest » du dépôt). Il n'y a
+qu'un programme à ouvrir, `CaisseEcoles.exe` : au démarrage, il lance en arrière-plan le serveur
+local de Décompte DGEO sur un port libre (l'onglet indique *démarre…* puis affiche le logiciel
+complet, avec toutes ses fonctions) et l'arrête à la fermeture de la fenêtre. Ses dossiers vont
+dans `data/decompte/`, à côté des registres de la caisse. Si le serveur s'arrête, un clic sur
+l'onglet le relance ; sans le dossier `decompte/`, l'onglet l'indique.
+
+**Pont entre les deux onglets** : quand un décompte est terminé dans Décompte DGEO (bouton
+*Générer le fichier Excel*), la fenêtre retient le dossier (n°, course d'école ou camp, classe,
+dates, enseignant-e, montants) dans `data/caisse/decomptes-dgeo.json`. L'onglet *Caisse écoles*
+affiche alors un badge « 1 décompte à saisir » et, au-dessus de la fiche, le décompte avec
+*Créer la pièce* : la fiche se pré-remplit (type DECOMPTE, objet, classe, période, détail,
+personne, compte habituel, libellé) ; le montant proposé est ce que l'enseignant-e a payé de sa
+poche d'après le formulaire (à défaut le total des dépenses, à défaut la part État), les autres
+montants du décompte restant à un clic. On vérifie montant, sens et compte, puis on enregistre :
+la pièce est marquée « DGEO » dans le journal et le décompte n'est plus proposé. *Ouvrir l'Excel*
+ouvre le fichier du décompte enregistré ; *Ignorer* écarte un décompte sans pièce. Rien n'est
+modifié dans Décompte DGEO : la fenêtre observe seulement sa requête locale de génération.
 
 L'exécutable est construit automatiquement par GitHub Actions
 (`.github/workflows/build-caisse-windows.yml`) : tests, construction de l'application autonome,
 empaquetage Electron (`desktop/`), Tesseract et Décompte DGEO ajoutés au dossier, test de fumée
 de l'exécutable (fenêtre à onglets, saisie d'une pièce jusqu'au journal et aux fichiers, moteur
-de lecture, OCR embarqué, Tesseract natif, démarrage de Décompte DGEO), puis publication du zip.
+de lecture, OCR embarqué, Tesseract natif, Décompte DGEO démarré avec l'application, pont
+décompte → pièce), puis publication du zip.
 
 ## Saisie des pièces (onglet principal)
 
@@ -77,6 +95,8 @@ de lecture, OCR embarqué, Tesseract natif, démarrage de Décompte DGEO), puis 
    et *×*.
 5. Depuis l'onglet des pièces scannées, **Ajouter au registre de l'année** verse les écritures
    lues dans le registre, avec l'image de chaque pièce en justificatif.
+6. Version portable : un décompte terminé dans l'onglet **Décompte DGEO** apparaît au-dessus de
+   la fiche ; *Créer la pièce* la pré-remplit (voir plus haut, *Pont entre les deux onglets*).
 
 ## Utilisation (fichier HTML seul, sans installation)
 
@@ -332,7 +352,7 @@ Structure :
 - `src/registre.js` – registre des pièces par année : modèle, libellé composé, validation, journal, stockage (fichiers ou navigateur)
 - `src/pdfpiece.js` – fiche « PIÈCE COMPTABLE » en PDF (pdf-lib) avec justificatifs
 - `src/saisie.js` – onglet de saisie (fiche, journal, Excel, PDF, sauvegarde)
-- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre à onglets, Décompte DGEO embarqué, fichiers du registre, dossier `data/`, fichier des noms), `shell.html` (barre d'onglets), `preload.js`, `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
+- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre à onglets, Décompte DGEO démarré avec l'application, pont décompte → pièce, fichiers du registre, dossier `data/`, fichier des noms), `shell.html` (barre d'onglets, badge des décomptes à saisir), `preload.js` (`CaisseFiles`, `CaisseNative`, `CaisseDgeo`), `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
 
 ## Limites
 

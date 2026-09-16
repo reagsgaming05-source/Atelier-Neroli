@@ -45,7 +45,8 @@
 
   <div class="layout2">
     <section class="card" id="ficheCard">
-      <h2>Pièce comptable <span class="legend" id="ficheTitle"></span></h2>
+      <h2>Pièce comptable <span class="legend" id="ficheTitle"></span> <button type="button" class="small hidden" id="btnOpenDgeo" title="Afficher l'onglet Décompte DGEO de cette application">Décompte DGEO ↗</button></h2>
+      <div id="dgeoPending" class="dgeo-pending hidden"></div>
       <div class="row">
         <div class="field"><label for="pNo">N°</label><input type="number" id="pNo" min="1" step="1" style="width:90px"></div>
         <div class="field"><label for="pDate">Date</label><input type="date" id="pDate"></div>

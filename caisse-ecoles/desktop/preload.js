@@ -46,3 +46,15 @@ contextBridge.exposeInMainWorld('CaisseFiles', {
   remove: (year, id, name) => ipcRenderer.invoke('files:remove', year, id, name),
   openDir: () => ipcRenderer.invoke('files:open-dir'),
 });
+
+// Pont Décompte DGEO → Caisse écoles : décomptes terminés (Excel généré dans l'autre onglet),
+// proposés dans la fiche comme pièce DECOMPTE pré-remplie ; voir main.js.
+contextBridge.exposeInMainWorld('CaisseDgeo', {
+  list: () => ipcRenderer.invoke('dgeo:list'),
+  mark: (id, info) => ipcRenderer.invoke('dgeo:mark', id, info),
+  forget: (id) => ipcRenderer.invoke('dgeo:forget', id),
+  openExcel: (id) => ipcRenderer.invoke('dgeo:open-excel', id),
+  show: () => ipcRenderer.send('shell:tab', 'dgeo'),
+  state: () => ipcRenderer.invoke('shell:state'),
+  onNew: (cb) => ipcRenderer.on('dgeo:new', (ev, d) => cb(d)),
+});

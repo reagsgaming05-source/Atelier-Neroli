@@ -62,3 +62,39 @@ test('registre : pièces créées depuis des écritures lues sur des PDF', () =>
   assert.equal(p.source, 'scan');
   assert.equal(R.composeLibelle(Object.assign({}, p, { libelle: '' })), 'PARTICIPATION DES PARENTS - Classe 3P/6 Camp du 10-13.06.25 - T. Morel');
 });
+
+test('pièce DECOMPTE proposée depuis un dossier Décompte DGEO terminé', () => {
+  const reg = R.emptyRegister(2026, { openingAmount: 100 });
+  const d = { id: 'abc', filename: 'decompte.pdf', numero: 'D-2026-07', type_activite: 'course', activite: 'Lausanne', classe: '5P/3', enseignant: 'A. Berger',
+    date_debut: '12.06.2026', date_fin: '12.06.2026', date_decompte: '20.06.2026', form_expenses: [{ paye_enseignant: 100.5 }, { paye_enseignant: 43.45, paye_commune: 12 }], form_total: 155.95, total: 24.4 };
+  const { piece, amounts, amountSource } = R.pieceFromDecompte(d, reg);
+  assert.equal(piece.type, 'DECOMPTE');
+  assert.equal(piece.objet, "Course d'école");
+  assert.equal(piece.classe, '5P/3');
+  assert.equal(piece.periode, '12.06.2026');
+  assert.equal(piece.personne, 'A. Berger');
+  assert.equal(piece.date, '2026-06-20');
+  assert.equal(piece.montant, 143.95);
+  assert.equal(piece.sens, 'credit');
+  assert.equal(amountSource, 'enseignant');
+  assert.deepEqual(amounts, { enseignant: 143.95, formulaire: 155.95, etat: 24.4 });
+  assert.equal(piece.source, 'dgeo');
+  assert.equal(piece.ref, 'D-2026-07');
+  assert.equal(piece.libelle, "DECOMPTE - Course d'école 5P/3 du 12.06.2026 Lausanne - A. Berger");
+  assert.equal(R.validate(Object.assign(piece, { compte: '51000.3662.00' }), reg).length, 0);
+  // camp sur plusieurs jours, sans montant payé par l'enseignant-e : total du formulaire, sens laissé au choix
+  const camp = R.pieceFromDecompte({ type_activite: 'camp', activite: 'Leysin', classe: '8P/3', enseignant: 'T. Morel', date_debut: '12.05.2026', date_fin: '16.05.2026', date_decompte: '01.06.2025', form_total: 2560, total: 400 }, reg);
+  assert.equal(camp.piece.periode, '12-16.05.2026');
+  assert.equal(camp.piece.montant, 2560);
+  assert.equal(camp.amountSource, 'formulaire');
+  assert.equal(camp.piece.sens, null);
+  assert.equal(camp.piece.date, R.today(), 'date du décompte hors année : date du jour');
+  assert.equal(camp.piece.libelle, 'DECOMPTE - Camp 8P/3 du 12-16.05.2026 Leysin - T. Morel');
+  assert.equal(R.periodOf('29.06.2026', '02.07.2026'), '29.06-02.07.2026');
+  assert.equal(R.periodOf('20.12.2026', '03.01.2027'), '20.12.2026-03.01.2027');
+  // la source et la référence survivent à la relecture du registre
+  R.upsertPiece(reg, piece);
+  const back = R.normalizeRegister(JSON.parse(R.serialize(reg)));
+  assert.equal(back.pieces[0].source, 'dgeo');
+  assert.equal(back.pieces[0].ref, 'D-2026-07');
+});

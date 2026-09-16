@@ -2,8 +2,9 @@
  * Test de fumée de l'application fenêtrée : la fenêtre à onglets s'ouvre, Caisse écoles est
  * chargée, le moteur de lecture et l'OCR embarqué fonctionnent, le lecteur natif répond si
  * présent, une pièce saisie dans la fiche arrive dans le journal et dans les fichiers de
- * l'application, la fiche PDF se génère, et l'onglet Décompte DGEO démarre le serveur local
- * s'il est inclus.
+ * l'application, la fiche PDF se génère, l'onglet Décompte DGEO (démarré avec l'application)
+ * s'affiche s'il est inclus, et un décompte terminé dans cet onglet est proposé puis enregistré
+ * comme pièce DECOMPTE dans la caisse (pont entre les deux outils).
  *
  *   node smoke-test.js                              # source (electron .)
  *   node smoke-test.js chemin/vers/CaisseEcoles.exe # exécutable empaqueté
@@ -112,11 +113,10 @@ async function findPage(app, pred, timeoutMs) {
   console.log('Tesseract natif :', JSON.stringify(nat));
   if (process.env.SMOKE_NATIVE === '1') ok = ok && nat.available && /29\.70/.test(nat.read || '') && (!nat.legacy || /29\.70/.test(nat.legacyRead || ''));
 
-  // onglet Décompte DGEO
+  // onglet Décompte DGEO (démarré avec l'application, sans cliquer)
   const st = await shell.evaluate(() => window.CaisseShell.state());
   console.log('coquille :', JSON.stringify(st));
   if (st.hasDgeo) {
-    await shell.click('.tab[data-tab="dgeo"]');
     let dgeoPage = null;
     const t0 = Date.now();
     while (Date.now() - t0 < 120000) {
@@ -124,16 +124,55 @@ async function findPage(app, pred, timeoutMs) {
       if (dgeoPage) break;
       await new Promise((r) => setTimeout(r, 500));
     }
+    await shell.click('.tab[data-tab="dgeo"]');
     if (dgeoPage) {
       await dgeoPage.waitForLoadState('domcontentloaded');
       const dt = await dgeoPage.title();
-      console.log('Décompte DGEO :', dgeoPage.url(), '–', dt);
-      ok = ok && /Décompte/i.test(dt + (await dgeoPage.content()).slice(0, 2000));
+      const st2 = await shell.evaluate(() => window.CaisseShell.state());
+      console.log('Décompte DGEO :', dgeoPage.url(), '–', dt, '–', JSON.stringify(st2));
+      ok = ok && /Décompte/i.test(dt + (await dgeoPage.content()).slice(0, 2000)) && st2.dgeo === 'ready' && st2.active === 'dgeo';
+
+      // pont : un décompte terminé dans DGEO (fichier Excel généré) est proposé en pièce dans la caisse
+      const dossier = { id: 'smoke-dgeo', filename: 'decompte-test.pdf', numero: 'D-TEST-1', type_activite: 'course', type_activite_texte: "Course d'école", activite: 'Lausanne', classe: '5P/3', enseignant: 'A. Berger', telephone: '',
+        date_debut: `12.06.${year}`, date_fin: `12.06.${year}`, date_decompte: `20.06.${year}`, budget: null, effectifs: { eleves: 20, enseignants_dgeo: 2, enseignants_js: 0, moniteurs_js: 0, autres: 1 }, noms_enseignants: [], noms_accompagnants: [],
+        form_expenses: [{ categorie: 'Transport', descriptif: 'CFF', pieces: '1', paye_enseignant: 143.95, paye_commune: null, cout_total: 143.95 }], form_total: 143.95, taux_eur_chf: null, pages: [], pieces: [],
+        rows: [{ rubrique: 'Transport', libelle: 'CFF 2 titrés', mode: 'direct', cout_total: null, cout_direct: 24.4, pieces: [] }], total: 24.4, warnings: [], ocr_engine: '' };
+      const status = await dgeoPage.evaluate(async (d) => { const r = await fetch('/api/excel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); await r.blob(); return r.status; }, dossier);
+      console.log('Excel généré par DGEO :', status);
+      await shell.click('.tab[data-tab="caisse"]');
+      let bridge = null;
+      try {
+        await win.waitForFunction(() => document.querySelectorAll('#dgeoPending button[data-dgeo-use="smoke-dgeo"]').length > 0, null, { timeout: 15000 });
+        bridge = await win.evaluate(async () => {
+          const list = await window.CaisseDgeo.list();
+          const d = list.find((x) => x.id === 'smoke-dgeo');
+          if (d) window.CaisseSaisie.useDecompte(d);
+          const v = (id) => document.getElementById(id).value;
+          return { found: !!d, type: v('pType'), objet: v('pObjet'), classe: v('pClasse'), periode: v('pPeriode'), personne: v('pPersonne'), montant: v('pMontant'), compte: v('pCompte'), libelle: v('pLibelle'), sens: document.getElementById('pSensCredit').checked ? 'credit' : (document.getElementById('pSensDebit').checked ? 'debit' : null), badge: (await window.CaisseDgeo.state()).decomptes };
+        });
+      } catch (e) { console.log('pont DGEO → caisse : décompte non proposé', e.message); }
+      console.log('pont DGEO → caisse :', JSON.stringify(bridge));
+      ok = ok && status === 200 && !!bridge && bridge.found && bridge.type === 'DECOMPTE' && bridge.objet === "Course d'école" && bridge.classe === '5P/3' && bridge.periode === `12.06.${year}` && bridge.montant === '143.95' && bridge.compte === '51000.3662.00' && bridge.sens === 'credit' && bridge.badge >= 1
+        && new RegExp(`^DECOMPTE - Course d'école 5P/3 du 12\\.06\\.${year} Lausanne - A\\. Berger$`).test(bridge.libelle);
+      if (bridge && bridge.found) {
+        // enregistrement : pièce marquée « DGEO », décompte marqué saisi ; puis nettoyage
+        const n0 = await win.evaluate(() => window.CaisseSaisie.state.reg.pieces.length);
+        await win.click('#btnPieceSave');
+        await win.waitForFunction((n) => window.CaisseSaisie.state.reg.pieces.length === n + 1, n0, { timeout: 10000 });
+        const saved = await win.evaluate(async () => {
+          const s = window.CaisseSaisie.state; const p = s.reg.pieces[s.reg.pieces.length - 1];
+          const d = (await window.CaisseDgeo.list()).find((x) => x.id === 'smoke-dgeo');
+          return { no: p.no, source: p.source, ref: p.ref, saisi: !!(d && d.saisi), linked: !!(d && d.pieceId === p.id), pending: document.querySelectorAll('#dgeoPending button[data-dgeo-use="smoke-dgeo"]').length, tag: !!document.querySelector(`#journalBody tr[data-id="${p.id}"] span[title^="Créée depuis Décompte DGEO"]`) };
+        });
+        console.log('pièce depuis DGEO :', JSON.stringify(saved));
+        ok = ok && saved.source === 'dgeo' && saved.ref === 'D-TEST-1' && saved.saisi && saved.linked && saved.pending === 0 && saved.tag;
+        await win.evaluate(async () => { const s = window.CaisseSaisie.state; window.CaisseRegistre.removePiece(s.reg, s.reg.pieces[s.reg.pieces.length - 1].id); await s.storage.save(s.reg); window.CaisseSaisie.renderJournal(); });
+      }
+      await win.evaluate(async () => { await window.CaisseDgeo.forget('smoke-dgeo'); await window.CaisseSaisie.refreshDgeo(); });
     } else {
       console.log('Décompte DGEO : le serveur local n\'a pas répondu');
       if (process.env.SMOKE_DGEO === '1') ok = false;
     }
-    await shell.click('.tab[data-tab="caisse"]');
   } else {
     console.log('Décompte DGEO : non inclus');
     if (process.env.SMOKE_DGEO === '1') ok = false;

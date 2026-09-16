@@ -69,7 +69,8 @@
       montant,
       sens: p.sens === 'debit' || p.sens === 'credit' ? p.sens : null,
       justificatifs: Array.isArray(p.justificatifs) ? p.justificatifs.filter((j) => j && j.name).map((j) => ({ name: String(j.name), size: Number(j.size) || 0, kind: j.kind || kindOf(j.name) })) : [],
-      source: p.source === 'scan' ? 'scan' : 'saisie',
+      source: p.source === 'scan' || p.source === 'dgeo' ? p.source : 'saisie',
+      ref: p.ref ? String(p.ref) : '',
       createdAt: p.createdAt || new Date().toISOString(),
       updatedAt: p.updatedAt || new Date().toISOString(),
     };
@@ -114,6 +115,49 @@
   /** Libellé du journal : « TYPE - Description - Personne ». */
   function composeLibelle(p) {
     return P.formatLibelle(p.type || null, composeDescription(p), p.personne || null);
+  }
+
+  /** Période « 12.06.2026 », « 12-16.05.2026 » ou « 29.06-02.07.2026 » depuis deux dates jj.mm.aaaa. */
+  function periodOf(debut, fin) {
+    const a = P.displayToIso(debut); const b = P.displayToIso(fin) || a;
+    if (!a) return String(debut || '').trim();
+    const [ya, ma, da] = a.split('-'); const [yb, mb, db] = b.split('-');
+    if (a === b) return `${da}.${ma}.${ya}`;
+    if (ya === yb && ma === mb) return `${da}-${db}.${ma}.${ya}`;
+    if (ya === yb) return `${da}.${ma}-${db}.${mb}.${ya}`;
+    return `${da}.${ma}.${ya}-${db}.${mb}.${yb}`;
+  }
+
+  /**
+   * Pièce DECOMPTE proposée depuis un dossier terminé dans Décompte DGEO (fichier Excel généré).
+   * Les champs descriptifs viennent du formulaire de couverture du dossier. Le montant proposé est
+   * ce que l'enseignant-e a payé de sa poche (colonne du formulaire), à défaut le total des
+   * dépenses du formulaire, à défaut la part État calculée : les trois sont renvoyés pour que la
+   * personne choisisse. Renvoie { piece, amounts, amountSource }.
+   */
+  function pieceFromDecompte(d, reg) {
+    d = d || {};
+    const p = newPiece(reg);
+    p.type = 'DECOMPTE';
+    p.objet = d.type_activite === 'camp' ? 'Camp' : "Course d'école";
+    p.classe = String(d.classe || '').trim();
+    p.periode = periodOf(d.date_debut, d.date_fin);
+    p.detail = String(d.activite || '').trim();
+    p.personne = String(d.enseignant || '').trim();
+    const num = (v) => { const n = Number(v); return n > 0 ? P.round2(n) : null; };
+    let paid = 0;
+    for (const e of Array.isArray(d.form_expenses) ? d.form_expenses : []) paid += Number(e && e.paye_enseignant) || 0;
+    const amounts = { enseignant: num(paid), formulaire: num(d.form_total), etat: num(d.total) };
+    const amountSource = amounts.enseignant != null ? 'enseignant' : amounts.formulaire != null ? 'formulaire' : amounts.etat != null ? 'etat' : null;
+    p.montant = amountSource ? amounts[amountSource] : 0;
+    // remboursement à l'enseignant-e = sortie de caisse ; sinon la personne choisit le sens
+    p.sens = amountSource === 'enseignant' ? 'credit' : null;
+    const dd = P.displayToIso(d.date_decompte);
+    if (dd && dd.slice(0, 4) === String(reg.annee)) p.date = dd;
+    p.source = 'dgeo';
+    p.ref = String(d.numero || d.filename || '').trim();
+    p.libelle = composeLibelle(p);
+    return { piece: p, amounts, amountSource };
   }
 
   /** Sens fixé par la logique des libellés (null pour DECOMPTE : à choisir). */
@@ -289,6 +333,8 @@
     newPiece,
     composeDescription,
     composeLibelle,
+    periodOf,
+    pieceFromDecompte,
     sensFor,
     accountSuggestions,
     validate,
