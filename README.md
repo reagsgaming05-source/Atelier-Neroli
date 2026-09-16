@@ -63,7 +63,8 @@ appliqué automatiquement pour conserver les valeurs saisies.
 - autorisations : impression, copie, modification, annotation, remplissage des
   formulaires, réorganisation ;
 - aplatissement des champs de formulaire ;
-- caviardage réel : une page caviardée est convertie en image à l'export, ce
+- caviardage réel : le texte caviardé est retiré du flux de la page, qui reste
+  vectorielle quand sa police le permet ; sinon la page est convertie en image, ce
   qui supprime définitivement le texte masqué.
 
 Les PDF protégés par mot de passe peuvent être ouverts : le mot de passe est
@@ -113,6 +114,39 @@ Dix ajouts, choisis pour le travail de bureau au quotidien :
     Ctrl+Tab), une page se glisse d'un onglet à l'autre. « Ouvrir » ouvre à
     part ; « Ajouter au document » combine.
 
+### Et depuis
+
+Ce qu'une relecture complète du logiciel a fait ajouter ensuite :
+
+- **Enregistrer** (Ctrl+S) réécrit le fichier ouvert, dans l'application Windows,
+  après une confirmation la première fois pour chaque fichier ; **Enregistrer
+  sous…** (Ctrl+Maj+S) crée un nouveau fichier. *Fichier › Récents* rouvre les
+  derniers documents, et la page d'accueil les liste.
+- **Récupération après plantage** : le travail en cours est mis de côté dans
+  `data/recuperation/` quelques secondes après chaque changement, effacé à
+  l'enregistrement ou à la fermeture voulue ; s'il en reste au lancement
+  suivant, l'application propose de le récupérer, modifications comprises.
+- **Sélection de texte en mode Lire**, copier-coller compris, sur un PDF
+  texte comme sur un scan reconnu.
+- **Caviardage et effacement sans convertir la page en image** : le texte
+  visé est retiré du flux de la page, qui reste vectorielle (texte net,
+  fichier léger) quand la police le permet ; sinon la page passe en image,
+  comme avant. Les tracés vectoriels sous la zone (traits, fonds) restent.
+- **Commentaires déjà présents** dans un PDF reçu : listés, et retirés d'un
+  clic (outil Commentaires).
+- **Annuler** une longue opération (OCR, lot, assemblage) : bouton en bas,
+  ou Échap.
+- **Journal** : ce qui a été contourné pendant une opération (police
+  illisible, lien perdu, commentaire ignoré…) n'est plus silencieux ; un
+  bouton en bas de la fenêtre l'ouvre.
+- **Comparer** : reconnaissance à la demande quand une version est un scan,
+  et une vue « aspect » qui marque en rouge ce qui change à l'image.
+- **Impression** : qualité au choix (fine 300 ppp, normale 200, rapide 150).
+  Le document part en images : c'est ce qui permet d'envoyer directement à
+  l'imprimante sans autre fenêtre, et Chromium ne sait pas imprimer un PDF
+  en vectoriel depuis une application ; à 300 ppp, la différence ne se voit
+  pas sur papier.
+
 ## Les deux fichiers
 
 | Fichier | Poids | Internet |
@@ -149,10 +183,14 @@ Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le r
 mémorisés (vue, zoom, thème, taille des vignettes) vont dans le sous-dossier `data/` à côté de
 l'exécutable.
 
-La fenêtre a son menu — *Fichier* (Ouvrir, Ajouter au document, Nouvelle fenêtre,
-Enregistrer le PDF, Imprimer, dossier des données), *Affichage* (Lire, Organiser, zoom, thème,
-plein écran), *Aide* (raccourcis, à propos). « Enregistrer le PDF » ouvre la boîte
-« Enregistrer sous » de Windows. « Imprimer » connaît vos imprimantes et envoie directement —
+La fenêtre a son menu — *Fichier* (Ouvrir, Récents, Ajouter au document, Nouvelle fenêtre,
+Enregistrer, Enregistrer sous…, Imprimer, dossier des données), *Affichage* (Lire, Organiser,
+zoom, thème, plein écran), *Outils*, *Aide* (raccourcis, à propos). « Enregistrer » (Ctrl+S)
+réécrit le fichier ouvert, après confirmation la première fois pour chaque fichier ;
+« Enregistrer sous… » (Ctrl+Maj+S) ouvre la boîte de Windows. Le travail en cours est mis de
+côté dans `data/recuperation/` quelques secondes après chaque changement et effacé à
+l'enregistrement : après un arrêt brutal, il est proposé au lancement suivant. « Imprimer »
+connaît vos imprimantes et envoie directement —
 imprimante choisie, recto verso, copies, livret, plusieurs pages par feuille, échelle
 (ajuster, taille réelle, réduire les pages hors format, pourcentage), source de papier selon
 le format de la page — sans autre fenêtre ; « Propriétés… » passe par la fenêtre d'impression
@@ -177,7 +215,8 @@ Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé v
 L'exécutable est construit automatiquement par GitHub Actions
 (`.github/workflows/build-blonaypdf-windows.yml`) à chaque poussée : tests unitaires,
 construction de la page autonome, empaquetage Electron (`outils/desktop/`), test de fumée de
-l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, export d'un vrai PDF), puis
+l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, Enregistrer sous, Enregistrer sur
+place après confirmation, récupération du travail après un arrêt brutal, seconde instance), puis
 publication du zip dans la pré-release à tag fixe `blonaypdf-windows-latest`.
 
 ### Utilisation
@@ -197,7 +236,8 @@ publication du zip dans la pré-release à tag fixe `blonaypdf-windows-latest`.
   caviardage, champs à remplir. Les annotations partent en vrais commentaires PDF.
 - **Outils** (menu) : reconnaître le texte (OCR), comparer deux versions, copier un tableau
   vers Excel, constituer un dossier de pièces, traiter plusieurs fichiers.
-- **Exporter** (Ctrl+S) : le PDF assemblé, avec ou sans aplatissement, mot de passe possible.
+- **Enregistrer** (Ctrl+S) : réécrit le fichier ouvert. **Enregistrer sous…** (Ctrl+Maj+S) : le
+  PDF assemblé dans un nouveau fichier, avec ou sans aplatissement, mot de passe possible.
 - **Imprimer** (Ctrl+P) : pages, livret, plusieurs pages par feuille, papier, échelle,
   imprimante, recto verso, copies ; aperçu en direct.
 
@@ -332,7 +372,8 @@ fenêtre. C'est une fonction du navigateur, pas une installation de logiciel.
 | Chiffre | Déplacer la page vers ce numéro |
 | Ctrl + A | Tout sélectionner |
 | Ctrl + O | Ouvrir des fichiers |
-| Ctrl + S | Exporter le PDF |
+| Ctrl + S | Enregistrer (application : réécrit le fichier ouvert ; navigateur : exporter) |
+| Ctrl + Maj + S | Enregistrer sous… |
 | Ctrl + F | Rechercher du texte |
 | Ctrl + Z / Ctrl + Y | Annuler / Rétablir |
 | Suppr | Retirer les pages sélectionnées |

@@ -4,7 +4,13 @@ BLONAY PDF — version portable Windows
 1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau, Documents…).
 2. Double-cliquez sur BlonayPDF.exe : la fenêtre de l'application s'ouvre.
 3. Ouvrez vos PDF (Fichier › Ouvrir, ou glissez-les dans la fenêtre), travaillez, puis
-   Fichier › Exporter le PDF.
+   Fichier › Enregistrer (Ctrl+S) : le fichier ouvert est réécrit, après confirmation la
+   première fois. Fichier › Enregistrer sous… (Ctrl+Maj+S) crée un nouveau fichier.
+
+Fichier › Récents rouvre les derniers documents ; la page d'accueil les liste aussi.
+Le travail en cours est mis de côté quelques secondes après chaque changement (dossier
+« data\recuperation ») et effacé à l'enregistrement : si l'application s'arrête
+brutalement, il est proposé au lancement suivant, modifications comprises.
 
 Aucune installation : tout est inclus dans le dossier. Aucun navigateur n'est utilisé.
 Aucune donnée ne quitte votre poste : les documents sont lus, modifiés et réassemblés
@@ -21,14 +27,20 @@ Ctrl+W fermer, Ctrl+Tab suivant) ; une page glissée sur un autre onglet y dém�
 
 Menu Outils : reconnaître le texte d'un scan (OCR, français et allemand, sur le poste),
 rechercher / remplacer / caviarder partout, copier un tableau vers Excel, comparer deux
-versions, constituer un dossier de pièces (sommaire, intercalaires, pagination, signets),
-traiter plusieurs fichiers d'un coup. Dans l'éditeur : tampons (Reçu le, Payé, Copie
-conforme…) et signatures mémorisées sur ce poste (dossier « data »).
+versions (texte, et aspect en rouge ; reconnaissance à la demande pour un scan), constituer
+un dossier de pièces (sommaire, intercalaires, pagination, signets), lister et retirer les
+commentaires d'un PDF reçu, traiter plusieurs fichiers d'un coup. Dans l'éditeur : tampons
+(Reçu le, Payé, Copie conforme…) et signatures mémorisées sur ce poste (dossier « data »).
+Caviarder ou effacer du texte garde la page nette (vectorielle) quand la police le permet.
+
+En mode Lire, le texte se sélectionne et se copie. Une longue opération (OCR, lot) s'annule
+par le bouton en bas ou Échap ; ce qui a été contourné pendant une opération est noté dans
+le journal, en bas de la fenêtre.
 
 Imprimer (Fichier › Imprimer) : l'application connaît vos imprimantes et envoie
 directement — imprimante choisie, recto verso, copies, livret, plusieurs pages par
-feuille, échelle — sans autre fenêtre. « Propriétés… » ouvre la fenêtre d'impression de
-Windows, avec les réglages du pilote (bac, qualité, options).
+feuille, échelle, qualité (fine, normale, rapide) — sans autre fenêtre. « Propriétés… »
+ouvre la fenêtre d'impression de Windows, avec les réglages du pilote (bac, qualité, options).
 
 Premier lancement : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (l'exécutable n'est pas signé). Cliquez sur « Informations complémentaires » puis

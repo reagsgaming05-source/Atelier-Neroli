@@ -25,6 +25,9 @@ const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
 
 // Dossier de données à côté de l'exécutable (version portable) ; sinon, dossier utilisateur.
 function setupUserData() {
+  // Test de fumée : un dossier de données à part, pour ne toucher ni aux
+  // récents ni à la récupération de l'utilisateur.
+  if (process.env.BLONAY_SMOKE_DIR) { try { app.setPath('userData', path.join(process.env.BLONAY_SMOKE_DIR, 'donnees')); } catch (e) { /* tant pis */ } return; }
   if (!app.isPackaged) return;
   const dir = path.join(PORTABLE_DIR, 'data');
   try {
@@ -47,10 +50,72 @@ function lire(chemins) {
   for (const c of chemins) {
     try {
       const b = fs.readFileSync(c);
-      out.push({ nom: path.basename(c), octets: new Uint8Array(b.buffer, b.byteOffset, b.length) });
+      out.push({ nom: path.basename(c), octets: new Uint8Array(b.buffer, b.byteOffset, b.length), chemin: c });
     } catch (e) { console.warn('illisible :', c, e && e.message); }
   }
   return out;
+}
+
+// Fichiers récents : une liste de chemins dans le dossier de données, rien d'autre.
+const RECENTS_MAX = 12;
+const fichierRecents = () => path.join(app.getPath('userData'), 'recents.json');
+function lireRecents() {
+  try { const l = JSON.parse(fs.readFileSync(fichierRecents(), 'utf8')); return Array.isArray(l) ? l.filter((c) => typeof c === 'string') : []; } catch (e) { return []; }
+}
+function ajouterRecent(chemin) {
+  if (!chemin) return;
+  const l = [chemin].concat(lireRecents().filter((c) => c !== chemin)).slice(0, RECENTS_MAX);
+  try { fs.writeFileSync(fichierRecents(), JSON.stringify(l, null, 1)); } catch (e) { /* dossier non inscriptible */ }
+  buildMenu();
+}
+function viderRecents() { try { fs.unlinkSync(fichierRecents()); } catch (e) { /* déjà vide */ } buildMenu(); }
+
+// Récupération après plantage : chaque onglet modifié dépose son travail
+// (sources et manifeste) dans le dossier de données ; il est effacé après
+// un enregistrement ou une fermeture voulue.
+const dossierRecup = () => path.join(app.getPath('userData'), 'recuperation');
+const cleValide = (cle) => typeof cle === 'string' && /^[a-z0-9-]{3,64}$/.test(cle);
+let recupProposee = false;
+function recupEcrire(o) {
+  if (!o || !cleValide(o.cle)) return { ok: false, erreur: 'clé invalide' };
+  const dir = path.join(dossierRecup(), o.cle);
+  fs.mkdirSync(dir, { recursive: true });
+  for (const f of o.fichiers || []) {
+    if (!f || typeof f.nom !== 'string' || !/^[a-z0-9._-]+$/i.test(f.nom)) continue;
+    fs.writeFileSync(path.join(dir, f.nom), Buffer.from(f.octets));
+  }
+  const tmp = path.join(dir, 'manifeste.json.tmp');
+  fs.writeFileSync(tmp, JSON.stringify(o.manifeste));
+  fs.renameSync(tmp, path.join(dir, 'manifeste.json'));
+  return { ok: true };
+}
+function recupListe() {
+  if (recupProposee) return [];
+  recupProposee = true;
+  const out = [];
+  try {
+    for (const cle of fs.readdirSync(dossierRecup())) {
+      if (!cleValide(cle)) continue;
+      try {
+        const m = JSON.parse(fs.readFileSync(path.join(dossierRecup(), cle, 'manifeste.json'), 'utf8'));
+        out.push({ cle, titre: m.titre || '', quand: m.quand || 0, pages: Array.isArray(m.pages) ? m.pages.length : 0 });
+      } catch (e) { /* manifeste absent ou illisible : rien à proposer */ }
+    }
+  } catch (e) { /* pas de dossier */ }
+  return out;
+}
+function recupLire(cle) {
+  if (!cleValide(cle)) return null;
+  const dir = path.join(dossierRecup(), cle);
+  const manifeste = JSON.parse(fs.readFileSync(path.join(dir, 'manifeste.json'), 'utf8'));
+  const fichiers = fs.readdirSync(dir).filter((f) => f !== 'manifeste.json' && !f.endsWith('.tmp'))
+    .map((f) => { const b = fs.readFileSync(path.join(dir, f)); return { nom: f, octets: new Uint8Array(b.buffer, b.byteOffset, b.length) }; });
+  return { manifeste, fichiers };
+}
+function recupEffacer(cle) {
+  if (!cleValide(cle)) return false;
+  fs.rmSync(path.join(dossierRecup(), cle), { recursive: true, force: true });
+  return true;
 }
 
 const fenetres = new Set();
@@ -62,6 +127,7 @@ const fenetreDe = (sender) => BrowserWindow.fromWebContents(sender);
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', (_e, argv) => {
   const liste = lire(fichiersDe(argv));
+  liste.forEach((f) => ajouterRecent(f.chemin));
   if (liste.length) { createWindow(liste); return; }
   const w = fenetreActive();
   if (w) { if (w.isMinimized()) w.restore(); w.focus(); }
@@ -138,6 +204,7 @@ function setupDownloads() {
     });
     item.once('done', (_e, etat) => {
       if (!contents || contents.isDestroyed()) return;
+      if (etat === 'completed' && /\.pdf$/i.test(item.getSavePath())) ajouterRecent(item.getSavePath());
       contents.send('blonay:enregistre', etat === 'completed' ? { chemin: item.getSavePath() } : { annule: true });
     });
   });
@@ -160,6 +227,28 @@ function setupIpc() {
     if (w) w.blonayFichiers = [];
     return l;
   });
+  // Enregistrer : réécrire le fichier ouvert, sur place, sans boîte de dialogue.
+  ipcMain.handle('blonay:ecrire', (_e, o) => {
+    try {
+      if (!o || typeof o.chemin !== 'string' || !path.isAbsolute(o.chemin) || !o.octets) return { ok: false, erreur: 'chemin invalide' };
+      const tmp = o.chemin + '.blonay-tmp';
+      fs.writeFileSync(tmp, Buffer.from(o.octets));
+      fs.renameSync(tmp, o.chemin);
+      ajouterRecent(o.chemin);
+      return { ok: true, chemin: o.chemin };
+    } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; }
+  });
+  ipcMain.handle('blonay:recents', () => lireRecents().filter((c) => fs.existsSync(c)));
+  // La page d'accueil rouvre un récent : seulement un chemin de la liste, jamais un autre.
+  ipcMain.handle('blonay:lire-recent', (_e, chemin) => {
+    if (typeof chemin !== 'string' || !lireRecents().includes(chemin) || !fs.existsSync(chemin)) return [];
+    ajouterRecent(chemin);
+    return lire([chemin]);
+  });
+  ipcMain.handle('blonay:recup-ecrire', (_e, o) => { try { return recupEcrire(o); } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; } });
+  ipcMain.handle('blonay:recup-liste', () => { try { return recupListe(); } catch (err) { return []; } });
+  ipcMain.handle('blonay:recup-lire', (_e, cle) => { try { return recupLire(cle); } catch (err) { return null; } });
+  ipcMain.handle('blonay:recup-effacer', (_e, cle) => { try { return recupEffacer(cle); } catch (err) { return false; } });
   ipcMain.handle('blonay:imprimantes', async (e) => {
     const liste = await e.sender.getPrintersAsync();
     return liste.map((p) => ({ name: p.name, displayName: p.displayName || p.name, isDefault: !!p.isDefault }));
@@ -190,7 +279,17 @@ async function choisirDocuments(win) {
     properties: ['openFile', 'multiSelections'],
     filters: [{ name: 'PDF et images', extensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp'] }, { name: 'Tous les fichiers', extensions: ['*'] }],
   });
-  return r.canceled ? [] : lire(r.filePaths);
+  if (r.canceled) return [];
+  r.filePaths.forEach(ajouterRecent);
+  return lire(r.filePaths);
+}
+function ouvrirRecent(chemin) {
+  if (!fs.existsSync(chemin)) { dialog.showMessageBox({ type: 'warning', title: APP_TITLE, message: 'Ce fichier n\'existe plus :', detail: chemin, noLink: true }); viderRecents(); return; }
+  const liste = lire([chemin]);
+  if (!liste.length) return;
+  ajouterRecent(chemin);
+  const win = fenetreActive();
+  if (win) win.webContents.send('blonay:ouvrir-onglet', liste); else createWindow(liste);
 }
 
 // Ouvrir… : un document à part, dans un nouvel onglet de la fenêtre courante
@@ -217,11 +316,17 @@ function buildMenu() {
       label: 'Fichier',
       submenu: [
         { label: 'Ouvrir…', accelerator: 'CmdOrCtrl+O', click: ouvrirDocuments },
+        {
+          label: 'Récents',
+          submenu: (lireRecents().length ? lireRecents().map((c) => ({ label: path.basename(c), sublabel: path.dirname(c), click: () => ouvrirRecent(c) })) : [{ label: 'Aucun fichier récent', enabled: false }])
+            .concat([{ type: 'separator' }, { label: 'Effacer la liste', click: viderRecents }]),
+        },
         { label: 'Ajouter au document…', accelerator: 'CmdOrCtrl+Shift+O', click: ajouterDocuments },
         { label: 'Nouvel onglet', accelerator: 'CmdOrCtrl+T', click: () => envoyer('nouvel-onglet') },
         { label: 'Nouvelle fenêtre', accelerator: 'CmdOrCtrl+N', click: () => createWindow([]) },
         { type: 'separator' },
-        { label: 'Enregistrer le PDF…', accelerator: 'CmdOrCtrl+S', click: () => envoyer('exporter') },
+        { id: 'enregistrer', label: 'Enregistrer', accelerator: 'CmdOrCtrl+S', click: () => envoyer('enregistrer') },
+        { id: 'enregistrer-sous', label: 'Enregistrer sous…', accelerator: 'CmdOrCtrl+Shift+S', click: () => envoyer('exporter') },
         { label: 'Imprimer…', accelerator: 'CmdOrCtrl+P', click: () => envoyer('imprimer') },
         { type: 'separator' },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
@@ -293,7 +398,9 @@ app.whenReady().then(() => {
   setupDownloads();
   setupIpc();
   buildMenu();
-  createWindow(lire(fichiersDe(process.argv)));
+  const initiaux = lire(fichiersDe(process.argv));
+  initiaux.forEach((f) => ajouterRecent(f.chemin));
+  createWindow(initiaux);
 });
 
 app.on('window-all-closed', () => app.quit());
