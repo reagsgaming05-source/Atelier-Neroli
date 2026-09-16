@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: var(--font-cormorant), "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --color-cream-50: #fcfaf6;
+  --color-cream-100: #f7f2ea;
+  --color-cream-200: #efe7da;
+  --color-cream-300: #e2d7c5;
+  --color-sand-400: #c9bba4;
+  --color-sand-500: #a8977b;
+
+  --color-forest-50: #eef2ee;
+  --color-forest-100: #d9e2da;
+  --color-forest-200: #b7c8bb;
+  --color-forest-500: #4a6656;
+  --color-forest-600: #3a5446;
+  --color-forest-700: #2c4237;
+  --color-forest-800: #1f3129;
+  --color-forest-900: #15231d;
+
+  --color-ink-900: #1b1e1c;
+  --color-ink-700: #3e433f;
+  --color-ink-500: #6c726e;
+  --color-ink-400: #8d928f;
+
+  --color-blossom-100: #fbeee3;
+  --color-blossom-200: #f5dcc6;
+  --color-blossom-400: #e6a97c;
+  --color-blossom-500: #d68f5a;
+  --color-blossom-600: #b8733f;
+
+  --color-line: #e7dfd3;
+  --color-success: #2f6b4b;
+  --color-warning: #b07a2a;
+  --color-danger: #a83a32;
+
+  --shadow-soft: 0 12px 40px -16px rgb(27 30 28 / 0.18);
+  --shadow-card: 0 1px 2px rgb(27 30 28 / 0.04), 0 8px 24px -12px rgb(27 30 28 / 0.12);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-cream-50 font-sans text-ink-900 antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--color-blossom-200);
+  }
+  h1,
+  h2,
+  h3 {
+    font-feature-settings: "liga", "kern";
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@utility container-x {
+  @apply mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-10;
+}
+
+@utility eyebrow {
+  @apply text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-forest-600;
+}
+
+@layer components {
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink-700;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-white px-4 py-3 text-[15px] text-ink-900 outline-none transition placeholder:text-ink-400 focus:border-forest-500 focus:ring-4 focus:ring-forest-500/10 disabled:bg-cream-100 disabled:text-ink-500;
+  }
+  .input-error {
+    @apply border-danger focus:border-danger focus:ring-danger/10;
+  }
+  .card {
+    @apply rounded-3xl border border-line bg-white shadow-card;
+  }
+  .hero-visual {
+    background-color: var(--color-forest-800);
+    background-image:
+      radial-gradient(120% 90% at 15% 0%, rgb(74 102 86 / 0.95) 0%, transparent 60%),
+      radial-gradient(80% 60% at 95% 100%, rgb(214 143 90 / 0.45) 0%, transparent 60%),
+      linear-gradient(160deg, var(--color-forest-700), var(--color-forest-900));
+  }
+  .band-forest {
+    background-color: var(--color-forest-900);
+    background-image:
+      radial-gradient(90% 100% at 0% 0%, rgb(74 102 86 / 0.55) 0%, transparent 55%),
+      radial-gradient(60% 80% at 100% 100%, rgb(214 143 90 / 0.25) 0%, transparent 55%);
+  }
+  .table {
+    @apply w-full text-left text-sm;
+  }
+  .table th {
+    @apply border-b border-line px-4 py-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink-500 first:pl-6 last:pr-6;
+  }
+  .table td {
+    @apply border-b border-line/70 px-4 py-4 align-middle text-ink-700 first:pl-6 last:pr-6;
+  }
+  .table tr:last-child td {
+    @apply border-b-0;
+  }
+  .prose-legal h2 {
+    @apply mt-10 mb-3 font-display text-2xl font-medium text-ink-900;
+  }
+  .prose-legal h3 {
+    @apply mt-6 mb-2 text-base font-semibold text-ink-900;
+  }
+  .prose-legal p,
+  .prose-legal li {
+    @apply text-[15px] leading-relaxed text-ink-700;
+  }
+  .prose-legal p {
+    @apply mb-4;
+  }
+  .prose-legal ul {
+    @apply mb-4 list-disc space-y-1.5 pl-5;
+  }
+  .prose-legal a {
+    @apply underline decoration-line underline-offset-4 hover:decoration-forest-600;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+  }
+}
