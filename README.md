@@ -73,7 +73,10 @@ Mode serveur local (interface dans le navigateur, optionnel) : `./run.sh --web -
    retoucher un libellé ou un montant ; « Recalculer » régénère tout depuis les pièces.
 5. **Générer le fichier Excel** : le modèle officiel (course ou camp) est rempli avec ses
    formules (règle de trois `H/G11×F11`, total `MROUND(…, 0.05)`), nommé d'après le
-   n° de dossier (ex. `ANS100325.xlsx`).
+   n° de dossier (ex. `ANS100325.xlsx`). Chaque ligne porte son coût total (colonne H) et une
+   formule en colonne I : la règle de trois du modèle pour un montant global, ou le détail
+   des tarifs adultes retenus (`=ROUND(6*2.80+2*2.10,2)`) pour des billets. Dans le tableau
+   des lignes, la colonne *Calcul* permet de passer une ligne de l'un à l'autre.
 
 Les PDF analysés et les images de pages sont conservés dans le dossier `data/` (local).
 
@@ -82,9 +85,9 @@ Les PDF analysés et les images de pages sont conservés dans le dossier `data/`
 | Situation | Traitement |
 |---|---|
 | Récépissé (bulletin de versement QR), reçu de carte, pièce « taux de change » | **Jamais** retenus comme pièce (seul le ticket / la facture fait foi). Ils servent uniquement à retrouver un montant CHF ou un taux. |
-| Billet avec tarifs par personne (ex. Mobilis « 3 Prix entier CHF 2.80 ») | **Saisie directe** (colonne I) : pour chaque billet on retient au plus *N titrés* tarifs adultes, **d'abord les plein tarifs, puis les demi-tarifs**. Libellé : `pces 1-4 (6*2.80 + 6*4.20 + 2*2.10)`. |
-| Facture / montant global (bus, musée, hébergement…) | **Règle de trois** (colonne H + formule du modèle) : total × titrés ÷ total participants. Libellé : `pce 2` ou `pces 2-3 (300.00 + 150.00)`. |
-| Accompagnants invités à 0.00 (ex. « INVITE MEDIATION ») ou aucun tarif adulte sur la pièce | Rien à charge de l'État : pièce exclue avec motif (modifiable). |
+| Billet avec tarifs par personne (ex. Mobilis « 3 Prix entier CHF 2.80 », MOB « 2 enseignants demi-tarif ») | **Saisie directe** (colonne I, écrite comme formule du détail) : pour chaque billet on retient au plus *N titrés* tarifs adultes, **d'abord les plein tarifs, puis les demi-tarifs**. Le coût total des billets est écrit en colonne H à titre d'information. Libellé : `pces 1-4 (6*2.80 + 6*4.20 + 2*2.10)`. |
+| Facture / montant global (bus, hôtel, auberge de jeunesse, musée ou activité au prix de groupe…) : le prix adulte n'est pas connu | **Règle de trois** (colonne H + formule du modèle) : coût total × titrés ÷ total participants. Libellé : `pce 2` ou `pces 2-3 (300.00 + 150.00)`. |
+| Accompagnants invités à 0.00 (ex. « INVITE MEDIATION ») ou aucun tarif adulte sur la pièce | Rien à charge de l'État : pièce exclue avec motif (modifiable). Retenue quand même, elle passe par la règle de trois sur son total (jamais une ligne vide). |
 | Pièce en EUR | Montant CHF imprimé sur la pièce s'il existe, sinon taux d'une pièce « taux de change » / reçu de carte du dossier, sinon taux saisi dans l'interface. Le libellé montre la conversion (`45.00 EUR*0.9500 = 42.75 CHF`). |
 | Deux pièces de même montant (lettre + facture) | La seconde est signalée comme doublon probable et exclue (modifiable). |
 | Rubriques | Course d'école : Transport / Activité / Autre. Camp : Nourriture / Hébergement / Transport / Activité / Autre / Cuisinière. Seules les rubriques utilisées apparaissent dans l'Excel, comme dans les décomptes établis à la main. |

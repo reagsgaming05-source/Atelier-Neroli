@@ -43,9 +43,10 @@ def test_del311025_like_dossier():
     d = dossier([piece(1, fares=[fare("demi", 1, 5.5), fare("enfant", 19, 5.5)], total=110.0),
                  piece(2, kind="facture", total=300.0, rubrique="Activité")], titres=2, eleves=19, autres=0)
     assert [(r.rubrique, r.mode, r.libelle, r.cout_total, r.cout_direct) for r in d.rows] == [
-        ("Transport", "direct", "pce 1 (1*5.50)", None, 5.5),
+        ("Transport", "direct", "pce 1 (1*5.50)", 110.0, 5.5),  # coût total du billet en H (information), part État directe en I
         ("Activité", "prorata", "pce 2", 300.0, None),
     ]
+    assert d.rows[0].formule == "1*5.50"
     assert d.total == 34.05  # 5.50 + 300/21*2 = 34.07 → arrondi à 0.05
 
 
@@ -86,3 +87,34 @@ def test_round_005():
     assert round_005(34.07) == 34.05
     assert round_005(34.08) == 34.10
     assert round_005(46.20) == 46.20
+
+
+def test_piece_without_readable_adult_fare_falls_back_to_rule_of_three():
+    # billet où seuls des tarifs élèves ont été lus : exclu avec motif, mode règle de trois si on le retient quand même
+    kids_only = piece(1, fares=[fare("enfant", 20, 5.2)], total=143.9)
+    d = dossier([kids_only], titres=2, eleves=20, autres=1)
+    assert not kids_only.include and kids_only.mode == "prorata" and "Aucun tarif adulte" in kids_only.exclusion_reason
+    kids_only.include = True
+    compute_rows(d)
+    assert [(r.mode, r.cout_total, r.cout_direct) for r in d.rows] == [("prorata", 143.9, None)]
+    assert d.total == 12.5  # 143.90 / 23 × 2 = 12.51 → 12.50
+    # pièce forcée en saisie directe (interface) sans tarif adulte : règle de trois sur son total, avec avertissement,
+    # au lieu de disparaître du décompte
+    forced = piece(2, fares=[fare("autre", 23, 8.0)], total=184.0, rubrique="Activité", mode="direct")
+    d2 = Dossier(id="t", type_activite="course", effectifs=Effectifs(eleves=20, enseignants_dgeo=2, autres=1), pieces=[forced])
+    compute_rows(d2)
+    assert [(r.rubrique, r.mode, r.cout_total) for r in d2.rows] == [("Activité", "prorata", 184.0)]
+    assert any("règle de trois" in w for w in d2.warnings)
+    # sans total lisible : non comptée, mais signalée
+    forced.total = None
+    compute_rows(d2)
+    assert d2.rows == [] and any("non comptée" in w for w in d2.warnings)
+
+
+def test_direct_rows_keep_ticket_totals_and_formula_detail():
+    t = [fare("plein", 2, 19.95), fare("enfant", 20, 5.2)]
+    d = dossier([piece(1, fares=t, total=143.9), piece(2, fares=t, total=143.9)], titres=2, eleves=20, autres=1)
+    row = d.rows[0]
+    # deux billets (aller, retour) : 2 titrés retenus sur chacun ; coût total des deux billets en H
+    assert row.mode == "direct" and row.cout_direct == 79.8 and row.cout_total == 287.8
+    assert row.formule == "4*19.95" and row.libelle == "pces 1-2 (4*19.95)"

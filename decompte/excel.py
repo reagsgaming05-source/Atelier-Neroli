@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 import io
+import re
 from copy import copy
 from pathlib import Path
 
@@ -101,6 +102,22 @@ def _parse_date(s: str | None) -> dt.date | None:
         return None
 
 
+def _direct_formula(row) -> "str | float":
+    """Colonne I d'une ligne « saisie directe » : « =6*2.8+6*4.2+2*2.1 » (le détail des tarifs adultes retenus),
+    ou le montant si le détail n'est pas disponible (ligne saisie à la main)."""
+    amount = round(row.cout_direct or 0.0, 2)
+    detail = (row.formule or "").replace(" ", "")
+    if not detail or not re.fullmatch(r"[0-9.*+EURCHF]+", detail):
+        return amount
+    expr = detail.replace("EUR", "").replace("CHF", "")
+    try:
+        if abs(round(eval(expr, {"__builtins__": {}}, {}), 2) - amount) > 0.011:  # noqa: S307 (expression numérique contrôlée)
+            return amount
+    except Exception:  # noqa: BLE001
+        return amount
+    return f"=ROUND({expr},2)"
+
+
 def build_workbook(dossier: Dossier, today: dt.date | None = None) -> bytes:
     template = TEMPLATES_DIR / TEMPLATES.get(dossier.type_activite, TEMPLATES["course"])
     wb = openpyxl.load_workbook(template)
@@ -142,8 +159,9 @@ def build_workbook(dossier: Dossier, today: dt.date | None = None) -> bytes:
         ws.cell(r, 2).value = row.rubrique
         ws.cell(r, 3).value = row.libelle
         if row.mode == "direct":
-            ws.cell(r, 8).value = None
-            ws.cell(r, 9).value = round(row.cout_direct or 0.0, 2)
+            # coût total des billets en H (information) ; part État en I sous forme de formule montrant le calcul
+            ws.cell(r, 8).value = round(row.cout_total, 2) if row.cout_total is not None else None
+            ws.cell(r, 9).value = _direct_formula(row)
         else:
             ws.cell(r, 8).value = round(row.cout_total or 0.0, 2)
             ws.cell(r, 9).value = f"=IFERROR(H{r}/$G$11*$F$11,0)"

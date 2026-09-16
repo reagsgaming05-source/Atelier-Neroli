@@ -166,8 +166,9 @@ class DecompteRow(BaseModel):
     rubrique: str
     libelle: str
     mode: Mode
-    cout_total: Optional[float] = None  # colonne H (règle de 3)
+    cout_total: Optional[float] = None  # colonne H : montant global (règle de 3) ou coût total des billets (information)
     cout_direct: Optional[float] = None  # colonne I (saisie directe)
+    formule: str = ""  # saisie directe : détail des tarifs retenus, écrit comme formule Excel (« 6*2.80 + 2*2.10 »)
     pieces: list[int] = Field(default_factory=list)
 
 

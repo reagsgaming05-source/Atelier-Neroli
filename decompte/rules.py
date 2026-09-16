@@ -5,8 +5,12 @@
 * Billet avec tarifs par personne → **saisie directe** : pour chaque billet on retient
   au maximum N tarifs adultes (N = accompagnants titrés), d'abord les plein tarifs,
   ensuite les demi-tarifs.
-* Facture / montant global → **règle de trois** dans l'Excel : total × titrés / total participants.
-* Accompagnants invités (0.00) ou pièce sans tarif adulte → rien à charge de l'État.
+* Facture / montant global (hébergement, hôtel, bus, activité au prix de groupe…) → **règle de
+  trois** dans l'Excel : coût total × titrés / total participants (formule du modèle).
+* Accompagnants invités (0.00) ou pièce sans tarif adulte → rien à charge de l'État ; si une
+  telle pièce est retenue quand même, elle passe par la règle de trois sur son total.
+* Chaque ligne de l'Excel porte son coût total (colonne H) et une formule (colonne I) : la
+  règle de trois du modèle, ou le détail des tarifs adultes retenus (« =6*2.8+2*2.1 »).
 * Pièce en EUR → montant CHF imprimé sur la pièce, sinon taux de change du dossier.
 * Le libellé contient toujours le détail du calcul.
 """
@@ -69,7 +73,8 @@ def propose(dossier: Dossier) -> None:
             p.include = False
             p.exclusion_reason = "Accompagnants invités (0.00) : rien à charge de l'État"
         elif kids:
-            p.mode = "direct"
+            # pas de prix adulte connu : si la pièce est retenue malgré tout, règle de trois sur son total
+            p.mode = "prorata"
             p.include = False
             p.exclusion_reason = "Aucun tarif adulte lu sur la pièce (seulement des élèves) : à vérifier"
         else:
@@ -168,25 +173,42 @@ def compute_rows(dossier: Dossier) -> None:
             continue
         rub = normalize_rubrique(p.rubrique, dossier.type_activite)
         key = (rub, p.mode)
-        g = groups.setdefault(key, {"numeros": [], "ids": [], "parts": OrderedDict(), "amounts": [], "eur_parts": []})
+        g = groups.setdefault(key, {"numeros": [], "ids": [], "parts": OrderedDict(), "amounts": [], "eur_parts": [], "totals": []})
         rate = _eur_rate_for(p, dossier)
         if p.currency == "EUR" and rate is None:
             warnings.append(f"[calcul] Pièce {p.numero} en EUR sans taux de change : non comptée. Indiquez le taux EUR→CHF.")
             continue
         g["numeros"].append(p.numero or str(p.id))
         g["ids"].append(p.id)
-        if p.mode == "direct":
+        mode = p.mode
+        taken: list[tuple[int, float, str]] = []
+        if mode == "direct":
             taken = take_adult_fares(p.fares, n)
             adults_on_ticket = sum(f.qty for f in p.adult_fares())
             if adults_on_ticket > n and n > 0:
                 warnings.append(
                     f"[calcul] Pièce {p.numero} : {adults_on_ticket} tarifs adultes sur le billet, {n} titrés retenus."
                 )
-            if not taken:
-                warnings.append(f"[calcul] Pièce {p.numero} : aucun tarif adulte retenu.")
+            if not taken and n > 0:
+                # prix adulte inconnu : la pièce passe par la règle de trois sur son total (colonne H + formule)
+                if p.total is not None:
+                    warnings.append(f"[calcul] Pièce {p.numero} : aucun tarif adulte lisible, règle de trois sur son total ({_fmt(p.total)}).")
+                    mode = "prorata"
+                else:
+                    warnings.append(f"[calcul] Pièce {p.numero} : aucun tarif adulte retenu et total illisible : non comptée.")
+        if mode != p.mode:
+            g["numeros"].pop(); g["ids"].pop()
+            key = (rub, mode)
+            g = groups.setdefault(key, {"numeros": [], "ids": [], "parts": OrderedDict(), "amounts": [], "eur_parts": [], "totals": []})
+            g["numeros"].append(p.numero or str(p.id))
+            g["ids"].append(p.id)
+        if mode == "direct":
             for q, unit, cur in taken:
                 k = (unit, cur, rate if cur == "EUR" else None)
                 g["parts"][k] = g["parts"].get(k, 0) + q
+            # coût total des billets (colonne H, à titre d'information : la part État est saisie directement)
+            if p.total is not None:
+                g["totals"].append(round(p.total * rate, 2) if p.currency == "EUR" else round(p.total, 2))
         else:
             if p.total is None:
                 continue
@@ -217,7 +239,8 @@ def compute_rows(dossier: Dossier) -> None:
             if not terms:
                 continue
             libelle = f"{label} ({' + '.join(terms)})"
-            rows.append(DecompteRow(rubrique=rub, libelle=libelle, mode="direct", cout_direct=round(total, 2), pieces=g["ids"]))
+            cout_total = round(sum(g["totals"]), 2) if g["totals"] else None
+            rows.append(DecompteRow(rubrique=rub, libelle=libelle, mode="direct", cout_total=cout_total, cout_direct=round(total, 2), pieces=g["ids"], formule=" + ".join(terms)))
         else:
             total = round(sum(g["amounts"]), 2)
             detail = ""

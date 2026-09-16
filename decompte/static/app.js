@@ -212,13 +212,24 @@
       const tr = el("tr", {}, [
         el("td", {}, el("select", { onchange: (e) => { r.rubrique = e.target.value; rowsManual = true; renderRows(); } }, rubs.map(x => el("option", { value: x, selected: r.rubrique === x ? "" : null }, x)))),
         el("td", {}, el("input", { value: r.libelle, onchange: (e) => { r.libelle = e.target.value; rowsManual = true; } })),
-        el("td", { class: "num" }, r.mode === "prorata" ? el("input", { class: "num", type: "number", step: "0.01", value: fmt(r.cout_total), onchange: (e) => { r.cout_total = num(e.target.value); rowsManual = true; renderRows(); } }) : el("span", { class: "legend" }, "–")),
-        el("td", { class: "num" }, r.mode === "direct" ? el("input", { class: "num", type: "number", step: "0.01", value: fmt(r.cout_direct), onchange: (e) => { r.cout_direct = num(e.target.value); rowsManual = true; renderRows(); } }) : el("span", { class: "legend", title: "Formule Excel : H / total participants × titrés" }, "formule")),
+        // mode de la ligne : règle de trois sur le coût total (H) ou part État saisie directement (I)
+        el("td", {}, el("select", { title: "Règle de trois : coût total (H) / total participants × titrés, formule du modèle. Saisie directe : tarifs adultes connus, part État en I.", onchange: (e) => {
+          const m = e.target.value;
+          if (m === "direct" && (r.cout_direct == null)) r.cout_direct = Math.round(rowAmount(r) * 100) / 100;
+          if (m === "prorata" && (r.cout_total == null)) r.cout_total = r.cout_direct || 0;
+          r.mode = m; rowsManual = true; renderRows(); // le détail des tarifs (formule Excel) est conservé pour un retour en saisie directe
+        } }, [["prorata", "Règle de trois (H)"], ["direct", "Saisie directe (I)"]].map(([v, t]) => el("option", { value: v, selected: r.mode === v ? "" : null }, t)))),
+        el("td", { class: "num" }, r.mode === "prorata"
+          ? el("input", { class: "num", type: "number", step: "0.01", value: fmt(r.cout_total), title: "Montant global payé (hébergement, bus, activité au prix de groupe…) : l'Excel calcule la part État par la règle de trois", onchange: (e) => { r.cout_total = num(e.target.value); rowsManual = true; renderRows(); } })
+          : el("span", { class: "legend", title: "Coût total des billets, écrit en H à titre d'information ; la part État est saisie directement en I" }, r.cout_total != null ? fmt(r.cout_total) : "–")),
+        el("td", { class: "num" }, r.mode === "direct"
+          ? el("input", { class: "num", type: "number", step: "0.01", value: fmt(r.cout_direct), title: r.formule ? `Écrit dans l'Excel comme formule : =ROUND(${r.formule.replace(/\s+/g, "")},2)` : "Montant saisi directement", onchange: (e) => { r.cout_direct = num(e.target.value); r.formule = ""; rowsManual = true; renderRows(); } })
+          : el("span", { class: "legend", title: "Formule Excel du modèle : H / total participants × titrés" }, "formule")),
         el("td", { class: "num" }, fmt(rowAmount(r))),
       ]);
       tb.append(tr);
     }
-    if (!dossier.rows.length) tb.append(el("tr", {}, el("td", { colspan: 5, class: "legend" }, "Aucune ligne : aucune pièce retenue ou aucun accompagnant titré.")));
+    if (!dossier.rows.length) tb.append(el("tr", {}, el("td", { colspan: 6, class: "legend" }, "Aucune ligne : aucune pièce retenue ou aucun accompagnant titré.")));
     const total = round005(dossier.rows.reduce((s, r) => s + rowAmount(r), 0));
     dossier.total = total;
     $("#total").textContent = `CHF ${fmt(total)}`;
