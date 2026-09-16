@@ -3,7 +3,7 @@
  * comptes et sens habituels par type d'écriture.
  *
  * Source : caisse.xlsx – 267 écriture(s), année(s) 2025
- * Généré le 2026-09-14 par tools/build-vocab.js – ne pas modifier à la main.
+ * Généré le 2026-09-16 par tools/build-vocab.js – ne pas modifier à la main.
  * Aucune donnée personnelle : les noms sont dans vocabulaire-noms.js (non versionné).
  */
 (function (root, factory) {
@@ -821,7 +821,548 @@
         "n": 1
       }
     ],
+    "objetAccounts": [
+      {
+        "type": "DECOMPTE",
+        "objet": "Course d'école",
+        "degre": "P",
+        "compte": "51000.3662.00",
+        "n": 24
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Course d'école",
+        "degre": "S",
+        "compte": "51000.3662.00",
+        "n": 19
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "51000.3170.05",
+        "n": 14
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "50000.3652.00",
+        "n": 11
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Course d'école",
+        "degre": "P",
+        "compte": "51000.3662.00",
+        "n": 10
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "51000.3151.00",
+        "n": 9
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "51000.3185.00",
+        "n": 8
+      },
+      {
+        "type": "PARTICIPATION DES PARENTS",
+        "objet": "Cours de ski",
+        "degre": "P",
+        "compte": "51000.4392.20",
+        "n": 8
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Course d'école",
+        "degre": "S",
+        "compte": "51000.3662.00",
+        "n": 7
+      },
+      {
+        "type": "RETRAIT",
+        "objet": "Bourse communale",
+        "degre": null,
+        "compte": "9111.100",
+        "n": 7
+      },
+      {
+        "type": "PARTICIPATION PARENTS",
+        "objet": "Cours de ski",
+        "degre": "P",
+        "compte": "51000.4392.20",
+        "n": 7
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "51000.3662.00",
+        "n": 7
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "51000.3199.00",
+        "n": 7
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Camp",
+        "degre": "S",
+        "compte": "52000.3662.00",
+        "n": 6
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Repas",
+        "degre": null,
+        "compte": "50000.3652.00",
+        "n": 6
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Matériel",
+        "degre": null,
+        "compte": "51000.3185.00",
+        "n": 5
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Camp",
+        "degre": null,
+        "compte": "52000.3662.00",
+        "n": 5
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Voyage d'étude",
+        "degre": "S",
+        "compte": "52000.3662.10",
+        "n": 5
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Échange linguistique",
+        "degre": "S",
+        "compte": "52000.3662.40",
+        "n": 4
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "51000.3662.50",
+        "n": 4
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": "P",
+        "compte": "35303.3152",
+        "n": 4
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Camp",
+        "degre": "P",
+        "compte": "51000.3662.30",
+        "n": 4
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "9206.101",
+        "n": 4
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Collation",
+        "degre": "S",
+        "compte": "51000.3662.50",
+        "n": 3
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Collation",
+        "degre": "P",
+        "compte": "51000.3662.50",
+        "n": 3
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Camp",
+        "degre": "P",
+        "compte": "51000.3662.30",
+        "n": 3
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Repas",
+        "degre": null,
+        "compte": "51000.3170.10",
+        "n": 3
+      },
+      {
+        "type": "RECETTE",
+        "objet": "Caisse de classe",
+        "degre": "P",
+        "compte": "9206.101",
+        "n": 3
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Camp",
+        "degre": "P",
+        "compte": "51000.3662.00",
+        "n": 3
+      },
+      {
+        "type": "PARTICIPATION DES PARENTS",
+        "objet": "Camp",
+        "degre": "P",
+        "compte": "51000.4392.00",
+        "n": 3
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Mini-camp",
+        "degre": "P",
+        "compte": "51000.3662.00",
+        "n": 3
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": "S",
+        "compte": "51000.3662.00",
+        "n": 2
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": "P",
+        "compte": "35308.3151",
+        "n": 2
+      },
+      {
+        "type": "RECETTE",
+        "objet": "Autre",
+        "degre": "S",
+        "compte": "52000.4390.30",
+        "n": 2
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": "P",
+        "compte": "51000.3662.00",
+        "n": 2
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Caisse de classe",
+        "degre": "P",
+        "compte": "9206.101",
+        "n": 2
+      },
+      {
+        "type": "RECETTE",
+        "objet": "Caisse de classe",
+        "degre": "S",
+        "compte": "9206.101",
+        "n": 2
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Camp",
+        "degre": "P",
+        "compte": "51000.3662.00",
+        "n": 2
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "35302.3152",
+        "n": 2
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "9206.101",
+        "n": 2
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "50000.3114.00",
+        "n": 2
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Matériel",
+        "degre": null,
+        "compte": "51000.3151.00",
+        "n": 2
+      },
+      {
+        "type": "RECETTE",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "9206.101",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Camp",
+        "degre": null,
+        "compte": "51000.3185.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": "P",
+        "compte": "9206.101",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Matériel",
+        "degre": null,
+        "compte": "50000.3652.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Repas",
+        "degre": null,
+        "compte": "51000.3662.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Repas",
+        "degre": "S",
+        "compte": "51000.3662.50",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": "S",
+        "compte": "51000.3662.50",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Cours de ski",
+        "degre": "P",
+        "compte": "51000.3662.20",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Camp",
+        "degre": "S",
+        "compte": "52000.3662.10",
+        "n": 1
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Camp",
+        "degre": "S",
+        "compte": "52000.3662.30",
+        "n": 1
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "51000.3662.30",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Repas",
+        "degre": null,
+        "compte": "51000.3185.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": "P",
+        "compte": "50000.3652.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Repas",
+        "degre": null,
+        "compte": "50000.3061.00",
+        "n": 1
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Autre",
+        "degre": "P",
+        "compte": "51000.3662.50",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Matériel",
+        "degre": null,
+        "compte": "52000.3112.00",
+        "n": 1
+      },
+      {
+        "type": "CADEAUX",
+        "objet": "Cadeau",
+        "degre": null,
+        "compte": "51000.3199.00",
+        "n": 1
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Cadeau",
+        "degre": null,
+        "compte": "51000.3199.00",
+        "n": 1
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Voyage d'étude",
+        "degre": "S",
+        "compte": "51000.3662.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Matériel",
+        "degre": "P",
+        "compte": "35308.3151",
+        "n": 1
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Mini-camp",
+        "degre": "P",
+        "compte": "51000.3662.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "52000.3112.00",
+        "n": 1
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Course d'école",
+        "degre": "P",
+        "compte": "9206.101",
+        "n": 1
+      },
+      {
+        "type": "PRIX",
+        "objet": "Autre",
+        "degre": "S",
+        "compte": "51000.3199.00",
+        "n": 1
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Voyage d'étude",
+        "degre": "S",
+        "compte": "51000.3662.00",
+        "n": 1
+      },
+      {
+        "type": "AVANCE",
+        "objet": "Voyage d'étude",
+        "degre": "S",
+        "compte": "52000.3662.10",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "50000.3170.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "9206.104",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": "S",
+        "compte": "50000.3170.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Matériel",
+        "degre": null,
+        "compte": "50000.3114.00",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "35303.3152",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": "P",
+        "compte": "35302.3152",
+        "n": 1
+      },
+      {
+        "type": "REMBOURSEMENT",
+        "objet": "Autre",
+        "degre": null,
+        "compte": "51000.3112.00",
+        "n": 1
+      },
+      {
+        "type": "DECOMPTE",
+        "objet": "Échange linguistique",
+        "degre": "P",
+        "compte": "52000.3662.40",
+        "n": 1
+      },
+      {
+        "type": "CADEAU",
+        "objet": "Cadeau",
+        "degre": null,
+        "compte": "51000.3199.00",
+        "n": 1
+      }
+    ],
     "source": "caisse.xlsx – 267 écriture(s), année(s) 2025",
-    "generated": "2026-09-14"
+    "generated": "2026-09-16"
   };
 });

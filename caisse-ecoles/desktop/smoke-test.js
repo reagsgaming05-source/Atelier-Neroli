@@ -1,22 +1,38 @@
 /*
- * Test de fumée de l'application fenêtrée : la fenêtre s'ouvre, l'application est chargée,
- * le moteur OCR embarqué est disponible et une pièce synthétique est lue.
+ * Test de fumée de l'application fenêtrée : la fenêtre à onglets s'ouvre, Caisse écoles est
+ * chargée, le moteur de lecture et l'OCR embarqué fonctionnent, le lecteur natif répond si
+ * présent, une pièce saisie dans la fiche arrive dans le journal et dans les fichiers de
+ * l'application, la fiche PDF se génère, et l'onglet Décompte DGEO démarre le serveur local
+ * s'il est inclus.
  *
- *   node smoke-test.js                      # source (electron .)
- *   node smoke-test.js chemin/vers/CaisseEcoles.exe   # exécutable empaqueté
+ *   node smoke-test.js                              # source (electron .)
+ *   node smoke-test.js chemin/vers/CaisseEcoles.exe # exécutable empaqueté
+ *   SMOKE_NATIVE=1 : exige le lecteur natif ; SMOKE_DGEO=1 : exige Décompte DGEO
  */
 const path = require('path');
 const { _electron: electron } = require('playwright-core');
+
+async function findPage(app, pred, timeoutMs) {
+  const t0 = Date.now();
+  for (;;) {
+    for (const p of app.windows()) { try { if (pred(p.url())) return p; } catch (e) { /* fermée */ } }
+    if (Date.now() - t0 > (timeoutMs || 30000)) throw new Error('page introuvable');
+    await new Promise((r) => setTimeout(r, 200));
+  }
+}
+
 (async () => {
   const exe = process.argv[2];
   const app = await electron.launch(exe ? { executablePath: exe, args: [] } : { args: [path.join(__dirname)] });
-  const win = await app.firstWindow();
+  const shell = await findPage(app, (u) => /shell\.html/.test(u));
+  const win = await findPage(app, (u) => /Caisse-ecoles\.html/.test(u));
   win.on('pageerror', (e) => console.log('[pageerror]', e.message));
   await win.waitForLoadState('domcontentloaded');
-  await win.waitForSelector('#step1');
+  await win.waitForSelector('#regYear');
   const title = await win.title();
   const info = await win.evaluate(() => ({
     parser: typeof window.CaisseParser, excel: typeof window.CaisseExcel, ocr: !!(window.CaisseOCR && window.CaisseOCR.available()),
+    registre: typeof window.CaisseRegistre, pdf: typeof window.CaissePdf, files: !!window.CaisseFiles,
     desktop: window.CaisseDesktop || null, names: !!(window.CaisseVocabNoms && window.CaisseVocabNoms.persons && window.CaisseVocabNoms.persons.length),
     vocab: (document.getElementById('vocabInfo').textContent || '').slice(0, 80),
   }));
@@ -34,9 +50,38 @@ const { _electron: electron } = require('playwright-core');
     return e ? { no: e.no, date: e.date, compte: e.compte, credit: e.credit, libelle: e.libelle } : null;
   });
   console.log('pièce synthétique :', JSON.stringify(entry));
-  let ok = /Caisse écoles/.test(title) && info.parser === 'object' && info.excel === 'object' && info.ocr && !!entry && entry.credit === 12 && entry.compte === '50000.3652.00';
+  let ok = /Caisse écoles/.test(title) && info.parser === 'object' && info.excel === 'object' && info.ocr && info.registre === 'object' && info.pdf === 'object' && info.files
+    && !!entry && entry.credit === 12 && entry.compte === '50000.3652.00';
+
+  // saisie d'une pièce dans la fiche -> journal -> fichiers de l'application
+  await win.waitForFunction(() => window.CaisseSaisie && window.CaisseSaisie.state.reg, null, { timeout: 20000 });
+  const year = await win.evaluate(() => window.CaisseSaisie.state.reg.annee);
+  await win.selectOption('#pType', 'DECOMPTE');
+  await win.selectOption('#pObjet', "Course d'école");
+  await win.fill('#pClasse', '5P/3');
+  await win.fill('#pPeriode', '12.06.' + year);
+  await win.fill('#pDetail', 'Lausanne');
+  await win.fill('#pPersonne', 'A. Berger');
+  await win.fill('#pMontant', '143.95');
+  await win.fill('#pDate', `${year}-06-15`);
+  await win.check('#pSensCredit');
+  const before = await win.evaluate(() => window.CaisseSaisie.state.reg.pieces.length);
+  await win.click('#btnPieceSave');
+  await win.waitForFunction((n) => window.CaisseSaisie.state.reg.pieces.length === n + 1, before, { timeout: 10000 });
+  const saisie = await win.evaluate(async () => {
+    const R = window.CaisseRegistre; const s = window.CaisseSaisie.state;
+    const p = s.reg.pieces[s.reg.pieces.length - 1];
+    const j = R.journal(s.reg);
+    const stored = window.CaisseFiles ? await window.CaisseFiles.load(s.reg.annee) : null;
+    const pdf = await window.CaissePdf.buildPdf([p], s.reg, () => null);
+    return { no: p.no, libelle: p.libelle, compte: p.compte, sens: p.sens, montant: p.montant, rows: j.rows.length, end: j.end, storedPieces: stored ? JSON.parse(stored).pieces.length : null, pdfPages: pdf.pages, journalRows: document.querySelectorAll('#journalBody tr[data-id]').length };
+  });
+  console.log('pièce saisie :', JSON.stringify(saisie));
+  ok = ok && saisie.compte === '51000.3662.00' && saisie.sens === 'credit' && saisie.montant === 143.95 && saisie.journalRows === saisie.rows && saisie.pdfPages === 1 && /DECOMPTE - Course d'école 5P\/3 du 12\.06\./.test(saisie.libelle) && (saisie.storedPieces === null || saisie.storedPieces === saisie.rows);
+  // nettoyage : la pièce de test est retirée du registre
+  await win.evaluate(async () => { const s = window.CaisseSaisie.state; window.CaisseRegistre.removePiece(s.reg, s.reg.pieces[s.reg.pieces.length - 1].id); await s.storage.save(s.reg); window.CaisseSaisie.renderJournal(); });
+
   if (process.env.SMOKE_OCR !== '0') {
-    // le moteur OCR démarre et lit un mot dessiné dans un canvas
     const ocr = await win.evaluate(async () => {
       const c = document.createElement('canvas'); c.width = 400; c.height = 100;
       const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 400, 100);
@@ -66,6 +111,33 @@ const { _electron: electron } = require('playwright-core');
   });
   console.log('Tesseract natif :', JSON.stringify(nat));
   if (process.env.SMOKE_NATIVE === '1') ok = ok && nat.available && /29\.70/.test(nat.read || '') && (!nat.legacy || /29\.70/.test(nat.legacyRead || ''));
+
+  // onglet Décompte DGEO
+  const st = await shell.evaluate(() => window.CaisseShell.state());
+  console.log('coquille :', JSON.stringify(st));
+  if (st.hasDgeo) {
+    await shell.click('.tab[data-tab="dgeo"]');
+    let dgeoPage = null;
+    const t0 = Date.now();
+    while (Date.now() - t0 < 120000) {
+      dgeoPage = app.windows().find((p) => /^http:\/\/127\.0\.0\.1:\d+\//.test(p.url()));
+      if (dgeoPage) break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    if (dgeoPage) {
+      await dgeoPage.waitForLoadState('domcontentloaded');
+      const dt = await dgeoPage.title();
+      console.log('Décompte DGEO :', dgeoPage.url(), '–', dt);
+      ok = ok && /Décompte/i.test(dt + (await dgeoPage.content()).slice(0, 2000));
+    } else {
+      console.log('Décompte DGEO : le serveur local n\'a pas répondu');
+      if (process.env.SMOKE_DGEO === '1') ok = false;
+    }
+    await shell.click('.tab[data-tab="caisse"]');
+  } else {
+    console.log('Décompte DGEO : non inclus');
+    if (process.env.SMOKE_DGEO === '1') ok = false;
+  }
   await app.close();
   console.log(ok ? 'SMOKE OK' : 'SMOKE ÉCHEC');
   process.exit(ok ? 0 : 1);

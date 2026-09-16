@@ -34,3 +34,15 @@ contextBridge.exposeInMainWorld('CaisseNative', {
   // png : Uint8Array ; opts : { psm, oem, dpi } ; renvoie [{ text, conf, x0, y0, x1, y1 }]
   ocrRecognize: (png, opts) => ipcRenderer.invoke('ocr:recognize', png, opts),
 });
+
+// Registre des pièces : fichiers de l'application (data/caisse/<année>/), voir main.js
+contextBridge.exposeInMainWorld('CaisseFiles', {
+  dir: () => ipcRenderer.invoke('files:dir'),
+  years: () => ipcRenderer.invoke('files:years'),
+  load: (year) => ipcRenderer.invoke('files:load', year),
+  save: (year, text) => ipcRenderer.invoke('files:save', year, text),
+  attach: (year, id, name, bytes) => ipcRenderer.invoke('files:attach', year, id, name, bytes),
+  read: (year, id, name) => ipcRenderer.invoke('files:read', year, id, name).then((b) => (b ? new Uint8Array(b) : null)),
+  remove: (year, id, name) => ipcRenderer.invoke('files:remove', year, id, name),
+  openDir: () => ipcRenderer.invoke('files:open-dir'),
+});

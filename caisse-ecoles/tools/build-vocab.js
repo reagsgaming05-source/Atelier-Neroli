@@ -37,6 +37,16 @@ function compact(vocab) {
     typeAccounts: agg(vocab.typeAccounts, 'type', 'compte'),
     typeSides: agg(vocab.typeSides, 'type', 'side'),
     accountSides: agg(vocab.accountSides, 'compte', 'side'),
+    // compte habituel par type d'écriture, objet d'activité et degré (saisie des pièces)
+    objetAccounts: (() => {
+      const m = new Map();
+      for (const it of vocab.objetAccounts || []) {
+        const k = [it.type, it.objet, it.degre || '', it.compte].join(SEP);
+        if (!m.has(k)) m.set(k, { type: it.type, objet: it.objet, degre: it.degre || null, compte: it.compte, n: 0 });
+        m.get(k).n += it.n || 1;
+      }
+      return Array.from(m.values()).sort((a, b) => b.n - a.n);
+    })(),
   };
 }
 
@@ -83,7 +93,7 @@ function moduleFile(global, data, header) {
 
   console.log(`OK – base intégrée : ${base.words.length} mots, ${base.classTokens.length} classes, ` +
     `${base.accounts.length} comptes, ${base.typeAccounts.length} paires type/compte, ` +
-    `${base.typeSides.length} sens par type, ${base.accountSides.length} sens par compte`);
+    `${base.typeSides.length} sens par type, ${base.accountSides.length} sens par compte, ${base.objetAccounts.length} comptes par objet`);
   console.log(`     noms (fichier séparé, non versionné) : ${persons.persons.length}`);
   console.log(`     source : ${source}`);
 })().catch((e) => { console.error(e); process.exit(1); });

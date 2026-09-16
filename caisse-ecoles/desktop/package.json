@@ -33,6 +33,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "shell.html",
+      "shell-preload.js",
       "native-ocr.js",
       "app/**",
       "!app/README.md"

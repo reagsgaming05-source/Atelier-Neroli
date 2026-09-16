@@ -406,7 +406,61 @@
   const CLASS_TOKEN_RE = /^\d{1,2}(?:-\d{1,2})?(?:VP|VG|P|S)(?:\/\d{1,2})?$/;
 
   function emptyVocabulary() {
-    return { words: [], persons: [], classTokens: [], accounts: [], typeAccounts: [], typeSides: [], accountSides: [] };
+    return { words: [], persons: [], classTokens: [], accounts: [], typeAccounts: [], typeSides: [], accountSides: [], objetAccounts: [] };
+  }
+
+  // Objets d'activité reconnus dans un libellé (mots-clés -> objet), du plus précis au plus général
+  const OBJETS = [
+    ['mini-camp', 'Mini-camp'], ['minicamp', 'Mini-camp'], ['camp', 'Camp'],
+    ["course d'école", "Course d'école"], ['course d’école', "Course d'école"], ['course', "Course d'école"],
+    ["voyage d'étude", "Voyage d'étude"], ['voyage', "Voyage d'étude"],
+    ['échange', 'Échange linguistique'], ['echange', 'Échange linguistique'],
+    ['cours de ski', 'Cours de ski'], ['ski', 'Cours de ski'],
+    ['collation', 'Collation'], ['repas', 'Repas'], ['apéritif', 'Repas'], ['aperitif', 'Repas'],
+    ['bourse', 'Bourse communale'], ['caisse de classe', 'Caisse de classe'],
+    ['matériel', 'Matériel'], ['materiel', 'Matériel'], ['fourniture', 'Matériel'],
+    ['cadeau', 'Cadeau'], ['départ', 'Cadeau'], ['depart', 'Cadeau'],
+  ];
+  const OBJET_LIST = ["Course d'école", 'Camp', 'Mini-camp', "Voyage d'étude", 'Échange linguistique', 'Cours de ski', 'Collation', 'Repas', 'Matériel', 'Caisse de classe', 'Bourse communale', 'Cadeau', 'Autre'];
+
+  /** Objet d'activité d'une description de libellé (« Camp 8P/3 du 12-16.05 » -> Camp), ou « Autre ». */
+  function objetOf(text) {
+    const t = stripAccents(String(text || '')).toLowerCase();
+    for (const [k, v] of OBJETS) if (t.includes(stripAccents(k).toLowerCase())) return v;
+    return 'Autre';
+  }
+
+  /** Degré scolaire d'après la classe citée : « 5P/3 » -> P (primaire), « 9S », « 10VP/4 » -> S (secondaire), sinon null. */
+  function degreOf(text) {
+    const m = /\b\d{1,2}(?:-\d{1,2})?\s*(P|S|VP|VG)\b/.exec(String(text || ''));
+    if (!m) return null;
+    return m[1] === 'P' ? 'P' : 'S';
+  }
+
+  /**
+   * Compte habituel pour un type d'écriture, un objet et un degré, d'après le classeur
+   * (vocab.objetAccounts, agrégé avec n) et l'historique du lot. Du plus précis au plus général :
+   * (type, objet, degré) -> (type, objet) -> (type). Renvoie [{ compte, n, niveau }] classés.
+   */
+  function suggestAccountFor(type, objet, degre, vocab, history) {
+    const key = stripAccents(type || '').toUpperCase();
+    if (!key) return [];
+    const list = ((vocab && vocab.objetAccounts) || []).concat(history || []);
+    const levels = [
+      (h) => objet && h.objet === objet && degre && h.degre === degre,
+      (h) => objet && h.objet === objet,
+      (h) => true,
+    ];
+    for (let lvl = 0; lvl < levels.length; lvl++) {
+      const counts = new Map();
+      for (const h of list) {
+        if (!h || !h.compte || stripAccents(h.type || '').toUpperCase() !== key) continue;
+        if (!levels[lvl](h)) continue;
+        counts.set(h.compte, (counts.get(h.compte) || 0) + (h.n || 1));
+      }
+      if (counts.size) return Array.from(counts, ([compte, n]) => ({ compte, n, niveau: lvl })).sort((a, b) => b.n - a.n);
+    }
+    return [];
   }
 
   /**
@@ -421,6 +475,7 @@
     const typeAccounts = [];
     const typeSides = [];
     const accountSides = [];
+    const objetAccounts = [];
     for (const e of entries || []) {
       const lib = String(e.libelle || '').trim();
       if (!lib || /^solde/i.test(lib)) continue;
@@ -430,6 +485,10 @@
       let type = null;
       if (parts.length) type = splitType(parts[0]).type;
       if (type && compte) typeAccounts.push({ type, compte });
+      if (type && compte) {
+        const desc = parts.slice(1).join(' ');
+        objetAccounts.push({ type, objet: objetOf(desc), degre: degreOf(desc), compte });
+      }
       {
         const d = Number(e.debit) || 0;
         const c = Number(e.credit) || 0;
@@ -466,6 +525,7 @@
       typeAccounts,
       typeSides,
       accountSides,
+      objetAccounts,
     };
   }
 
@@ -487,6 +547,7 @@
       typeAccounts,
       typeSides: (a.typeSides || []).concat(b.typeSides || []),
       accountSides: (a.accountSides || []).concat(b.accountSides || []),
+      objetAccounts: (a.objetAccounts || []).concat(b.objetAccounts || []),
     };
   }
 
@@ -1579,6 +1640,10 @@
     detectCaisseAccount,
     typeFromLibelle,
     explainGap,
+    objetOf,
+    degreOf,
+    OBJET_LIST,
+    suggestAccountFor,
     levenshtein,
     round2,
   };

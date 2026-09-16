@@ -47,6 +47,8 @@ const tessLang = fs.readFileSync(vendor('@tesseract.js-data/fra/4.0.0_best_int/f
 const pkgTess = require(vendor('tesseract.js/package.json')).version;
 const pkgTessCore = require(vendor('tesseract.js-core/package.json')).version;
 const pkgXl = require(vendor('exceljs/package.json')).version;
+const pdflib = read(vendor('pdf-lib/dist/pdf-lib.min.js'));
+const pkgPdfLib = require(vendor('pdf-lib/package.json')).version;
 
 let html = read(src('index.html'));
 
@@ -76,10 +78,14 @@ inline('<!--INLINE_TESSERACT_WORKER-->', scriptTag(tessWorker, 'type="text/plain
 inline('<!--INLINE_TESSERACT_CORE-->', scriptTag(tessCore, 'type="text/plain" id="tess-core-src"'));
 inline('<!--INLINE_TESSERACT_LANG-->', scriptTag(tessLang, 'type="text/plain" id="tess-lang-src"'));
 inline('<!--INLINE_VOCAB-->', vocabCode);
+inline('<!--INLINE_PDFLIB-->', `<!-- pdf-lib ${pkgPdfLib} (MIT) -->\n` + scriptTag(pdflib));
 inline('<!--INLINE_PARSER-->', scriptTag(read(src('parser.js'))));
 inline('<!--INLINE_OCR-->', scriptTag(read(src('ocr.js'))));
 inline('<!--INLINE_EXCEL-->', scriptTag(read(src('excel.js'))));
+inline('<!--INLINE_REGISTRE-->', scriptTag(read(src('registre.js'))));
+inline('<!--INLINE_PDFPIECE-->', scriptTag(read(src('pdfpiece.js'))));
 inline('<!--INLINE_APP-->', scriptTag(read(src('app.js'))));
+inline('<!--INLINE_SAISIE-->', scriptTag(read(src('saisie.js'))));
 if (/<!--INLINE_[A-Z_]+-->/.test(html)) throw new Error('Marqueur non remplacé dans index.html');
 
 const outDir = path.join(root, 'dist');

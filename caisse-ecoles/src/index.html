@@ -3,15 +3,131 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caisse écoles – Saisie automatique des pièces</title>
+<title>Caisse écoles</title>
 <!--INLINE_CSS-->
 </head>
 <body>
 <header class="top">
-  <h1>Caisse écoles – Saisie automatique des pièces</h1>
-  <span class="sub">Lit les pièces comptables (PDF scanné) et remplit le journal de caisse Excel. Tout se passe sur votre PC, aucune donnée n'est envoyée.</span>
+  <h1>Caisse écoles</h1>
+  <span class="sub">Saisie des pièces comptables, journal de caisse et fichier Excel. Tout se passe sur votre PC, aucune donnée n'est envoyée.</span>
+  <nav class="apptabs" id="appTabs">
+    <button type="button" class="apptab active" data-panel="panelSaisie">✎ Saisie des pièces</button>
+    <button type="button" class="apptab" data-panel="panelScan">📄 Pièces scannées (PDF)</button>
+  </nav>
 </header>
 <main>
+
+<div id="panelSaisie" class="panel">
+  <section class="card">
+    <h2>Registre des pièces</h2>
+    <div class="row">
+      <div class="field">
+        <label for="regYear">Année</label>
+        <select id="regYear" style="width:110px"></select>
+      </div>
+      <button type="button" class="small" id="btnNewYear" style="align-self:flex-end">+ Nouvelle année</button>
+      <div class="field">
+        <label for="regOpeningDate">Solde à nouveau le</label>
+        <input type="date" id="regOpeningDate">
+      </div>
+      <div class="field">
+        <label for="regOpeningAmount">Solde à nouveau (CHF)</label>
+        <input type="number" id="regOpeningAmount" step="0.05" style="width:140px">
+      </div>
+      <div class="field">
+        <label for="regCaisse">Compte caisse</label>
+        <input type="text" id="regCaisse" style="width:120px">
+      </div>
+      <button type="button" class="small hidden" id="btnRegOpenDir" style="align-self:flex-end">Ouvrir le dossier</button>
+    </div>
+    <div class="legend" id="regInfo" style="margin-top:8px"></div>
+  </section>
+
+  <div class="layout2">
+    <section class="card" id="ficheCard">
+      <h2>Pièce comptable <span class="legend" id="ficheTitle"></span></h2>
+      <div class="row">
+        <div class="field"><label for="pNo">N°</label><input type="number" id="pNo" min="1" step="1" style="width:90px"></div>
+        <div class="field"><label for="pDate">Date</label><input type="date" id="pDate"></div>
+        <div class="field"><label for="pType">Type d'écriture</label><select id="pType"></select></div>
+        <div class="field"><label for="pObjet">Objet</label><select id="pObjet"></select></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="pClasse">Classe</label><input type="text" id="pClasse" list="regClassList" placeholder="5P/3, 9S, 10VP/4…" style="width:120px"></div>
+        <div class="field"><label for="pPeriode">Dates de l'activité</label><input type="text" id="pPeriode" placeholder="12.06.2026 ou 12-16.05.2026" style="width:190px"></div>
+        <div class="field" style="flex:1"><label for="pDetail">Détail (lieu, contenu…)</label><input type="text" id="pDetail" placeholder="ex. Lausanne, musée Bolo ; bonbons vaccination…"></div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1"><label for="pPersonne">Personne (initiale et nom)</label><input type="text" id="pPersonne" list="regPersonList" placeholder="A. Berger"></div>
+        <div class="field"><label for="pMontant">Montant (CHF)</label><input type="number" id="pMontant" step="0.05" min="0" style="width:130px"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="pCompte">Compte de contrepartie</label><input type="text" id="pCompte" list="regAccountList" placeholder="51000.3662.00" style="width:150px"></div>
+        <div class="field" style="flex:1"><label>Comptes habituels pour ce type d'écriture, cet objet et ce degré</label><div class="legend" id="pCompteSugg" style="padding-top:6px"></div></div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1">
+          <label for="pLibelle">Libellé du journal <label class="legend" style="display:inline;font-weight:400"><input type="checkbox" id="pLibelleEdit"> modifier à la main</label></label>
+          <input type="text" id="pLibelle" readonly>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Sens</label>
+          <div class="choice" style="margin:0">
+            <label><input type="radio" name="pSens" id="pSensDebit" value="debit"> Entrée en caisse (Débit)</label>
+            <label><input type="radio" name="pSens" id="pSensCredit" value="credit"> Sortie de caisse (Crédit)</label>
+            <label class="legend"><input type="checkbox" id="pSensForce"> forcer</label>
+          </div>
+          <div class="legend" id="pSensHint"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1">
+          <label for="pFiles">Justificatifs joints (tickets, factures, photos : PDF, JPG, PNG)</label>
+          <input type="file" id="pFiles" accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png" multiple>
+          <div id="pFilesList" style="margin-top:4px"></div>
+        </div>
+      </div>
+      <div id="ficheErrors"></div>
+      <div class="toolbar">
+        <button type="button" class="primary" id="btnPieceSave">Enregistrer la pièce → journal</button>
+        <button type="button" id="btnPiecePreview">Aperçu de la fiche</button>
+        <button type="button" class="small" id="btnPieceNew">Nouvelle pièce</button>
+      </div>
+      <div id="fichePreview" class="hidden" style="margin-top:8px">
+        <div class="toolbar"><span class="legend">Aperçu de la fiche (et des justificatifs)</span><span class="spacer"></span><button type="button" class="small" id="btnPreviewClose">Fermer</button></div>
+        <iframe id="ficheFrame" style="width:100%;height:520px;border:1px solid #d1d5db;border-radius:8px;background:#fff"></iframe>
+      </div>
+      <datalist id="regClassList"></datalist>
+      <datalist id="regPersonList"></datalist>
+      <datalist id="regAccountList"></datalist>
+    </section>
+
+    <section class="card" id="journalCard">
+      <h2>Journal <span id="journalYear"></span></h2>
+      <div class="totals" id="journalTotals"></div>
+      <div class="table-wrap">
+        <table class="entries journal" id="journalTable">
+          <thead><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Solde</th><th>Justif.</th><th></th></tr></thead>
+          <tbody id="journalBody"></tbody>
+        </table>
+      </div>
+      <div class="toolbar" style="margin-top:10px">
+        <button type="button" class="primary" id="btnRegExcel">Générer le fichier Excel de l'année</button>
+        <button type="button" id="btnRegPdf">PDF des pièces</button>
+        <select id="regPdfFrom" class="small"></select>
+        <span class="spacer"></span>
+        <button type="button" class="small" id="btnRegExport">Sauvegarde (JSON)</button>
+        <button type="button" class="small" id="btnRegImport">Restaurer…</button>
+        <input type="file" id="regImportFile" accept="application/json,.json" class="hidden">
+      </div>
+      <div id="regNotices"></div>
+    </section>
+  </div>
+</div>
+
+<div id="panelScan" class="panel hidden">
 
   <section class="card" id="step1">
     <h2><span class="n">1</span> Classeur Excel</h2>
@@ -159,11 +275,14 @@
     <div class="toolbar">
       <button type="button" class="primary" id="btnExcel">Générer le fichier Excel</button>
       <button type="button" id="btnReport">Rapport de contrôle</button>
+      <button type="button" id="btnToRegister" title="Ajoute ces écritures au registre de l'année (onglet Saisie), avec l'image de chaque pièce en justificatif">Ajouter au registre de l'année</button>
       <span class="legend" id="excelHint"></span>
     </div>
   </section>
 
-  <footer class="note">Application locale – fonctionne hors ligne dans le navigateur. Format du classeur : Date | No | Compte | Libellé | Débit | Crédit | Solde (solde cumulé par formule).</footer>
+</div>
+
+  <footer class="note">Application locale – fonctionne hors ligne. Format du classeur : Date | No | Compte | Libellé | Débit | Crédit | Solde (solde cumulé par formule).</footer>
 </main>
 
 <!--INLINE_PDFJS-->
@@ -174,9 +293,13 @@
 <!--INLINE_TESSERACT_CORE-->
 <!--INLINE_TESSERACT_LANG-->
 <!--INLINE_VOCAB-->
+<!--INLINE_PDFLIB-->
 <!--INLINE_PARSER-->
 <!--INLINE_OCR-->
 <!--INLINE_EXCEL-->
+<!--INLINE_REGISTRE-->
+<!--INLINE_PDFPIECE-->
 <!--INLINE_APP-->
+<!--INLINE_SAISIE-->
 </body>
 </html>

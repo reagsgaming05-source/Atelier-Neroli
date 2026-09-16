@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Caisse écoles</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1f4e79; font-family: "Segoe UI", Arial, sans-serif; overflow: hidden; }
+  .tabs { display: flex; align-items: stretch; height: 40px; box-sizing: border-box; padding: 6px 10px 0; gap: 6px; }
+  .tab { border: none; border-radius: 8px 8px 0 0; padding: 0 18px; font-size: 14px; font-weight: 600; color: #dbe7f3; background: rgba(255,255,255,.12); cursor: pointer; }
+  .tab:hover { background: rgba(255,255,255,.22); }
+  .tab.active { background: #f6f7fb; color: #1f4e79; }
+  .tab .st { font-weight: 400; font-size: 12px; opacity: .8; margin-left: 6px; }
+  .spacer { flex: 1; }
+  .brand { color: #dbe7f3; font-size: 12px; align-self: center; opacity: .8; }
+</style></head>
+<body>
+  <nav class="tabs">
+    <button class="tab active" data-tab="caisse">Caisse écoles</button>
+    <button class="tab" data-tab="dgeo">Décompte DGEO <span class="st" id="dgeoState"></span></button>
+    <span class="spacer"></span>
+    <span class="brand">Tout se passe sur ce PC – aucune donnée n'est envoyée</span>
+  </nav>
+  <script>
+    const tabs = document.querySelectorAll('.tab');
+    const setActive = (name) => tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    tabs.forEach((t) => t.addEventListener('click', () => { setActive(t.dataset.tab); window.CaisseShell.show(t.dataset.tab); }));
+    window.CaisseShell.onActive(setActive);
+    window.CaisseShell.state().then((s) => { setActive(s.active); if (!s.hasDgeo) document.getElementById('dgeoState').textContent = '(non inclus)'; });
+  </script>
+</body></html>

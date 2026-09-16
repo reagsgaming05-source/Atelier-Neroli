@@ -22,6 +22,8 @@
       accounts: v.accounts || [],
       typeAccounts: v.typeAccounts || [],
       typeSides: v.typeSides || [],
+      accountSides: v.accountSides || [],
+      objetAccounts: v.objetAccounts || [],
       source: v.source || null,
       generated: v.generated || null,
       hasNames: !!(noms.persons && noms.persons.length),
@@ -1803,7 +1805,59 @@
   }
 
   // Accès pour les tests automatisés
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue };
+  /* ---------------- Onglets de la page ---------------- */
+  const appTabs = document.getElementById('appTabs');
+  function showPanel(id) {
+    for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
+    for (const pid of ['panelSaisie', 'panelScan']) { const el = document.getElementById(pid); if (el) el.classList.toggle('hidden', pid !== id); }
+    try { localStorage.setItem('caisse.onglet', id); } catch (e) { /* ignore */ }
+  }
+  if (appTabs) {
+    appTabs.addEventListener('click', (ev) => { const b = ev.target.closest('.apptab'); if (b) showPanel(b.dataset.panel); });
+    try { const saved = localStorage.getItem('caisse.onglet'); if (saved === 'panelScan') showPanel(saved); } catch (e) { /* ignore */ }
+  }
+
+  /* ---------------- Vers le registre de l'année (onglet Saisie) ---------------- */
+  const btnToRegister = document.getElementById('btnToRegister');
+  if (btnToRegister) {
+    btnToRegister.addEventListener('click', async () => {
+      if (!window.CaisseSaisie) return;
+      const entries = state.entries.filter((e) => !e.manual || e.libelle);
+      if (!entries.length) return;
+      const pending = entries.filter((e) => rowStatus(e) !== 'ok');
+      if (pending.length && !confirm(`${pending.length} ligne(s) sont encore à vérifier (orange). Les ajouter quand même au registre ?`)) return;
+      // image de la pièce (page rendue en JPEG) jointe en justificatif
+      const getImage = async (e) => {
+        const ref = e.page ? pageRef(e.page) : null;
+        if (!ref) return null;
+        const page = await ref.doc.doc.getPage(ref.pageInDoc);
+        const base = page.getViewport({ scale: 1 });
+        const vp = page.getViewport({ scale: 1200 / base.width });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+        const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
+        return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+      };
+      btnToRegister.disabled = true;
+      try {
+        const n = await window.CaisseSaisie.addFromScan(entries.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit, page: e.page })), getImage);
+        if (n) showPanel('panelSaisie');
+      } finally { btnToRegister.disabled = false; }
+    });
+  }
+
+  /** Mémorise dans le vocabulaire appris sur ce PC des noms et classes saisis à la main. */
+  function rememberVocabulary(extra) {
+    if (!state.vocab) return;
+    const v = state.vocab;
+    let changed = false;
+    for (const p of (extra.persons || [])) if (p && P.looksLikePerson(p) && !v.persons.includes(p)) { v.persons.push(p); changed = true; }
+    for (const c of (extra.classTokens || [])) if (c && !v.classTokens.includes(c)) { v.classTokens.push(c); changed = true; }
+    if (changed) { saveVocab(); renderVocabInfo(); }
+  }
+
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, showPanel };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';

@@ -239,3 +239,19 @@ table.checks button { margin-left: 6px; }
 .review .progress { font-size: 13px; }
 .review .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .review .actions button { font-size: 15px; padding: 9px 16px; }
+
+/* onglets de l'application (saisie / pièces scannées) */
+.apptabs { display: flex; gap: 6px; margin-top: 10px; }
+.apptab { border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.12); color: #fff; border-radius: 8px 8px 0 0; padding: 7px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.apptab:hover { background: rgba(255,255,255,.22); }
+.apptab.active { background: var(--bg, #f6f7fb); color: #1f4e79; border-color: transparent; }
+.panel.hidden { display: none; }
+.layout2 { display: grid; grid-template-columns: minmax(420px, 1fr) minmax(420px, 1.2fr); gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .layout2 { grid-template-columns: 1fr; } }
+table.entries.journal td { padding: 4px 6px; font-size: 13px; }
+table.entries.journal td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.entries.journal tr.selected td { background: #eef4ff; }
+table.entries.journal td.libelle { max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pFilesList ul { margin: 4px 0 0 16px; padding: 0; font-size: 13px; }
+#pFilesList li { margin: 2px 0; }
+#pCompteSugg button.small { margin-right: 4px; }

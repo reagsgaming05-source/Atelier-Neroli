@@ -1,8 +1,19 @@
-# Caisse écoles – Saisie automatique des pièces comptables
+# Caisse écoles – Saisie des pièces comptables et journal de caisse
 
-Application locale (un seul fichier HTML, sans installation) qui lit un PDF scanné de
-pièces comptables et remplit le journal de caisse Excel dans le même format que le
-classeur existant :
+Application locale, sans installation, en deux onglets :
+
+- **Saisie des pièces** : la fiche « PIÈCE COMPTABLE » se remplit dans l'application (n°, date,
+  type, objet, classe, personne, compte proposé, montant, sens fixé par le libellé, justificatifs
+  joints). Chaque pièce enregistrée entre dans le journal de l'année, conservé dans les fichiers
+  de l'application ; à la fin : le fichier Excel de l'année et le PDF des pièces (fiche +
+  justificatifs).
+- **Pièces scannées (PDF)** : lecture des pièces déjà remplies à la main et scannées, avec
+  lectures croisées (couche texte, OCR local, Tesseract natif), et ajout au registre.
+
+La version portable Windows ajoute un troisième onglet : **Décompte DGEO** (courses d'école &
+camps), l'autre logiciel du dépôt, embarqué et lancé dans la même fenêtre.
+
+Le journal de caisse Excel est produit dans le même format que le classeur existant :
 
 | Date | No | Compte | Libellé | Débit | Crédit | Solde |
 |------|----|--------|---------|-------|--------|-------|
@@ -32,10 +43,40 @@ s'apprennent en chargeant un classeur existant.
 Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
 
+**Décompte DGEO dans la même fenêtre** : le zip contient aussi la version portable de Décompte
+DGEO (dossier `decompte/`, prise dans la release « windows-latest » du dépôt). L'onglet
+*Décompte DGEO* démarre son serveur local sur un port libre et l'affiche dans la fenêtre ; ses
+dossiers vont dans `data/decompte/`. Sans le dossier `decompte/`, l'onglet l'indique.
+
 L'exécutable est construit automatiquement par GitHub Actions
 (`.github/workflows/build-caisse-windows.yml`) : tests, construction de l'application autonome,
-empaquetage Electron (`desktop/`), test de fumée de l'exécutable (fenêtre, moteur de lecture,
-OCR embarqué), puis publication du zip.
+empaquetage Electron (`desktop/`), Tesseract et Décompte DGEO ajoutés au dossier, test de fumée
+de l'exécutable (fenêtre à onglets, saisie d'une pièce jusqu'au journal et aux fichiers, moteur
+de lecture, OCR embarqué, Tesseract natif, démarrage de Décompte DGEO), puis publication du zip.
+
+## Saisie des pièces (onglet principal)
+
+1. **Année** : le registre de l'année en cours s'ouvre (ou se crée avec, comme solde à nouveau,
+   le solde final de l'année précédente). Chaque année est un registre séparé, conservé dans
+   `data/caisse/<année>/` à côté de l'exécutable (version portable) ou dans le navigateur
+   (fichier HTML seul) ; *Sauvegarde (JSON)* / *Restaurer…* pour copier ou reprendre un registre.
+2. **Fiche** : n° (proposé), date, **type d'écriture** (REMBOURSEMENT, AVANCE, DECOMPTE,
+   PARTICIPATION DES PARENTS…), **objet** (course d'école, camp, mini-camp, voyage d'étude, cours de
+   ski, collation, repas, matériel…), classe, dates de l'activité, détail, personne. Le libellé du
+   journal se compose tout seul (`TYPE - Objet classe du dates détail - Personne`) et reste
+   modifiable. Le **compte** est proposé d'après le classeur 2025 pour ce type, cet objet et ce
+   degré (primaire / secondaire) — par exemple DECOMPTE + course d'école + 5P → 51000.3662.00,
+   AVANCE + camp + 9S → 52000.3662.00, PARTICIPATION + cours de ski → 51000.4392.20. Le **sens**
+   est fixé par la logique des libellés (un DECOMPTE se choisit). Les **justificatifs** (PDF, JPG,
+   PNG) sont joints à la pièce et enregistrés avec elle.
+3. **Enregistrer la pièce → journal** : la pièce est vérifiée (n° unique, date de l'année, compte,
+   montant, sens, personne) puis ajoutée au journal, qui recalcule le solde cumulé.
+4. **Fichier Excel de l'année** : même format que le classeur ; **PDF des pièces** : une page
+   « PIÈCE COMPTABLE » par pièce (relisible par l'application) suivie de ses justificatifs, pour
+   toutes les pièces ou depuis un n°. Chaque ligne du journal a aussi ses boutons *Modifier*, *PDF*
+   et *×*.
+5. Depuis l'onglet des pièces scannées, **Ajouter au registre de l'année** verse les écritures
+   lues dans le registre, avec l'image de chaque pièce en justificatif.
 
 ## Utilisation (fichier HTML seul, sans installation)
 
@@ -288,7 +329,10 @@ Structure :
 - `src/app.js`, `src/index.html`, `src/app.css` – interface
 - `src/ocr.js` – seconde lecture par OCR local : prétraitement, zones, confrontation des lectures, moteur embarqué
 - `build.js` – assemble tout (avec pdf.js, ExcelJS, tesseract.js et le modèle français) dans `dist/Caisse-ecoles.html`
-- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre, menu, dossier `data/`, fichier des noms), `preload.js`, `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
+- `src/registre.js` – registre des pièces par année : modèle, libellé composé, validation, journal, stockage (fichiers ou navigateur)
+- `src/pdfpiece.js` – fiche « PIÈCE COMPTABLE » en PDF (pdf-lib) avec justificatifs
+- `src/saisie.js` – onglet de saisie (fiche, journal, Excel, PDF, sauvegarde)
+- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre à onglets, Décompte DGEO embarqué, fichiers du registre, dossier `data/`, fichier des noms), `shell.html` (barre d'onglets), `preload.js`, `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
 
 ## Limites
 

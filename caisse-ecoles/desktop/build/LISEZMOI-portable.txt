@@ -2,9 +2,14 @@ CAISSE ÉCOLES — version portable Windows
 ========================================
 
 1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau, Documents…).
-2. Double-cliquez sur CaisseEcoles.exe : la fenêtre de l'application s'ouvre.
-3. Indiquez le solde à nouveau, glissez les PDF des pièces, vérifiez les lignes orange,
-   puis « Générer le fichier Excel ».
+2. Double-cliquez sur CaisseEcoles.exe : la fenêtre de l'application s'ouvre, avec deux onglets :
+   « Caisse écoles » et « Décompte DGEO ».
+3. Caisse écoles – Saisie des pièces : remplissez la fiche (n°, date, type, objet, classe,
+   personne, compte proposé, montant, justificatifs), « Enregistrer la pièce → journal ».
+   À la fin de l'année : « Générer le fichier Excel de l'année » et « PDF des pièces ».
+   Les registres sont conservés dans data\caisse\<année>\ à côté de l'exécutable.
+   Caisse écoles – Pièces scannées : glissez les PDF des pièces, vérifiez les lignes orange,
+   « Générer le fichier Excel » ou « Ajouter au registre de l'année ».
 
 Aucune installation : tout est inclus dans le dossier (lecture des PDF, lectures croisées
 par OCR local et Tesseract natif — dossier tesseract/ —, génération du fichier Excel). Aucun navigateur n'est utilisé. Aucune donnée

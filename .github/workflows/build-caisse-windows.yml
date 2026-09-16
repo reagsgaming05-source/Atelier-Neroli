@@ -78,21 +78,42 @@ jobs:
           & tesseract\tesseract.exe --list-langs --tessdata-dir tesseract\tessdata
           "Tesseract $($rel.tag_name) — https://github.com/UB-Mannheim/tesseract (Apache 2.0)`nModèles : tessdata_best/fra (fra), tessdata/fra (fra_leg) — https://github.com/tesseract-ocr (Apache 2.0)" | Out-File tesseract\VERSION.txt
 
+      - name: Décompte DGEO (version portable publiée dans la release « windows-latest »)
+        working-directory: caisse-ecoles/desktop
+        shell: pwsh
+        run: |
+          $url = "https://github.com/${{ github.repository }}/releases/download/windows-latest/DecompteDGEO-windows.zip"
+          $ok = $false
+          foreach ($try in 1..5) {
+            try { Invoke-WebRequest $url -OutFile decompte.zip -TimeoutSec 600; $ok = $true; break }
+            catch { Write-Host "Tentative $try/5 : $($_.Exception.Message)"; Start-Sleep -Seconds (10 * $try) }
+          }
+          if (-not $ok) { throw "Décompte DGEO introuvable : $url (publiez d'abord la release windows-latest)" }
+          Expand-Archive decompte.zip -DestinationPath decompte-extract -Force
+          $exe = Get-ChildItem decompte-extract -Recurse -Filter DecompteDGEO.exe | Select-Object -First 1
+          if (-not $exe) { throw "DecompteDGEO.exe introuvable dans le zip" }
+          New-Item -ItemType Directory -Force -Path decompte | Out-Null
+          Copy-Item "$($exe.DirectoryName)\*" decompte -Recurse -Force
+          Remove-Item decompte\data -Recurse -Force -ErrorAction SilentlyContinue
+          Get-ChildItem decompte | Select-Object Name, Length
+
       - name: Assembler le dossier portable
         working-directory: caisse-ecoles/desktop
         shell: pwsh
         run: |
           Rename-Item dist\win-unpacked CaisseEcoles
           Copy-Item tesseract dist\CaisseEcoles\tesseract -Recurse
+          Copy-Item decompte dist\CaisseEcoles\decompte -Recurse
           Copy-Item ..\README.md dist\CaisseEcoles\LISEZMOI.md
           Copy-Item build\LISEZMOI-portable.txt dist\CaisseEcoles\LISEZMOI-portable.txt
           Get-ChildItem dist\CaisseEcoles | Select-Object Name, Length
 
-      - name: Test de fumée de l'exécutable (fenêtre, moteur de lecture, OCR embarqué, Tesseract natif)
+      - name: Test de fumée de l'exécutable (fenêtre à onglets, saisie d'une pièce, OCR embarqué, Tesseract natif, Décompte DGEO)
         working-directory: caisse-ecoles/desktop
         shell: pwsh
         env:
           SMOKE_NATIVE: "1"
+          SMOKE_DGEO: "1"
         run: |
           try { node smoke-test.js dist\CaisseEcoles\CaisseEcoles.exe }
           finally {
@@ -119,7 +140,7 @@ jobs:
           prerelease: true
           body: |
             Version portable Windows : décompressez le zip, puis double-cliquez sur `CaisseEcoles.exe`.
-            Aucune installation, aucun navigateur : tout est inclus (lecture des PDF, lectures croisées par OCR local et Tesseract natif, génération du fichier Excel).
+            Aucune installation, aucun navigateur : tout est inclus. Deux onglets : Caisse écoles (saisie des pièces, pièces scannées, journal, Excel, PDF) et Décompte DGEO (courses d'école & camps).
             Cette version ne contient aucun nom de personne : posez `vocabulaire-noms.js` (remis séparément) à côté de l'exécutable.
             Construit automatiquement depuis le commit ${{ github.sha }}.
           files: CaisseEcoles-windows.zip
