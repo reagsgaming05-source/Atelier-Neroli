@@ -36,7 +36,7 @@ MONTHS = {
     "janvier": 1, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6, "juillet": 7, "aout": 8,
     "septembre": 9, "octobre": 10, "novembre": 11, "decembre": 12,
 }
-DATE_NUM_RE = re.compile(r"(\d{1,2})[./,:](\d{1,2})[./,:](\d{2}|\d{4})")
+DATE_NUM_RE = re.compile(r"(\d{1,2})[./,:](\d{1,2})[./,:](\d{4}|\d{2})")
 DATE_TXT_RE = re.compile(
     r"(\d{1,2})(?:er)?\s+(janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)(?:\s+(\d{4}))?"
 )
