@@ -27,12 +27,13 @@
 
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = v.toFixed(2).split('.'); return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
-  function notice(kind, html) {
+  function notice(kind, html, opts) {
     const div = document.createElement('div');
     div.className = `notice ${kind}`;
     div.innerHTML = html;
     els.regNotices.prepend(div);
-    setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
+    // opts.keep : message qui contient un bouton à cliquer (fiche PDF bloquée) — il reste affiché
+    if (!(opts && opts.keep)) setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
   }
   async function saveBlob(blob, name) {
     if (A.saveBlob) return A.saveBlob(blob, name);
@@ -71,12 +72,20 @@
   }
 
   async function openYear(year) {
-    let reg = await state.storage.load(year);
+    // un registre enregistré mais illisible (fichier abîmé) ne doit jamais être remplacé par un registre vide
+    const stored = state.storage.loadStored ? await state.storage.loadStored(year) : { reg: await state.storage.load(year) };
+    if (stored.error) {
+      notice('err', `Le registre ${year} est enregistré mais illisible (fichier abîmé). Il n'a pas été remplacé : restaurez une sauvegarde (« Restaurer… ») ` +
+        'ou, dans l\'application fenêtrée, reprenez le fichier <code>registre.bak.json</code> du dossier des données.');
+      els.regYear.value = String(state.reg ? state.reg.annee : year);
+      return;
+    }
+    let reg = stored.reg;
     if (!reg) {
       const prev = state.years.filter((y) => y < year).sort().pop();
       const prevReg = prev ? await state.storage.load(prev) : null;
       const opening = prevReg ? R.journal(prevReg).end : 0;
-      reg = R.emptyRegister(year, { caisse: (A.state && A.state.caisse) || undefined, openingDate: `${year}-01-01`, openingAmount: opening });
+      reg = R.emptyRegister(year, { caisse: (A.getCaisse && A.getCaisse()) || undefined, openingDate: `${year}-01-01`, openingAmount: opening });
       await state.storage.save(reg);
       if (!state.years.includes(year)) state.years.push(year);
       state.years.sort();
@@ -147,6 +156,8 @@
   /* ---------------- Fiche ---------------- */
   function newPiece() {
     const p = R.newPiece(state.reg);
+    const force = $('pSensForce');
+    if (force) force.checked = false; // la case « forcer le sens » ne reste pas cochée d'une pièce à l'autre
     state.editingId = null;
     state.pending = [];
     state.dgeo.current = null;
@@ -171,7 +182,11 @@
     els.pLibelleEdit.checked = !!(p.libelle && p.libelle !== R.composeLibelle(p));
     els.pLibelle.readOnly = !els.pLibelleEdit.checked;
     els.pLibelle.value = p.libelle || R.composeLibelle(p);
-    setSens(p.sens || R.sensFor(p.type), true);
+    // le sens enregistré est conservé tel quel ; s'il ne suit pas la logique du type (pièce remplie
+    // à l'envers, conservée ainsi), la case « forcer » est cochée pour qu'il reste modifiable
+    const force = $('pSensForce');
+    if (force) force.checked = !!(p.sens && R.sensFor(p.type) && p.sens !== R.sensFor(p.type));
+    setSens(p.sens || R.sensFor(p.type), !p.sens);
     refreshKind();
     renderFiles(p);
     refreshSuggestions();
@@ -275,7 +290,8 @@
   els.pFilesList.addEventListener('click', async (ev) => {
     const b = ev.target.closest('button[data-remove]');
     if (!b) return;
-    const [where, key] = b.dataset.remove.split(':');
+    const raw = b.dataset.remove; const cut = raw.indexOf(':');
+    const where = cut < 0 ? raw : raw.slice(0, cut); const key = cut < 0 ? '' : raw.slice(cut + 1); // le nom du fichier peut contenir « : »
     if (where === 'pending') state.pending.splice(Number(key), 1);
     else if (state.editingId) {
       const p = state.reg.pieces.find((x) => x.id === state.editingId);
@@ -305,6 +321,7 @@
     els.ficheErrors.innerHTML = '';
     // justificatifs en attente -> fichiers
     for (const f of state.pending) {
+      if (p.justificatifs.some((j) => j.name === f.name)) { notice('warn', `Un justificatif nommé « ${escapeHtml(f.name)} » est déjà joint à cette pièce : le second n'a pas été ajouté.`); continue; }
       try {
         const saved = await state.storage.attach(state.reg.annee, p.id, f.name, f.bytes);
         p.justificatifs.push({ name: saved.name, size: saved.size, kind: f.kind });
@@ -327,7 +344,10 @@
     state.draftId = null;
     newPiece();
     els.pDate.focus();
-    if (ficheAuto.open) openPiecePdf(p).catch((e) => notice('err', `Fiche PDF impossible : ${escapeHtml(e.message || e)}`));
+    if (ficheAuto.open) {
+      const w = window.open('', '_blank'); // ouverte tout de suite (clic de l'utilisateur), remplie ensuite
+      openPiecePdf(p, w).catch((e) => { if (w && !w.closed) w.close(); notice('err', `Fiche PDF impossible : ${escapeHtml(e.message || e)}`); });
+    }
   });
 
   // Fiche PDF ouverte automatiquement après l'enregistrement (pour l'imprimer) : réglage mémorisé.
@@ -344,11 +364,14 @@
     els.optPdfAutoJust.addEventListener('change', saveOpt);
   }
   /** Construit la fiche PDF de la pièce et l'ouvre dans une fenêtre (visionneuse PDF, imprimable). */
-  async function openPiecePdf(p) {
+  async function openPiecePdf(p, win) {
     const res = await F.buildPdf([p], state.reg, ficheAuto.withAttachments ? (piece, j) => readAttachment(piece, j) : () => null, { title: `Pièce comptable n° ${p.no} – ${p.libelle}` });
     const url = URL.createObjectURL(new Blob([res.bytes], { type: 'application/pdf' }));
-    const w = window.open(url, '_blank');
-    if (!w) notice('warn', `La fiche PDF n'a pas pu s'ouvrir toute seule (fenêtre bloquée par le navigateur) : <button type="button" data-open-pdf="${url}">Ouvrir la fiche PDF</button>`);
+    // la fenêtre est ouverte avant la construction du PDF (voir l'appelant) : un navigateur bloque
+    // window.open appelé après un await, hors du clic de l'utilisateur
+    const w = win && !win.closed ? win : window.open(url, '_blank');
+    if (w && w !== win) { /* ouverte ici */ } else if (w) { try { w.location.replace(url); } catch (e) { w.location = url; } }
+    if (!w) notice('warn', `La fiche PDF n'a pas pu s'ouvrir toute seule (fenêtre bloquée par le navigateur) : <button type="button" data-open-pdf="${url}">Ouvrir la fiche PDF</button>`, { keep: true });
     setTimeout(() => URL.revokeObjectURL(url), 180000); // la fenêtre a le temps de charger le document
     return res;
   }
@@ -477,6 +500,14 @@
       const p = state.reg.pieces.find((x) => x.id === b.dataset.del);
       if (!p || !confirm(`Supprimer la pièce n° ${p.no} (${p.libelle}) et ses justificatifs ?`)) return;
       for (const j of p.justificatifs) { try { await state.storage.remove(state.reg.annee, p.id, j.name); } catch (e) { /* ignore */ } }
+      // pièce créée depuis un décompte DGEO : le décompte redevient « à saisir »
+      if (p.source === 'dgeo' && window.CaisseDgeo) {
+        try {
+          const list = await window.CaisseDgeo.list();
+          const d = list.find((x) => x.pieceId === p.id) || (p.ref ? list.find((x) => (x.numero || '') === p.ref) : null);
+          if (d) { await window.CaisseDgeo.mark(d.id, { saisi: false, pieceId: null }); await refreshDgeo(); }
+        } catch (e) { /* ignore */ }
+      }
       R.removePiece(state.reg, p.id);
       await saveReg();
       if (state.editingId === p.id) newPiece();
@@ -587,9 +618,10 @@
     const pieces = R.piecesFromEntries(entries);
     const wrongYear = pieces.filter((p) => p.date && String(p.date).slice(0, 4) !== String(year));
     if (wrongYear.length && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?`)) return 0;
-    let added = 0; let dup = 0; const conflicts = [];
+    let added = 0; let dup = 0; let sansMontant = 0; const conflicts = [];
     for (let i = 0; i < pieces.length; i++) {
       const p = pieces[i];
+      if (!(p.montant > 0)) { sansMontant++; continue; } // ligne sans montant lisible : rien à enregistrer
       const same = p.no != null ? state.reg.pieces.find((x) => x.no === p.no) : null;
       if (same) { if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) dup++; else conflicts.push(p.no); continue; }
       if (getImage) {
@@ -605,7 +637,8 @@
     renderJournal();
     newPiece();
     notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
-      `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}.`);
+      `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}` +
+      `${sansMontant ? `, ${sansMontant} ligne(s) sans montant ignorée(s)` : ''}.`);
     return added;
   }
 

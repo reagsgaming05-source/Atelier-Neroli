@@ -562,7 +562,8 @@
       caisse,
       history,
       vocabulary: state.vocab,
-      existingNumbers: existing.map((e) => Number(e.no)).filter((n) => !isNaN(n)),
+      // n° déjà pris, avec leur montant : une pièce identique déjà enregistrée n'est pas signalée
+      existingNumbers: existing.filter((e) => !isNaN(numNo(e))).map((e) => ({ no: numNo(e), debit: e.debit, credit: e.credit })),
       refine: state.ocr.reads.size ? refineWithOcr : null,
     });
 
@@ -1678,9 +1679,13 @@
     });
     // une pièce du lot déjà dans la base (même n°, même montant : ajoutée au registre, ou déjà dans le classeur) n'est pas comptée deux fois
     const exist = existingEntries();
-    const key = (e) => `${numNo(e)}|${Math.round((Number(e.debit) || 0) * 100)}|${Math.round((Number(e.credit) || 0) * 100)}`;
+    const cents = (v) => Math.round((Number(v) || 0) * 100);
+    const key = (e) => `${numNo(e)}|${cents(e.debit)}|${cents(e.credit)}`;
+    // sans n° lisible : on compare la ligne entière (date, libellé, montants)
+    const keyNoNum = (e) => `${e.date || ''}|${String(e.libelle || '').trim()}|${cents(e.debit)}|${cents(e.credit)}`;
     const already = new Set(exist.filter((e) => !isNaN(numNo(e))).map(key));
-    const fresh = news.filter((e) => isNaN(numNo(e)) || !already.has(key(e)));
+    const alreadyNoNum = new Set(exist.map(keyNoNum));
+    const fresh = news.filter((e) => (isNaN(numNo(e)) ? !alreadyNoNum.has(keyNoNum(e)) : !already.has(key(e))));
     return exist.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
       .concat(fresh.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
   }
@@ -1749,18 +1754,28 @@
     renderBalanceCheck();
   }
 
+  /** Écritures à prendre en compte pour le rapprochement : jusqu'à la date du comptage si elle est indiquée. */
+  function entriesUpToCheckDate() {
+    const all = allEntriesForExcel();
+    const d = els.checkDate && els.checkDate.value;
+    return d ? all.filter((e) => !e.date || String(e.date) <= d) : all;
+  }
   function renderBalanceCheck() {
     const v = els.checkBalance.value.trim();
     if (v === '') { els.balanceResult.innerHTML = ''; return; }
     const reel = Number(v.replace(',', '.'));
     if (!isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
-    const t = X.computeTotals(currentOpening(), allEntriesForExcel());
+    const entries = entriesUpToCheckDate();
+    const t = X.computeTotals(currentOpening(), entries);
+    const horsDate = allEntriesForExcel().length - entries.length;
     const ecart = P.round2(t.end - reel);
     if (Math.abs(ecart) < 0.005) {
-      els.balanceResult.innerHTML = `<div class="balance-box ok">✓ Le solde calculé correspond exactement au solde réel : <b>${escapeHtml(fmtCHF(t.end))}</b>. Les écritures de ce lot sont cohérentes.</div>`;
+      els.balanceResult.innerHTML = `<div class="balance-box ok">✓ Le solde calculé correspond exactement au solde réel : <b>${escapeHtml(fmtCHF(t.end))}</b>. Les écritures de ce lot sont cohérentes.` +
+        (horsDate ? ` <span class="legend">(${horsDate} écriture(s) postérieure(s) au ${escapeHtml(P.isoToDisplay(els.checkDate.value))} non comptée(s))</span>` : '') + '</div>';
     } else {
       const props = P.explainGap(state.entries, ecart, 5);
-      let html = `<div class="balance-box err">✖ Écart de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> : le calcul donne ${escapeHtml(fmtCHF(t.end))}, vous avez compté ${escapeHtml(fmtCHF(reel))}.`;
+      let html = `<div class="balance-box err">✖ Écart de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> : le calcul donne ${escapeHtml(fmtCHF(t.end))}, vous avez compté ${escapeHtml(fmtCHF(reel))}.` +
+        (horsDate ? ` <span class="legend">(${horsDate} écriture(s) postérieure(s) au ${escapeHtml(P.isoToDisplay(els.checkDate.value))} non comptée(s))</span>` : '');
       if (props.length) {
         html += `<br><b>Explication${props.length > 1 ? 's' : ''} possible${props.length > 1 ? 's' : ''}</b> (les pièces ci-dessous expliquent exactement l'écart) :<ul style="margin:6px 0 0 0">`;
         for (const pr of props) {
@@ -1804,6 +1819,7 @@
   });
 
   els.checkBalance.addEventListener('input', renderBalanceCheck);
+  if (els.checkDate) els.checkDate.addEventListener('change', renderBalanceCheck);
 
   els.checkTable.addEventListener('click', (ev) => {
     const b = ev.target.closest('button[data-check]');
@@ -2118,7 +2134,7 @@
     } catch (e) { /* ignore */ }
   }
 
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel };
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
@@ -2152,7 +2168,7 @@
     }
     const soldeSaisi = els.checkBalance.value.trim();
     if (soldeSaisi !== '') {
-      const t0 = X.computeTotals(currentOpening(), allEntriesForExcel());
+      const t0 = X.computeTotals(currentOpening(), entriesUpToCheckDate());
       const ecart = P.round2(t0.end - Number(soldeSaisi.replace(',', '.')));
       if (Math.abs(ecart) >= 0.005 && !confirm(`Le solde calculé (${fmtCHF(t0.end)}) ne correspond pas au solde réel saisi : écart de ${fmtCHF(Math.abs(ecart))}.\n\nGénérer le fichier malgré cet écart ?`)) return;
     }

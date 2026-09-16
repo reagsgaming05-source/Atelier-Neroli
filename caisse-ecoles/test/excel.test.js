@@ -53,3 +53,16 @@ test('readWorkbook relit un classeur généré (aller-retour)', async () => {
   assert.deepEqual(t, { start: 2062.2, debits: 10552, credits: 29.7, end: 12584.5 });
   assert.equal(X.suggestFileName(back.entries, back.opening), 'Caisse écoles 2025.xlsx');
 });
+
+test('solde à nouveau reconnu aussi quand la ligne s\'appelle « Report »', async () => {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Caisse');
+  ws.getRow(1).values = ['Date', 'No ', 'Compte', 'Libellé', 'Débit ', 'Crédit', 'Solde'];
+  ws.getRow(2).values = [new Date(Date.UTC(2026, 0, 6)), 0, '', 'Report', null, null, 2062.2];
+  ws.getRow(3).values = [new Date(Date.UTC(2026, 0, 12)), 1, '51000.3662.00', "DECOMPTE - Course d'école 5P/3 du 12.01.2026 Vevey - A. Berger", null, 120];
+  const data = await X.readWorkbook(await wb.xlsx.writeBuffer());
+  assert.equal(data.opening.amount, 2062.2);
+  assert.equal(data.opening.date, '2026-01-06');
+  assert.equal(data.entries.length, 1);
+  assert.equal(data.entries[0].no, 1);
+});

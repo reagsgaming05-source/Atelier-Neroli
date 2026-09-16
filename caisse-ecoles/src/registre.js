@@ -16,6 +16,16 @@
   const TYPES = ['REMBOURSEMENT', 'AVANCE', 'DECOMPTE', 'PARTICIPATION DES PARENTS', 'RECETTE', 'RETRAIT', 'CADEAU', 'FRAIS', 'ACHAT', 'PAIEMENT', 'ENCAISSEMENT', 'VENTE'];
   const ACCOUNT_RE = /^\d{4,5}\.\d{3,4}(?:\.\d{2})?$/;
 
+  /** Date ISO existant réellement : « 2026-02-30 » est rejetée (JavaScript la décalerait au 2 mars). */
+  function isRealDate(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    if (!m) return false;
+    const y = Number(m[1]); const mo = Number(m[2]); const d = Number(m[3]);
+    if (mo < 1 || mo > 12 || d < 1) return false;
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+  }
+
   function today() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -181,11 +191,16 @@
   }
 
   /** Solde du journal à une date : solde à nouveau + écritures datées jusqu'à cette date incluse. */
+  /**
+   * Solde du journal à une date : solde à nouveau + écritures jusqu'à cette date. Les pièces sans date
+   * (lues sur un scan illisible ou reprises d'un classeur) sont comptées : sinon ce solde ne
+   * correspondrait pas au solde final du journal, qui les compte.
+   */
   function balanceAt(reg, date) {
     const d = String(date || today());
     let bal = Number(reg.opening && reg.opening.amount) || 0;
     for (const p of reg.pieces || []) {
-      if (!p.date || String(p.date) > d || !(p.montant > 0)) continue;
+      if ((p.date && String(p.date) > d) || !(p.montant > 0)) continue;
       if (p.sens === 'debit') bal += p.montant; else if (p.sens === 'credit') bal -= p.montant;
     }
     return P.round2(bal);
@@ -256,7 +271,7 @@
     const errs = [];
     if (p.no == null || !Number.isInteger(p.no) || p.no <= 0) errs.push('Numéro de pièce manquant ou invalide');
     else if (reg && reg.pieces.some((x) => x.id !== p.id && x.no === p.no)) errs.push(`Le n° ${p.no} existe déjà dans le registre`);
-    if (!p.date || !/^\d{4}-\d{2}-\d{2}$/.test(p.date) || isNaN(new Date(p.date).getTime())) errs.push('Date manquante ou invalide');
+    if (!isRealDate(p.date)) errs.push('Date manquante ou invalide');
     else if (reg && String(p.date).slice(0, 4) !== String(reg.annee)) errs.push(`La date n'est pas dans l'année ${reg.annee}`);
     if (!p.type) errs.push("Type d'écriture manquant");
     if (!(p.montant > 0)) errs.push('Montant manquant (doit être positif)');
@@ -323,7 +338,7 @@
       const desc = parts.slice(1, personne ? -1 : undefined).join(' - ');
       return normalizePiece({
         no: e.no, date: e.date, type, objet: P.objetOf(desc), detail: desc, personne, libelle: e.libelle, compte: e.compte,
-        montant: e.debit != null ? e.debit : e.credit, sens: e.debit != null ? 'debit' : 'credit', source: source || 'scan',
+        montant: e.debit > 0 ? e.debit : (e.credit > 0 ? e.credit : 0), sens: e.debit > 0 ? 'debit' : (e.credit > 0 ? 'credit' : null), source: source || 'scan',
       });
     });
   }
@@ -350,9 +365,12 @@
         res.openingTaken = true;
       } else if (Math.abs(amount - P.round2(reg.opening.amount)) >= 0.005) res.openingDiffers = true;
     }
+    const sameLine = (a, b) => a.date === b.date && a.sens === b.sens && Math.abs((a.montant || 0) - (b.montant || 0)) < 0.005
+      && (a.libelle || composeLibelle(a)) === (b.libelle || composeLibelle(b));
     for (const p of pieces) {
       if (!(p.montant > 0)) { res.noAmount.push(p); continue; }
-      const same = p.no != null ? reg.pieces.find((x) => x.no === p.no) : null;
+      // sans n° : on compare la ligne entière (date, libellé, montant, sens) pour ne pas la reprendre deux fois
+      const same = p.no != null ? reg.pieces.find((x) => x.no === p.no) : reg.pieces.find((x) => x.no == null && sameLine(x, p));
       if (same) {
         if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) res.skipped.push(p); else res.conflicts.push(p);
         continue;
@@ -373,6 +391,17 @@
     try { return normalizeRegister(JSON.parse(text)); } catch (e) { return null; }
   }
 
+  /**
+   * Lecture d'un registre enregistré : renvoie { reg } si tout va bien, { reg: null } s'il n'existe pas,
+   * { error } si le texte existe mais est illisible (fichier tronqué, JSON abîmé). Dans ce dernier cas
+   * l'appelant ne doit surtout pas enregistrer par-dessus : la sauvegarde serait perdue.
+   */
+  function readStored(text) {
+    if (text == null || String(text).trim() === '') return { reg: null };
+    const reg = parse(text);
+    return reg ? { reg } : { reg: null, error: 'registre illisible' };
+  }
+
   /* ------------------------------------------------------------------ */
   /* Stockage                                                               */
   /* ------------------------------------------------------------------ */
@@ -383,7 +412,8 @@
       kind: 'fichiers',
       location: () => F.dir(),
       years: () => F.years(),
-      load: async (year) => { const t = await F.load(year); return t ? parse(t) : null; },
+      load: async (year) => { const t = await F.load(year); return readStored(t).reg; },
+      loadStored: async (year) => readStored(await F.load(year)),
       save: (reg) => F.save(reg.annee, serialize(reg)),
       attach: (year, pieceId, name, bytes) => F.attach(year, pieceId, name, bytes),
       read: (year, pieceId, name) => F.read(year, pieceId, name),
@@ -421,7 +451,8 @@
         for (let i = 0; i < localStorage.length; i++) { const m = /^caisse\.registre\.(\d{4})$/.exec(localStorage.key(i)); if (m) out.push(Number(m[1])); }
         return out.sort();
       },
-      load: async (year) => { const t = localStorage.getItem(KEY(year)); return t ? parse(t) : null; },
+      load: async (year) => readStored(localStorage.getItem(KEY(year))).reg,
+      loadStored: async (year) => readStored(localStorage.getItem(KEY(year))),
       save: async (reg) => { localStorage.setItem(KEY(reg.annee), serialize(reg)); },
       attach: async (year, pieceId, name, bytes) => { await tx('readwrite', (s) => s.put(bytes, k(year, pieceId, name))); return { name, size: bytes.length }; },
       read: async (year, pieceId, name) => { const v = await tx('readonly', (s) => s.get(k(year, pieceId, name))); return v ? new Uint8Array(v) : null; },
@@ -440,6 +471,7 @@
     TYPES,
     ACCOUNT_RE,
     today,
+    isRealDate,
     newId,
     emptyRegister,
     normalizeRegister,
@@ -470,6 +502,7 @@
     piecesFromEntries, mergeEntries,
     serialize,
     parse,
+    readStored,
     storage,
     fileStorage,
     browserStorage,

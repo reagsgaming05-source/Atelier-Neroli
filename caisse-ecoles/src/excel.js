@@ -119,7 +119,9 @@
       const solde = toNumber(cellValue(row.getCell(7)));
       const no = toNumber(noV);
 
-      const isOpening = !opening && /solde/i.test(libelle) && debit == null && credit == null;
+      // solde à nouveau : « Solde à nouveau », « Report », ou la ligne n° 0 avec un solde et aucun montant
+      const isOpening = !opening && debit == null && credit == null
+        && (/solde|report|à nouveau|a nouveau/i.test(libelle) || (solde != null && (no === 0 || noV == null || noV === '')));
       if (isOpening) {
         opening = { date, amount: solde != null ? solde : 0, libelle };
         continue;

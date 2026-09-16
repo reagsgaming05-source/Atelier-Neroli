@@ -15,7 +15,7 @@
   for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cTitle', 'countErrors', 'btnCountSave', 'btnCountLoadPrev', 'btnCountNew', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
   if (!els.cRows || !S) return;
 
-  const state = { editingId: null, prevYear: { annee: null, last: null } };
+  const state = { editingId: null, shownYear: null, prevYear: { annee: null, last: null } };
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = Math.abs(v).toFixed(2).split('.'); return `${v < 0 ? '− ' : ''}${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
   const signed = (n) => (Math.abs(n) < 0.005 ? '0.00' : `${n > 0 ? '+ ' : '− '}${fmtCHF(Math.abs(n))}`);
@@ -126,7 +126,9 @@
   /* ---------------- formulaire ---------------- */
   function newCount() {
     state.editingId = null;
-    els.cDate.value = R.today();
+    if (S.state.reg) state.shownYear = S.state.reg.annee;
+    // la date proposée reste dans l'année du registre ouvert
+    els.cDate.value = S.state.reg && String(R.today()).slice(0, 4) !== String(S.state.reg.annee) ? `${S.state.reg.annee}-01-01` : R.today();
     els.cNote.value = '';
     fillCounts({});
     els.cTitle.textContent = '';
@@ -203,8 +205,12 @@
   function render() {
     if (!S.state.reg) return;
     if (!els.cRows.children.length) buildRows();
+    // changement d'année du registre : on repart d'un comptage vierge (la date et les quantités
+    // de l'année précédente donneraient des soldes faux)
+    if (state.shownYear !== S.state.reg.annee) { state.shownYear = S.state.reg.annee; newCount(); return; }
     if (state.editingId && !S.state.reg.comptages.some((c) => c.id === state.editingId)) state.editingId = null;
     if (!els.cDate.value) els.cDate.value = R.today();
+    if (state.editingId) state.shownYear = S.state.reg.annee;
     refreshTotals();
     renderHistory();
     loadPrevYear();

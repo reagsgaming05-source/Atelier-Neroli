@@ -202,3 +202,47 @@ test("classeur Excel de l'année → registre → classeur : mêmes écritures, 
   assert.equal(r2.added.length, 0);
   assert.equal(r2.skipped.length, 2);
 });
+
+test('registre illisible : jamais remplacé par un registre vide', () => {
+  assert.deepEqual(R.readStored(null), { reg: null });
+  assert.deepEqual(R.readStored('   '), { reg: null });
+  const bad = R.readStored('{"annee":2026,"pieces":[');
+  assert.equal(bad.reg, null);
+  assert.ok(bad.error);
+  const reg = R.emptyRegister(2026, { openingAmount: 12 });
+  assert.equal(R.readStored(R.serialize(reg)).reg.annee, 2026);
+  assert.equal(R.readStored(R.serialize(reg)).error, undefined);
+});
+
+test('solde du journal à une date : les pièces sans date sont comptées comme dans le journal', () => {
+  const reg = R.emptyRegister(2026, { openingAmount: 100 });
+  R.upsertPiece(reg, R.normalizePiece({ no: 1, date: null, type: 'FRAIS', personne: 'A. Berger', montant: 10, sens: 'credit', compte: '50000.3652.00' }));
+  R.upsertPiece(reg, R.normalizePiece({ no: 2, date: '2026-08-01', type: 'RECETTE', personne: 'Ch. Dupraz', montant: 30, sens: 'debit', compte: '51000.4392.00' }));
+  assert.equal(R.balanceAt(reg, '2026-06-30'), 90); // la pièce sans date compte, celle d'août pas encore
+  assert.equal(R.balanceAt(reg, '2026-12-31'), R.journal(reg).end);
+});
+
+test('dates impossibles refusées (30 février)', () => {
+  assert.equal(R.isRealDate('2026-02-30'), false);
+  assert.equal(R.isRealDate('2026-13-01'), false);
+  assert.equal(R.isRealDate('2026-02-28'), true);
+  const reg = R.emptyRegister(2026, {});
+  const p = R.newPiece(reg);
+  Object.assign(p, { date: '2026-02-30', type: 'FRAIS', personne: 'A. Berger', montant: 10, sens: 'credit', compte: '50000.3652.00' });
+  assert.ok(R.validate(p, reg).some((e) => /Date/.test(e)));
+});
+
+test("écriture sans montant : ni sens ni pièce inventés ; reprise sans n° non comptée deux fois", () => {
+  const [p] = R.piecesFromEntries([{ no: 5, date: '2026-02-02', compte: '50000.3652.00', libelle: 'REMBOURSEMENT - x - A. Berger', debit: 0, credit: 50 }]);
+  assert.equal(p.montant, 50);
+  assert.equal(p.sens, 'credit');
+  const [vide] = R.piecesFromEntries([{ no: 6, date: '2026-02-02', compte: '', libelle: 'note', debit: null, credit: null }]);
+  assert.equal(vide.montant, 0);
+  assert.equal(vide.sens, null);
+  // même ligne sans n° reprise deux fois : comptée une seule fois
+  const reg = R.emptyRegister(2026, {});
+  const ligne = [{ no: null, date: '2026-03-03', compte: '50000.3652.00', libelle: 'FRAIS - Timbres - A. Berger', debit: null, credit: 8.5 }];
+  assert.equal(R.mergeEntries(reg, ligne, { source: 'excel' }).added.length, 1);
+  assert.equal(R.mergeEntries(reg, ligne, { source: 'excel' }).added.length, 0);
+  assert.equal(reg.pieces.length, 1);
+});

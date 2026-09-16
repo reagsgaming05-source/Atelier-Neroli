@@ -1347,7 +1347,7 @@
 
   /**
    * pages : [{ pageNumber, width, height, words }]
-   * options : { caisse, vocabulary, history: [{type, compte}], existingNumbers: [..] }
+   * options : { caisse, vocabulary, history: [{type, compte}], existingNumbers: [n° ou {no, debit, credit}] }
    */
   function parseDocument(pages, options) {
     options = options || {};
@@ -1430,11 +1430,20 @@
       }
     }
 
-    // Numéros déjà présents dans le classeur
+    // Numéros déjà présents dans la base (registre de l'année ou classeur). Une pièce déjà enregistrée
+    // avec le MÊME montant est la même pièce (lot déjà versé au registre) : ce n'est pas un doute.
     if (options.existingNumbers && options.existingNumbers.length) {
-      const ex = new Set(options.existingNumbers.map(Number));
+      const ex = new Map();
+      for (const x of options.existingNumbers) {
+        if (x != null && typeof x === 'object') { if (x.no != null) ex.set(Number(x.no), x); }
+        else if (!isNaN(Number(x))) ex.set(Number(x), null);
+      }
+      const cents = (v) => Math.round((Number(v) || 0) * 100);
       for (const e of entries) {
-        if (e.no != null && ex.has(Number(e.no))) addDoubt(e, 'no', `La pièce n° ${e.no} existe déjà dans le classeur`);
+        if (e.no == null || !ex.has(Number(e.no))) continue;
+        const x = ex.get(Number(e.no));
+        if (x && cents(x.debit) === cents(e.debit) && cents(x.credit) === cents(e.credit)) continue; // même pièce
+        addDoubt(e, 'no', `La pièce n° ${e.no} existe déjà avec un autre montant`);
       }
     }
 

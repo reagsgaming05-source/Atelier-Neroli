@@ -102,8 +102,10 @@
     centered('Libellé', L.colSomme, L.colAvoir, yLibTitle + 5, { size: 11 });
     const libelle = piece.libelle || '';
     const parts = libelle.split(' - ');
-    const typeLine = parts.length > 1 ? `${parts[0]} ${parts.slice(1, parts.length > 2 ? -1 : undefined).join(' - ')}` : libelle;
+    // « TYPE - Description - Personne » : la personne est écrite seule, sous la description ; avec
+    // seulement « TYPE - Personne », la description est vide (le nom ne doit pas être écrit deux fois)
     const person = parts.length > 2 ? parts[parts.length - 1] : (parts.length === 2 && P.looksLikePerson(parts[1]) ? parts[1] : '');
+    const typeLine = parts.length > 2 ? `${parts[0]} ${parts.slice(1, -1).join(' - ')}` : (parts.length === 2 ? (person ? parts[0] : `${parts[0]} ${parts[1]}`) : libelle);
     const lines = wrap(normal, 11, typeLine, L.colSomme - L.left - 16);
     let ly = yLibTitle - L.lineH * 2 + 4;
     for (const l of lines.slice(0, L.libLines - 3)) { text(l, L.left + 8, ly, { size: 11 }); ly -= L.lineH; }

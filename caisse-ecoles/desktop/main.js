@@ -438,10 +438,18 @@ ipcMain.handle('dgeo:open-excel', (ev, id) => {
 // toujours demander où enregistrer, jamais en silence dans « Téléchargements ».
 function setupDownloads() {
   session.defaultSession.on('will-download', (ev, item, wc) => {
+    // le filtre de la boîte suit le type du fichier (classeur, PDF, sauvegarde), sinon Windows
+    // ajouterait « .xlsx » à un PDF dont on retape le nom
+    const name = item.getFilename();
+    const ext = (/\.([a-z0-9]+)$/i.exec(name) || [])[1];
+    const KNOWN = { xlsx: 'Classeur Excel', xlsm: 'Classeur Excel', pdf: 'Document PDF', json: 'Sauvegarde (JSON)', html: 'Page HTML', csv: 'Fichier CSV', jpg: 'Image JPEG', jpeg: 'Image JPEG', png: 'Image PNG' };
+    const filters = [];
+    if (ext && KNOWN[ext.toLowerCase()]) filters.push({ name: KNOWN[ext.toLowerCase()], extensions: [ext.toLowerCase()] });
+    filters.push({ name: 'Tous les fichiers', extensions: ['*'] });
     item.setSaveDialogOptions({
       title: 'Enregistrer le fichier',
-      defaultPath: path.join(app.getPath('documents'), item.getFilename()),
-      filters: [{ name: 'Classeur Excel', extensions: ['xlsx'] }, { name: 'Tous les fichiers', extensions: ['*'] }],
+      defaultPath: path.join(app.getPath('documents'), name),
+      filters,
     });
     // fichier Excel d'un décompte DGEO : son emplacement est retenu avec le décompte (pont)
     if (dgeoView && wc && wc.id === dgeoView.webContents.id) {

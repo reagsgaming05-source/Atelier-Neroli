@@ -4062,7 +4062,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
   /**
    * pages : [{ pageNumber, width, height, words }]
-   * options : { caisse, vocabulary, history: [{type, compte}], existingNumbers: [..] }
+   * options : { caisse, vocabulary, history: [{type, compte}], existingNumbers: [n° ou {no, debit, credit}] }
    */
   function parseDocument(pages, options) {
     options = options || {};
@@ -4145,11 +4145,20 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       }
     }
 
-    // Numéros déjà présents dans le classeur
+    // Numéros déjà présents dans la base (registre de l'année ou classeur). Une pièce déjà enregistrée
+    // avec le MÊME montant est la même pièce (lot déjà versé au registre) : ce n'est pas un doute.
     if (options.existingNumbers && options.existingNumbers.length) {
-      const ex = new Set(options.existingNumbers.map(Number));
+      const ex = new Map();
+      for (const x of options.existingNumbers) {
+        if (x != null && typeof x === 'object') { if (x.no != null) ex.set(Number(x.no), x); }
+        else if (!isNaN(Number(x))) ex.set(Number(x), null);
+      }
+      const cents = (v) => Math.round((Number(v) || 0) * 100);
       for (const e of entries) {
-        if (e.no != null && ex.has(Number(e.no))) addDoubt(e, 'no', `La pièce n° ${e.no} existe déjà dans le classeur`);
+        if (e.no == null || !ex.has(Number(e.no))) continue;
+        const x = ex.get(Number(e.no));
+        if (x && cents(x.debit) === cents(e.debit) && cents(x.credit) === cents(e.credit)) continue; // même pièce
+        addDoubt(e, 'no', `La pièce n° ${e.no} existe déjà avec un autre montant`);
       }
     }
 
@@ -5262,7 +5271,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       const solde = toNumber(cellValue(row.getCell(7)));
       const no = toNumber(noV);
 
-      const isOpening = !opening && /solde/i.test(libelle) && debit == null && credit == null;
+      // solde à nouveau : « Solde à nouveau », « Report », ou la ligne n° 0 avec un solde et aucun montant
+      const isOpening = !opening && debit == null && credit == null
+        && (/solde|report|à nouveau|a nouveau/i.test(libelle) || (solde != null && (no === 0 || noV == null || noV === '')));
       if (isOpening) {
         opening = { date, amount: solde != null ? solde : 0, libelle };
         continue;
@@ -5471,6 +5482,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   const TYPES = ['REMBOURSEMENT', 'AVANCE', 'DECOMPTE', 'PARTICIPATION DES PARENTS', 'RECETTE', 'RETRAIT', 'CADEAU', 'FRAIS', 'ACHAT', 'PAIEMENT', 'ENCAISSEMENT', 'VENTE'];
   const ACCOUNT_RE = /^\d{4,5}\.\d{3,4}(?:\.\d{2})?$/;
 
+  /** Date ISO existant réellement : « 2026-02-30 » est rejetée (JavaScript la décalerait au 2 mars). */
+  function isRealDate(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    if (!m) return false;
+    const y = Number(m[1]); const mo = Number(m[2]); const d = Number(m[3]);
+    if (mo < 1 || mo > 12 || d < 1) return false;
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+  }
+
   function today() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -5636,11 +5657,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
 
   /** Solde du journal à une date : solde à nouveau + écritures datées jusqu'à cette date incluse. */
+  /**
+   * Solde du journal à une date : solde à nouveau + écritures jusqu'à cette date. Les pièces sans date
+   * (lues sur un scan illisible ou reprises d'un classeur) sont comptées : sinon ce solde ne
+   * correspondrait pas au solde final du journal, qui les compte.
+   */
   function balanceAt(reg, date) {
     const d = String(date || today());
     let bal = Number(reg.opening && reg.opening.amount) || 0;
     for (const p of reg.pieces || []) {
-      if (!p.date || String(p.date) > d || !(p.montant > 0)) continue;
+      if ((p.date && String(p.date) > d) || !(p.montant > 0)) continue;
       if (p.sens === 'debit') bal += p.montant; else if (p.sens === 'credit') bal -= p.montant;
     }
     return P.round2(bal);
@@ -5711,7 +5737,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const errs = [];
     if (p.no == null || !Number.isInteger(p.no) || p.no <= 0) errs.push('Numéro de pièce manquant ou invalide');
     else if (reg && reg.pieces.some((x) => x.id !== p.id && x.no === p.no)) errs.push(`Le n° ${p.no} existe déjà dans le registre`);
-    if (!p.date || !/^\d{4}-\d{2}-\d{2}$/.test(p.date) || isNaN(new Date(p.date).getTime())) errs.push('Date manquante ou invalide');
+    if (!isRealDate(p.date)) errs.push('Date manquante ou invalide');
     else if (reg && String(p.date).slice(0, 4) !== String(reg.annee)) errs.push(`La date n'est pas dans l'année ${reg.annee}`);
     if (!p.type) errs.push("Type d'écriture manquant");
     if (!(p.montant > 0)) errs.push('Montant manquant (doit être positif)');
@@ -5778,7 +5804,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       const desc = parts.slice(1, personne ? -1 : undefined).join(' - ');
       return normalizePiece({
         no: e.no, date: e.date, type, objet: P.objetOf(desc), detail: desc, personne, libelle: e.libelle, compte: e.compte,
-        montant: e.debit != null ? e.debit : e.credit, sens: e.debit != null ? 'debit' : 'credit', source: source || 'scan',
+        montant: e.debit > 0 ? e.debit : (e.credit > 0 ? e.credit : 0), sens: e.debit > 0 ? 'debit' : (e.credit > 0 ? 'credit' : null), source: source || 'scan',
       });
     });
   }
@@ -5805,9 +5831,12 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
         res.openingTaken = true;
       } else if (Math.abs(amount - P.round2(reg.opening.amount)) >= 0.005) res.openingDiffers = true;
     }
+    const sameLine = (a, b) => a.date === b.date && a.sens === b.sens && Math.abs((a.montant || 0) - (b.montant || 0)) < 0.005
+      && (a.libelle || composeLibelle(a)) === (b.libelle || composeLibelle(b));
     for (const p of pieces) {
       if (!(p.montant > 0)) { res.noAmount.push(p); continue; }
-      const same = p.no != null ? reg.pieces.find((x) => x.no === p.no) : null;
+      // sans n° : on compare la ligne entière (date, libellé, montant, sens) pour ne pas la reprendre deux fois
+      const same = p.no != null ? reg.pieces.find((x) => x.no === p.no) : reg.pieces.find((x) => x.no == null && sameLine(x, p));
       if (same) {
         if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) res.skipped.push(p); else res.conflicts.push(p);
         continue;
@@ -5828,6 +5857,17 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     try { return normalizeRegister(JSON.parse(text)); } catch (e) { return null; }
   }
 
+  /**
+   * Lecture d'un registre enregistré : renvoie { reg } si tout va bien, { reg: null } s'il n'existe pas,
+   * { error } si le texte existe mais est illisible (fichier tronqué, JSON abîmé). Dans ce dernier cas
+   * l'appelant ne doit surtout pas enregistrer par-dessus : la sauvegarde serait perdue.
+   */
+  function readStored(text) {
+    if (text == null || String(text).trim() === '') return { reg: null };
+    const reg = parse(text);
+    return reg ? { reg } : { reg: null, error: 'registre illisible' };
+  }
+
   /* ------------------------------------------------------------------ */
   /* Stockage                                                               */
   /* ------------------------------------------------------------------ */
@@ -5838,7 +5878,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       kind: 'fichiers',
       location: () => F.dir(),
       years: () => F.years(),
-      load: async (year) => { const t = await F.load(year); return t ? parse(t) : null; },
+      load: async (year) => { const t = await F.load(year); return readStored(t).reg; },
+      loadStored: async (year) => readStored(await F.load(year)),
       save: (reg) => F.save(reg.annee, serialize(reg)),
       attach: (year, pieceId, name, bytes) => F.attach(year, pieceId, name, bytes),
       read: (year, pieceId, name) => F.read(year, pieceId, name),
@@ -5876,7 +5917,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
         for (let i = 0; i < localStorage.length; i++) { const m = /^caisse\.registre\.(\d{4})$/.exec(localStorage.key(i)); if (m) out.push(Number(m[1])); }
         return out.sort();
       },
-      load: async (year) => { const t = localStorage.getItem(KEY(year)); return t ? parse(t) : null; },
+      load: async (year) => readStored(localStorage.getItem(KEY(year))).reg,
+      loadStored: async (year) => readStored(localStorage.getItem(KEY(year))),
       save: async (reg) => { localStorage.setItem(KEY(reg.annee), serialize(reg)); },
       attach: async (year, pieceId, name, bytes) => { await tx('readwrite', (s) => s.put(bytes, k(year, pieceId, name))); return { name, size: bytes.length }; },
       read: async (year, pieceId, name) => { const v = await tx('readonly', (s) => s.get(k(year, pieceId, name))); return v ? new Uint8Array(v) : null; },
@@ -5895,6 +5937,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     TYPES,
     ACCOUNT_RE,
     today,
+    isRealDate,
     newId,
     emptyRegister,
     normalizeRegister,
@@ -5925,6 +5968,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     piecesFromEntries, mergeEntries,
     serialize,
     parse,
+    readStored,
     storage,
     fileStorage,
     browserStorage,
@@ -6037,8 +6081,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     centered('Libellé', L.colSomme, L.colAvoir, yLibTitle + 5, { size: 11 });
     const libelle = piece.libelle || '';
     const parts = libelle.split(' - ');
-    const typeLine = parts.length > 1 ? `${parts[0]} ${parts.slice(1, parts.length > 2 ? -1 : undefined).join(' - ')}` : libelle;
+    // « TYPE - Description - Personne » : la personne est écrite seule, sous la description ; avec
+    // seulement « TYPE - Personne », la description est vide (le nom ne doit pas être écrit deux fois)
     const person = parts.length > 2 ? parts[parts.length - 1] : (parts.length === 2 && P.looksLikePerson(parts[1]) ? parts[1] : '');
+    const typeLine = parts.length > 2 ? `${parts[0]} ${parts.slice(1, -1).join(' - ')}` : (parts.length === 2 ? (person ? parts[0] : `${parts[0]} ${parts[1]}`) : libelle);
     const lines = wrap(normal, 11, typeLine, L.colSomme - L.left - 16);
     let ly = yLibTitle - L.lineH * 2 + 4;
     for (const l of lines.slice(0, L.libLines - 3)) { text(l, L.left + 8, ly, { size: 11 }); ly -= L.lineH; }
@@ -6855,7 +6901,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       caisse,
       history,
       vocabulary: state.vocab,
-      existingNumbers: existing.map((e) => Number(e.no)).filter((n) => !isNaN(n)),
+      // n° déjà pris, avec leur montant : une pièce identique déjà enregistrée n'est pas signalée
+      existingNumbers: existing.filter((e) => !isNaN(numNo(e))).map((e) => ({ no: numNo(e), debit: e.debit, credit: e.credit })),
       refine: state.ocr.reads.size ? refineWithOcr : null,
     });
 
@@ -7971,9 +8018,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     });
     // une pièce du lot déjà dans la base (même n°, même montant : ajoutée au registre, ou déjà dans le classeur) n'est pas comptée deux fois
     const exist = existingEntries();
-    const key = (e) => `${numNo(e)}|${Math.round((Number(e.debit) || 0) * 100)}|${Math.round((Number(e.credit) || 0) * 100)}`;
+    const cents = (v) => Math.round((Number(v) || 0) * 100);
+    const key = (e) => `${numNo(e)}|${cents(e.debit)}|${cents(e.credit)}`;
+    // sans n° lisible : on compare la ligne entière (date, libellé, montants)
+    const keyNoNum = (e) => `${e.date || ''}|${String(e.libelle || '').trim()}|${cents(e.debit)}|${cents(e.credit)}`;
     const already = new Set(exist.filter((e) => !isNaN(numNo(e))).map(key));
-    const fresh = news.filter((e) => isNaN(numNo(e)) || !already.has(key(e)));
+    const alreadyNoNum = new Set(exist.map(keyNoNum));
+    const fresh = news.filter((e) => (isNaN(numNo(e)) ? !alreadyNoNum.has(keyNoNum(e)) : !already.has(key(e))));
     return exist.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
       .concat(fresh.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
   }
@@ -8042,18 +8093,28 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     renderBalanceCheck();
   }
 
+  /** Écritures à prendre en compte pour le rapprochement : jusqu'à la date du comptage si elle est indiquée. */
+  function entriesUpToCheckDate() {
+    const all = allEntriesForExcel();
+    const d = els.checkDate && els.checkDate.value;
+    return d ? all.filter((e) => !e.date || String(e.date) <= d) : all;
+  }
   function renderBalanceCheck() {
     const v = els.checkBalance.value.trim();
     if (v === '') { els.balanceResult.innerHTML = ''; return; }
     const reel = Number(v.replace(',', '.'));
     if (!isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
-    const t = X.computeTotals(currentOpening(), allEntriesForExcel());
+    const entries = entriesUpToCheckDate();
+    const t = X.computeTotals(currentOpening(), entries);
+    const horsDate = allEntriesForExcel().length - entries.length;
     const ecart = P.round2(t.end - reel);
     if (Math.abs(ecart) < 0.005) {
-      els.balanceResult.innerHTML = `<div class="balance-box ok">✓ Le solde calculé correspond exactement au solde réel : <b>${escapeHtml(fmtCHF(t.end))}</b>. Les écritures de ce lot sont cohérentes.</div>`;
+      els.balanceResult.innerHTML = `<div class="balance-box ok">✓ Le solde calculé correspond exactement au solde réel : <b>${escapeHtml(fmtCHF(t.end))}</b>. Les écritures de ce lot sont cohérentes.` +
+        (horsDate ? ` <span class="legend">(${horsDate} écriture(s) postérieure(s) au ${escapeHtml(P.isoToDisplay(els.checkDate.value))} non comptée(s))</span>` : '') + '</div>';
     } else {
       const props = P.explainGap(state.entries, ecart, 5);
-      let html = `<div class="balance-box err">✖ Écart de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> : le calcul donne ${escapeHtml(fmtCHF(t.end))}, vous avez compté ${escapeHtml(fmtCHF(reel))}.`;
+      let html = `<div class="balance-box err">✖ Écart de <b>${escapeHtml(fmtCHF(Math.abs(ecart)))}</b> : le calcul donne ${escapeHtml(fmtCHF(t.end))}, vous avez compté ${escapeHtml(fmtCHF(reel))}.` +
+        (horsDate ? ` <span class="legend">(${horsDate} écriture(s) postérieure(s) au ${escapeHtml(P.isoToDisplay(els.checkDate.value))} non comptée(s))</span>` : '');
       if (props.length) {
         html += `<br><b>Explication${props.length > 1 ? 's' : ''} possible${props.length > 1 ? 's' : ''}</b> (les pièces ci-dessous expliquent exactement l'écart) :<ul style="margin:6px 0 0 0">`;
         for (const pr of props) {
@@ -8097,6 +8158,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   });
 
   els.checkBalance.addEventListener('input', renderBalanceCheck);
+  if (els.checkDate) els.checkDate.addEventListener('change', renderBalanceCheck);
 
   els.checkTable.addEventListener('click', (ev) => {
     const b = ev.target.closest('button[data-check]');
@@ -8411,7 +8473,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     } catch (e) { /* ignore */ }
   }
 
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel };
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
@@ -8445,7 +8507,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     }
     const soldeSaisi = els.checkBalance.value.trim();
     if (soldeSaisi !== '') {
-      const t0 = X.computeTotals(currentOpening(), allEntriesForExcel());
+      const t0 = X.computeTotals(currentOpening(), entriesUpToCheckDate());
       const ecart = P.round2(t0.end - Number(soldeSaisi.replace(',', '.')));
       if (Math.abs(ecart) >= 0.005 && !confirm(`Le solde calculé (${fmtCHF(t0.end)}) ne correspond pas au solde réel saisi : écart de ${fmtCHF(Math.abs(ecart))}.\n\nGénérer le fichier malgré cet écart ?`)) return;
     }
@@ -8512,12 +8574,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = v.toFixed(2).split('.'); return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
-  function notice(kind, html) {
+  function notice(kind, html, opts) {
     const div = document.createElement('div');
     div.className = `notice ${kind}`;
     div.innerHTML = html;
     els.regNotices.prepend(div);
-    setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
+    // opts.keep : message qui contient un bouton à cliquer (fiche PDF bloquée) — il reste affiché
+    if (!(opts && opts.keep)) setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
   }
   async function saveBlob(blob, name) {
     if (A.saveBlob) return A.saveBlob(blob, name);
@@ -8556,12 +8619,20 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
 
   async function openYear(year) {
-    let reg = await state.storage.load(year);
+    // un registre enregistré mais illisible (fichier abîmé) ne doit jamais être remplacé par un registre vide
+    const stored = state.storage.loadStored ? await state.storage.loadStored(year) : { reg: await state.storage.load(year) };
+    if (stored.error) {
+      notice('err', `Le registre ${year} est enregistré mais illisible (fichier abîmé). Il n'a pas été remplacé : restaurez une sauvegarde (« Restaurer… ») ` +
+        'ou, dans l\'application fenêtrée, reprenez le fichier <code>registre.bak.json</code> du dossier des données.');
+      els.regYear.value = String(state.reg ? state.reg.annee : year);
+      return;
+    }
+    let reg = stored.reg;
     if (!reg) {
       const prev = state.years.filter((y) => y < year).sort().pop();
       const prevReg = prev ? await state.storage.load(prev) : null;
       const opening = prevReg ? R.journal(prevReg).end : 0;
-      reg = R.emptyRegister(year, { caisse: (A.state && A.state.caisse) || undefined, openingDate: `${year}-01-01`, openingAmount: opening });
+      reg = R.emptyRegister(year, { caisse: (A.getCaisse && A.getCaisse()) || undefined, openingDate: `${year}-01-01`, openingAmount: opening });
       await state.storage.save(reg);
       if (!state.years.includes(year)) state.years.push(year);
       state.years.sort();
@@ -8632,6 +8703,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   /* ---------------- Fiche ---------------- */
   function newPiece() {
     const p = R.newPiece(state.reg);
+    const force = $('pSensForce');
+    if (force) force.checked = false; // la case « forcer le sens » ne reste pas cochée d'une pièce à l'autre
     state.editingId = null;
     state.pending = [];
     state.dgeo.current = null;
@@ -8656,7 +8729,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     els.pLibelleEdit.checked = !!(p.libelle && p.libelle !== R.composeLibelle(p));
     els.pLibelle.readOnly = !els.pLibelleEdit.checked;
     els.pLibelle.value = p.libelle || R.composeLibelle(p);
-    setSens(p.sens || R.sensFor(p.type), true);
+    // le sens enregistré est conservé tel quel ; s'il ne suit pas la logique du type (pièce remplie
+    // à l'envers, conservée ainsi), la case « forcer » est cochée pour qu'il reste modifiable
+    const force = $('pSensForce');
+    if (force) force.checked = !!(p.sens && R.sensFor(p.type) && p.sens !== R.sensFor(p.type));
+    setSens(p.sens || R.sensFor(p.type), !p.sens);
     refreshKind();
     renderFiles(p);
     refreshSuggestions();
@@ -8760,7 +8837,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   els.pFilesList.addEventListener('click', async (ev) => {
     const b = ev.target.closest('button[data-remove]');
     if (!b) return;
-    const [where, key] = b.dataset.remove.split(':');
+    const raw = b.dataset.remove; const cut = raw.indexOf(':');
+    const where = cut < 0 ? raw : raw.slice(0, cut); const key = cut < 0 ? '' : raw.slice(cut + 1); // le nom du fichier peut contenir « : »
     if (where === 'pending') state.pending.splice(Number(key), 1);
     else if (state.editingId) {
       const p = state.reg.pieces.find((x) => x.id === state.editingId);
@@ -8790,6 +8868,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     els.ficheErrors.innerHTML = '';
     // justificatifs en attente -> fichiers
     for (const f of state.pending) {
+      if (p.justificatifs.some((j) => j.name === f.name)) { notice('warn', `Un justificatif nommé « ${escapeHtml(f.name)} » est déjà joint à cette pièce : le second n'a pas été ajouté.`); continue; }
       try {
         const saved = await state.storage.attach(state.reg.annee, p.id, f.name, f.bytes);
         p.justificatifs.push({ name: saved.name, size: saved.size, kind: f.kind });
@@ -8812,7 +8891,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     state.draftId = null;
     newPiece();
     els.pDate.focus();
-    if (ficheAuto.open) openPiecePdf(p).catch((e) => notice('err', `Fiche PDF impossible : ${escapeHtml(e.message || e)}`));
+    if (ficheAuto.open) {
+      const w = window.open('', '_blank'); // ouverte tout de suite (clic de l'utilisateur), remplie ensuite
+      openPiecePdf(p, w).catch((e) => { if (w && !w.closed) w.close(); notice('err', `Fiche PDF impossible : ${escapeHtml(e.message || e)}`); });
+    }
   });
 
   // Fiche PDF ouverte automatiquement après l'enregistrement (pour l'imprimer) : réglage mémorisé.
@@ -8829,11 +8911,14 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     els.optPdfAutoJust.addEventListener('change', saveOpt);
   }
   /** Construit la fiche PDF de la pièce et l'ouvre dans une fenêtre (visionneuse PDF, imprimable). */
-  async function openPiecePdf(p) {
+  async function openPiecePdf(p, win) {
     const res = await F.buildPdf([p], state.reg, ficheAuto.withAttachments ? (piece, j) => readAttachment(piece, j) : () => null, { title: `Pièce comptable n° ${p.no} – ${p.libelle}` });
     const url = URL.createObjectURL(new Blob([res.bytes], { type: 'application/pdf' }));
-    const w = window.open(url, '_blank');
-    if (!w) notice('warn', `La fiche PDF n'a pas pu s'ouvrir toute seule (fenêtre bloquée par le navigateur) : <button type="button" data-open-pdf="${url}">Ouvrir la fiche PDF</button>`);
+    // la fenêtre est ouverte avant la construction du PDF (voir l'appelant) : un navigateur bloque
+    // window.open appelé après un await, hors du clic de l'utilisateur
+    const w = win && !win.closed ? win : window.open(url, '_blank');
+    if (w && w !== win) { /* ouverte ici */ } else if (w) { try { w.location.replace(url); } catch (e) { w.location = url; } }
+    if (!w) notice('warn', `La fiche PDF n'a pas pu s'ouvrir toute seule (fenêtre bloquée par le navigateur) : <button type="button" data-open-pdf="${url}">Ouvrir la fiche PDF</button>`, { keep: true });
     setTimeout(() => URL.revokeObjectURL(url), 180000); // la fenêtre a le temps de charger le document
     return res;
   }
@@ -8962,6 +9047,14 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       const p = state.reg.pieces.find((x) => x.id === b.dataset.del);
       if (!p || !confirm(`Supprimer la pièce n° ${p.no} (${p.libelle}) et ses justificatifs ?`)) return;
       for (const j of p.justificatifs) { try { await state.storage.remove(state.reg.annee, p.id, j.name); } catch (e) { /* ignore */ } }
+      // pièce créée depuis un décompte DGEO : le décompte redevient « à saisir »
+      if (p.source === 'dgeo' && window.CaisseDgeo) {
+        try {
+          const list = await window.CaisseDgeo.list();
+          const d = list.find((x) => x.pieceId === p.id) || (p.ref ? list.find((x) => (x.numero || '') === p.ref) : null);
+          if (d) { await window.CaisseDgeo.mark(d.id, { saisi: false, pieceId: null }); await refreshDgeo(); }
+        } catch (e) { /* ignore */ }
+      }
       R.removePiece(state.reg, p.id);
       await saveReg();
       if (state.editingId === p.id) newPiece();
@@ -9072,9 +9165,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const pieces = R.piecesFromEntries(entries);
     const wrongYear = pieces.filter((p) => p.date && String(p.date).slice(0, 4) !== String(year));
     if (wrongYear.length && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?`)) return 0;
-    let added = 0; let dup = 0; const conflicts = [];
+    let added = 0; let dup = 0; let sansMontant = 0; const conflicts = [];
     for (let i = 0; i < pieces.length; i++) {
       const p = pieces[i];
+      if (!(p.montant > 0)) { sansMontant++; continue; } // ligne sans montant lisible : rien à enregistrer
       const same = p.no != null ? state.reg.pieces.find((x) => x.no === p.no) : null;
       if (same) { if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) dup++; else conflicts.push(p.no); continue; }
       if (getImage) {
@@ -9090,7 +9184,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     renderJournal();
     newPiece();
     notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
-      `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}.`);
+      `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}` +
+      `${sansMontant ? `, ${sansMontant} ligne(s) sans montant ignorée(s)` : ''}.`);
     return added;
   }
 
@@ -9191,7 +9286,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cTitle', 'countErrors', 'btnCountSave', 'btnCountLoadPrev', 'btnCountNew', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
   if (!els.cRows || !S) return;
 
-  const state = { editingId: null, prevYear: { annee: null, last: null } };
+  const state = { editingId: null, shownYear: null, prevYear: { annee: null, last: null } };
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = Math.abs(v).toFixed(2).split('.'); return `${v < 0 ? '− ' : ''}${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
   const signed = (n) => (Math.abs(n) < 0.005 ? '0.00' : `${n > 0 ? '+ ' : '− '}${fmtCHF(Math.abs(n))}`);
@@ -9302,7 +9397,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   /* ---------------- formulaire ---------------- */
   function newCount() {
     state.editingId = null;
-    els.cDate.value = R.today();
+    if (S.state.reg) state.shownYear = S.state.reg.annee;
+    // la date proposée reste dans l'année du registre ouvert
+    els.cDate.value = S.state.reg && String(R.today()).slice(0, 4) !== String(S.state.reg.annee) ? `${S.state.reg.annee}-01-01` : R.today();
     els.cNote.value = '';
     fillCounts({});
     els.cTitle.textContent = '';
@@ -9379,8 +9476,12 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   function render() {
     if (!S.state.reg) return;
     if (!els.cRows.children.length) buildRows();
+    // changement d'année du registre : on repart d'un comptage vierge (la date et les quantités
+    // de l'année précédente donneraient des soldes faux)
+    if (state.shownYear !== S.state.reg.annee) { state.shownYear = S.state.reg.annee; newCount(); return; }
     if (state.editingId && !S.state.reg.comptages.some((c) => c.id === state.editingId)) state.editingId = null;
     if (!els.cDate.value) els.cDate.value = R.today();
+    if (state.editingId) state.shownYear = S.state.reg.annee;
     refreshTotals();
     renderHistory();
     loadPrevYear();
