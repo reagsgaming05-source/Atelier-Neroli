@@ -99,6 +99,11 @@
         <select id="regYear" style="width:120px"></select>
       </div>
       <button type="button" class="small" id="btnNewYear" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle année</button>
+      <span class="hidden" id="newYearBox" style="display:inline-flex;gap:6px;align-items:center;align-self:flex-end">
+        <input type="number" id="newYearInput" min="1990" max="2100" step="1" style="width:110px;height:36px" aria-label="Nouvelle année du registre">
+        <button type="button" class="small primary" id="btnNewYearOk" style="height:36px">Créer</button>
+        <button type="button" class="small ghost" id="btnNewYearCancel" style="height:36px">Annuler</button>
+      </span>
       <div class="sep"></div>
       <div class="field">
         <label for="regOpeningDate">Solde à nouveau le</label>

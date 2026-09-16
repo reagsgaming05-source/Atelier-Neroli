@@ -107,6 +107,21 @@ async function findPage(app, pred, timeoutMs) {
   console.log('décomptes :', JSON.stringify(recapInfo));
   ok = ok && recapInfo.kindShown && recapInfo.kinds.join('|') === "Course d'école|Camp" && recapInfo.inDgeoTool && recapInfo.rows >= 1 && recapInfo.pages >= 1 && recapInfo.total >= 143.95;
 
+  // nouvelle année par le petit formulaire en ligne (window.prompt n'existe pas dans Electron)
+  const ny = await win.evaluate(async () => {
+    const s = window.CaisseSaisie.state; const y0 = s.reg.annee;
+    document.getElementById('btnNewYear').click();
+    const box = document.getElementById('newYearBox'); const shown = !box.classList.contains('hidden');
+    document.getElementById('newYearInput').value = String(y0 + 1);
+    document.getElementById('btnNewYearOk').click();
+    await new Promise((r) => setTimeout(r, 800));
+    const created = s.reg.annee === y0 + 1 && s.years.includes(y0 + 1);
+    await window.CaisseSaisie.openYear(y0);
+    return { shown, created, hidden: box.classList.contains('hidden'), back: s.reg.annee === y0 };
+  });
+  console.log('nouvelle année :', JSON.stringify(ny));
+  ok = ok && ny.shown && ny.created && ny.hidden && ny.back;
+
   // pièces scannées et saisie synchronisées : un classeur Excel de l'année (ancienne méthode) est repris
   // dans le registre sans rien compter deux fois, et l'espace des pièces scannées s'appuie sur ce registre
   const sync = await win.evaluate(async () => {
@@ -148,8 +163,8 @@ async function findPage(app, pred, timeoutMs) {
     return { total: c.total, billets: c.billets, pieces: c.pieces, kpis, rows: document.querySelectorAll('#countBody tr[data-id]').length, storedCounts: stored ? stored.comptages.length : null, book: window.CaisseRegistre.balanceAt(s.reg, c.date) };
   });
   console.log('comptage :', totalTxt, JSON.stringify(count));
-  // le journal ne contient que la pièce de test (sortie de 143.95 depuis un solde à nouveau de 0 ou celui du poste) : l'écart affiché doit être total − solde du journal
-  ok = ok && totalTxt === '341.55' && count.total === 341.55 && count.billets === 340 && count.pieces === 1.55 && count.rows >= 1 && count.kpis.length === 5 && count.kpis[0] === '341.55'
+  // après l'enregistrement, le comptage reste affiché : la tuile « Solde compté » (2e) montre son total
+  ok = ok && totalTxt === '341.55' && count.total === 341.55 && count.billets === 340 && count.pieces === 1.55 && count.rows >= 1 && count.kpis.length === 5 && count.kpis[1] === '341.55'
     && (count.storedCounts === null || count.storedCounts === count.rows);
   await win.evaluate(async () => { const s = window.CaisseSaisie.state; window.CaisseRegistre.removeCount(s.reg, s.reg.comptages[s.reg.comptages.length - 1].id); await s.storage.save(s.reg); window.CaisseComptage.render(); window.CaisseApp.showPanel('panelSaisie'); });
   // nettoyage : la pièce de test est retirée du registre

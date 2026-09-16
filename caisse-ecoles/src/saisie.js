@@ -115,15 +115,30 @@
   }
 
   els.regYear.addEventListener('change', () => openYear(Number(els.regYear.value)));
-  els.btnNewYear.addEventListener('click', async () => {
-    const def = (state.years.length ? Math.max.apply(null, state.years) : new Date().getFullYear()) + 1;
-    const v = prompt('Nouvelle année du registre :', String(def));
-    if (!v) return;
-    const y = Number(v);
-    if (!y || y < 1990 || y > 2100) { alert('Année invalide.'); return; }
+  // Nouvelle année : petit formulaire en ligne (window.prompt n'existe pas dans l'application fenêtrée)
+  const yearBox = $('newYearBox');
+  const yearInput = $('newYearInput');
+  function hideYearBox() { if (yearBox) yearBox.classList.add('hidden'); }
+  async function createYear() {
+    const y = Number(yearInput.value);
+    if (!Number.isInteger(y) || y < 1990 || y > 2100) { notice('err', 'Année invalide : indiquez une année entre 1990 et 2100.'); return; }
+    hideYearBox();
+    const existed = state.years.includes(y);
     await openYear(y);
-    notice('ok', `Registre ${y} créé. Le solde à nouveau proposé est le solde final de l'année précédente : vérifiez-le.`);
+    notice('ok', existed ? `Registre ${y} ouvert (il existait déjà).` : `Registre ${y} créé. Le solde à nouveau proposé est le solde final de l'année précédente : vérifiez-le.`);
+  }
+  els.btnNewYear.addEventListener('click', () => {
+    if (!yearBox || !yearInput) return;
+    yearInput.value = String((state.years.length ? Math.max.apply(null, state.years) : new Date().getFullYear()) + 1);
+    yearBox.classList.remove('hidden');
+    yearInput.focus();
+    yearInput.select();
   });
+  if (yearBox) {
+    $('btnNewYearOk').addEventListener('click', createYear);
+    $('btnNewYearCancel').addEventListener('click', hideYearBox);
+    yearInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); createYear(); } else if (ev.key === 'Escape') hideYearBox(); });
+  }
   els.regOpeningDate.addEventListener('change', async () => { state.reg.opening.date = els.regOpeningDate.value; await saveReg(); renderJournal(); });
   els.regOpeningAmount.addEventListener('change', async () => { state.reg.opening.amount = P.round2(Number(String(els.regOpeningAmount.value).replace(',', '.')) || 0); await saveReg(); renderJournal(); });
   els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); });
@@ -465,6 +480,7 @@
       R.removePiece(state.reg, p.id);
       await saveReg();
       if (state.editingId === p.id) newPiece();
+      else if (!state.editingId && Number(els.pNo.value) > R.nextNo(state.reg)) els.pNo.value = R.nextNo(state.reg); // fiche vierge : le n° suivant redescend
       renderJournal();
     } else if (b.dataset.pdf) {
       const p = state.reg.pieces.find((x) => x.id === b.dataset.pdf);

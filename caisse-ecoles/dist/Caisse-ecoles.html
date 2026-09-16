@@ -626,6 +626,11 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
         <select id="regYear" style="width:120px"></select>
       </div>
       <button type="button" class="small" id="btnNewYear" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle année</button>
+      <span class="hidden" id="newYearBox" style="display:inline-flex;gap:6px;align-items:center;align-self:flex-end">
+        <input type="number" id="newYearInput" min="1990" max="2100" step="1" style="width:110px;height:36px" aria-label="Nouvelle année du registre">
+        <button type="button" class="small primary" id="btnNewYearOk" style="height:36px">Créer</button>
+        <button type="button" class="small ghost" id="btnNewYearCancel" style="height:36px">Annuler</button>
+      </span>
       <div class="sep"></div>
       <div class="field">
         <label for="regOpeningDate">Solde à nouveau le</label>
@@ -8136,13 +8141,19 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
    * Enregistre le fichier : boîte de dialogue « Enregistrer sous » (Edge/Chrome) si disponible,
    * sinon téléchargement classique. Retourne le nom choisi, null (téléchargement) ou 'cancelled'.
    */
+  const SAVE_TYPES = {
+    xlsx: { description: 'Classeur Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } },
+    pdf: { description: 'Document PDF', accept: { 'application/pdf': ['.pdf'] } },
+    json: { description: 'Sauvegarde (JSON)', accept: { 'application/json': ['.json'] } },
+    html: { description: 'Page HTML', accept: { 'text/html': ['.html'] } },
+  };
   async function saveBlob(blob, name) {
     if (typeof window.showSaveFilePicker === 'function') {
       try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: name,
-          types: [{ description: 'Classeur Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
-        });
+        // filtre de la boîte de dialogue selon l'extension du fichier (Excel, PDF, sauvegarde JSON…)
+        const ext = (/\.([a-z0-9]+)$/i.exec(name || '') || [])[1];
+        const type = ext && SAVE_TYPES[ext.toLowerCase()];
+        const handle = await window.showSaveFilePicker(Object.assign({ suggestedName: name }, type ? { types: [type] } : {}));
         const writable = await handle.createWritable();
         await writable.write(blob);
         await writable.close();
@@ -8589,15 +8600,30 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
 
   els.regYear.addEventListener('change', () => openYear(Number(els.regYear.value)));
-  els.btnNewYear.addEventListener('click', async () => {
-    const def = (state.years.length ? Math.max.apply(null, state.years) : new Date().getFullYear()) + 1;
-    const v = prompt('Nouvelle année du registre :', String(def));
-    if (!v) return;
-    const y = Number(v);
-    if (!y || y < 1990 || y > 2100) { alert('Année invalide.'); return; }
+  // Nouvelle année : petit formulaire en ligne (window.prompt n'existe pas dans l'application fenêtrée)
+  const yearBox = $('newYearBox');
+  const yearInput = $('newYearInput');
+  function hideYearBox() { if (yearBox) yearBox.classList.add('hidden'); }
+  async function createYear() {
+    const y = Number(yearInput.value);
+    if (!Number.isInteger(y) || y < 1990 || y > 2100) { notice('err', 'Année invalide : indiquez une année entre 1990 et 2100.'); return; }
+    hideYearBox();
+    const existed = state.years.includes(y);
     await openYear(y);
-    notice('ok', `Registre ${y} créé. Le solde à nouveau proposé est le solde final de l'année précédente : vérifiez-le.`);
+    notice('ok', existed ? `Registre ${y} ouvert (il existait déjà).` : `Registre ${y} créé. Le solde à nouveau proposé est le solde final de l'année précédente : vérifiez-le.`);
+  }
+  els.btnNewYear.addEventListener('click', () => {
+    if (!yearBox || !yearInput) return;
+    yearInput.value = String((state.years.length ? Math.max.apply(null, state.years) : new Date().getFullYear()) + 1);
+    yearBox.classList.remove('hidden');
+    yearInput.focus();
+    yearInput.select();
   });
+  if (yearBox) {
+    $('btnNewYearOk').addEventListener('click', createYear);
+    $('btnNewYearCancel').addEventListener('click', hideYearBox);
+    yearInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); createYear(); } else if (ev.key === 'Escape') hideYearBox(); });
+  }
   els.regOpeningDate.addEventListener('change', async () => { state.reg.opening.date = els.regOpeningDate.value; await saveReg(); renderJournal(); });
   els.regOpeningAmount.addEventListener('change', async () => { state.reg.opening.amount = P.round2(Number(String(els.regOpeningAmount.value).replace(',', '.')) || 0); await saveReg(); renderJournal(); });
   els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); });
@@ -8939,6 +8965,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       R.removePiece(state.reg, p.id);
       await saveReg();
       if (state.editingId === p.id) newPiece();
+      else if (!state.editingId && Number(els.pNo.value) > R.nextNo(state.reg)) els.pNo.value = R.nextNo(state.reg); // fiche vierge : le n° suivant redescend
       renderJournal();
     } else if (b.dataset.pdf) {
       const p = state.reg.pieces.find((x) => x.id === b.dataset.pdf);
@@ -9313,8 +9340,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const book = R.balanceAt(reg, date);
     const ecart = P.round2(c.total - book);
     notice(Math.abs(ecart) < 0.005 ? 'ok' : 'warn', `Comptage du ${fmtDate(date)} enregistré : <b>${fmtCHF(c.total)}</b> en caisse (${fmtCHF(c.billets)} en billets, ${fmtCHF(c.pieces)} en pièces). ` +
-      (Math.abs(ecart) < 0.005 ? 'La caisse correspond au journal.' : `Écart avec le journal à cette date : <b>${signed(ecart)}</b>.`));
-    newCount();
+      (Math.abs(ecart) < 0.005 ? 'La caisse correspond au journal.' : `Écart avec le journal à cette date : <b>${signed(ecart)}</b>.`) +
+      ' Le comptage reste affiché ; « Nouveau comptage » pour en commencer un autre.');
+    // le comptage enregistré reste à l'écran (soldes et écart le concernent), au lieu d'un formulaire remis à zéro
+    state.editingId = c.id;
+    els.cTitle.textContent = `(comptage du ${fmtDate(c.date)} enregistré)`;
+    refreshTotals();
+    renderHistory();
   }
 
   els.cRows.addEventListener('input', refreshTotals);

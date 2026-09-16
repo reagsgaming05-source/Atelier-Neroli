@@ -1848,13 +1848,19 @@
    * Enregistre le fichier : boîte de dialogue « Enregistrer sous » (Edge/Chrome) si disponible,
    * sinon téléchargement classique. Retourne le nom choisi, null (téléchargement) ou 'cancelled'.
    */
+  const SAVE_TYPES = {
+    xlsx: { description: 'Classeur Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } },
+    pdf: { description: 'Document PDF', accept: { 'application/pdf': ['.pdf'] } },
+    json: { description: 'Sauvegarde (JSON)', accept: { 'application/json': ['.json'] } },
+    html: { description: 'Page HTML', accept: { 'text/html': ['.html'] } },
+  };
   async function saveBlob(blob, name) {
     if (typeof window.showSaveFilePicker === 'function') {
       try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: name,
-          types: [{ description: 'Classeur Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
-        });
+        // filtre de la boîte de dialogue selon l'extension du fichier (Excel, PDF, sauvegarde JSON…)
+        const ext = (/\.([a-z0-9]+)$/i.exec(name || '') || [])[1];
+        const type = ext && SAVE_TYPES[ext.toLowerCase()];
+        const handle = await window.showSaveFilePicker(Object.assign({ suggestedName: name }, type ? { types: [type] } : {}));
         const writable = await handle.createWritable();
         await writable.write(blob);
         await writable.close();

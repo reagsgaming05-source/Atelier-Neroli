@@ -164,8 +164,13 @@
     const book = R.balanceAt(reg, date);
     const ecart = P.round2(c.total - book);
     notice(Math.abs(ecart) < 0.005 ? 'ok' : 'warn', `Comptage du ${fmtDate(date)} enregistré : <b>${fmtCHF(c.total)}</b> en caisse (${fmtCHF(c.billets)} en billets, ${fmtCHF(c.pieces)} en pièces). ` +
-      (Math.abs(ecart) < 0.005 ? 'La caisse correspond au journal.' : `Écart avec le journal à cette date : <b>${signed(ecart)}</b>.`));
-    newCount();
+      (Math.abs(ecart) < 0.005 ? 'La caisse correspond au journal.' : `Écart avec le journal à cette date : <b>${signed(ecart)}</b>.`) +
+      ' Le comptage reste affiché ; « Nouveau comptage » pour en commencer un autre.');
+    // le comptage enregistré reste à l'écran (soldes et écart le concernent), au lieu d'un formulaire remis à zéro
+    state.editingId = c.id;
+    els.cTitle.textContent = `(comptage du ${fmtDate(c.date)} enregistré)`;
+    refreshTotals();
+    renderHistory();
   }
 
   els.cRows.addEventListener('input', refreshTotals);
