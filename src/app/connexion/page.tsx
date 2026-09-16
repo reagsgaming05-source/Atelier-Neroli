@@ -14,7 +14,7 @@ export default async function ConnexionPage({ searchParams }: { searchParams: Pr
   if (user) redirect(next ?? (user.role === "admin" ? "/admin" : "/compte"));
 
   return (
-    <AuthShell title="Bon retour." text="Connectez-vous pour accéder à votre abonnement, vos factures et vos avantages.">
+    <AuthShell title="Bon retour." text="Connectez-vous pour accéder à votre formule, votre licence et vos factures.">
       <LoginForm next={next} />
     </AuthShell>
   );

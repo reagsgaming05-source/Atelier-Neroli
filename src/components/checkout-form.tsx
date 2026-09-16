@@ -43,11 +43,11 @@ export function CheckoutForm({ planSlug, interval, amountCents, defaultHolder }:
       <input type="hidden" name="planSlug" value={planSlug} />
       <input type="hidden" name="interval" value={interval} />
 
-      <div className="rounded-2xl border border-blossom-200 bg-blossom-100 p-5 text-sm text-blossom-600">
+      <div className="rounded-2xl border border-accent-200 bg-accent-100 p-5 text-sm text-accent-600">
         <p className="font-semibold">Mode démonstration — aucun paiement réel.</p>
         <p className="mt-1">Utilisez une carte de test pour parcourir la souscription de bout en bout.</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={() => fillDemoCard("success")} className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-forest-700 shadow-card transition hover:bg-forest-50">
+          <button type="button" onClick={() => fillDemoCard("success")} className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-card transition hover:bg-brand-50">
             Carte acceptée · {DEMO_CARDS.success}
           </button>
           <button type="button" onClick={() => fillDemoCard("declined")} className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-danger shadow-card transition hover:bg-danger/5">
@@ -77,7 +77,7 @@ export function CheckoutForm({ planSlug, interval, amountCents, defaultHolder }:
             className={`input pr-28 font-mono tracking-wider ${fe.number ? "input-error" : ""}`}
             required
           />
-          {brand && <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rounded-md bg-cream-100 px-2 py-1 text-xs font-semibold text-ink-700">{brand}</span>}
+          {brand && <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rounded-md bg-canvas-100 px-2 py-1 text-xs font-semibold text-ink-700">{brand}</span>}
         </div>
         {fe.number?.[0] && <p className="mt-1.5 text-xs font-medium text-danger">{fe.number[0]}</p>}
       </div>
@@ -93,7 +93,7 @@ export function CheckoutForm({ planSlug, interval, amountCents, defaultHolder }:
         label={
           <>
             J'ai lu et j'accepte les{" "}
-            <Link href="/cgv" className="font-semibold text-forest-700 underline underline-offset-4" target="_blank">
+            <Link href="/cgv" className="font-semibold text-brand-700 underline underline-offset-4" target="_blank">
               conditions générales
             </Link>
             . L'abonnement se renouvelle automatiquement et peut être résilié à tout moment.

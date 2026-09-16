@@ -1,6 +1,6 @@
-# Atelier Néroli — site & espace membres
+# Blonay PDF — site et espace client
 
-Site vitrine et système d'abonnements pour **Atelier Néroli**, maison de soins et de bien-être à Blonay (VD).
+Site vitrine et système d'abonnements pour **Blonay PDF**, l'outil PDF complet (éditer, fusionner, convertir, signer, protéger, annoter) conçu en Suisse.
 Tout fonctionne **en local**, sans service externe : base SQLite dans un fichier, paiement en mode démonstration.
 
 ## Démarrage rapide
@@ -14,14 +14,14 @@ npm run dev
 
 Puis ouvrir <http://localhost:3000>.
 
-Au premier lancement, la base de données est créée automatiquement (`data/atelier-neroli.db`), les formules d'abonnement sont insérées et deux comptes de démonstration sont créés.
+Au premier lancement, la base de données est créée automatiquement (`data/blonay-pdf.db`), les formules sont insérées et deux comptes de démonstration sont créés.
 
 ### Comptes de démonstration
 
 | Rôle | E-mail | Mot de passe | Accès |
 | --- | --- | --- | --- |
-| Administration | `admin@atelier-neroli.ch` | `Neroli-Admin-2026!` | <http://localhost:3000/admin> |
-| Membre (abonnement Signature actif) | `marie.demo@exemple.ch` | `Demo-1234!` | <http://localhost:3000/compte> |
+| Administration | `admin@blonaypdf.ch` | `BlonayPDF-Admin-2026!` | <http://localhost:3000/admin> |
+| Client (formule Pro active) | `marie.demo@exemple.ch` | `Demo-1234!` | <http://localhost:3000/compte> |
 
 Le mot de passe admin peut être défini avant le premier lancement via `.env` (voir `.env.example`).
 
@@ -38,35 +38,37 @@ Date d'expiration future et CVC à 3 chiffres quelconques.
 
 **Site public**
 
-- Accueil, carte des soins, abonnements (mensuel / annuel), l'atelier, contact (formulaire enregistré en base)
-- Mentions légales, conditions générales, politique de confidentialité
+- Accueil avec aperçu de l'éditeur, Fonctionnalités (12 outils), Tarifs (mensuel / annuel), Sécurité et hébergement, Contact (formulaire enregistré en base)
+- Mentions légales, conditions générales d'abonnement, politique de confidentialité
 
 **Abonnements**
 
-- Trois formules (Essentiel, Signature, Prestige), en mensuel ou annuel (2 mois offerts)
+- Trois formules (Essentiel, Pro, Équipe), en mensuel ou annuel (2 mois offerts)
 - Souscription en ligne avec création de compte, paiement démo et facture immédiate
 - Résiliation à l'échéance, réactivation, changement de formule (montée en gamme immédiate avec crédit prorata, descente à l'échéance)
 - Renouvellements automatiques : appliqués à la consultation (sans tâche planifiée), avec facture à chaque période
 
-**Espace membre** (`/compte`)
+**Espace client** (`/compte`)
 
-- Tableau de bord, gestion de l'abonnement, factures (imprimables / export PDF via le navigateur), profil et mot de passe
+- Tableau de bord avec clé de licence et liens de téléchargement (web, Windows, macOS)
+- Gestion de la formule, factures (imprimables / export PDF via le navigateur), profil et mot de passe
 
 **Administration** (`/admin`)
 
 - Indicateurs (abonnements actifs, revenu mensuel récurrent, encaissé du mois, résiliations programmées)
-- Listes des membres, abonnements, factures et messages reçus
+- Listes des clients, abonnements, factures et messages reçus
 
 ## Personnaliser
 
 | Quoi | Où |
 | --- | --- |
-| Coordonnées, horaires, textes, soins, FAQ, témoignages, équipe | `src/content/site.ts` |
-| Formules et prix des abonnements | `src/content/plans.ts` (appliqué au prochain `npm run dev`) |
+| Coordonnées, textes, fonctionnalités, FAQ, témoignages, liens de téléchargement | `src/content/site.ts` |
+| Formules et prix | `src/content/plans.ts` (appliqué au prochain `npm run dev`) |
 | Couleurs, typographies, styles de base | `src/app/globals.css` |
-| Polices (auto-hébergées) | `src/fonts/` et `src/app/fonts.ts` |
+| Polices (auto-hébergées : Bricolage Grotesque, Manrope) | `src/fonts/` et `src/app/fonts.ts` |
+| Aperçu de l'éditeur sur l'accueil | `src/components/app-mock.tsx` |
 
-Les coordonnées (adresse, téléphone, e-mail, IDE), les témoignages et les prénoms de l'équipe sont des **valeurs provisoires** à remplacer.
+Les coordonnées (adresse, téléphone, e-mail, IDE), les témoignages, les garanties de sécurité (certifications, taux de disponibilité) et les liens de téléchargement sont des **valeurs provisoires** à vérifier ou remplacer.
 
 ## Commandes
 
@@ -78,6 +80,10 @@ Les coordonnées (adresse, téléphone, e-mail, IDE), les témoignages et les pr
 | `npm run db:reset` | Supprime et recrée la base avec les données de démonstration |
 | `npm run db:generate` | Génère une migration après modification de `src/lib/db/schema.ts` |
 
+## Maquette partageable
+
+Le dossier `maquette/` contient une version statique navigable du site (toutes les pages, y compris l'espace client et l'administration avec des données de démonstration), publiable sur GitHub Pages via le workflow `.github/workflows/pages.yml`. GitHub Pages doit être activé une fois dans Settings → Pages → Source : « GitHub Actions ».
+
 ## Stack technique
 
 - [Next.js 16](https://nextjs.org) (App Router, Server Actions) · React 19 · TypeScript
@@ -88,6 +94,7 @@ Les coordonnées (adresse, téléphone, e-mail, IDE), les témoignages et les pr
 ## Passer en production
 
 1. **Paiement** : remplacer `chargeCard` dans `src/lib/payments.ts` par un prestataire (Stripe, Datatrans, Payrexx…) en conservant la signature ; les renouvellements devront alors être déclenchés par une tâche planifiée ou les webhooks du prestataire.
-2. **E-mails** : brancher un envoi (confirmation, facture, résiliation) là où les actions serveur retournent aujourd'hui un message.
-3. **Hébergement** : définir `SITE_URL`, `DATABASE_URL` et un compte admin dédié dans les variables d'environnement.
-4. **Juridique** : faire relire les CGV et la politique de confidentialité, compléter le numéro IDE.
+2. **Licence** : la clé affichée dans l'espace client est dérivée de l'identifiant du compte (`src/app/compte/page.tsx`) ; la faire vérifier par l'application de bureau via une API.
+3. **E-mails** : brancher un envoi (confirmation, facture, résiliation) là où les actions serveur retournent aujourd'hui un message.
+4. **Hébergement** : définir `SITE_URL`, `DATABASE_URL` et un compte admin dédié dans les variables d'environnement.
+5. **Juridique** : faire relire les CGV et la politique de confidentialité, compléter le numéro IDE.

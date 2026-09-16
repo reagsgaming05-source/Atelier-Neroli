@@ -15,12 +15,12 @@ export default async function AdminAbonnementsPage() {
   });
 
   return (
-    <Panel title={`Abonnements (${rows.length})`} className="!p-0">
+    <Panel title={`Abonnements (${rows.length})`} flush>
       <div className="overflow-x-auto">
         <table className="table">
           <thead>
             <tr>
-              <th>Membre</th>
+              <th>Client</th>
               <th>Formule</th>
               <th>Montant</th>
               <th>Période en cours</th>
@@ -37,7 +37,7 @@ export default async function AdminAbonnementsPage() {
                 </td>
                 <td>
                   {s.plan.name} · {intervalLabel(s.interval)}
-                  {s.pendingPlan && <span className="block text-xs text-blossom-600">→ {s.pendingPlan.name} à l'échéance</span>}
+                  {s.pendingPlan && <span className="block text-xs text-accent-600">→ {s.pendingPlan.name} à l'échéance</span>}
                 </td>
                 <td className="font-semibold text-ink-900">{formatCHF(planPrice(s.plan, s.interval))}</td>
                 <td className="whitespace-nowrap">

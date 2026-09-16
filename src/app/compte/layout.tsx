@@ -9,9 +9,9 @@ export default async function CompteLayout({ children }: { children: React.React
 
   return (
     <SpaceShell
-      eyebrow="Espace membre"
+      eyebrow="Espace client"
       title={`Bonjour ${user.firstName}`}
-      subtitle="Votre abonnement, vos factures et vos informations, en un seul endroit."
+      subtitle="Votre formule, votre licence, vos factures et vos informations, en un seul endroit."
       items={[
         { href: "/compte", label: "Tableau de bord", icon: "dashboard", exact: true },
         { href: "/compte/abonnement", label: "Abonnement", icon: "subscription" },

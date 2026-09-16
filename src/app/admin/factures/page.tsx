@@ -12,13 +12,13 @@ export default async function AdminFacturesPage() {
   const total = rows.filter((r) => r.status === "paid").reduce((acc, r) => acc + r.amountCents, 0);
 
   return (
-    <Panel title={`Factures (${rows.length})`} className="!p-0" action={<span className="text-sm text-ink-500">Total encaissé : <strong className="text-ink-900">{formatCHF(total)}</strong></span>}>
+    <Panel title={`Factures (${rows.length})`} flush action={<span className="text-sm text-ink-500">Total encaissé : <strong className="text-ink-900">{formatCHF(total)}</strong></span>}>
       <div className="overflow-x-auto">
         <table className="table">
           <thead>
             <tr>
               <th>Numéro</th>
-              <th>Membre</th>
+              <th>Client</th>
               <th>Date</th>
               <th>Description</th>
               <th>Montant</th>

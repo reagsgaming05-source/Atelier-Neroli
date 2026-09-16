@@ -3,15 +3,15 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 const base =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-forest-500/20 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/25 disabled:cursor-not-allowed disabled:opacity-60";
 
 const variants = {
-  primary: "bg-forest-800 text-cream-50 hover:bg-forest-700",
-  secondary: "border border-ink-900/15 bg-transparent text-ink-900 hover:border-ink-900/40 hover:bg-white",
-  light: "bg-cream-50 text-forest-900 hover:bg-white",
-  outlineLight: "border border-cream-50/40 text-cream-50 hover:bg-cream-50/10",
-  ghost: "text-forest-700 hover:bg-forest-50",
-  danger: "border border-danger/30 text-danger hover:bg-danger/5",
+  primary: "bg-brand-700 text-white hover:bg-brand-800",
+  secondary: "border border-ink-900/15 bg-white text-ink-900 hover:border-ink-900/40",
+  light: "bg-white text-brand-800 hover:bg-brand-50",
+  outlineLight: "border border-white/40 text-white hover:bg-white/10",
+  ghost: "text-brand-700 hover:bg-brand-50",
+  danger: "border border-danger/30 bg-white text-danger hover:bg-danger/5",
 } as const;
 
 const sizes = {

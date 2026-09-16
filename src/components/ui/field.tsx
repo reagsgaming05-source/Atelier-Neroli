@@ -59,7 +59,7 @@ export function CheckboxField({ label, name, error, className, ...props }: Omit<
           id={id}
           name={name}
           type="checkbox"
-          className="mt-0.5 size-4 shrink-0 rounded border-line accent-forest-700"
+          className="mt-0.5 size-4 shrink-0 rounded border-line accent-brand-700"
           {...props}
         />
         <span>{label}</span>
@@ -81,7 +81,7 @@ export function FormError({ message }: { message?: string }) {
 export function FormSuccess({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <div role="status" className="rounded-xl border border-forest-200 bg-forest-50 px-4 py-3 text-sm text-forest-700">
+    <div role="status" className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
       {message}
     </div>
   );

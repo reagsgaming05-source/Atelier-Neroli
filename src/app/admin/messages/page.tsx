@@ -29,7 +29,7 @@ export default async function AdminMessagesPage() {
                 {!m.readAt && <Badge tone="amber">Nouveau</Badge>}
               </div>
               <p className="mt-1 text-sm text-ink-500">
-                {m.name} · <a href={`mailto:${m.email}`} className="hover:text-forest-700">{m.email}</a>
+                {m.name} · <a href={`mailto:${m.email}`} className="hover:text-brand-700">{m.email}</a>
                 {m.phone && <> · {m.phone}</>}
               </p>
               <p className="mt-0.5 text-xs text-ink-400">{formatDateTime(m.createdAt)}</p>

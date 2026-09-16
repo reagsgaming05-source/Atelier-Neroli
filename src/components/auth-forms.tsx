@@ -23,7 +23,7 @@ export function LoginForm({ next }: { next?: string }) {
       </Button>
       <p className="text-center text-sm text-ink-500">
         Pas encore de compte ?{" "}
-        <Link href={next ? `/inscription?next=${encodeURIComponent(next)}` : "/inscription"} className="font-semibold text-forest-700 hover:text-forest-900">
+        <Link href={next ? `/inscription?next=${encodeURIComponent(next)}` : "/inscription"} className="font-semibold text-brand-700 hover:text-brand-900">
           Créer un compte
         </Link>
       </p>
@@ -52,7 +52,7 @@ export function RegisterForm({ next }: { next?: string }) {
       </Button>
       <p className="text-center text-sm text-ink-500">
         Déjà membre ?{" "}
-        <Link href={next ? `/connexion?next=${encodeURIComponent(next)}` : "/connexion"} className="font-semibold text-forest-700 hover:text-forest-900">
+        <Link href={next ? `/connexion?next=${encodeURIComponent(next)}` : "/connexion"} className="font-semibold text-brand-700 hover:text-brand-900">
           Se connecter
         </Link>
       </p>

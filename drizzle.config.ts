@@ -5,6 +5,6 @@ export default defineConfig({
   schema: "./src/lib/db/schema.ts",
   out: "./drizzle",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "file:./data/atelier-neroli.db",
+    url: process.env.DATABASE_URL ?? "file:./data/blonay-pdf.db",
   },
 });

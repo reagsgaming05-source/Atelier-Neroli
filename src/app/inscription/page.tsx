@@ -14,7 +14,7 @@ export default async function InscriptionPage({ searchParams }: { searchParams: 
   if (user) redirect(next ?? "/compte");
 
   return (
-    <AuthShell title="Créer un compte." text="Une minute suffit. Vous pourrez ensuite choisir votre formule et gérer votre abonnement en ligne.">
+    <AuthShell title="Créer un compte." text="Une minute suffit. Vous pourrez ensuite choisir votre formule et ouvrir vos PDF immédiatement.">
       <RegisterForm next={next} />
     </AuthShell>
   );

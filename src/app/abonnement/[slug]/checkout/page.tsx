@@ -33,11 +33,11 @@ export default async function CheckoutPage({
   const otherInterval: BillingInterval = interval === "month" ? "year" : "month";
 
   return (
-    <section className="bg-cream-100/60">
+    <section className="bg-canvas-100/60">
       <div className="container-x grid gap-10 py-12 lg:grid-cols-[1fr_400px] lg:gap-16 lg:py-20">
         <div>
           <p className="eyebrow">Souscription</p>
-          <h1 className="mt-3 font-display text-4xl font-medium text-ink-900 sm:text-5xl">Finalisez votre abonnement.</h1>
+          <h1 className="mt-3 font-display text-[2.25rem] font-semibold text-ink-900 sm:text-[2.75rem]">Finalisez votre abonnement.</h1>
           <p className="mt-3 text-[15px] text-ink-500">
             Connecté·e en tant que <strong className="text-ink-900">{fullName(user)}</strong> ({user.email}).
           </p>
@@ -51,16 +51,16 @@ export default async function CheckoutPage({
             <p className="eyebrow">Votre formule</p>
             <div className="mt-3 flex items-start justify-between gap-4">
               <div>
-                <h2 className="font-display text-3xl font-medium text-ink-900">{plan.name}</h2>
+                <h2 className="font-display text-3xl font-semibold text-ink-900">{plan.name}</h2>
                 <p className="mt-1 text-sm text-ink-500">{plan.tagline}</p>
               </div>
-              <span className="rounded-full bg-cream-100 px-3 py-1 text-xs font-semibold capitalize text-ink-700">{intervalLabel(interval)}</span>
+              <span className="rounded-full bg-canvas-100 px-3 py-1 text-xs font-semibold capitalize text-ink-700">{intervalLabel(interval)}</span>
             </div>
 
             <ul className="mt-6 space-y-2.5 border-t border-line pt-6">
               {plan.features.map((f) => (
                 <li key={f} className="flex items-start gap-2.5 text-sm text-ink-700">
-                  <Check className="mt-0.5 size-4 shrink-0 text-forest-600" aria-hidden />
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
                   {f}
                 </li>
               ))}
@@ -72,7 +72,7 @@ export default async function CheckoutPage({
                 <dd>{formatCHF(amount)}</dd>
               </div>
               {interval === "year" && (
-                <div className="flex justify-between text-forest-700">
+                <div className="flex justify-between text-brand-700">
                   <dt>Économie vs mensuel</dt>
                   <dd>− {formatCHF(yearlySavings(plan))}</dd>
                 </div>
@@ -86,9 +86,9 @@ export default async function CheckoutPage({
             </dl>
 
             <p className="mt-5 text-xs leading-relaxed text-ink-400">
-              Renouvellement automatique le {formatDate(renewal)}. {site.vatNote} Résiliable à tout moment depuis votre espace.
+              Renouvellement automatique le {formatDate(renewal)}. {site.vatNote} Résiliable à tout moment depuis votre espace client.
             </p>
-            <Link href={`/abonnement/${plan.slug}/checkout?interval=${otherInterval}`} className="mt-4 inline-block text-sm font-semibold text-forest-700 hover:text-forest-900">
+            <Link href={`/abonnement/${plan.slug}/checkout?interval=${otherInterval}`} className="mt-4 inline-block text-sm font-semibold text-brand-700 hover:text-brand-900">
               Passer en {intervalLabel(otherInterval)} ({formatCHF(planPrice(plan, otherInterval))} {intervalSuffix(otherInterval)})
             </Link>
           </div>

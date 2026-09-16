@@ -4,7 +4,7 @@ import { createClient, type Client } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-export const DATABASE_URL = process.env.DATABASE_URL ?? "file:./data/atelier-neroli.db";
+export const DATABASE_URL = process.env.DATABASE_URL ?? "file:./data/blonay-pdf.db";
 
 // S'assure que le dossier de la base existe (file:./data/xxx.db).
 if (DATABASE_URL.startsWith("file:")) {

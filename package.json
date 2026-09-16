@@ -1,8 +1,8 @@
 {
-  "name": "atelier-neroli",
+  "name": "blonay-pdf",
   "version": "0.1.0",
   "private": true,
-  "description": "Site vitrine et espace membres d'Atelier Néroli (Blonay) — abonnements, espace client, administration.",
+  "description": "Site et espace client de Blonay PDF — abonnements, licences, facturation, administration.",
   "scripts": {
     "predev": "tsx scripts/ensure-db.ts",
     "dev": "next dev",

@@ -6,7 +6,7 @@ import type { ActionState } from "@/lib/actions/types";
 import { Field, FormError, FormSuccess, SelectField, TextareaField } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 
-const subjects = ["Réserver un soin", "Question sur les abonnements", "Offrir une carte cadeau", "Ateliers senteurs", "Autre demande"];
+import { contactSubjects as subjects } from "@/content/site";
 
 export function ContactForm({ defaultSubject, defaultMessage }: { defaultSubject?: string; defaultMessage?: string }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(contactAction, {});
@@ -17,7 +17,7 @@ export function ContactForm({ defaultSubject, defaultMessage }: { defaultSubject
     return (
       <div className="card p-8">
         <FormSuccess message={state.success} />
-        <p className="mt-4 text-sm text-ink-500">Pour une réservation urgente, appelez-nous directement pendant les heures d'ouverture.</p>
+        <p className="mt-4 text-sm text-ink-500">Pour une question urgente sur votre abonnement, écrivez directement au support.</p>
       </div>
     );
   }

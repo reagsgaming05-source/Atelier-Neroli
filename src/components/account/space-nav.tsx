@@ -34,13 +34,13 @@ export function SpaceNav({ items }: { items: SpaceNavItem[] }) {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
-                  active ? "bg-forest-800 text-cream-50" : "text-ink-700 hover:bg-cream-100",
+                  active ? "bg-brand-800 text-canvas-50" : "text-ink-700 hover:bg-canvas-100",
                 )}
               >
                 <Icon className="size-4 shrink-0" aria-hidden />
                 <span className="whitespace-nowrap">{item.label}</span>
                 {item.badge ? (
-                  <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[0.65rem] font-bold", active ? "bg-cream-50/20 text-cream-50" : "bg-blossom-100 text-blossom-600")}>
+                  <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[0.65rem] font-bold", active ? "bg-canvas-50/20 text-canvas-50" : "bg-accent-100 text-accent-600")}>
                     {item.badge}
                   </span>
                 ) : null}
@@ -50,7 +50,7 @@ export function SpaceNav({ items }: { items: SpaceNavItem[] }) {
         })}
       </ul>
       <form action={logoutAction} className="mt-2 border-t border-line pt-2">
-        <button type="submit" className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-ink-500 transition hover:bg-cream-100 hover:text-ink-900">
+        <button type="submit" className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-ink-500 transition hover:bg-canvas-100 hover:text-ink-900">
           <LogOut className="size-4" aria-hidden />
           Se déconnecter
         </button>

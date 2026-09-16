@@ -18,16 +18,16 @@ export default async function ConfirmationPage({ searchParams }: { searchParams:
   return (
     <section className="container-x flex justify-center py-16 lg:py-24">
       <div className="card w-full max-w-xl p-10 text-center sm:p-14">
-        <span className="mx-auto inline-flex size-16 items-center justify-center rounded-full bg-forest-50 text-forest-700">
+        <span className="mx-auto inline-flex size-16 items-center justify-center rounded-full bg-brand-50 text-brand-700">
           <CircleCheck className="size-8" aria-hidden />
         </span>
         <p className="eyebrow mt-8">Abonnement confirmé</p>
-        <h1 className="mt-3 font-display text-4xl font-medium text-ink-900 sm:text-5xl">Bienvenue à l'atelier, {user.firstName}.</h1>
+        <h1 className="mt-3 font-display text-[2.25rem] font-semibold text-ink-900 sm:text-[2.75rem]">Bienvenue, {user.firstName}.</h1>
         <p className="mt-4 text-[15px] leading-relaxed text-ink-500">
-          Votre formule {invoice.subscription?.plan?.name ?? ""} est active. Vous pouvez dès maintenant réserver votre premier soin en mentionnant votre abonnement.
+          Votre formule {invoice.subscription?.plan?.name ?? ""} est active. Votre licence et les liens de téléchargement vous attendent dans votre espace client.
         </p>
 
-        <dl className="mt-8 grid gap-4 rounded-2xl bg-cream-100 p-6 text-left text-sm sm:grid-cols-3">
+        <dl className="mt-8 grid gap-4 rounded-2xl bg-canvas-100 p-6 text-left text-sm sm:grid-cols-3">
           <div>
             <dt className="text-ink-500">Facture</dt>
             <dd className="mt-0.5 font-semibold text-ink-900">{invoice.number}</dd>

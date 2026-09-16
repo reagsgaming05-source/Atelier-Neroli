@@ -1,6 +1,6 @@
 import "./env";
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, notInArray } from "drizzle-orm";
 import { db } from "../src/lib/db";
 import { invoices, plans, subscriptions, users } from "../src/lib/db/schema";
 import { hashPassword } from "../src/lib/password";
@@ -13,15 +13,18 @@ export async function runSeed() {
   for (const plan of planCatalog) {
     const existing = await db.query.plans.findFirst({ where: eq(plans.slug, plan.slug) });
     if (existing) {
-      await db.update(plans).set({ ...plan }).where(eq(plans.id, existing.id));
+      await db.update(plans).set({ ...plan, active: true }).where(eq(plans.id, existing.id));
     } else {
       await db.insert(plans).values({ id: randomUUID(), ...plan, active: true });
     }
   }
+  // Les formules retirées du catalogue restent en base (historique des factures) mais ne sont plus proposées.
+  const slugs = planCatalog.map((p) => p.slug);
+  await db.update(plans).set({ active: false }).where(notInArray(plans.slug, slugs));
 
   // 2. Compte administrateur
-  const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@atelier-neroli.ch").toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD ?? "Neroli-Admin-2026!";
+  const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@blonaypdf.ch").toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "BlonayPDF-Admin-2026!";
   const admin = await db.query.users.findFirst({ where: eq(users.email, adminEmail) });
   if (!admin) {
     await db.insert(users).values({
@@ -29,7 +32,7 @@ export async function runSeed() {
       email: adminEmail,
       passwordHash: await hashPassword(adminPassword),
       firstName: "Administration",
-      lastName: "Atelier Néroli",
+      lastName: "Blonay PDF",
       role: "admin",
     });
     console.log(`✔ Compte administrateur créé : ${adminEmail}`);
@@ -38,8 +41,8 @@ export async function runSeed() {
   // 3. Membre de démonstration avec un abonnement et un historique de factures
   const demo = await db.query.users.findFirst({ where: eq(users.email, DEMO_MEMBER.email) });
   if (!demo) {
-    const signature = await db.query.plans.findFirst({ where: eq(plans.slug, "signature") });
-    if (!signature) throw new Error("Formule 'signature' introuvable.");
+    const pro = await db.query.plans.findFirst({ where: eq(plans.slug, "pro") });
+    if (!pro) throw new Error("Formule 'pro' introuvable.");
 
     const userId = randomUUID();
     await db.insert(users).values({
@@ -61,7 +64,7 @@ export async function runSeed() {
     await db.insert(subscriptions).values({
       id: subscriptionId,
       userId,
-      planId: signature.id,
+      planId: pro.id,
       interval: "month",
       status: "active",
       currentPeriodStart: periodStart,
@@ -83,8 +86,8 @@ export async function runSeed() {
         number: `AN-${year}-${String(n++).padStart(4, "0")}`,
         userId,
         subscriptionId,
-        description: `${offset === 3 ? "Abonnement" : "Renouvellement"} Signature — mensuel`,
-        amountCents: signature.priceMonthlyCents,
+        description: `${offset === 3 ? "Abonnement" : "Renouvellement"} Pro — mensuel`,
+        amountCents: pro.priceMonthlyCents,
         status: "paid",
         periodStart: start,
         periodEnd: end,

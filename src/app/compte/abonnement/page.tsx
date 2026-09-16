@@ -30,9 +30,9 @@ export default async function CompteAbonnementPage({ searchParams }: { searchPar
         {notice === "already" && <Notice tone="info">Vous avez déjà un abonnement actif.</Notice>}
         <Panel>
           <SubscriptionBadge subscription={null} />
-          <h2 className="mt-4 font-display text-3xl font-medium text-ink-900">Aucun abonnement actif.</h2>
+          <h2 className="mt-4 font-display text-3xl font-semibold text-ink-900">Aucun abonnement actif.</h2>
           <p className="mt-2 max-w-lg text-[15px] text-ink-500">Choisissez une formule mensuelle ou annuelle ; vous pourrez la modifier ou la résilier à tout moment depuis cette page.</p>
-          <ButtonLink href="/abonnements" className="mt-6">
+          <ButtonLink href="/tarifs" className="mt-6">
             Voir les formules
             <ArrowRight className="size-4" aria-hidden />
           </ButtonLink>
@@ -68,9 +68,9 @@ export default async function CompteAbonnementPage({ searchParams }: { searchPar
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div>
             <SubscriptionBadge subscription={subscription} />
-            <h2 className="mt-4 font-display text-4xl font-medium text-ink-900">Formule {subscription.plan.name}</h2>
+            <h2 className="mt-4 font-display text-4xl font-semibold text-ink-900">Formule {subscription.plan.name}</h2>
             <p className="mt-2 flex items-baseline gap-2">
-              <span className="font-display text-2xl font-medium text-ink-900">{formatCHF(planPrice(subscription.plan, subscription.interval))}</span>
+              <span className="font-display text-2xl font-semibold text-ink-900">{formatCHF(planPrice(subscription.plan, subscription.interval))}</span>
               <span className="text-sm text-ink-500">{intervalSuffix(subscription.interval)}</span>
             </p>
             <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
@@ -113,13 +113,13 @@ export default async function CompteAbonnementPage({ searchParams }: { searchPar
                 </SubmitButton>
               </ConfirmForm>
             )}
-            <p className="text-xs text-ink-400">Sans frais. L'accès aux avantages est conservé jusqu'à la fin de la période réglée.</p>
+            <p className="text-xs text-ink-400">Sans frais. La licence reste active jusqu'à la fin de la période réglée.</p>
           </div>
         </div>
 
         {subscription.pendingPlan && subscription.pendingInterval && (
-          <div className="mt-8 flex flex-col gap-4 rounded-2xl bg-blossom-100 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-blossom-600">
+          <div className="mt-8 flex flex-col gap-4 rounded-2xl bg-accent-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-accent-600">
               Changement programmé : formule <strong>{subscription.pendingPlan.name}</strong> ({intervalLabel(subscription.pendingInterval)}) à partir du {formatDate(subscription.currentPeriodEnd)}.
             </p>
             <form action={cancelPendingChangeAction}>
@@ -138,12 +138,12 @@ export default async function CompteAbonnementPage({ searchParams }: { searchPar
         <div className="grid gap-4 md:grid-cols-3">
           {plans.map((plan) => (
             <div key={plan.id} className="flex flex-col rounded-2xl border border-line p-5">
-              <h3 className="font-display text-2xl font-medium text-ink-900">{plan.name}</h3>
+              <h3 className="font-display text-2xl font-semibold text-ink-900">{plan.name}</h3>
               <p className="mt-1 text-xs text-ink-500">{plan.tagline}</p>
               <ul className="mt-4 flex-1 space-y-2">
                 {plan.features.slice(0, 3).map((f) => (
                   <li key={f} className="flex items-start gap-2 text-xs text-ink-700">
-                    <Check className="mt-0.5 size-3 shrink-0 text-forest-600" aria-hidden />
+                    <Check className="mt-0.5 size-3 shrink-0 text-brand-600" aria-hidden />
                     {f}
                   </li>
                 ))}
@@ -160,7 +160,7 @@ export default async function CompteAbonnementPage({ searchParams }: { searchPar
                       <button
                         type="submit"
                         disabled={isCurrent || isPending}
-                        className="flex w-full items-center justify-between rounded-xl border border-line px-4 py-2.5 text-left text-sm transition hover:border-forest-500 hover:bg-forest-50 disabled:cursor-default disabled:border-forest-200 disabled:bg-forest-50"
+                        className="flex w-full items-center justify-between rounded-xl border border-line px-4 py-2.5 text-left text-sm transition hover:border-brand-500 hover:bg-brand-50 disabled:cursor-default disabled:border-brand-200 disabled:bg-brand-50"
                       >
                         <span>
                           <span className="font-semibold capitalize text-ink-900">{intervalLabel(interval)}</span>

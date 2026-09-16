@@ -8,30 +8,36 @@ export default function ConfidentialitePage() {
   return (
     <LegalPage eyebrow="Informations" title="Politique de confidentialité" updated="septembre 2026">
       <p>
-        {site.name} traite vos données personnelles conformément à la loi fédérale sur la protection des données (LPD) et, le cas échéant, au règlement général sur la protection des données (RGPD). Cette page décrit quelles données sont collectées, pourquoi, et quels sont vos droits.
+        {site.legalName} traite vos données personnelles conformément à la loi fédérale sur la protection des données (LPD) et, le cas échéant, au règlement général sur la protection des données (RGPD). Cette page décrit quelles données sont collectées, pourquoi, et quels sont vos droits.
       </p>
 
       <h2>Données collectées</h2>
       <ul>
-        <li>Données de compte : prénom, nom, adresse e-mail, téléphone, mot de passe (stocké sous forme chiffrée).</li>
+        <li>Données de compte : prénom, nom, adresse e-mail, téléphone, mot de passe (stocké sous forme hachée).</li>
         <li>Données d'abonnement et de facturation : formule, périodes, factures, marque et quatre derniers chiffres de la carte. Le numéro complet de carte n'est jamais conservé.</li>
+        <li>Documents traités : les fichiers que vous envoyez au service en ligne, chiffrés et supprimés après 24 heures sauf enregistrement volontaire. Leur contenu n'est jamais analysé à d'autres fins que le traitement demandé.</li>
+        <li>Journal d'utilisation : horodatage des opérations (par exemple « fusion », « signature ») nécessaire au journal d'audit et à la facturation, sans le contenu des documents.</li>
         <li>Messages envoyés via le formulaire de contact.</li>
         <li>Données techniques strictement nécessaires au fonctionnement du site (cookie de session).</li>
       </ul>
 
       <h2>Finalités</h2>
       <ul>
+        <li>Fournir le service : traitement des documents, licence, synchronisation entre appareils.</li>
         <li>Gérer votre compte, votre abonnement et vos factures.</li>
-        <li>Répondre à vos demandes et organiser vos rendez-vous.</li>
+        <li>Répondre à vos demandes de support.</li>
         <li>Respecter nos obligations légales, notamment comptables.</li>
       </ul>
-      <p>Nous n'utilisons aucun outil de suivi publicitaire et ne transmettons pas vos données à des tiers à des fins commerciales.</p>
+      <p>Nous n'utilisons aucun outil de suivi publicitaire, ne vendons pas de données et n'entraînons aucun modèle sur vos documents.</p>
+
+      <h2>Hébergement et sous-traitants</h2>
+      <p>Les données sont hébergées en Suisse. Les sous-traitants (hébergement, paiement par carte) sont liés par contrat et n'accèdent qu'aux données nécessaires à leur prestation. La liste à jour est disponible sur demande.</p>
 
       <h2>Durée de conservation</h2>
-      <p>Les données de compte sont conservées tant que le compte est actif. Les factures sont conservées dix ans conformément aux obligations comptables suisses. Les messages de contact sont supprimés au plus tard deux ans après leur réception.</p>
+      <p>Les données de compte sont conservées tant que le compte est actif, puis 30 jours. Les factures sont conservées dix ans conformément aux obligations comptables suisses. Les fichiers non enregistrés sont supprimés après 24 heures ; les fichiers enregistrés le sont 30 jours après la fin de l'abonnement.</p>
 
       <h2>Cookies</h2>
-      <p>Le site utilise un unique cookie technique de session, indispensable à la connexion à votre espace membre. Aucun cookie publicitaire ou de mesure d'audience n'est déposé.</p>
+      <p>Le site utilise un unique cookie technique de session, indispensable à la connexion à votre espace client. Aucun cookie publicitaire ou de mesure d'audience n'est déposé.</p>
 
       <h2>Vos droits</h2>
       <p>
@@ -41,7 +47,7 @@ export default function ConfidentialitePage() {
 
       <h2>Contact</h2>
       <p>
-        {site.name}, {site.address.street}, {site.address.zip} {site.address.city} · {site.email}
+        {site.legalName}, {site.address.street}, {site.address.zip} {site.address.city} · {site.email}
       </p>
     </LegalPage>
   );

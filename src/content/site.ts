@@ -1,15 +1,15 @@
 /**
- * Contenu éditorial du site. Tout ce qui est propre à l'entreprise se règle ici.
- * ⚠️ Les coordonnées ci-dessous sont des valeurs provisoires à remplacer.
+ * Contenu éditorial du site Blonay PDF. Tout ce qui est propre au produit et à l'entreprise se règle ici.
+ * ⚠️ Coordonnées, témoignages et liens de téléchargement sont des valeurs provisoires à remplacer.
  */
 
 export const site = {
-  name: "Atelier Néroli",
-  shortName: "Néroli",
-  tagline: "Soins & bien-être à Blonay",
+  name: "Blonay PDF",
+  legalName: "Blonay PDF Sàrl",
+  tagline: "L'outil PDF complet, conçu en Suisse",
   description:
-    "Atelier Néroli est une maison de soins et de bien-être à Blonay, sur la Riviera vaudoise. Soins du visage, massages aux huiles essentielles et ateliers de senteurs, sur rendez-vous ou en abonnement.",
-  founded: 2018,
+    "Blonay PDF réunit tout ce qu'il faut pour travailler vos documents : éditer, fusionner, convertir, signer, protéger et annoter vos PDF, depuis le navigateur ou l'application de bureau. Une alternative complète à Acrobat, avec des données hébergées en Suisse.",
+  founded: 2021,
   address: {
     street: "Route de Vevey 12",
     zip: "1807",
@@ -19,201 +19,303 @@ export const site = {
   },
   phone: "+41 21 943 00 00",
   phoneHref: "tel:+41219430000",
-  email: "bonjour@atelier-neroli.ch",
+  email: "bonjour@blonaypdf.ch",
+  supportEmail: "support@blonaypdf.ch",
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=Route+de+Vevey+12+1807+Blonay",
-  instagram: "https://www.instagram.com/",
-  hours: [
-    { days: "Lundi", value: "Fermé" },
-    { days: "Mardi – Vendredi", value: "09h00 – 19h00" },
-    { days: "Samedi", value: "09h00 – 16h00" },
-    { days: "Dimanche", value: "Fermé" },
+  linkedin: "https://www.linkedin.com/",
+  supportHours: [
+    { days: "Lundi – Vendredi", value: "08h30 – 18h00" },
+    { days: "Samedi – Dimanche", value: "E-mail uniquement" },
   ],
   vatNote: "Prix en CHF, TVA 8.1 % incluse.",
+  platforms: ["Web", "Windows", "macOS"],
+  /** Liens vers l'application : à renseigner lorsque les builds sont disponibles. */
+  downloads: {
+    web: "#",
+    windows: "#",
+    mac: "#",
+  },
 };
 
 export const navigation = [
-  { href: "/soins", label: "Soins" },
-  { href: "/abonnements", label: "Abonnements" },
-  { href: "/a-propos", label: "L'atelier" },
+  { href: "/fonctionnalites", label: "Fonctionnalités" },
+  { href: "/tarifs", label: "Tarifs" },
+  { href: "/securite", label: "Sécurité" },
   { href: "/contact", label: "Contact" },
 ];
 
-export type Service = {
+export const featureCategories = ["Créer & éditer", "Organiser & convertir", "Signer & protéger", "Collaborer"] as const;
+export type FeatureCategory = (typeof featureCategories)[number];
+
+export type Feature = {
   slug: string;
   name: string;
-  category: "Visage" | "Corps" | "Rituels" | "Ateliers";
-  duration: string;
-  priceCents: number;
+  category: FeatureCategory;
   summary: string;
   description: string;
-  benefits: string[];
-  icon: "sparkles" | "hand" | "flower" | "flask" | "leaf" | "sun";
+  details: string[];
+  icon:
+    | "edit"
+    | "organize"
+    | "merge"
+    | "convert"
+    | "compress"
+    | "ocr"
+    | "sign"
+    | "protect"
+    | "redact"
+    | "forms"
+    | "annotate"
+    | "compare";
   featured?: boolean;
+  /** Réservé aux formules Pro et Équipe. */
+  pro?: boolean;
 };
 
-export const services: Service[] = [
+export const features: Feature[] = [
   {
-    slug: "soin-visage-signature",
-    name: "Soin visage signature Néroli",
-    category: "Visage",
-    duration: "60 min",
-    priceCents: 16000,
-    summary: "Nettoyage, gommage doux, massage lymphatique et masque à la fleur d'oranger.",
+    slug: "editer",
+    name: "Éditer le texte et les images",
+    category: "Créer & éditer",
+    summary: "Corrigez un paragraphe, remplacez un logo, ajoutez une page : directement dans le PDF, sans repasser par le fichier d'origine.",
     description:
-      "Notre soin emblématique. Un protocole complet qui commence par un diagnostic de peau, se poursuit par un nettoyage en profondeur et un gommage enzymatique, puis un long massage drainant du visage, du cou et du décolleté. Le masque au néroli et à l'hydrolat de rose vient apaiser et illuminer le teint.",
-    benefits: ["Teint unifié et lumineux", "Traits détendus", "Hydratation profonde"],
-    icon: "sparkles",
+      "L'éditeur reconnaît les blocs de texte, les polices et les images du document. Vous modifiez le contenu comme dans un traitement de texte, avec la mise en page conservée. Les polices manquantes sont remplacées automatiquement par l'équivalent le plus proche.",
+    details: ["Texte, images, liens et en-têtes", "Polices et interlignes conservés", "Annuler / rétablir illimité"],
+    icon: "edit",
     featured: true,
   },
   {
-    slug: "massage-aromatique",
-    name: "Massage aromatique sur mesure",
-    category: "Corps",
-    duration: "60 · 90 min",
-    priceCents: 15000,
-    summary: "Une synergie d'huiles essentielles composée pour vous, un massage lent et enveloppant.",
+    slug: "formulaires",
+    name: "Créer et remplir des formulaires",
+    category: "Créer & éditer",
+    summary: "Transformez n'importe quel document en formulaire à remplir, ou complétez ceux que vous recevez.",
     description:
-      "Avant chaque séance, nous composons ensemble une synergie d'huiles essentielles adaptée à votre état du moment : besoin de calme, de tonus ou de récupération. Le massage, à l'huile végétale suisse de première pression, alterne manœuvres profondes et effleurages pour relâcher les tensions durablement.",
-    benefits: ["Relâchement musculaire", "Sommeil apaisé", "Synergie personnalisée à emporter"],
-    icon: "hand",
+      "Ajoutez des champs texte, cases à cocher, listes et signatures en quelques clics. La détection automatique repère les zones à remplir dans les formulaires existants, y compris scannés.",
+    details: ["Détection automatique des champs", "Export des réponses en CSV", "Compatible avec les formulaires Acrobat"],
+    icon: "forms",
+  },
+  {
+    slug: "ocr",
+    name: "Reconnaissance de texte (OCR)",
+    category: "Créer & éditer",
+    summary: "Rendez vos scans consultables et modifiables, en français, allemand, italien et anglais.",
+    description:
+      "L'OCR convertit les images de texte en texte réel : vous pouvez ensuite rechercher, copier, éditer ou caviarder. Les documents multilingues sont pris en charge dans un seul passage, avec conservation de la mise en page.",
+    details: ["Plus de 30 langues", "Traitement par lots", "Sortie PDF/A pour l'archivage"],
+    icon: "ocr",
+    pro: true,
+  },
+  {
+    slug: "organiser",
+    name: "Organiser les pages",
+    category: "Organiser & convertir",
+    summary: "Réordonnez, pivotez, supprimez ou insérez des pages par glisser-déposer.",
+    description:
+      "La vue en vignettes permet de restructurer un document de cent pages en quelques secondes. Vous pouvez extraire une plage de pages vers un nouveau fichier ou insérer des pages venant d'un autre PDF, d'une image ou d'un scan.",
+    details: ["Glisser-déposer des vignettes", "Extraction de plages", "Numérotation et filigranes"],
+    icon: "organize",
+  },
+  {
+    slug: "fusionner",
+    name: "Fusionner et diviser",
+    category: "Organiser & convertir",
+    summary: "Combinez plusieurs fichiers en un seul PDF, ou découpez un document volumineux.",
+    description:
+      "Fusionnez des PDF, des images et des documents Office dans l'ordre souhaité, avec une table des matières générée automatiquement. La division fonctionne par nombre de pages, par signets ou par taille de fichier.",
+    details: ["Fusion de formats mixtes", "Division par signets ou par taille", "Signets et table des matières"],
+    icon: "merge",
     featured: true,
   },
   {
-    slug: "rituel-fleur-d-oranger",
-    name: "Rituel Fleur d'oranger",
-    category: "Rituels",
-    duration: "120 min",
-    priceCents: 28000,
-    summary: "Gommage corps, enveloppement, massage et soin visage express : une parenthèse complète.",
+    slug: "convertir",
+    name: "Convertir dans les deux sens",
+    category: "Organiser & convertir",
+    summary: "Word, Excel, PowerPoint, images, HTML : vers PDF et depuis PDF, avec la mise en page respectée.",
     description:
-      "Deux heures hors du temps. Le rituel s'ouvre par un gommage corps au sucre et à l'huile de néroli, se poursuit par un enveloppement chaud puis un massage intégral, et se termine par un soin visage express. Une tisane maison vous attend à la fin du rituel.",
-    benefits: ["Peau douce et nourrie", "Esprit apaisé", "Effet détox"],
-    icon: "flower",
+      "La conversion vers Word ou Excel reconstruit les paragraphes, tableaux et styles pour un fichier réellement éditable. Vers PDF, la sortie respecte les normes PDF/A et PDF/X pour l'archivage et l'impression.",
+    details: ["Word, Excel, PowerPoint, JPG, PNG, HTML", "PDF/A et PDF/X", "Conversion par lots"],
+    icon: "convert",
     featured: true,
   },
   {
-    slug: "atelier-senteurs",
-    name: "Atelier création de senteur",
-    category: "Ateliers",
-    duration: "90 min",
-    priceCents: 12000,
-    summary: "Composez votre eau de senteur ou votre huile de massage, guidé·e par notre aromathérapeute.",
+    slug: "compresser",
+    name: "Compresser sans perte visible",
+    category: "Organiser & convertir",
+    summary: "Réduisez le poids de vos fichiers jusqu'à 90 % pour les envoyer par e-mail ou les archiver.",
     description:
-      "En petit groupe (4 personnes maximum), découvrez les familles olfactives, apprenez à équilibrer notes de tête, de cœur et de fond, et repartez avec votre création (30 ml). Un moment convivial à partager, idéal pour un cadeau.",
-    benefits: ["Création personnelle offerte", "Petit groupe", "Idéal en duo"],
-    icon: "flask",
+      "Trois niveaux de compression, avec un aperçu avant/après pour vérifier la qualité des images. Les polices et le texte restent vectoriels, seules les images sont recalculées.",
+    details: ["Aperçu avant / après", "Choix de la résolution cible", "Traitement par lots"],
+    icon: "compress",
   },
   {
-    slug: "soin-express",
-    name: "Éclat express",
-    category: "Visage",
-    duration: "30 min",
-    priceCents: 8500,
-    summary: "Nettoyage, masque coup d'éclat et modelage rapide : l'idéal entre deux rendez-vous.",
+    slug: "signer",
+    name: "Signer électroniquement",
+    category: "Signer & protéger",
+    summary: "Signez, faites signer et suivez l'avancement, avec horodatage et journal d'audit.",
     description:
-      "Un soin court et efficace pour retrouver un teint frais en trente minutes. Nettoyage, masque adapté à votre peau et modelage stimulant. Parfait avant un événement ou pour entretenir les résultats de votre soin signature.",
-    benefits: ["Résultat immédiat", "Sans temps de récupération", "Compatible pause de midi"],
-    icon: "sun",
+      "Envoyez un document à un ou plusieurs signataires, définissez l'ordre de signature et recevez une notification à chaque étape. Chaque signature est horodatée et le certificat d'audit est joint au document final.",
+    details: ["Signatures simples et avancées", "Ordre de signature et rappels", "Certificat d'audit joint"],
+    icon: "sign",
+    featured: true,
+    pro: true,
   },
   {
-    slug: "consultation-aromatherapie",
-    name: "Consultation aromathérapie",
-    category: "Rituels",
-    duration: "45 min",
-    priceCents: 9000,
-    summary: "Un entretien personnalisé pour intégrer les huiles essentielles à votre quotidien, en toute sécurité.",
+    slug: "proteger",
+    name: "Protéger et chiffrer",
+    category: "Signer & protéger",
+    summary: "Mot de passe, chiffrement AES-256 et permissions fines : impression, copie, modification.",
     description:
-      "Notre aromathérapeute diplômée vous reçoit pour un bilan de vos besoins (sommeil, stress, peau, saisonnalité) et vous remet un protocole écrit avec des recommandations d'usage sûres et précises.",
-    benefits: ["Protocole écrit", "Conseils personnalisés", "Suivi possible"],
-    icon: "leaf",
+      "Définissez un mot de passe d'ouverture et un mot de passe de permissions distincts. Vous contrôlez ce que le destinataire peut faire : imprimer, copier du texte, remplir des champs ou modifier le document.",
+    details: ["Chiffrement AES-256", "Permissions détaillées", "Suppression des métadonnées"],
+    icon: "protect",
+  },
+  {
+    slug: "caviarder",
+    name: "Caviarder définitivement",
+    category: "Signer & protéger",
+    summary: "Supprimez des informations sensibles de façon irréversible, texte et images compris.",
+    description:
+      "Contrairement à un simple rectangle noir, le caviardage retire réellement le contenu du fichier. Recherchez un terme, un numéro AVS ou un IBAN pour caviarder toutes les occurrences en une fois.",
+    details: ["Recherche et caviardage en masse", "Motifs prédéfinis (AVS, IBAN, e-mails)", "Rapport de vérification"],
+    icon: "redact",
+    pro: true,
+  },
+  {
+    slug: "annoter",
+    name: "Annoter et commenter",
+    category: "Collaborer",
+    summary: "Surlignez, commentez, dessinez et discutez dans le document, à plusieurs.",
+    description:
+      "Les annotations sont compatibles avec les autres lecteurs PDF. Partagez un lien de relecture : vos collègues commentent depuis leur navigateur, sans compte, et vous recevez un résumé des retours.",
+    details: ["Surlignage, notes, formes, tampons", "Lien de relecture sans compte", "Résumé des commentaires"],
+    icon: "annotate",
+  },
+  {
+    slug: "comparer",
+    name: "Comparer deux versions",
+    category: "Collaborer",
+    summary: "Repérez chaque différence entre deux versions d'un contrat ou d'un rapport.",
+    description:
+      "La comparaison met en évidence les textes ajoutés, supprimés et déplacés, ainsi que les changements de mise en page. Un rapport de synthèse liste les différences, page par page.",
+    details: ["Différences de texte et de mise en page", "Rapport exportable", "Navigation d'une différence à l'autre"],
+    icon: "compare",
+    pro: true,
   },
 ];
 
 export const values = [
   {
-    title: "Des formules naturelles",
-    text: "Huiles végétales suisses de première pression, huiles essentielles chémotypées, sans parfum de synthèse ni silicone.",
+    title: "Vos fichiers restent en Suisse",
+    text: "Traitement et stockage sur des serveurs situés en Suisse, chiffrement de bout en bout, suppression automatique des fichiers temporaires après 24 heures.",
   },
   {
-    title: "Le temps juste",
-    text: "Jamais deux rendez-vous à la même heure. Chaque soin commence par un moment d'écoute et se termine sans hâte.",
+    title: "Un seul outil, partout",
+    text: "La même application dans le navigateur, sur Windows et sur macOS. Vos documents et réglages vous suivent, et l'app de bureau fonctionne hors ligne.",
   },
   {
-    title: "Un savoir-faire certifié",
-    text: "Esthéticienne CFC, aromathérapeute diplômée et formation continue chaque année en Suisse et en France.",
+    title: "Un prix clair, sans engagement",
+    text: "Trois formules, mensuelles ou annuelles, résiliables à tout moment. Pas de frais cachés ni d'options facturées à part.",
   },
 ];
 
 export const steps = [
   {
+    title: "Créez votre compte",
+    text: "Une adresse e-mail suffit. Votre espace client centralise abonnement, factures et licence.",
+  },
+  {
     title: "Choisissez votre formule",
-    text: "Trois abonnements, mensuels ou annuels, sans engagement au-delà de la période en cours.",
+    text: "Essentiel, Pro ou Équipe, en mensuel ou en annuel. Vous pouvez changer de formule à tout moment.",
   },
   {
-    title: "Réservez vos soins",
-    text: "Par téléphone ou par e-mail, avec une priorité de réservation réservée aux membres.",
-  },
-  {
-    title: "Profitez chaque mois",
-    text: "Vos soins inclus, vos avantages boutique et vos invitations aux ateliers, gérés depuis votre espace.",
+    title: "Ouvrez vos PDF",
+    text: "Dans le navigateur immédiatement, ou en installant l'application sur Windows et macOS.",
   },
 ];
 
-/** Témoignages fictifs d'exemple, à remplacer par de vrais avis clients. */
+/** Témoignages fictifs d'exemple, à remplacer par de vrais retours clients. */
 export const testimonials = [
   {
-    quote:
-      "Le soin signature est devenu mon rendez-vous mensuel. On sort avec la peau lumineuse et la tête vide, ce qui est rare.",
+    quote: "Nous avons remplacé cinq licences Acrobat par Blonay PDF. La signature électronique et le caviardage nous font gagner des heures chaque semaine.",
     author: "Claire M.",
-    detail: "Membre Signature depuis 2023",
+    detail: "Fiduciaire, Vevey · formule Équipe",
   },
   {
-    quote:
-      "J'ai offert l'atelier senteurs à ma sœur, nous y sommes allées ensemble. Un moment vraiment à part, et un parfum que je porte encore.",
+    quote: "La conversion vers Word est enfin fidèle : les tableaux ressortent propres. Et l'OCR sur nos plans scannés fonctionne du premier coup.",
     author: "Nadia R.",
-    detail: "Atelier création de senteur",
+    detail: "Bureau d'architecture, Montreux · formule Pro",
   },
   {
-    quote:
-      "Un lieu calme, des huiles remarquables et une vraie écoute. L'abonnement annuel s'est imposé de lui-même.",
+    quote: "Un outil simple qui fait tout ce dont j'ai besoin, avec des données qui restent en Suisse. Le rapport qualité-prix est imbattable.",
     author: "Thomas B.",
-    detail: "Membre Prestige",
+    detail: "Avocat indépendant · formule Pro",
   },
 ];
 
 export const faq = [
   {
     q: "L'abonnement est-il avec engagement ?",
-    a: "Non. Vous pouvez résilier à tout moment depuis votre espace membre ; l'abonnement reste actif jusqu'à la fin de la période déjà réglée, puis s'arrête sans frais.",
+    a: "Non. Vous pouvez résilier à tout moment depuis votre espace client ; l'abonnement reste actif jusqu'à la fin de la période déjà réglée, puis s'arrête sans frais.",
   },
   {
-    q: "Les soins non utilisés sont-ils reportés ?",
-    a: "Les soins inclus dans une formule mensuelle sont valables durant le mois en cours. Avec une formule annuelle, ils peuvent être répartis librement sur l'année.",
+    q: "Que deviennent mes fichiers ?",
+    a: "Les fichiers traités en ligne sont chiffrés, hébergés en Suisse et supprimés automatiquement après 24 heures, sauf si vous les enregistrez dans votre espace de stockage. L'application de bureau traite vos documents localement.",
+  },
+  {
+    q: "Puis-je utiliser Blonay PDF sur plusieurs appareils ?",
+    a: "Oui. Une licence Essentiel ou Pro couvre tous vos appareils (navigateur, Windows, macOS). La formule Équipe inclut cinq utilisateurs, extensibles depuis l'administration.",
   },
   {
     q: "Puis-je changer de formule ?",
     a: "Oui. Un passage à une formule supérieure est immédiat, avec un crédit au prorata de la période en cours. Un passage à une formule inférieure prend effet à la prochaine échéance.",
   },
   {
-    q: "Puis-je offrir un abonnement ?",
-    a: "Bien sûr. Contactez-nous et nous préparons une carte cadeau à votre nom, valable sur les abonnements comme sur les soins à l'unité.",
+    q: "Les signatures électroniques sont-elles valables juridiquement ?",
+    a: "Les signatures simples et avancées conviennent à la grande majorité des contrats. Pour les actes exigeant une signature qualifiée au sens de la SCSE, contactez-nous : nous vous orientons vers un prestataire certifié compatible.",
   },
   {
     q: "Comment se passe le paiement ?",
-    a: "Le paiement s'effectue par carte, en ligne, au moment de la souscription puis à chaque renouvellement. Vos factures sont disponibles dans votre espace membre.",
+    a: "Le paiement s'effectue par carte, en ligne, à la souscription puis à chaque renouvellement. Vos factures sont disponibles dans votre espace client, en format imprimable.",
   },
 ];
 
-/** Équipe (noms provisoires à remplacer). */
-export const team = [
+export const securityPoints = [
   {
-    name: "Élodie",
-    role: "Fondatrice · Esthéticienne CFC",
-    bio: "Quinze ans de cabine entre Lausanne et Montreux avant d'ouvrir l'atelier. Elle conçoit chaque protocole et forme l'équipe aux gestes de la maison.",
+    icon: "server",
+    title: "Hébergement en Suisse",
+    text: "Serveurs situés en Suisse, chez un prestataire certifié ISO 27001. Aucune donnée n'est transférée hors du pays.",
   },
   {
-    name: "Sarah",
-    role: "Aromathérapeute diplômée",
-    bio: "Formée en aromathérapie scientifique, elle compose les synergies de l'atelier, anime les ateliers senteurs et assure les consultations individuelles.",
+    icon: "lock",
+    title: "Chiffrement de bout en bout",
+    text: "TLS 1.3 pour les transferts, AES-256 pour le stockage. Les clés sont gérées séparément des données.",
   },
+  {
+    icon: "trash",
+    title: "Suppression automatique",
+    text: "Les fichiers traités en ligne sont supprimés après 24 heures. Vous pouvez aussi les effacer immédiatement.",
+  },
+  {
+    icon: "shield",
+    title: "Conforme LPD et RGPD",
+    text: "Traitement conforme à la loi fédérale sur la protection des données et au RGPD. Contrat de sous-traitance disponible pour les équipes.",
+  },
+  {
+    icon: "key",
+    title: "Accès maîtrisés",
+    text: "Authentification à deux facteurs, connexion unique (SSO) Google et Microsoft pour les équipes, journal d'audit des actions.",
+  },
+  {
+    icon: "monitor",
+    title: "Hors ligne sur le bureau",
+    text: "L'application Windows et macOS traite vos documents localement. Rien ne quitte votre machine sans votre accord.",
+  },
+] as const;
+
+export const contactSubjects = ["Question sur les tarifs", "Demande de démonstration", "Offre pour une équipe", "Support technique", "Autre demande"];
+
+export const stats = [
+  { k: "12", v: "outils PDF" },
+  { k: "3", v: "plateformes" },
+  { k: "0", v: "engagement" },
 ];

@@ -14,11 +14,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <SpaceShell
       eyebrow="Administration"
-      title="Atelier Néroli"
-      subtitle="Membres, abonnements, factures et messages reçus."
+      title="Blonay PDF"
+      subtitle="Clients, abonnements, factures et messages reçus."
       items={[
         { href: "/admin", label: "Vue d'ensemble", icon: "dashboard", exact: true },
-        { href: "/admin/membres", label: "Membres", icon: "members" },
+        { href: "/admin/membres", label: "Clients", icon: "members" },
         { href: "/admin/abonnements", label: "Abonnements", icon: "subscriptions" },
         { href: "/admin/factures", label: "Factures", icon: "invoices" },
         { href: "/admin/messages", label: "Messages", icon: "messages", badge: unread },

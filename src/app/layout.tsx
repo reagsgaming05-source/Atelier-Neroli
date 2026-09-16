@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { cormorant, manrope } from "./fonts";
+import { bricolage, manrope } from "./fonts";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { getCurrentUser } from "@/lib/auth";
@@ -26,7 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const user = await getCurrentUser();
 
   return (
-    <html lang="fr-CH" className={`${cormorant.variable} ${manrope.variable}`}>
+    <html lang="fr-CH" className={`${bricolage.variable} ${manrope.variable}`}>
       <body className="flex min-h-dvh flex-col">
         <SiteHeader user={user ? { firstName: user.firstName, role: user.role } : null} />
         <main className="flex-1">{children}</main>

@@ -25,7 +25,7 @@ export default async function FactureDetailPage({ params }: { params: Promise<{ 
   return (
     <>
       <div className="flex items-center justify-between gap-4 print:hidden">
-        <Link href="/compte/factures" className="inline-flex items-center gap-2 text-sm font-semibold text-forest-700 hover:text-forest-900">
+        <Link href="/compte/factures" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-900">
           <ArrowLeft className="size-4" aria-hidden />
           Toutes les factures
         </Link>
@@ -34,11 +34,11 @@ export default async function FactureDetailPage({ params }: { params: Promise<{ 
 
       <article className="card p-8 sm:p-12 print:border-0 print:shadow-none">
         <header className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-3 text-forest-800">
+          <div className="flex items-center gap-3 text-brand-800">
             <LogoMark className="size-9" />
             <div>
-              <p className="font-display text-2xl leading-none">
-                Atelier <span className="font-semibold">Néroli</span>
+              <p className="font-display text-2xl font-bold leading-none tracking-tight">
+                Blonay <span className="text-brand-600">PDF</span>
               </p>
               <p className="mt-1 text-xs text-ink-500">
                 {site.address.street}, {site.address.zip} {site.address.city} · {site.email}
@@ -47,7 +47,7 @@ export default async function FactureDetailPage({ params }: { params: Promise<{ 
           </div>
           <div className="sm:text-right">
             <p className="eyebrow">Facture</p>
-            <p className="mt-1 font-display text-3xl font-medium text-ink-900">{invoice.number}</p>
+            <p className="mt-1 font-display text-3xl font-semibold text-ink-900">{invoice.number}</p>
             <p className="mt-1 text-sm text-ink-500">Émise le {formatDate(invoice.issuedAt)}</p>
           </div>
         </header>
@@ -61,7 +61,7 @@ export default async function FactureDetailPage({ params }: { params: Promise<{ 
           </div>
           <div className="sm:text-right">
             <p className="eyebrow">Règlement</p>
-            <p className="mt-2 font-semibold text-forest-700">{invoice.status === "paid" ? "Payée" : invoice.status}</p>
+            <p className="mt-2 font-semibold text-brand-700">{invoice.status === "paid" ? "Payée" : invoice.status}</p>
             {invoice.paidAt && <p className="text-sm text-ink-500">le {formatDate(invoice.paidAt)}</p>}
             {invoice.paymentBrand && (
               <p className="text-sm text-ink-500">
@@ -109,7 +109,7 @@ export default async function FactureDetailPage({ params }: { params: Promise<{ 
         </dl>
 
         <footer className="mt-12 border-t border-line pt-6 text-xs text-ink-400">
-          {site.name} · {site.address.street}, {site.address.zip} {site.address.city} · {site.phone} · IDE CHE-000.000.000 (à compléter) · {site.vatNote}
+          {site.legalName} · {site.address.street}, {site.address.zip} {site.address.city} · {site.phone} · IDE CHE-000.000.000 (à compléter) · {site.vatNote}
         </footer>
       </article>
     </>

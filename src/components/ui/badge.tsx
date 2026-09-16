@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 const tones = {
-  green: "bg-forest-50 text-forest-700 ring-forest-200",
-  amber: "bg-blossom-100 text-blossom-600 ring-blossom-200",
-  gray: "bg-cream-100 text-ink-500 ring-line",
-  dark: "bg-forest-800 text-cream-50 ring-forest-800",
-  light: "bg-cream-50/15 text-cream-50 ring-cream-50/25",
+  green: "bg-success-50 text-success ring-success-200",
+  amber: "bg-accent-100 text-accent-600 ring-accent-200",
+  gray: "bg-canvas-100 text-ink-500 ring-line",
+  dark: "bg-brand-900 text-white ring-brand-900",
+  brand: "bg-brand-50 text-brand-700 ring-brand-200",
+  light: "bg-white/15 text-white ring-white/25",
 } as const;
 
 export function Badge({ tone = "gray", className, children }: { tone?: keyof typeof tones; className?: string; children: ReactNode }) {

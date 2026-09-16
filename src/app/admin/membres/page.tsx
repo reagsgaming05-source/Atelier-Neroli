@@ -15,12 +15,12 @@ export default async function AdminMembresPage() {
   });
 
   return (
-    <Panel title={`Membres (${members.length})`} className="!p-0">
+    <Panel title={`Clients (${members.length})`} flush>
       <div className="overflow-x-auto">
         <table className="table">
           <thead>
             <tr>
-              <th>Membre</th>
+              <th>Client</th>
               <th>Téléphone</th>
               <th>Inscrit le</th>
               <th>Formule</th>

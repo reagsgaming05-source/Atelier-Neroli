@@ -34,7 +34,7 @@ export default async function AdminOverviewPage() {
     { label: "Revenu mensuel récurrent", value: formatCHF(mrr) },
     { label: "Encaissé ce mois", value: formatCHF(Number(revenue ?? 0)) },
     { label: "Résiliations programmées", value: String(pendingCancellations) },
-    { label: "Membres inscrits", value: String(members) },
+    { label: "Comptes clients", value: String(members) },
   ];
 
   return (
@@ -43,7 +43,7 @@ export default async function AdminOverviewPage() {
         {kpis.map((k) => (
           <div key={k.label} className="card p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-500">{k.label}</p>
-            <p className="mt-3 whitespace-nowrap font-display text-[1.75rem] font-medium leading-none text-ink-900">{k.value}</p>
+            <p className="mt-3 whitespace-nowrap font-display text-[1.75rem] font-semibold leading-none text-ink-900">{k.value}</p>
           </div>
         ))}
       </div>
@@ -51,9 +51,9 @@ export default async function AdminOverviewPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <Panel
           title="Dernières factures"
-          className="!p-0"
+          flush
           action={
-            <Link href="/admin/factures" className="text-sm font-semibold text-forest-700 hover:text-forest-900">
+            <Link href="/admin/factures" className="text-sm font-semibold text-brand-700 hover:text-brand-900">
               Tout voir
             </Link>
           }
@@ -63,7 +63,7 @@ export default async function AdminOverviewPage() {
               <thead>
                 <tr>
                   <th>Numéro</th>
-                  <th>Membre</th>
+                  <th>Client</th>
                   <th>Date</th>
                   <th>Montant</th>
                 </tr>
@@ -83,10 +83,10 @@ export default async function AdminOverviewPage() {
         </Panel>
 
         <Panel
-          title="Derniers membres"
-          className="!p-0"
+          title="Derniers clients"
+          flush
           action={
-            <Link href="/admin/membres" className="text-sm font-semibold text-forest-700 hover:text-forest-900">
+            <Link href="/admin/membres" className="text-sm font-semibold text-brand-700 hover:text-brand-900">
               Tout voir
             </Link>
           }
@@ -95,7 +95,7 @@ export default async function AdminOverviewPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Membre</th>
+                  <th>Client</th>
                   <th>Inscrit le</th>
                   <th>Formule</th>
                   <th>Statut</th>

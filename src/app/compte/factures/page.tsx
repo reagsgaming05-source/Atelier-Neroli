@@ -14,7 +14,7 @@ export default async function FacturesPage() {
   const invoices = await listUserInvoices(user.id);
 
   return (
-    <Panel title="Factures" className="!p-0">
+    <Panel title="Factures" flush>
       {invoices.length === 0 ? (
         <p className="px-6 pb-8 text-sm text-ink-500">Aucune facture pour le moment.</p>
       ) : (
@@ -34,7 +34,7 @@ export default async function FacturesPage() {
               {invoices.map((inv) => (
                 <tr key={inv.id}>
                   <td className="whitespace-nowrap">
-                    <Link href={`/compte/factures/${inv.id}`} className="font-semibold text-ink-900 hover:text-forest-700">
+                    <Link href={`/compte/factures/${inv.id}`} className="font-semibold text-ink-900 hover:text-brand-700">
                       {inv.number}
                     </Link>
                   </td>
