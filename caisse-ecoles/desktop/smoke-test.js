@@ -183,7 +183,10 @@ async function findPage(app, pred, timeoutMs) {
       console.log('Excel généré par DGEO :', status);
       // dossier scanné qui commence par la pièce comptable : la passerelle la retire avant l'analyse
       const dossierB64 = await win.evaluate(async () => {
-        const s = window.CaisseSaisie.state; const p = s.reg.pieces[s.reg.pieces.length - 1];
+        const s = window.CaisseSaisie.state; const R = window.CaisseRegistre;
+        const p = R.newPiece(s.reg); // pièce fictive (le registre du poste peut être vide)
+        Object.assign(p, { no: 99, type: 'DECOMPTE', objet: "Course d'école", classe: '5P/3', periode: '12.06.2026', detail: 'Lausanne', personne: 'A. Berger', montant: 143.95, sens: 'credit', compte: '51000.3662.00', date: `${s.reg.annee}-06-20` });
+        p.libelle = R.composeLibelle(p);
         const fiche = await window.CaissePdf.buildPdf([p], s.reg, () => null);
         const doc = await window.PDFLib.PDFDocument.load(fiche.bytes);
         const blank = doc.addPage([595.28, 841.89]); blank.drawText('Ticket CFF Lausanne 2 x CHF 12.20', { x: 60, y: 700, size: 12 });
