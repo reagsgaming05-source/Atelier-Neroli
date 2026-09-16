@@ -61,4 +61,5 @@ contextBridge.exposeInMainWorld('CaisseDgeo', {
   embed: (rect) => ipcRenderer.send('dgeo:embed', rect),
   onState: (cb) => ipcRenderer.on('shell:state', (ev, s) => cb(s)),
   onPanel: (cb) => ipcRenderer.on('app:panel', (ev, id) => cb(id)),
+  scrollTo: (sectionId) => ipcRenderer.send('dgeo:scroll', sectionId),
 });

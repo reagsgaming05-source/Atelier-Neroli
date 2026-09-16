@@ -285,6 +285,11 @@ ipcMain.on('dgeo:embed', (ev, rect) => {
   }
 });
 ipcMain.on('shell:tab', (ev, name) => { showTab(name === 'dgeo' ? 'dgeo' : 'caisse'); });
+// raccourcis de la barre latérale vers les sections de la page Décompte DGEO (ids de sa page)
+ipcMain.on('dgeo:scroll', (ev, sectionId) => {
+  if (!dgeoView || dgeo.status !== 'ready' || !/^[a-z-]{1,40}$/.test(String(sectionId))) return;
+  dgeoView.webContents.executeJavaScript(`(function(){var el=document.getElementById(${JSON.stringify(String(sectionId))});if(el&&!el.hidden){el.scrollIntoView({behavior:'smooth',block:'start'});}else{window.scrollTo({top:0,behavior:'smooth'});}})()`, true).catch(() => {});
+});
 ipcMain.handle('shell:state', () => shellState());
 
 /* ---------------- Pont Décompte DGEO → Caisse écoles ---------------- */

@@ -1811,8 +1811,46 @@
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
     for (const el of document.querySelectorAll('main .panel')) el.classList.toggle('hidden', el.id !== id);
     try { localStorage.setItem('caisse.onglet', id); } catch (e) { /* ignore */ }
+    if (id !== 'panelDgeo') lastCaissePanel = id;
+    syncTool(id === 'panelDgeo' ? 'dgeo' : 'caisse');
     updateDgeoEmbed();
   }
+  // Sélecteur d'outil en tête de la barre latérale : Caisse écoles (ses espaces) ou Décompte DGEO
+  // (sa page, avec des raccourcis vers ses sections). L'outil ouvert est mémorisé.
+  const toolEls = { btn: document.getElementById('btnTool'), menu: document.getElementById('toolMenu'), mark: document.getElementById('toolMark'), name: document.getElementById('toolName'), caisseNav: appTabs, dgeoNav: document.getElementById('dgeoNav') };
+  let currentTool = 'caisse';
+  let lastCaissePanel = 'panelSaisie';
+  function syncTool(tool) {
+    currentTool = tool;
+    const dgeo = tool === 'dgeo';
+    if (toolEls.mark) { toolEls.mark.classList.toggle('dgeo', dgeo); toolEls.mark.innerHTML = `<svg class="ico"><use href="#i-${dgeo ? 'layers' : 'wallet'}"/></svg>`; }
+    if (toolEls.name) toolEls.name.textContent = dgeo ? 'Décompte DGEO' : 'Caisse écoles';
+    if (toolEls.caisseNav) toolEls.caisseNav.classList.toggle('hidden', dgeo);
+    if (toolEls.dgeoNav) toolEls.dgeoNav.classList.toggle('hidden', !dgeo);
+    if (toolEls.menu) for (const b of toolEls.menu.querySelectorAll('button[data-tool]')) b.classList.toggle('active', b.dataset.tool === tool);
+    try { localStorage.setItem('caisse.outil', tool); } catch (e) { /* ignore */ }
+  }
+  function setTool(tool) {
+    closeToolMenu();
+    if (tool === 'dgeo') showPanel('panelDgeo');
+    else showPanel(lastCaissePanel && document.getElementById(lastCaissePanel) ? lastCaissePanel : 'panelSaisie');
+  }
+  function closeToolMenu() { if (toolEls.menu) { toolEls.menu.classList.add('hidden'); toolEls.btn.setAttribute('aria-expanded', 'false'); } }
+  if (toolEls.btn && toolEls.menu) {
+    toolEls.btn.addEventListener('click', (ev) => { ev.stopPropagation(); const open = toolEls.menu.classList.toggle('hidden'); toolEls.btn.setAttribute('aria-expanded', open ? 'false' : 'true'); });
+    toolEls.menu.addEventListener('click', (ev) => { const b = ev.target.closest('button[data-tool]'); if (b) setTool(b.dataset.tool); });
+    document.addEventListener('click', (ev) => { if (!toolEls.menu.contains(ev.target) && ev.target !== toolEls.btn) closeToolMenu(); });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeToolMenu(); });
+  }
+  if (toolEls.dgeoNav) {
+    toolEls.dgeoNav.addEventListener('click', (ev) => {
+      const b = ev.target.closest('.apptab[data-dgeo]');
+      if (!b) return;
+      for (const x of toolEls.dgeoNav.querySelectorAll('.apptab')) x.classList.toggle('active', x === b);
+      if (window.CaisseDgeo && window.CaisseDgeo.scrollTo) window.CaisseDgeo.scrollTo(b.dataset.dgeo);
+    });
+  }
+
   // Décompte DGEO : dans l'application fenêtrée, sa page est posée par le processus principal dans
   // la zone de l'espace « Décompte DGEO » (fichier HTML seul : une explication à la place).
   const dgeoHost = document.getElementById('dgeoHost');

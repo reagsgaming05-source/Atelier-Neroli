@@ -36,21 +36,37 @@
   <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
   <symbol id="i-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18M7 6h1v4M16.71 13.88l.7.71-2.82 2.82"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
   <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></symbol>
 </svg>
 
 <div class="app">
 <aside class="sidebar">
-  <div class="brand">
-    <div class="mark"><svg class="ico"><use href="#i-wallet"/></svg></div>
-    <div><div class="name">Caisse écoles</div><div class="suite">Compta Blonay</div></div>
+  <div class="switcher" id="toolSwitcher">
+    <button type="button" class="brand" id="btnTool" aria-haspopup="menu" aria-expanded="false" title="Changer d'outil : Caisse écoles ou Décompte DGEO">
+      <div class="mark" id="toolMark"><svg class="ico"><use href="#i-wallet"/></svg></div>
+      <div class="txt"><div class="name" id="toolName">Caisse écoles</div><div class="suite">Compta Blonay</div></div>
+      <svg class="ico chev"><use href="#i-chevron"/></svg>
+    </button>
+    <div class="tool-menu hidden" id="toolMenu" role="menu">
+      <div class="section">Outils de Compta Blonay</div>
+      <button type="button" role="menuitem" data-tool="caisse" class="active"><span class="mark"><svg class="ico"><use href="#i-wallet"/></svg></span><span class="txt"><b>Caisse écoles</b><small>Pièces, journal, Excel, comptage</small></span><svg class="ico tick"><use href="#i-check"/></svg></button>
+      <button type="button" role="menuitem" data-tool="dgeo"><span class="mark dgeo"><svg class="ico"><use href="#i-layers"/></svg></span><span class="txt"><b>Décompte DGEO</b><small id="dgeoNavState">Courses d'école &amp; camps</small></span><svg class="ico tick"><use href="#i-check"/></svg></button>
+    </div>
   </div>
   <nav class="nav" id="appTabs">
     <div class="section">Espaces</div>
     <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
-    <button type="button" class="apptab" data-panel="panelDgeo" title="Décompte DGEO"><svg class="ico"><use href="#i-layers"/></svg><span class="lbl">Décompte DGEO<small id="dgeoNavState">Courses d'école &amp; camps</small></span></button>
+  </nav>
+  <nav class="nav hidden" id="dgeoNav">
+    <div class="section">Décompte DGEO</div>
+    <button type="button" class="apptab active" data-dgeo="sec-upload" title="Dossier PDF scanné"><svg class="ico"><use href="#i-upload"/></svg><span class="lbl">Dossier PDF<small>Déposer et analyser</small></span></button>
+    <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier et effectifs"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span></button>
+    <button type="button" class="apptab" data-dgeo="sec-pieces" title="Pièces justificatives"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Pièces justificatives<small>Tickets retenus</small></span></button>
+    <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
   </nav>
   <div class="foot">
     <span class="pill"><svg class="ico"><use href="#i-shield"/></svg> 100 % local, aucune donnée envoyée</span>

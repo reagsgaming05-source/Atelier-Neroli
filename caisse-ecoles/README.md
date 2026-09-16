@@ -14,8 +14,11 @@ Application locale, sans installation, en deux onglets :
   dates, écart avec le solde du journal à cette date, historique des comptages dans le registre.
 
 La version portable Windows s'appelle **Compta Blonay** : une seule application pour les deux
-outils du dépôt. Un espace de plus dans la barre latérale, **Décompte DGEO** (courses d'école &
-camps), affiche l'autre logiciel au complet, démarré avec la fenêtre et arrêté avec elle. Un pont relie les deux : chaque
+outils du dépôt. Le logo en tête de la barre latérale est un menu déroulant qui passe de
+**Caisse écoles** à **Décompte DGEO** (courses d'école & camps) : l'autre logiciel s'affiche alors
+au complet dans la même page, avec ses propres raccourcis dans la barre latérale (dossier PDF,
+dossier & effectifs, pièces justificatives, lignes du décompte), démarré avec la fenêtre et arrêté
+avec elle. Un pont relie les deux : chaque
 décompte terminé dans l'onglet Décompte DGEO est proposé dans la caisse comme pièce DECOMPTE
 pré-remplie.
 
@@ -53,12 +56,14 @@ Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé v
 **Décompte DGEO dans la même application** : le zip contient aussi la version portable de
 Décompte DGEO (dossier `decompte/`, prise dans la release « windows-latest » du dépôt). Il n'y a
 qu'un programme à ouvrir, `ComptaBlonay.exe` : au démarrage, il lance en arrière-plan le serveur
-local de Décompte DGEO sur un port libre (l'espace *Décompte DGEO* de la barre latérale indique
-*démarre…* puis affiche le logiciel complet, avec toutes ses fonctions : analyse du dossier PDF,
-effectifs, pièces, part État, décompte Excel) et l'arrête à la fermeture de la fenêtre. Ses dossiers vont
-dans `data/decompte/`, à côté des registres de la caisse. Si le serveur s'arrête, rouvrir
-l'espace le relance ; sans le dossier `decompte/`, l'espace l'indique. Dans le fichier HTML seul,
-cet espace explique que Décompte DGEO fait partie de l'application Windows.
+local de Décompte DGEO sur un port libre (le menu du logo indique *démarre…* puis, une fois
+Décompte DGEO choisi, affiche le logiciel complet, avec toutes ses fonctions : analyse du dossier
+PDF, effectifs, pièces, part État, décompte Excel) et l'arrête à la fermeture de la fenêtre.
+Raccourci : Ctrl+4 ; Ctrl+1 à Ctrl+3 ramènent aux espaces de Caisse écoles. Ses dossiers vont
+dans `data/decompte/`, à côté des registres de la caisse. Si le serveur s'arrête, rechoisir
+Décompte DGEO dans le menu le relance ; sans le dossier `decompte/`, le menu l'indique. Dans le
+fichier HTML seul, Décompte DGEO n'affiche qu'une explication : il fait partie de l'application
+Windows.
 
 **Pont entre les deux outils** : quand un décompte est terminé dans Décompte DGEO (bouton
 *Générer le fichier Excel*), la fenêtre retient le dossier (n°, course d'école ou camp, classe,

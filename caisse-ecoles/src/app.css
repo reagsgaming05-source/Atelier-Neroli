@@ -71,7 +71,7 @@ a { color: var(--accent); }
 /* ---------------------------------------------------------------- coquille */
 .app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; }
 .sidebar {
-  position: sticky; top: 0; height: 100vh; overflow: auto;
+  position: sticky; top: 0; height: 100vh; overflow: visible; /* le menu du sélecteur d'outil dépasse en mode rail */
   background: var(--card); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; padding: 18px 14px 16px;
 }
@@ -467,3 +467,27 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 @media (max-width: 1500px) { .navbadge { position: absolute; top: 4px; right: 4px; margin: 0; padding: 0 5px; font-size: 10px; } }
 .content.embed { padding: 0; }
 .dgeo-host { height: 100vh; }
+
+/* ---------------------------------------------------------------- sélecteur d'outil (Caisse écoles / Décompte DGEO) */
+.switcher { position: relative; margin-bottom: 4px; }
+.switcher .brand { width: 100%; border: 1px solid transparent; background: transparent; border-radius: 10px; padding: 6px 8px; margin: 0 0 12px; cursor: pointer; text-align: left; box-shadow: none; height: auto; justify-content: flex-start; gap: 11px; }
+.switcher .brand:hover { background: var(--surface-2); border-color: var(--line); }
+.switcher .brand .txt { flex: 1; min-width: 0; }
+.switcher .brand .chev { color: var(--muted-2); width: 16px; height: 16px; }
+.switcher .brand[aria-expanded="true"] { background: var(--surface-2); border-color: var(--line); }
+.mark.dgeo { background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%); box-shadow: 0 6px 14px -6px rgba(109, 40, 217, 0.7); }
+.tool-menu { position: absolute; left: 6px; right: 6px; top: 100%; z-index: 20; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; min-width: 250px; }
+.tool-menu .section { padding: 8px 10px 6px; }
+.tool-menu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; box-shadow: none; height: auto; padding: 8px 10px; border-radius: 8px; }
+.tool-menu button:hover { background: var(--surface-2); }
+.tool-menu button .mark { width: 30px; height: 30px; border-radius: 8px; flex: none; background: linear-gradient(135deg, #2457d6 0%, #5b8def 100%); color: #fff; display: grid; place-items: center; }
+.tool-menu button .mark .ico { width: 16px; height: 16px; }
+.tool-menu button .txt { display: flex; flex-direction: column; line-height: 1.2; flex: 1; min-width: 0; }
+.tool-menu button .txt small { font-size: 11.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+.tool-menu button .tick { color: var(--accent); width: 16px; height: 16px; visibility: hidden; }
+.tool-menu button.active .tick { visibility: visible; }
+@media (max-width: 1500px) {
+  .switcher .brand { padding: 6px; width: 48px; justify-content: center; }
+  .switcher .brand .txt, .switcher .brand .chev { display: none; }
+  .tool-menu { left: 52px; right: auto; top: 0; width: 280px; }
+}
