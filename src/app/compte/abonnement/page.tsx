@@ -29,6 +29,7 @@ export default async function CompteAbonnementPage({ searchParams }: { searchPar
       <>
         {error && <Notice tone="error">{error}</Notice>}
         {notice === "already" && <Notice tone="info">Vous avez déjà un abonnement actif.</Notice>}
+        {notice === "equipe" && <Notice tone="info">La gestion d'équipe est réservée aux titulaires d'une licence Établissement.</Notice>}
         <Panel>
           <SubscriptionBadge subscription={null} />
           <h2 className="mt-4 font-display text-3xl font-semibold text-ink-900">Aucun abonnement actif.</h2>
@@ -64,6 +65,7 @@ export default async function CompteAbonnementPage({ searchParams }: { searchPar
       {notice === "scheduled" && <Notice>Changement de formule enregistré. Il prendra effet le {formatDate(subscription.currentPeriodEnd)}.</Notice>}
       {notice === "change-canceled" && <Notice>Le changement de formule programmé a été annulé.</Notice>}
       {notice === "already" && <Notice tone="info">Vous avez déjà un abonnement actif : gérez-le ci-dessous.</Notice>}
+      {notice === "equipe" && <Notice tone="info">La gestion d'équipe est réservée à la formule Établissement. Passez à cette formule ci-dessous pour inviter vos collaborateur·trice·s.</Notice>}
 
       <Panel>
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">

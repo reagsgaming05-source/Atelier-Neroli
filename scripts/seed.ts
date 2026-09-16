@@ -2,7 +2,7 @@ import "./env";
 import { randomUUID } from "node:crypto";
 import { eq, notInArray } from "drizzle-orm";
 import { db } from "../src/lib/db";
-import { invoices, plans, subscriptions, users } from "../src/lib/db/schema";
+import { invoices, orgMembers, plans, subscriptions, usageEvents, users, USAGE_TOOLS } from "../src/lib/db/schema";
 import { hashPassword } from "../src/lib/password";
 import { planCatalog } from "../src/content/plans";
 
@@ -97,7 +97,68 @@ export async function runSeed() {
         paymentLast4: "4242",
       });
     }
-    console.log(`✔ Membre de démonstration créé : ${DEMO_MEMBER.email}`);
+    // Collaborateur·trice·s de l'établissement : deux comptes actifs, une invitation en attente
+    const collaborators = [
+      { email: "paul.martin@exemple.ch", firstName: "Paul", lastName: "Martin", role: "collaborateur" as const, account: true },
+      { email: "sophie.rey@exemple.ch", firstName: "Sophie", lastName: "Rey", role: "administration" as const, account: true },
+      { email: "luc.perret@exemple.ch", firstName: "Luc", lastName: "Perret", role: "collaborateur" as const, account: false },
+    ];
+    const memberIds: string[] = [];
+    for (const c of collaborators) {
+      let accountId: string | null = null;
+      if (c.account) {
+        accountId = randomUUID();
+        await db.insert(users).values({
+          id: accountId,
+          email: c.email,
+          passwordHash: await hashPassword(DEMO_MEMBER.password),
+          firstName: c.firstName,
+          lastName: c.lastName,
+          role: "member",
+          createdAt: monthsAgo(2),
+        });
+        memberIds.push(accountId);
+      }
+      await db.insert(orgMembers).values({
+        id: randomUUID(),
+        ownerUserId: userId,
+        email: c.email,
+        name: `${c.firstName} ${c.lastName}`,
+        role: c.role,
+        status: c.account ? "active" : "invited",
+        userId: accountId,
+        invitedAt: monthsAgo(2),
+        joinedAt: c.account ? monthsAgo(2) : null,
+      });
+    }
+
+    // Historique d'usage sur six mois (déterministe) pour la titulaire et les collaborateurs
+    const weights: Record<string, number> = { merge: 9, convert: 8, sign: 6, organize: 5, edit: 5, forms: 4, compress: 4, redact: 3, annotate: 3, ocr: 2, protect: 2, compare: 1 };
+    const pool = USAGE_TOOLS.flatMap((t) => Array(weights[t] ?? 1).fill(t) as (typeof USAGE_TOOLS)[number][]);
+    let seed = 42;
+    const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+    const actors = [userId, ...memberIds];
+    const now = new Date();
+    for (let day = 180; day >= 0; day--) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - day);
+      if (date.getDay() === 0 || date.getDay() === 6) continue; // pas d'activité le week-end
+      const ramp = 0.5 + (180 - day) / 180; // usage croissant au fil des mois
+      const ops = Math.round(rand() * 3 * ramp);
+      for (let i = 0; i < ops; i++) {
+        const tool = pool[Math.floor(rand() * pool.length)];
+        const at = new Date(date);
+        at.setHours(8 + Math.floor(rand() * 9), Math.floor(rand() * 60), 0, 0);
+        await db.insert(usageEvents).values({
+          id: randomUUID(),
+          userId: actors[Math.floor(rand() * actors.length)],
+          tool,
+          pages: 1 + Math.floor(rand() * 24),
+          createdAt: at,
+        });
+      }
+    }
+    console.log(`✔ Membre de démonstration créé : ${DEMO_MEMBER.email} (+ 2 collaborateurs, historique d'usage)`);
   }
 }
 

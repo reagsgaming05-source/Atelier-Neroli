@@ -40,6 +40,7 @@ export const site = {
 
 export const navigation = [
   { href: "/fonctionnalites", label: "Fonctionnalités" },
+  { href: "/demo", label: "Démo" },
   { href: "/tarifs", label: "Tarifs" },
   { href: "/securite", label: "Sécurité" },
   { href: "/contact", label: "Contact" },
@@ -324,3 +325,39 @@ export const stats = [
   { k: "100 %", v: "hébergé en Suisse" },
   { k: "1", v: "licence par établissement" },
 ];
+
+/** Types d'institutions concernées (bandeau). */
+export const institutionTypes = ["Écoles primaires", "Établissements secondaires", "Gymnases", "Écoles professionnelles", "Écoles de maturité spécialisée", "Services de l'État"];
+
+/** Déploiement type dans un établissement. */
+export const deployment = [
+  { week: "Semaine 1", title: "Convention et bon de commande", text: "Signature de la convention, contrat de sous-traitance LPD / LPrD, création de l'espace de l'établissement." },
+  { week: "Semaine 2", title: "Comptes et connexion cantonale", text: "Activation de la connexion unique, import de la liste des collaborateur·trice·s, paramétrage des modèles de l'école." },
+  { week: "Semaine 3", title: "Formation du secrétariat", text: "Deux heures en visioconférence ou sur place : signatures, formulaires, caviardage, dossiers d'élèves." },
+  { week: "Semaine 4", title: "Ouverture à tout l'établissement", text: "Accès pour le corps enseignant, guide de démarrage, support aux horaires scolaires." },
+];
+
+/** Comparatif indicatif (à vérifier avant publication). */
+export const comparison = {
+  columns: ["Blonay PDF", "Acrobat Pro", "Outils en ligne gratuits"],
+  rows: [
+    { label: "Données hébergées en Suisse", values: ["yes", "no", "no"] },
+    { label: "Conformité LPD et LPrD, contrat de sous-traitance", values: ["yes", "partial", "no"] },
+    { label: "Licence par établissement, sans plafond", values: ["yes", "no", "no"] },
+    { label: "Signature électronique avec journal d'audit", values: ["yes", "yes", "no"] },
+    { label: "Caviardage définitif", values: ["yes", "yes", "no"] },
+    { label: "OCR multilingue", values: ["yes", "yes", "partial"] },
+    { label: "Application de bureau hors ligne", values: ["yes", "yes", "no"] },
+    { label: "Connexion unique via l'identité cantonale", values: ["yes", "partial", "no"] },
+    { label: "Support en français, horaires scolaires", values: ["yes", "partial", "no"] },
+    { label: "Facturation sur bon de commande", values: ["yes", "partial", "no"] },
+  ] as { label: string; values: ("yes" | "no" | "partial")[] }[],
+  note: "Comparatif indicatif établi à partir des offres publiques ; à vérifier avant publication.",
+};
+
+/** Hypothèses du calculateur d'économies. */
+export const roi = {
+  defaultStaff: 80,
+  defaultLicenceCost: 24000, // CHF 240.– par an et par licence, en centimes
+  establishmentYearlyCents: 149000,
+};

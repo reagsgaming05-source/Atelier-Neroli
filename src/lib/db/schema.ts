@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const timestamp = (name: string) => integer(name, { mode: "timestamp_ms" });
 
@@ -106,6 +106,47 @@ export const invoices = sqliteTable(
   (t) => [index("invoices_user_idx").on(t.userId)],
 );
 
+/** Collaborateur·trice·s rattachés à une licence Établissement (invitation par e-mail). */
+export const orgMembers = sqliteTable(
+  "org_members",
+  {
+    id: text("id").primaryKey(),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    name: text("name").notNull(),
+    role: text("role", { enum: ["administration", "collaborateur"] }).notNull().default("collaborateur"),
+    status: text("status", { enum: ["invited", "active"] }).notNull().default("invited"),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    invitedAt: timestamp("invited_at")
+      .notNull()
+      .$defaultFn(() => new Date()),
+    joinedAt: timestamp("joined_at"),
+  },
+  (t) => [uniqueIndex("org_members_owner_email_idx").on(t.ownerUserId, t.email), index("org_members_user_idx").on(t.userId)],
+);
+
+export const USAGE_TOOLS = ["edit", "organize", "merge", "convert", "compress", "ocr", "sign", "protect", "redact", "forms", "annotate", "compare"] as const;
+export type UsageTool = (typeof USAGE_TOOLS)[number];
+
+/** Une opération effectuée avec un outil (alimente les statistiques d'usage). */
+export const usageEvents = sqliteTable(
+  "usage_events",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tool: text("tool", { enum: USAGE_TOOLS }).notNull(),
+    pages: integer("pages").notNull().default(0),
+    createdAt: timestamp("created_at")
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("usage_events_user_idx").on(t.userId), index("usage_events_created_idx").on(t.createdAt)],
+);
+
 export const contactMessages = sqliteTable("contact_messages", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -125,6 +166,18 @@ export const usersRelations = relations(users, ({ many }) => ({
   subscriptions: many(subscriptions),
   invoices: many(invoices),
   sessions: many(sessions),
+  orgMembers: many(orgMembers, { relationName: "owner" }),
+  memberships: many(orgMembers, { relationName: "member" }),
+  usageEvents: many(usageEvents),
+}));
+
+export const orgMembersRelations = relations(orgMembers, ({ one }) => ({
+  owner: one(users, { fields: [orgMembers.ownerUserId], references: [users.id], relationName: "owner" }),
+  user: one(users, { fields: [orgMembers.userId], references: [users.id], relationName: "member" }),
+}));
+
+export const usageEventsRelations = relations(usageEvents, ({ one }) => ({
+  user: one(users, { fields: [usageEvents.userId], references: [users.id] }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -159,3 +212,5 @@ export type Plan = typeof plans.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type ContactMessage = typeof contactMessages.$inferSelect;
+export type OrgMember = typeof orgMembers.$inferSelect;
+export type UsageEvent = typeof usageEvents.$inferSelect;

@@ -21,7 +21,8 @@ Au premier lancement, la base de données est créée automatiquement (`data/blo
 | Rôle | E-mail | Mot de passe | Accès |
 | --- | --- | --- | --- |
 | Administration | `admin@blonaypdf.ch` | `BlonayPDF-Admin-2026!` | <http://localhost:3000/admin> |
-| Client (formule Établissement active) | `marie.demo@exemple.ch` | `Demo-1234!` | <http://localhost:3000/compte> |
+| Établissement (formule Établissement, 2 collaborateurs, historique d'usage) | `marie.demo@exemple.ch` | `Demo-1234!` | <http://localhost:3000/compte> |
+| Collaborateur rattaché à l'établissement | `paul.martin@exemple.ch` | `Demo-1234!` | <http://localhost:3000/compte> |
 
 Le mot de passe admin peut être défini avant le premier lancement via `.env` (voir `.env.example`).
 
@@ -38,7 +39,9 @@ Date d'expiration future et CVC à 3 chiffres quelconques.
 
 **Site public**
 
-- Accueil avec aperçu de l'éditeur, Fonctionnalités (12 outils), Tarifs (mensuel / annuel), Sécurité et hébergement, Contact (formulaire enregistré en base)
+- Accueil : aperçu de l'éditeur à scénarios (signer, caviarder, convertir, éditer), trois mises en situation scolaires, comparatif face à Acrobat, calendrier de déploiement
+- **Démo interactive** (`/demo`) : fusion, réorganisation, extraction, filigrane et numérotation de vrais PDF, entièrement dans le navigateur (pdf-lib + pdf.js), sans envoi de fichier
+- Fonctionnalités (12 outils), Tarifs avec calculateur d'économies et comparatif, Sécurité et hébergement, Contact (formulaire enregistré en base)
 - Mentions légales, conditions générales d'abonnement, politique de confidentialité
 
 **Abonnements**
@@ -50,12 +53,14 @@ Date d'expiration future et CVC à 3 chiffres quelconques.
 
 **Espace client** (`/compte`)
 
-- Tableau de bord avec clé de licence et liens de téléchargement (web, Windows, macOS)
+- Tableau de bord : statistiques d'usage (documents, pages, signatures, OCR), graphique sur six mois, outils les plus utilisés, clé de licence et liens de téléchargement (web, Windows, macOS)
+- **Équipe** (licence Établissement) : invitation des collaborateur·trice·s par e-mail, rôles, retrait. Une personne invitée obtient l'accès dès la création de son compte et voit « Licence fournie par votre établissement »
 - Gestion de la formule, factures (imprimables / export PDF via le navigateur), profil et mot de passe
+- Les opérations réalisées dans la démo par une personne connectée alimentent ses statistiques
 
 **Administration** (`/admin`)
 
-- Indicateurs (abonnements actifs, revenu mensuel récurrent, encaissé du mois, résiliations programmées)
+- Indicateurs (abonnements actifs, revenu mensuel récurrent, encaissé du mois, résiliations programmées), graphiques (encaissé, nouveaux comptes, documents traités par mois, répartition par formule)
 - Listes des clients, abonnements, factures et messages reçus
 
 ## Personnaliser
@@ -89,6 +94,7 @@ Le dossier `maquette/` contient une version statique navigable du site (toutes l
 - [Next.js 16](https://nextjs.org) (App Router, Server Actions) · React 19 · TypeScript
 - Tailwind CSS 4
 - SQLite via [libsql](https://github.com/tursodatabase/libsql) + [Drizzle ORM](https://orm.drizzle.team) (migrations dans `drizzle/`)
+- [pdf-lib](https://pdf-lib.js.org) et [pdf.js](https://mozilla.github.io/pdf.js/) (build « legacy », worker copié dans `public/`) pour la démo dans le navigateur
 - Authentification maison par sessions (cookie httpOnly, mots de passe hachés avec bcrypt)
 
 ## Passer en production

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { and, count, desc, eq, gte, sum } from "drizzle-orm";
+import { BarChart, BarList } from "@/components/charts/bar-chart";
+import { getUsageSummary } from "@/lib/usage";
 import { Panel } from "@/components/account/space-shell";
 import { SubscriptionBadge } from "@/components/account/subscription-badge";
 import { db } from "@/lib/db";
@@ -29,6 +31,30 @@ export default async function AdminOverviewPage() {
   ]);
 
   const mrr = activeSubs.reduce((acc, s) => acc + monthlyEquivalent(s.plan, s.interval), 0);
+
+  // Séries mensuelles (six derniers mois)
+  const sixMonthsAgo = new Date(startOfMonth);
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  const [paidInvoices, allUsers] = await Promise.all([
+    db.select({ amount: invoices.amountCents, issuedAt: invoices.issuedAt }).from(invoices).where(and(eq(invoices.status, "paid"), gte(invoices.issuedAt, sixMonthsAgo))),
+    db.select({ id: users.id, createdAt: users.createdAt }).from(users).where(eq(users.role, "member")),
+  ]);
+  const monthLabels = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth() - 5 + i, 1);
+    return { key: `${d.getFullYear()}-${d.getMonth()}`, label: monthLabels[d.getMonth()] };
+  });
+  const keyOf = (d: Date) => `${d.getFullYear()}-${d.getMonth()}`;
+  const revenueByMonth = months.map((m) => paidInvoices.filter((i) => keyOf(i.issuedAt) === m.key).reduce((a, i) => a + i.amount, 0));
+  const signupsByMonth = months.map((m) => allUsers.filter((u) => keyOf(u.createdAt) === m.key).length);
+  const usage = await getUsageSummary(allUsers.map((u) => u.id));
+  const byPlan = Object.values(
+    activeSubs.reduce<Record<string, { label: string; value: number }>>((acc, s) => {
+      acc[s.plan.slug] ??= { label: s.plan.name, value: 0 };
+      acc[s.plan.slug].value += 1;
+      return acc;
+    }, {}),
+  );
   const kpis = [
     { label: "Abonnements actifs", value: String(activeSubs.length) },
     { label: "Revenu mensuel récurrent", value: formatCHF(mrr) },
@@ -46,6 +72,24 @@ export default async function AdminOverviewPage() {
             <p className="mt-3 whitespace-nowrap font-display text-[1.75rem] font-semibold leading-none text-ink-900">{k.value}</p>
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <Panel title="Encaissé par mois" action={<span className="text-xs text-ink-400">Factures payées, six derniers mois</span>}>
+          <BarChart ariaLabel="Montant encaissé par mois" labels={months.map((m) => m.label)} series={[{ name: "Encaissé", color: "var(--color-brand-600)", values: revenueByMonth.map((v) => v / 100) }]} unit="chf" />
+        </Panel>
+        <Panel title="Abonnements actifs par formule">
+          {byPlan.length === 0 ? <p className="text-sm text-ink-500">Aucun abonnement actif.</p> : <BarList items={byPlan} />}
+        </Panel>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Panel title="Nouveaux comptes par mois">
+          <BarChart ariaLabel="Nouveaux comptes par mois" labels={months.map((m) => m.label)} series={[{ name: "Comptes", color: "var(--color-accent-500)", values: signupsByMonth }]} height={180} />
+        </Panel>
+        <Panel title="Documents traités par mois" action={<span className="text-xs text-ink-400">Tous comptes confondus</span>}>
+          <BarChart ariaLabel="Documents traités par mois" labels={usage.monthly.map((m) => m.label)} series={[{ name: "Documents", color: "var(--color-brand-600)", values: usage.monthly.map((m) => m.documents) }]} height={180} />
+        </Panel>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

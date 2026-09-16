@@ -7,7 +7,8 @@ import { site } from "@/content/site";
 import { requireUser } from "@/lib/auth";
 import type { BillingInterval } from "@/lib/db/schema";
 import { formatCHF, formatDate, fullName, intervalLabel, intervalSuffix } from "@/lib/format";
-import { addInterval, getActiveSubscription, getPlanBySlug, planPrice, yearlySavings } from "@/lib/subscriptions";
+import { addInterval, getPlanBySlug, planPrice, yearlySavings } from "@/lib/subscriptions";
+import { getAccess } from "@/lib/access";
 
 export const metadata: Metadata = { title: "Souscription" };
 
@@ -26,8 +27,9 @@ export default async function CheckoutPage({
   if (!plan) notFound();
   if (plan.quoteOnly) redirect("/contact?sujet=Offre%20cantonale");
 
-  const existing = await getActiveSubscription(user.id);
-  if (existing) redirect("/compte/abonnement?notice=already");
+  const access = await getAccess(user);
+  if (access.kind === "owner") redirect("/compte/abonnement?notice=already");
+  if (access.kind === "member") redirect("/compte?notice=via-etablissement");
 
   const amount = planPrice(plan, interval);
   const renewal = addInterval(new Date(), interval);

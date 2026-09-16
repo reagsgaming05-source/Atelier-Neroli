@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { Check } from "lucide-react";
+import { ComparisonTable } from "@/components/comparison-table";
 import { Faq } from "@/components/faq";
 import { PricingTable } from "@/components/pricing-table";
+import { Reveal } from "@/components/reveal";
+import { RoiCalculator } from "@/components/roi-calculator";
 import { ButtonLink } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { faq, site } from "@/content/site";
+import { getAccess } from "@/lib/access";
 import { getCurrentUser } from "@/lib/auth";
-import { getActiveSubscription, listActivePlans } from "@/lib/subscriptions";
+import { listActivePlans } from "@/lib/subscriptions";
 
 export const metadata: Metadata = {
   title: "Tarifs",
@@ -24,7 +28,8 @@ const included = [
 
 export default async function TarifsPage() {
   const [plans, user] = await Promise.all([listActivePlans(), getCurrentUser()]);
-  const subscription = user ? await getActiveSubscription(user.id) : null;
+  const access = user ? await getAccess(user) : null;
+  const hasSubscription = Boolean(access && access.kind !== "none");
 
   return (
     <>
@@ -39,11 +44,31 @@ export default async function TarifsPage() {
       </section>
 
       <section className="container-x py-16 lg:py-24">
-        <PricingTable plans={plans} hasSubscription={Boolean(subscription)} />
+        <PricingTable plans={plans} hasSubscription={hasSubscription} />
         <p className="mt-8 text-center text-xs text-ink-400">{site.vatNote}</p>
       </section>
 
+      <section className="container-x pb-20 lg:pb-28">
+        <Reveal>
+          <SectionHeading eyebrow="Calculateur" title="Combien économise votre établissement ?" text="Comparez le coût de licences individuelles avec une licence Établissement, qui couvre tout le personnel sans plafond." />
+        </Reveal>
+        <Reveal delay={100} className="mt-10">
+          <RoiCalculator />
+        </Reveal>
+      </section>
+
       <section className="bg-canvas-100">
+        <div className="container-x py-20 lg:py-28">
+          <Reveal>
+            <SectionHeading eyebrow="Comparatif" title="Face à Acrobat et aux outils gratuits." text="Ce qui change pour un établissement public : l'hébergement, la conformité, le modèle de licence et le support." />
+          </Reveal>
+          <Reveal delay={100} className="mt-12">
+            <ComparisonTable />
+          </Reveal>
+        </div>
+      </section>
+
+      <section>
         <div className="container-x grid gap-12 py-20 lg:grid-cols-2 lg:gap-20">
           <SectionHeading eyebrow="Dans toutes les formules" title="Ce qui est toujours inclus." text="Enseignant·e ou établissement, le même éditeur complet, sur toutes les plateformes, avec les mises à jour comprises." />
           <ul className="grid gap-4 sm:grid-cols-2">

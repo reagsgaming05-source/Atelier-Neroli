@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { createSession, destroySession, safeNextPath } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { linkInvitations } from "@/lib/org";
 import type { ActionState } from "./types";
 
 const registerSchema = z.object({
@@ -58,6 +59,7 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
     phone: parsed.data.phone || null,
     role: "member",
   });
+  await linkInvitations(id, parsed.data.email);
   await createSession(id);
 
   redirect(safeNextPath(formData.get("next")));
@@ -78,6 +80,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     return { error: "E-mail ou mot de passe incorrect.", values };
   }
 
+  await linkInvitations(user.id, user.email);
   await createSession(user.id);
   const fallback = user.role === "admin" ? "/admin" : "/compte";
   redirect(safeNextPath(formData.get("next"), fallback));
