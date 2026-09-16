@@ -65,6 +65,14 @@ Décompte DGEO dans le menu le relance ; sans le dossier `decompte/`, le menu l'
 fichier HTML seul, Décompte DGEO n'affiche qu'une explication : il fait partie de l'application
 Windows.
 
+**Dossier nettoyé avant l'analyse** : le dossier scanné pour un décompte commence par la pièce
+comptable de la caisse (fiche imprimée depuis l'application ou remplie à la main), que Décompte
+DGEO ne doit pas lire. Une passerelle locale placée devant Décompte DGEO confie chaque dossier
+déposé à Caisse écoles, qui retire les pages « PIÈCE COMPTABLE » reconnues par leur texte (et, si
+le dossier n'a aucun texte lisible, la première page, réglage sous les raccourcis de Décompte
+DGEO dans la barre latérale), puis transmet le reste : Décompte DGEO ne voit que le formulaire de
+couverture et les tickets. La barre latérale indique ce qui a été retiré.
+
 **Pont entre les deux outils** : quand un décompte est terminé dans Décompte DGEO (bouton
 *Générer le fichier Excel*), la fenêtre retient le dossier (n°, course d'école ou camp, classe,
 dates, enseignant-e, montants) dans `data/caisse/decomptes-dgeo.json`. L'onglet *Caisse écoles*
@@ -384,6 +392,8 @@ Structure :
 - `src/app.js`, `src/index.html`, `src/app.css` – interface
 - `src/ocr.js` – seconde lecture par OCR local : prétraitement, zones, confrontation des lectures, moteur embarqué
 - `build.js` – assemble tout (avec pdf.js, ExcelJS, tesseract.js et le modèle français, pdf-lib, la police Inter) dans `dist/Caisse-ecoles.html`
+- `src/dossier.js` – dossier scanné pour Décompte DGEO : pages « PIÈCE COMPTABLE » retirées avant l'analyse (pdf.js, pdf-lib, analyseur)
+- `desktop/dgeo-proxy.js` – passerelle locale devant Décompte DGEO (multipart, nettoyage du dossier via la page)
 - `src/comptage.js` – comptage de la caisse (grille des coupures, soldes, historique) ; modèle dans `registre.js` (`countTotal`, `upsertCount`, `previousCount`, `balanceAt`)
 - `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Compter la caisse, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
 - `src/registre.js` – registre des pièces par année : modèle, libellé composé, validation, journal, stockage (fichiers ou navigateur)

@@ -67,6 +67,10 @@
     <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier et effectifs"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-pieces" title="Pièces justificatives"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Pièces justificatives<small>Tickets retenus</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
+    <div class="navnote">
+      <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
+      <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
+    </div>
   </nav>
   <div class="foot">
     <span class="pill"><svg class="ico"><use href="#i-shield"/></svg> 100 % local, aucune donnée envoyée</span>
@@ -463,6 +467,7 @@
 <!--INLINE_EXCEL-->
 <!--INLINE_REGISTRE-->
 <!--INLINE_PDFPIECE-->
+<!--INLINE_DOSSIER-->
 <!--INLINE_APP-->
 <!--INLINE_SAISIE-->
 <!--INLINE_COMPTAGE-->

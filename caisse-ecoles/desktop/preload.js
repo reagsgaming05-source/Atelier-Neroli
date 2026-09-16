@@ -62,4 +62,10 @@ contextBridge.exposeInMainWorld('CaisseDgeo', {
   onState: (cb) => ipcRenderer.on('shell:state', (ev, s) => cb(s)),
   onPanel: (cb) => ipcRenderer.on('app:panel', (ev, id) => cb(id)),
   scrollTo: (sectionId) => ipcRenderer.send('dgeo:scroll', sectionId),
+  // nettoyage du dossier PDF avant Décompte DGEO (la page retire les pages « PIÈCE COMPTABLE »)
+  onClean: (cb) => ipcRenderer.on('dgeo:clean', (ev, req) => cb(req)),
+  cleanResult: (r) => ipcRenderer.send('dgeo:clean-result', r),
+  onCleaned: (cb) => ipcRenderer.on('dgeo:cleaned', (ev, info) => cb(info)),
+  settings: () => ipcRenderer.invoke('settings:get'),
+  setSettings: (patchObj) => ipcRenderer.invoke('settings:set', patchObj),
 });

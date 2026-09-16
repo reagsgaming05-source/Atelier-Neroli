@@ -181,6 +181,25 @@ async function findPage(app, pred, timeoutMs) {
         rows: [{ rubrique: 'Transport', libelle: 'CFF 2 titrés', mode: 'direct', cout_total: null, cout_direct: 24.4, pieces: [] }], total: 24.4, warnings: [], ocr_engine: '' };
       const status = await dgeoPage.evaluate(async (d) => { const r = await fetch('/api/excel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); await r.blob(); return r.status; }, dossier);
       console.log('Excel généré par DGEO :', status);
+      // dossier scanné qui commence par la pièce comptable : la passerelle la retire avant l'analyse
+      const dossierB64 = await win.evaluate(async () => {
+        const s = window.CaisseSaisie.state; const p = s.reg.pieces[s.reg.pieces.length - 1];
+        const fiche = await window.CaissePdf.buildPdf([p], s.reg, () => null);
+        const doc = await window.PDFLib.PDFDocument.load(fiche.bytes);
+        const blank = doc.addPage([595.28, 841.89]); blank.drawText('Ticket CFF Lausanne 2 x CHF 12.20', { x: 60, y: 700, size: 12 });
+        const bytes = await doc.save();
+        return btoa(String.fromCharCode.apply(null, Array.from(bytes)));
+      });
+      const analysed = await dgeoPage.evaluate(async (b64) => {
+        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        const fd = new FormData(); fd.append('file', new File([bytes], 'dossier-test.pdf', { type: 'application/pdf' })); fd.append('type_activite', 'course');
+        const r = await fetch('/api/analyse', { method: 'POST', body: fd });
+        const j = await r.json().catch(() => ({}));
+        return { status: r.status, pages: Array.isArray(j.pages) ? j.pages.length : null, detail: j.detail || null };
+      }, dossierB64);
+      const cleanTxt = await win.evaluate(() => document.getElementById('dgeoCleanInfo').textContent);
+      console.log('dossier nettoyé :', JSON.stringify(analysed), '–', cleanTxt);
+      ok = ok && analysed.status === 200 && analysed.pages === 1 && /page 1 sur 2 ignorée/.test(cleanTxt);
       await win.evaluate(() => window.CaisseApp.showPanel('panelSaisie'));
       let bridge = null;
       try {

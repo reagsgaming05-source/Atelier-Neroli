@@ -1881,6 +1881,33 @@
     };
     window.CaisseDgeo.onState(applyState);
     window.CaisseDgeo.state().then(applyState).catch(() => {});
+    // dossier PDF déposé dans Décompte DGEO : la passerelle le confie à cette page, qui retire les
+    // pages « PIÈCE COMPTABLE » (src/dossier.js) avant l'analyse
+    if (window.CaisseDgeo.onClean && window.CaisseDossier) {
+      window.CaisseDgeo.onClean(async (req) => {
+        const result = { id: req.id, bytes: null, removed: [], total: 0, reason: '' };
+        try {
+          const r = await window.CaisseDossier.clean(req.bytes, { skipFirst: !!req.skipFirst });
+          result.removed = r.removed; result.total = r.total; result.reason = r.reason;
+          if (r.removed.length) result.bytes = r.bytes;
+        } catch (e) { result.reason = `nettoyage impossible : ${e && e.message ? e.message : e}`; }
+        window.CaisseDgeo.cleanResult(result);
+      });
+    }
+    const cleanInfo = document.getElementById('dgeoCleanInfo');
+    if (window.CaisseDgeo.onCleaned && cleanInfo) {
+      window.CaisseDgeo.onCleaned((info) => {
+        const n = info.removed.length;
+        cleanInfo.textContent = n
+          ? `Dossier « ${info.filename} » : page${n > 1 ? 's' : ''} ${info.removed.join(', ')} sur ${info.total} ignorée${n > 1 ? 's' : ''} (${info.reason}).`
+          : `Dossier « ${info.filename} » : ${info.total} page(s) transmise(s) telles quelles (${info.reason}).`;
+      });
+    }
+    const skip = document.getElementById('optDgeoSkip');
+    if (skip && window.CaisseDgeo.settings) {
+      window.CaisseDgeo.settings().then((s) => { skip.checked = s.dgeoSkipFirst !== false; }).catch(() => {});
+      skip.addEventListener('change', () => window.CaisseDgeo.setSettings({ dgeoSkipFirst: skip.checked }));
+    }
   }
   if (appTabs) {
     appTabs.addEventListener('click', (ev) => { const b = ev.target.closest('.apptab'); if (b) showPanel(b.dataset.panel); });

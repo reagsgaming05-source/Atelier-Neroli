@@ -17,6 +17,7 @@ const { spawn } = require('child_process');
 const http = require('http');
 const net = require('net');
 const nativeOcr = require('./native-ocr.js');
+const dgeoProxy = require('./dgeo-proxy.js');
 
 const APP_TITLE = 'Compta Blonay';
 const PORTABLE_DIR = path.dirname(process.execPath);
@@ -162,7 +163,7 @@ function dgeoPlaceholder(title, message, spinner) {
 // Le dossier decompte/ (version portable de Décompte DGEO) est posé à côté de l'exécutable ;
 // son serveur est lancé en mode --web sur un port libre et affiché dans le second onglet.
 // En développement : DECOMPTE_CMD (ex. « python -m decompte ») avec DECOMPTE_CWD.
-const dgeo = { proc: null, url: null, status: 'off', starting: null };
+const dgeo = { proc: null, url: null, target: null, proxy: null, status: 'off', starting: null };
 
 /** État de la fenêtre pour la barre d'onglets (et le test de fumée). */
 function shellState() {
@@ -234,7 +235,17 @@ async function startDgeo() {
     const url = `http://127.0.0.1:${port}/`;
     for (let i = 0; i < 180; i++) {
       if (!dgeo.proc) break;
-      if (await httpOk(url + 'api/health')) { dgeo.status = 'ready'; dgeo.url = url; logLine(`Décompte DGEO prêt : ${url}`); return url; }
+      if (await httpOk(url + 'api/health')) {
+        // passerelle devant Décompte DGEO : le dossier PDF est nettoyé (pièce comptable retirée) avant l'analyse
+        dgeo.target = url;
+        try {
+          dgeo.proxy = await dgeoProxy.startProxy({ target: url, clean: cleanDossierViaPage, onCleaned: (info) => notifyCaisse('dgeo:cleaned', info), log: logLine });
+          dgeo.url = dgeo.proxy.url;
+        } catch (e) { logLine(`passerelle Décompte DGEO indisponible (${e.message}) : accès direct`); dgeo.url = url; }
+        dgeo.status = 'ready';
+        logLine(`Décompte DGEO prêt : ${url} (affiché via ${dgeo.url})`);
+        return dgeo.url;
+      }
       await new Promise((r) => setTimeout(r, 500));
     }
     if (dgeo.status !== 'ready') dgeo.status = 'failed';
@@ -244,6 +255,7 @@ async function startDgeo() {
 }
 
 function stopDgeo() {
+  if (dgeo.proxy) { try { dgeo.proxy.close(); } catch (e) { /* ignore */ } dgeo.proxy = null; }
   if (!dgeo.proc) return;
   try {
     if (process.platform === 'win32') spawn('taskkill', ['/pid', String(dgeo.proc.pid), '/T', '/F'], { windowsHide: true });
@@ -292,6 +304,43 @@ ipcMain.on('dgeo:scroll', (ev, sectionId) => {
   dgeoView.webContents.executeJavaScript(`(function(){var el=document.getElementById(${JSON.stringify(String(sectionId))});if(el&&!el.hidden){el.scrollIntoView({behavior:'smooth',block:'start'});}else{window.scrollTo({top:0,behavior:'smooth'});}})()`, true).catch(() => {});
 });
 ipcMain.handle('shell:state', () => shellState());
+
+/* ---------------- Réglages (data/caisse/reglages.json) ---------------- */
+const SETTINGS_FILE = () => path.join(REG_ROOT(), 'reglages.json');
+const SETTINGS_DEFAULT = { dgeoSkipFirst: true };
+function loadSettings() {
+  try { return Object.assign({}, SETTINGS_DEFAULT, JSON.parse(fs.readFileSync(SETTINGS_FILE(), 'utf8'))); } catch (e) { return Object.assign({}, SETTINGS_DEFAULT); }
+}
+function saveSettings(patchObj) {
+  const s = Object.assign(loadSettings(), patchObj || {});
+  fs.mkdirSync(REG_ROOT(), { recursive: true });
+  fs.writeFileSync(SETTINGS_FILE(), JSON.stringify(s, null, 1));
+  return s;
+}
+ipcMain.handle('settings:get', () => loadSettings());
+ipcMain.handle('settings:set', (ev, patchObj) => saveSettings(patchObj && typeof patchObj === 'object' ? patchObj : {}));
+
+/* ---------------- Nettoyage du dossier DGEO par la page Caisse écoles ---------------- */
+// La page a déjà pdf.js, pdf-lib et l'analyseur des pièces : la passerelle lui confie le dossier,
+// elle retire les pages « PIÈCE COMPTABLE » et renvoie le PDF (src/dossier.js).
+const pendingClean = new Map();
+let cleanSeq = 0;
+function cleanDossierViaPage(bytes, filename) {
+  return new Promise((resolve) => {
+    if (!caisseView || caisseView.webContents.isDestroyed()) { resolve(null); return; }
+    const id = ++cleanSeq;
+    pendingClean.set(id, resolve);
+    caisseView.webContents.send('dgeo:clean', { id, bytes, filename, skipFirst: loadSettings().dgeoSkipFirst !== false });
+    setTimeout(() => { if (pendingClean.delete(id)) { logLine('nettoyage du dossier : pas de réponse de la page, dossier transmis tel quel'); resolve(null); } }, 120000);
+  });
+}
+ipcMain.on('dgeo:clean-result', (ev, r) => {
+  if (!r || typeof r !== 'object') return;
+  const resolve = pendingClean.get(r.id);
+  if (!resolve) return;
+  pendingClean.delete(r.id);
+  resolve({ bytes: r.bytes ? Buffer.from(r.bytes) : null, removed: Array.isArray(r.removed) ? r.removed : [], total: Number(r.total) || 0, reason: String(r.reason || '') });
+});
 
 /* ---------------- Pont Décompte DGEO → Caisse écoles ---------------- */
 // Quand Décompte DGEO génère son fichier Excel (POST /api/excel sur son serveur local), le dossier

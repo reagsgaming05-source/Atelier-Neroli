@@ -491,3 +491,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   .switcher .brand .txt, .switcher .brand .chev { display: none; }
   .tool-menu { left: 52px; right: auto; top: 0; width: 280px; }
 }
+
+/* note sous la navigation Décompte DGEO (nettoyage du dossier) */
+.navnote { padding: 14px 10px 0; font-size: 12px; }
+.navnote .check input { margin-top: 2px; }
+@media (max-width: 1500px) { .navnote { display: none; } }

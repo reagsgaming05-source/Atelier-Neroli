@@ -90,6 +90,7 @@ inline('<!--INLINE_OCR-->', scriptTag(read(src('ocr.js'))));
 inline('<!--INLINE_EXCEL-->', scriptTag(read(src('excel.js'))));
 inline('<!--INLINE_REGISTRE-->', scriptTag(read(src('registre.js'))));
 inline('<!--INLINE_PDFPIECE-->', scriptTag(read(src('pdfpiece.js'))));
+inline('<!--INLINE_DOSSIER-->', scriptTag(read(src('dossier.js'))));
 inline('<!--INLINE_APP-->', scriptTag(read(src('app.js'))));
 inline('<!--INLINE_SAISIE-->', scriptTag(read(src('saisie.js'))));
 inline('<!--INLINE_COMPTAGE-->', scriptTag(read(src('comptage.js'))));
