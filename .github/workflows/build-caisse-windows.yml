@@ -159,7 +159,7 @@ jobs:
           prerelease: true
           body: |
             Compta Blonay, version portable Windows : décompressez le zip, puis double-cliquez sur `ComptaBlonay.exe`.
-            Aucune installation, aucun navigateur : tout est inclus. Une seule application pour les deux outils, en deux onglets : Caisse écoles (saisie des pièces, pièces scannées, journal, Excel, PDF) et Décompte DGEO (courses d'école & camps, démarré avec l'application). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
+            Aucune installation, aucun navigateur : tout est inclus. Une seule application pour les deux outils : le menu du logo, en haut de la barre latérale, passe de Caisse écoles (saisie des pièces, pièces scannées, comptage de la caisse, journal, Excel, PDF, récapitulatif des décomptes) à Décompte DGEO (courses d'école & camps, démarré avec l'application et affiché dans la même page). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
             Cette version ne contient aucun nom de personne : posez `vocabulaire-noms.js` (remis séparément) à côté de l'exécutable.
             Construit automatiquement depuis le commit ${{ github.sha }}.
           files: ComptaBlonay-windows.zip
