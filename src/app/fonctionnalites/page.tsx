@@ -19,7 +19,7 @@ export default function FonctionnalitesPage() {
           <p className="eyebrow">Fonctionnalités</p>
           <h1 className="mt-4 max-w-3xl font-display text-[2.75rem] font-bold leading-[1.02] tracking-tight text-ink-900 sm:text-[3.5rem]">Tout ce qu'un PDF peut demander.</h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">
-            Douze outils dans une seule interface, disponibles dans le navigateur et dans l'application de bureau. Les outils marqués « Pro » sont inclus dans les formules Pro et Équipe.
+            Douze outils dans une seule interface, disponibles dans le navigateur et dans l'application de bureau, pour le secrétariat comme pour la salle des maîtres. Tous les outils sont inclus dans chaque formule.
           </p>
         </div>
       </section>
@@ -52,7 +52,7 @@ export default function FonctionnalitesPage() {
                             ))}
                           </ul>
                         </div>
-                        <div className="md:text-right">{feature.pro ? <Badge tone="brand">Pro et Équipe</Badge> : <Badge tone="gray">Toutes formules</Badge>}</div>
+                        <div className="md:text-right">{feature.pro ? <Badge tone="brand">Données sensibles</Badge> : <Badge tone="gray">Inclus</Badge>}</div>
                       </article>
                     );
                   })}
@@ -65,8 +65,8 @@ export default function FonctionnalitesPage() {
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="band-brand rounded-[1.5rem] p-8 text-white shadow-soft">
             <p className="eyebrow text-accent-400">Formules</p>
-            <h2 className="mt-3 font-display text-[1.75rem] font-semibold leading-tight">Tous les outils dès {formatCHF(990)} par mois.</h2>
-            <p className="mt-4 text-[15px] leading-relaxed text-white/75">Sans engagement, avec deux mois offerts en formule annuelle. Les outils Pro à partir de {formatCHF(1990)} par mois.</p>
+            <h2 className="mt-3 font-display text-[1.75rem] font-semibold leading-tight">Tous les outils dès {formatCHF(490)} par mois.</h2>
+            <p className="mt-4 text-[15px] leading-relaxed text-white/75">Pour une personne. Une licence Établissement à {formatCHF(14900)} par mois couvre tous les collaborateur·trice·s, sans plafond.</p>
             <ButtonLink href="/tarifs" variant="light" className="mt-8 w-full">
               Comparer les formules
             </ButtonLink>
@@ -77,6 +77,7 @@ export default function FonctionnalitesPage() {
               <li>Disponible sur {site.platforms.join(", ")}.</li>
               <li>Fichiers traités en Suisse, supprimés après 24 h.</li>
               <li>Compatible avec les annotations et formulaires Acrobat.</li>
+              <li>Export PDF/UA pour les documents accessibles.</li>
               <li>{site.vatNote}</li>
             </ul>
           </div>

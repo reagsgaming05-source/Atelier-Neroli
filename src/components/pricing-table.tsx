@@ -15,7 +15,10 @@ export type PricingPlan = {
   priceYearlyCents: number;
   features: string[];
   highlight: boolean;
+  quoteOnly: boolean;
 };
+
+const QUOTE_HREF = "/contact?sujet=Offre%20cantonale";
 
 type Billing = "month" | "year";
 
@@ -66,7 +69,7 @@ export function PricingTable({ plans, hasSubscription }: { plans: PricingPlan[];
         {plans.map((plan) => {
           const price = billing === "month" ? plan.priceMonthlyCents : plan.priceYearlyCents;
           const perMonth = billing === "month" ? plan.priceMonthlyCents : Math.round(plan.priceYearlyCents / 12);
-          const href = hasSubscription ? "/compte/abonnement" : `/abonnement/${plan.slug}/checkout?interval=${billing}`;
+          const href = plan.quoteOnly ? QUOTE_HREF : hasSubscription ? "/compte/abonnement" : `/abonnement/${plan.slug}/checkout?interval=${billing}`;
           const dark = plan.highlight;
 
           return (
@@ -86,13 +89,23 @@ export function PricingTable({ plans, hasSubscription }: { plans: PricingPlan[];
               <p className={cn("mt-2 text-sm", dark ? "text-canvas-100/75" : "text-ink-500")}>{plan.tagline}</p>
 
               <div className="mt-8">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display text-[2.5rem] font-semibold leading-none tracking-tight">{formatCHF(price)}</span>
-                  <span className={cn("text-sm", dark ? "text-canvas-100/70" : "text-ink-500")}>{billing === "month" ? "/ mois" : "/ an"}</span>
-                </div>
-                <p className={cn("mt-2 text-xs", dark ? "text-canvas-100/60" : "text-ink-400")}>
-                  {billing === "year" ? `soit ${formatCHF(perMonth)} par mois · 2 mois offerts` : `ou ${formatCHF(plan.priceYearlyCents)} par an`}{plan.slug === "equipe" ? " · 5 utilisateurs inclus" : ""}
-                </p>
+                {plan.quoteOnly ? (
+                  <>
+                    <span className="font-display text-[2.5rem] font-semibold leading-none tracking-tight">Sur devis</span>
+                    <p className={cn("mt-2 text-xs", dark ? "text-canvas-100/60" : "text-ink-400")}>Tarif dégressif selon le nombre d'établissements · facturation annuelle</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-display text-[2.5rem] font-semibold leading-none tracking-tight">{formatCHF(price)}</span>
+                      <span className={cn("text-sm", dark ? "text-canvas-100/70" : "text-ink-500")}>{billing === "month" ? "/ mois" : "/ an"}</span>
+                    </div>
+                    <p className={cn("mt-2 text-xs", dark ? "text-canvas-100/60" : "text-ink-400")}>
+                      {billing === "year" ? `soit ${formatCHF(perMonth)} par mois · 2 mois offerts` : `ou ${formatCHF(plan.priceYearlyCents)} par an`}
+                      {plan.slug === "etablissement" ? " · collaborateur·trice·s illimités" : ""}
+                    </p>
+                  </>
+                )}
               </div>
 
               <ul className="mt-8 flex-1 space-y-3">
@@ -107,7 +120,7 @@ export function PricingTable({ plans, hasSubscription }: { plans: PricingPlan[];
               </ul>
 
               <Link href={href} className={buttonClasses(dark ? "light" : "primary", "md", "mt-10 w-full")}>
-                {hasSubscription ? "Gérer mon abonnement" : `Choisir ${plan.name}`}
+                {plan.quoteOnly ? "Demander une offre" : hasSubscription ? "Gérer mon abonnement" : `Choisir ${plan.name}`}
               </Link>
             </article>
           );

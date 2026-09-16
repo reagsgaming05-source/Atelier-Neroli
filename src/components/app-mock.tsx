@@ -26,7 +26,7 @@ export function AppMock({ className }: { className?: string }) {
             <span className="size-2.5 rounded-full bg-canvas-300" />
             <span className="size-2.5 rounded-full bg-canvas-300" />
           </div>
-          <p className="flex-1 truncate text-center text-xs font-medium text-ink-500">Contrat_de_bail_Blonay_2026.pdf · 12 pages</p>
+          <p className="flex-1 truncate text-center text-xs font-medium text-ink-500">Autorisation_camp_ski_8P_2026.pdf · 3 pages</p>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-700 px-2.5 py-1 text-[0.68rem] font-semibold text-white">
             <Share2 className="size-3" aria-hidden />
             Partager
@@ -81,7 +81,7 @@ export function AppMock({ className }: { className?: string }) {
               </div>
               <div className="mt-5 flex items-end justify-between rounded-md border-2 border-dashed border-brand-500 bg-brand-50/60 px-3 py-2">
                 <div>
-                  <p className="text-[0.55rem] font-semibold uppercase tracking-wider text-brand-700">Signature du locataire</p>
+                  <p className="text-[0.55rem] font-semibold uppercase tracking-wider text-brand-700">Signature du parent</p>
                   <svg viewBox="0 0 120 32" className="mt-1 h-7 w-24 text-ink-900" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
                     <path d="M4 24c10-18 16-18 20-6s8 10 14-4 10-8 16 2 10 6 18-6 12-8 20 0 12 10 22 4" />
                   </svg>
@@ -96,9 +96,9 @@ export function AppMock({ className }: { className?: string }) {
             <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-ink-400">Signature électronique</p>
             <ul className="mt-3 space-y-2.5">
               {[
-                { name: "Marie Dupont", role: "Locataire", done: true },
-                { name: "Régie Léman SA", role: "Bailleur", done: true },
-                { name: "Julien Favre", role: "Garant", done: false },
+                { name: "Marie Dupont", role: "Parent", done: true },
+                { name: "Secrétariat", role: "Établissement", done: true },
+                { name: "J. Favre", role: "Direction", done: false },
               ].map((s) => (
                 <li key={s.name} className="flex items-center gap-2">
                   <span className={cn("inline-flex size-5 shrink-0 items-center justify-center rounded-full", s.done ? "bg-success-50 text-success" : "border border-dashed border-line text-transparent")}>
@@ -121,7 +121,7 @@ export function AppMock({ className }: { className?: string }) {
       {/* Bulles flottantes */}
       <div className="absolute -left-3 top-24 hidden items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink-900 shadow-card ring-1 ring-line md:flex">
         <ScanText className="size-3.5 text-brand-600" aria-hidden />
-        OCR terminé · 12 pages
+        Caviardage · 3 n° AVS
       </div>
       <div className="absolute -right-3 bottom-16 hidden items-center gap-2 rounded-full bg-brand-900 px-3 py-1.5 text-xs font-semibold text-white shadow-soft md:flex">
         <Check className="size-3.5 text-accent-400" strokeWidth={3} aria-hidden />

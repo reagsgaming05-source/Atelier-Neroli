@@ -24,6 +24,7 @@ export default async function CheckoutPage({
   const user = await requireUser(`/abonnement/${slug}/checkout?interval=${interval}`);
   const plan = await getPlanBySlug(slug);
   if (!plan) notFound();
+  if (plan.quoteOnly) redirect("/contact?sujet=Offre%20cantonale");
 
   const existing = await getActiveSubscription(user.id);
   if (existing) redirect("/compte/abonnement?notice=already");

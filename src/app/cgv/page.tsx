@@ -15,11 +15,11 @@ export default function CgvPage() {
       <h2>2. Formules et licence</h2>
       <h3>2.1 Formules</h3>
       <p>
-        Trois formules sont proposées (Essentiel, Pro, Équipe), en périodicité mensuelle ou annuelle. Le contenu de chaque formule (outils, limites de taille, stockage, nombre d'utilisateurs) est celui décrit sur la page Tarifs au moment de la souscription.
+        Les formules Enseignant·e et Établissement sont proposées en périodicité mensuelle ou annuelle ; la formule Canton fait l'objet d'une convention séparée. Le contenu de chaque formule (outils, limites de taille, stockage, nombre d'utilisateurs) est celui décrit sur la page Tarifs au moment de la souscription.
       </p>
       <h3>2.2 Licence d'utilisation</h3>
       <p>
-        L'abonnement confère un droit d'utilisation personnel, non exclusif et non transférable du logiciel, sur l'ensemble des appareils de l'utilisateur, pour la durée de l'abonnement. La formule Équipe couvre le nombre d'utilisateurs indiqué ; chaque utilisateur dispose d'un compte nominatif.
+        L'abonnement confère un droit d'utilisation non exclusif et non transférable du logiciel pour la durée de l'abonnement. La formule Enseignant·e couvre une personne sur l'ensemble de ses appareils. La formule Établissement couvre l'ensemble des collaborateur·trice·s de l'établissement souscripteur ; chaque personne dispose d'un compte nominatif rattaché à l'établissement.
       </p>
       <h3>2.3 Durée et renouvellement</h3>
       <p>
@@ -36,7 +36,7 @@ export default function CgvPage() {
 
       <h2>3. Prix et paiement</h2>
       <p>
-        Les prix sont indiqués en francs suisses (CHF), TVA de 8.1 % incluse. Le paiement s'effectue par carte, en ligne, à la souscription puis à chaque renouvellement. Une facture est mise à disposition dans l'espace client. En cas d'échec de paiement, l'éditeur peut suspendre l'accès jusqu'à régularisation, après notification.
+        Les prix sont indiqués en francs suisses (CHF), TVA de 8.1 % incluse. Les particuliers règlent par carte, en ligne, à la souscription puis à chaque renouvellement. Les établissements scolaires et les services de l'État peuvent régler sur facture, à 30 jours, avec bon de commande et référence interne. Une facture est mise à disposition dans l'espace client. En cas de retard de paiement, l'éditeur peut suspendre l'accès après notification et délai de grâce de 30 jours.
       </p>
 
       <h2>4. Disponibilité et mises à jour</h2>

@@ -1,6 +1,6 @@
 # Blonay PDF — site et espace client
 
-Site vitrine et système d'abonnements pour **Blonay PDF**, l'outil PDF complet (éditer, fusionner, convertir, signer, protéger, annoter) conçu en Suisse.
+Site vitrine et système d'abonnements pour **Blonay PDF**, l'outil PDF complet (éditer, fusionner, convertir, signer, protéger, annoter) destiné à l'État de Vaud et à l'ensemble des établissements scolaires.
 Tout fonctionne **en local**, sans service externe : base SQLite dans un fichier, paiement en mode démonstration.
 
 ## Démarrage rapide
@@ -21,7 +21,7 @@ Au premier lancement, la base de données est créée automatiquement (`data/blo
 | Rôle | E-mail | Mot de passe | Accès |
 | --- | --- | --- | --- |
 | Administration | `admin@blonaypdf.ch` | `BlonayPDF-Admin-2026!` | <http://localhost:3000/admin> |
-| Client (formule Pro active) | `marie.demo@exemple.ch` | `Demo-1234!` | <http://localhost:3000/compte> |
+| Client (formule Établissement active) | `marie.demo@exemple.ch` | `Demo-1234!` | <http://localhost:3000/compte> |
 
 Le mot de passe admin peut être défini avant le premier lancement via `.env` (voir `.env.example`).
 
@@ -43,7 +43,7 @@ Date d'expiration future et CVC à 3 chiffres quelconques.
 
 **Abonnements**
 
-- Trois formules (Essentiel, Pro, Équipe), en mensuel ou annuel (2 mois offerts)
+- Formules Enseignant·e et Établissement, en mensuel ou annuel (2 mois offerts), et formule Canton sur devis (pas de souscription en ligne : renvoi vers le contact)
 - Souscription en ligne avec création de compte, paiement démo et facture immédiate
 - Résiliation à l'échéance, réactivation, changement de formule (montée en gamme immédiate avec crédit prorata, descente à l'échéance)
 - Renouvellements automatiques : appliqués à la consultation (sans tâche planifiée), avec facture à chaque période

@@ -44,6 +44,8 @@ export const plans = sqliteTable("plans", {
   priceYearlyCents: integer("price_yearly_cents").notNull(),
   features: text("features", { mode: "json" }).$type<string[]>().notNull(),
   highlight: integer("highlight", { mode: "boolean" }).notNull().default(false),
+  /** Formule sur devis : pas de souscription en ligne, contact commercial. */
+  quoteOnly: integer("quote_only", { mode: "boolean" }).notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
 });

@@ -47,7 +47,7 @@ export function FeatureCard({ feature }: { feature: Feature }) {
       <p className="mt-3 flex-1 text-[15px] leading-relaxed text-ink-500">{feature.summary}</p>
       <div className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-4 text-sm">
         <span className="font-semibold text-brand-700">En savoir plus</span>
-        {feature.pro ? <Badge tone="brand">Pro</Badge> : <Badge tone="gray">Inclus</Badge>}
+        {feature.pro ? <Badge tone="brand">Données sensibles</Badge> : <Badge tone="gray">Inclus</Badge>}
       </div>
     </Link>
   );

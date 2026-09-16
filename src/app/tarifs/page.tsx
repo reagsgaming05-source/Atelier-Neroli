@@ -10,16 +10,16 @@ import { getActiveSubscription, listActivePlans } from "@/lib/subscriptions";
 
 export const metadata: Metadata = {
   title: "Tarifs",
-  description: "Trois formules Blonay PDF, mensuelles ou annuelles, sans engagement : Essentiel, Pro et Équipe. Deux mois offerts en annuel.",
+  description: "Formules Blonay PDF pour les enseignant·e·s, les établissements scolaires et le canton de Vaud. Mensuel ou annuel, sans engagement, facturation sur bon de commande.",
 };
 
 const included = [
-  "Résiliation à tout moment, effective à la fin de la période réglée",
+  "Les 12 outils, sans option payante",
   "Application web, Windows et macOS avec la même licence",
+  "Données hébergées en Suisse, conformité LPD et LPrD",
   "Mises à jour incluses pendant toute la durée de l'abonnement",
-  "Changement de formule à tout moment, prorata automatique",
-  "Paiement par carte, factures disponibles dans l'espace client",
-  "Support en français, allemand et anglais",
+  "Résiliation à tout moment, effective à la fin de la période réglée",
+  "Support en français, aux horaires scolaires",
 ];
 
 export default async function TarifsPage() {
@@ -31,9 +31,9 @@ export default async function TarifsPage() {
       <section className="border-b border-line bg-canvas-100">
         <div className="container-x py-16 text-center lg:py-20">
           <p className="eyebrow">Tarifs</p>
-          <h1 className="mx-auto mt-4 max-w-3xl font-display text-[2.75rem] font-bold leading-[1.02] tracking-tight text-ink-900 sm:text-[3.5rem]">Simple, clair, sans engagement.</h1>
+          <h1 className="mx-auto mt-4 max-w-3xl font-display text-[2.75rem] font-bold leading-[1.02] tracking-tight text-ink-900 sm:text-[3.5rem]">Un prix public, sans engagement.</h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">
-            Mensuel ou annuel, résiliable à tout moment. L'abonnement annuel équivaut à deux mois offerts.
+            Une formule pour une personne, une licence par établissement, ou un déploiement cantonal sur devis. L'abonnement annuel équivaut à deux mois offerts ; les établissements règlent sur bon de commande.
           </p>
         </div>
       </section>
@@ -45,7 +45,7 @@ export default async function TarifsPage() {
 
       <section className="bg-canvas-100">
         <div className="container-x grid gap-12 py-20 lg:grid-cols-2 lg:gap-20">
-          <SectionHeading eyebrow="Dans toutes les formules" title="Ce qui est toujours inclus." text="Quelle que soit la formule, vous disposez du même éditeur, sur toutes vos plateformes, avec les mises à jour comprises." />
+          <SectionHeading eyebrow="Dans toutes les formules" title="Ce qui est toujours inclus." text="Enseignant·e ou établissement, le même éditeur complet, sur toutes les plateformes, avec les mises à jour comprises." />
           <ul className="grid gap-4 sm:grid-cols-2">
             {included.map((item) => (
               <li key={item} className="flex items-start gap-3 rounded-2xl bg-white p-5 text-[15px] text-ink-700 shadow-card">
@@ -66,10 +66,10 @@ export default async function TarifsPage() {
 
       <section className="container-x pb-20 lg:pb-28">
         <div className="band-brand rounded-[1.75rem] p-10 text-center text-white shadow-soft sm:p-16">
-          <h2 className="mx-auto max-w-2xl font-display text-[2.25rem] font-semibold leading-tight sm:text-[2.75rem]">Plus de cinq utilisateurs ?</h2>
-          <p className="mx-auto mt-5 max-w-xl text-[17px] text-white/75">Nous proposons des conditions adaptées aux administrations, écoles et grandes équipes, avec facturation annuelle et déploiement centralisé.</p>
+          <h2 className="mx-auto max-w-2xl font-display text-[2.25rem] font-semibold leading-tight sm:text-[2.75rem]">Plusieurs établissements, ou tout le canton ?</h2>
+          <p className="mx-auto mt-5 max-w-xl text-[17px] text-white/75">Tarif dégressif, déploiement centralisé par la DGEO ou la DGEP, formation des secrétariats et fiche technique pour les marchés publics.</p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/contact?sujet=Offre%20pour%20une%20équipe" variant="light">
+            <ButtonLink href="/contact?sujet=Offre%20cantonale" variant="light">
               Demander une offre
             </ButtonLink>
             <ButtonLink href={`mailto:${site.email}`} variant="outlineLight">

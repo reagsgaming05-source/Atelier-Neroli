@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { Notice, Panel } from "@/components/account/space-shell";
 import { SubscriptionBadge } from "@/components/account/subscription-badge";
@@ -133,10 +134,14 @@ export default async function CompteAbonnementPage({ searchParams }: { searchPar
 
       <Panel title="Changer de formule">
         <p className="-mt-2 mb-6 text-sm text-ink-500">
-          Une montée en gamme est immédiate, avec un crédit au prorata de votre période en cours. Une formule inférieure prend effet à la prochaine échéance.
+          Une montée en gamme est immédiate, avec un crédit au prorata de votre période en cours. Une formule inférieure prend effet à la prochaine échéance. Pour un déploiement cantonal,{" "}
+          <Link href="/contact?sujet=Offre%20cantonale" className="font-semibold text-brand-700 hover:text-brand-900">
+            demandez une offre
+          </Link>
+          .
         </p>
-        <div className="grid gap-4 md:grid-cols-3">
-          {plans.map((plan) => (
+        <div className="grid gap-4 md:grid-cols-2">
+          {plans.filter((plan) => !plan.quoteOnly).map((plan) => (
             <div key={plan.id} className="flex flex-col rounded-2xl border border-line p-5">
               <h3 className="font-display text-2xl font-semibold text-ink-900">{plan.name}</h3>
               <p className="mt-1 text-xs text-ink-500">{plan.tagline}</p>

@@ -127,6 +127,7 @@ export async function startSubscription(input: {
 }) {
   const plan = await getPlanBySlug(input.planSlug);
   if (!plan) throw new SubscriptionError("Cette formule n'est plus disponible.");
+  if (plan.quoteOnly) throw new SubscriptionError("Cette formule se souscrit sur devis. Contactez-nous.");
 
   const existing = await getActiveSubscription(input.userId);
   if (existing) throw new SubscriptionError("Vous avez déjà un abonnement actif. Gérez-le depuis votre espace.");
@@ -212,6 +213,7 @@ export async function changePlan(input: {
   if (!sub) throw new SubscriptionError("Aucun abonnement actif.");
   const newPlan = await getPlanBySlug(input.planSlug);
   if (!newPlan) throw new SubscriptionError("Cette formule n'est plus disponible.");
+  if (newPlan.quoteOnly) throw new SubscriptionError("Cette formule se souscrit sur devis. Contactez-nous.");
   if (newPlan.id === sub.planId && input.interval === sub.interval) {
     throw new SubscriptionError("Vous êtes déjà sur cette formule.");
   }

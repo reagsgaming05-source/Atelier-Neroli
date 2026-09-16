@@ -28,7 +28,7 @@ export default async function CompteDashboardPage() {
             <div>
               <SubscriptionBadge subscription={null} />
               <h2 className="mt-4 font-display text-[1.9rem] font-semibold text-ink-900">Vous n'avez pas encore de formule.</h2>
-              <p className="mt-2 max-w-lg text-[15px] text-ink-500">Choisissez Essentiel, Pro ou Équipe pour activer votre licence et utiliser {site.name} dans le navigateur, sur Windows et sur macOS.</p>
+              <p className="mt-2 max-w-lg text-[15px] text-ink-500">Choisissez la formule Enseignant·e ou Établissement pour activer votre licence et utiliser {site.name} dans le navigateur, sur Windows et sur macOS.</p>
             </div>
             <ButtonLink href="/tarifs">
               Choisir une formule
@@ -98,7 +98,11 @@ export default async function CompteDashboardPage() {
       <Panel title="Votre licence et vos applications">
         <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <p className="text-sm text-ink-500">Clé de licence, à saisir au premier lancement de l'application de bureau. Elle couvre tous vos appareils.</p>
+            <p className="text-sm text-ink-500">
+              {subscription.plan.slug === "etablissement"
+                ? "Clé de licence de l'établissement, à transmettre à vos collaborateur·trice·s ou à saisir dans la console de déploiement."
+                : "Clé de licence, à saisir au premier lancement de l'application de bureau. Elle couvre tous vos appareils."}
+            </p>
             <p className="mt-3 inline-flex items-center gap-3 rounded-xl border border-line bg-canvas-50 px-4 py-3 font-mono text-[15px] font-semibold tracking-wider text-ink-900">
               <KeyRound className="size-4 text-brand-600" aria-hidden />
               {licenceKey(user.id)}

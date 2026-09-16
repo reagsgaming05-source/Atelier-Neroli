@@ -6,9 +6,10 @@
 export const site = {
   name: "Blonay PDF",
   legalName: "Blonay PDF Sàrl",
-  tagline: "L'outil PDF complet, conçu en Suisse",
+  tagline: "L'outil PDF des établissements scolaires vaudois",
   description:
-    "Blonay PDF réunit tout ce qu'il faut pour travailler vos documents : éditer, fusionner, convertir, signer, protéger et annoter vos PDF, depuis le navigateur ou l'application de bureau. Une alternative complète à Acrobat, avec des données hébergées en Suisse.",
+    "Blonay PDF réunit tout ce qu'il faut pour travailler les documents de l'école : éditer, fusionner, convertir, signer, protéger et annoter les PDF, depuis le navigateur ou l'application de bureau. Une alternative complète à Acrobat pour l'État de Vaud et ses établissements scolaires, hébergée en Suisse et conforme à la LPrD.",
+  audience: "l'État de Vaud et l'ensemble des établissements scolaires",
   founded: 2021,
   address: {
     street: "Route de Vevey 12",
@@ -24,8 +25,8 @@ export const site = {
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=Route+de+Vevey+12+1807+Blonay",
   linkedin: "https://www.linkedin.com/",
   supportHours: [
-    { days: "Lundi – Vendredi", value: "08h30 – 18h00" },
-    { days: "Samedi – Dimanche", value: "E-mail uniquement" },
+    { days: "Lundi – Vendredi", value: "07h30 – 17h30" },
+    { days: "Vacances scolaires", value: "08h30 – 12h00" },
   ],
   vatNote: "Prix en CHF, TVA 8.1 % incluse.",
   platforms: ["Web", "Windows", "macOS"],
@@ -77,7 +78,7 @@ export const features: Feature[] = [
     slug: "editer",
     name: "Éditer le texte et les images",
     category: "Créer & éditer",
-    summary: "Corrigez un paragraphe, remplacez un logo, ajoutez une page : directement dans le PDF, sans repasser par le fichier d'origine.",
+    summary: "Corrigez une date de convocation, remplacez l'en-tête de l'établissement, ajoutez une page : directement dans le PDF.",
     description:
       "L'éditeur reconnaît les blocs de texte, les polices et les images du document. Vous modifiez le contenu comme dans un traitement de texte, avec la mise en page conservée. Les polices manquantes sont remplacées automatiquement par l'équivalent le plus proche.",
     details: ["Texte, images, liens et en-têtes", "Polices et interlignes conservés", "Annuler / rétablir illimité"],
@@ -88,17 +89,17 @@ export const features: Feature[] = [
     slug: "formulaires",
     name: "Créer et remplir des formulaires",
     category: "Créer & éditer",
-    summary: "Transformez n'importe quel document en formulaire à remplir, ou complétez ceux que vous recevez.",
+    summary: "Inscriptions aux camps, autorisations de sortie, demandes de congé : des formulaires à remplir en ligne, réponses centralisées.",
     description:
       "Ajoutez des champs texte, cases à cocher, listes et signatures en quelques clics. La détection automatique repère les zones à remplir dans les formulaires existants, y compris scannés.",
-    details: ["Détection automatique des champs", "Export des réponses en CSV", "Compatible avec les formulaires Acrobat"],
+    details: ["Détection automatique des champs", "Réponses exportées en tableau", "Compatible avec les formulaires Acrobat"],
     icon: "forms",
   },
   {
     slug: "ocr",
     name: "Reconnaissance de texte (OCR)",
     category: "Créer & éditer",
-    summary: "Rendez vos scans consultables et modifiables, en français, allemand, italien et anglais.",
+    summary: "Rendez les dossiers scannés consultables et modifiables : certificats, décisions, anciens bulletins.",
     description:
       "L'OCR convertit les images de texte en texte réel : vous pouvez ensuite rechercher, copier, éditer ou caviarder. Les documents multilingues sont pris en charge dans un seul passage, avec conservation de la mise en page.",
     details: ["Plus de 30 langues", "Traitement par lots", "Sortie PDF/A pour l'archivage"],
@@ -109,7 +110,7 @@ export const features: Feature[] = [
     slug: "organiser",
     name: "Organiser les pages",
     category: "Organiser & convertir",
-    summary: "Réordonnez, pivotez, supprimez ou insérez des pages par glisser-déposer.",
+    summary: "Réordonnez, pivotez, supprimez ou insérez des pages par glisser-déposer, par exemple pour assembler un dossier d'élève.",
     description:
       "La vue en vignettes permet de restructurer un document de cent pages en quelques secondes. Vous pouvez extraire une plage de pages vers un nouveau fichier ou insérer des pages venant d'un autre PDF, d'une image ou d'un scan.",
     details: ["Glisser-déposer des vignettes", "Extraction de plages", "Numérotation et filigranes"],
@@ -119,7 +120,7 @@ export const features: Feature[] = [
     slug: "fusionner",
     name: "Fusionner et diviser",
     category: "Organiser & convertir",
-    summary: "Combinez plusieurs fichiers en un seul PDF, ou découpez un document volumineux.",
+    summary: "Assemblez les bulletins d'une classe en un seul envoi, ou découpez un lot de convocations par élève.",
     description:
       "Fusionnez des PDF, des images et des documents Office dans l'ordre souhaité, avec une table des matières générée automatiquement. La division fonctionne par nombre de pages, par signets ou par taille de fichier.",
     details: ["Fusion de formats mixtes", "Division par signets ou par taille", "Signets et table des matières"],
@@ -130,10 +131,10 @@ export const features: Feature[] = [
     slug: "convertir",
     name: "Convertir dans les deux sens",
     category: "Organiser & convertir",
-    summary: "Word, Excel, PowerPoint, images, HTML : vers PDF et depuis PDF, avec la mise en page respectée.",
+    summary: "Word, Excel, PowerPoint, images : vers PDF et depuis PDF, avec export PDF/A pour l'archivage et PDF/UA pour l'accessibilité.",
     description:
       "La conversion vers Word ou Excel reconstruit les paragraphes, tableaux et styles pour un fichier réellement éditable. Vers PDF, la sortie respecte les normes PDF/A et PDF/X pour l'archivage et l'impression.",
-    details: ["Word, Excel, PowerPoint, JPG, PNG, HTML", "PDF/A et PDF/X", "Conversion par lots"],
+    details: ["Word, Excel, PowerPoint, JPG, PNG, HTML", "PDF/A (archivage) et PDF/UA (accessibilité)", "Conversion par lots"],
     icon: "convert",
     featured: true,
   },
@@ -141,7 +142,7 @@ export const features: Feature[] = [
     slug: "compresser",
     name: "Compresser sans perte visible",
     category: "Organiser & convertir",
-    summary: "Réduisez le poids de vos fichiers jusqu'à 90 % pour les envoyer par e-mail ou les archiver.",
+    summary: "Réduisez le poids des documents jusqu'à 90 % pour les envoyer aux parents ou les déposer sur la plateforme de l'école.",
     description:
       "Trois niveaux de compression, avec un aperçu avant/après pour vérifier la qualité des images. Les polices et le texte restent vectoriels, seules les images sont recalculées.",
     details: ["Aperçu avant / après", "Choix de la résolution cible", "Traitement par lots"],
@@ -151,7 +152,7 @@ export const features: Feature[] = [
     slug: "signer",
     name: "Signer électroniquement",
     category: "Signer & protéger",
-    summary: "Signez, faites signer et suivez l'avancement, avec horodatage et journal d'audit.",
+    summary: "Faites signer les parents, la direction ou les stagiaires, suivez l'avancement, avec horodatage et journal d'audit.",
     description:
       "Envoyez un document à un ou plusieurs signataires, définissez l'ordre de signature et recevez une notification à chaque étape. Chaque signature est horodatée et le certificat d'audit est joint au document final.",
     details: ["Signatures simples et avancées", "Ordre de signature et rappels", "Certificat d'audit joint"],
@@ -163,7 +164,7 @@ export const features: Feature[] = [
     slug: "proteger",
     name: "Protéger et chiffrer",
     category: "Signer & protéger",
-    summary: "Mot de passe, chiffrement AES-256 et permissions fines : impression, copie, modification.",
+    summary: "Mot de passe, chiffrement AES-256 et permissions fines pour les documents contenant des données d'élèves.",
     description:
       "Définissez un mot de passe d'ouverture et un mot de passe de permissions distincts. Vous contrôlez ce que le destinataire peut faire : imprimer, copier du texte, remplir des champs ou modifier le document.",
     details: ["Chiffrement AES-256", "Permissions détaillées", "Suppression des métadonnées"],
@@ -173,7 +174,7 @@ export const features: Feature[] = [
     slug: "caviarder",
     name: "Caviarder définitivement",
     category: "Signer & protéger",
-    summary: "Supprimez des informations sensibles de façon irréversible, texte et images compris.",
+    summary: "Supprimez de façon irréversible les données personnelles avant transmission : noms, numéros AVS, adresses.",
     description:
       "Contrairement à un simple rectangle noir, le caviardage retire réellement le contenu du fichier. Recherchez un terme, un numéro AVS ou un IBAN pour caviarder toutes les occurrences en une fois.",
     details: ["Recherche et caviardage en masse", "Motifs prédéfinis (AVS, IBAN, e-mails)", "Rapport de vérification"],
@@ -184,7 +185,7 @@ export const features: Feature[] = [
     slug: "annoter",
     name: "Annoter et commenter",
     category: "Collaborer",
-    summary: "Surlignez, commentez, dessinez et discutez dans le document, à plusieurs.",
+    summary: "Corrigez des travaux, annotez un projet d'établissement, relisez un règlement à plusieurs.",
     description:
       "Les annotations sont compatibles avec les autres lecteurs PDF. Partagez un lien de relecture : vos collègues commentent depuis leur navigateur, sans compte, et vous recevez un résumé des retours.",
     details: ["Surlignage, notes, formes, tampons", "Lien de relecture sans compte", "Résumé des commentaires"],
@@ -194,7 +195,7 @@ export const features: Feature[] = [
     slug: "comparer",
     name: "Comparer deux versions",
     category: "Collaborer",
-    summary: "Repérez chaque différence entre deux versions d'un contrat ou d'un rapport.",
+    summary: "Repérez chaque différence entre deux versions d'un règlement, d'une directive ou d'un plan d'études.",
     description:
       "La comparaison met en évidence les textes ajoutés, supprimés et déplacés, ainsi que les changements de mise en page. Un rapport de synthèse liste les différences, page par page.",
     details: ["Différences de texte et de mise en page", "Rapport exportable", "Navigation d'une différence à l'autre"],
@@ -205,65 +206,69 @@ export const features: Feature[] = [
 
 export const values = [
   {
-    title: "Vos fichiers restent en Suisse",
-    text: "Traitement et stockage sur des serveurs situés en Suisse, chiffrement de bout en bout, suppression automatique des fichiers temporaires après 24 heures.",
+    title: "Les données des élèves restent en Suisse",
+    text: "Traitement et stockage sur des serveurs situés en Suisse, chiffrement de bout en bout, suppression automatique des fichiers temporaires. Conforme à la LPD et à la LPrD vaudoise.",
   },
   {
-    title: "Un seul outil, partout",
-    text: "La même application dans le navigateur, sur Windows et sur macOS. Vos documents et réglages vous suivent, et l'app de bureau fonctionne hors ligne.",
+    title: "Un seul outil pour tout l'établissement",
+    text: "Secrétariat, direction, doyens et enseignant·e·s utilisent la même application, dans le navigateur ou sur le poste de travail, avec la connexion unique de l'identité cantonale.",
   },
   {
-    title: "Un prix clair, sans engagement",
-    text: "Trois formules, mensuelles ou annuelles, résiliables à tout moment. Pas de frais cachés ni d'options facturées à part.",
+    title: "Un prix public, une facture par établissement",
+    text: "Une licence par établissement, sans plafond de collaborateurs, facturée sur bon de commande. Aucune option payante cachée.",
   },
 ];
 
 export const steps = [
   {
-    title: "Créez votre compte",
-    text: "Une adresse e-mail suffit. Votre espace client centralise abonnement, factures et licence.",
+    title: "L'établissement souscrit",
+    text: "Le secrétariat ou la direction choisit la formule Établissement et reçoit la facture sur bon de commande.",
   },
   {
-    title: "Choisissez votre formule",
-    text: "Essentiel, Pro ou Équipe, en mensuel ou en annuel. Vous pouvez changer de formule à tout moment.",
+    title: "Les collaborateur·trice·s se connectent",
+    text: "Avec leur identité cantonale ou une invitation par e-mail. Aucune installation n'est nécessaire pour la version web.",
   },
   {
-    title: "Ouvrez vos PDF",
-    text: "Dans le navigateur immédiatement, ou en installant l'application sur Windows et macOS.",
+    title: "Chacun travaille ses PDF",
+    text: "Bulletins, convocations, formulaires, dossiers : dans le navigateur ou l'application de bureau, hors ligne si besoin.",
   },
 ];
 
 /** Témoignages fictifs d'exemple, à remplacer par de vrais retours clients. */
 export const testimonials = [
   {
-    quote: "Nous avons remplacé cinq licences Acrobat par Blonay PDF. La signature électronique et le caviardage nous font gagner des heures chaque semaine.",
+    quote: "Les autorisations de sortie signées par les parents reviennent en deux jours au lieu de deux semaines. Le secrétariat a arrêté de courir après les papiers.",
     author: "Claire M.",
-    detail: "Fiduciaire, Vevey · formule Équipe",
+    detail: "Secrétaire d'établissement primaire, Riviera",
   },
   {
-    quote: "La conversion vers Word est enfin fidèle : les tableaux ressortent propres. Et l'OCR sur nos plans scannés fonctionne du premier coup.",
+    quote: "Le caviardage des données d'élèves avant transmission à un service externe est devenu un réflexe : on recherche, on valide, c'est propre.",
     author: "Nadia R.",
-    detail: "Bureau d'architecture, Montreux · formule Pro",
+    detail: "Doyenne, gymnase vaudois",
   },
   {
-    quote: "Un outil simple qui fait tout ce dont j'ai besoin, avec des données qui restent en Suisse. Le rapport qualité-prix est imbattable.",
+    quote: "Je corrige les travaux de mes classes directement dans le PDF, sur le poste de l'école comme à la maison. Un seul outil, enfin.",
     author: "Thomas B.",
-    detail: "Avocat indépendant · formule Pro",
+    detail: "Enseignant, école professionnelle",
   },
 ];
 
 export const faq = [
   {
+    q: "Qui souscrit : l'enseignant·e ou l'établissement ?",
+    a: "Les deux sont possibles. La formule Établissement couvre l'ensemble des collaborateur·trice·s d'une école, sans plafond, et se règle sur facture. La formule Enseignant·e permet à une personne de s'équiper individuellement.",
+  },
+  {
+    q: "Que deviennent les documents des élèves ?",
+    a: "Les fichiers traités en ligne sont chiffrés, hébergés en Suisse et supprimés automatiquement après 24 heures, sauf enregistrement volontaire dans l'espace de l'établissement. L'application de bureau traite les documents localement. Le traitement respecte la LPD et la LPrD vaudoise.",
+  },
+  {
+    q: "Les élèves peuvent-ils utiliser l'outil ?",
+    a: "La licence Établissement peut être étendue aux élèves du secondaire II pour la remise de travaux et les formulaires, sans compte nominatif pour les mineurs. Parlez-en avec nous lors de la mise en place.",
+  },
+  {
     q: "L'abonnement est-il avec engagement ?",
-    a: "Non. Vous pouvez résilier à tout moment depuis votre espace client ; l'abonnement reste actif jusqu'à la fin de la période déjà réglée, puis s'arrête sans frais.",
-  },
-  {
-    q: "Que deviennent mes fichiers ?",
-    a: "Les fichiers traités en ligne sont chiffrés, hébergés en Suisse et supprimés automatiquement après 24 heures, sauf si vous les enregistrez dans votre espace de stockage. L'application de bureau traite vos documents localement.",
-  },
-  {
-    q: "Puis-je utiliser Blonay PDF sur plusieurs appareils ?",
-    a: "Oui. Une licence Essentiel ou Pro couvre tous vos appareils (navigateur, Windows, macOS). La formule Équipe inclut cinq utilisateurs, extensibles depuis l'administration.",
+    a: "Non. L'abonnement se résilie à tout moment depuis l'espace client ; il reste actif jusqu'à la fin de la période déjà réglée, puis s'arrête sans frais.",
   },
   {
     q: "Puis-je changer de formule ?",
@@ -275,7 +280,7 @@ export const faq = [
   },
   {
     q: "Comment se passe le paiement ?",
-    a: "Le paiement s'effectue par carte, en ligne, à la souscription puis à chaque renouvellement. Vos factures sont disponibles dans votre espace client, en format imprimable.",
+    a: "Les particuliers règlent par carte, en ligne. Les établissements et services de l'État peuvent régler sur facture, avec bon de commande et référence interne. Toutes les factures sont disponibles dans l'espace client.",
   },
 ];
 
@@ -297,13 +302,13 @@ export const securityPoints = [
   },
   {
     icon: "shield",
-    title: "Conforme LPD et RGPD",
-    text: "Traitement conforme à la loi fédérale sur la protection des données et au RGPD. Contrat de sous-traitance disponible pour les équipes.",
+    title: "Conforme LPD et LPrD",
+    text: "Traitement conforme à la loi fédérale sur la protection des données et à la loi vaudoise sur la protection des données personnelles. Contrat de sous-traitance fourni à chaque établissement.",
   },
   {
     icon: "key",
     title: "Accès maîtrisés",
-    text: "Authentification à deux facteurs, connexion unique (SSO) Google et Microsoft pour les équipes, journal d'audit des actions.",
+    text: "Connexion unique via l'identité cantonale, authentification à deux facteurs, journal d'audit des actions par établissement.",
   },
   {
     icon: "monitor",
@@ -312,10 +317,10 @@ export const securityPoints = [
   },
 ] as const;
 
-export const contactSubjects = ["Question sur les tarifs", "Demande de démonstration", "Offre pour une équipe", "Support technique", "Autre demande"];
+export const contactSubjects = ["Souscrire pour un établissement", "Offre cantonale", "Demande de démonstration", "Support technique", "Autre demande"];
 
 export const stats = [
   { k: "12", v: "outils PDF" },
-  { k: "3", v: "plateformes" },
-  { k: "0", v: "engagement" },
+  { k: "100 %", v: "hébergé en Suisse" },
+  { k: "1", v: "licence par établissement" },
 ];

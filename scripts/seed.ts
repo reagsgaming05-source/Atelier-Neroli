@@ -41,8 +41,8 @@ export async function runSeed() {
   // 3. Membre de démonstration avec un abonnement et un historique de factures
   const demo = await db.query.users.findFirst({ where: eq(users.email, DEMO_MEMBER.email) });
   if (!demo) {
-    const pro = await db.query.plans.findFirst({ where: eq(plans.slug, "pro") });
-    if (!pro) throw new Error("Formule 'pro' introuvable.");
+    const pro = await db.query.plans.findFirst({ where: eq(plans.slug, "etablissement") });
+    if (!pro) throw new Error("Formule 'etablissement' introuvable.");
 
     const userId = randomUUID();
     await db.insert(users).values({
@@ -86,7 +86,7 @@ export async function runSeed() {
         number: `AN-${year}-${String(n++).padStart(4, "0")}`,
         userId,
         subscriptionId,
-        description: `${offset === 3 ? "Abonnement" : "Renouvellement"} Pro — mensuel`,
+        description: `${offset === 3 ? "Abonnement" : "Renouvellement"} Établissement — mensuel`,
         amountCents: pro.priceMonthlyCents,
         status: "paid",
         periodStart: start,

@@ -1,0 +1,1 @@
+ALTER TABLE `plans` ADD `quote_only` integer DEFAULT false NOT NULL;

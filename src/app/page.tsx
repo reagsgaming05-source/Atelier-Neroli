@@ -11,10 +11,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { getActiveSubscription, listActivePlans } from "@/lib/subscriptions";
 
 const highlights = [
-  { icon: ServerCog, text: "Données hébergées en Suisse" },
+  { icon: ServerCog, text: "Données des élèves hébergées en Suisse" },
+  { icon: ShieldCheck, text: "Conforme LPD et LPrD vaudoise" },
   { icon: Globe, text: "Web, Windows et macOS" },
-  { icon: ShieldCheck, text: "Conforme LPD et RGPD" },
-  { icon: Monitor, text: "Fonctionne hors ligne sur le bureau" },
+  { icon: Monitor, text: "Connexion unique via l'identité cantonale" },
 ];
 
 export default async function HomePage() {
@@ -28,9 +28,9 @@ export default async function HomePage() {
       <section className="relative overflow-hidden">
         <div className="container-x grid items-center gap-12 py-16 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16 lg:py-24">
           <div>
-            <p className="eyebrow">L'alternative suisse à Acrobat</p>
+            <p className="eyebrow">Pour l'État de Vaud et les établissements scolaires</p>
             <h1 className="mt-5 font-display text-[2.9rem] font-bold leading-[1.02] tracking-tight text-ink-900 sm:text-[3.6rem] lg:text-[4.1rem]">
-              Tous vos PDF, <span className="text-brand-700">un seul outil.</span>
+              Tous les PDF de l'école, <span className="text-brand-700">un seul outil.</span>
             </h1>
             <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-500 sm:text-lg">{site.description}</p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -70,7 +70,7 @@ export default async function HomePage() {
       {/* ---------- Fonctionnalités ---------- */}
       <section className="container-x py-20 lg:py-28">
         <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-          <SectionHeading eyebrow="Fonctionnalités" title="Douze outils, une seule interface." text="Les opérations que vous faites chaque jour sur vos documents, sans changer d'application ni de fichier." />
+          <SectionHeading eyebrow="Fonctionnalités" title="Douze outils, une seule interface." text="Bulletins, convocations, formulaires, dossiers d'élèves : les opérations du quotidien d'un secrétariat ou d'une salle des maîtres, sans changer d'application." />
           <Link href="/fonctionnalites" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-900">
             Toutes les fonctionnalités
             <ArrowRight className="size-4" aria-hidden />
@@ -89,12 +89,12 @@ export default async function HomePage() {
           <div className="band-brand relative overflow-hidden rounded-[1.75rem] p-10 text-white sm:p-14">
             <p className="eyebrow text-accent-400">Notre conviction</p>
             <p className="mt-4 font-display text-[1.9rem] font-semibold leading-snug sm:text-[2.3rem]">
-              « Un outil PDF doit être complet, rapide, et garder vos documents là où ils doivent rester : chez vous. »
+              « Un outil PDF pour l'école doit être complet, simple pour tout le monde, et garder les données des élèves là où elles doivent rester : en Suisse. »
             </p>
             <p className="mt-6 text-xs uppercase tracking-[0.16em] text-white/60">L'équipe {site.name}, {site.address.city}</p>
           </div>
           <div>
-            <SectionHeading eyebrow="Pourquoi Blonay PDF" title="Conçu pour les professionnels suisses." text="Fiduciaires, études, bureaux techniques et administrations : des utilisateurs pour qui la confidentialité et la fiabilité ne sont pas négociables." />
+            <SectionHeading eyebrow="Pourquoi Blonay PDF" title="Pensé pour l'école vaudoise." text="Écoles obligatoires, gymnases, écoles professionnelles et services de l'État : des utilisateurs pour qui la protection des données et la simplicité ne sont pas négociables." />
             <ul className="mt-10 space-y-6">
               {values.map((v) => (
                 <li key={v.title} className="flex gap-5">
@@ -117,7 +117,7 @@ export default async function HomePage() {
 
       {/* ---------- Tarifs ---------- */}
       <section id="tarifs" className="container-x py-20 lg:py-28">
-        <SectionHeading align="center" eyebrow="Tarifs" title="Une formule pour chaque usage." text="Mensuel ou annuel, sans engagement au-delà de la période en cours. Changez de formule quand vous voulez, le prorata est calculé automatiquement." />
+        <SectionHeading align="center" eyebrow="Tarifs" title="Une formule par personne, par établissement ou pour le canton." text="Mensuel ou annuel, sans engagement au-delà de la période en cours. Les établissements règlent sur bon de commande ; le déploiement cantonal se fait sur devis." />
         <div className="mt-12">
           <PricingTable plans={plans} hasSubscription={Boolean(subscription)} />
         </div>
@@ -127,7 +127,7 @@ export default async function HomePage() {
       {/* ---------- Étapes ---------- */}
       <section className="band-brand text-white">
         <div className="container-x py-20 lg:py-28">
-          <SectionHeading light eyebrow="Démarrer" title="Trois étapes, cinq minutes." />
+          <SectionHeading light eyebrow="Démarrer" title="Trois étapes pour équiper un établissement." />
           <ol className="mt-14 grid gap-10 md:grid-cols-3">
             {steps.map((step, i) => (
               <li key={step.title} className="border-t border-white/15 pt-6">
@@ -142,7 +142,7 @@ export default async function HomePage() {
 
       {/* ---------- Témoignages ---------- */}
       <section className="container-x py-20 lg:py-28">
-        <SectionHeading align="center" eyebrow="Ils l'utilisent" title="Ce que nos clients retiennent." />
+        <SectionHeading align="center" eyebrow="Dans les écoles" title="Ce que les établissements retiennent." />
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {testimonials.map((t) => (
             <figure key={t.author} className="card flex flex-col p-8">
@@ -170,13 +170,13 @@ export default async function HomePage() {
         <div className="card grid gap-10 p-8 sm:p-12 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p className="eyebrow">Prêt à commencer ?</p>
-            <h2 className="mt-3 font-display text-[2.25rem] font-semibold leading-tight text-ink-900">Ouvrez votre premier PDF aujourd'hui.</h2>
+            <h2 className="mt-3 font-display text-[2.25rem] font-semibold leading-tight text-ink-900">Équipez votre établissement en une semaine.</h2>
             <p className="mt-3 max-w-xl text-[15px] text-ink-500">
-              Créez un compte, choisissez votre formule et travaillez immédiatement dans le navigateur. Les applications Windows et macOS se téléchargent depuis votre espace client.
+              Souscrivez en ligne ou demandez une démonstration pour votre équipe. Les applications Windows et macOS se téléchargent depuis l'espace client, et la version web est immédiate.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-            <ButtonLink href="/inscription">Créer un compte</ButtonLink>
+            <ButtonLink href="/tarifs">Souscrire pour un établissement</ButtonLink>
             <ButtonLink href="/contact?sujet=Demande%20de%20démonstration" variant="secondary">
               Demander une démo
             </ButtonLink>
