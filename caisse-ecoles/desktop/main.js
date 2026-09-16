@@ -59,7 +59,7 @@ let mainWindow = null;
 let caisseView = null;
 let dgeoView = null;
 let activeTab = 'caisse';
-const TAB_H = 40; // hauteur de la barre d'onglets (shell.html)
+const TAB_H = 46; // hauteur de la barre d'onglets (shell.html)
 
 function layoutViews() {
   if (!mainWindow) return;
@@ -116,6 +116,15 @@ function createWindow() {
   dgeoView = new WebContentsView({ webPreferences: { contextIsolation: true, nodeIntegration: false } });
   mainWindow.contentView.addChildView(dgeoView);
   dgeoView.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  // même aspect que Caisse écoles : thème (police, couleurs, arrondis) injecté dans la page de Décompte DGEO
+  dgeoView.webContents.on('did-finish-load', () => {
+    if (!dgeoView || !dgeo.url || !dgeoView.webContents.getURL().startsWith(dgeo.url)) return;
+    // feuille ajoutée en fin de document pour passer après la feuille de style de Décompte DGEO
+    const css = dgeoTheme();
+    if (!css) return;
+    dgeoView.webContents.executeJavaScript(`(function(){var s=document.getElementById('compta-theme')||document.createElement('style');s.id='compta-theme';s.textContent=${JSON.stringify(css)};document.documentElement.appendChild(s);})()`, true)
+      .catch((e) => logLine(`thème DGEO : ${e.message}`));
+  });
   dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage du logiciel de décompte…', true));
   launchDgeo();
 
@@ -125,8 +134,19 @@ function createWindow() {
   setTimeout(() => { if (mainWindow && !mainWindow.isVisible()) mainWindow.show(); }, 4000);
 }
 
+let dgeoThemeCss = null;
+function dgeoTheme() {
+  if (dgeoThemeCss != null) return dgeoThemeCss;
+  try {
+    const font = fs.readFileSync(path.join(__dirname, 'app', 'fonts', 'inter-latin-wght-normal.woff2')).toString('base64');
+    const face = `@font-face{font-family:"Inter Variable";font-weight:100 900;font-display:swap;src:url(data:font/woff2;base64,${font}) format("woff2-variations")}\n`;
+    dgeoThemeCss = face + fs.readFileSync(path.join(__dirname, 'dgeo-theme.css'), 'utf8');
+  } catch (e) { logLine(`thème DGEO indisponible : ${e.message}`); dgeoThemeCss = ''; }
+  return dgeoThemeCss;
+}
+
 function dgeoPlaceholder(title, message, spinner) {
-  const html = `<!doctype html><meta charset="utf-8"><title>${title}</title><body style="font-family:Segoe UI,Arial,sans-serif;background:#f6f7fb;color:#1f2937;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center;max-width:560px"><h2 style="margin:0 0 8px">${title}</h2><p style="color:#4b5563">${message}</p>${spinner ? '<p style="color:#9ca3af;font-size:13px">Cela prend quelques secondes au premier lancement…</p>' : ''}</div></body>`;
+  const html = `<!doctype html><meta charset="utf-8"><title>${title}</title><body style="font-family:Inter,'Segoe UI',Arial,sans-serif;background:#f4f6fa;color:#0f172a;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center;max-width:560px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:34px 40px;box-shadow:0 1px 2px rgba(15,23,42,.05)">${spinner ? '<div style="width:34px;height:34px;margin:0 auto 16px;border:3px solid #e2e8f0;border-top-color:#2457d6;border-radius:50%;animation:s 1s linear infinite"></div><style>@keyframes s{to{transform:rotate(360deg)}}</style>' : ''}<h2 style="margin:0 0 8px;font-size:18px;letter-spacing:-.01em">${title}</h2><p style="color:#64748b;margin:0;line-height:1.5">${message}</p>${spinner ? '<p style="color:#94a3b8;font-size:12.5px;margin:12px 0 0">Cela prend quelques secondes au premier lancement…</p>' : ''}</div></body>`;
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
 

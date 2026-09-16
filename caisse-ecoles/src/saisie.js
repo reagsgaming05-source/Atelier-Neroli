@@ -319,12 +319,13 @@
     const j = R.journal(state.reg);
     els.journalBody.innerHTML = j.rows.map((r) => {
       const p = state.reg.pieces.find((x) => x.id === r.id);
+      const ico = (id) => `<svg class="ico"><use href="#i-${id}"/></svg>`;
       return `<tr data-id="${r.id}"${state.editingId === r.id ? ' class="selected"' : ''}>` +
-        `<td>${r.no == null ? '' : r.no}</td><td>${escapeHtml(P.isoToDisplay(r.date))}</td><td>${escapeHtml(r.compte)}</td><td class="libelle">${escapeHtml(r.libelle)}</td>` +
-        `<td class="num">${r.debit != null ? fmtCHF(r.debit) : ''}</td><td class="num">${r.credit != null ? fmtCHF(r.credit) : ''}</td><td class="num">${fmtCHF(r.solde)}</td>` +
-        `<td>${p && p.justificatifs.length ? `📎 ${p.justificatifs.length}` : ''}${p && p.source === 'scan' ? ' <span class="legend">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="legend" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}</td>` +
-        `<td><button type="button" class="small" data-edit="${r.id}">Modifier</button> <button type="button" class="small" data-pdf="${r.id}">PDF</button> <button type="button" class="small danger" data-del="${r.id}">×</button></td></tr>`;
-    }).join('') || '<tr><td colspan="9" class="legend">Aucune pièce dans ce registre. Remplissez la fiche à gauche.</td></tr>';
+        `<td>${r.no == null ? '' : r.no}</td><td>${escapeHtml(P.isoToDisplay(r.date))}</td><td class="compte">${escapeHtml(r.compte)}</td><td class="libelle" title="${escapeHtml(r.libelle)}">${escapeHtml(r.libelle)}</td>` +
+        `<td class="num">${r.debit != null ? fmtCHF(r.debit) : ''}</td><td class="num">${r.credit != null ? fmtCHF(r.credit) : ''}</td><td class="num solde">${fmtCHF(r.solde)}</td>` +
+        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}</td>` +
+        `<td class="acts"><button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
+    }).join('') || '<tr><td colspan="9" class="legend">Aucune pièce dans ce registre. Remplissez la fiche à gauche : chaque pièce enregistrée apparaît ici avec le solde cumulé.</td></tr>';
     els.journalTotals.innerHTML = `<div class="t"><div class="l">Solde à nouveau</div><div class="v">${fmtCHF(j.start)}</div></div>` +
       `<div class="t"><div class="l">Débits (entrées)</div><div class="v">+ ${fmtCHF(j.debits)}</div></div>` +
       `<div class="t"><div class="l">Crédits (sorties)</div><div class="v">− ${fmtCHF(j.credits)}</div></div>` +

@@ -69,6 +69,12 @@ const hasNames = !sansNoms && fs.existsSync(src('vocabulaire-noms.js'));
 const vocabCode = scriptTag(read(src('vocabulaire.js'))) +
   (hasNames ? '\n' + scriptTag(read(src('vocabulaire-noms.js'))) : '');
 
+// Police Inter (SIL OFL 1.1), variable, sous-ensembles latin et latin étendu, embarquée en base64
+const fontDir = path.join(__dirname, 'node_modules', '@fontsource-variable', 'inter', 'files');
+const fontFace = (file, range) => `@font-face{font-family:"Inter Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(data:font/woff2;base64,${fs.readFileSync(path.join(fontDir, file)).toString('base64')}) format("woff2-variations");unicode-range:${range}}`;
+const fonts = fontFace('inter-latin-wght-normal.woff2', 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD')
+  + fontFace('inter-latin-ext-wght-normal.woff2', 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF');
+inline('<!--INLINE_FONTS-->', `<!-- Inter (SIL Open Font License 1.1) -->\n<style>${fonts}</style>`);
 inline('<!--INLINE_CSS-->', `<style>\n${read(src('app.css'))}\n</style>`);
 inline('<!--INLINE_PDFJS-->', `<!-- pdf.js ${pkgPdf} (Apache-2.0) -->\n` + scriptTag(pdfjs));
 inline('<!--INLINE_PDFJS_WORKER-->', scriptTag(pdfjsWorker, 'type="text/plain" id="pdfjs-worker-src"'));
