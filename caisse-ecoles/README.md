@@ -9,6 +9,9 @@ Application locale, sans installation, en deux onglets :
   justificatifs).
 - **Pièces scannées (PDF)** : lecture des pièces déjà remplies à la main et scannées, avec
   lectures croisées (couche texte, OCR local, Tesseract natif), et ajout au registre.
+- **Compter la caisse** : nombre de billets (1000, 200, 100, 50, 20, 10) et de pièces (5, 2, 1,
+  50, 20, 10 et 5 centimes), total compté, dernier solde compté et nouveau solde avec leurs
+  dates, écart avec le solde du journal à cette date, historique des comptages dans le registre.
 
 La version portable Windows s'appelle **Compta Blonay** : une seule application pour les deux
 outils du dépôt. Un troisième onglet, **Décompte DGEO** (courses d'école & camps), embarque
@@ -99,6 +102,21 @@ décompte → pièce), puis publication du zip.
    lues dans le registre, avec l'image de chaque pièce en justificatif.
 6. Version portable : un décompte terminé dans l'onglet **Décompte DGEO** apparaît au-dessus de
    la fiche ; *Créer la pièce* la pré-remplit (voir plus haut, *Pont entre les deux onglets*).
+
+## Compter la caisse
+
+L'espace *Compter la caisse* sert au comptage physique : pour chaque coupure (billets de 1000,
+200, 100, 50, 20, 10 CHF ; pièces de 5, 2, 1 CHF et de 50, 20, 10, 5 centimes) on tape le
+nombre, le total se calcule en direct (billets, pièces, total). À droite, cinq indicateurs :
+le **dernier solde compté** avec sa date (le comptage précédent, au besoin celui de l'année
+d'avant), le **nouveau solde compté** avec sa date, la variation entre les deux, le **solde du
+journal** au jour du comptage (solde à nouveau + écritures datées jusqu'à ce jour) et l'**écart
+caisse / journal** : 0.00 quand la caisse correspond, sinon le montant qui manque ou qui est en
+trop, ce qui signale une pièce non enregistrée ou un montant faux. *Enregistrer le comptage* le
+range dans l'historique de l'année (date, billets, pièces, total, solde du journal, écart,
+remarque), conservé dans `registre.json` avec les pièces ; chaque comptage peut être repris pour
+correction ou supprimé. *Reprendre le dernier comptage* pré-remplit les quantités du comptage
+précédent pour ne corriger que ce qui a changé.
 
 ## Utilisation (fichier HTML seul, sans installation)
 
@@ -351,7 +369,8 @@ Structure :
 - `src/app.js`, `src/index.html`, `src/app.css` – interface
 - `src/ocr.js` – seconde lecture par OCR local : prétraitement, zones, confrontation des lectures, moteur embarqué
 - `build.js` – assemble tout (avec pdf.js, ExcelJS, tesseract.js et le modèle français, pdf-lib, la police Inter) dans `dist/Caisse-ecoles.html`
-- `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
+- `src/comptage.js` – comptage de la caisse (grille des coupures, soldes, historique) ; modèle dans `registre.js` (`countTotal`, `upsertCount`, `previousCount`, `balanceAt`)
+- `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Compter la caisse, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
 - `src/registre.js` – registre des pièces par année : modèle, libellé composé, validation, journal, stockage (fichiers ou navigateur)
 - `src/pdfpiece.js` – fiche « PIÈCE COMPTABLE » en PDF (pdf-lib) avec justificatifs
 - `src/saisie.js` – onglet de saisie (fiche, journal, Excel, PDF, sauvegarde)

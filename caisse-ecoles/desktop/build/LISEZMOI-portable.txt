@@ -14,6 +14,10 @@ comptables et journal de caisse) et « Décompte DGEO » (courses d'école & cam
    Les registres sont conservés dans data\caisse\<année>\ à côté de l'exécutable.
    Caisse écoles – Pièces scannées : glissez les PDF des pièces, vérifiez les lignes orange,
    « Générer le fichier Excel » ou « Ajouter au registre de l'année ».
+   Caisse écoles – Compter la caisse : tapez le nombre de billets et de pièces de chaque valeur ;
+   l'application affiche le total, le dernier solde compté et le nouveau solde avec leurs dates,
+   et l'écart avec le solde du journal à cette date. « Enregistrer le comptage » le garde dans
+   l'historique de l'année.
 4. Décompte DGEO : déposez le dossier PDF de la course d'école ou du camp, validez, « Générer le
    fichier Excel ». Le décompte terminé est alors proposé dans l'onglet Caisse écoles (badge
    « 1 décompte à saisir », puis « Créer la pièce » au-dessus de la fiche) : la pièce DECOMPTE

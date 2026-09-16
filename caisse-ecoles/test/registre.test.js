@@ -98,3 +98,35 @@ test('pièce DECOMPTE proposée depuis un dossier Décompte DGEO terminé', () =
   assert.equal(back.pieces[0].source, 'dgeo');
   assert.equal(back.pieces[0].ref, 'D-2026-07');
 });
+
+test('comptage de la caisse : totaux, dernier comptage, solde du journal à une date, aller-retour JSON', () => {
+  const reg = R.emptyRegister(2026, { openingAmount: 100 });
+  const mk = (no, date, montant, sens) => { const p = R.newPiece(reg); Object.assign(p, { no, date, montant, sens, compte: '51000.3662.00', personne: 'A. Berger', type: sens === 'debit' ? 'RECETTE' : 'REMBOURSEMENT' }); p.libelle = R.composeLibelle(p); R.upsertPiece(reg, p); };
+  mk(1, '2026-01-10', 50, 'credit'); mk(2, '2026-02-01', 200, 'debit'); mk(3, '2026-03-15', 12.35, 'credit');
+  assert.equal(R.balanceAt(reg, '2026-01-01'), 100);
+  assert.equal(R.balanceAt(reg, '2026-01-10'), 50);
+  assert.equal(R.balanceAt(reg, '2026-02-20'), 250);
+  assert.equal(R.balanceAt(reg, '2026-12-31'), 237.65);
+  const t = R.countTotal({ 100: 3, 20: 2, 0.5: 3, 0.05: 1, 1000: 0, 5: -2 });
+  assert.deepEqual(t, { billets: 340, pieces: 1.55, total: 341.55 });
+  const c1 = R.upsertCount(reg, { date: '2026-02-20', counts: { 200: 1, 20: 2, 5: 2 }, note: 'fin février', createdAt: '2026-02-20T10:00:00.000Z' });
+  assert.equal(c1.total, 250);
+  assert.deepEqual(c1.counts, { 200: 1, 20: 2, 5: 2 });
+  const c2 = R.upsertCount(reg, { date: '2026-01-05', counts: { 100: 1 }, createdAt: '2026-01-05T10:00:00.000Z' });
+  assert.deepEqual(reg.comptages.map((c) => c.date), ['2026-01-05', '2026-02-20'], 'triés par date');
+  assert.equal(R.previousCount(reg, '2026-03-20', null).id, c1.id);
+  assert.equal(R.previousCount(reg, '2026-02-20', null).id, c1.id, 'même jour : comptage existant compte comme précédent');
+  assert.equal(R.previousCount(reg, '2026-02-20', c1).id, c2.id, 'en modification, le comptage lui-même est ignoré');
+  assert.equal(R.previousCount(reg, '2026-01-01', null), null);
+  // modification en place, suppression
+  R.upsertCount(reg, { id: c2.id, date: '2026-01-05', counts: { 100: 1, 0.05: 1 }, createdAt: c2.createdAt });
+  assert.equal(reg.comptages.length, 2);
+  assert.equal(reg.comptages[0].total, 100.05);
+  const back = R.normalizeRegister(JSON.parse(R.serialize(reg)));
+  assert.equal(back.comptages.length, 2);
+  assert.equal(back.comptages[1].note, 'fin février');
+  assert.equal(back.comptages[1].total, 250);
+  R.removeCount(reg, c1.id);
+  assert.equal(reg.comptages.length, 1);
+  assert.equal(R.emptyRegister(2027).comptages.length, 0);
+});

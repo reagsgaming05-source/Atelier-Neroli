@@ -29,7 +29,7 @@ async function findPage(app, pred, timeoutMs) {
   const win = await findPage(app, (u) => /Caisse-ecoles\.html/.test(u));
   win.on('pageerror', (e) => console.log('[pageerror]', e.message));
   await win.waitForLoadState('domcontentloaded');
-  await win.waitForSelector('#regYear');
+  await win.waitForSelector('#regYear', { state: 'attached' });
   const title = await win.title();
   const shellTitle = await shell.title();
   const info = await win.evaluate(() => ({
@@ -57,6 +57,7 @@ async function findPage(app, pred, timeoutMs) {
 
   // saisie d'une pièce dans la fiche -> journal -> fichiers de l'application
   await win.waitForFunction(() => window.CaisseSaisie && window.CaisseSaisie.state.reg, null, { timeout: 20000 });
+  await win.evaluate(() => window.CaisseApp.showPanel('panelSaisie')); // l'application rouvre le dernier espace utilisé
   const year = await win.evaluate(() => window.CaisseSaisie.state.reg.annee);
   await win.selectOption('#pType', 'DECOMPTE');
   await win.selectOption('#pObjet', "Course d'école");
@@ -80,6 +81,26 @@ async function findPage(app, pred, timeoutMs) {
   });
   console.log('pièce saisie :', JSON.stringify(saisie));
   ok = ok && saisie.compte === '51000.3662.00' && saisie.sens === 'credit' && saisie.montant === 143.95 && saisie.journalRows === saisie.rows && saisie.pdfPages === 1 && /DECOMPTE - Course d'école 5P\/3 du 12\.06\./.test(saisie.libelle) && (saisie.storedPieces === null || saisie.storedPieces === saisie.rows);
+  // comptage de la caisse : billets et pièces -> total, dernier solde / nouveau solde, écart avec le journal
+  await win.evaluate(() => window.CaisseApp.showPanel('panelCaisse'));
+  await win.waitForSelector('#cRows input[data-denom="100"]');
+  for (const [d, n] of [['100', '3'], ['20', '2'], ['0.5', '3'], ['0.05', '1']]) await win.fill(`#cRows input[data-denom="${d}"]`, n);
+  await win.dispatchEvent('#cRows input[data-denom="0.05"]', 'input');
+  const totalTxt = await win.evaluate(() => document.getElementById('cTotal').textContent);
+  const n0c = await win.evaluate(() => window.CaisseSaisie.state.reg.comptages.length);
+  await win.click('#btnCountSave');
+  await win.waitForFunction((n) => window.CaisseSaisie.state.reg.comptages.length === n + 1, n0c, { timeout: 10000 });
+  const count = await win.evaluate(async () => {
+    const s = window.CaisseSaisie.state; const c = s.reg.comptages[s.reg.comptages.length - 1];
+    const stored = window.CaisseFiles ? JSON.parse(await window.CaisseFiles.load(s.reg.annee)) : null;
+    const kpis = Array.from(document.querySelectorAll('#cKpis .t .v')).map((e) => e.textContent);
+    return { total: c.total, billets: c.billets, pieces: c.pieces, kpis, rows: document.querySelectorAll('#countBody tr[data-id]').length, storedCounts: stored ? stored.comptages.length : null, book: window.CaisseRegistre.balanceAt(s.reg, c.date) };
+  });
+  console.log('comptage :', totalTxt, JSON.stringify(count));
+  // le journal ne contient que la pièce de test (sortie de 143.95 depuis un solde à nouveau de 0 ou celui du poste) : l'écart affiché doit être total − solde du journal
+  ok = ok && totalTxt === '341.55' && count.total === 341.55 && count.billets === 340 && count.pieces === 1.55 && count.rows >= 1 && count.kpis.length === 5 && count.kpis[0] === '341.55'
+    && (count.storedCounts === null || count.storedCounts === count.rows);
+  await win.evaluate(async () => { const s = window.CaisseSaisie.state; window.CaisseRegistre.removeCount(s.reg, s.reg.comptages[s.reg.comptages.length - 1].id); await s.storage.save(s.reg); window.CaisseComptage.render(); window.CaisseApp.showPanel('panelSaisie'); });
   // nettoyage : la pièce de test est retirée du registre
   await win.evaluate(async () => { const s = window.CaisseSaisie.state; window.CaisseRegistre.removePiece(s.reg, s.reg.pieces[s.reg.pieces.length - 1].id); await s.storage.save(s.reg); window.CaisseSaisie.renderJournal(); });
 

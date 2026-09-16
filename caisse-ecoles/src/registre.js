@@ -35,6 +35,7 @@
       caisse: opts.caisse || P.DEFAULT_CAISSE,
       opening: { date: opts.openingDate || `${y}-01-01`, amount: P.round2(Number(opts.openingAmount) || 0) },
       pieces: [],
+      comptages: [],
       updatedAt: new Date().toISOString(),
     };
   }
@@ -47,6 +48,8 @@
     const reg = emptyRegister(annee, { caisse: raw.caisse, openingDate: raw.opening && raw.opening.date, openingAmount: raw.opening && raw.opening.amount });
     reg.pieces = (Array.isArray(raw.pieces) ? raw.pieces : []).map((p) => normalizePiece(p)).filter(Boolean);
     sortPieces(reg);
+    reg.comptages = (Array.isArray(raw.comptages) ? raw.comptages : []).map((c) => normalizeCount(c)).filter(Boolean);
+    sortCounts(reg);
     reg.updatedAt = raw.updatedAt || reg.updatedAt;
     return reg;
   }
@@ -110,6 +113,82 @@
     let desc = parts.join(' ').replace(/\s+/g, ' ').trim();
     if (desc) desc = desc[0].toUpperCase() + desc.slice(1);
     return desc;
+  }
+
+  /* ---------------- Comptage de la caisse ---------------- */
+  /** Coupures en circulation (CHF) : billets puis pièces. */
+  const BILLETS = [1000, 200, 100, 50, 20, 10];
+  const PIECES = [5, 2, 1, 0.5, 0.2, 0.1, 0.05];
+  const DENOMS = BILLETS.concat(PIECES);
+  const denomKey = (d) => String(d);
+
+  /** Montants d'un comptage { '100': 3, '0.5': 2, … } -> { billets, pieces, total }. */
+  function countTotal(counts) {
+    counts = counts || {};
+    let billets = 0; let pieces = 0;
+    for (const d of BILLETS) billets += d * (Math.max(0, Math.floor(Number(counts[denomKey(d)]))) || 0);
+    for (const d of PIECES) pieces += d * (Math.max(0, Math.floor(Number(counts[denomKey(d)]))) || 0);
+    billets = P.round2(billets); pieces = P.round2(pieces);
+    return { billets, pieces, total: P.round2(billets + pieces) };
+  }
+
+  function normalizeCount(c) {
+    if (!c || typeof c !== 'object') return null;
+    const counts = {};
+    for (const d of DENOMS) {
+      const n = Math.max(0, Math.floor(Number((c.counts || {})[denomKey(d)]) || 0));
+      if (n) counts[denomKey(d)] = n;
+    }
+    const t = countTotal(counts);
+    return { id: String(c.id || newId()), date: c.date || today(), counts, billets: t.billets, pieces: t.pieces, total: t.total, note: String(c.note || ''), createdAt: c.createdAt || new Date().toISOString() };
+  }
+
+  function sortCounts(reg) {
+    reg.comptages.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.createdAt).localeCompare(String(b.createdAt)));
+  }
+
+  /** Ajoute ou remplace un comptage (par id), puis trie par date. */
+  function upsertCount(reg, c) {
+    const n = normalizeCount(c);
+    if (!n) return null;
+    if (!Array.isArray(reg.comptages)) reg.comptages = [];
+    const i = reg.comptages.findIndex((x) => x.id === n.id);
+    if (i >= 0) reg.comptages[i] = n; else reg.comptages.push(n);
+    sortCounts(reg);
+    reg.updatedAt = new Date().toISOString();
+    return n;
+  }
+
+  function removeCount(reg, id) {
+    reg.comptages = (reg.comptages || []).filter((c) => c.id !== id);
+    reg.updatedAt = new Date().toISOString();
+  }
+
+  /**
+   * Dernier comptage à la date donnée ou avant (le « dernier solde »). `ref` = comptage en cours de
+   * modification ({ id, createdAt }) : il est ignoré, ainsi que les comptages du même jour faits après lui.
+   */
+  function previousCount(reg, date, ref) {
+    const d = String(date || today());
+    let best = null;
+    for (const c of reg.comptages || []) {
+      if (ref && c.id === ref.id) continue;
+      if (String(c.date) > d) continue;
+      if (ref && String(c.date) === d && ref.createdAt && String(c.createdAt) > String(ref.createdAt)) continue;
+      if (!best || String(c.date) > String(best.date) || (String(c.date) === String(best.date) && String(c.createdAt) > String(best.createdAt))) best = c;
+    }
+    return best;
+  }
+
+  /** Solde du journal à une date : solde à nouveau + écritures datées jusqu'à cette date incluse. */
+  function balanceAt(reg, date) {
+    const d = String(date || today());
+    let bal = Number(reg.opening && reg.opening.amount) || 0;
+    for (const p of reg.pieces || []) {
+      if (!p.date || String(p.date) > d || !(p.montant > 0)) continue;
+      if (p.sens === 'debit') bal += p.montant; else if (p.sens === 'credit') bal -= p.montant;
+    }
+    return P.round2(bal);
   }
 
   /** Libellé du journal : « TYPE - Description - Personne ». */
@@ -342,6 +421,15 @@
     removePiece,
     entriesOf,
     journal,
+    BILLETS,
+    PIECES,
+    DENOMS,
+    countTotal,
+    normalizeCount,
+    upsertCount,
+    removeCount,
+    previousCount,
+    balanceAt,
     piecesFromEntries,
     serialize,
     parse,

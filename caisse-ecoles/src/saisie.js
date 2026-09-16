@@ -94,6 +94,7 @@
     if (els.btnRegOpenDir) els.btnRegOpenDir.classList.toggle('hidden', state.storage.kind !== 'fichiers');
     newPiece();
     renderJournal();
+    if (window.CaisseComptage) window.CaisseComptage.render();
   }
 
   function renderYears() {
@@ -338,6 +339,7 @@
       els.regPdfFrom.innerHTML = '<option value="">toutes les pièces</option>' + nos.map((n) => `<option value="${n}">depuis le n° ${n}</option>`).join('');
       if (nos.map(String).includes(cur)) els.regPdfFrom.value = cur;
     }
+    if (window.CaisseComptage && window.CaisseComptage.state) window.CaisseComptage.render();
   }
 
   els.journalBody.addEventListener('click', async (ev) => {
@@ -522,6 +524,6 @@
     refreshLibelle();
   });
 
-  window.CaisseSaisie = { state, init, openYear, addFromScan, renderJournal, useDecompte, refreshDgeo };
+  window.CaisseSaisie = { state, init, openYear, addFromScan, renderJournal, useDecompte, refreshDgeo, saveReg };
   init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
 })();

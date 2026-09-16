@@ -1809,12 +1809,12 @@
   const appTabs = document.getElementById('appTabs');
   function showPanel(id) {
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
-    for (const pid of ['panelSaisie', 'panelScan']) { const el = document.getElementById(pid); if (el) el.classList.toggle('hidden', pid !== id); }
+    for (const el of document.querySelectorAll('main .panel')) el.classList.toggle('hidden', el.id !== id);
     try { localStorage.setItem('caisse.onglet', id); } catch (e) { /* ignore */ }
   }
   if (appTabs) {
     appTabs.addEventListener('click', (ev) => { const b = ev.target.closest('.apptab'); if (b) showPanel(b.dataset.panel); });
-    try { const saved = localStorage.getItem('caisse.onglet'); if (saved === 'panelScan') showPanel(saved); } catch (e) { /* ignore */ }
+    try { const saved = localStorage.getItem('caisse.onglet'); if (saved && saved !== 'panelSaisie' && document.getElementById(saved)) showPanel(saved); } catch (e) { /* ignore */ }
   }
 
   /* ---------------- Vers le registre de l'année (onglet Saisie) ---------------- */

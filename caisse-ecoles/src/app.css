@@ -433,3 +433,25 @@ footer.note { color: var(--muted-2); font-size: 12px; text-align: center; margin
 kbd { font: inherit; font-size: 11.5px; padding: 1px 6px; border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 6px; background: #fff; color: var(--ink-2); }
 .empty { padding: 26px 12px; text-align: center; color: var(--muted); }
 @media print { .sidebar { display: none; } .app { grid-template-columns: 1fr; } .card { box-shadow: none; } }
+
+/* ---------------------------------------------------------------- comptage de la caisse */
+.layout-count { display: grid; grid-template-columns: minmax(460px, 1.1fr) minmax(320px, 0.9fr); gap: 18px; align-items: start; }
+@media (max-width: 1180px) { .layout-count { grid-template-columns: 1fr; } }
+table.denoms { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 14px; }
+table.denoms tr.grp th { text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 14px 8px 6px; border-bottom: 1px solid var(--line); }
+table.denoms td { padding: 5px 8px; border-bottom: 1px solid #eef2f7; vertical-align: middle; }
+table.denoms td.lbl { color: var(--ink-2); }
+table.denoms td.lbl b { color: var(--ink); font-weight: 600; }
+table.denoms td.qty { width: 140px; text-align: right; }
+table.denoms td.qty input { width: 110px; text-align: right; height: 34px; }
+table.denoms td.num { text-align: right; width: 150px; font-variant-numeric: tabular-nums; color: var(--muted-2); }
+table.denoms td.num.filled { color: var(--ink); font-weight: 500; }
+table.denoms tfoot td { border-bottom: 0; padding-top: 8px; font-weight: 600; color: var(--ink-2); }
+table.denoms tfoot tr:first-child td { border-top: 2px solid var(--line); padding-top: 12px; }
+table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-top: 6px; }
+.totals.kpi-col { grid-template-columns: 1fr 1fr; }
+.totals .t .d { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.totals .t.end .d { color: rgba(255, 255, 255, 0.85); }
+.totals .t.err { border-color: var(--err-line); background: var(--err-soft); }
+.totals .t.ok { border-color: var(--ok-line); background: var(--ok-soft); }
+.totals .t.warn { border-color: var(--warn-line); background: var(--warn-soft); }
