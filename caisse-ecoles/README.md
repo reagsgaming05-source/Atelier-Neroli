@@ -100,7 +100,9 @@ décompte → pièce), puis publication du zip.
    est fixé par la logique des libellés (un DECOMPTE se choisit). Les **justificatifs** (PDF, JPG,
    PNG) sont joints à la pièce et enregistrés avec elle.
 3. **Enregistrer la pièce → journal** : la pièce est vérifiée (n° unique, date de l'année, compte,
-   montant, sens, personne) puis ajoutée au journal, qui recalcule le solde cumulé.
+   montant, sens, personne) puis ajoutée au journal, qui recalcule le solde cumulé. La **fiche
+   PDF s'ouvre aussitôt dans une fenêtre**, prête à imprimer (Ctrl+P), seule ou avec ses
+   justificatifs selon les deux cases sous les boutons ; le réglage est mémorisé.
    Pour un **DECOMPTE**, la liste des objets laisse place à deux choix explicites : *Course
    d'école* ou *Camp*.
 4. **Fichier Excel de l'année** : même format que le classeur ; **PDF des pièces** : une page

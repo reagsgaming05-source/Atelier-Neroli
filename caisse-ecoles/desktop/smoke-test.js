@@ -71,6 +71,12 @@ async function findPage(app, pred, timeoutMs) {
   const before = await win.evaluate(() => window.CaisseSaisie.state.reg.pieces.length);
   await win.click('#btnPieceSave');
   await win.waitForFunction((n) => window.CaisseSaisie.state.reg.pieces.length === n + 1, before, { timeout: 10000 });
+  // la fiche PDF s'ouvre automatiquement dans une fenêtre de l'application (visionneuse, imprimable)
+  let pdfWin = null;
+  try { pdfWin = await findPage(app, (u) => /^blob:/.test(u), 15000); } catch (e) { /* absente */ }
+  console.log('fiche PDF ouverte :', pdfWin ? pdfWin.url().slice(0, 40) + '…' : 'non');
+  ok = ok && !!pdfWin;
+  if (pdfWin) { await pdfWin.waitForTimeout(500); await pdfWin.close().catch(() => {}); }
   const saisie = await win.evaluate(async () => {
     const R = window.CaisseRegistre; const s = window.CaisseSaisie.state;
     const p = s.reg.pieces[s.reg.pieces.length - 1];

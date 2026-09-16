@@ -112,7 +112,8 @@ function createWindow() {
   // Le rapport de contrôle s'ouvre dans une fenêtre de l'application (imprimable avec Ctrl+P)
   caisseView.webContents.setWindowOpenHandler(({ url }) => {
     if (url === 'about:blank' || url.startsWith('file:') || url.startsWith('blob:')) {
-      return { action: 'allow', overrideBrowserWindowOptions: { width: 1000, height: 800, title: `${APP_TITLE} – rapport`, autoHideMenuBar: true, webPreferences: { contextIsolation: true, nodeIntegration: false } } };
+      // rapport de contrôle, fiche PDF à imprimer (visionneuse PDF de Chromium, Ctrl+P), récapitulatifs
+      return { action: 'allow', overrideBrowserWindowOptions: { width: 1000, height: 860, title: `${APP_TITLE} – document`, autoHideMenuBar: true, webPreferences: { contextIsolation: true, nodeIntegration: false, plugins: true } } };
     }
     shell.openExternal(url);
     return { action: 'deny' };

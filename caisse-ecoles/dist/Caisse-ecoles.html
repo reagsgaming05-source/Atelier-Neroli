@@ -661,6 +661,10 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
         <span class="spacer"></span>
         <button type="button" class="ghost" id="btnPieceNew"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle pièce</button>
       </div>
+      <div class="toolbar" style="margin-top:8px;gap:16px">
+        <label class="check legend" style="align-items:center"><input type="checkbox" id="optPdfAuto" checked style="margin-top:0"> <svg class="ico sm"><use href="#i-printer"/></svg> À l'enregistrement, ouvrir la fiche PDF pour l'imprimer</label>
+        <label class="check legend" style="align-items:center"><input type="checkbox" id="optPdfAutoJust" style="margin-top:0"> avec les justificatifs joints</label>
+      </div>
       <div id="fichePreview" class="hidden">
         <div class="toolbar top"><span class="legend">Aperçu de la fiche (et des justificatifs)</span><span class="spacer"></span><button type="button" class="small" id="btnPreviewClose"><svg class="ico"><use href="#i-x"/></svg> Fermer</button></div>
         <iframe id="ficheFrame"></iframe>
@@ -8125,7 +8129,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
     'journalYear', 'journalBody', 'journalTotals', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
-    'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint']) {
+    'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
   if (!els.regYear) return; // page sans le panneau de saisie
@@ -8408,10 +8412,39 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       await refreshDgeo();
     }
     renderJournal();
-    notice('ok', `Pièce n° ${p.no} ${wasEdit ? 'modifiée' : 'enregistrée'} : ${escapeHtml(p.libelle)} – ${p.sens === 'debit' ? 'Débit' : 'Crédit'} ${fmtCHF(p.montant)}.`);
+    notice('ok', `Pièce n° ${p.no} ${wasEdit ? 'modifiée' : 'enregistrée'} : ${escapeHtml(p.libelle)} – ${p.sens === 'debit' ? 'Débit' : 'Crédit'} ${fmtCHF(p.montant)}.` +
+      (ficheAuto.open ? ' La fiche PDF s\'ouvre dans une fenêtre : <b>Ctrl+P</b> pour l\'imprimer.' : ''));
     state.draftId = null;
     newPiece();
     els.pDate.focus();
+    if (ficheAuto.open) openPiecePdf(p).catch((e) => notice('err', `Fiche PDF impossible : ${escapeHtml(e.message || e)}`));
+  });
+
+  // Fiche PDF ouverte automatiquement après l'enregistrement (pour l'imprimer) : réglage mémorisé.
+  const ficheAuto = { open: true, withAttachments: false };
+  try { Object.assign(ficheAuto, JSON.parse(localStorage.getItem('caisse.ficheAuto') || '{}')); } catch (e) { /* ignore */ }
+  if (els.optPdfAuto && els.optPdfAutoJust) {
+    els.optPdfAuto.checked = !!ficheAuto.open;
+    els.optPdfAutoJust.checked = !!ficheAuto.withAttachments;
+    const saveOpt = () => {
+      ficheAuto.open = els.optPdfAuto.checked; ficheAuto.withAttachments = els.optPdfAutoJust.checked;
+      try { localStorage.setItem('caisse.ficheAuto', JSON.stringify(ficheAuto)); } catch (e) { /* ignore */ }
+    };
+    els.optPdfAuto.addEventListener('change', saveOpt);
+    els.optPdfAutoJust.addEventListener('change', saveOpt);
+  }
+  /** Construit la fiche PDF de la pièce et l'ouvre dans une fenêtre (visionneuse PDF, imprimable). */
+  async function openPiecePdf(p) {
+    const res = await F.buildPdf([p], state.reg, ficheAuto.withAttachments ? (piece, j) => readAttachment(piece, j) : () => null, { title: `Pièce comptable n° ${p.no} – ${p.libelle}` });
+    const url = URL.createObjectURL(new Blob([res.bytes], { type: 'application/pdf' }));
+    const w = window.open(url, '_blank');
+    if (!w) notice('warn', `La fiche PDF n'a pas pu s'ouvrir toute seule (fenêtre bloquée par le navigateur) : <button type="button" data-open-pdf="${url}">Ouvrir la fiche PDF</button>`);
+    setTimeout(() => URL.revokeObjectURL(url), 180000); // la fenêtre a le temps de charger le document
+    return res;
+  }
+  els.regNotices.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-open-pdf]');
+    if (b) window.open(b.dataset.openPdf, '_blank');
   });
   els.btnPieceNew.addEventListener('click', () => { state.draftId = null; newPiece(); });
 
@@ -8700,7 +8733,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     refreshLibelle();
   });
 
-  window.CaisseSaisie = { state, init, openYear, addFromScan, renderJournal, useDecompte, refreshDgeo, saveReg };
+  window.CaisseSaisie = { state, init, openYear, addFromScan, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto };
   init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
 })();
 

@@ -165,6 +165,10 @@
         <span class="spacer"></span>
         <button type="button" class="ghost" id="btnPieceNew"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle pièce</button>
       </div>
+      <div class="toolbar" style="margin-top:8px;gap:16px">
+        <label class="check legend" style="align-items:center"><input type="checkbox" id="optPdfAuto" checked style="margin-top:0"> <svg class="ico sm"><use href="#i-printer"/></svg> À l'enregistrement, ouvrir la fiche PDF pour l'imprimer</label>
+        <label class="check legend" style="align-items:center"><input type="checkbox" id="optPdfAutoJust" style="margin-top:0"> avec les justificatifs joints</label>
+      </div>
       <div id="fichePreview" class="hidden">
         <div class="toolbar top"><span class="legend">Aperçu de la fiche (et des justificatifs)</span><span class="spacer"></span><button type="button" class="small" id="btnPreviewClose"><svg class="ico"><use href="#i-x"/></svg> Fermer</button></div>
         <iframe id="ficheFrame"></iframe>
