@@ -143,15 +143,17 @@ jobs:
 
       # L'application s'appelait « Caisse écoles » (release caisse-windows-latest) : cette ancienne
       # release et son tag sont retirés pour qu'il n'y ait qu'une version portable publiée.
+      # Publication aussi au lancement manuel (workflow_dispatch) : c'est ainsi qu'on refait le zip
+      # après une nouvelle version de Décompte DGEO (release « windows-latest »), sans nouveau commit.
       - name: Retirer l'ancienne release « caisse-windows-latest »
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release delete caisse-windows-latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || echo "ancienne release absente"
 
       - name: Publier la version portable (pré-release « compta-blonay-windows-latest »)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: compta-blonay-windows-latest
@@ -159,7 +161,7 @@ jobs:
           prerelease: true
           body: |
             Compta Blonay, version portable Windows : décompressez le zip, puis double-cliquez sur `ComptaBlonay.exe`.
-            Aucune installation, aucun navigateur : tout est inclus. Une seule application pour les deux outils : le menu du logo, en haut de la barre latérale, passe de Caisse écoles (saisie des pièces, pièces scannées, comptage de la caisse, journal, Excel, PDF, récapitulatif des décomptes) à Décompte DGEO (courses d'école & camps, démarré avec l'application et affiché dans la même page). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
+            Aucune installation, aucun navigateur : tout est inclus. Une seule application pour les deux outils : le menu du logo, en haut de la barre latérale, passe de Caisse écoles (saisie des pièces, pièces scannées, comptage de la caisse, journal, Excel, PDF) à Décompte DGEO (courses d'école & camps, démarré avec l'application et affiché dans la même page, avec le récapitulatif des décomptes). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
             Cette version ne contient aucun nom de personne : posez `vocabulaire-noms.js` (remis séparément) à côté de l'exécutable.
             Construit automatiquement depuis le commit ${{ github.sha }}.
           files: ComptaBlonay-windows.zip
