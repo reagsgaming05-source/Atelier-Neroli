@@ -101,7 +101,8 @@
         <div class="field"><label for="pNo">N°</label><input type="number" id="pNo" min="1" step="1" style="width:84px"></div>
         <div class="field"><label for="pDate">Date</label><input type="date" id="pDate"></div>
         <div class="field" style="flex:1;min-width:230px;max-width:380px"><label for="pType">Type d'écriture</label><select id="pType"></select></div>
-        <div class="field" style="flex:1;min-width:190px;max-width:300px"><label for="pObjet">Objet</label><select id="pObjet"></select></div>
+        <div class="field" style="flex:1;min-width:190px;max-width:300px" id="pObjetField"><label for="pObjet">Objet</label><select id="pObjet"></select></div>
+        <div class="field hidden" id="pKindField"><label>Décompte pour</label><div class="choice seg" id="pKind" style="margin:0"><label><input type="radio" name="pKind" value="Course d'école"> Course d'école</label><label><input type="radio" name="pKind" value="Camp"> Camp</label></div></div>
       </div>
       <div class="row">
         <div class="field"><label for="pClasse">Classe</label><input type="text" id="pClasse" list="regClassList" placeholder="5P/3, 9S, 10VP/4…" style="width:130px"></div>
@@ -177,6 +178,32 @@
       <div id="regNotices"></div>
     </section>
   </div>
+
+  <section class="card" id="recapCard">
+    <h2><svg class="ico"><use href="#i-layers"/></svg> Récapitulatif des décomptes <span id="recapYear"></span></h2>
+    <div class="hint" style="margin-bottom:12px">Cochez les décomptes à reprendre, puis générez le document : n° de chaque décompte, montant et total. Il est prêt à être remis avec les pièces.</div>
+    <div class="toolbar top">
+      <div class="choice seg" id="recapFilter" style="margin:0">
+        <label><input type="radio" name="recapFilter" value="course" checked> Courses d'école</label>
+        <label><input type="radio" name="recapFilter" value="camp"> Camps</label>
+        <label><input type="radio" name="recapFilter" value="tous"> Les deux</label>
+      </div>
+      <button type="button" class="small ghost" id="btnRecapAll">Tout cocher</button>
+      <button type="button" class="small ghost" id="btnRecapNone">Tout décocher</button>
+      <span class="spacer"></span>
+      <span class="legend" id="recapSummary"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="entries journal" id="recapTable">
+        <thead><tr><th></th><th>N°</th><th>Date</th><th>Décompte</th><th>Enseignant-e</th><th>Réf. DGEO</th><th>Sens</th><th class="num">Montant</th></tr></thead>
+        <tbody id="recapBody"></tbody>
+      </table>
+    </div>
+    <div class="toolbar">
+      <button type="button" class="primary" id="btnRecapPdf"><svg class="ico"><use href="#i-printer"/></svg> Générer le récapitulatif (PDF)</button>
+      <span class="legend" id="recapHint"></span>
+    </div>
+  </section>
 </div>
 
 <div id="panelScan" class="panel hidden">

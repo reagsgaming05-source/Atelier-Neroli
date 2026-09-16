@@ -17,7 +17,8 @@
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
-    'journalYear', 'journalBody', 'journalTotals', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList']) {
+    'journalYear', 'journalBody', 'journalTotals', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
+    'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint']) {
     els[id] = $(id);
   }
   if (!els.regYear) return; // page sans le panneau de saisie
@@ -150,9 +151,29 @@
     els.pLibelle.readOnly = !els.pLibelleEdit.checked;
     els.pLibelle.value = p.libelle || R.composeLibelle(p);
     setSens(p.sens || R.sensFor(p.type), true);
+    refreshKind();
     renderFiles(p);
     refreshSuggestions();
   }
+
+  // Un DECOMPTE concerne une course d'école ou un camp : deux choix explicites à la place de la liste des objets.
+  const DECOMPTE_KINDS = ["Course d'école", 'Camp'];
+  function kindOfObjet(o) { return o === 'Camp' || o === 'Mini-camp' ? 'Camp' : "Course d'école"; }
+  function refreshKind() {
+    const isDecompte = els.pType.value === 'DECOMPTE';
+    els.pKindField.classList.toggle('hidden', !isDecompte);
+    els.pObjetField.classList.toggle('hidden', isDecompte);
+    if (!isDecompte) return;
+    if (!DECOMPTE_KINDS.includes(els.pObjet.value)) els.pObjet.value = kindOfObjet(els.pObjet.value);
+    for (const r of els.pKind.querySelectorAll('input')) r.checked = r.value === els.pObjet.value;
+  }
+  els.pKind.addEventListener('change', () => {
+    const r = els.pKind.querySelector('input:checked');
+    if (!r) return;
+    els.pObjet.value = r.value;
+    if (state.autoAccount) els.pCompte.value = '';
+    refreshSuggestions(); refreshLibelle();
+  });
 
   function formPiece() {
     const base = state.editingId ? state.reg.pieces.find((x) => x.id === state.editingId) : null;
@@ -210,7 +231,7 @@
     state.autoAccount = false;
     refreshSuggestions();
   });
-  els.pType.addEventListener('change', () => { setSens(null, true); els.pCompte.value = ''; state.autoAccount = true; refreshSuggestions(); refreshLibelle(); });
+  els.pType.addEventListener('change', () => { setSens(null, true); refreshKind(); els.pCompte.value = ''; state.autoAccount = true; refreshSuggestions(); refreshLibelle(); });
   // objet ou classe modifiés : le compte habituel change souvent (degré, activité) -> re-proposé
   for (const id of ['pObjet', 'pClasse']) els[id].addEventListener('input', () => { if (state.autoAccount) els.pCompte.value = ''; refreshSuggestions(); refreshLibelle(); });
   els.pDetail.addEventListener('input', () => { refreshSuggestions(); refreshLibelle(); });
@@ -340,7 +361,55 @@
       if (nos.map(String).includes(cur)) els.regPdfFrom.value = cur;
     }
     if (window.CaisseComptage && window.CaisseComptage.state) window.CaisseComptage.render();
+    renderRecap();
   }
+
+  /* ---------------- Récapitulatif des décomptes ---------------- */
+  // Les pièces DECOMPTE de l'année, filtrées (courses d'école / camps / les deux), cochées ou non,
+  // puis un PDF : n° de chaque décompte, montant, total.
+  const recap = { filter: 'course', selected: new Set(), seen: new Set() };
+  const RECAP_LABEL = { course: "Courses d'école", camp: 'Camps', tous: "Courses d'école et camps" };
+  function recapPieces() {
+    return state.reg.pieces.filter((p) => p.type === 'DECOMPTE' && (recap.filter === 'tous' || kindOfObjet(p.objet) === (recap.filter === 'camp' ? 'Camp' : "Course d'école")));
+  }
+  function renderRecap() {
+    if (!els.recapBody || !state.reg) return;
+    els.recapYear.textContent = String(state.reg.annee);
+    const pieces = recapPieces();
+    // une pièce vue pour la première fois est cochée d'office
+    for (const p of pieces) if (!recap.seen.has(p.id)) { recap.seen.add(p.id); recap.selected.add(p.id); }
+    els.recapBody.innerHTML = pieces.map((p) => {
+      const on = recap.selected.has(p.id);
+      return `<tr data-id="${p.id}" class="${on ? '' : 'off'}"><td class="sel"><input type="checkbox" data-recap="${p.id}"${on ? ' checked' : ''} aria-label="Reprendre la pièce n° ${p.no}"></td>` +
+        `<td>${p.no == null ? '' : p.no}</td><td>${escapeHtml(P.isoToDisplay(p.date))}</td><td class="libelle" title="${escapeHtml(F.recapDescription(p))}">${escapeHtml(F.recapDescription(p))}</td>` +
+        `<td>${escapeHtml(p.personne)}</td><td>${p.ref ? `<span class="tag">${escapeHtml(p.ref)}</span>` : ''}</td><td class="legend">${p.sens === 'debit' ? 'entrée' : 'sortie'}</td><td class="num">${fmtCHF(p.montant)}</td></tr>`;
+    }).join('') || `<tr><td colspan="8" class="legend">Aucun décompte ${recap.filter === 'course' ? 'de course d\'école' : recap.filter === 'camp' ? 'de camp' : ''} dans le registre ${state.reg.annee}. Les pièces de type DECOMPTE apparaissent ici.</td></tr>`;
+    const sel = pieces.filter((p) => recap.selected.has(p.id));
+    const total = P.round2(sel.reduce((s, p) => s + (Number(p.montant) || 0), 0));
+    els.recapSummary.innerHTML = pieces.length ? `<b>${sel.length}</b> sur ${pieces.length} décompte(s) coché(s) · total <b>${fmtCHF(total)}</b>` : '';
+    els.btnRecapPdf.disabled = !sel.length;
+  }
+  els.recapFilter.addEventListener('change', () => { const r = els.recapFilter.querySelector('input:checked'); recap.filter = r ? r.value : 'course'; renderRecap(); });
+  els.btnRecapAll.addEventListener('click', () => { for (const p of recapPieces()) recap.selected.add(p.id); renderRecap(); });
+  els.btnRecapNone.addEventListener('click', () => { for (const p of recapPieces()) recap.selected.delete(p.id); renderRecap(); });
+  els.recapBody.addEventListener('change', (ev) => {
+    const cb = ev.target.closest('input[data-recap]');
+    if (!cb) return;
+    if (cb.checked) recap.selected.add(cb.dataset.recap); else recap.selected.delete(cb.dataset.recap);
+    renderRecap();
+  });
+  els.btnRecapPdf.addEventListener('click', async () => {
+    const pieces = recapPieces().filter((p) => recap.selected.has(p.id));
+    if (!pieces.length) { notice('warn', 'Aucun décompte coché.'); return; }
+    const title = `Récapitulatif des décomptes – ${RECAP_LABEL[recap.filter]} ${state.reg.annee}`;
+    try {
+      const res = await F.buildRecapPdf(pieces, state.reg, { title });
+      const name = `${title}.pdf`;
+      const saved = await saveBlob(new Blob([res.bytes], { type: 'application/pdf' }), name);
+      if (saved === 'cancelled') return;
+      notice('ok', `Récapitulatif généré : <b>${pieces.length}</b> décompte(s), total <b>${fmtCHF(res.total)}</b>, ${res.pages} page(s).`);
+    } catch (e) { notice('err', `Récapitulatif impossible : ${escapeHtml(e.message || e)}`); }
+  });
 
   els.journalBody.addEventListener('click', async (ev) => {
     const b = ev.target.closest('button');

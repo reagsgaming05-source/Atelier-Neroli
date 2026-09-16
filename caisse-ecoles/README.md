@@ -94,6 +94,8 @@ décompte → pièce), puis publication du zip.
    PNG) sont joints à la pièce et enregistrés avec elle.
 3. **Enregistrer la pièce → journal** : la pièce est vérifiée (n° unique, date de l'année, compte,
    montant, sens, personne) puis ajoutée au journal, qui recalcule le solde cumulé.
+   Pour un **DECOMPTE**, la liste des objets laisse place à deux choix explicites : *Course
+   d'école* ou *Camp*.
 4. **Fichier Excel de l'année** : même format que le classeur ; **PDF des pièces** : une page
    « PIÈCE COMPTABLE » par pièce (relisible par l'application) suivie de ses justificatifs, pour
    toutes les pièces ou depuis un n°. Chaque ligne du journal a aussi ses boutons *Modifier*, *PDF*
@@ -102,6 +104,10 @@ décompte → pièce), puis publication du zip.
    lues dans le registre, avec l'image de chaque pièce en justificatif.
 6. Version portable : un décompte terminé dans l'onglet **Décompte DGEO** apparaît au-dessus de
    la fiche ; *Créer la pièce* la pré-remplit (voir plus haut, *Pont entre les deux onglets*).
+7. **Récapitulatif des décomptes** (carte sous le journal) : les pièces DECOMPTE de l'année,
+   filtrées (courses d'école, camps ou les deux), à cocher ; *Générer le récapitulatif (PDF)*
+   produit un document avec le n° de chaque décompte, la date, la description, l'enseignant-e, la
+   référence DGEO, le montant et le total des décomptes cochés (plusieurs pages si besoin).
 
 ## Compter la caisse
 

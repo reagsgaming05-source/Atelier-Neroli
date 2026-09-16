@@ -60,7 +60,7 @@ async function findPage(app, pred, timeoutMs) {
   await win.evaluate(() => window.CaisseApp.showPanel('panelSaisie')); // l'application rouvre le dernier espace utilisé
   const year = await win.evaluate(() => window.CaisseSaisie.state.reg.annee);
   await win.selectOption('#pType', 'DECOMPTE');
-  await win.selectOption('#pObjet', "Course d'école");
+  await win.check('#pKind input[value="Course d\'école"]'); // pour un DECOMPTE, la liste des objets laisse place au choix course d'école / camp
   await win.fill('#pClasse', '5P/3');
   await win.fill('#pPeriode', '12.06.' + year);
   await win.fill('#pDetail', 'Lausanne');
@@ -81,6 +81,20 @@ async function findPage(app, pred, timeoutMs) {
   });
   console.log('pièce saisie :', JSON.stringify(saisie));
   ok = ok && saisie.compte === '51000.3662.00' && saisie.sens === 'credit' && saisie.montant === 143.95 && saisie.journalRows === saisie.rows && saisie.pdfPages === 1 && /DECOMPTE - Course d'école 5P\/3 du 12\.06\./.test(saisie.libelle) && (saisie.storedPieces === null || saisie.storedPieces === saisie.rows);
+  // décomptes : choix course d'école / camp sur la fiche, récapitulatif PDF des décomptes cochés
+  const recapInfo = await win.evaluate(async () => {
+    const s = window.CaisseSaisie.state;
+    document.getElementById('pType').value = 'DECOMPTE'; document.getElementById('pType').dispatchEvent(new Event('change'));
+    const kindShown = !document.getElementById('pKindField').classList.contains('hidden') && document.getElementById('pObjetField').classList.contains('hidden');
+    const kinds = Array.from(document.querySelectorAll('#pKind input')).map((r) => r.value);
+    const rows = document.querySelectorAll('#recapBody tr[data-id]').length;
+    const pieces = s.reg.pieces.filter((p) => p.type === 'DECOMPTE');
+    const res = await window.CaissePdf.buildRecapPdf(pieces, s.reg, { title: 'test' });
+    return { kindShown, kinds, rows, pages: res.pages, total: res.total, n: pieces.length };
+  });
+  console.log('décomptes :', JSON.stringify(recapInfo));
+  ok = ok && recapInfo.kindShown && recapInfo.kinds.join('|') === "Course d'école|Camp" && recapInfo.rows >= 1 && recapInfo.pages >= 1 && recapInfo.total >= 143.95;
+
   // comptage de la caisse : billets et pièces -> total, dernier solde / nouveau solde, écart avec le journal
   await win.evaluate(() => window.CaisseApp.showPanel('panelCaisse'));
   await win.waitForSelector('#cRows input[data-denom="100"]');

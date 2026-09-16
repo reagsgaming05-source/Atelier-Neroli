@@ -283,7 +283,7 @@ table.entries.journal td.libelle { max-width: 520px; overflow: hidden; text-over
 table.entries.journal td.compte { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
 table.entries.journal td.acts { white-space: nowrap; text-align: right; }
 table.entries.journal td.acts button { margin-left: 3px; }
-table.entries.journal td .tag { display: inline-block; padding: 0 6px; border-radius: 5px; font-size: 11px; font-weight: 600; background: var(--accent-soft); color: var(--accent); margin-left: 4px; vertical-align: 1px; }
+table.entries.journal td .tag { display: inline-block; white-space: nowrap; padding: 0 6px; border-radius: 5px; font-size: 11px; font-weight: 600; background: var(--accent-soft); color: var(--accent); margin-left: 4px; vertical-align: 1px; }
 table.entries.journal td.legend { padding: 26px 12px; text-align: center; }
 
 /* fichiers PDF chargés */
@@ -455,3 +455,9 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .totals .t.err { border-color: var(--err-line); background: var(--err-soft); }
 .totals .t.ok { border-color: var(--ok-line); background: var(--ok-soft); }
 .totals .t.warn { border-color: var(--warn-line); background: var(--warn-soft); }
+
+/* ---------------------------------------------------------------- récapitulatif des décomptes */
+#recapTable td.sel { width: 34px; text-align: center; }
+#recapTable tr.off td { color: var(--muted-2); }
+#recapTable tr.off td.num { color: var(--muted-2); }
+#pKind label { white-space: nowrap; }

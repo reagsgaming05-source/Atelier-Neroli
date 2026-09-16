@@ -53,3 +53,37 @@ test('fiche PDF : une page par pièce, justificatifs image et PDF ajoutés, fich
   assert.equal(e.compte, '51000.3662.50');
   assert.equal(e.libelle, 'REMBOURSEMENT - Collation 7-11S du 12.12.2026 concert chœur - A. Berger');
 });
+
+test('récapitulatif des décomptes : tableau, total, pagination, texte relisible', async () => {
+  const reg = R.emptyRegister(2026, { openingAmount: 100 });
+  const mk = (no, objet, classe, periode, detail, personne, montant, sens, ref) => {
+    const p = R.newPiece(reg);
+    Object.assign(p, { no, type: 'DECOMPTE', objet, classe, periode, detail, personne, montant, sens, compte: '51000.3662.00', date: `2026-06-${String(10 + no).padStart(2, '0')}`, ref: ref || '' });
+    p.libelle = R.composeLibelle(p); R.upsertPiece(reg, p); return p;
+  };
+  const a = mk(1, "Course d'école", '5P/3', '12.06.2026', 'Lausanne', 'A. Berger', 143.95, 'credit', 'D-2026-07');
+  const b = mk(2, "Course d'école", '7P/1', '13.06.2026', 'Zoo de Servion, entrées et transport en car', 'Ch. Dupraz', 612.4, 'credit');
+  const c = mk(3, 'Camp', '8P/3', '12-16.05.2026', 'Leysin', 'T. Morel', 2560, 'debit');
+  const res = await F.buildRecapPdf([b, a], reg, { title: "Récapitulatif des décomptes – Courses d'école 2026", date: '16.09.2026' });
+  assert.equal(res.pages, 1);
+  assert.equal(res.total, 756.35);
+  assert.equal(res.sorties, 756.35);
+  assert.equal(res.entrees, 0);
+  assert.equal(F.recapDescription(c), 'Camp 8P/3 du 12-16.05.2026 Leysin');
+  const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(res.bytes), isEvalSupported: false, verbosity: 0 }).promise;
+  const page = await doc.getPage(1);
+  const txt = (await page.getTextContent()).items.map((i) => i.str).join(' ');
+  assert.match(txt, /Récapitulatif des décomptes/);
+  assert.match(txt, /Course d'école 5P\/3 du 12\.06\.2026\s+Lausanne/);
+  assert.match(txt, /D-2026-07/);
+  assert.match(txt, /756\.35/);
+  assert.ok(txt.indexOf('143.95') < txt.indexOf('612.40'), 'trié par n°');
+  // beaucoup de lignes : plusieurs pages, sens mêlés
+  const many = [];
+  for (let i = 0; i < 70; i++) many.push(mk(10 + i, i % 2 ? 'Camp' : "Course d'école", '6P/2', '01.05.2026', 'sortie ' + i, 'L. Duvernay', 10 + i, i % 3 ? 'credit' : 'debit'));
+  const big = await F.buildRecapPdf(many.concat([c]), reg, {});
+  assert.ok(big.pages >= 2, 'pagination');
+  assert.equal(big.total, P.round2(many.reduce((s, p) => s + p.montant, 0) + 2560));
+  assert.ok(big.entrees > 0 && big.sorties > 0);
+});

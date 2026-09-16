@@ -171,5 +171,110 @@
     return { bytes, pages: doc.getPageCount(), skipped };
   }
 
-  return { buildPdf, drawPiece, fmtCHF, A4 };
+  /** Description d'un décompte pour le récapitulatif : « Course d'école 5P/3 du 12.06.2026 Lausanne ». */
+  function recapDescription(p) {
+    const parts = [];
+    if (p.objet && p.objet !== 'Autre') parts.push(p.objet);
+    if (p.classe) parts.push(p.classe);
+    if (p.periode) parts.push(/^(du|le|les)\b/i.test(String(p.periode).trim()) ? String(p.periode).trim() : `du ${String(p.periode).trim()}`);
+    if (p.detail) parts.push(String(p.detail).trim());
+    return parts.join(' ').replace(/\s+/g, ' ').trim() || (p.libelle || '');
+  }
+
+  /**
+   * Récapitulatif des décomptes : un tableau (n° de pièce, date, décompte, personne, réf. DGEO,
+   * montant) avec le total, sur autant de pages A4 que nécessaire.
+   * opts : { title, subtitle, date } ; renvoie { bytes, pages, total, sorties, entrees }.
+   */
+  async function buildRecapPdf(pieces, reg, opts) {
+    opts = opts || {};
+    const doc = await PDFDocument.create();
+    const title = opts.title || `Récapitulatif des décomptes ${reg.annee}`;
+    doc.setTitle(title);
+    doc.setProducer('Caisse écoles');
+    doc.setCreator('Caisse écoles');
+    const normal = await doc.embedFont(StandardFonts.Helvetica);
+    const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const left = 56; const right = A4[0] - 56; const top = A4[1] - 56; const bottom = 60;
+    const cols = [
+      { key: 'no', label: 'N°', w: 34, align: 'right' },
+      { key: 'date', label: 'Date', w: 62 },
+      { key: 'desc', label: 'Décompte', w: 188 },
+      { key: 'personne', label: 'Enseignant-e', w: 84 },
+      { key: 'ref', label: 'Réf. DGEO', w: 58 },
+      { key: 'montant', label: 'Montant CHF', w: right - left - (34 + 62 + 188 + 84 + 58), align: 'right' },
+    ];
+    const rows = pieces.slice().sort((a, b) => (a.no == null ? 1e9 : a.no) - (b.no == null ? 1e9 : b.no)).map((p) => ({
+      no: p.no == null ? '' : String(p.no),
+      date: P.isoToDisplay(p.date),
+      desc: recapDescription(p),
+      personne: p.personne || '',
+      ref: p.ref || '',
+      montant: fmtCHF(p.montant).replace('CHF ', ''),
+      sens: p.sens,
+      value: Number(p.montant) || 0,
+    }));
+    const total = P.round2(rows.reduce((s, r) => s + r.value, 0));
+    const sorties = P.round2(rows.filter((r) => r.sens === 'credit').reduce((s, r) => s + r.value, 0));
+    const entrees = P.round2(rows.filter((r) => r.sens === 'debit').reduce((s, r) => s + r.value, 0));
+    const dateStr = opts.date || P.isoToDisplay(new Date().toISOString().slice(0, 10));
+    const size = 9.5; const lineH = 12.5; const pad = 4;
+    const pages = [];
+    let page = null; let y = 0;
+    const cellX = (i) => left + cols.slice(0, i).reduce((s, c) => s + c.w, 0);
+    const text = (font, str, x, yy, sz, color) => page.drawText(safe(font, str), { x, y: yy, size: sz || size, font, color: color || BLACK });
+    const rightText = (font, str, xRight, yy, sz, color) => { const s = safe(font, str); page.drawText(s, { x: xRight - font.widthOfTextAtSize(s, sz || size), y: yy, size: sz || size, font, color: color || BLACK }); };
+    function header() {
+      page = doc.addPage(A4); pages.push(page);
+      y = top;
+      text(bold, title, left, y, 15);
+      y -= 18;
+      text(normal, opts.subtitle || `Caisse écoles – registre ${reg.annee} – établi le ${dateStr}`, left, y, 10, GREY);
+      y -= 22;
+      // en-tête du tableau
+      page.drawRectangle({ x: left, y: y - pad - 3, width: right - left, height: lineH + pad + 2, color: rgb(0.94, 0.95, 0.97) });
+      cols.forEach((c, i) => {
+        const x = cellX(i);
+        if (c.align === 'right') rightText(bold, c.label, x + c.w - pad, y - 1, 8.5, GREY); else text(bold, c.label, x + pad, y - 1, 8.5, GREY);
+      });
+      y -= lineH + pad + 4;
+    }
+    header();
+    for (const r of rows) {
+      const descLines = wrap(normal, size, r.desc, cols[2].w - 2 * pad);
+      const persLines = wrap(normal, size, r.personne, cols[3].w - 2 * pad);
+      const n = Math.max(1, descLines.length, persLines.length);
+      const h = n * lineH + pad;
+      if (y - h < bottom + 30) header();
+      rightText(normal, r.no, cellX(0) + cols[0].w - pad, y - lineH + 3);
+      text(normal, r.date, cellX(1) + pad, y - lineH + 3);
+      descLines.forEach((l, k) => text(normal, l, cellX(2) + pad, y - lineH * (k + 1) + 3));
+      persLines.forEach((l, k) => text(normal, l, cellX(3) + pad, y - lineH * (k + 1) + 3));
+      text(normal, r.ref, cellX(4) + pad, y - lineH + 3, 8.5, GREY);
+      rightText(r.sens === 'debit' ? normal : bold, r.montant, right - pad, y - lineH + 3);
+      y -= h;
+      page.drawLine({ start: { x: left, y: y + 1 }, end: { x: right, y: y + 1 }, thickness: 0.4, color: rgb(0.85, 0.87, 0.9) });
+    }
+    // total
+    if (y - 2 * lineH - 10 < bottom + 30) header();
+    y -= 6;
+    page.drawLine({ start: { x: left, y: y + 2 }, end: { x: right, y: y + 2 }, thickness: 1, color: BLACK });
+    y -= lineH + 2;
+    text(bold, `Total (${rows.length} décompte${rows.length > 1 ? 's' : ''})`, left + pad, y, 10.5);
+    rightText(bold, fmtCHF(total), right - pad, y, 10.5);
+    if (sorties && entrees) {
+      y -= lineH;
+      text(normal, `dont sorties de caisse ${fmtCHF(sorties)} et entrées en caisse ${fmtCHF(entrees)}`, left + pad, y, 8.5, GREY);
+    }
+    // pieds de page
+    pages.forEach((pg, i) => {
+      const s = safe(normal, `${title} – page ${i + 1} / ${pages.length}`);
+      pg.drawText(s, { x: right - normal.widthOfTextAtSize(s, 8), y: 30, size: 8, font: normal, color: GREY });
+      pg.drawText(safe(normal, 'Caisse écoles – Compta Blonay'), { x: left, y: 30, size: 8, font: normal, color: GREY });
+    });
+    const bytes = await doc.save();
+    return { bytes, pages: doc.getPageCount(), total, sorties, entrees };
+  }
+
+  return { buildPdf, buildRecapPdf, recapDescription, drawPiece, fmtCHF, A4 };
 });
