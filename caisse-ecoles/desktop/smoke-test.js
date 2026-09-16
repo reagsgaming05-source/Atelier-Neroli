@@ -87,19 +87,50 @@ async function findPage(app, pred, timeoutMs) {
   });
   console.log('pièce saisie :', JSON.stringify(saisie));
   ok = ok && saisie.compte === '51000.3662.00' && saisie.sens === 'credit' && saisie.montant === 143.95 && saisie.journalRows === saisie.rows && saisie.pdfPages === 1 && /DECOMPTE - Course d'école 5P\/3 du 12\.06\./.test(saisie.libelle) && (saisie.storedPieces === null || saisie.storedPieces === saisie.rows);
-  // décomptes : choix course d'école / camp sur la fiche, récapitulatif PDF des décomptes cochés
+  // décomptes : choix course d'école / camp sur la fiche ; récapitulatif PDF des décomptes cochés,
+  // dans l'espace « Récapitulatif » de l'outil Décompte DGEO
   const recapInfo = await win.evaluate(async () => {
     const s = window.CaisseSaisie.state;
     document.getElementById('pType').value = 'DECOMPTE'; document.getElementById('pType').dispatchEvent(new Event('change'));
     const kindShown = !document.getElementById('pKindField').classList.contains('hidden') && document.getElementById('pObjetField').classList.contains('hidden');
     const kinds = Array.from(document.querySelectorAll('#pKind input')).map((r) => r.value);
+    window.CaisseApp.showPanel('panelRecap');
+    const inDgeoTool = document.getElementById('toolName').textContent === 'Décompte DGEO' && !document.getElementById('dgeoNav').classList.contains('hidden')
+      && !document.getElementById('panelRecap').classList.contains('hidden') && document.getElementById('panelSaisie').classList.contains('hidden')
+      && !!document.querySelector('#dgeoNav .apptab[data-panel="panelRecap"].active');
     const rows = document.querySelectorAll('#recapBody tr[data-id]').length;
     const pieces = s.reg.pieces.filter((p) => p.type === 'DECOMPTE');
     const res = await window.CaissePdf.buildRecapPdf(pieces, s.reg, { title: 'test' });
-    return { kindShown, kinds, rows, pages: res.pages, total: res.total, n: pieces.length };
+    window.CaisseApp.showPanel('panelSaisie');
+    return { kindShown, kinds, inDgeoTool, rows, pages: res.pages, total: res.total, n: pieces.length };
   });
   console.log('décomptes :', JSON.stringify(recapInfo));
-  ok = ok && recapInfo.kindShown && recapInfo.kinds.join('|') === "Course d'école|Camp" && recapInfo.rows >= 1 && recapInfo.pages >= 1 && recapInfo.total >= 143.95;
+  ok = ok && recapInfo.kindShown && recapInfo.kinds.join('|') === "Course d'école|Camp" && recapInfo.inDgeoTool && recapInfo.rows >= 1 && recapInfo.pages >= 1 && recapInfo.total >= 143.95;
+
+  // pièces scannées et saisie synchronisées : un classeur Excel de l'année (ancienne méthode) est repris
+  // dans le registre sans rien compter deux fois, et l'espace des pièces scannées s'appuie sur ce registre
+  const sync = await win.evaluate(async () => {
+    const s = window.CaisseSaisie.state; const R = window.CaisseRegistre; const X = window.CaisseExcel;
+    const before = s.reg.pieces.length;
+    const existing = s.reg.pieces[0]; // déjà dans le registre : reconnue, pas comptée deux fois
+    const entries = [
+      { no: existing.no, date: existing.date, compte: existing.compte, libelle: existing.libelle, debit: existing.sens === 'debit' ? existing.montant : null, credit: existing.sens === 'credit' ? existing.montant : null },
+      { no: 150, date: `${s.reg.annee}-03-02`, compte: '51000.4392.20', libelle: 'PARTICIPATION DES PARENTS - Cours de ski 5P/6 du 06-10.01.2026 - Ch. Dupraz', debit: 400, credit: null },
+    ];
+    const { workbook } = X.buildWorkbook({ opening: { date: `${s.reg.annee}-01-01`, amount: 1000 }, entries });
+    const buf = await workbook.xlsx.writeBuffer();
+    const r = await window.CaisseSaisie.importWorkbook(buf, 'Caisse écoles test.xlsx');
+    const p150 = s.reg.pieces.find((p) => p.no === 150);
+    window.CaisseApp.showPanel('panelScan');
+    window.CaisseApp.applyMode('registre');
+    const info = document.getElementById('registreInfo').textContent;
+    const a = window.CaisseApp.state;
+    window.CaisseApp.showPanel('panelSaisie');
+    return { added: r ? r.added.length : null, skipped: r ? r.skipped.length : null, openingDiffers: r ? r.openingDiffers : null, pieces: s.reg.pieces.length, before, source: p150 ? p150.source : null, type: p150 ? p150.type : null,
+      nextNo: R.nextNo(s.reg), excelTag: !!document.querySelector('#journalBody .tag'), mode: a.mode, info: info.slice(0, 90), regTag: /Registre \d{4} \(Saisie des pièces\)/.test(info) };
+  });
+  console.log('synchronisation scan ↔ saisie :', JSON.stringify(sync));
+  ok = ok && sync.added === 1 && sync.skipped === 1 && sync.pieces === sync.before + 1 && sync.source === 'excel' && sync.type === 'PARTICIPATION DES PARENTS' && sync.nextNo === 151 && sync.excelTag && sync.mode === 'registre' && sync.regTag;
 
   // comptage de la caisse : billets et pièces -> total, dernier solde / nouveau solde, écart avec le journal
   await win.evaluate(() => window.CaisseApp.showPanel('panelCaisse'));

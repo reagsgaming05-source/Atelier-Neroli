@@ -17,7 +17,7 @@
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
-    'journalYear', 'journalBody', 'journalTotals', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
+    'journalYear', 'journalBody', 'journalTotals', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
     'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
@@ -96,6 +96,7 @@
     newPiece();
     renderJournal();
     if (window.CaisseComptage) window.CaisseComptage.render();
+    notifyRegister();
   }
 
   function renderYears() {
@@ -106,6 +107,11 @@
   async function saveReg() {
     state.reg.updatedAt = new Date().toISOString();
     await state.storage.save(state.reg);
+    notifyRegister();
+  }
+  /** Le registre a changé (ouvert, enregistré) : l'espace des pièces scannées, qui s'appuie dessus, se met à jour. */
+  function notifyRegister() {
+    try { document.dispatchEvent(new CustomEvent('caisse:registre', { detail: { annee: state.reg ? state.reg.annee : null } })); } catch (e) { /* ignore */ }
   }
 
   els.regYear.addEventListener('change', () => openYear(Number(els.regYear.value)));
@@ -374,7 +380,7 @@
       return `<tr data-id="${r.id}"${state.editingId === r.id ? ' class="selected"' : ''}>` +
         `<td>${r.no == null ? '' : r.no}</td><td>${escapeHtml(P.isoToDisplay(r.date))}</td><td class="compte">${escapeHtml(r.compte)}</td><td class="libelle" title="${escapeHtml(r.libelle)}">${escapeHtml(r.libelle)}</td>` +
         `<td class="num">${r.debit != null ? fmtCHF(r.debit) : ''}</td><td class="num">${r.credit != null ? fmtCHF(r.credit) : ''}</td><td class="num solde">${fmtCHF(r.solde)}</td>` +
-        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}</td>` +
+        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
         `<td class="acts"><button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
     }).join('') || '<tr><td colspan="9" class="legend">Aucune pièce dans ce registre. Remplissez la fiche à gauche : chaque pièce enregistrée apparaît ici avec le solde cumulé.</td></tr>';
     els.journalTotals.innerHTML = `<div class="t"><div class="l">Solde à nouveau</div><div class="v">${fmtCHF(j.start)}</div></div>` +
@@ -517,6 +523,43 @@
     notice('ok', `Registre ${reg.annee} restauré.`);
   });
 
+  /* ---------------- Reprise d'un classeur Excel ---------------- */
+  // Année commencée à l'ancienne (classeur tenu à la main ou produit depuis les pièces scannées) :
+  // ses écritures entrent dans le registre, rien n'est compté deux fois, la numérotation continue.
+  async function importWorkbook(buffer, fileName) {
+    if (!state.reg) await init();
+    const reg = state.reg;
+    let data;
+    try { data = await X.readWorkbook(buffer); } catch (e) { notice('err', `Impossible de lire ce classeur : ${escapeHtml(e.message || e)}`); return null; }
+    const otherYears = R.piecesFromEntries(data.entries, 'excel').filter((p) => p.montant > 0 && p.date && String(p.date).slice(0, 4) !== String(reg.annee)).length;
+    const includeOther = otherYears > 0 && confirm(`${otherYears} écriture(s) du classeur ne sont pas de l'année ${reg.annee} du registre ouvert. Les reprendre quand même ?`);
+    const r = R.mergeEntries(reg, data.entries, { source: 'excel', opening: data.opening, otherYears: includeOther });
+    await saveReg();
+    els.regOpeningDate.value = reg.opening.date || '';
+    els.regOpeningAmount.value = reg.opening.amount;
+    renderJournal();
+    newPiece();
+    if (A && A.learnEntries) A.learnEntries(data.entries);
+    const parts = [`<b>${r.added.length}</b> écriture(s) reprise(s) de <b>${escapeHtml(fileName || 'ce classeur')}</b> dans le registre ${reg.annee}`];
+    if (r.skipped.length) parts.push(`${r.skipped.length} déjà présente(s) (même n° et même montant), non comptée(s) deux fois`);
+    if (r.conflicts.length) parts.push(`<b>${r.conflicts.length} n° déjà pris avec un autre montant</b>, non reprise(s) : ${r.conflicts.slice(0, 10).map((p) => `n° ${p.no}`).join(', ')}`);
+    if (r.otherYears.length && !includeOther) parts.push(`${r.otherYears.length} d'une autre année ignorée(s)`);
+    if (r.noAmount.length) parts.push(`${r.noAmount.length} ligne(s) sans montant ignorée(s)`);
+    if (r.openingTaken) parts.push(`solde à nouveau repris du classeur : <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}`);
+    if (r.openingDiffers) parts.push(`le solde à nouveau du classeur (${fmtCHF(Number(data.opening.amount) || 0)}) diffère de celui du registre (${fmtCHF(reg.opening.amount)}), conservé : vérifiez-le`);
+    notice(r.conflicts.length ? 'warn' : 'ok', parts.join(' · ') + '.');
+    return r;
+  }
+  if (els.btnRegExcelIn && els.regExcelFile) {
+    els.btnRegExcelIn.addEventListener('click', () => els.regExcelFile.click());
+    els.regExcelFile.addEventListener('change', async () => {
+      const f = els.regExcelFile.files && els.regExcelFile.files[0];
+      els.regExcelFile.value = '';
+      if (!f) return;
+      await importWorkbook(await f.arrayBuffer(), f.name);
+    });
+  }
+
   /* ---------------- Depuis les pièces scannées ---------------- */
   /**
    * Ajoute au registre de l'année des écritures lues sur des PDF ; getImage(entry) peut fournir
@@ -528,10 +571,11 @@
     const pieces = R.piecesFromEntries(entries);
     const wrongYear = pieces.filter((p) => p.date && String(p.date).slice(0, 4) !== String(year));
     if (wrongYear.length && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?`)) return 0;
-    let added = 0; let dup = 0;
+    let added = 0; let dup = 0; const conflicts = [];
     for (let i = 0; i < pieces.length; i++) {
       const p = pieces[i];
-      if (p.no != null && state.reg.pieces.some((x) => x.no === p.no)) { dup++; continue; }
+      const same = p.no != null ? state.reg.pieces.find((x) => x.no === p.no) : null;
+      if (same) { if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) dup++; else conflicts.push(p.no); continue; }
       if (getImage) {
         try {
           const img = await getImage(entries[i]);
@@ -544,7 +588,8 @@
     await saveReg();
     renderJournal();
     newPiece();
-    notice(added ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n°) ignorée(s)` : ''}.`);
+    notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
+      `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}.`);
     return added;
   }
 
@@ -622,6 +667,6 @@
     refreshLibelle();
   });
 
-  window.CaisseSaisie = { state, init, openYear, addFromScan, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto };
+  window.CaisseSaisie = { state, init, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto };
   init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
 })();

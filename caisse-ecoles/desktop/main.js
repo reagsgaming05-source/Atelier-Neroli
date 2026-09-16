@@ -492,6 +492,7 @@ function buildMenu() {
         { label: 'Pièces scannées', accelerator: 'CmdOrCtrl+2', click: () => openPanel('panelScan') },
         { label: 'Compter la caisse', accelerator: 'CmdOrCtrl+3', click: () => openPanel('panelCaisse') },
         { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+4', click: () => openPanel('panelDgeo') },
+        { label: 'Récapitulatif des décomptes', accelerator: 'CmdOrCtrl+5', click: () => openPanel('panelRecap') },
       ],
     },
     {

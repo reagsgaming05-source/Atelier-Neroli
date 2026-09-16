@@ -130,3 +130,75 @@ test('comptage de la caisse : totaux, dernier comptage, solde du journal à une 
   assert.equal(reg.comptages.length, 1);
   assert.equal(R.emptyRegister(2027).comptages.length, 0);
 });
+
+test("reprise d'un classeur Excel dans le registre : doublons par n°, conflits, solde à nouveau, autre année", () => {
+  const reg = R.emptyRegister(2026, { openingAmount: 0 });
+  const entries = [
+    { no: 1, date: '2026-01-12', compte: '51000.3662.00', libelle: "DECOMPTE - Course d'école 5P/3 du 12.01.2026 Vevey - A. Berger", debit: null, credit: 120 },
+    { no: 2, date: '2026-02-03', compte: '51000.4392.20', libelle: 'PARTICIPATION DES PARENTS - Cours de ski 5P/6 du 06-10.01.2026 - Ch. Dupraz', debit: 400, credit: null },
+    { no: 3, date: '2025-12-20', compte: '50000.3652.00', libelle: 'REMBOURSEMENT - Frais - T. Morel', debit: null, credit: 30 },
+    { no: 'x', date: '2026-02-03', compte: '', libelle: 'note sans montant', debit: null, credit: null },
+  ];
+  const r = R.mergeEntries(reg, entries, { source: 'excel', opening: { date: '2026-01-06', amount: 2062.2 } });
+  assert.equal(r.openingTaken, true);
+  assert.equal(reg.opening.amount, 2062.2);
+  assert.equal(reg.opening.date, '2026-01-06');
+  assert.equal(r.added.length, 2);
+  assert.equal(r.otherYears.length, 1);
+  assert.equal(r.noAmount.length, 1);
+  assert.equal(reg.pieces.length, 2);
+  assert.equal(reg.pieces[0].source, 'excel');
+  assert.equal(reg.pieces[0].type, 'DECOMPTE');
+  assert.equal(reg.pieces[0].personne, 'A. Berger');
+  assert.equal(reg.pieces[1].sens, 'debit');
+  assert.equal(R.nextNo(reg), 3);
+  assert.equal(R.journal(reg).end, 2342.2);
+  // seconde reprise du même classeur : rien n'est compté deux fois ; un n° déjà pris avec un autre montant est signalé
+  const again = entries.slice(0, 2).concat([{ no: 2, date: '2026-02-03', compte: '51000.4392.20', libelle: 'PARTICIPATION DES PARENTS - Cours de ski - Ch. Dupraz', debit: 450, credit: null }]);
+  const r2 = R.mergeEntries(reg, again, { source: 'excel', opening: { date: '2026-01-06', amount: 100 } });
+  assert.equal(r2.added.length, 0);
+  assert.equal(r2.skipped.length, 2);
+  assert.equal(r2.conflicts.length, 1);
+  assert.equal(r2.openingDiffers, true);
+  assert.equal(reg.opening.amount, 2062.2);
+  assert.equal(reg.pieces.length, 2);
+  // écritures d'une autre année acceptées explicitement
+  const r3 = R.mergeEntries(reg, [entries[2]], { source: 'excel', otherYears: true });
+  assert.equal(r3.added.length, 1);
+  assert.equal(reg.pieces.length, 3);
+  // aller-retour JSON : la source « excel » est conservée
+  const back = R.parse(R.serialize(reg));
+  assert.equal(back.pieces.filter((p) => p.source === 'excel').length, 3);
+});
+
+test("classeur Excel de l'année → registre → classeur : mêmes écritures, même solde", async () => {
+  const ExcelJS = require('exceljs');
+  const X = require('../src/excel.js')(ExcelJS);
+  const reg0 = R.emptyRegister(2026, { openingAmount: 500, openingDate: '2026-01-01' });
+  const a = R.newPiece(reg0);
+  Object.assign(a, { type: 'DECOMPTE', objet: 'Camp', classe: '8P/3', periode: '12-16.05.2026', detail: 'Leysin', personne: 'L. Duvernay', montant: 250.5, sens: 'credit', compte: '51000.3662.00', date: '2026-05-20' });
+  a.libelle = R.composeLibelle(a);
+  R.upsertPiece(reg0, a);
+  const b = R.newPiece(reg0);
+  Object.assign(b, { type: 'PARTICIPATION DES PARENTS', objet: 'Camp', classe: '8P/3', periode: '12-16.05.2026', personne: 'L. Duvernay', montant: 1200, sens: 'debit', compte: '51000.4392.00', date: '2026-05-04' });
+  b.libelle = R.composeLibelle(b);
+  R.upsertPiece(reg0, b);
+  // classeur produit par l'application (ancienne méthode ou « Fichier Excel de l'année »)
+  const { workbook } = X.buildWorkbook({ opening: { date: reg0.opening.date, amount: reg0.opening.amount }, entries: R.entriesOf(reg0) });
+  const buf = await workbook.xlsx.writeBuffer();
+  const data = await X.readWorkbook(buf);
+  assert.equal(data.entries.length, 2);
+  // repris dans un registre vide : mêmes n°, mêmes libellés, même solde, numérotation qui continue
+  const reg1 = R.emptyRegister(2026, { openingAmount: 0 });
+  const r = R.mergeEntries(reg1, data.entries, { source: 'excel', opening: data.opening });
+  assert.equal(r.added.length, 2);
+  assert.equal(reg1.opening.amount, 500);
+  assert.equal(reg1.opening.date, '2026-01-01');
+  assert.deepEqual(reg1.pieces.map((p) => [p.no, p.libelle, p.montant, p.sens, p.compte]), reg0.pieces.map((p) => [p.no, p.libelle, p.montant, p.sens, p.compte]));
+  assert.equal(R.journal(reg1).end, R.journal(reg0).end);
+  assert.equal(R.nextNo(reg1), 3);
+  // le même classeur repris une seconde fois ne change rien
+  const r2 = R.mergeEntries(reg1, data.entries, { source: 'excel', opening: data.opening });
+  assert.equal(r2.added.length, 0);
+  assert.equal(r2.skipped.length, 2);
+});

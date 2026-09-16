@@ -45,8 +45,8 @@
 
   /* ---------------- État ---------------- */
   const state = {
-    mode: 'new',
-    existing: null, // { fileName, opening, entries }
+    mode: 'registre', // base des écritures : registre de l'année (Saisie des pièces), classeur existant ou nouveau classeur
+    existing: null, // { fileName, opening, entries, buffer }
     docs: [], // [{ id, name, doc (pdf.js), numPages, pages: [{pageInDoc,width,height,words}], pieceCount }]
     nextDocId: 1,
     pages: [], // pages globales : { pageNumber, docId, pageInDoc, width, height, words }
@@ -68,6 +68,8 @@
     modeRadios: document.querySelectorAll('input[name="mode"]'),
     newBox: $('newBox'),
     existingBox: $('existingBox'),
+    registreBox: $('registreBox'),
+    registreInfo: $('registreInfo'),
     openingHint: $('openingHint'),
     vocabInfo: $('vocabInfo'),
     xlsxFile: $('xlsxFile'),
@@ -237,7 +239,16 @@
     return P.normalizeAccount(els.caisse.value) || P.DEFAULT_CAISSE;
   }
 
+  /** Registre de l'année ouvert dans « Saisie des pièces » (même année, mêmes écritures). */
+  function registre() {
+    return window.CaisseSaisie && window.CaisseSaisie.state ? window.CaisseSaisie.state.reg : null;
+  }
+
   function currentOpening() {
+    if (state.mode === 'registre') {
+      const reg = registre();
+      return reg ? { date: reg.opening.date || null, amount: Number(reg.opening.amount) || 0, libelle: 'Solde à nouveau' } : { date: null, amount: 0, libelle: 'Solde à nouveau' };
+    }
     if (state.mode === 'existing' && state.existing) return state.existing.opening;
     return {
       date: els.openingDate.value || null,
@@ -246,18 +257,51 @@
     };
   }
 
+  /** Écritures déjà dans la base choisie : registre de l'année ou classeur existant. */
   function existingEntries() {
+    if (state.mode === 'registre') { const reg = registre(); return reg ? window.CaisseRegistre.entriesOf(reg) : []; }
     return state.mode === 'existing' && state.existing ? state.existing.entries : [];
   }
+  const baseLabel = () => (state.mode === 'registre' ? 'le registre' : 'le classeur');
+  const numNo = (e) => (e.no == null || e.no === '' ? NaN : Number(e.no));
 
-  /* ---------------- Étape 1 : classeur ---------------- */
-  els.modeRadios.forEach((r) => r.addEventListener('change', () => {
-    state.mode = document.querySelector('input[name="mode"]:checked').value;
-    els.newBox.classList.toggle('hidden', state.mode !== 'new');
-    els.existingBox.classList.toggle('hidden', state.mode !== 'existing');
+  /* ---------------- Étape 1 : base des écritures ---------------- */
+  // Par défaut, le registre de l'année : les pièces scannées viennent à la suite de celles déjà
+  // saisies (ou reprises d'un classeur), et « Ajouter au registre » les y verse. Une année commencée
+  // à l'ancienne se reprend par « Reprendre ces écritures dans le registre » (classeur existant).
+  function applyMode(mode) {
+    if (!['registre', 'existing', 'new'].includes(mode)) mode = 'registre';
+    state.mode = mode;
+    for (const r of els.modeRadios) r.checked = r.value === mode;
+    els.newBox.classList.toggle('hidden', mode !== 'new');
+    els.existingBox.classList.toggle('hidden', mode !== 'existing');
+    if (els.registreBox) els.registreBox.classList.toggle('hidden', mode !== 'registre');
+    try { localStorage.setItem('caisse.scan.base', mode); } catch (e) { /* ignore */ }
+    renderRegistreInfo();
     if (state.pages.length) reparse();
     refreshAll();
-  }));
+  }
+  els.modeRadios.forEach((r) => r.addEventListener('change', () => applyMode(document.querySelector('input[name="mode"]:checked').value)));
+
+  function renderRegistreInfo() {
+    if (!els.registreInfo) return;
+    const reg = registre();
+    if (!reg) { els.registreInfo.textContent = "Registre de l'année indisponible : ouvrez d'abord « Saisie des pièces »."; return; }
+    const j = window.CaisseRegistre.journal(reg);
+    const last = reg.pieces.length ? reg.pieces[reg.pieces.length - 1] : null;
+    els.registreInfo.innerHTML = `Registre <b>${reg.annee}</b> (Saisie des pièces) : <b>${reg.pieces.length}</b> pièce(s), solde à nouveau <b>${fmtCHF(j.start)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}` +
+      (last ? `, dernière pièce n° <b>${last.no == null ? '?' : last.no}</b>${last.date ? ` du ${escapeHtml(P.isoToDisplay(last.date))}` : ''}` : '') + `, solde actuel <b>${fmtCHF(j.end)}</b>. ` +
+      `Les pièces scannées viennent à la suite (« Ajouter au registre de l'année ») ; le fichier Excel généré ici contient tout le registre plus ce lot, sans rien compter deux fois. ` +
+      `<button type="button" class="small" data-act="goSaisie">Ouvrir la saisie des pièces</button>`;
+  }
+  if (els.registreInfo) els.registreInfo.addEventListener('click', (ev) => { if (ev.target.closest('button[data-act="goSaisie"]')) showPanel('panelSaisie'); });
+  // le registre a changé (ouvert, pièce enregistrée, classeur repris) : la base se met à jour
+  document.addEventListener('caisse:registre', () => {
+    if (state.mode !== 'registre') return;
+    renderRegistreInfo();
+    if (state.pages.length) reparse();
+    refreshAll();
+  });
 
   els.xlsxFile.addEventListener('change', async () => {
     const file = els.xlsxFile.files[0];
@@ -273,7 +317,9 @@
         `<b>${escapeHtml(file.name)}</b> – feuille « ${escapeHtml(data.sheetName)} » : <b>${data.entries.length}</b> écriture(s), ` +
         `solde à nouveau <b>${fmtCHF(data.opening.amount)}</b>` + (data.opening.date ? ` au ${P.isoToDisplay(data.opening.date)}` : '') +
         (last ? `, dernière pièce n° <b>${escapeHtml(last.no)}</b>` + (last.date ? ` du ${P.isoToDisplay(last.date)}` : '') : '') +
-        `, solde actuel <b>${fmtCHF(totals.end)}</b>.`;
+        `, solde actuel <b>${fmtCHF(totals.end)}</b>.` +
+        (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le registre de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le registre de l'année</button>` : '');
+      state.existing.buffer = buf;
       if (!els.openingAmount.value || Number(els.openingAmount.value) === 0) els.openingAmount.value = totals.end;
       // apprentissage du vocabulaire (mots, noms, comptes) pour corriger l'OCR
       state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(data.entries));
@@ -286,6 +332,16 @@
     }
     if (state.pages.length) reparse();
     refreshAll();
+  });
+
+  els.existingInfo.addEventListener('click', async (ev) => {
+    const b = ev.target.closest('button[data-act="toRegistre"]');
+    if (!b || !state.existing || !state.existing.buffer || !window.CaisseSaisie) return;
+    b.disabled = true;
+    try {
+      const r = await window.CaisseSaisie.importWorkbook(state.existing.buffer, state.existing.fileName);
+      if (r) { applyMode('registre'); showPanel('panelSaisie'); }
+    } finally { b.disabled = false; }
   });
 
   renderOpeningHint();
@@ -1620,8 +1676,13 @@
       if (isNaN(nb)) return -1;
       return na - nb;
     });
-    return existingEntries().map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
-      .concat(news.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
+    // une pièce du lot déjà dans la base (même n°, même montant : ajoutée au registre, ou déjà dans le classeur) n'est pas comptée deux fois
+    const exist = existingEntries();
+    const key = (e) => `${numNo(e)}|${Math.round((Number(e.debit) || 0) * 100)}|${Math.round((Number(e.credit) || 0) * 100)}`;
+    const already = new Set(exist.filter((e) => !isNaN(numNo(e))).map(key));
+    const fresh = news.filter((e) => isNaN(numNo(e)) || !already.has(key(e)));
+    return exist.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
+      .concat(fresh.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
   }
 
   /**
@@ -1638,13 +1699,21 @@
     if (nos.length) {
       for (let n = Math.min.apply(null, nos); n <= Math.max.apply(null, nos); n++) if (!counts.has(n)) manquants.push(n);
     }
-    const existNos = new Set(existingEntries().map((e) => Number(e.no)).filter((n) => !isNaN(n)));
-    const dejaLa = nos.filter((n) => existNos.has(n));
+    // n° déjà dans la base : même montant, la pièce y est déjà (pas comptée deux fois) ; autre montant, conflit
+    const exist = new Map();
+    for (const e of existingEntries()) { const n = numNo(e); if (!isNaN(n)) exist.set(n, e); }
+    const cents = (v) => Math.round((Number(v) || 0) * 100);
+    const dejaLa = []; const conflits = [];
+    for (const e of news) {
+      const n = numNo(e); const x = !isNaN(n) ? exist.get(n) : null;
+      if (!x) continue;
+      if (cents(x.debit) === cents(e.debit) && cents(x.credit) === cents(e.credit)) dejaLa.push(n); else conflits.push(n);
+    }
     const sansNo = news.filter((e) => e.no == null || e.no === '').length;
     const aVerifier = news.filter((e) => rowStatus(e) === 'warn');
     const incompletes = news.filter((e) => rowStatus(e) === 'err');
     const jamaisVues = news.filter((e) => !e.seen && !e.checked && !e.edited && !e.manual);
-    return { doublons, manquants, dejaLa: uniqList(dejaLa), sansNo, aVerifier, incompletes, jamaisVues, count: news.length };
+    return { doublons, manquants, dejaLa: uniqList(dejaLa), conflits: uniqList(conflits), sansNo, aVerifier, incompletes, jamaisVues, count: news.length };
   }
 
   function renderChecks() {
@@ -1661,7 +1730,8 @@
     rows.push(c.doublons.length
       ? line('Numéros en double', `${c.doublons.join(', ')}`, 'err', btn('Voir', 'dup'))
       : line('Numéros en double', 'aucun', 'ok'));
-    if (c.dejaLa.length) rows.push(line('Numéros déjà dans le classeur', c.dejaLa.join(', '), 'err'));
+    if (c.conflits.length) rows.push(line(`Numéros déjà dans ${baseLabel()} avec un autre montant`, c.conflits.join(', '), 'err'));
+    if (c.dejaLa.length) rows.push(line(`Pièces déjà dans ${baseLabel()}`, `${c.dejaLa.length} (n° ${c.dejaLa.slice(0, 20).join(', ')}${c.dejaLa.length > 20 ? '…' : ''}) : non comptées deux fois`, 'ok'));
     if (c.sansNo) rows.push(line('Pièces sans numéro', String(c.sansNo), 'err'));
     rows.push(c.incompletes.length
       ? line('Lignes incomplètes', String(c.incompletes.length), 'err', btn('Voir', 'err'))
@@ -1754,7 +1824,7 @@
     const tAll = X.computeTotals(opening, allEntriesForExcel());
     const exist = existingEntries();
     const cards = [
-      ['Solde de départ' + (state.mode === 'existing' && exist.length ? ' (classeur)' : ''), fmtCHF(state.mode === 'existing' && exist.length ? X.computeTotals(opening, exist).end : opening.amount), ''],
+      ['Solde de départ' + (state.mode !== 'new' && exist.length ? (state.mode === 'registre' ? ' (registre)' : ' (classeur)') : ''), fmtCHF(state.mode !== 'new' && exist.length ? X.computeTotals(opening, exist).end : opening.amount), ''],
       ['Débits (nouvelles pièces)', '+ ' + fmtCHF(tNew.debits), ''],
       ['Crédits (nouvelles pièces)', '− ' + fmtCHF(tNew.credits), ''],
       ['Solde final', fmtCHF(tAll.end), 'end'],
@@ -1807,12 +1877,21 @@
   // Accès pour les tests automatisés
   /* ---------------- Onglets de la page ---------------- */
   const appTabs = document.getElementById('appTabs');
+  // Espaces de l'outil Décompte DGEO : sa page (panelDgeo) et le récapitulatif des décomptes
+  const DGEO_PANELS = ['panelDgeo', 'panelRecap'];
+  const toolOf = (id) => (DGEO_PANELS.includes(id) ? 'dgeo' : 'caisse');
   function showPanel(id) {
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
+    if (toolEls.dgeoNav) {
+      for (const b of toolEls.dgeoNav.querySelectorAll('.apptab[data-panel]')) b.classList.toggle('active', b.dataset.panel === id);
+      // raccourcis vers les sections de Décompte DGEO : actifs seulement quand sa page est affichée
+      for (const b of toolEls.dgeoNav.querySelectorAll('.apptab[data-dgeo]')) b.classList.toggle('active', id === 'panelDgeo' && b.dataset.dgeo === dgeoSection);
+    }
     for (const el of document.querySelectorAll('main .panel')) el.classList.toggle('hidden', el.id !== id);
     try { localStorage.setItem('caisse.onglet', id); } catch (e) { /* ignore */ }
-    if (id !== 'panelDgeo') lastCaissePanel = id;
-    syncTool(id === 'panelDgeo' ? 'dgeo' : 'caisse');
+    const tool = toolOf(id);
+    if (tool === 'caisse') lastCaissePanel = id; else lastDgeoPanel = id;
+    syncTool(tool);
     updateDgeoEmbed();
   }
   // Sélecteur d'outil en tête de la barre latérale : Caisse écoles (ses espaces) ou Décompte DGEO
@@ -1820,6 +1899,8 @@
   const toolEls = { btn: document.getElementById('btnTool'), menu: document.getElementById('toolMenu'), mark: document.getElementById('toolMark'), name: document.getElementById('toolName'), caisseNav: appTabs, dgeoNav: document.getElementById('dgeoNav') };
   let currentTool = 'caisse';
   let lastCaissePanel = 'panelSaisie';
+  let lastDgeoPanel = 'panelDgeo';
+  let dgeoSection = 'sec-upload';
   function syncTool(tool) {
     currentTool = tool;
     const dgeo = tool === 'dgeo';
@@ -1832,7 +1913,7 @@
   }
   function setTool(tool) {
     closeToolMenu();
-    if (tool === 'dgeo') showPanel('panelDgeo');
+    if (tool === 'dgeo') showPanel(lastDgeoPanel && document.getElementById(lastDgeoPanel) ? lastDgeoPanel : 'panelDgeo');
     else showPanel(lastCaissePanel && document.getElementById(lastCaissePanel) ? lastCaissePanel : 'panelSaisie');
   }
   function closeToolMenu() { if (toolEls.menu) { toolEls.menu.classList.add('hidden'); toolEls.btn.setAttribute('aria-expanded', 'false'); } }
@@ -1844,9 +1925,12 @@
   }
   if (toolEls.dgeoNav) {
     toolEls.dgeoNav.addEventListener('click', (ev) => {
-      const b = ev.target.closest('.apptab[data-dgeo]');
+      const b = ev.target.closest('.apptab');
       if (!b) return;
-      for (const x of toolEls.dgeoNav.querySelectorAll('.apptab')) x.classList.toggle('active', x === b);
+      if (b.dataset.panel) { showPanel(b.dataset.panel); return; } // espace de l'outil (récapitulatif)
+      if (!b.dataset.dgeo) return;
+      dgeoSection = b.dataset.dgeo;
+      showPanel('panelDgeo'); // la page de Décompte DGEO, puis sa section
       if (window.CaisseDgeo && window.CaisseDgeo.scrollTo) window.CaisseDgeo.scrollTo(b.dataset.dgeo);
     });
   }
@@ -1976,6 +2060,8 @@
     appTabs.addEventListener('click', (ev) => { const b = ev.target.closest('.apptab'); if (b) showPanel(b.dataset.panel); });
     try { const saved = localStorage.getItem('caisse.onglet'); if (saved && saved !== 'panelSaisie' && document.getElementById(saved)) showPanel(saved); } catch (e) { /* ignore */ }
   }
+  // base des écritures des pièces scannées : celle choisie la dernière fois, sinon le registre de l'année
+  { let base = 'registre'; try { base = localStorage.getItem('caisse.scan.base') || 'registre'; } catch (e) { /* ignore */ } applyMode(base); }
 
   /* ---------------- Vers le registre de l'année (onglet Saisie) ---------------- */
   const btnToRegister = document.getElementById('btnToRegister');
@@ -2017,7 +2103,16 @@
     if (changed) { saveVocab(); renderVocabInfo(); }
   }
 
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, showPanel };
+  /** Les écritures d'un classeur repris dans le registre enrichissent le vocabulaire (mots, noms, comptes). */
+  function learnEntries(entries) {
+    try {
+      state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(entries || []));
+      saveVocab();
+      renderVocabInfo();
+    } catch (e) { /* ignore */ }
+  }
+
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
@@ -2031,7 +2126,7 @@
     const graves = [];
     if (c.manquants.length) graves.push(`• numéros absents de la suite : ${c.manquants.slice(0, 25).join(', ')}${c.manquants.length > 25 ? '…' : ''}`);
     if (c.doublons.length) graves.push(`• numéros en double : ${c.doublons.join(', ')}`);
-    if (c.dejaLa.length) graves.push(`• numéros déjà présents dans le classeur : ${c.dejaLa.join(', ')}`);
+    if (c.conflits.length) graves.push(`• numéros déjà présents dans ${baseLabel()} avec un autre montant : ${c.conflits.join(', ')}`);
     if (c.sansNo) graves.push(`• ${c.sansNo} pièce(s) sans numéro`);
     if (graves.length) {
       const ok = confirm(

@@ -594,6 +594,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier et effectifs"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-pieces" title="Pièces justificatives"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Pièces justificatives<small>Tickets retenus</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
+    <div class="section">Récapitulatif</div>
+    <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span></button>
     <div class="navnote">
       <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
@@ -721,6 +723,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       </div>
       <div class="toolbar">
         <button type="button" class="primary" id="btnRegExcel"><svg class="ico"><use href="#i-grid"/></svg> Fichier Excel de l'année</button>
+        <button type="button" id="btnRegExcelIn" title="Reprend dans ce registre les écritures d'un classeur Excel de l'année (année commencée à l'ancienne, à la main ou avec les pièces scannées) : rien n'est compté deux fois, la numérotation continue"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un classeur Excel…</button>
+        <input type="file" id="regExcelFile" accept=".xlsx" class="hidden">
         <button type="button" id="btnRegPdf"><svg class="ico"><use href="#i-printer"/></svg> PDF des pièces</button>
         <select id="regPdfFrom" style="height:36px"></select>
         <span class="spacer"></span>
@@ -732,48 +736,27 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     </section>
   </div>
 
-  <section class="card" id="recapCard">
-    <h2><svg class="ico"><use href="#i-layers"/></svg> Récapitulatif des décomptes <span id="recapYear"></span></h2>
-    <div class="hint" style="margin-bottom:12px">Cochez les décomptes à reprendre, puis générez le document : n° de chaque décompte, montant et total. Il est prêt à être remis avec les pièces.</div>
-    <div class="toolbar top">
-      <div class="choice seg" id="recapFilter" style="margin:0">
-        <label><input type="radio" name="recapFilter" value="course" checked> Courses d'école</label>
-        <label><input type="radio" name="recapFilter" value="camp"> Camps</label>
-        <label><input type="radio" name="recapFilter" value="tous"> Les deux</label>
-      </div>
-      <button type="button" class="small ghost" id="btnRecapAll">Tout cocher</button>
-      <button type="button" class="small ghost" id="btnRecapNone">Tout décocher</button>
-      <span class="spacer"></span>
-      <span class="legend" id="recapSummary"></span>
-    </div>
-    <div class="table-wrap">
-      <table class="entries journal" id="recapTable">
-        <thead><tr><th></th><th>N°</th><th>Date</th><th>Décompte</th><th>Enseignant-e</th><th>Réf. DGEO</th><th>Sens</th><th class="num">Montant</th></tr></thead>
-        <tbody id="recapBody"></tbody>
-      </table>
-    </div>
-    <div class="toolbar">
-      <button type="button" class="primary" id="btnRecapPdf"><svg class="ico"><use href="#i-printer"/></svg> Générer le récapitulatif (PDF)</button>
-      <span class="legend" id="recapHint"></span>
-    </div>
-  </section>
 </div>
 
 <div id="panelScan" class="panel hidden">
   <header class="page-head">
     <div>
       <h1>Pièces scannées</h1>
-      <p>Les pièces déjà remplies à la main et scannées sont lues trois fois (couche texte, OCR local, Tesseract natif), puis contrôlées et versées dans le classeur Excel ou dans le registre.</p>
+      <p>Les pièces déjà remplies à la main et scannées sont lues trois fois (couche texte, OCR local, Tesseract natif), puis contrôlées et versées dans le registre de l'année, celui de la saisie des pièces : les deux espaces travaillent sur les mêmes écritures, et le fichier Excel de l'année les contient toutes.</p>
     </div>
   </header>
 
   <section class="card" id="step1">
-    <h2><span class="n">1</span> Classeur Excel</h2>
+    <h2><span class="n">1</span> Base des écritures</h2>
     <div class="choice seg">
-      <label><input type="radio" name="mode" value="new" checked> Nouveau classeur (nouvelle année)</label>
-      <label><input type="radio" name="mode" value="existing"> Continuer un classeur existant</label>
+      <label><input type="radio" name="mode" value="registre" checked> Registre de l'année (Saisie des pièces)</label>
+      <label><input type="radio" name="mode" value="existing"> Classeur Excel existant</label>
+      <label><input type="radio" name="mode" value="new"> Nouveau classeur (nouvelle année)</label>
     </div>
-    <div id="newBox">
+    <div id="registreBox">
+      <div class="info" id="registreInfo">Registre de l'année en cours de chargement…</div>
+    </div>
+    <div id="newBox" class="hidden">
       <div class="row">
         <div class="field">
           <label for="openingDate">Date du solde à nouveau</label>
@@ -789,7 +772,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <div id="existingBox" class="hidden">
       <div class="row">
         <div class="field">
-          <label for="xlsxFile">Classeur Excel (.xlsx) de l'année en cours – les nouvelles pièces sont ajoutées à la suite</label>
+          <label for="xlsxFile">Classeur Excel (.xlsx) de l'année en cours (année commencée à l'ancienne) – les nouvelles pièces sont ajoutées à la suite, et ses écritures peuvent être reprises dans le registre</label>
           <input type="file" id="xlsxFile" accept=".xlsx">
         </div>
       </div>
@@ -986,6 +969,41 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <h2><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</h2>
     <p>Décompte DGEO analyse le dossier PDF d'une course d'école ou d'un camp (formulaire de couverture et tickets), retient les pièces, calcule la part à charge de l'État pour les accompagnants titrés et produit le décompte Excel.</p>
     <p>Il fait partie de l'application Windows <b>Compta Blonay</b> (<code>ComptaBlonay.exe</code>), où il s'ouvre ici même, dans cet espace. Dans ce fichier HTML seul, il n'est pas disponible.</p>
+  </section>
+</div>
+
+<div id="panelRecap" class="panel hidden">
+  <header class="page-head">
+    <div>
+      <h1>Récapitulatif des décomptes</h1>
+      <p>Les décomptes de courses d'école et de camps de l'année, avec le n° de chaque décompte, le montant et la somme totale : sélectionnez-les et générez le récapitulatif (PDF).</p>
+    </div>
+  </header>
+
+  <section class="card" id="recapCard">
+    <h2><svg class="ico"><use href="#i-layers"/></svg> Décomptes du registre <span id="recapYear"></span></h2>
+    <div class="hint" style="margin-bottom:12px">Chaque décompte passé en pièce DECOMPTE dans Caisse écoles (année du registre ouvert) apparaît ici. Cochez ceux à reprendre, puis générez le document : n° de chaque décompte, montant et total, prêt à être remis avec les pièces.</div>
+    <div class="toolbar top">
+      <div class="choice seg" id="recapFilter" style="margin:0">
+        <label><input type="radio" name="recapFilter" value="course" checked> Courses d'école</label>
+        <label><input type="radio" name="recapFilter" value="camp"> Camps</label>
+        <label><input type="radio" name="recapFilter" value="tous"> Les deux</label>
+      </div>
+      <button type="button" class="small ghost" id="btnRecapAll">Tout cocher</button>
+      <button type="button" class="small ghost" id="btnRecapNone">Tout décocher</button>
+      <span class="spacer"></span>
+      <span class="legend" id="recapSummary"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="entries journal" id="recapTable">
+        <thead><tr><th></th><th>N°</th><th>Date</th><th>Décompte</th><th>Enseignant-e</th><th>Réf. DGEO</th><th>Sens</th><th class="num">Montant</th></tr></thead>
+        <tbody id="recapBody"></tbody>
+      </table>
+    </div>
+    <div class="toolbar">
+      <button type="button" class="primary" id="btnRecapPdf"><svg class="ico"><use href="#i-printer"/></svg> Générer le récapitulatif (PDF)</button>
+      <span class="legend" id="recapHint"></span>
+    </div>
   </section>
 </div>
 
@@ -5491,7 +5509,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const montant = P.round2(Number(p.montant) || 0);
     return {
       id: String(p.id || newId()),
-      no: p.no == null || p.no === '' ? null : Number(p.no),
+      no: p.no == null || p.no === '' || !Number.isFinite(Number(p.no)) ? null : Number(p.no),
       date: p.date || null,
       type: p.type || '',
       objet: p.objet || 'Autre',
@@ -5504,7 +5522,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       montant,
       sens: p.sens === 'debit' || p.sens === 'credit' ? p.sens : null,
       justificatifs: Array.isArray(p.justificatifs) ? p.justificatifs.filter((j) => j && j.name).map((j) => ({ name: String(j.name), size: Number(j.size) || 0, kind: j.kind || kindOf(j.name) })) : [],
-      source: p.source === 'scan' || p.source === 'dgeo' ? p.source : 'saisie',
+      source: p.source === 'scan' || p.source === 'dgeo' || p.source === 'excel' ? p.source : 'saisie',
       ref: p.ref ? String(p.ref) : '',
       createdAt: p.createdAt || new Date().toISOString(),
       updatedAt: p.updatedAt || new Date().toISOString(),
@@ -5746,8 +5764,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     return { rows, start: reg.opening.amount, debits: P.round2(debits), credits: P.round2(credits), end: solde };
   }
 
-  /** Pièces créées depuis des écritures lues sur des PDF scannés. */
-  function piecesFromEntries(entries) {
+  /** Pièces créées depuis des écritures lues sur des PDF scannés (source « scan ») ou reprises d'un classeur Excel (« excel »). */
+  function piecesFromEntries(entries, source) {
     return (entries || []).map((e) => {
       const parts = String(e.libelle || '').split(' - ');
       const type = P.typeFromLibelle(e.libelle) || '';
@@ -5755,9 +5773,46 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       const desc = parts.slice(1, personne ? -1 : undefined).join(' - ');
       return normalizePiece({
         no: e.no, date: e.date, type, objet: P.objetOf(desc), detail: desc, personne, libelle: e.libelle, compte: e.compte,
-        montant: e.debit != null ? e.debit : e.credit, sens: e.debit != null ? 'debit' : 'credit', source: 'scan',
+        montant: e.debit != null ? e.debit : e.credit, sens: e.debit != null ? 'debit' : 'credit', source: source || 'scan',
       });
     });
+  }
+
+  /**
+   * Reprend dans le registre des écritures venues d'ailleurs : classeur Excel d'une année commencée
+   * à la main (source « excel ») ou lot de pièces scannées (« scan »). Une écriture dont le n° est
+   * déjà dans le registre n'est pas reprise : même montant et même sens, elle y est déjà
+   * (skipped) ; sinon elle est signalée (conflicts). Les écritures sans montant sont ignorées
+   * (noAmount) ; celles d'une autre année aussi (otherYears), sauf opts.otherYears.
+   * opts.opening = { date, amount } du classeur : repris tel quel si le registre est encore vide,
+   * sinon comparé (openingDiffers).
+   */
+  function mergeEntries(reg, entries, opts) {
+    opts = opts || {};
+    const pieces = piecesFromEntries(entries, opts.source || 'excel');
+    const res = { added: [], skipped: [], conflicts: [], noAmount: [], otherYears: [], openingTaken: false, openingDiffers: false };
+    if (opts.opening && typeof opts.opening === 'object') {
+      const amount = P.round2(Number(opts.opening.amount) || 0);
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(String(opts.opening.date || '')) ? String(opts.opening.date) : null;
+      if (!reg.pieces.length) {
+        reg.opening.amount = amount;
+        if (date) reg.opening.date = date;
+        res.openingTaken = true;
+      } else if (Math.abs(amount - P.round2(reg.opening.amount)) >= 0.005) res.openingDiffers = true;
+    }
+    for (const p of pieces) {
+      if (!(p.montant > 0)) { res.noAmount.push(p); continue; }
+      const same = p.no != null ? reg.pieces.find((x) => x.no === p.no) : null;
+      if (same) {
+        if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) res.skipped.push(p); else res.conflicts.push(p);
+        continue;
+      }
+      if (p.date && String(p.date).slice(0, 4) !== String(reg.annee)) { res.otherYears.push(p); if (!opts.otherYears) continue; }
+      upsertPiece(reg, p);
+      res.added.push(p);
+    }
+    if (res.added.length) reg.updatedAt = new Date().toISOString();
+    return res;
   }
 
   function serialize(reg) {
@@ -5862,7 +5917,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     removeCount,
     previousCount,
     balanceAt,
-    piecesFromEntries,
+    piecesFromEntries, mergeEntries,
     serialize,
     parse,
     storage,
@@ -6049,7 +6104,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   /** Description d'un décompte pour le récapitulatif : « Course d'école 5P/3 du 12.06.2026 Lausanne ». */
   function recapDescription(p) {
     const parts = [];
-    if (p.objet && p.objet !== 'Autre') parts.push(p.objet);
+    const det = String(p.detail || '').trim();
+    // l'objet n'est écrit que s'il n'ouvre pas déjà le détail (pièces lues sur un scan ou reprises d'un classeur)
+    if (p.objet && p.objet !== 'Autre' && !det.toLowerCase().startsWith(String(p.objet).toLowerCase())) parts.push(p.objet);
     if (p.classe) parts.push(p.classe);
     if (p.periode) parts.push(/^(du|le|les)\b/i.test(String(p.periode).trim()) ? String(p.periode).trim() : `du ${String(p.periode).trim()}`);
     if (p.detail) parts.push(String(p.detail).trim());
@@ -6276,8 +6333,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
   /* ---------------- État ---------------- */
   const state = {
-    mode: 'new',
-    existing: null, // { fileName, opening, entries }
+    mode: 'registre', // base des écritures : registre de l'année (Saisie des pièces), classeur existant ou nouveau classeur
+    existing: null, // { fileName, opening, entries, buffer }
     docs: [], // [{ id, name, doc (pdf.js), numPages, pages: [{pageInDoc,width,height,words}], pieceCount }]
     nextDocId: 1,
     pages: [], // pages globales : { pageNumber, docId, pageInDoc, width, height, words }
@@ -6299,6 +6356,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     modeRadios: document.querySelectorAll('input[name="mode"]'),
     newBox: $('newBox'),
     existingBox: $('existingBox'),
+    registreBox: $('registreBox'),
+    registreInfo: $('registreInfo'),
     openingHint: $('openingHint'),
     vocabInfo: $('vocabInfo'),
     xlsxFile: $('xlsxFile'),
@@ -6468,7 +6527,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     return P.normalizeAccount(els.caisse.value) || P.DEFAULT_CAISSE;
   }
 
+  /** Registre de l'année ouvert dans « Saisie des pièces » (même année, mêmes écritures). */
+  function registre() {
+    return window.CaisseSaisie && window.CaisseSaisie.state ? window.CaisseSaisie.state.reg : null;
+  }
+
   function currentOpening() {
+    if (state.mode === 'registre') {
+      const reg = registre();
+      return reg ? { date: reg.opening.date || null, amount: Number(reg.opening.amount) || 0, libelle: 'Solde à nouveau' } : { date: null, amount: 0, libelle: 'Solde à nouveau' };
+    }
     if (state.mode === 'existing' && state.existing) return state.existing.opening;
     return {
       date: els.openingDate.value || null,
@@ -6477,18 +6545,51 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     };
   }
 
+  /** Écritures déjà dans la base choisie : registre de l'année ou classeur existant. */
   function existingEntries() {
+    if (state.mode === 'registre') { const reg = registre(); return reg ? window.CaisseRegistre.entriesOf(reg) : []; }
     return state.mode === 'existing' && state.existing ? state.existing.entries : [];
   }
+  const baseLabel = () => (state.mode === 'registre' ? 'le registre' : 'le classeur');
+  const numNo = (e) => (e.no == null || e.no === '' ? NaN : Number(e.no));
 
-  /* ---------------- Étape 1 : classeur ---------------- */
-  els.modeRadios.forEach((r) => r.addEventListener('change', () => {
-    state.mode = document.querySelector('input[name="mode"]:checked').value;
-    els.newBox.classList.toggle('hidden', state.mode !== 'new');
-    els.existingBox.classList.toggle('hidden', state.mode !== 'existing');
+  /* ---------------- Étape 1 : base des écritures ---------------- */
+  // Par défaut, le registre de l'année : les pièces scannées viennent à la suite de celles déjà
+  // saisies (ou reprises d'un classeur), et « Ajouter au registre » les y verse. Une année commencée
+  // à l'ancienne se reprend par « Reprendre ces écritures dans le registre » (classeur existant).
+  function applyMode(mode) {
+    if (!['registre', 'existing', 'new'].includes(mode)) mode = 'registre';
+    state.mode = mode;
+    for (const r of els.modeRadios) r.checked = r.value === mode;
+    els.newBox.classList.toggle('hidden', mode !== 'new');
+    els.existingBox.classList.toggle('hidden', mode !== 'existing');
+    if (els.registreBox) els.registreBox.classList.toggle('hidden', mode !== 'registre');
+    try { localStorage.setItem('caisse.scan.base', mode); } catch (e) { /* ignore */ }
+    renderRegistreInfo();
     if (state.pages.length) reparse();
     refreshAll();
-  }));
+  }
+  els.modeRadios.forEach((r) => r.addEventListener('change', () => applyMode(document.querySelector('input[name="mode"]:checked').value)));
+
+  function renderRegistreInfo() {
+    if (!els.registreInfo) return;
+    const reg = registre();
+    if (!reg) { els.registreInfo.textContent = "Registre de l'année indisponible : ouvrez d'abord « Saisie des pièces »."; return; }
+    const j = window.CaisseRegistre.journal(reg);
+    const last = reg.pieces.length ? reg.pieces[reg.pieces.length - 1] : null;
+    els.registreInfo.innerHTML = `Registre <b>${reg.annee}</b> (Saisie des pièces) : <b>${reg.pieces.length}</b> pièce(s), solde à nouveau <b>${fmtCHF(j.start)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}` +
+      (last ? `, dernière pièce n° <b>${last.no == null ? '?' : last.no}</b>${last.date ? ` du ${escapeHtml(P.isoToDisplay(last.date))}` : ''}` : '') + `, solde actuel <b>${fmtCHF(j.end)}</b>. ` +
+      `Les pièces scannées viennent à la suite (« Ajouter au registre de l'année ») ; le fichier Excel généré ici contient tout le registre plus ce lot, sans rien compter deux fois. ` +
+      `<button type="button" class="small" data-act="goSaisie">Ouvrir la saisie des pièces</button>`;
+  }
+  if (els.registreInfo) els.registreInfo.addEventListener('click', (ev) => { if (ev.target.closest('button[data-act="goSaisie"]')) showPanel('panelSaisie'); });
+  // le registre a changé (ouvert, pièce enregistrée, classeur repris) : la base se met à jour
+  document.addEventListener('caisse:registre', () => {
+    if (state.mode !== 'registre') return;
+    renderRegistreInfo();
+    if (state.pages.length) reparse();
+    refreshAll();
+  });
 
   els.xlsxFile.addEventListener('change', async () => {
     const file = els.xlsxFile.files[0];
@@ -6504,7 +6605,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
         `<b>${escapeHtml(file.name)}</b> – feuille « ${escapeHtml(data.sheetName)} » : <b>${data.entries.length}</b> écriture(s), ` +
         `solde à nouveau <b>${fmtCHF(data.opening.amount)}</b>` + (data.opening.date ? ` au ${P.isoToDisplay(data.opening.date)}` : '') +
         (last ? `, dernière pièce n° <b>${escapeHtml(last.no)}</b>` + (last.date ? ` du ${P.isoToDisplay(last.date)}` : '') : '') +
-        `, solde actuel <b>${fmtCHF(totals.end)}</b>.`;
+        `, solde actuel <b>${fmtCHF(totals.end)}</b>.` +
+        (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le registre de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le registre de l'année</button>` : '');
+      state.existing.buffer = buf;
       if (!els.openingAmount.value || Number(els.openingAmount.value) === 0) els.openingAmount.value = totals.end;
       // apprentissage du vocabulaire (mots, noms, comptes) pour corriger l'OCR
       state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(data.entries));
@@ -6517,6 +6620,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     }
     if (state.pages.length) reparse();
     refreshAll();
+  });
+
+  els.existingInfo.addEventListener('click', async (ev) => {
+    const b = ev.target.closest('button[data-act="toRegistre"]');
+    if (!b || !state.existing || !state.existing.buffer || !window.CaisseSaisie) return;
+    b.disabled = true;
+    try {
+      const r = await window.CaisseSaisie.importWorkbook(state.existing.buffer, state.existing.fileName);
+      if (r) { applyMode('registre'); showPanel('panelSaisie'); }
+    } finally { b.disabled = false; }
   });
 
   renderOpeningHint();
@@ -7851,8 +7964,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       if (isNaN(nb)) return -1;
       return na - nb;
     });
-    return existingEntries().map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
-      .concat(news.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
+    // une pièce du lot déjà dans la base (même n°, même montant : ajoutée au registre, ou déjà dans le classeur) n'est pas comptée deux fois
+    const exist = existingEntries();
+    const key = (e) => `${numNo(e)}|${Math.round((Number(e.debit) || 0) * 100)}|${Math.round((Number(e.credit) || 0) * 100)}`;
+    const already = new Set(exist.filter((e) => !isNaN(numNo(e))).map(key));
+    const fresh = news.filter((e) => isNaN(numNo(e)) || !already.has(key(e)));
+    return exist.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
+      .concat(fresh.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
   }
 
   /**
@@ -7869,13 +7987,21 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (nos.length) {
       for (let n = Math.min.apply(null, nos); n <= Math.max.apply(null, nos); n++) if (!counts.has(n)) manquants.push(n);
     }
-    const existNos = new Set(existingEntries().map((e) => Number(e.no)).filter((n) => !isNaN(n)));
-    const dejaLa = nos.filter((n) => existNos.has(n));
+    // n° déjà dans la base : même montant, la pièce y est déjà (pas comptée deux fois) ; autre montant, conflit
+    const exist = new Map();
+    for (const e of existingEntries()) { const n = numNo(e); if (!isNaN(n)) exist.set(n, e); }
+    const cents = (v) => Math.round((Number(v) || 0) * 100);
+    const dejaLa = []; const conflits = [];
+    for (const e of news) {
+      const n = numNo(e); const x = !isNaN(n) ? exist.get(n) : null;
+      if (!x) continue;
+      if (cents(x.debit) === cents(e.debit) && cents(x.credit) === cents(e.credit)) dejaLa.push(n); else conflits.push(n);
+    }
     const sansNo = news.filter((e) => e.no == null || e.no === '').length;
     const aVerifier = news.filter((e) => rowStatus(e) === 'warn');
     const incompletes = news.filter((e) => rowStatus(e) === 'err');
     const jamaisVues = news.filter((e) => !e.seen && !e.checked && !e.edited && !e.manual);
-    return { doublons, manquants, dejaLa: uniqList(dejaLa), sansNo, aVerifier, incompletes, jamaisVues, count: news.length };
+    return { doublons, manquants, dejaLa: uniqList(dejaLa), conflits: uniqList(conflits), sansNo, aVerifier, incompletes, jamaisVues, count: news.length };
   }
 
   function renderChecks() {
@@ -7892,7 +8018,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     rows.push(c.doublons.length
       ? line('Numéros en double', `${c.doublons.join(', ')}`, 'err', btn('Voir', 'dup'))
       : line('Numéros en double', 'aucun', 'ok'));
-    if (c.dejaLa.length) rows.push(line('Numéros déjà dans le classeur', c.dejaLa.join(', '), 'err'));
+    if (c.conflits.length) rows.push(line(`Numéros déjà dans ${baseLabel()} avec un autre montant`, c.conflits.join(', '), 'err'));
+    if (c.dejaLa.length) rows.push(line(`Pièces déjà dans ${baseLabel()}`, `${c.dejaLa.length} (n° ${c.dejaLa.slice(0, 20).join(', ')}${c.dejaLa.length > 20 ? '…' : ''}) : non comptées deux fois`, 'ok'));
     if (c.sansNo) rows.push(line('Pièces sans numéro', String(c.sansNo), 'err'));
     rows.push(c.incompletes.length
       ? line('Lignes incomplètes', String(c.incompletes.length), 'err', btn('Voir', 'err'))
@@ -7985,7 +8112,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const tAll = X.computeTotals(opening, allEntriesForExcel());
     const exist = existingEntries();
     const cards = [
-      ['Solde de départ' + (state.mode === 'existing' && exist.length ? ' (classeur)' : ''), fmtCHF(state.mode === 'existing' && exist.length ? X.computeTotals(opening, exist).end : opening.amount), ''],
+      ['Solde de départ' + (state.mode !== 'new' && exist.length ? (state.mode === 'registre' ? ' (registre)' : ' (classeur)') : ''), fmtCHF(state.mode !== 'new' && exist.length ? X.computeTotals(opening, exist).end : opening.amount), ''],
       ['Débits (nouvelles pièces)', '+ ' + fmtCHF(tNew.debits), ''],
       ['Crédits (nouvelles pièces)', '− ' + fmtCHF(tNew.credits), ''],
       ['Solde final', fmtCHF(tAll.end), 'end'],
@@ -8038,12 +8165,21 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   // Accès pour les tests automatisés
   /* ---------------- Onglets de la page ---------------- */
   const appTabs = document.getElementById('appTabs');
+  // Espaces de l'outil Décompte DGEO : sa page (panelDgeo) et le récapitulatif des décomptes
+  const DGEO_PANELS = ['panelDgeo', 'panelRecap'];
+  const toolOf = (id) => (DGEO_PANELS.includes(id) ? 'dgeo' : 'caisse');
   function showPanel(id) {
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
+    if (toolEls.dgeoNav) {
+      for (const b of toolEls.dgeoNav.querySelectorAll('.apptab[data-panel]')) b.classList.toggle('active', b.dataset.panel === id);
+      // raccourcis vers les sections de Décompte DGEO : actifs seulement quand sa page est affichée
+      for (const b of toolEls.dgeoNav.querySelectorAll('.apptab[data-dgeo]')) b.classList.toggle('active', id === 'panelDgeo' && b.dataset.dgeo === dgeoSection);
+    }
     for (const el of document.querySelectorAll('main .panel')) el.classList.toggle('hidden', el.id !== id);
     try { localStorage.setItem('caisse.onglet', id); } catch (e) { /* ignore */ }
-    if (id !== 'panelDgeo') lastCaissePanel = id;
-    syncTool(id === 'panelDgeo' ? 'dgeo' : 'caisse');
+    const tool = toolOf(id);
+    if (tool === 'caisse') lastCaissePanel = id; else lastDgeoPanel = id;
+    syncTool(tool);
     updateDgeoEmbed();
   }
   // Sélecteur d'outil en tête de la barre latérale : Caisse écoles (ses espaces) ou Décompte DGEO
@@ -8051,6 +8187,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   const toolEls = { btn: document.getElementById('btnTool'), menu: document.getElementById('toolMenu'), mark: document.getElementById('toolMark'), name: document.getElementById('toolName'), caisseNav: appTabs, dgeoNav: document.getElementById('dgeoNav') };
   let currentTool = 'caisse';
   let lastCaissePanel = 'panelSaisie';
+  let lastDgeoPanel = 'panelDgeo';
+  let dgeoSection = 'sec-upload';
   function syncTool(tool) {
     currentTool = tool;
     const dgeo = tool === 'dgeo';
@@ -8063,7 +8201,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
   function setTool(tool) {
     closeToolMenu();
-    if (tool === 'dgeo') showPanel('panelDgeo');
+    if (tool === 'dgeo') showPanel(lastDgeoPanel && document.getElementById(lastDgeoPanel) ? lastDgeoPanel : 'panelDgeo');
     else showPanel(lastCaissePanel && document.getElementById(lastCaissePanel) ? lastCaissePanel : 'panelSaisie');
   }
   function closeToolMenu() { if (toolEls.menu) { toolEls.menu.classList.add('hidden'); toolEls.btn.setAttribute('aria-expanded', 'false'); } }
@@ -8075,9 +8213,12 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
   if (toolEls.dgeoNav) {
     toolEls.dgeoNav.addEventListener('click', (ev) => {
-      const b = ev.target.closest('.apptab[data-dgeo]');
+      const b = ev.target.closest('.apptab');
       if (!b) return;
-      for (const x of toolEls.dgeoNav.querySelectorAll('.apptab')) x.classList.toggle('active', x === b);
+      if (b.dataset.panel) { showPanel(b.dataset.panel); return; } // espace de l'outil (récapitulatif)
+      if (!b.dataset.dgeo) return;
+      dgeoSection = b.dataset.dgeo;
+      showPanel('panelDgeo'); // la page de Décompte DGEO, puis sa section
       if (window.CaisseDgeo && window.CaisseDgeo.scrollTo) window.CaisseDgeo.scrollTo(b.dataset.dgeo);
     });
   }
@@ -8207,6 +8348,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     appTabs.addEventListener('click', (ev) => { const b = ev.target.closest('.apptab'); if (b) showPanel(b.dataset.panel); });
     try { const saved = localStorage.getItem('caisse.onglet'); if (saved && saved !== 'panelSaisie' && document.getElementById(saved)) showPanel(saved); } catch (e) { /* ignore */ }
   }
+  // base des écritures des pièces scannées : celle choisie la dernière fois, sinon le registre de l'année
+  { let base = 'registre'; try { base = localStorage.getItem('caisse.scan.base') || 'registre'; } catch (e) { /* ignore */ } applyMode(base); }
 
   /* ---------------- Vers le registre de l'année (onglet Saisie) ---------------- */
   const btnToRegister = document.getElementById('btnToRegister');
@@ -8248,7 +8391,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (changed) { saveVocab(); renderVocabInfo(); }
   }
 
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, showPanel };
+  /** Les écritures d'un classeur repris dans le registre enrichissent le vocabulaire (mots, noms, comptes). */
+  function learnEntries(entries) {
+    try {
+      state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(entries || []));
+      saveVocab();
+      renderVocabInfo();
+    } catch (e) { /* ignore */ }
+  }
+
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
@@ -8262,7 +8414,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const graves = [];
     if (c.manquants.length) graves.push(`• numéros absents de la suite : ${c.manquants.slice(0, 25).join(', ')}${c.manquants.length > 25 ? '…' : ''}`);
     if (c.doublons.length) graves.push(`• numéros en double : ${c.doublons.join(', ')}`);
-    if (c.dejaLa.length) graves.push(`• numéros déjà présents dans le classeur : ${c.dejaLa.join(', ')}`);
+    if (c.conflits.length) graves.push(`• numéros déjà présents dans ${baseLabel()} avec un autre montant : ${c.conflits.join(', ')}`);
     if (c.sansNo) graves.push(`• ${c.sansNo} pièce(s) sans numéro`);
     if (graves.length) {
       const ok = confirm(
@@ -8339,7 +8491,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
-    'journalYear', 'journalBody', 'journalTotals', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
+    'journalYear', 'journalBody', 'journalTotals', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
     'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
@@ -8418,6 +8570,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     newPiece();
     renderJournal();
     if (window.CaisseComptage) window.CaisseComptage.render();
+    notifyRegister();
   }
 
   function renderYears() {
@@ -8428,6 +8581,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   async function saveReg() {
     state.reg.updatedAt = new Date().toISOString();
     await state.storage.save(state.reg);
+    notifyRegister();
+  }
+  /** Le registre a changé (ouvert, enregistré) : l'espace des pièces scannées, qui s'appuie dessus, se met à jour. */
+  function notifyRegister() {
+    try { document.dispatchEvent(new CustomEvent('caisse:registre', { detail: { annee: state.reg ? state.reg.annee : null } })); } catch (e) { /* ignore */ }
   }
 
   els.regYear.addEventListener('change', () => openYear(Number(els.regYear.value)));
@@ -8696,7 +8854,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       return `<tr data-id="${r.id}"${state.editingId === r.id ? ' class="selected"' : ''}>` +
         `<td>${r.no == null ? '' : r.no}</td><td>${escapeHtml(P.isoToDisplay(r.date))}</td><td class="compte">${escapeHtml(r.compte)}</td><td class="libelle" title="${escapeHtml(r.libelle)}">${escapeHtml(r.libelle)}</td>` +
         `<td class="num">${r.debit != null ? fmtCHF(r.debit) : ''}</td><td class="num">${r.credit != null ? fmtCHF(r.credit) : ''}</td><td class="num solde">${fmtCHF(r.solde)}</td>` +
-        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}</td>` +
+        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
         `<td class="acts"><button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
     }).join('') || '<tr><td colspan="9" class="legend">Aucune pièce dans ce registre. Remplissez la fiche à gauche : chaque pièce enregistrée apparaît ici avec le solde cumulé.</td></tr>';
     els.journalTotals.innerHTML = `<div class="t"><div class="l">Solde à nouveau</div><div class="v">${fmtCHF(j.start)}</div></div>` +
@@ -8839,6 +8997,43 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     notice('ok', `Registre ${reg.annee} restauré.`);
   });
 
+  /* ---------------- Reprise d'un classeur Excel ---------------- */
+  // Année commencée à l'ancienne (classeur tenu à la main ou produit depuis les pièces scannées) :
+  // ses écritures entrent dans le registre, rien n'est compté deux fois, la numérotation continue.
+  async function importWorkbook(buffer, fileName) {
+    if (!state.reg) await init();
+    const reg = state.reg;
+    let data;
+    try { data = await X.readWorkbook(buffer); } catch (e) { notice('err', `Impossible de lire ce classeur : ${escapeHtml(e.message || e)}`); return null; }
+    const otherYears = R.piecesFromEntries(data.entries, 'excel').filter((p) => p.montant > 0 && p.date && String(p.date).slice(0, 4) !== String(reg.annee)).length;
+    const includeOther = otherYears > 0 && confirm(`${otherYears} écriture(s) du classeur ne sont pas de l'année ${reg.annee} du registre ouvert. Les reprendre quand même ?`);
+    const r = R.mergeEntries(reg, data.entries, { source: 'excel', opening: data.opening, otherYears: includeOther });
+    await saveReg();
+    els.regOpeningDate.value = reg.opening.date || '';
+    els.regOpeningAmount.value = reg.opening.amount;
+    renderJournal();
+    newPiece();
+    if (A && A.learnEntries) A.learnEntries(data.entries);
+    const parts = [`<b>${r.added.length}</b> écriture(s) reprise(s) de <b>${escapeHtml(fileName || 'ce classeur')}</b> dans le registre ${reg.annee}`];
+    if (r.skipped.length) parts.push(`${r.skipped.length} déjà présente(s) (même n° et même montant), non comptée(s) deux fois`);
+    if (r.conflicts.length) parts.push(`<b>${r.conflicts.length} n° déjà pris avec un autre montant</b>, non reprise(s) : ${r.conflicts.slice(0, 10).map((p) => `n° ${p.no}`).join(', ')}`);
+    if (r.otherYears.length && !includeOther) parts.push(`${r.otherYears.length} d'une autre année ignorée(s)`);
+    if (r.noAmount.length) parts.push(`${r.noAmount.length} ligne(s) sans montant ignorée(s)`);
+    if (r.openingTaken) parts.push(`solde à nouveau repris du classeur : <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}`);
+    if (r.openingDiffers) parts.push(`le solde à nouveau du classeur (${fmtCHF(Number(data.opening.amount) || 0)}) diffère de celui du registre (${fmtCHF(reg.opening.amount)}), conservé : vérifiez-le`);
+    notice(r.conflicts.length ? 'warn' : 'ok', parts.join(' · ') + '.');
+    return r;
+  }
+  if (els.btnRegExcelIn && els.regExcelFile) {
+    els.btnRegExcelIn.addEventListener('click', () => els.regExcelFile.click());
+    els.regExcelFile.addEventListener('change', async () => {
+      const f = els.regExcelFile.files && els.regExcelFile.files[0];
+      els.regExcelFile.value = '';
+      if (!f) return;
+      await importWorkbook(await f.arrayBuffer(), f.name);
+    });
+  }
+
   /* ---------------- Depuis les pièces scannées ---------------- */
   /**
    * Ajoute au registre de l'année des écritures lues sur des PDF ; getImage(entry) peut fournir
@@ -8850,10 +9045,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const pieces = R.piecesFromEntries(entries);
     const wrongYear = pieces.filter((p) => p.date && String(p.date).slice(0, 4) !== String(year));
     if (wrongYear.length && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?`)) return 0;
-    let added = 0; let dup = 0;
+    let added = 0; let dup = 0; const conflicts = [];
     for (let i = 0; i < pieces.length; i++) {
       const p = pieces[i];
-      if (p.no != null && state.reg.pieces.some((x) => x.no === p.no)) { dup++; continue; }
+      const same = p.no != null ? state.reg.pieces.find((x) => x.no === p.no) : null;
+      if (same) { if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) dup++; else conflicts.push(p.no); continue; }
       if (getImage) {
         try {
           const img = await getImage(entries[i]);
@@ -8866,7 +9062,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     await saveReg();
     renderJournal();
     newPiece();
-    notice(added ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n°) ignorée(s)` : ''}.`);
+    notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
+      `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}.`);
     return added;
   }
 
@@ -8944,7 +9141,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     refreshLibelle();
   });
 
-  window.CaisseSaisie = { state, init, openYear, addFromScan, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto };
+  window.CaisseSaisie = { state, init, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto };
   init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
 })();
 

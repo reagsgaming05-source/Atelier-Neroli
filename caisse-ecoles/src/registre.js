@@ -59,7 +59,7 @@
     const montant = P.round2(Number(p.montant) || 0);
     return {
       id: String(p.id || newId()),
-      no: p.no == null || p.no === '' ? null : Number(p.no),
+      no: p.no == null || p.no === '' || !Number.isFinite(Number(p.no)) ? null : Number(p.no),
       date: p.date || null,
       type: p.type || '',
       objet: p.objet || 'Autre',
@@ -72,7 +72,7 @@
       montant,
       sens: p.sens === 'debit' || p.sens === 'credit' ? p.sens : null,
       justificatifs: Array.isArray(p.justificatifs) ? p.justificatifs.filter((j) => j && j.name).map((j) => ({ name: String(j.name), size: Number(j.size) || 0, kind: j.kind || kindOf(j.name) })) : [],
-      source: p.source === 'scan' || p.source === 'dgeo' ? p.source : 'saisie',
+      source: p.source === 'scan' || p.source === 'dgeo' || p.source === 'excel' ? p.source : 'saisie',
       ref: p.ref ? String(p.ref) : '',
       createdAt: p.createdAt || new Date().toISOString(),
       updatedAt: p.updatedAt || new Date().toISOString(),
@@ -314,8 +314,8 @@
     return { rows, start: reg.opening.amount, debits: P.round2(debits), credits: P.round2(credits), end: solde };
   }
 
-  /** Pièces créées depuis des écritures lues sur des PDF scannés. */
-  function piecesFromEntries(entries) {
+  /** Pièces créées depuis des écritures lues sur des PDF scannés (source « scan ») ou reprises d'un classeur Excel (« excel »). */
+  function piecesFromEntries(entries, source) {
     return (entries || []).map((e) => {
       const parts = String(e.libelle || '').split(' - ');
       const type = P.typeFromLibelle(e.libelle) || '';
@@ -323,9 +323,46 @@
       const desc = parts.slice(1, personne ? -1 : undefined).join(' - ');
       return normalizePiece({
         no: e.no, date: e.date, type, objet: P.objetOf(desc), detail: desc, personne, libelle: e.libelle, compte: e.compte,
-        montant: e.debit != null ? e.debit : e.credit, sens: e.debit != null ? 'debit' : 'credit', source: 'scan',
+        montant: e.debit != null ? e.debit : e.credit, sens: e.debit != null ? 'debit' : 'credit', source: source || 'scan',
       });
     });
+  }
+
+  /**
+   * Reprend dans le registre des écritures venues d'ailleurs : classeur Excel d'une année commencée
+   * à la main (source « excel ») ou lot de pièces scannées (« scan »). Une écriture dont le n° est
+   * déjà dans le registre n'est pas reprise : même montant et même sens, elle y est déjà
+   * (skipped) ; sinon elle est signalée (conflicts). Les écritures sans montant sont ignorées
+   * (noAmount) ; celles d'une autre année aussi (otherYears), sauf opts.otherYears.
+   * opts.opening = { date, amount } du classeur : repris tel quel si le registre est encore vide,
+   * sinon comparé (openingDiffers).
+   */
+  function mergeEntries(reg, entries, opts) {
+    opts = opts || {};
+    const pieces = piecesFromEntries(entries, opts.source || 'excel');
+    const res = { added: [], skipped: [], conflicts: [], noAmount: [], otherYears: [], openingTaken: false, openingDiffers: false };
+    if (opts.opening && typeof opts.opening === 'object') {
+      const amount = P.round2(Number(opts.opening.amount) || 0);
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(String(opts.opening.date || '')) ? String(opts.opening.date) : null;
+      if (!reg.pieces.length) {
+        reg.opening.amount = amount;
+        if (date) reg.opening.date = date;
+        res.openingTaken = true;
+      } else if (Math.abs(amount - P.round2(reg.opening.amount)) >= 0.005) res.openingDiffers = true;
+    }
+    for (const p of pieces) {
+      if (!(p.montant > 0)) { res.noAmount.push(p); continue; }
+      const same = p.no != null ? reg.pieces.find((x) => x.no === p.no) : null;
+      if (same) {
+        if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) res.skipped.push(p); else res.conflicts.push(p);
+        continue;
+      }
+      if (p.date && String(p.date).slice(0, 4) !== String(reg.annee)) { res.otherYears.push(p); if (!opts.otherYears) continue; }
+      upsertPiece(reg, p);
+      res.added.push(p);
+    }
+    if (res.added.length) reg.updatedAt = new Date().toISOString();
+    return res;
   }
 
   function serialize(reg) {
@@ -430,7 +467,7 @@
     removeCount,
     previousCount,
     balanceAt,
-    piecesFromEntries,
+    piecesFromEntries, mergeEntries,
     serialize,
     parse,
     storage,

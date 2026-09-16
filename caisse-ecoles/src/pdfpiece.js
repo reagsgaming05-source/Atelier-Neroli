@@ -174,7 +174,9 @@
   /** Description d'un décompte pour le récapitulatif : « Course d'école 5P/3 du 12.06.2026 Lausanne ». */
   function recapDescription(p) {
     const parts = [];
-    if (p.objet && p.objet !== 'Autre') parts.push(p.objet);
+    const det = String(p.detail || '').trim();
+    // l'objet n'est écrit que s'il n'ouvre pas déjà le détail (pièces lues sur un scan ou reprises d'un classeur)
+    if (p.objet && p.objet !== 'Autre' && !det.toLowerCase().startsWith(String(p.objet).toLowerCase())) parts.push(p.objet);
     if (p.classe) parts.push(p.classe);
     if (p.periode) parts.push(/^(du|le|les)\b/i.test(String(p.periode).trim()) ? String(p.periode).trim() : `du ${String(p.periode).trim()}`);
     if (p.detail) parts.push(String(p.detail).trim());

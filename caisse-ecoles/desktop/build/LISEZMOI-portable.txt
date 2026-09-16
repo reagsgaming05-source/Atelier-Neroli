@@ -8,13 +8,18 @@ comptables et journal de caisse) et « Décompte DGEO » (courses d'école & cam
 2. Double-cliquez sur ComptaBlonay.exe : c'est le seul programme à ouvrir. Le logo en haut de
    la barre latérale est un menu : « Caisse écoles » (Saisie des pièces, Pièces scannées,
    Compter la caisse) ou « Décompte DGEO » (le logiciel de décompte complet, démarré avec
-   l'application dans le dossier decompte\ ; il n'y a rien d'autre à lancer).
+   l'application dans le dossier decompte\ ; il n'y a rien d'autre à lancer, et l'espace
+   « Récapitulatif » y liste les décomptes de l'année : n°, montants, total, en PDF).
 3. Caisse écoles – Saisie des pièces : remplissez la fiche (n°, date, type, objet, classe,
    personne, compte proposé, montant, justificatifs), « Enregistrer la pièce → journal ».
    À la fin de l'année : « Générer le fichier Excel de l'année » et « PDF des pièces ».
    Les registres sont conservés dans data\caisse\<année>\ à côté de l'exécutable.
+   Année commencée à l'ancienne (classeur Excel tenu à la main) : « Reprendre un classeur
+   Excel… » sous le journal verse ses écritures dans le registre (rien n'est compté deux fois,
+   la numérotation continue), puis les nouvelles pièces se saisissent dans la fiche.
    Caisse écoles – Pièces scannées : glissez les PDF des pièces, vérifiez les lignes orange,
-   « Générer le fichier Excel » ou « Ajouter au registre de l'année ».
+   « Ajouter au registre de l'année » (les pièces scannées et les pièces saisies vont dans le
+   même registre) ; « Générer le fichier Excel » produit le classeur complet de l'année.
    Caisse écoles – Compter la caisse : tapez le nombre de billets et de pièces de chaque valeur ;
    l'application affiche le total, le dernier solde compté et le nouveau solde avec leurs dates,
    et l'écart avec le solde du journal à cette date. « Enregistrer le comptage » le garde dans

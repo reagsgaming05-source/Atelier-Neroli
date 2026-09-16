@@ -125,14 +125,24 @@ décompte → pièce), puis publication du zip.
    « PIÈCE COMPTABLE » par pièce (relisible par l'application) suivie de ses justificatifs, pour
    toutes les pièces ou depuis un n°. Chaque ligne du journal a aussi ses boutons *Modifier*, *PDF*
    et *×*.
-5. Depuis l'onglet des pièces scannées, **Ajouter au registre de l'année** verse les écritures
-   lues dans le registre, avec l'image de chaque pièce en justificatif.
+5. **Pièces scannées et pièces saisies vont dans le même registre.** L'espace des pièces
+   scannées prend par défaut le registre de l'année comme base : les pièces lues viennent à la
+   suite de celles déjà saisies, **Ajouter au registre de l'année** les y verse (avec l'image de
+   chaque pièce en justificatif) et le fichier Excel généré là contient tout le registre plus le
+   lot, sans rien compter deux fois (une pièce déjà dans le registre avec le même n° et le même
+   montant est reconnue ; même n° avec un autre montant : signalé). Année commencée à l'ancienne
+   (classeur Excel tenu à la main ou produit par les pièces scannées) : **Reprendre un classeur
+   Excel…** sous le journal verse ses écritures dans le registre (solde à nouveau repris si le
+   registre est vide, numérotation qui continue, pièces marquées *Excel*), et la saisie reprend
+   dans la fiche. Le bouton *Reprendre ces écritures dans le registre* de l'espace des pièces
+   scannées fait la même chose depuis un classeur chargé là.
 6. Version portable : un décompte terminé dans l'onglet **Décompte DGEO** apparaît au-dessus de
    la fiche ; *Créer la pièce* la pré-remplit (voir plus haut, *Pont entre les deux onglets*).
-7. **Récapitulatif des décomptes** (carte sous le journal) : les pièces DECOMPTE de l'année,
-   filtrées (courses d'école, camps ou les deux), à cocher ; *Générer le récapitulatif (PDF)*
-   produit un document avec le n° de chaque décompte, la date, la description, l'enseignant-e, la
-   référence DGEO, le montant et le total des décomptes cochés (plusieurs pages si besoin).
+7. **Récapitulatif des décomptes** : dans l'outil *Décompte DGEO* (sélecteur en tête de la barre
+   latérale), espace *Récapitulatif*. Les pièces DECOMPTE de l'année du registre ouvert, filtrées
+   (courses d'école, camps ou les deux), à cocher ; *Générer le récapitulatif (PDF)* produit un
+   document avec le n° de chaque décompte, la date, la description, l'enseignant-e, la référence
+   DGEO, le montant et le total des décomptes cochés (plusieurs pages si besoin).
 
 ## Compter la caisse
 
@@ -157,11 +167,13 @@ lancé :
 1. Copier `dist/Caisse-ecoles.html` sur le PC (clé USB, courriel, téléchargement depuis GitHub).
 2. Double-cliquer dessus : il s'ouvre dans le navigateur (Edge, Chrome, Firefox). Rien n'est
    envoyé sur internet, tout se passe dans le navigateur ; l'application fonctionne hors ligne.
-3. **Étape 1 – Classeur Excel** : par défaut *Nouveau classeur*, il suffit d'indiquer la date et
-   le montant du solde à nouveau (le solde final du dernier fichier généré est proposé d'un clic).
-   Choisir *Continuer un classeur existant* pour ajouter les pièces à la suite d'un classeur en
-   cours. **Aucun classeur n'est nécessaire pour lire les pièces** : la base de référence est
-   intégrée à l'application. Vérifier le n° du compte caisse (`9100.104` par défaut).
+3. **Étape 1 – Base des écritures** : par défaut *Registre de l'année* (celui de la saisie des
+   pièces : les pièces scannées viennent à la suite, et le fichier Excel produit contient tout).
+   *Classeur Excel existant* ajoute les pièces à la suite d'un classeur en cours (et permet de
+   reprendre ses écritures dans le registre) ; *Nouveau classeur* demande la date et le montant du
+   solde à nouveau (le solde final du dernier fichier généré est proposé d'un clic). **Aucun
+   classeur n'est nécessaire pour lire les pièces** : la base de référence est intégrée à
+   l'application. Vérifier le n° du compte caisse (`9100.104` par défaut).
 4. **Étape 2 – PDF** : glisser un ou plusieurs PDF de pièces (ex. `Pce 01 à 33.pdf`,
    `Pce 34 à 60.pdf`). Les fichiers sont classés par nom (ordre naturel) et listés avec leur
    nombre de pièces ; on peut les monter/descendre, en retirer, en ajouter plus tard sans perdre

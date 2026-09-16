@@ -67,6 +67,8 @@
     <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier et effectifs"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-pieces" title="Pièces justificatives"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Pièces justificatives<small>Tickets retenus</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
+    <div class="section">Récapitulatif</div>
+    <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span></button>
     <div class="navnote">
       <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
@@ -194,6 +196,8 @@
       </div>
       <div class="toolbar">
         <button type="button" class="primary" id="btnRegExcel"><svg class="ico"><use href="#i-grid"/></svg> Fichier Excel de l'année</button>
+        <button type="button" id="btnRegExcelIn" title="Reprend dans ce registre les écritures d'un classeur Excel de l'année (année commencée à l'ancienne, à la main ou avec les pièces scannées) : rien n'est compté deux fois, la numérotation continue"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un classeur Excel…</button>
+        <input type="file" id="regExcelFile" accept=".xlsx" class="hidden">
         <button type="button" id="btnRegPdf"><svg class="ico"><use href="#i-printer"/></svg> PDF des pièces</button>
         <select id="regPdfFrom" style="height:36px"></select>
         <span class="spacer"></span>
@@ -205,48 +209,27 @@
     </section>
   </div>
 
-  <section class="card" id="recapCard">
-    <h2><svg class="ico"><use href="#i-layers"/></svg> Récapitulatif des décomptes <span id="recapYear"></span></h2>
-    <div class="hint" style="margin-bottom:12px">Cochez les décomptes à reprendre, puis générez le document : n° de chaque décompte, montant et total. Il est prêt à être remis avec les pièces.</div>
-    <div class="toolbar top">
-      <div class="choice seg" id="recapFilter" style="margin:0">
-        <label><input type="radio" name="recapFilter" value="course" checked> Courses d'école</label>
-        <label><input type="radio" name="recapFilter" value="camp"> Camps</label>
-        <label><input type="radio" name="recapFilter" value="tous"> Les deux</label>
-      </div>
-      <button type="button" class="small ghost" id="btnRecapAll">Tout cocher</button>
-      <button type="button" class="small ghost" id="btnRecapNone">Tout décocher</button>
-      <span class="spacer"></span>
-      <span class="legend" id="recapSummary"></span>
-    </div>
-    <div class="table-wrap">
-      <table class="entries journal" id="recapTable">
-        <thead><tr><th></th><th>N°</th><th>Date</th><th>Décompte</th><th>Enseignant-e</th><th>Réf. DGEO</th><th>Sens</th><th class="num">Montant</th></tr></thead>
-        <tbody id="recapBody"></tbody>
-      </table>
-    </div>
-    <div class="toolbar">
-      <button type="button" class="primary" id="btnRecapPdf"><svg class="ico"><use href="#i-printer"/></svg> Générer le récapitulatif (PDF)</button>
-      <span class="legend" id="recapHint"></span>
-    </div>
-  </section>
 </div>
 
 <div id="panelScan" class="panel hidden">
   <header class="page-head">
     <div>
       <h1>Pièces scannées</h1>
-      <p>Les pièces déjà remplies à la main et scannées sont lues trois fois (couche texte, OCR local, Tesseract natif), puis contrôlées et versées dans le classeur Excel ou dans le registre.</p>
+      <p>Les pièces déjà remplies à la main et scannées sont lues trois fois (couche texte, OCR local, Tesseract natif), puis contrôlées et versées dans le registre de l'année, celui de la saisie des pièces : les deux espaces travaillent sur les mêmes écritures, et le fichier Excel de l'année les contient toutes.</p>
     </div>
   </header>
 
   <section class="card" id="step1">
-    <h2><span class="n">1</span> Classeur Excel</h2>
+    <h2><span class="n">1</span> Base des écritures</h2>
     <div class="choice seg">
-      <label><input type="radio" name="mode" value="new" checked> Nouveau classeur (nouvelle année)</label>
-      <label><input type="radio" name="mode" value="existing"> Continuer un classeur existant</label>
+      <label><input type="radio" name="mode" value="registre" checked> Registre de l'année (Saisie des pièces)</label>
+      <label><input type="radio" name="mode" value="existing"> Classeur Excel existant</label>
+      <label><input type="radio" name="mode" value="new"> Nouveau classeur (nouvelle année)</label>
     </div>
-    <div id="newBox">
+    <div id="registreBox">
+      <div class="info" id="registreInfo">Registre de l'année en cours de chargement…</div>
+    </div>
+    <div id="newBox" class="hidden">
       <div class="row">
         <div class="field">
           <label for="openingDate">Date du solde à nouveau</label>
@@ -262,7 +245,7 @@
     <div id="existingBox" class="hidden">
       <div class="row">
         <div class="field">
-          <label for="xlsxFile">Classeur Excel (.xlsx) de l'année en cours – les nouvelles pièces sont ajoutées à la suite</label>
+          <label for="xlsxFile">Classeur Excel (.xlsx) de l'année en cours (année commencée à l'ancienne) – les nouvelles pièces sont ajoutées à la suite, et ses écritures peuvent être reprises dans le registre</label>
           <input type="file" id="xlsxFile" accept=".xlsx">
         </div>
       </div>
@@ -459,6 +442,41 @@
     <h2><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</h2>
     <p>Décompte DGEO analyse le dossier PDF d'une course d'école ou d'un camp (formulaire de couverture et tickets), retient les pièces, calcule la part à charge de l'État pour les accompagnants titrés et produit le décompte Excel.</p>
     <p>Il fait partie de l'application Windows <b>Compta Blonay</b> (<code>ComptaBlonay.exe</code>), où il s'ouvre ici même, dans cet espace. Dans ce fichier HTML seul, il n'est pas disponible.</p>
+  </section>
+</div>
+
+<div id="panelRecap" class="panel hidden">
+  <header class="page-head">
+    <div>
+      <h1>Récapitulatif des décomptes</h1>
+      <p>Les décomptes de courses d'école et de camps de l'année, avec le n° de chaque décompte, le montant et la somme totale : sélectionnez-les et générez le récapitulatif (PDF).</p>
+    </div>
+  </header>
+
+  <section class="card" id="recapCard">
+    <h2><svg class="ico"><use href="#i-layers"/></svg> Décomptes du registre <span id="recapYear"></span></h2>
+    <div class="hint" style="margin-bottom:12px">Chaque décompte passé en pièce DECOMPTE dans Caisse écoles (année du registre ouvert) apparaît ici. Cochez ceux à reprendre, puis générez le document : n° de chaque décompte, montant et total, prêt à être remis avec les pièces.</div>
+    <div class="toolbar top">
+      <div class="choice seg" id="recapFilter" style="margin:0">
+        <label><input type="radio" name="recapFilter" value="course" checked> Courses d'école</label>
+        <label><input type="radio" name="recapFilter" value="camp"> Camps</label>
+        <label><input type="radio" name="recapFilter" value="tous"> Les deux</label>
+      </div>
+      <button type="button" class="small ghost" id="btnRecapAll">Tout cocher</button>
+      <button type="button" class="small ghost" id="btnRecapNone">Tout décocher</button>
+      <span class="spacer"></span>
+      <span class="legend" id="recapSummary"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="entries journal" id="recapTable">
+        <thead><tr><th></th><th>N°</th><th>Date</th><th>Décompte</th><th>Enseignant-e</th><th>Réf. DGEO</th><th>Sens</th><th class="num">Montant</th></tr></thead>
+        <tbody id="recapBody"></tbody>
+      </table>
+    </div>
+    <div class="toolbar">
+      <button type="button" class="primary" id="btnRecapPdf"><svg class="ico"><use href="#i-printer"/></svg> Générer le récapitulatif (PDF)</button>
+      <span class="legend" id="recapHint"></span>
+    </div>
   </section>
 </div>
 
