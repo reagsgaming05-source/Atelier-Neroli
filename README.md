@@ -301,26 +301,34 @@ indique celui qui est déjà là.
 
 `outils/src/` est la seule source, et **la seule chose versionnée**. L'application y vit en
 morceaux : `page.html` (l'ossature et deux repères), `style.css`, et trente et un modules
-`NN-nom.js` lus dans l'ordre de leurs numéros. `assembler.js` les recolle en une page unique —
-une substitution de texte, rien d'autre — et `build.js` en tire les cinq versions livrées (page
-CDN, page hors ligne, `docs/` du site, page du lanceur, dossier `pour-les-collegues/`), dont
-aucune n'est commitée. Le fichier d'un seul tenant faisait 11 876 lignes : on ne pouvait plus
-en ouvrir une partie sans charger le reste, et deux corrections dans deux endroits éloignés se
-gênaient. Le découpage n'a pas changé un octet du livrable, et `outils/test/assemblage.test.js`
-garde la couture : repères consommés, modules numérotés sans doublon, script recollé qui
-s'analyse d'un bloc. Elles pèsent 28 Mo à elles toutes : les
-garder dans le dépôt ajoutait autant à l'historique à chaque changement de la source, et une
-copie faite à la main finissait toujours par dater — celle de `pour-les-collegues/` avait
-quatre jours de retard. `npm run build` les remet en une seconde ; la CI et Vercel les
-construisent eux-mêmes. Les tests
-de `outils/test/` valident le code réellement livré, extrait de la source. Ceux de
-`outils/test-e2e/` pilotent l'application entière dans Chromium, sur la page hors ligne et donc
-sans réseau : ils tiennent les promesses qu'une relecture ne suffit pas à garantir — un mot
-caviardé qui quitte vraiment le fichier, un sommaire de dossier à jour dans le PDF enregistré,
-un lien interne qui suit sa page. Ils tournent sur Linux à chaque poussée, et la version
-Windows n'est empaquetée que s'ils passent. Le lanceur Go en
-un seul fichier (`outils/application/lanceur/`, fenêtre WebView2, 4 Mo) reste disponible en
-solution de repli : `sh outils/application/lanceur/construire.sh`.
+`NN-nom.js` lus dans l'ordre de leurs numéros — `00-socle` et `05-etat` d'abord, puis la
+lecture et les vignettes, l'écriture dans les flux PDF et l'assemblage, les outils un par un
+(OCR, comparaison, dossier de pièces, lots, recherche, tableau vers Excel), l'éditeur de page,
+et `99-init` qui met tout en marche. `assembler.js` les recolle en une page unique — une
+substitution de texte, sans reformatage ni réordonnancement.
+
+Le fichier d'un seul tenant faisait 11 876 lignes : on ne pouvait plus en ouvrir un bout sans
+charger le reste, et deux corrections éloignées se gênaient. Le découpage n'a pas changé un
+octet du livrable — le recollage a été comparé caractère pour caractère au fichier d'avant — et
+`outils/test/assemblage.test.js` garde la couture : repères consommés, page complète, modules
+numérotés sans doublon, script recollé qui s'analyse d'un bloc.
+
+`build.js` en tire les cinq versions livrées (page CDN, page hors ligne, `docs/` du site, page
+du lanceur, dossier `pour-les-collegues/`), dont aucune n'est commitée. Elles pèsent 28 Mo à
+elles toutes : les garder dans le dépôt ajoutait autant à l'historique à chaque changement de la
+source, et une copie faite à la main finissait toujours par dater — celle de
+`pour-les-collegues/` avait quatre jours de retard. `npm run build` les remet en une seconde ;
+la CI et Vercel les construisent eux-mêmes.
+
+Les tests de `outils/test/` valident le code réellement livré, extrait de la source recollée.
+Ceux de `outils/test-e2e/` pilotent l'application entière dans Chromium, sur la page hors ligne
+et donc sans réseau : ils tiennent les promesses qu'une relecture ne suffit pas à garantir — un
+mot caviardé qui quitte vraiment le fichier, un sommaire de dossier à jour dans le PDF
+enregistré, un lien interne qui suit sa page. Ils tournent sur Linux à chaque poussée, et la
+version Windows n'est empaquetée que s'ils passent.
+
+Le lanceur Go en un seul fichier (`outils/application/lanceur/`, fenêtre WebView2, 4 Mo) reste
+disponible en solution de repli : `sh outils/application/lanceur/construire.sh`.
 
 ## L'installer comme une vraie application
 
