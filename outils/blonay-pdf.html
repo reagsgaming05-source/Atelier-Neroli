@@ -1221,7 +1221,7 @@
   const APP = 'Blonay PDF';
   const APP_VERSION = '2.0.0';
   // Renseigné par build.js : date de construction et commit.
-  const APP_CONSTRUCTION = "construite le 16.09.2026, commit ec0af54";
+  const APP_CONSTRUCTION = "construite le 17.09.2026, commit 43ce358";
   const CDN = {
     pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
     worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
@@ -3081,7 +3081,7 @@
     renderChips();
     renderOnglets();
     updateSelectionUI();
-    if (state.dossier) rafraichirSommaire();
+    if (state.dossier) lancerSommaire();
   }
 
   function defaultBase() {
@@ -5207,6 +5207,17 @@
   let uidImageCaviardee = 0;
   async function buildPdf(pages, opts) {
     opts = opts || {};
+    // Un dossier de pièces porte un sommaire et des intercalaires qui suivent
+    // les pages. S'ils sont en train d'être refaits, on les attend : ce qui
+    // part doit porter les numéros d'aujourd'hui, pas ceux d'avant le dernier
+    // déplacement. La régénération remplace la source générée, et peut au
+    // passage laisser des pages en trop dans la liste reçue : on ne garde que
+    // celles qui sont encore dans le document.
+    if (state.dossier) {
+      await sommairePret();
+      const vivantes = new Set(state.pages.map(p => p.id));
+      if (pages.some(p => !vivantes.has(p.id))) pages = pages.filter(p => vivantes.has(p.id));
+    }
     const { PDFDocument, degrees } = PDFLib;
     const onProgress = opts.onProgress || (() => {});
     const rasterAll = !!opts.rasterize;
@@ -7492,6 +7503,36 @@
   // des pages change, les pages générées sont refaites avec les bons
   // numéros. Ce qu'on voit est ce qu'on exporte.
   let sommaireEnCours = false;
+  // La régénération en cours, s'il y en a une : l'assemblage l'attend, sinon
+  // un dernier déplacement de page partirait avec les numéros d'avant.
+  let sommaireEnVol = null;
+  function lancerSommaire() {
+    const p = rafraichirSommaire();
+    sommaireEnVol = p;
+    p.catch(() => {}).then(() => { if (sommaireEnVol === p) sommaireEnVol = null; });
+    return p;
+  }
+  // À jour : rien en train d'être refait, et la signature colle aux pages
+  // d'aujourd'hui. La signature est posée dès le début de la régénération :
+  // elle ne suffit donc pas à elle seule à dire que le sommaire est prêt.
+  const sommaireAJour = () => {
+    const d = state.dossier;
+    if (!d) return true;
+    if (sommaireEnCours || sommaireEnVol) return false;
+    return d.signature === state.pages.map(p => p.id).join(',');
+  };
+  // Attendre que le sommaire soit prêt : chaque tour attend ce qui est en vol,
+  // puis relance si les pages ont encore bougé entre-temps. Borné, et on
+  // n'insiste pas si une relance ne change rien : jamais d'attente sans fin.
+  async function sommairePret() {
+    for (let tour = 0; tour < 8; tour++) {
+      if (sommaireEnVol) { try { await sommaireEnVol; } catch (_) {} continue; }
+      if (sommaireAJour()) return;
+      const avant = state.dossier ? state.dossier.signature : '';
+      try { await lancerSommaire(); } catch (_) { return; }
+      if (state.dossier && state.dossier.signature === avant) return;
+    }
+  }
   async function rafraichirSommaire() {
     const d = state.dossier;
     if (!d) return;
@@ -7532,7 +7573,7 @@
     finally {
       sommaireEnCours = false;
       // Les pages ont encore bougé pendant qu'on refaisait le sommaire ? On recommence.
-      if (state.pages.map(p => p.id).join(',') !== sig) { d.signature = ''; rafraichirSommaire(); }
+      if (state.pages.map(p => p.id).join(',') !== sig) { d.signature = ''; lancerSommaire(); }
     }
   }
   function toolDossier() {
@@ -7566,7 +7607,7 @@
         b.append(field('Titre du dossier', titre));
         b.append(groupOf('Les pièces, dans l\'ordre des pages', [liste]));
         b.append(inter, mention, numero, sommaire, signets);
-        b.append(note('Chaque document ouvert devient une pièce ; ses pages sont regroupées. Le sommaire et les intercalaires se refont d\'eux-mêmes si vous déplacez ou retirez des pages ensuite. Ctrl+Z défait le tout.'));
+        b.append(note('Chaque document ouvert devient une pièce ; ses pages sont regroupées. Le sommaire et les intercalaires se refont d\'eux-mêmes si vous déplacez ou retirez des pages ensuite, et le PDF enregistré porte toujours les numéros du moment. Ctrl+Z défait le tout.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Constituer le dossier', primary: true, onClick: async close => {
         close();
