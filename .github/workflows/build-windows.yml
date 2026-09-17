@@ -135,7 +135,7 @@ jobs:
           prerelease: true
           body: |
             Version portable Windows : décompressez le zip, puis double-cliquez sur `DecompteDGEO.exe`.
-            Aucune installation (Python et Tesseract OCR sont inclus). Construit automatiquement depuis le commit ${{ github.sha }}.
+            Aucune installation (Python et Tesseract OCR sont inclus). Construit automatiquement depuis la branche `${{ github.ref_name }}`, commit ${{ github.sha }}.
 
       # L'envoi du zip par l'action échoue par intermittence (« Error saving asset »), et elle
       # supprime l'ancien fichier AVANT d'envoyer le nouveau : la page de téléchargement restait
@@ -151,6 +151,11 @@ jobs:
             # « timeout » : gh peut rester bloqué sans rien téléverser, ce qui mangeait tout le temps du job
             if timeout 300 gh release upload windows-latest DecompteDGEO-windows.zip --clobber --repo "$GITHUB_REPOSITORY"; then
               echo "zip publié (tentative $try)"
+              # L'étiquette « windows-latest » doit désigner le commit d'où vient ce zip : l'action
+              # ne la déplace pas, elle restait sur le tout premier commit publié.
+              gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/windows-latest" \
+                -f sha="$GITHUB_SHA" -F force=true >/dev/null \
+                || echo "étiquette non déplacée (sans conséquence pour le téléchargement)"
               exit 0
             fi
             echo "tentative $try échouée ; nouvelle tentative dans $((15 * try)) s"
