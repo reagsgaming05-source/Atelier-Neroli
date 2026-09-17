@@ -1,5 +1,5 @@
 <title>Blonay PDF</title>
-<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNiAyNiI+PHJlY3Qgd2lkdGg9IjI2IiBoZWlnaHQ9IjI2IiByeD0iNyIgZmlsbD0iIzI1NjNDOSIvPjxwYXRoIGQ9Ik04IDYuNWg2LjVsNC41IDQuNXY4LjVIOHoiIGZpbGw9IiNmZmZmZmYiLz48cGF0aCBkPSJNMTQuNSA2LjVWMTFIMTkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI1NjNDOSIgc3Ryb2tlLXdpZHRoPSIxLjQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMTAuNSAxNGg2TTEwLjUgMTYuNWg2IiBzdHJva2U9IiMyNTYzQzkiIHN0cm9rZS13aWR0aD0iMS4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=">
+<!--@favicon@-->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
@@ -7,14 +7,14 @@
 /*@style@*/
 </style>
 
+<!-- Le dessin de la marque, posé une fois ; les deux tuiles s'y réfèrent. -->
+<svg class="marque-source" aria-hidden="true" hidden><defs><g id="marque">
+<!--@marque@-->
+</g></defs></svg>
+
 <div class="boot" id="boot">
   <div class="inner">
-    <svg class="mark" viewBox="0 0 26 26" aria-hidden="true">
-      <rect width="26" height="26" rx="7" fill="var(--bleu)"/>
-      <path d="M8 6.5h6.5l4.5 4.5v8.5H8z" fill="var(--bleu-encre)"/>
-      <path d="M14.5 6.5V11H19" fill="none" stroke="var(--bleu)" stroke-width="1.4" stroke-linejoin="round"/>
-      <path d="M10.5 14h6M10.5 16.5h6" stroke="var(--bleu)" stroke-width="1.2" stroke-linecap="round"/>
-    </svg>
+    <svg class="mark" viewBox="0 0 26 26" aria-hidden="true"><use href="#marque"/></svg>
     <p id="boot-msg">Chargement des composants PDF…</p>
     <button class="retry" id="boot-retry" type="button" hidden>Réessayer</button>
   </div>
@@ -22,12 +22,7 @@
 
 <header class="toolbar" role="toolbar" aria-label="Barre d'outils" id="app-toolbar" hidden>
   <div class="brand">
-    <svg class="mark" viewBox="0 0 26 26" aria-hidden="true">
-      <rect width="26" height="26" rx="7" fill="var(--bleu)"/>
-      <path d="M8 6.5h6.5l4.5 4.5v8.5H8z" fill="var(--bleu-encre)"/>
-      <path d="M14.5 6.5V11H19" fill="none" stroke="var(--bleu)" stroke-width="1.4" stroke-linejoin="round"/>
-      <path d="M10.5 14h6M10.5 16.5h6" stroke="var(--bleu)" stroke-width="1.2" stroke-linecap="round"/>
-    </svg>
+    <svg class="mark" viewBox="0 0 26 26" aria-hidden="true"><use href="#marque"/></svg>
     <div class="name">Blonay <span>PDF</span></div>
   </div>
   <span class="tb-sep"></span>

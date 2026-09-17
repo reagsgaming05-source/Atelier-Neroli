@@ -285,6 +285,7 @@ npm ci                # (aucune dépendance de la page elle-même)
 npm run libs          # pdf.js, pdf-lib, JSZip, tesseract.js et les modèles fra/deu depuis npm, dans outils/libs/
 npm test              # tests unitaires (node --test), sous Windows comme sous Linux
 npm run build         # src/ → blonay-pdf.html, hors-ligne, docs/, lanceur/, pour-les-collegues/
+npm run icones        # src/marque.svg → les PNG et les .ico du site, d'Electron et du lanceur
 cd desktop
 npm ci
 npm start             # la fenêtre, depuis les sources
@@ -300,7 +301,7 @@ Si le navigateur ne peut pas être téléchargé sur le poste, `BLONAY_CHROMIUM=
 indique celui qui est déjà là.
 
 `outils/src/` est la seule source, et **la seule chose versionnée**. L'application y vit en
-morceaux : `page.html` (l'ossature et deux repères), `style.css`, et trente et un modules
+morceaux : `page.html` (l'ossature et quatre repères), `style.css`, `marque.svg`, et trente et un modules
 `NN-nom.js` lus dans l'ordre de leurs numéros — `00-socle` et `05-etat` d'abord, puis la
 lecture et les vignettes, l'écriture dans les flux PDF et l'assemblage, les outils un par un
 (OCR, comparaison, dossier de pièces, lots, recherche, tableau vers Excel), l'éditeur de page,
@@ -312,6 +313,18 @@ charger le reste, et deux corrections éloignées se gênaient. Le découpage n'
 octet du livrable — le recollage a été comparé caractère pour caractère au fichier d'avant — et
 `outils/test/assemblage.test.js` garde la couture : repères consommés, page complète, modules
 numérotés sans doublon, script recollé qui s'analyse d'un bloc.
+
+La marque est dessinée une seule fois, dans `src/marque.svg` : une feuille de papier, son coin
+replié et un signet posé dessus, en rouge. `assembler.js` en pose le tracé dans la page — les
+deux tuiles, celle de la barre d'outils et celle de l'écran de démarrage, y renvoient par
+`<use>`, et l'icône d'onglet est le même fichier encodé dans la page, sans quoi elle ne
+suivrait pas la page hors ligne qu'on envoie seule. `npm run icones` en tire le reste : les
+trois icônes du site installable, celle de la fenêtre Electron, celles du lanceur, et les deux
+`.ico` posés sur les exécutables Windows, chaque taille dessinée à sa taille plutôt que réduite
+depuis une grande — à 16 pixels, cela se voit. Ces neuf fichiers-là sont commités : ils servent
+avant que quoi que ce soit ne soit construit, `electron-builder` veut son `.ico` et le lanceur
+Go veut le sien. Le dessin vivait auparavant en trois exemplaires qui n'avaient aucune raison
+de concorder ; un test de `outils/test/` vérifie maintenant qu'il n'y en a qu'un.
 
 `build.js` en tire les cinq versions livrées (page CDN, page hors ligne, `docs/` du site, page
 du lanceur, dossier `pour-les-collegues/`), dont aucune n'est commitée. Elles pèsent 28 Mo à
@@ -344,7 +357,7 @@ connexion.
 | `index.html` | l'application complète |
 | `manifest.webmanifest` | nom, icône, fenêtre autonome |
 | `sw.js` | cache hors ligne |
-| `icon-192.png`, `icon-512.png`, `icon.svg` | icônes |
+| `icon-192.png`, `icon-512.png`, `icon.svg` | icônes, tirées de `outils/src/marque.svg` |
 
 ### Mise en ligne avec Vercel
 

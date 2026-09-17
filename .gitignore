@@ -10,6 +10,12 @@ outils/application/lanceur/blonay-pdf.html
 outils/pour-les-collegues/blonay-pdf.html
 docs/index.html
 
+# recopiées par outils/build.js depuis outils/application/, où les pose
+# « npm run icones » à partir de outils/src/marque.svg
+outils/application/lanceur/icon-32.png
+outils/application/lanceur/icon-48.png
+outils/application/lanceur/icon-256.png
+
 # produit par outils/build.js puis compressé pour être embarqué
 outils/application/lanceur/blonay-pdf.html.gz
 outils/application/lanceur/Blonay PDF.exe

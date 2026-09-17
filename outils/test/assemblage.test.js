@@ -7,24 +7,52 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const vm = require('node:vm');
-const { assembler, modules } = require('../assembler');
+const { assembler, modules, traceMarque } = require('../assembler');
 
 const SRC = path.join(__dirname, '..', 'src');
 const source = assembler();
 
 test('les repères sont consommés, rien ne reste en place', () => {
-  assert.ok(!source.includes('/*@style@*/'), 'le repère de la feuille de style a été remplacé');
-  assert.ok(!source.includes('/*@modules@*/'), 'le repère des modules a été remplacé');
+  for (const repere of ['/*@style@*/', '/*@modules@*/', '<!--@marque@-->', '<!--@favicon@-->']) {
+    assert.ok(!source.includes(repere), 'le repère ' + repere + ' a été remplacé');
+  }
 });
 
 test('la page recollée est complète', () => {
   assert.match(source, /^<title>Blonay PDF<\/title>\n/);
+  assert.equal(source.split('<svg class="marque-source"').length - 1, 1);
   assert.equal(source.split('<style>').length - 1, 1);
   assert.equal(source.split('</style>').length - 1, 1);
   assert.equal(source.split('<script>').length - 1, 1);
   assert.ok(source.trimEnd().endsWith('</script>'), 'la page se termine par son script');
   // Le repère que build.js remplace par la date et le commit.
   assert.ok(source.includes("'__CONSTRUCTION__'"), 'le repère de construction est là');
+});
+
+// La marque a déjà existé en trois exemplaires — la tuile de la barre, celle
+// du démarrage, l'icône d'onglet — et rien n'obligeait les trois à concorder.
+test('la marque n\'est dessinée qu\'une fois, et les deux tuiles y renvoient', () => {
+  const trace = traceMarque();
+  assert.ok(trace.includes('<rect'), 'le tracé porte bien un dessin');
+  assert.equal(source.split(trace).length - 1, 1, 'le dessin n\'apparaît qu\'une fois dans la page');
+  assert.equal(source.split('<use href="#marque"/>').length - 1, 2, 'les deux tuiles renvoient au dessin');
+  assert.equal(source.split('id="marque"').length - 1, 1, 'un seul élément porte cet identifiant');
+});
+
+test('l\'icône d\'onglet est la marque, encodée dans la page', () => {
+  const m = source.match(/<link rel="icon" href="data:image\/svg\+xml;base64,([^"]+)">/);
+  assert.ok(m, 'la page porte une icône d\'onglet');
+  const svg = Buffer.from(m[1], 'base64').toString('utf8');
+  assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/, 'c\'est un SVG autonome');
+  assert.ok(svg.includes(traceMarque().split('\n')[0].trim()), 'et c\'est le même dessin que les tuiles');
+  // Un fichier à côté ne suivrait pas la page hors ligne, qu'on envoie seule.
+  assert.ok(!source.includes('rel="icon" href="icon'), 'aucune icône servie depuis un fichier voisin');
+});
+
+test('le dessin livré ne porte pas les commentaires qui l\'expliquent', () => {
+  const brut = fs.readFileSync(path.join(SRC, 'marque.svg'), 'utf8');
+  assert.ok(brut.includes('<!--'), 'src/marque.svg explique le dessin');
+  assert.ok(!traceMarque().includes('<!--'), 'la page ne reçoit que le tracé');
 });
 
 test('la feuille de style est celle de src/', () => {

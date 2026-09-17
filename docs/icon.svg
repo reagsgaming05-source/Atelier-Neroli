@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="114" fill="#2563C9"/>
-  <path d="M150 118h146l98 98v178H150z" fill="#ffffff"/>
-  <path d="M296 118v98h98" fill="none" stroke="#2563C9" stroke-width="26" stroke-linejoin="round"/>
-  <path d="M196 276h120M196 330h120" stroke="#2563C9" stroke-width="24" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="512" height="512" role="img" aria-label="Blonay PDF">
+  <rect width="26" height="26" rx="7" fill="#D4322A"/>
+  <path d="M7.2 4.4h7l4.6 4.6v13H7.2z" fill="#FBFAF7"/>
+  <path d="M14.2 4.4v4.6h4.6z" fill="#F2705C"/>
+  <path d="M9.4 4.4h3.6v9.6l-1.8-1.7-1.8 1.7z" fill="#AF1C14"/>
+  <path d="M9.4 16.8h7M9.4 19.2h4.4" stroke="#AF1C14" stroke-width="1.45" stroke-linecap="round"/>
 </svg>
