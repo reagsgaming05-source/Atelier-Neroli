@@ -9,6 +9,12 @@ on:
 permissions:
   contents: write
 
+# Une seule construction à la fois : deux exécutions qui se chevauchent publiaient leur zip sur
+# la même pré-release et la dernière arrivée n'était pas forcément la plus récente.
+concurrency:
+  group: compta-blonay-windows
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest

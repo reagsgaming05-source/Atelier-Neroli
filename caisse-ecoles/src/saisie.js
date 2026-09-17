@@ -149,7 +149,17 @@
     yearInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); createYear(); } else if (ev.key === 'Escape') hideYearBox(); });
   }
   els.regOpeningDate.addEventListener('change', async () => { state.reg.opening.date = els.regOpeningDate.value; await saveReg(); renderJournal(); });
-  els.regOpeningAmount.addEventListener('change', async () => { state.reg.opening.amount = P.round2(Number(String(els.regOpeningAmount.value).replace(',', '.')) || 0); await saveReg(); renderJournal(); });
+  els.regOpeningAmount.addEventListener('change', async () => {
+    // Un texte illisible ne doit pas devenir 0 : le solde à nouveau de l'année serait effacé
+    // sans rien dire, et tout le journal recalculé par-dessus.
+    const v = R.parseAmountInput(els.regOpeningAmount.value);
+    if (v == null) {
+      notice('err', `« ${escapeHtml(els.regOpeningAmount.value)} » n'est pas un montant : le solde à nouveau n'a pas été modifié.`);
+      els.regOpeningAmount.value = state.reg.opening.amount;
+      return;
+    }
+    state.reg.opening.amount = v; await saveReg(); renderJournal();
+  });
   els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); });
   if (els.btnRegOpenDir) els.btnRegOpenDir.addEventListener('click', () => { if (window.CaisseFiles) window.CaisseFiles.openDir(); });
 
@@ -231,7 +241,7 @@
       detail: els.pDetail.value.trim(),
       personne: els.pPersonne.value.trim(),
       compte: els.pCompte.value.trim(),
-      montant: Number(String(els.pMontant.value).replace(',', '.')) || 0,
+      montant: R.parseAmountInput(els.pMontant.value) || 0,
       sens: els.pSensDebit.checked ? 'debit' : (els.pSensCredit.checked ? 'credit' : null),
       justificatifs: base ? base.justificatifs : [],
       source: base ? base.source : (state.dgeo.current ? 'dgeo' : 'saisie'),

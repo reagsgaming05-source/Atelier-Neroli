@@ -105,6 +105,21 @@
   }
 
   /** Nouvelle pièce vierge, pré-remplie (n° suivant, date du jour). */
+  /**
+   * Montant tapé à la main : « 4'825.55 », « 4 825,55 », « CHF 4825.55 » → 4825.55.
+   * Renvoie null si le texte n'est pas un montant (au lieu de 0, qui passait pour une saisie).
+   */
+  function parseAmountInput(text) {
+    const t = String(text == null ? '' : text)
+      .replace(/chf|frs?\.?/ig, '')
+      .replace(/[\s\u00A0’'´`]/g, '')
+      .replace(',', '.')
+      .trim();
+    if (t === '' || !/^-?\d+(\.\d+)?$/.test(t)) return null;
+    const v = Number(t);
+    return isFinite(v) ? P.round2(v) : null;
+  }
+
   function newPiece(reg) {
     // La date proposée reste dans l'année du registre ouvert : sur un registre d'une année passée,
     // la date du jour était refusée à l'enregistrement et devait être retapée à chaque pièce.
@@ -510,6 +525,7 @@
     removeCount,
     previousCount,
     balanceAt,
+    parseAmountInput,
     piecesFromEntries, mergeEntries,
     serialize,
     parse,

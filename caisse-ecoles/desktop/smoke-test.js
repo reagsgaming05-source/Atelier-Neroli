@@ -80,10 +80,27 @@ async function findPage(app, pred, timeoutMs) {
     return { avant, apres };
   });
   console.log('deux formulaires sur une page :', JSON.stringify(deuxFormulaires));
+
+  // les champs de montant acceptent le séparateur de milliers que l'application affiche elle-même
+  // (un champ « number » vidait la valeur et le contrôle était sauté en silence)
+  const montants = await win.evaluate(() => {
+    const R = window.CaisseRegistre;
+    const essai = (id, texte) => { const el = document.getElementById(id); el.value = texte; return el.value; };
+    return {
+      checkBalance: essai('checkBalance', '4’825.55'),
+      openingAmount: essai('openingAmount', "2'062.20"),
+      regOpeningAmount: essai('regOpeningAmount', 'CHF 2 062,20'),
+      lu: [R.parseAmountInput('4’825.55'), R.parseAmountInput("2'062.20"), R.parseAmountInput('CHF 2 062,20'), R.parseAmountInput('abc')],
+    };
+  });
+  console.log('montants tapés à la main :', JSON.stringify(montants));
+  const montantsOk = montants.checkBalance === '4’825.55' && montants.openingAmount === "2'062.20"
+    && montants.regOpeningAmount === 'CHF 2 062,20'
+    && JSON.stringify(montants.lu) === JSON.stringify([4825.55, 2062.2, 2062.2, null]);
   const paire = (l) => Array.isArray(l) && l.length === 2 && l[0] === 10 && l[1] === 11;
   let ok = /Compta Blonay/.test(shellTitle) && /Caisse écoles/.test(title) && info.parser === 'object' && info.excel === 'object' && info.ocr && info.registre === 'object' && info.pdf === 'object' && info.files
     && !!entry && entry.credit === 12 && entry.compte === '50000.3652.00'
-    && paire(deuxFormulaires.avant) && paire(deuxFormulaires.apres);
+    && paire(deuxFormulaires.avant) && paire(deuxFormulaires.apres) && montantsOk;
 
   // saisie d'une pièce dans la fiche -> journal -> fichiers de l'application
   await win.waitForFunction(() => window.CaisseSaisie && window.CaisseSaisie.state.reg, null, { timeout: 20000 });

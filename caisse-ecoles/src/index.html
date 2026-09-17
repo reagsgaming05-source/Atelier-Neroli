@@ -111,7 +111,7 @@
       </div>
       <div class="field">
         <label for="regOpeningAmount">Solde à nouveau (CHF)</label>
-        <input type="number" id="regOpeningAmount" step="0.05" style="width:150px">
+        <input type="text" inputmode="decimal" id="regOpeningAmount" placeholder="ex. 2062.20" style="width:150px">
       </div>
       <div class="field">
         <label for="regCaisse">Compte caisse</label>
@@ -140,7 +140,7 @@
       </div>
       <div class="row">
         <div class="field" style="flex:1"><label for="pPersonne">Personne (initiale et nom)</label><input type="text" id="pPersonne" list="regPersonList" placeholder="A. Berger"></div>
-        <div class="field"><label for="pMontant">Montant (CHF)</label><input type="number" id="pMontant" step="0.05" min="0" style="width:140px"></div>
+        <div class="field"><label for="pMontant">Montant (CHF)</label><input type="text" inputmode="decimal" id="pMontant" placeholder="ex. 143.95" style="width:140px"></div>
       </div>
       <div class="row">
         <div class="field"><label for="pCompte">Compte de contrepartie</label><input type="text" id="pCompte" list="regAccountList" placeholder="51000.3662.00" style="width:160px;font-family:var(--mono);font-size:13px"></div>
@@ -242,7 +242,7 @@
         </div>
         <div class="field">
           <label for="openingAmount">Solde à nouveau (CHF)</label>
-          <input type="number" id="openingAmount" step="0.05" value="0" style="width:150px">
+          <input type="text" inputmode="decimal" id="openingAmount" value="0" placeholder="ex. 2062.20" style="width:150px">
         </div>
         <div class="legend" id="openingHint" style="align-self:center"></div>
       </div>
@@ -361,7 +361,7 @@
         <div class="row">
           <div class="field">
             <label for="checkBalance">Solde réel en caisse (CHF)</label>
-            <input type="number" id="checkBalance" step="0.05" placeholder="ex. 4825.55" style="width:160px">
+            <input type="text" inputmode="decimal" id="checkBalance" placeholder="ex. 4’825.55" style="width:160px">
           </div>
           <div class="field">
             <label for="checkDate">à la date du (facultatif)</label>

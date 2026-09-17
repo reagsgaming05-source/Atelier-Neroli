@@ -638,7 +638,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       </div>
       <div class="field">
         <label for="regOpeningAmount">Solde à nouveau (CHF)</label>
-        <input type="number" id="regOpeningAmount" step="0.05" style="width:150px">
+        <input type="text" inputmode="decimal" id="regOpeningAmount" placeholder="ex. 2062.20" style="width:150px">
       </div>
       <div class="field">
         <label for="regCaisse">Compte caisse</label>
@@ -667,7 +667,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       </div>
       <div class="row">
         <div class="field" style="flex:1"><label for="pPersonne">Personne (initiale et nom)</label><input type="text" id="pPersonne" list="regPersonList" placeholder="A. Berger"></div>
-        <div class="field"><label for="pMontant">Montant (CHF)</label><input type="number" id="pMontant" step="0.05" min="0" style="width:140px"></div>
+        <div class="field"><label for="pMontant">Montant (CHF)</label><input type="text" inputmode="decimal" id="pMontant" placeholder="ex. 143.95" style="width:140px"></div>
       </div>
       <div class="row">
         <div class="field"><label for="pCompte">Compte de contrepartie</label><input type="text" id="pCompte" list="regAccountList" placeholder="51000.3662.00" style="width:160px;font-family:var(--mono);font-size:13px"></div>
@@ -769,7 +769,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
         </div>
         <div class="field">
           <label for="openingAmount">Solde à nouveau (CHF)</label>
-          <input type="number" id="openingAmount" step="0.05" value="0" style="width:150px">
+          <input type="text" inputmode="decimal" id="openingAmount" value="0" placeholder="ex. 2062.20" style="width:150px">
         </div>
         <div class="legend" id="openingHint" style="align-self:center"></div>
       </div>
@@ -888,7 +888,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
         <div class="row">
           <div class="field">
             <label for="checkBalance">Solde réel en caisse (CHF)</label>
-            <input type="number" id="checkBalance" step="0.05" placeholder="ex. 4825.55" style="width:160px">
+            <input type="text" inputmode="decimal" id="checkBalance" placeholder="ex. 4’825.55" style="width:160px">
           </div>
           <div class="field">
             <label for="checkDate">à la date du (facultatif)</label>
@@ -5604,6 +5604,21 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
 
   /** Nouvelle pièce vierge, pré-remplie (n° suivant, date du jour). */
+  /**
+   * Montant tapé à la main : « 4'825.55 », « 4 825,55 », « CHF 4825.55 » → 4825.55.
+   * Renvoie null si le texte n'est pas un montant (au lieu de 0, qui passait pour une saisie).
+   */
+  function parseAmountInput(text) {
+    const t = String(text == null ? '' : text)
+      .replace(/chf|frs?\.?/ig, '')
+      .replace(/[\s\u00A0’'´`]/g, '')
+      .replace(',', '.')
+      .trim();
+    if (t === '' || !/^-?\d+(\.\d+)?$/.test(t)) return null;
+    const v = Number(t);
+    return isFinite(v) ? P.round2(v) : null;
+  }
+
   function newPiece(reg) {
     // La date proposée reste dans l'année du registre ouvert : sur un registre d'une année passée,
     // la date du jour était refusée à l'enregistrement et devait être retapée à chaque pièce.
@@ -6009,6 +6024,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     removeCount,
     previousCount,
     balanceAt,
+    parseAmountInput,
     piecesFromEntries, mergeEntries,
     serialize,
     parse,
@@ -6649,7 +6665,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (state.mode === 'existing' && state.existing) return state.existing.opening;
     return {
       date: els.openingDate.value || null,
-      amount: Number(els.openingAmount.value) || 0,
+      amount: (window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value)) || 0,
       libelle: 'Solde à nouveau',
     };
   }
@@ -6717,7 +6733,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
         `, solde actuel <b>${fmtCHF(totals.end)}</b>.` +
         (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le registre de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le registre de l'année</button>` : '');
       state.existing.buffer = buf;
-      if (!els.openingAmount.value || Number(els.openingAmount.value) === 0) els.openingAmount.value = totals.end;
+      const saisi = window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value);
+      if (!saisi) els.openingAmount.value = totals.end;
       // apprentissage du vocabulaire (mots, noms, comptes) pour corriger l'OCR
       state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(data.entries));
       saveVocab();
@@ -8194,9 +8211,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const v = els.checkBalance.value.trim();
     if (v === '') { els.balanceResult.innerHTML = ''; return; }
     // le séparateur de milliers que l'application affiche elle-même (1’234.50) et un « CHF »
-    // recopié ne doivent pas rendre le solde illisible : la vérification était alors sautée en silence
-    const reel = Number(v.replace(/chf/ig, '').replace(/[\s\u00A0’'´`]/g, '').replace(',', '.'));
-    if (!isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
+    // recopié ne doivent pas rendre le solde illisible : la vérification était alors sautée en
+    // silence (le champ était « number », qui vide sa valeur au moindre caractère inattendu)
+    const reel = window.CaisseRegistre ? window.CaisseRegistre.parseAmountInput(v) : Number(v.replace(',', '.'));
+    if (reel == null || !isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
     const entries = entriesUpToCheckDate();
     const t = X.computeTotals(currentOpening(), entries);
     const horsDate = allEntriesForExcel().length - entries.length;
@@ -8791,7 +8809,17 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     yearInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); createYear(); } else if (ev.key === 'Escape') hideYearBox(); });
   }
   els.regOpeningDate.addEventListener('change', async () => { state.reg.opening.date = els.regOpeningDate.value; await saveReg(); renderJournal(); });
-  els.regOpeningAmount.addEventListener('change', async () => { state.reg.opening.amount = P.round2(Number(String(els.regOpeningAmount.value).replace(',', '.')) || 0); await saveReg(); renderJournal(); });
+  els.regOpeningAmount.addEventListener('change', async () => {
+    // Un texte illisible ne doit pas devenir 0 : le solde à nouveau de l'année serait effacé
+    // sans rien dire, et tout le journal recalculé par-dessus.
+    const v = R.parseAmountInput(els.regOpeningAmount.value);
+    if (v == null) {
+      notice('err', `« ${escapeHtml(els.regOpeningAmount.value)} » n'est pas un montant : le solde à nouveau n'a pas été modifié.`);
+      els.regOpeningAmount.value = state.reg.opening.amount;
+      return;
+    }
+    state.reg.opening.amount = v; await saveReg(); renderJournal();
+  });
   els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); });
   if (els.btnRegOpenDir) els.btnRegOpenDir.addEventListener('click', () => { if (window.CaisseFiles) window.CaisseFiles.openDir(); });
 
@@ -8873,7 +8901,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       detail: els.pDetail.value.trim(),
       personne: els.pPersonne.value.trim(),
       compte: els.pCompte.value.trim(),
-      montant: Number(String(els.pMontant.value).replace(',', '.')) || 0,
+      montant: R.parseAmountInput(els.pMontant.value) || 0,
       sens: els.pSensDebit.checked ? 'debit' : (els.pSensCredit.checked ? 'credit' : null),
       justificatifs: base ? base.justificatifs : [],
       source: base ? base.source : (state.dgeo.current ? 'dgeo' : 'saisie'),

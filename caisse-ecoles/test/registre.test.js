@@ -274,3 +274,15 @@ test('le libellé recomposé d\'une écriture reprise ne perd pas la description
     assert.ok(R.composeLibelle(p).toLowerCase().includes(p.detail.toLowerCase()), `« ${libelle} » → « ${R.composeLibelle(p)} »`);
   }
 });
+
+test('un montant tapé à la main accepte les formats affichés par l\'application', () => {
+  const cas = [
+    ["4'825.55", 4825.55], ['4’825.55', 4825.55], ['4 825,55', 4825.55], ['CHF 4825.55', 4825.55],
+    ['2062.20', 2062.2], ['0', 0], ['143,95', 143.95], ['-12.50', -12.5],
+  ];
+  for (const [texte, attendu] of cas) assert.equal(R.parseAmountInput(texte), attendu, texte);
+  // ce qui n'est pas un montant reste null (et non 0, qui passerait pour une saisie)
+  for (const texte of ['', '   ', 'abc', '12.3.4', 'CHF', '1 2 3 abc']) {
+    assert.equal(R.parseAmountInput(texte), null, `« ${texte} » ne doit pas être lu comme un montant`);
+  }
+});

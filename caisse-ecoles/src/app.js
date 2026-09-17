@@ -252,7 +252,7 @@
     if (state.mode === 'existing' && state.existing) return state.existing.opening;
     return {
       date: els.openingDate.value || null,
-      amount: Number(els.openingAmount.value) || 0,
+      amount: (window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value)) || 0,
       libelle: 'Solde à nouveau',
     };
   }
@@ -320,7 +320,8 @@
         `, solde actuel <b>${fmtCHF(totals.end)}</b>.` +
         (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le registre de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le registre de l'année</button>` : '');
       state.existing.buffer = buf;
-      if (!els.openingAmount.value || Number(els.openingAmount.value) === 0) els.openingAmount.value = totals.end;
+      const saisi = window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value);
+      if (!saisi) els.openingAmount.value = totals.end;
       // apprentissage du vocabulaire (mots, noms, comptes) pour corriger l'OCR
       state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(data.entries));
       saveVocab();
@@ -1797,9 +1798,10 @@
     const v = els.checkBalance.value.trim();
     if (v === '') { els.balanceResult.innerHTML = ''; return; }
     // le séparateur de milliers que l'application affiche elle-même (1’234.50) et un « CHF »
-    // recopié ne doivent pas rendre le solde illisible : la vérification était alors sautée en silence
-    const reel = Number(v.replace(/chf/ig, '').replace(/[\s\u00A0’'´`]/g, '').replace(',', '.'));
-    if (!isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
+    // recopié ne doivent pas rendre le solde illisible : la vérification était alors sautée en
+    // silence (le champ était « number », qui vide sa valeur au moindre caractère inattendu)
+    const reel = window.CaisseRegistre ? window.CaisseRegistre.parseAmountInput(v) : Number(v.replace(',', '.'));
+    if (reel == null || !isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
     const entries = entriesUpToCheckDate();
     const t = X.computeTotals(currentOpening(), entries);
     const horsDate = allEntriesForExcel().length - entries.length;
