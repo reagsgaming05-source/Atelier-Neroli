@@ -96,3 +96,16 @@ test('une ligne vide finale qui porte encore la formule du solde n\'est pas pris
   assert.equal(data.entries.length, 1);
   assert.equal(X.computeTotals(data.opening, data.entries).end, 280);
 });
+
+test('un classeur avec un titre au-dessus du solde à nouveau reste lisible', async () => {
+  // certains classeurs tenus à la main portent un titre ou une ligne vide avant les écritures
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Caisse');
+  ws.getRow(1).values = ['Date', 'No ', 'Compte', 'Libellé', 'Débit ', 'Crédit', 'Solde'];
+  ws.getRow(2).values = [null, null, '', 'Caisse des écoles – année 2026'];
+  ws.getRow(3).values = [new Date(Date.UTC(2026, 0, 1)), 0, '', 'Solde à nouveau', null, null, 2062.2];
+  ws.getRow(4).values = [new Date(Date.UTC(2026, 0, 12)), 1, '51000.3662.00', 'DECOMPTE - Course - A. Berger', null, 120];
+  const data = await X.readWorkbook(await wb.xlsx.writeBuffer());
+  assert.equal(data.opening.amount, 2062.2, `solde d'ouverture lu : ${data.opening.amount}`);
+  assert.equal(X.computeTotals(data.opening, data.entries).end, 1942.2);
+});

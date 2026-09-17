@@ -217,7 +217,9 @@
     const MONTRE_COMME = { 'Mini-camp': 'Camp' };
     const courant = els.pObjet.value;
     const affiche = DECOMPTE_KINDS.includes(courant) ? courant : (MONTRE_COMME[courant] || kindOfObjet(courant));
-    if (!DECOMPTE_KINDS.includes(courant) && !MONTRE_COMME[courant]) els.pObjet.value = affiche;
+    // On n'écrit dans la pièce que si elle n'a pas encore d'objet à elle : ouvrir la fiche
+    // suffisait sinon à changer l'objet enregistré, donc le libellé.
+    if (!courant || courant === 'Autre') els.pObjet.value = affiche;
     for (const r of els.pKind.querySelectorAll('input')) r.checked = r.value === affiche;
   }
   els.pKind.addEventListener('change', () => {
@@ -351,6 +353,7 @@
       }
     }
     state.pending = failed;
+    renderFiles(p); // les indices « pending:<i> » du bouton « retirer » ont changé
     const wasEdit = !!state.editingId;
     R.upsertPiece(state.reg, p);
     await saveReg();
@@ -659,7 +662,11 @@
     // refuser ne jette plus le lot entier : seules les pièces d'une autre année sont laissées de côté
     const skipYear = wrongYear.length > 0
       && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?\n\nAnnuler : seules les pièces de ${year} sont ajoutées.`);
-    // deux pièces sans numéro sont la même si tout le reste concorde (comme « Reprendre un classeur »)
+    // Deux pièces sans numéro sont la même si tout le reste concorde (comme « Reprendre un
+    // classeur »). La comparaison ne porte que sur le registre TEL QU'IL ÉTAIT avant ce lot :
+    // deux pièces réellement distinctes du même lot (même jour, même montant, même libellé)
+    // doivent toutes deux être ajoutées, quitte à se voir dans le journal.
+    const avant = state.reg.pieces.slice();
     const sameLine = (a, b) => a.date === b.date && a.sens === b.sens && Math.abs((a.montant || 0) - (b.montant || 0)) < 0.005
       && (a.libelle || R.composeLibelle(a)) === (b.libelle || R.composeLibelle(b));
     let added = 0; let dup = 0; let sansMontant = 0; let autreAnnee = 0; const conflicts = [];
@@ -669,7 +676,7 @@
       if (skipYear && wrongYear.includes(p)) { autreAnnee++; continue; }
       const same = p.no != null
         ? state.reg.pieces.find((x) => x.no === p.no)
-        : state.reg.pieces.find((x) => x.no == null && sameLine(x, p));
+        : avant.find((x) => x.no == null && sameLine(x, p));
       if (same) { if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) dup++; else conflicts.push(p.no); continue; }
       if (getImage) {
         try {

@@ -5305,8 +5305,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       //  - la ligne doit venir avant toute écriture : sinon la dernière ligne vide d'un classeur,
       //    qui porte encore la formule du solde, passait pour le solde à nouveau et le solde de
       //    clôture devenait le solde d'ouverture (année reprise avec le double du montant réel).
-      const isOpening = !opening && entries.length === 0 && !debit && !credit
-        && (/solde|report|à nouveau|a nouveau/i.test(libelle) || (solde != null && (no === 0 || noV == null || noV === '')));
+      // Une ligne qui se nomme « Solde à nouveau » ou « Report » est reconnue où qu'elle soit
+      // (certains classeurs ont un titre au-dessus). La reconnaissance muette — un solde sans
+      // libellé ni n° — ne vaut qu'avant toute écriture : sinon la dernière ligne vide d'un
+      // classeur, qui porte encore la formule du solde, passait pour le solde à nouveau.
+      const nomme = /solde|report|à nouveau|a nouveau/i.test(libelle);
+      const muette = entries.length === 0 && solde != null && (no === 0 || noV == null || noV === '');
+      const isOpening = !opening && !debit && !credit && (nomme || muette);
       if (isOpening) {
         opening = { date, amount: solde != null ? solde : 0, libelle };
         continue;
@@ -6601,6 +6606,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     } catch (e) { return null; }
   }
   function renderOpeningHint() {
+    // un solde à nouveau tapé mais illisible ne doit pas passer pour 0 sans le dire
+    if (openingSaisi() == null) {
+      els.openingHint.innerHTML = `<span style="color:var(--err);font-weight:600">« ${escapeHtml(String(els.openingAmount.value).trim())} » n'est pas un montant : le solde à nouveau est compté comme 0.</span>`;
+      return;
+    }
     const last = loadLastBalance();
     if (!last) { els.openingHint.textContent = ''; return; }
     els.openingHint.innerHTML = `Dernier fichier généré : solde final <b>${fmtCHF(last.amount)}</b>` +
@@ -6665,7 +6675,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (state.mode === 'existing' && state.existing) return state.existing.opening;
     return {
       date: els.openingDate.value || null,
-      amount: (window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value)) || 0,
+      // un texte illisible vaut 0, et renderOpeningHint le dit à côté du champ
+      amount: openingSaisi() ?? 0,
       libelle: 'Solde à nouveau',
     };
   }
@@ -8073,8 +8084,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
         `<td>${esc(e.page ? pageLabel(e.page) : 'manuel')}</td><td>${esc(uniqList(msgs).join(' ; '))}</td></tr>`;
     };
     const signalees = state.entries.filter((e) => rowStatus(e) !== 'ok');
-    const soldeSaisi = els.checkBalance.value.trim();
-    const ecart = soldeSaisi === '' ? null : P.round2(t.end - Number(soldeSaisi.replace(',', '.')));
+    const reelCompte = soldeCompte();
+    const ecart = reelCompte == null ? null : P.round2(t.end - reelCompte);
     const html =
       `<!doctype html><meta charset="utf-8"><title>Rapport de contrôle – caisse</title>` +
       `<style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;margin:24px;color:#111}` +
@@ -8090,7 +8101,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       `<dt>Total des débits (entrées)</dt><dd>${esc(fmtCHF(t.debits))}</dd>` +
       `<dt>Total des crédits (sorties)</dt><dd>${esc(fmtCHF(t.credits))}</dd>` +
       `<dt>Solde calculé</dt><dd>${esc(fmtCHF(t.end))}</dd>` +
-      (ecart == null ? '' : `<dt>Solde réel compté</dt><dd>${esc(fmtCHF(Number(soldeSaisi.replace(',', '.'))))}</dd>` +
+      (ecart == null ? '' : `<dt>Solde réel compté</dt><dd>${esc(fmtCHF(reelCompte))}</dd>` +
         `<dt>Écart</dt><dd class="${Math.abs(ecart) < 0.005 ? 'ok' : 'ko'}">${esc(fmtCHF(ecart))}${Math.abs(ecart) < 0.005 ? ' (rapprochement correct)' : ' (à expliquer)'}</dd>`) +
       `<dt>Numéros manquants</dt><dd class="${c.manquants.length ? 'ko' : 'ok'}">${c.manquants.length ? esc(c.manquants.join(', ')) : 'aucun'}</dd>` +
       `<dt>Numéros en double</dt><dd class="${c.doublons.length ? 'ko' : 'ok'}">${c.doublons.length ? esc(c.doublons.join(', ')) : 'aucun'}</dd>` +
@@ -8210,11 +8221,12 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   function renderBalanceCheck() {
     const v = els.checkBalance.value.trim();
     if (v === '') { els.balanceResult.innerHTML = ''; return; }
+    const reelSaisi = soldeCompte();
     // le séparateur de milliers que l'application affiche elle-même (1’234.50) et un « CHF »
     // recopié ne doivent pas rendre le solde illisible : la vérification était alors sautée en
     // silence (le champ était « number », qui vide sa valeur au moindre caractère inattendu)
-    const reel = window.CaisseRegistre ? window.CaisseRegistre.parseAmountInput(v) : Number(v.replace(',', '.'));
-    if (reel == null || !isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
+    const reel = reelSaisi;
+    if (reel == null) { els.balanceResult.innerHTML = `<div class="balance-box err">« ${escapeHtml(v)} » n'est pas un montant : le rapprochement n'a pas pu être fait.</div>`; return; }
     const entries = entriesUpToCheckDate();
     const t = X.computeTotals(currentOpening(), entries);
     const horsDate = allEntriesForExcel().length - entries.length;
@@ -8284,6 +8296,22 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     selectEntry(list[0].id);
   });
 
+  /** Solde réel compté tel que tapé dans le champ, ou null. */
+  function soldeCompte() {
+    const v = els.checkBalance.value.trim();
+    if (v === '') return null;
+    const n = window.CaisseRegistre ? window.CaisseRegistre.parseAmountInput(v) : Number(v.replace(',', '.'));
+    return n == null || !isFinite(n) ? null : n;
+  }
+
+  /** Solde à nouveau tapé pour un classeur neuf, ou null si le champ n'est pas un montant. */
+  function openingSaisi() {
+    const v = String(els.openingAmount.value || '').trim();
+    if (v === '') return 0;
+    const n = window.CaisseRegistre ? window.CaisseRegistre.parseAmountInput(v) : Number(v.replace(',', '.'));
+    return n == null || !isFinite(n) ? null : n;
+  }
+
   function renderTotals() {
     const opening = currentOpening();
     // seulement les écritures qui ne sont pas déjà dans la base : sinon, après « Ajouter au
@@ -8301,6 +8329,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
 
   function refreshAll() {
+    renderOpeningHint(); // signale un solde à nouveau tapé mais illisible
     const has = state.entries.length > 0;
     els.step3.classList.toggle('hidden', !has);
     els.step4.classList.toggle('hidden', !has);
@@ -8618,10 +8647,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (c.jamaisVues.length > 0 && c.jamaisVues.length === c.count) {
       if (!confirm(`Aucune des ${c.count} pièces n'a été affichée à l'écran. Générer le fichier sans les avoir contrôlées ?`)) { openReview(null); return; }
     }
-    const soldeSaisi = els.checkBalance.value.trim();
-    if (soldeSaisi !== '') {
+    const reelCompte = soldeCompte();
+    if (reelCompte != null) {
       const t0 = X.computeTotals(currentOpening(), entriesUpToCheckDate());
-      const ecart = P.round2(t0.end - Number(soldeSaisi.replace(',', '.')));
+      const ecart = P.round2(t0.end - reelCompte);
       if (Math.abs(ecart) >= 0.005 && !confirm(`Le solde calculé (${fmtCHF(t0.end)}) ne correspond pas au solde réel saisi : écart de ${fmtCHF(Math.abs(ecart))}.\n\nGénérer le fichier malgré cet écart ?`)) return;
     }
     if (state.mode === 'new' && !els.openingDate.value) {
@@ -8877,7 +8906,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const MONTRE_COMME = { 'Mini-camp': 'Camp' };
     const courant = els.pObjet.value;
     const affiche = DECOMPTE_KINDS.includes(courant) ? courant : (MONTRE_COMME[courant] || kindOfObjet(courant));
-    if (!DECOMPTE_KINDS.includes(courant) && !MONTRE_COMME[courant]) els.pObjet.value = affiche;
+    // On n'écrit dans la pièce que si elle n'a pas encore d'objet à elle : ouvrir la fiche
+    // suffisait sinon à changer l'objet enregistré, donc le libellé.
+    if (!courant || courant === 'Autre') els.pObjet.value = affiche;
     for (const r of els.pKind.querySelectorAll('input')) r.checked = r.value === affiche;
   }
   els.pKind.addEventListener('change', () => {
@@ -9011,6 +9042,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       }
     }
     state.pending = failed;
+    renderFiles(p); // les indices « pending:<i> » du bouton « retirer » ont changé
     const wasEdit = !!state.editingId;
     R.upsertPiece(state.reg, p);
     await saveReg();
@@ -9319,7 +9351,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     // refuser ne jette plus le lot entier : seules les pièces d'une autre année sont laissées de côté
     const skipYear = wrongYear.length > 0
       && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?\n\nAnnuler : seules les pièces de ${year} sont ajoutées.`);
-    // deux pièces sans numéro sont la même si tout le reste concorde (comme « Reprendre un classeur »)
+    // Deux pièces sans numéro sont la même si tout le reste concorde (comme « Reprendre un
+    // classeur »). La comparaison ne porte que sur le registre TEL QU'IL ÉTAIT avant ce lot :
+    // deux pièces réellement distinctes du même lot (même jour, même montant, même libellé)
+    // doivent toutes deux être ajoutées, quitte à se voir dans le journal.
+    const avant = state.reg.pieces.slice();
     const sameLine = (a, b) => a.date === b.date && a.sens === b.sens && Math.abs((a.montant || 0) - (b.montant || 0)) < 0.005
       && (a.libelle || R.composeLibelle(a)) === (b.libelle || R.composeLibelle(b));
     let added = 0; let dup = 0; let sansMontant = 0; let autreAnnee = 0; const conflicts = [];
@@ -9329,7 +9365,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       if (skipYear && wrongYear.includes(p)) { autreAnnee++; continue; }
       const same = p.no != null
         ? state.reg.pieces.find((x) => x.no === p.no)
-        : state.reg.pieces.find((x) => x.no == null && sameLine(x, p));
+        : avant.find((x) => x.no == null && sameLine(x, p));
       if (same) { if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) dup++; else conflicts.push(p.no); continue; }
       if (getImage) {
         try {

@@ -183,8 +183,9 @@ function dgeoCommand() {
     const parts = process.env.DECOMPTE_CMD.split(/\s+/);
     // chemin vers un fichier : vérifié tout de suite, pour dire « non inclus » plutôt que d'attendre
     // l'échec du lancement (un simple nom de commande est laissé au PATH)
-    if (/[\\/]/.test(parts[0]) && !fs.existsSync(parts[0])) { logLine(`DECOMPTE_CMD introuvable : ${parts[0]}`); return null; }
-    return { cmd: parts[0], args: parts.slice(1), cwd: process.env.DECOMPTE_CWD || PORTABLE_DIR };
+    const cwd = process.env.DECOMPTE_CWD || PORTABLE_DIR;
+    if (/[\\/]/.test(parts[0]) && !fs.existsSync(path.resolve(cwd, parts[0]))) { logLine(`DECOMPTE_CMD introuvable : ${parts[0]}`); return null; }
+    return { cmd: parts[0], args: parts.slice(1), cwd };
   }
   const exe = path.join(PORTABLE_DIR, 'decompte', process.platform === 'win32' ? 'DecompteDGEO.exe' : 'DecompteDGEO');
   if (fs.existsSync(exe)) return { cmd: exe, args: [], cwd: path.dirname(exe) };

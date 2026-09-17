@@ -188,6 +188,11 @@
     } catch (e) { return null; }
   }
   function renderOpeningHint() {
+    // un solde à nouveau tapé mais illisible ne doit pas passer pour 0 sans le dire
+    if (openingSaisi() == null) {
+      els.openingHint.innerHTML = `<span style="color:var(--err);font-weight:600">« ${escapeHtml(String(els.openingAmount.value).trim())} » n'est pas un montant : le solde à nouveau est compté comme 0.</span>`;
+      return;
+    }
     const last = loadLastBalance();
     if (!last) { els.openingHint.textContent = ''; return; }
     els.openingHint.innerHTML = `Dernier fichier généré : solde final <b>${fmtCHF(last.amount)}</b>` +
@@ -252,7 +257,8 @@
     if (state.mode === 'existing' && state.existing) return state.existing.opening;
     return {
       date: els.openingDate.value || null,
-      amount: (window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value)) || 0,
+      // un texte illisible vaut 0, et renderOpeningHint le dit à côté du champ
+      amount: openingSaisi() ?? 0,
       libelle: 'Solde à nouveau',
     };
   }
@@ -1660,8 +1666,8 @@
         `<td>${esc(e.page ? pageLabel(e.page) : 'manuel')}</td><td>${esc(uniqList(msgs).join(' ; '))}</td></tr>`;
     };
     const signalees = state.entries.filter((e) => rowStatus(e) !== 'ok');
-    const soldeSaisi = els.checkBalance.value.trim();
-    const ecart = soldeSaisi === '' ? null : P.round2(t.end - Number(soldeSaisi.replace(',', '.')));
+    const reelCompte = soldeCompte();
+    const ecart = reelCompte == null ? null : P.round2(t.end - reelCompte);
     const html =
       `<!doctype html><meta charset="utf-8"><title>Rapport de contrôle – caisse</title>` +
       `<style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;margin:24px;color:#111}` +
@@ -1677,7 +1683,7 @@
       `<dt>Total des débits (entrées)</dt><dd>${esc(fmtCHF(t.debits))}</dd>` +
       `<dt>Total des crédits (sorties)</dt><dd>${esc(fmtCHF(t.credits))}</dd>` +
       `<dt>Solde calculé</dt><dd>${esc(fmtCHF(t.end))}</dd>` +
-      (ecart == null ? '' : `<dt>Solde réel compté</dt><dd>${esc(fmtCHF(Number(soldeSaisi.replace(',', '.'))))}</dd>` +
+      (ecart == null ? '' : `<dt>Solde réel compté</dt><dd>${esc(fmtCHF(reelCompte))}</dd>` +
         `<dt>Écart</dt><dd class="${Math.abs(ecart) < 0.005 ? 'ok' : 'ko'}">${esc(fmtCHF(ecart))}${Math.abs(ecart) < 0.005 ? ' (rapprochement correct)' : ' (à expliquer)'}</dd>`) +
       `<dt>Numéros manquants</dt><dd class="${c.manquants.length ? 'ko' : 'ok'}">${c.manquants.length ? esc(c.manquants.join(', ')) : 'aucun'}</dd>` +
       `<dt>Numéros en double</dt><dd class="${c.doublons.length ? 'ko' : 'ok'}">${c.doublons.length ? esc(c.doublons.join(', ')) : 'aucun'}</dd>` +
@@ -1797,11 +1803,12 @@
   function renderBalanceCheck() {
     const v = els.checkBalance.value.trim();
     if (v === '') { els.balanceResult.innerHTML = ''; return; }
+    const reelSaisi = soldeCompte();
     // le séparateur de milliers que l'application affiche elle-même (1’234.50) et un « CHF »
     // recopié ne doivent pas rendre le solde illisible : la vérification était alors sautée en
     // silence (le champ était « number », qui vide sa valeur au moindre caractère inattendu)
-    const reel = window.CaisseRegistre ? window.CaisseRegistre.parseAmountInput(v) : Number(v.replace(',', '.'));
-    if (reel == null || !isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
+    const reel = reelSaisi;
+    if (reel == null) { els.balanceResult.innerHTML = `<div class="balance-box err">« ${escapeHtml(v)} » n'est pas un montant : le rapprochement n'a pas pu être fait.</div>`; return; }
     const entries = entriesUpToCheckDate();
     const t = X.computeTotals(currentOpening(), entries);
     const horsDate = allEntriesForExcel().length - entries.length;
@@ -1871,6 +1878,22 @@
     selectEntry(list[0].id);
   });
 
+  /** Solde réel compté tel que tapé dans le champ, ou null. */
+  function soldeCompte() {
+    const v = els.checkBalance.value.trim();
+    if (v === '') return null;
+    const n = window.CaisseRegistre ? window.CaisseRegistre.parseAmountInput(v) : Number(v.replace(',', '.'));
+    return n == null || !isFinite(n) ? null : n;
+  }
+
+  /** Solde à nouveau tapé pour un classeur neuf, ou null si le champ n'est pas un montant. */
+  function openingSaisi() {
+    const v = String(els.openingAmount.value || '').trim();
+    if (v === '') return 0;
+    const n = window.CaisseRegistre ? window.CaisseRegistre.parseAmountInput(v) : Number(v.replace(',', '.'));
+    return n == null || !isFinite(n) ? null : n;
+  }
+
   function renderTotals() {
     const opening = currentOpening();
     // seulement les écritures qui ne sont pas déjà dans la base : sinon, après « Ajouter au
@@ -1888,6 +1911,7 @@
   }
 
   function refreshAll() {
+    renderOpeningHint(); // signale un solde à nouveau tapé mais illisible
     const has = state.entries.length > 0;
     els.step3.classList.toggle('hidden', !has);
     els.step4.classList.toggle('hidden', !has);
@@ -2205,10 +2229,10 @@
     if (c.jamaisVues.length > 0 && c.jamaisVues.length === c.count) {
       if (!confirm(`Aucune des ${c.count} pièces n'a été affichée à l'écran. Générer le fichier sans les avoir contrôlées ?`)) { openReview(null); return; }
     }
-    const soldeSaisi = els.checkBalance.value.trim();
-    if (soldeSaisi !== '') {
+    const reelCompte = soldeCompte();
+    if (reelCompte != null) {
       const t0 = X.computeTotals(currentOpening(), entriesUpToCheckDate());
-      const ecart = P.round2(t0.end - Number(soldeSaisi.replace(',', '.')));
+      const ecart = P.round2(t0.end - reelCompte);
       if (Math.abs(ecart) >= 0.005 && !confirm(`Le solde calculé (${fmtCHF(t0.end)}) ne correspond pas au solde réel saisi : écart de ${fmtCHF(Math.abs(ecart))}.\n\nGénérer le fichier malgré cet écart ?`)) return;
     }
     if (state.mode === 'new' && !els.openingDate.value) {

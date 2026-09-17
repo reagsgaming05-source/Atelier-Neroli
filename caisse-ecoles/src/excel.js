@@ -125,8 +125,13 @@
       //  - la ligne doit venir avant toute écriture : sinon la dernière ligne vide d'un classeur,
       //    qui porte encore la formule du solde, passait pour le solde à nouveau et le solde de
       //    clôture devenait le solde d'ouverture (année reprise avec le double du montant réel).
-      const isOpening = !opening && entries.length === 0 && !debit && !credit
-        && (/solde|report|à nouveau|a nouveau/i.test(libelle) || (solde != null && (no === 0 || noV == null || noV === '')));
+      // Une ligne qui se nomme « Solde à nouveau » ou « Report » est reconnue où qu'elle soit
+      // (certains classeurs ont un titre au-dessus). La reconnaissance muette — un solde sans
+      // libellé ni n° — ne vaut qu'avant toute écriture : sinon la dernière ligne vide d'un
+      // classeur, qui porte encore la formule du solde, passait pour le solde à nouveau.
+      const nomme = /solde|report|à nouveau|a nouveau/i.test(libelle);
+      const muette = entries.length === 0 && solde != null && (no === 0 || noV == null || noV === '');
+      const isOpening = !opening && !debit && !credit && (nomme || muette);
       if (isOpening) {
         opening = { date, amount: solde != null ? solde : 0, libelle };
         continue;
