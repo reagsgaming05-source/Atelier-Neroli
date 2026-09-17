@@ -182,7 +182,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           for try in 1 2 3 4 5; do
-            if gh release upload compta-blonay-windows-latest ComptaBlonay-windows.zip --clobber --repo "$GITHUB_REPOSITORY"; then
+            # « timeout » : gh peut rester bloqué sans rien téléverser, ce qui mangeait tout le temps du job
+            if timeout 300 gh release upload compta-blonay-windows-latest ComptaBlonay-windows.zip --clobber --repo "$GITHUB_REPOSITORY"; then
               echo "zip publié (tentative $try)"
               exit 0
             fi
