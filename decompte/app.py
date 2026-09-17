@@ -4,6 +4,8 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+import unicodedata
+import urllib.parse
 import uuid
 from pathlib import Path
 
@@ -17,7 +19,7 @@ from .analyse import analyse_pdf
 from .excel import build_workbook, output_filename
 from .models import Dossier
 from .ocr import TESSERACT_CMD, app_dir, tesseract_available
-from .rules import compute_rows, compute_total, propose
+from .rules import compute_rows, compute_total
 
 log = logging.getLogger(__name__)
 
@@ -75,14 +77,17 @@ async def analyse(file: UploadFile = File(...), type_activite: str | None = Form
     with pdf_path.open("wb") as fh:
         shutil.copyfileobj(file.file, fh)
     try:
-        dossier = await run_in_threadpool(analyse_pdf, pdf_path, work / "pages", dossier_id, file.filename or "")
+        dossier = await run_in_threadpool(
+            analyse_pdf,
+            pdf_path,
+            work / "pages",
+            dossier_id,
+            file.filename or "",
+            type_activite=type_activite if type_activite in ("course", "camp") else None,
+        )
     except Exception as exc:  # noqa: BLE001 — on veut remonter le message à l'écran
         log.exception("analyse impossible")
         raise HTTPException(500, f"Analyse impossible : {exc}") from exc
-    if type_activite in ("course", "camp") and type_activite != dossier.type_activite:
-        dossier.type_activite = type_activite  # type: ignore[assignment]
-        propose(dossier)
-        compute_rows(dossier)
     _dossiers[dossier_id] = dossier
     return public(dossier)
 
@@ -110,10 +115,16 @@ def excel(payload: dict) -> Response:
     dossier.total = compute_total(dossier)
     data = build_workbook(dossier)
     name = output_filename(dossier)
+    # L'en-tête HTTP ne sait écrire que du latin-1 : un nom d'enseignant ou de fichier avec une
+    # lettre hors de cet alphabet (ł, ě, ş) faisait échouer l'export en erreur 500. On donne donc
+    # une version simplifiée en filename, et le nom complet en filename* (RFC 5987, lu par les
+    # navigateurs et par la fenêtre « Enregistrer sous » de l'application).
+    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode() or "decompte.xlsx"
+    quoted = urllib.parse.quote(name, safe="")
     return Response(
         content=data,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+        headers={"Content-Disposition": f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{quoted}'},
     )
 
 

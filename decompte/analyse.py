@@ -65,6 +65,7 @@ def analyse_pdf(
     pages: list[PageData] | None = None,
     engine: str = "",
     progress=None,
+    type_activite: str | None = None,
 ) -> Dossier:
     if pages is None:
         pages, engine = load_pages(pdf_path, work_dir, progress=progress)
@@ -92,7 +93,10 @@ def analyse_pdf(
         id=dossier_id,
         filename=filename,
         numero=make_numero(filename, form.get("enseignant", ""), form.get("date_debut")),
-        type_activite=guess_type(form),  # type: ignore[arg-type]
+        # Le type choisi à l'envoi doit être connu avant propose() : celui-ci ramène à « Autre »
+        # toute rubrique absente de la liste du type, et l'imposer après coup ne rendait plus
+        # « Hébergement », « Nourriture » ou « Cuisinière » à un camp détecté comme course.
+        type_activite=(type_activite if type_activite in ("course", "camp") else guess_type(form)),  # type: ignore[arg-type]
         pages=pages,
         pieces=pieces,
         warnings=warnings,

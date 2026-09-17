@@ -34,3 +34,19 @@ def test_invoice_page_is_one_piece_plus_recepisse():
     assert len(blocks) == 2
     assert blocks[0].text.startswith("Ville de Vevey") and "300.00" in blocks[0].text and "Récépissé" not in blocks[0].text
     assert blocks[1].text.startswith("Récépissé")
+
+
+# ---------------------------------------------------------------------------
+# Audit
+# ---------------------------------------------------------------------------
+
+
+def test_recus_numerotes_a_la_main_restent_des_pieces_distinctes():
+    """« Auberge du Lac 1 » … « Auberge du Lac 4 » : quatre reçus, pas un seul."""
+    from decompte.segment import _is_header_line, _repeated_first_lines
+
+    firsts = [f"Auberge du Lac {i}" for i in range(1, 5)]
+    repeated = _repeated_first_lines(firsts)
+    assert repeated, "les premières lignes répétées doivent être reconnues"
+    for f in firsts:
+        assert _is_header_line(f, repeated), f"« {f} » n'est pas vu comme un en-tête de pièce"

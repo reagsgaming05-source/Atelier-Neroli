@@ -144,7 +144,10 @@ def _is_header_line(text: str, repeated: set[str]) -> bool:
     n = normalize(text)
     if not n:
         return False
-    if n in repeated:
+    # Même normalisation que _repeated_first_lines et _is_ticket_header : le numéro manuscrit au
+    # bout de la ligne (« Auberge du Lac 3 ») doit être retiré avant la comparaison. Sans cela les
+    # quatre reçus étaient bien comptés comme quatre en-têtes, puis fondus en une seule pièce.
+    if re.sub(r"\s*\d+$", "", n) in repeated:
         return True
     n_pad = n + " "
     if any(n_pad.startswith(k) for k in HEADER_KEYWORDS):

@@ -392,8 +392,11 @@ def parse_expense_table(fp: FormPages) -> tuple[list[FormExpense], Optional[floa
     if not (header_desc and header_com):
         return [], None
     page = header_com[0].page
-    header_desc = [h for h in header_desc if h.page is page] or header_desc
-    top = min(header_desc[0].y0, header_com[0].y0)
+    # Le repère « Description » doit être sur la même page que « payées par la commune » : se
+    # rabattre sur une occurrence d'une autre page donnait un « haut de tableau » venu d'ailleurs,
+    # et la fenêtre des dépenses avalait les champs du formulaire (lignes de dépense fantômes).
+    same_page_desc = [h for h in header_desc if h.page is page]
+    top = min(same_page_desc[0].y0, header_com[0].y0) if same_page_desc else header_com[0].y0
     total_hits = [h for h in fp.find(r"total des depenses") if h.page is page]
     page_lines = [l for p, l in fp.lines if p is page]
     bottom = total_hits[0].y0 if total_hits else max(l.y1 for l in page_lines)

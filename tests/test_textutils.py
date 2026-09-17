@@ -25,3 +25,26 @@ def test_amounts_rejects_dates_times_percents_codes():
 
 def test_normalize():
     assert normalize("  Récépissé   Théâtre ") == "recepisse theatre"
+
+
+# ---------------------------------------------------------------------------
+# Audit : recollage « 2. » + « 80 »
+# ---------------------------------------------------------------------------
+
+
+def test_recollage_des_decimales_seulement_de_gauche_a_droite():
+    from decompte.models import Word
+    from decompte.ocr import _normalize_textlayer_numbers
+
+    def w(text, x0, x1, y0=100.0, h=10.0):
+        return Word(x0=x0, y0=y0, x1=x1, y1=y0 + h, text=text, conf=90)
+
+    # cas normal : « 2. » puis « 80 » un peu plus à droite → « 2.80 »
+    out = _normalize_textlayer_numbers([w("2.", 10, 20), w("80", 24, 34)])
+    assert [x.text for x in out] == ["2.80"]
+    assert out[0].x0 < out[0].x1
+
+    # lecture de droite à gauche : recoller donnerait un mot dont x1 < x0, qui fausse la
+    # découpe en colonnes — les deux mots restent séparés
+    out2 = _normalize_textlayer_numbers([w("2.", 40, 50), w("80", 10, 20)])
+    assert [x.text for x in out2] == ["2.", "80"]

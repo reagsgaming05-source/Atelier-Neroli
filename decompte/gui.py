@@ -180,7 +180,6 @@ class App(tk.Tk):
         self._recompute_job: Optional[str] = None
         self._thumbs: list = []
         self._page_images: dict[str, Image.Image] = {}
-        self._queue: "queue.Queue" = queue.Queue()
         self._setup_style()
         self._build()
         self.report_callback_exception = self._tk_error  # type: ignore[assignment]
@@ -364,33 +363,44 @@ class App(tk.Tk):
         win.update_idletasks()
         win.geometry(f"+{self.winfo_rootx() + 380}+{self.winfo_rooty() + 260}")
         win.grab_set()
+        # La croix ne ferme pas la fenêtre : la détruire pendant l'analyse laissait poll() écrire
+        # dans des widgets détruits (TclError) et le résultat de la lecture était perdu.
+        win.protocol("WM_DELETE_WINDOW", lambda: None)
+        # Une file par analyse : deux lectures lancées à la suite ne se volent plus leurs messages
+        # (la seconde chargeait le dossier de la première).
+        q: "queue.Queue" = queue.Queue()
 
         def worker() -> None:
             try:
-                d = analyse_pdf(pdf, work / "pages", dossier_id, src.name, progress=lambda i, n: self._queue.put(("progress", i, n)))
-                self._queue.put(("done", d))
+                d = analyse_pdf(pdf, work / "pages", dossier_id, src.name, progress=lambda i, n: q.put(("progress", i, n)))
+                q.put(("done", d))
             except Exception as exc:  # noqa: BLE001
                 log.exception("analyse impossible")
-                self._queue.put(("error", str(exc)))
+                q.put(("error", str(exc)))
 
         threading.Thread(target=worker, daemon=True).start()
 
+        def fermer() -> None:
+            if win.winfo_exists():
+                win.grab_release()
+                win.destroy()
+
         def poll() -> None:
+            vivante = win.winfo_exists()
             try:
                 while True:
-                    msg = self._queue.get_nowait()
+                    msg = q.get_nowait()
                     if msg[0] == "progress":
-                        _, i, n = msg
-                        bar.configure(maximum=n, value=i - 1)
-                        lbl.configure(text=f"Lecture OCR de la page {i} / {n}…")
+                        if vivante:
+                            _, i, n = msg
+                            bar.configure(maximum=n, value=i - 1)
+                            lbl.configure(text=f"Lecture OCR de la page {i} / {n}…")
                     elif msg[0] == "done":
-                        win.grab_release()
-                        win.destroy()
+                        fermer()
                         self.load_dossier(msg[1])
                         return
                     else:
-                        win.grab_release()
-                        win.destroy()
+                        fermer()
                         messagebox.showerror("Analyse impossible", msg[1])
                         return
             except queue.Empty:
@@ -416,7 +426,13 @@ class App(tk.Tk):
 
     def _recompute(self) -> None:
         self._recompute_job = None
-        if not self.dossier or self.rows_manual:
+        if not self.dossier:
+            return
+        if self.rows_manual:
+            # Les lignes retouchées à la main sont conservées telles quelles, mais la part de
+            # l'État et le total doivent quand même suivre les effectifs et le taux EUR : sinon
+            # l'export annonçait un total différent de celui affiché à l'écran.
+            self._refresh_total()
             return
         compute_rows(self.dossier)
         self.refresh_rows_tab()
@@ -685,9 +701,12 @@ class PieceCard(ttk.Frame):
         left = ttk.Frame(self, style="Card.TFrame")
         left.grid(row=0, column=0, sticky="n", padx=(0, 12))
         photo = app.thumbnail(p)
-        thumb = tk.Label(left, image=photo, bd=1, relief="solid", cursor="hand2", bg="#e9edf0", width=THUMB[0], height=THUMB[1])
         if photo is None:
-            thumb.configure(image="", text="(aperçu indisponible)")
+            # sans image, Tkinter compte width/height en CARACTÈRES et en LIGNES : la vignette de
+            # remplacement mesurait 230 caractères sur 170 lignes et disloquait l'onglet des pièces
+            thumb = tk.Label(left, text="(aperçu indisponible)", bd=1, relief="solid", cursor="hand2", bg="#e9edf0", width=26, height=9)
+        else:
+            thumb = tk.Label(left, image=photo, bd=1, relief="solid", cursor="hand2", bg="#e9edf0", width=THUMB[0], height=THUMB[1])
         thumb.pack()
         thumb.bind("<Button-1>", lambda e: app.open_viewer(p))
         cap = ttk.Frame(left, style="Card.TFrame")
@@ -723,7 +742,8 @@ class PieceCard(ttk.Frame):
         ttk.Label(fields, text="Rubrique Excel", style="CardMuted.TLabel").grid(row=2, column=0, sticky="w", padx=(0, 10))
         Combo(fields, rubs, p.rubrique if p.rubrique in rubs else "Autre", lambda c: (setattr(p, "rubrique", c), app.on_piece_changed()), width=16).grid(row=3, column=0, sticky="w", padx=(0, 10), pady=(0, 6))
         ttk.Label(fields, text="Mode de calcul", style="CardMuted.TLabel").grid(row=2, column=1, columnspan=3, sticky="w")
-        Combo(fields, MODES, p.mode, lambda c: (setattr(p, "mode", c), app.on_piece_changed()), width=32).grid(row=3, column=1, columnspan=3, sticky="w", pady=(0, 6))
+        self.mode_combo = Combo(fields, MODES, p.mode, lambda c: (setattr(p, "mode", c), app.on_piece_changed()), width=32)
+        self.mode_combo.grid(row=3, column=1, columnspan=3, sticky="w", pady=(0, 6))
         self.eur_fields = ttk.Frame(body, style="Card.TFrame")
         self.eur_fields.pack(fill="x")
         self._entry(self.eur_fields, 0, "Montant CHF imprimé sur la pièce (si présent)", "total_chf", width=12, numeric=True)
@@ -782,6 +802,10 @@ class PieceCard(ttk.Frame):
         p = self.piece
         p.fares.append(FareLine(label="Adulte", category="plein", qty=1, unit_price=0.0, currency=p.currency or "CHF"))
         p.mode = "direct"
+        # la liste « Mode de calcul » doit le dire : elle affichait encore « Règle de trois »
+        # pendant que la pièce ne comptait plus que le tarif à 0.00 qui vient d'être ajouté
+        if getattr(self, "mode_combo", None) is not None:
+            self.mode_combo.set_code("direct")
         self._build_fares()
         self.app.on_piece_changed()
 

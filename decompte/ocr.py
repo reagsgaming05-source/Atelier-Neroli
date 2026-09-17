@@ -140,7 +140,10 @@ def _normalize_textlayer_numbers(words: list[Word]) -> list[Word]:
         if i + 1 < len(words):
             n = words[i + 1]
             same_line = abs(n.cy - w.cy) < max(w.h, n.h) * 0.6
-            if same_line and re.fullmatch(r"\d+[.,]", w.text) and re.fullmatch(r"\d{2}", n.text) and n.x0 - w.x1 < w.h * 1.5:
+            # l'écart doit aussi être positif : sur une ligne lue de droite à gauche, recoller
+            # donnait un mot dont x1 < x0, dont l'intervalle inversé fausse la découpe en colonnes
+            gap = n.x0 - w.x1
+            if same_line and re.fullmatch(r"\d+[.,]", w.text) and re.fullmatch(r"\d{2}", n.text) and 0 <= gap < w.h * 1.5:
                 out.append(Word(x0=w.x0, y0=min(w.y0, n.y0), x1=n.x1, y1=max(w.y1, n.y1), text=w.text + n.text, conf=min(w.conf, n.conf)))
                 i += 2
                 continue
@@ -231,40 +234,42 @@ def load_pages(
     `progress(page_en_cours, nb_pages)` est appelé avant chaque page. Retourne (pages, moteur utilisé)."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    doc = pymupdf.open(str(pdf_path))
     use_tess = tesseract_available()
     langs = _ocr_langs() if use_tess else ""
     engine = f"tesseract ({langs})" if use_tess else "couche texte du PDF (Tesseract absent)"
     pages: list[PageData] = []
     scale = dpi / 72.0
-    for idx, page in enumerate(doc):
-        num = idx + 1
-        if progress:
-            progress(num, len(doc))
-        img = render_page(page, dpi)
-        rotation = 0
-        if is_native_text_page(page):
-            words = words_from_textlayer(page, scale)
-            source = "textlayer"
-        elif use_tess:
-            img, words, rotation = ocr_page_best_rotation(img, langs)
-            source = "tesseract"
-        else:
-            words = words_from_textlayer(page, scale)
-            source = "textlayer" if words else "none"
-        image_path = out_dir / f"page-{num}.jpg"
-        img.save(image_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
-        pages.append(
-            PageData(
-                number=num,
-                width=img.width,
-                height=img.height,
-                rotation=rotation,
-                source=source,
-                words=words,
-                image=str(image_path),
-                kind="pieces" if words else "empty",
+    # « with » : sans lui le fichier restait ouvert (mmap) à chaque dossier analysé et, sous
+    # Windows, le dossier de travail restait verrouillé dès qu'un rendu de page échouait.
+    with pymupdf.open(str(pdf_path)) as doc:
+        for idx, page in enumerate(doc):
+            num = idx + 1
+            if progress:
+                progress(num, len(doc))
+            img = render_page(page, dpi)
+            rotation = 0
+            if is_native_text_page(page):
+                words = words_from_textlayer(page, scale)
+                source = "textlayer"
+            elif use_tess:
+                img, words, rotation = ocr_page_best_rotation(img, langs)
+                source = "tesseract"
+            else:
+                words = words_from_textlayer(page, scale)
+                source = "textlayer" if words else "none"
+            image_path = out_dir / f"page-{num}.jpg"
+            img.save(image_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
+            pages.append(
+                PageData(
+                    number=num,
+                    width=img.width,
+                    height=img.height,
+                    rotation=rotation,
+                    source=source,
+                    words=words,
+                    image=str(image_path),
+                    kind="pieces" if words else "empty",
+                )
             )
-        )
-        log.info("page %d: %s, rotation %d°, %d mots", num, source, rotation, len(words))
+            log.info("page %d: %s, rotation %d°, %d mots", num, source, rotation, len(words))
     return pages, engine
