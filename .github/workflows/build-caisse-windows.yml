@@ -169,7 +169,7 @@ jobs:
             Compta Blonay, version portable Windows : décompressez le zip, puis double-cliquez sur `ComptaBlonay.exe`.
             Aucune installation, aucun navigateur : tout est inclus. Une seule application pour les deux outils : le menu du logo, en haut de la barre latérale, passe de Caisse écoles (saisie des pièces, pièces scannées, comptage de la caisse, journal, Excel, PDF) à Décompte DGEO (courses d'école & camps, démarré avec l'application et affiché dans la même page, avec le récapitulatif des décomptes). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
             Cette version ne contient aucun nom de personne : posez `vocabulaire-noms.js` (remis séparément) à côté de l'exécutable.
-            Construit automatiquement depuis le commit ${{ github.sha }}.
+            Construit automatiquement depuis la branche `${{ github.ref_name }}`, commit ${{ github.sha }}.
 
       # L'envoi du zip (~200 Mo) par l'action échoue par intermittence, et elle supprime l'ancien
       # fichier AVANT d'envoyer le nouveau : la page de téléchargement restait alors vide. « gh »
@@ -185,6 +185,12 @@ jobs:
             # « timeout » : gh peut rester bloqué sans rien téléverser, ce qui mangeait tout le temps du job
             if timeout 300 gh release upload compta-blonay-windows-latest ComptaBlonay-windows.zip --clobber --repo "$GITHUB_REPOSITORY"; then
               echo "zip publié (tentative $try)"
+              # L'étiquette « …-latest » doit désigner le commit d'où vient ce zip : l'action ne la
+              # déplace pas, elle restait sur le tout premier commit publié alors que le texte de la
+              # page annonce un commit récent.
+              gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/compta-blonay-windows-latest" \
+                -f sha="$GITHUB_SHA" -F force=true >/dev/null \
+                || echo "étiquette non déplacée (sans conséquence pour le téléchargement)"
               exit 0
             fi
             echo "tentative $try échouée ; nouvelle tentative dans $((15 * try)) s"
