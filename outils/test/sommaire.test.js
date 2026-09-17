@@ -10,7 +10,7 @@ const DEBUT = '  let sommaireEnCours = false;';
 const FIN = '  async function rafraichirSommaire() {';
 const a = SOURCE.indexOf(DEBUT);
 const b = SOURCE.indexOf(FIN, a);
-if (a < 0 || b < 0) throw new Error('bloc du sommaire introuvable dans source.html');
+if (a < 0 || b < 0) throw new Error('bloc du sommaire introuvable dans la source');
 const BLOC = SOURCE.slice(a, b);
 // Le bloc livré, avec ses deux seules dépendances passées de l'extérieur.
 const fabrique = new Function('state', 'rafraichirSommaire',

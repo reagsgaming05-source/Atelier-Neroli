@@ -61,7 +61,7 @@ avec le chemin du fichier double-cliqué. Une page `file://` n'a pas le droit
 de lire un fichier voisin (`fetch` est refusé), mais elle peut le charger
 comme script. Le lanceur dépose donc le document, encodé, dans un fichier
 `ouverture-<aléa>.js` à côté de la page, et ouvre la page avec
-`#ouvrir=<ce nom>`. La page (`ouvrirAuLancement` dans `source.html`) n'accepte
+`#ouvrir=<ce nom>`. La page (`ouvrirAuLancement` dans `outils/src/99-init.js`) n'accepte
 qu'un nom de cette forme exacte, jamais un chemin ni une adresse, charge le
 script, ouvre le document à la place de l'exemple et nettoie l'adresse. La
 version hors ligne autorise pour cela `file:` dans `script-src`.

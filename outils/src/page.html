@@ -1,0 +1,245 @@
+<title>Blonay PDF</title>
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNiAyNiI+PHJlY3Qgd2lkdGg9IjI2IiBoZWlnaHQ9IjI2IiByeD0iNyIgZmlsbD0iIzI1NjNDOSIvPjxwYXRoIGQ9Ik04IDYuNWg2LjVsNC41IDQuNXY4LjVIOHoiIGZpbGw9IiNmZmZmZmYiLz48cGF0aCBkPSJNMTQuNSA2LjVWMTFIMTkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI1NjNDOSIgc3Ryb2tlLXdpZHRoPSIxLjQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMTAuNSAxNGg2TTEwLjUgMTYuNWg2IiBzdHJva2U9IiMyNTYzQzkiIHN0cm9rZS13aWR0aD0iMS4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
+<style>
+/*@style@*/
+</style>
+
+<div class="boot" id="boot">
+  <div class="inner">
+    <svg class="mark" viewBox="0 0 26 26" aria-hidden="true">
+      <rect width="26" height="26" rx="7" fill="var(--bleu)"/>
+      <path d="M8 6.5h6.5l4.5 4.5v8.5H8z" fill="var(--bleu-encre)"/>
+      <path d="M14.5 6.5V11H19" fill="none" stroke="var(--bleu)" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M10.5 14h6M10.5 16.5h6" stroke="var(--bleu)" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    <p id="boot-msg">Chargement des composants PDF…</p>
+    <button class="retry" id="boot-retry" type="button" hidden>Réessayer</button>
+  </div>
+</div>
+
+<header class="toolbar" role="toolbar" aria-label="Barre d'outils" id="app-toolbar" hidden>
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 26 26" aria-hidden="true">
+      <rect width="26" height="26" rx="7" fill="var(--bleu)"/>
+      <path d="M8 6.5h6.5l4.5 4.5v8.5H8z" fill="var(--bleu-encre)"/>
+      <path d="M14.5 6.5V11H19" fill="none" stroke="var(--bleu)" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M10.5 14h6M10.5 16.5h6" stroke="var(--bleu)" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    <div class="name">Blonay <span>PDF</span></div>
+  </div>
+  <span class="tb-sep"></span>
+  <input type="file" id="file-input" accept="application/pdf,.pdf,image/png,image/jpeg,image/webp" multiple class="sr-only" tabindex="-1">
+  <button class="tb-btn" id="btn-open" type="button" title="Ouvrir des PDF ou des images (Ctrl+O)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v6.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5z"/></svg>
+    <span class="lbl">Ouvrir</span>
+  </button>
+  <span class="tb-sep"></span>
+  <button class="tb-btn" id="btn-undo" type="button" disabled title="Annuler (Ctrl+Z)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3 3 6l3 3"/><path d="M3 6h6.5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    <span class="lbl">Annuler</span>
+  </button>
+  <button class="tb-btn" id="btn-redo" type="button" disabled title="Rétablir (Ctrl+Y)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m10 3 3 3-3 3"/><path d="M13 6H6.5a3.5 3.5 0 0 0 0 7H10"/></svg>
+    <span class="lbl">Rétablir</span>
+  </button>
+  <span class="tb-sep"></span>
+  <div class="vue-modes" id="vue-modes" role="group" aria-label="Affichage">
+    <button class="vue-mode" data-vue="lecture" type="button" aria-pressed="true" title="Lire le document (Ctrl+1)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v9"/><path d="M8 4 3 5.2v8L8 12"/><path d="M8 4l5 1.2v8L8 12"/></svg>
+      <span class="lbl">Lire</span>
+    </button>
+    <button class="vue-mode" data-vue="organiser" type="button" aria-pressed="false" title="Organiser les pages (Ctrl+2)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2.5" y="2.5" width="4.5" height="5.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="5.5" rx="1"/><rect x="2.5" y="10" width="4.5" height="3.5" rx="1"/><rect x="9" y="10" width="4.5" height="3.5" rx="1"/></svg>
+      <span class="lbl">Organiser</span>
+    </button>
+  </div>
+  <span class="zoom-lecture" id="zoom-lecture" hidden role="group" aria-label="Zoom">
+    <button type="button" id="zoom-moins" title="Réduire (Ctrl −)" aria-label="Réduire">−</button>
+    <select id="zoom-niveau" aria-label="Niveau de zoom" title="Zoom : Ctrl + molette, Ctrl + / Ctrl −, Ctrl 0 pour la page entière">
+      <option value="page">Page entière</option>
+      <option value="largeur">Largeur</option>
+      <option value="0.5">50 %</option>
+      <option value="0.75">75 %</option>
+      <option value="1">100 %</option>
+      <option value="1.25">125 %</option>
+      <option value="1.5">150 %</option>
+      <option value="2">200 %</option>
+      <option value="3">300 %</option>
+      <option value="4">400 %</option>
+    </select>
+    <button type="button" id="zoom-plus" title="Agrandir (Ctrl +)" aria-label="Agrandir">+</button>
+    <button type="button" id="vue-deux" title="Deux pages côte à côte, comme un livre ouvert" aria-label="Deux pages côte à côte" aria-pressed="false">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="1.5" y="3" width="5.5" height="10" rx="1"/><rect x="9" y="3" width="5.5" height="10" rx="1"/></svg>
+    </button>
+  </span>
+  <span class="tb-sep"></span>
+  <button class="tb-btn" id="btn-select-all" type="button" disabled title="Tout sélectionner (Ctrl+A)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="m5.5 8 2 2 3.5-4"/></svg>
+    <span class="lbl" id="select-all-label">Tout sélectionner</span>
+  </button>
+  <button class="tb-btn" id="btn-search" type="button" disabled title="Rechercher du texte (Ctrl+F)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+    <span class="lbl">Rechercher</span>
+  </button>
+  <span class="tb-spacer"></span>
+  <button class="tb-btn icon" id="btn-theme" type="button" title="Thème clair ou sombre"></button>
+  <button class="tb-btn icon" id="btn-help" type="button" title="Raccourcis clavier (?)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M6.3 6.2a1.8 1.8 0 1 1 2.3 1.9c-.4.2-.6.5-.6.9v.3"/><path d="M8 11.6h.01"/></svg>
+  </button>
+  <button class="tb-btn" id="btn-print" type="button" disabled title="Imprimer (Ctrl+P)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6V2.5h7V6"/><path d="M3 6h10a1 1 0 0 1 1 1v4h-2.5"/><path d="M3 11H1.5"/><path d="M4.5 9.5h7v4h-7z"/></svg>
+    <span class="lbl">Imprimer</span>
+  </button>
+  <div class="filename" title="Nom du fichier exporté">
+    <label for="filename" class="sr-only">Nom du fichier</label>
+    <input type="text" id="filename" value="document" spellcheck="false" autocomplete="off">
+    <span class="ext">.pdf</span>
+  </div>
+  <button class="tb-btn primary" id="btn-export" type="button" disabled title="Exporter le PDF (Ctrl+S)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8"/><path d="m4.5 6.5 3.5 3.5 3.5-3.5"/><path d="M2.5 11v1.5A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V11"/></svg>
+    <span class="lbl">Exporter le PDF</span>
+  </button>
+</header>
+
+<main class="workspace" id="app-main" hidden>
+  <div class="onglets" id="onglets" hidden role="tablist" aria-label="Documents ouverts dans cette fenêtre"></div>
+  <aside class="side" aria-label="Panneau latéral">
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tab-docs" role="tab" aria-selected="true" aria-controls="pane-docs" type="button">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5H4.5A1.5 1.5 0 0 0 3 3v10a1.5 1.5 0 0 0 1.5 1.5h7A1.5 1.5 0 0 0 13 13V5z"/><path d="M9.5 1.5V5H13"/></svg>
+        Documents
+      </button>
+      <button class="tab" id="tab-tools" role="tab" aria-selected="false" aria-controls="pane-tools" type="button">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.8 2.6a3.5 3.5 0 0 0-4.6 4.3l-4 4a1.3 1.3 0 0 0 1.9 1.9l4-4a3.5 3.5 0 0 0 4.3-4.6L10.2 6 9 4.8z"/></svg>
+        Outils
+      </button>
+      <button class="tab" id="tab-plan" role="tab" aria-selected="false" aria-controls="pane-plan" type="button" title="Signets : le plan du document">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h8v11l-4-3-4 3z"/></svg>
+        Plan
+      </button>
+    </div>
+
+    <div class="pane" id="pane-docs" role="tabpanel" aria-labelledby="tab-docs">
+      <div class="panel-head"><span>Documents ouverts</span><span class="count" id="doc-count">0</span></div>
+      <ul class="doc-list" id="doc-list"></ul>
+      <p class="docs-empty" id="docs-empty">Aucun document ouvert.</p>
+      <div class="pane-foot">
+        <button class="tb-btn" id="btn-add" type="button">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+          <span class="lbl">Ajouter un document</span>
+        </button>
+      </div>
+      <section class="shortcuts" aria-label="Raccourcis">
+        <dl>
+          <dt>Glisser</dt><dd>Déplacer une page ou la sélection</dd>
+          <dt>Numéro</dt><dd>Saisir la position voulue sous la page</dd>
+          <dt>Double-clic</dt><dd>Ouvrir l'éditeur de page</dd>
+          <dt><kbd>Maj</kbd> + clic</dt><dd>Sélectionner une plage</dd>
+          <dt><kbd>Suppr</kbd></dt><dd>Retirer la sélection</dd>
+          <dt><kbd>?</kbd></dt><dd>Tous les raccourcis</dd>
+        </dl>
+      </section>
+      <p class="privacy">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
+        <span>Traitement local : vos fichiers ne quittent pas cet ordinateur.</span>
+      </p>
+    </div>
+
+    <div class="pane" id="pane-tools" role="tabpanel" aria-labelledby="tab-tools" hidden>
+      <div id="tool-groups"></div>
+    </div>
+
+    <div class="pane" id="pane-plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
+      <div class="panel-head"><span>Signets</span><span class="count" id="signet-count">0</span></div>
+      <ul class="signets" id="signets"></ul>
+      <p class="docs-empty" id="signets-vide">Aucun signet. Ajoutez-en pour retrouver un chapitre ou une pièce d'un clic ; ils sont enregistrés dans le PDF exporté et repris par Acrobat.</p>
+      <div class="pane-foot">
+        <button class="tb-btn" id="btn-signet" type="button" title="Un signet vers la page affichée (ou la première sélectionnée)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+          <span class="lbl">Ajouter un signet</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="canvas" id="canvas" aria-label="Pages">
+    <div class="chips" id="chips" hidden></div>
+    <div class="dropzone" id="dropzone">
+      <div class="dz-art" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="dz-title">Déposez vos PDF ici</p>
+      <p class="dz-sub">Réorganisez, retirez, pivotez, annotez, fusionnez, protégez, puis exportez le document obtenu. Les images JPEG et PNG deviennent des pages.</p>
+      <div class="dz-actions">
+        <button class="tb-btn primary" id="btn-choose" type="button"><span class="lbl">Choisir des fichiers</span></button>
+        <button class="tb-btn" id="btn-sample" type="button"><span class="lbl">Charger un exemple</span></button>
+      </div>
+      <div class="dz-recents" id="dz-recents" hidden></div>
+    </div>
+    <div class="lecture" id="lecture" hidden aria-label="Document"></div>
+    <ol class="pages" id="pages" role="listbox" aria-multiselectable="true" aria-label="Pages du document"></ol>
+  </section>
+</main>
+
+<footer class="statusbar" id="app-status" hidden>
+  <span class="summary" id="summary">Aucune page</span>
+  <span class="last" id="last"></span>
+  <span class="progress" id="progress" hidden><i id="progress-bar"></i></span>
+  <button class="tb-btn annuler-op" id="btn-annuler-op" type="button" hidden title="Interrompre l'opération en cours (Échap)">Annuler</button>
+  <button class="tb-btn avis" id="btn-journal" type="button" hidden>
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2h.01"/></svg>
+    <span class="n">0</span>
+  </button>
+  <span class="page-courante" id="page-courante" hidden>
+    <label for="page-num" class="sr-only">Page affichée</label>
+    <input type="text" id="page-num" inputmode="numeric" autocomplete="off" value="1">
+    <span id="page-total">/ 1</span>
+  </span>
+  <label class="zoom" id="zoom-tuiles">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="4" height="4" rx="1"/><rect x="9.5" y="2.5" width="4" height="4" rx="1"/><rect x="2.5" y="9.5" width="4" height="4" rx="1"/><rect x="9.5" y="9.5" width="4" height="4" rx="1"/></svg>
+    <input type="range" id="zoom" min="120" max="300" step="8" value="172" aria-label="Taille des vignettes">
+  </label>
+</footer>
+
+<div class="selbar" id="selbar" hidden role="toolbar" aria-label="Actions sur la sélection">
+  <span class="count" id="sel-count"></span>
+  <span class="sep"></span>
+  <div class="moveto">
+    <label for="moveto" title="Déplacer la sélection à partir de ce numéro de page">Position</label>
+    <input type="text" id="moveto" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="Numéro de la position cible">
+    <button class="go" id="moveto-go" type="button">OK</button>
+  </div>
+  <span class="sep"></span>
+  <button class="tb-btn" id="sel-rot-left" type="button" title="Pivoter à gauche (Maj+R)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5A5 5 0 1 1 3 9"/><path d="M3 3v3.5h3.5"/></svg>
+  </button>
+  <button class="tb-btn" id="sel-rot-right" type="button" title="Pivoter à droite (R)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 6.5A5 5 0 1 0 13 9"/><path d="M13 3v3.5H9.5"/></svg>
+  </button>
+  <button class="tb-btn" id="sel-dup" type="button" title="Dupliquer la sélection">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 5.5v-2A1.5 1.5 0 0 0 9 2H4a1.5 1.5 0 0 0-1.5 1.5v5A1.5 1.5 0 0 0 4 10h1.5"/></svg>
+    <span class="lbl">Dupliquer</span>
+  </button>
+  <button class="tb-btn" id="sel-extract" type="button" title="Enregistrer la sélection dans un nouveau PDF">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2H4.5A1.5 1.5 0 0 0 3 3.5v9A1.5 1.5 0 0 0 4.5 14h7a1.5 1.5 0 0 0 1.5-1.5V6z"/><path d="M9 2v4h4"/></svg>
+    <span class="lbl">Extraire</span>
+  </button>
+  <button class="tb-btn danger" id="sel-delete" type="button" title="Retirer les pages sélectionnées (Suppr)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h10"/><path d="M6.5 4.5V3h3v1.5"/><path d="M4.5 4.5 5 13h6l.5-8.5"/></svg>
+    <span class="lbl">Retirer</span>
+  </button>
+  <span class="sep"></span>
+  <button class="tb-btn" id="sel-clear" type="button" title="Désélectionner (Échap)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m4 4 8 8M12 4l-8 8"/></svg>
+  </button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="modal-root"></div>
+
+<script>
+(() => {
+/*@modules@*/
+})();
+</script>

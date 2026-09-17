@@ -1,7 +1,7 @@
 # Bibliothèques récupérées depuis npm par outils/build.js
 outils/libs/
 
-# produits par outils/build.js à partir de outils/source.html : jamais commités,
+# produits par outils/build.js à partir de outils/src/ : jamais commités,
 # sinon chaque changement de la source ajoute 28 Mo à l'historique. « npm run
 # build » dans outils/ les remet ; la CI et Vercel les construisent eux-mêmes.
 outils/blonay-pdf.html

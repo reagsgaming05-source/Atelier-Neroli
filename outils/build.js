@@ -1,10 +1,12 @@
-// Produit les deux fichiers livrés à partir de la source unique pro.html
+// Produit les fichiers livrés à partir de la source unique, elle-même
+// recollée depuis les modules de src/ par assembler.js.
 const fs = require('fs');
 const path = require('path');
+const { assembler } = require('./assembler');
 const LIB = path.join(__dirname, 'libs');
 // Quel que soit le poste (Windows convertit les fins de ligne au passage),
 // on travaille en LF : les repères de ce script en dépendent.
-let src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8').replace(/\r\n/g, '\n');
+let src = assembler();
 // Date et commit de construction, affichés dans l'aide : on sait quelle
 // version on a sous la main.
 function commitCourt() {
@@ -14,7 +16,7 @@ function commitCourt() {
 }
 const d = new Date();
 const CONSTRUCTION = 'construite le ' + String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear() + (commitCourt() ? ', commit ' + commitCourt() : '');
-if (!src.includes("'__CONSTRUCTION__'")) throw new Error('repère de construction introuvable dans source.html');
+if (!src.includes("'__CONSTRUCTION__'")) throw new Error('repère de construction introuvable dans la source');
 src = src.replace("'__CONSTRUCTION__'", () => JSON.stringify(CONSTRUCTION));
 fs.writeFileSync(path.join(__dirname, 'desktop', 'construction.json'), JSON.stringify({ construction: CONSTRUCTION, commit: commitCourt(), date: d.toISOString() }) + '\n');
 const HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="color-scheme" content="dark light">\n</head>\n<body>\n';

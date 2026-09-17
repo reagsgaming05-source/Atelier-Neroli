@@ -284,7 +284,7 @@ cd outils
 npm ci                # (aucune dépendance de la page elle-même)
 npm run libs          # pdf.js, pdf-lib, JSZip, tesseract.js et les modèles fra/deu depuis npm, dans outils/libs/
 npm test              # tests unitaires (node --test), sous Windows comme sous Linux
-npm run build         # source.html → blonay-pdf.html, hors-ligne, docs/, lanceur/, pour-les-collegues/
+npm run build         # src/ → blonay-pdf.html, hors-ligne, docs/, lanceur/, pour-les-collegues/
 cd desktop
 npm ci
 npm start             # la fenêtre, depuis les sources
@@ -299,9 +299,16 @@ npm test              # suite de bout en bout (Chromium sur la page hors ligne)
 Si le navigateur ne peut pas être téléchargé sur le poste, `BLONAY_CHROMIUM=/chemin/vers/chromium`
 indique celui qui est déjà là.
 
-`outils/source.html` est la seule source, et **la seule chose versionnée** : `build.js` en tire
-les cinq versions livrées (page CDN, page hors ligne, `docs/` du site, page du lanceur, dossier
-`pour-les-collegues/`), et aucune n'est commitée. Elles pèsent 28 Mo à elles toutes : les
+`outils/src/` est la seule source, et **la seule chose versionnée**. L'application y vit en
+morceaux : `page.html` (l'ossature et deux repères), `style.css`, et trente et un modules
+`NN-nom.js` lus dans l'ordre de leurs numéros. `assembler.js` les recolle en une page unique —
+une substitution de texte, rien d'autre — et `build.js` en tire les cinq versions livrées (page
+CDN, page hors ligne, `docs/` du site, page du lanceur, dossier `pour-les-collegues/`), dont
+aucune n'est commitée. Le fichier d'un seul tenant faisait 11 876 lignes : on ne pouvait plus
+en ouvrir une partie sans charger le reste, et deux corrections dans deux endroits éloignés se
+gênaient. Le découpage n'a pas changé un octet du livrable, et `outils/test/assemblage.test.js`
+garde la couture : repères consommés, modules numérotés sans doublon, script recollé qui
+s'analyse d'un bloc. Elles pèsent 28 Mo à elles toutes : les
 garder dans le dépôt ajoutait autant à l'historique à chaque changement de la source, et une
 copie faite à la main finissait toujours par dater — celle de `pour-les-collegues/` avait
 quatre jours de retard. `npm run build` les remet en une seconde ; la CI et Vercel les
@@ -336,7 +343,7 @@ connexion.
 Le fichier `vercel.json` à la racine dit à Vercel de construire le site avant de le servir
 (`npm --prefix outils ci`, puis `npm run libs && npm run build`) et de publier le `docs/` ainsi
 produit : la page du site n'est donc plus dans le dépôt, elle est refaite à chaque déploiement
-depuis `source.html`. Le fichier indique aussi quoi servir : rien à
+depuis `outils/src/`. Le fichier indique aussi quoi servir : rien à
 configurer, rien à installer.
 
 1. ouvrir https://vercel.com et se connecter avec son compte GitHub
