@@ -10,7 +10,60 @@ permissions:
   contents: write
 
 jobs:
+  # De bout en bout, sur Linux : l'application entière pilotée dans Chromium,
+  # sur la page hors ligne, sans réseau. Rapide, et c'est elle qui garde les
+  # promesses lourdes — un mot caviardé qui quitte vraiment le fichier, un
+  # sommaire de dossier à jour dans le PDF enregistré.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Dépendances
+        working-directory: outils
+        run: npm ci
+
+      - name: Bibliothèques de la page (pdf.js, pdf-lib, JSZip, depuis npm)
+        working-directory: outils
+        run: npm run libs
+
+      - name: Application autonome (la suite teste ce que la source produit)
+        working-directory: outils
+        run: npm run build
+
+      - name: Dépendances de la suite
+        working-directory: outils/test-e2e
+        run: npm ci
+
+      - name: Navigateur de la suite (mis en cache d'une fois sur l'autre)
+        id: navigateur
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('outils/test-e2e/package-lock.json') }}
+
+      - name: Chromium
+        working-directory: outils/test-e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Suite de bout en bout
+        working-directory: outils/test-e2e
+        run: npm test
+
+      - name: Rapport (en cas d'échec)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-e2e
+          path: outils/test-e2e/playwright-report
+          retention-days: 7
+
   build:
+    needs: e2e
     runs-on: windows-latest
     defaults:
       run:

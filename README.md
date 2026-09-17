@@ -232,7 +232,8 @@ Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé v
 (exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
 
 L'exécutable est construit automatiquement par GitHub Actions
-(`.github/workflows/build-blonaypdf-windows.yml`) à chaque poussée : tests unitaires,
+(`.github/workflows/build-blonaypdf-windows.yml`) à chaque poussée : suite de bout en bout sur
+Linux (Chromium, page hors ligne), puis tests unitaires,
 construction de la page autonome, empaquetage Electron (`outils/desktop/`), test de fumée de
 l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, Enregistrer sous, Enregistrer sur
 place après confirmation, récupération du travail après un arrêt brutal, seconde instance), puis
@@ -275,10 +276,22 @@ npm ci
 npm start             # la fenêtre, depuis les sources
 npm run smoke         # test de fumée (Playwright pilote Electron)
 npm run dist:win      # dossier portable dist/win-unpacked (BlonayPDF.exe)
+cd ../test-e2e
+npm ci
+npx playwright install chromium
+npm test              # suite de bout en bout (Chromium sur la page hors ligne)
 ```
 
+Si le navigateur ne peut pas être téléchargé sur le poste, `BLONAY_CHROMIUM=/chemin/vers/chromium`
+indique celui qui est déjà là.
+
 `outils/source.html` est la seule source : `build.js` en tire les versions livrées. Les tests
-de `outils/test/` valident le code réellement livré, extrait de la source. Le lanceur Go en
+de `outils/test/` valident le code réellement livré, extrait de la source. Ceux de
+`outils/test-e2e/` pilotent l'application entière dans Chromium, sur la page hors ligne et donc
+sans réseau : ils tiennent les promesses qu'une relecture ne suffit pas à garantir — un mot
+caviardé qui quitte vraiment le fichier, un sommaire de dossier à jour dans le PDF enregistré,
+un lien interne qui suit sa page. Ils tournent sur Linux à chaque poussée, et la version
+Windows n'est empaquetée que s'ils passent. Le lanceur Go en
 un seul fichier (`outils/application/lanceur/`, fenêtre WebView2, 4 Mo) reste disponible en
 solution de repli : `sh outils/application/lanceur/construire.sh`.
 

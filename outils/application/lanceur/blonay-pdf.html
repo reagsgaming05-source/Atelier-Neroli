@@ -1490,7 +1490,7 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
   const APP = 'Blonay PDF';
   const APP_VERSION = '2.0.0';
   // Renseigné par build.js : date de construction et commit.
-  const APP_CONSTRUCTION = "construite le 17.09.2026, commit 43ce358";
+  const APP_CONSTRUCTION = "construite le 17.09.2026, commit 63c5f33";
   const CDN = {
     pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
     worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
@@ -4319,6 +4319,24 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
     return out;
   }
 
+  // Combien de pages du document se partagent chaque flux de contenu. Un flux
+  // n'est retiré du fichier que s'il ne sert plus qu'à la page réécrite.
+  function fxPartageContenus(doc) {
+    if (doc.__fxContenus) return doc.__fxContenus;
+    const { PDFName, PDFArray } = PDFLib;
+    const m = new Map();
+    const compter = r => { if (r == null) return; const k = String(r); m.set(k, (m.get(k) || 0) + 1); };
+    try {
+      doc.getPages().forEach(pg => {
+        const c = pg.node.get(PDFName.of('Contents'));
+        if (c instanceof PDFArray) { for (let i = 0; i < c.size(); i++) compter(c.get(i)); }
+        else compter(c);
+      });
+    } catch (e) { signaler('Écriture du flux', e); }
+    doc.__fxContenus = m;
+    return m;
+  }
+
   // Le flux de la page, concaténé, et de quoi le réécrire.
   function fxFluxPage(doc, page) {
     const { PDFArray, decodePDFRawStream, PDFName } = PDFLib;
@@ -4345,9 +4363,25 @@ I.prototype.getWordFontAttributes=function(){var a=new Ai,b=this.WordFontAttribu
     return {
       octets,
       ecrire(nouveaux) {
+        // L'ancien flux ne doit pas rester dans le fichier : la page ne le
+        // montre plus, mais il y serait encore, en clair, et le texte caviardé
+        // se relirait dans les octets. On le retire donc du document, sauf
+        // s'il sert aussi à une autre page.
+        const anciens = [];
+        const avant = page.node.get(PDFName.of('Contents'));
+        if (avant instanceof PDFArray) { for (let i = 0; i < avant.size(); i++) anciens.push(avant.get(i)); }
+        else if (avant != null) anciens.push(avant);
         const flux = doc.context.flateStream(nouveaux);
         const ref = doc.context.register(flux);
         page.node.set(PDFName.of('Contents'), ref);
+        const partage = fxPartageContenus(doc);
+        anciens.forEach(r => {
+          try {
+            if (!r || typeof r.objectNumber !== 'number') return;
+            if ((partage.get(String(r)) || 0) > 1) return;
+            doc.context.delete(r);
+          } catch (e) { signaler('Écriture du flux', e); }
+        });
       },
     };
   }

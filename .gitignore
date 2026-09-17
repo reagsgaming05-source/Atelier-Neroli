@@ -17,3 +17,8 @@ outils/desktop/app/
 outils/desktop/dist/
 outils/desktop/.electron-cache/
 outils/desktop/construction.json
+
+# suite de bout en bout (outils/test-e2e)
+outils/test-e2e/node_modules/
+outils/test-e2e/test-results/
+outils/test-e2e/playwright-report/
