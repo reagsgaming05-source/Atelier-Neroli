@@ -288,6 +288,25 @@ async function findPage(app, pred, timeoutMs) {
         });
         console.log('pièce depuis DGEO :', JSON.stringify(saved));
         ok = ok && saved.source === 'dgeo' && saved.ref === 'D-TEST-1' && saved.saisi && saved.linked && saved.pending === 0 && saved.tag;
+
+        // le même décompte refait après la création de la pièce : un seul enregistrement, toujours
+        // lié à sa pièce, et rien ne revient dans « à passer en pièce comptable »
+        const capturedBefore = await win.evaluate(async () => ((await window.CaisseDgeo.list()).find((x) => x.id === 'smoke-dgeo') || {}).capturedAt || '');
+        await dgeoPage.evaluate(async (d) => { const r = await fetch('/api/excel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); await r.blob(); }, dossier);
+        const again = await win.evaluate(async (was) => {
+          let list = [];
+          for (let i = 0; i < 50; i++) {
+            list = await window.CaisseDgeo.list();
+            const mine = list.filter((x) => x.id === 'smoke-dgeo');
+            if (mine.length > 1 || (mine[0] && mine[0].capturedAt !== was)) break;
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          const mine = list.filter((x) => x.id === 'smoke-dgeo');
+          await window.CaisseSaisie.refreshDgeo();
+          return { entries: mine.length, refait: !!(mine[0] && mine[0].capturedAt !== was), saisi: !!(mine[0] && mine[0].saisi), linked: !!(mine[0] && mine[0].pieceId), pending: document.querySelectorAll('#dgeoPending button[data-dgeo-use="smoke-dgeo"]').length };
+        }, capturedBefore);
+        console.log('décompte refait :', JSON.stringify(again));
+        ok = ok && again.entries === 1 && again.refait && again.saisi && again.linked && again.pending === 0;
         await win.evaluate(async () => { const s = window.CaisseSaisie.state; window.CaisseRegistre.removePiece(s.reg, s.reg.pieces[s.reg.pieces.length - 1].id); await s.storage.save(s.reg); window.CaisseSaisie.renderJournal(); });
       }
       await win.evaluate(async () => { await window.CaisseDgeo.forget('smoke-dgeo'); await window.CaisseSaisie.refreshDgeo(); });
