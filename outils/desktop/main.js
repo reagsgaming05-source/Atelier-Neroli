@@ -59,6 +59,19 @@ function lire(chemins) {
 // Fichiers récents : une liste de chemins dans le dossier de données, rien d'autre.
 const RECENTS_MAX = 12;
 const fichierRecents = () => path.join(app.getPath('userData'), 'recents.json');
+
+// Les réglages du poste, dans le dossier de données à côté de l'exécutable.
+const fichierReglages = () => path.join(app.getPath('userData'), 'reglages.json');
+function lireReglages() {
+  try { const r = JSON.parse(fs.readFileSync(fichierReglages(), 'utf8')); return r && typeof r === 'object' ? r : {}; } catch (e) { return {}; }
+}
+function ecrireReglages(r) {
+  try {
+    fs.mkdirSync(path.dirname(fichierReglages()), { recursive: true });
+    fs.writeFileSync(fichierReglages(), JSON.stringify(r, null, 1));
+  } catch (e) { /* le réglage ne survivra pas au redémarrage, tant pis */ }
+}
+const toujoursEnOnglet = () => lireReglages().toujoursEnOnglet === true;
 function lireRecents() {
   try { const l = JSON.parse(fs.readFileSync(fichierRecents(), 'utf8')); return Array.isArray(l) ? l.filter((c) => typeof c === 'string') : []; } catch (e) { return []; }
 }
@@ -122,14 +135,24 @@ const fenetres = new Set();
 const fenetreActive = () => BrowserWindow.getFocusedWindow() || Array.from(fenetres).pop() || null;
 const fenetreDe = (sender) => BrowserWindow.fromWebContents(sender);
 
-// Une seule instance : un nouveau double-clic sur un PDF ouvre une nouvelle fenêtre
-// dans l'application déjà lancée — un document à part, jamais ajouté au précédent.
+// Une seule instance. Un nouveau double-clic sur un PDF ouvre par défaut une
+// nouvelle fenêtre — un document à part. Deux façons d'ouvrir plusieurs
+// documents, fenêtres depuis le bureau et onglets depuis l'application, c'est
+// une de trop : « Toujours ouvrir en onglet » (menu Fichier) range les
+// doubles-clics dans la fenêtre déjà ouverte.
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', (_e, argv) => {
   const liste = lire(fichiersDe(argv));
   liste.forEach((f) => ajouterRecent(f.chemin));
-  if (liste.length) { createWindow(liste); return; }
   const w = fenetreActive();
+  if (liste.length) {
+    if (toujoursEnOnglet() && w) {
+      if (w.isMinimized()) w.restore();
+      w.focus();
+      w.webContents.send('blonay:ouvrir-onglet', liste);
+    } else createWindow(liste);
+    return;
+  }
   if (w) { if (w.isMinimized()) w.restore(); w.focus(); }
 });
 
@@ -324,6 +347,13 @@ function buildMenu() {
         { label: 'Ajouter au document…', accelerator: 'CmdOrCtrl+Shift+O', click: ajouterDocuments },
         { label: 'Nouvel onglet', accelerator: 'CmdOrCtrl+T', click: () => envoyer('nouvel-onglet') },
         { label: 'Nouvelle fenêtre', accelerator: 'CmdOrCtrl+N', click: () => createWindow([]) },
+        {
+          type: 'checkbox',
+          label: 'Toujours ouvrir en onglet',
+          checked: toujoursEnOnglet(),
+          toolTip: 'Un double-clic sur un PDF depuis le bureau l\'ajoute à la fenêtre ouverte, au lieu d\'en ouvrir une seconde.',
+          click: (item) => { const r = lireReglages(); r.toujoursEnOnglet = !!item.checked; ecrireReglages(r); },
+        },
         { type: 'separator' },
         { id: 'enregistrer', label: 'Enregistrer', accelerator: 'CmdOrCtrl+S', click: () => envoyer('enregistrer') },
         { id: 'enregistrer-sous', label: 'Enregistrer sous…', accelerator: 'CmdOrCtrl+Shift+S', click: () => envoyer('exporter') },

@@ -118,6 +118,9 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path dist\BlonayPDF -DestinationPath ..\..\BlonayPDF-windows.zip
 
+      # upload-artifact@v4 et action-gh-release@v2 ciblent encore Node 20 : le
+      # runner les force sur Node 24 et prévient à chaque exécution. Rien n'est
+      # cassé aujourd'hui ; à passer au majeur suivant dès qu'il sort.
       - uses: actions/upload-artifact@v4
         with:
           name: BlonayPDF-windows

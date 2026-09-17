@@ -17,6 +17,19 @@ Aucune donnée ne quitte votre poste : les documents sont lus, modifiés et réa
 dans cette fenêtre. Les réglages mémorisés (vue, zoom, thème) sont enregistrés dans le
 sous-dossier « data » à côté de l'exécutable.
 
+À SAVOIR SUR LE DOSSIER « data »
+Ce que vous mémorisez y est écrit en clair, sans mot de passe : vos tampons, vos
+signatures manuscrites, la liste de vos fichiers récents, et le travail mis de côté
+pour la récupération (qui contient une copie des documents ouverts). Quiconque
+ouvre votre session Windows, ou met la main sur la clé USB si l'application y
+tourne, peut donc lire ces documents et reposer votre signature sur un PDF.
+Trois conséquences pratiques :
+ - verrouillez votre session Windows quand vous quittez votre bureau ;
+ - ne mémorisez pas votre signature manuscrite sur un poste partagé ou sur une clé
+   USB qui circule — tracez-la au moment de signer, sans cocher « Mémoriser » ;
+ - « Fichier › Ouvrir le dossier des données » y donne accès : vous pouvez vider
+   ce que vous ne voulez pas y laisser.
+
 Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un PDF, « Ouvrir avec »,
 « Choisir une autre application », puis désignez BlonayPDF.exe et cochez « Toujours ».
 Chaque PDF double-cliqué s'ouvre dans sa propre fenêtre ; pour combiner plusieurs

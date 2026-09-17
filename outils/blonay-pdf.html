@@ -1221,7 +1221,7 @@
   const APP = 'Blonay PDF';
   const APP_VERSION = '2.0.0';
   // Renseigné par build.js : date de construction et commit.
-  const APP_CONSTRUCTION = "construite le 17.09.2026, commit 63c5f33";
+  const APP_CONSTRUCTION = "construite le 17.09.2026, commit dbd5bfd";
   const CDN = {
     pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
     worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
@@ -2331,7 +2331,9 @@
     onglets.forEach(o => {
       const e = o.id === ongletActif ? prendreEtat() : o.etat;
       const t = document.createElement('div');
-      t.className = 'onglet'; t.setAttribute('role', 'tab'); t.tabIndex = 0;
+      t.className = 'onglet'; t.setAttribute('role', 'tab');
+      // Un seul onglet est atteignable par Tab ; les flèches font le reste.
+      t.tabIndex = o.id === ongletActif ? 0 : -1;
       t.dataset.onglet = o.id;
       t.setAttribute('aria-selected', o.id === ongletActif ? 'true' : 'false');
       const titre = titreEtat(e);
@@ -2347,7 +2349,7 @@
       t.appendChild(x);
       t.addEventListener('click', () => activerOnglet(o.id));
       t.addEventListener('contextmenu', ev => menuOnglet(ev, o.id));
-      t.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); activerOnglet(o.id); } });
+      t.addEventListener('keydown', ev => surOngletTouche(ev, o.id));
       el.onglets.appendChild(t);
     });
     const plus = document.createElement('button');
@@ -2357,6 +2359,26 @@
     plus.addEventListener('click', () => nouvelOnglet());
     el.onglets.appendChild(plus);
   }
+  // Le clavier dans la barre d'onglets : les flèches passent de l'un à
+  // l'autre, Début et Fin aux extrémités, Suppr ferme celui qu'on tient.
+  function surOngletTouche(ev, id) {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); activerOnglet(id); return; }
+    if (ev.key === 'Delete') { ev.preventDefault(); fermerOnglet(id); return; }
+    const i = onglets.findIndex(o => o.id === id);
+    if (i < 0) return;
+    let cible = null;
+    if (ev.key === 'ArrowRight') cible = onglets[(i + 1) % onglets.length];
+    else if (ev.key === 'ArrowLeft') cible = onglets[(i - 1 + onglets.length) % onglets.length];
+    else if (ev.key === 'Home') cible = onglets[0];
+    else if (ev.key === 'End') cible = onglets[onglets.length - 1];
+    if (!cible) return;
+    ev.preventDefault();
+    activerOnglet(cible.id);
+    // Le rendu a remplacé les éléments : on reprend le clavier sur le neuf.
+    const n = el.onglets.querySelector('[data-onglet="' + cible.id + '"]');
+    if (n) n.focus();
+  }
+
   function quitterDocument() {
     if (ed.root && !ed.root.hidden) closeEditor();
     if (openDlg) openDlg.close();
@@ -6360,7 +6382,9 @@
     const dlg = document.createElement('div');
     dlg.className = 'dialog' + (o.wide ? ' wide' : '') + (o.libre ? ' libre' : '');
     dlg.setAttribute('role', 'dialog');
-    dlg.setAttribute('aria-modal', 'true');
+    // Une boîte « libre » n'est pas modale : on lit le document derrière, et le
+    // clavier doit pouvoir en sortir. Une vraie boîte, elle, retient le focus.
+    if (!o.libre) dlg.setAttribute('aria-modal', 'true');
     dlg.setAttribute('aria-label', o.title);
 
     const head = document.createElement('div'); head.className = 'dlg-head';
@@ -6378,10 +6402,13 @@
     // continue à lire, à défiler, à cliquer pendant qu'elle est ouverte.
     const conteneur = o.libre ? dlg : scrim;
 
+    // Où rendre le clavier en refermant : là où l'utilisateur l'avait laissé.
+    const revenirA = document.activeElement;
     const close = () => {
       conteneur.remove();
       document.removeEventListener('keydown', onKey, true);
       openDlg = null;
+      try { if (revenirA && revenirA.focus && document.contains(revenirA)) revenirA.focus(); } catch (_) {}
       if (o.onClose) o.onClose();
     };
     function onKey(e) {
@@ -6391,6 +6418,17 @@
         if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.tagName === 'SELECT')) return;
         const prim = foot.querySelector('.primary');
         if (prim && !prim.disabled) { e.preventDefault(); prim.click(); }
+      }
+      else if (e.key === 'Tab' && !o.libre) {
+        // Tab tourne dans la boîte : sans cela le clavier part parcourir le
+        // document derrière, sans moyen visible de revenir.
+        const cibles = Array.from(dlg.querySelectorAll('a[href], button:not(:disabled), input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'))
+          .filter(n => n === document.activeElement || (n.offsetWidth > 0 || n.offsetHeight > 0));
+        if (!cibles.length) return;
+        const premier = cibles[0], dernier = cibles[cibles.length - 1];
+        if (!dlg.contains(document.activeElement)) { e.preventDefault(); premier.focus(); }
+        else if (e.shiftKey && document.activeElement === premier) { e.preventDefault(); dernier.focus(); }
+        else if (!e.shiftKey && document.activeElement === dernier) { e.preventDefault(); premier.focus(); }
       }
     }
     x.addEventListener('click', close);
@@ -6901,12 +6939,30 @@
     core: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0/tesseract-core-simd-lstm.wasm.js',
   };
   const ocr = { moteur: null, langues: '', workerUrl: null, embarque: !!document.getElementById('tess-worker-src') };
+  // Le moteur pèse quelque deux cents mégaoctets. Il reste en place tant qu'on
+  // s'en sert — reconnaître une seconde page ne doit pas le recharger — mais il
+  // se libère après un long moment sans usage plutôt que de tenir la mémoire
+  // jusqu'à la fermeture de l'application.
+  const OCR_REPOS = 5 * 60 * 1000;
+  let ocrMinuteur = null, ocrEnCours = 0;
+  function ocrToucher() {
+    clearTimeout(ocrMinuteur);
+    ocrMinuteur = setTimeout(ocrLiberer, OCR_REPOS);
+  }
+  async function ocrLiberer() {
+    clearTimeout(ocrMinuteur); ocrMinuteur = null;
+    if (ocrEnCours || !ocr.moteur) return;
+    const m = ocr.moteur;
+    ocr.moteur = null; ocr.langues = '';
+    try { await m.terminate(); } catch (e) { signaler('OCR', e, 'info'); }
+  }
   // Un mot reconnu : sa ligne de base et son corps (ceux de sa ligne).
   const ocrBase = m => (m.b != null ? m.b : m.y + m.h * 0.8);
   const ocrCorps = m => (m.s > 0 ? m.s : Math.max(4, m.h * 1.05));
   const ocrDisponible = () => typeof WebAssembly === 'object' && typeof Worker !== 'undefined' && (ocr.embarque || !state.bureau);
   async function ocrMoteur(langues, avancement) {
     const cle = langues.join('+');
+    ocrToucher();
     if (ocr.moteur && ocr.langues === cle) return ocr.moteur;
     if (ocr.moteur) { try { await ocr.moteur.terminate(); } catch (_) {} ocr.moteur = null; }
     if (!window.Tesseract) {
@@ -6936,6 +6992,7 @@
     }
     ocr.moteur = await window.Tesseract.createWorker(modeles, 1, opts);
     ocr.langues = cle;
+    ocrToucher();
     return ocr.moteur;
   }
   // Une page rendue assez fin pour un texte imprimé (≈ 200 ppp), puis lue.
@@ -6961,7 +7018,11 @@
     cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
     await page.render({ canvasContext: cx, viewport: vp }).promise;
     page.cleanup();
-    const { data } = await moteur.recognize(cv, {}, { blocks: true, text: true });
+    // Tant qu'une page est en cours de lecture, le moteur ne se libère pas.
+    ocrEnCours++;
+    let data;
+    try { ({ data } = await moteur.recognize(cv, {}, { blocks: true, text: true })); }
+    finally { ocrEnCours--; ocrToucher(); }
     const mots = [], lignes = [];
     (data.blocks || []).forEach(b => (b.paragraphs || []).forEach(par => (par.lines || []).forEach(l => {
       const ml = [];
@@ -9002,6 +9063,9 @@
         [
           'Vos documents ne quittent jamais cet ordinateur. Ils sont lus, modifiés et réassemblés par le navigateur, dans la mémoire de cette page.',
           'Aucun envoi, aucun compte, aucun cookie, aucune mesure d\'audience, aucun identifiant. Rien n\'est conservé après la fermeture, hormis la taille des vignettes et le thème choisi.',
+          state.bureau
+            ? 'Ce que vous mémorisez est écrit en clair dans le dossier data/, sans mot de passe : tampons, signatures, fichiers récents, et le travail mis de côté pour la récupération. Quiconque ouvre votre session Windows peut donc reposer votre signature sur un PDF. Verrouillez votre session, et ne mémorisez pas votre signature sur un poste partagé — tracez-la au moment de signer, sans cocher « Mémoriser ».'
+            : 'Les tampons et signatures que vous mémorisez restent dans ce navigateur, en clair : quiconque ouvre votre session peut les reposer sur un PDF.',
           'La page ne sait contacter personne : ses règles de sécurité interdisent toute connexion sortante.',
         ].forEach(t => conf.appendChild(note(t)));
         b.append(groupOf('Confidentialité', [conf]));
@@ -10807,7 +10871,7 @@
         b.append(note(memo.hidden ? 'Tracez votre signature avec la souris, le doigt ou le stylet.' : 'Ou tracez-en une nouvelle :'));
         b.append(wrap);
         b.append(rowOf([field('Couleur', colorSel), garder], true));
-        b.append(note('Une signature mémorisée reste sur cet ordinateur (dossier data/ de l\'application) ; elle n\'est jamais écrite dans un PDF sans que vous l\'y posiez.'));
+        b.append(note('Une signature mémorisée reste sur cet ordinateur (dossier data/ de l\'application) ; elle n\'est jamais écrite dans un PDF sans que vous l\'y posiez. Elle y est écrite en clair : sur un poste partagé, mieux vaut la tracer chaque fois plutôt que la mémoriser.', 'warn'));
       },
       actions: [
         { label: 'Effacer', onClick: () => { ctx.clearRect(0, 0, cv.width, cv.height); any = false; } },

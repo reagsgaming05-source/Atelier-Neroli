@@ -202,6 +202,17 @@ Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le r
 mémorisés (vue, zoom, thème, taille des vignettes) vont dans le sous-dossier `data/` à côté de
 l'exécutable.
 
+**Ce que `data/` contient est en clair, sans mot de passe** : tampons, signatures manuscrites,
+fichiers récents, et le travail mis de côté pour la récupération — qui contient une copie des
+documents ouverts. Quiconque ouvre la session Windows, ou récupère la clé USB si l'application
+y tourne, peut lire ces documents et reposer la signature mémorisée sur un PDF. Le chiffrer
+n'y changerait rien tant que la clé dort à côté : ce qui protège ici, c'est la session
+Windows. D'où trois consignes, reprises dans le `LISEZMOI-portable.txt` livré avec le dossier :
+verrouiller sa session en quittant son bureau, ne pas mémoriser sa signature sur un poste
+partagé ou une clé qui circule (la tracer au moment de signer, sans cocher « Mémoriser »), et
+se servir de *Fichier › Ouvrir le dossier des données* pour vider ce qu'on ne veut pas y
+laisser.
+
 La fenêtre a son menu — *Fichier* (Ouvrir, Récents, Ajouter au document, Nouvelle fenêtre,
 Enregistrer, Enregistrer sous…, Imprimer, dossier des données), *Affichage* (Lire, Organiser,
 zoom, thème, plein écran), *Outils*, *Aide* (raccourcis, à propos). « Enregistrer » (Ctrl+S)
@@ -215,9 +226,12 @@ imprimante choisie, recto verso, copies, livret, plusieurs pages par feuille, é
 le format de la page — sans autre fenêtre ; « Propriétés… » passe par la fenêtre d'impression
 de Windows et les réglages du pilote.
 
-Chaque PDF double-cliqué s'ouvre dans **sa propre fenêtre**, comme dans Acrobat : deux
-documents ouverts depuis le bureau restent deux documents. Les combiner est un choix :
-*Fichier › Ajouter au document…*, ou le bouton « Ajouter un document » dans la fenêtre.
+Chaque PDF double-cliqué s'ouvre par défaut dans **sa propre fenêtre**, comme dans Acrobat :
+deux documents ouverts depuis le bureau restent deux documents. Cela fait deux façons d'en
+ouvrir plusieurs — fenêtres depuis le bureau, onglets depuis l'application — et on peut s'y
+perdre : *Fichier › Toujours ouvrir en onglet* range les doubles-clics dans la fenêtre déjà
+ouverte, et le réglage est retenu dans `data/`. Les combiner en un seul document reste un
+choix à part : *Fichier › Ajouter au document…*, ou le bouton « Ajouter un document ».
 Fermer avec des modifications non enregistrées demande d'abord confirmation.
 
 L'ancienne version (avant les dix ajouts de la version 2) reste disponible telle quelle dans

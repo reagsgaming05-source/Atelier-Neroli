@@ -175,6 +175,27 @@ async function tournerPage(win, n) {
   const recents = JSON.parse(fs.readFileSync(path.join(donnees, 'recents.json'), 'utf8'));
   console.log('récents :', JSON.stringify(recents.map((c) => path.basename(c))));
   verifier(recents.includes(pdf) && recents.includes(pdf2) && recents.includes(sortie), 'fichiers récents');
+
+  // 5. « Toujours ouvrir en onglet » : le même double-clic n'ouvre plus une
+  //    seconde fenêtre, il ajoute un onglet à celle qui est déjà là.
+  const docsPartout = async () => {
+    const out = [];
+    for (const w of app.windows()) {
+      try { out.push(...await w.evaluate(() => Array.from(document.querySelectorAll('#doc-list .doc-name')).map((e) => e.textContent))); } catch (e) { /* fenêtre en cours de fermeture */ }
+    }
+    return out;
+  };
+  fs.writeFileSync(path.join(donnees, 'reglages.json'), JSON.stringify({ toujoursEnOnglet: true }));
+  const fenetresAvant = app.windows().length;
+  const pdf3 = path.join(dossier, 'troisieme.pdf');
+  fs.writeFileSync(pdf3, fabriquerPdf(4));
+  const troisieme = exe ? spawn(exe, [pdf3], { env, stdio: 'ignore' }) : spawn(require('electron'), [path.join(__dirname), pdf3, '--no-sandbox'], { env, stdio: 'ignore' });
+  troisieme.on('error', () => {});
+  await attendre(async () => (await docsPartout()).some((t) => /troisieme\.pdf/.test(t)), 60000, 'document ouvert en onglet');
+  const fenetresApres = app.windows().length;
+  console.log('toujours en onglet : fenêtres', fenetresAvant, '->', fenetresApres, '| documents :', JSON.stringify(await docsPartout()));
+  verifier(fenetresApres === fenetresAvant, 'aucune fenêtre de plus quand le réglage est actif');
+
   await app.close();
   fs.rmSync(dossier, { recursive: true, force: true });
   console.log(ok ? 'SMOKE OK' : 'SMOKE ÉCHEC');
