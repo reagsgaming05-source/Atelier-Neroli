@@ -135,6 +135,14 @@ for (const ic of ['icon-32.png', 'icon-48.png', 'icon-256.png']) {
   fs.copyFileSync(path.join(OUT, 'application', ic), path.join(APPDIR, ic));
 }
 
-for (const f of ['blonay-pdf.html', 'blonay-pdf-hors-ligne.html', '../docs/index.html', 'application/lanceur/blonay-pdf.html']) {
+// 5. le dossier à poser sur un partage réseau pour les collègues : la page
+//    hors ligne, à côté de ses deux lanceurs et de son mode d'emploi. Elle est
+//    produite ici et non recopiée à la main : une copie faite à la main reste
+//    à la version du jour où on l'a faite, et personne ne s'en aperçoit.
+fs.copyFileSync(path.join(OUT, 'blonay-pdf-hors-ligne.html'),
+  path.join(OUT, 'pour-les-collegues', 'blonay-pdf.html'));
+
+for (const f of ['blonay-pdf.html', 'blonay-pdf-hors-ligne.html', '../docs/index.html',
+  'application/lanceur/blonay-pdf.html', 'pour-les-collegues/blonay-pdf.html']) {
   console.log(f.replace('../', '').padEnd(34), (fs.statSync(path.join(OUT, f)).size / 1024 / 1024).toFixed(2) + ' Mo');
 }
