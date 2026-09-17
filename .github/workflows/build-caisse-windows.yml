@@ -97,13 +97,20 @@ jobs:
         working-directory: caisse-ecoles/desktop
         shell: pwsh
         run: |
+          # Ce zip est produit par l'autre chaîne (branche de Décompte DGEO) et remplacé sur sa
+          # pré-release. Pendant ce remplacement, il est absent quelques minutes : si les deux
+          # constructions partent ensemble (deux branches poussées à la suite), celle-ci tombait
+          # dans le trou et échouait. On attend donc le temps d'une construction complète.
           $url = "https://github.com/${{ github.repository }}/releases/download/windows-latest/DecompteDGEO-windows.zip"
           $ok = $false
-          foreach ($try in 1..5) {
+          foreach ($try in 1..12) {
             try { Invoke-WebRequest $url -OutFile decompte.zip -TimeoutSec 600; $ok = $true; break }
-            catch { Write-Host "Tentative $try/5 : $($_.Exception.Message)"; Start-Sleep -Seconds (10 * $try) }
+            catch {
+              Write-Host "Tentative $try/12 : $($_.Exception.Message)"
+              if ($try -lt 12) { Write-Host "  (Décompte DGEO est peut-être en cours de republication) nouvel essai dans 60 s"; Start-Sleep -Seconds 60 }
+            }
           }
-          if (-not $ok) { throw "Décompte DGEO introuvable : $url (publiez d'abord la release windows-latest)" }
+          if (-not $ok) { throw "Décompte DGEO introuvable après 12 tentatives : $url (la construction de sa branche a-t-elle abouti ?)" }
           Expand-Archive decompte.zip -DestinationPath decompte-extract -Force
           $exe = Get-ChildItem decompte-extract -Recurse -Filter DecompteDGEO.exe | Select-Object -First 1
           if (-not $exe) { throw "DecompteDGEO.exe introuvable dans le zip" }
