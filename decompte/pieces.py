@@ -170,10 +170,9 @@ FARE_CATEGORIES: list[tuple[str, re.Pattern]] = [
 
 # « enseignant », « accompagnateur », « maître » : tarifs adultes des billets de groupe (MOB, CFF,
 # TL…). Ces mots sont trop courants pour être reconnus n'importe où : une facture adressée « à
-# l'attention de l'enseignant responsable » n'est pas une ligne tarifaire. Ils ne comptent donc que
-# sur une ligne courte, de la forme « 2 Enseignants CHF 8.40 ».
+# l'attention de l'enseignant responsable » n'est pas une ligne tarifaire.
 STAFF_RE = re.compile(r"accompagnat|acc\.|enseignant|maitre|maitresse|professeur|\bprof\b|lehrer|lehrperson|begleit", re.I)
-STAFF_LABEL_MAX = 30
+STAFF_LABEL_MAX = 40
 
 TOTAL_COUNT_RE = re.compile(r"^\s*(\d{1,3})\s+(total|tot\.?)\s*$", re.I)
 QTY_PREFIX_RE = re.compile(r"^\s*(\d{1,3})\s*[xX×]?\s+(?=[A-Za-zÀ-ÿ])")
@@ -189,12 +188,29 @@ def fare_label(line: str) -> str:
     return re.sub(r"\s+", " ", label).strip(" -:|")
 
 
-def fare_category(label: str) -> str:
+def _staff_fare_line(line: str, piece_total: Optional[float]) -> bool:
+    """« 2 Enseignants CHF 8.40 » est une ligne tarifaire ; « À l'attention de l'enseignant
+    responsable CHF 250.00 » est une phrase de facture.
+
+    La longueur de l'intitulé ne sépare pas les deux : « 3 Accompagnants / Begleitpersonen »
+    est long et « Facture enseignant responsable » est court. On regarde donc la structure :
+    une quantité écrite sur la ligne, ou bien un montant qui n'est pas le total de la pièce
+    (c'est-à-dire un prix unitaire, et non la somme à payer)."""
+    if QTY_PREFIX_RE.match(line) or QTY_MIDDLE_RE.search(line) or QTY_AFTER_LABEL_RE.search(line):
+        return True
+    if len(fare_label(line)) > STAFF_LABEL_MAX:
+        return False
+    if piece_total is None:
+        return True
+    return all(abs(a.value - piece_total) > 0.011 for a in find_amounts([line]))
+
+
+def fare_category(label: str, piece_total: Optional[float] = None) -> str:
     n = normalize(label)
     for cat, rx in FARE_CATEGORIES:
         if rx.search(n):
             return cat
-    if STAFF_RE.search(n) and len(fare_label(label)) <= STAFF_LABEL_MAX:
+    if STAFF_RE.search(n) and _staff_fare_line(label, piece_total):
         return "plein"
     return "autre"
 
@@ -208,7 +224,7 @@ def parse_fare_line_ex(
     line: str, default_currency: Currency, piece_total: Optional[float]
 ) -> Optional[tuple[FareLine, list[float]]]:
     """Reconnaît « 3 Prix entier CHF 2.80 », « ECOLES 15,-groupe 38 15,00 570,00 », « Erwachsene 2 x 12.40 »…"""
-    cat = fare_category(line)
+    cat = fare_category(line, piece_total)
     if cat == "autre":
         return None
     amounts = find_amounts([line])

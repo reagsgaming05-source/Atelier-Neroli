@@ -1,3 +1,5 @@
+import pytest
+
 from decompte.models import Block, Line, Word
 from decompte.pieces import analyse_block, classify_kind, parse_fares
 from decompte.textutils import normalize
@@ -148,17 +150,38 @@ def test_mob_group_ticket_teacher_fares_are_adult_fares():
 # ---------------------------------------------------------------------------
 
 
-def test_mention_enseignant_dans_une_phrase_nest_pas_un_tarif():
-    p = analyse_block(block(["Facture", "A l'attention de l'enseignant responsable CHF 250.00", "Total CHF 250.00"]), 1)
-    assert p.fares == []
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "A l'attention de l'enseignant responsable CHF 250.00",
+        "Facture enseignant responsable CHF 250.00",
+        "Payable par l'enseignant CHF 250.00",
+        "Concerne : camp - enseignant CHF 250.00",
+    ],
+)
+def test_mention_enseignant_dans_une_phrase_nest_pas_un_tarif(phrase):
+    """Sans quantité et pour le montant total de la pièce : c'est une phrase, pas un tarif.
+
+    Pris pour un tarif adulte, le montant entier partait à la charge de l'État au lieu de
+    passer par la règle de trois."""
+    p = analyse_block(block(["Facture", phrase, "Total CHF 250.00"]), 1)
+    assert p.fares == [], f"tarif inventé : {[(f.category, f.qty, f.unit_price, f.label) for f in p.fares]}"
     assert p.total == 250.0
 
 
-def test_ligne_tarifaire_enseignant_reste_un_tarif_adulte():
-    p = analyse_block(block(["MOB Golden Pass", "2 Enseignants CHF 8.40", "24 Jeune 6-16 CHF 4.20", "CHF 117.60"]), 1)
+@pytest.mark.parametrize(
+    "ligne,qty,prix",
+    [
+        ("2 Enseignants CHF 8.40", 2, 8.40),
+        ("3 Accompagnants / Begleitpersonen CHF 26.00 78.00", 3, 26.00),
+        ("Begleitperson 2 x 12.40", 2, 12.40),
+        ("1 accompagnateur CHF 12.00", 1, 12.00),
+    ],
+)
+def test_ligne_tarifaire_enseignant_reste_un_tarif_adulte(ligne, qty, prix):
+    p = analyse_block(block(["MOB Golden Pass", ligne, "24 Jeune 6-16 CHF 4.20", "CHF 300.00"]), 1)
     cats = {(f.category, f.qty, f.unit_price) for f in p.fares}
-    assert ("plein", 2, 8.40) in cats
-    assert ("enfant", 24, 4.20) in cats
+    assert ("plein", qty, prix) in cats, f"tarifs lus : {cats}"
 
 
 def test_page_de_decompte_reste_un_dossier_valide():

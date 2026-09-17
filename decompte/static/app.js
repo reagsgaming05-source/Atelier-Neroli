@@ -69,7 +69,7 @@
 
   function field(label, key, opts = {}) {
     const input = opts.select
-      ? el("select", { onchange: (e) => { dossier[key] = e.target.value; onChange(opts.recompute); } }, opts.select.map(([v, t]) => el("option", { value: v, selected: dossier[key] === v ? "" : null }, t)))
+      ? el("select", { onchange: (e) => { dossier[key] = e.target.value; onChange(opts.recompute); if (opts.rerender) opts.rerender(); } }, opts.select.map(([v, t]) => el("option", { value: v, selected: dossier[key] === v ? "" : null }, t)))
       : el("input", { type: opts.type || "text", value: dossier[key] ?? "", placeholder: opts.placeholder || "", onchange: (e) => { dossier[key] = opts.type === "number" ? num(e.target.value) : e.target.value; onChange(opts.recompute); } });
     return el("label", { class: "f" }, [label, input]);
   }
@@ -78,7 +78,9 @@
     const g = $("#dossier-fields"); g.innerHTML = "";
     g.append(
       field("N° de dossier (course / camp n°)", "numero", { placeholder: "ex. ANS100325" }),
-      field("Type d'activité (modèle Excel)", "type_activite", { select: [["course", "Course d'école"], ["camp", "Camp"]], recompute: true }),
+      // les rubriques des pièces dépendent du type : les fiches sont redessinées, sinon les
+      // rubriques du camp (Hébergement, Nourriture, Cuisinière) restaient inaccessibles
+      field("Type d'activité (modèle Excel)", "type_activite", { select: [["course", "Course d'école"], ["camp", "Camp"]], recompute: true, rerender: () => renderPieces() }),
       field("Classe(s)", "classe"),
       field("Enseignant-e responsable", "enseignant"),
       field("Nom de l'activité", "activite"),
@@ -146,7 +148,16 @@
       el("div", { class: "thumb", style: thumbStyle(p), title: "Agrandir", onclick: () => openViewer(p) }),
       el("div", { class: "thumb-cap" }, [el("span", {}, `page ${p.page}`), el("a", { href: "#", onclick: (e) => { e.preventDefault(); openViewer(p); } }, "voir la page")]),
     ]);
-    const kindSel = el("select", { onchange: (e) => { p.kind = e.target.value; if (NON_REMB.includes(p.kind)) { p.include = false; p.exclusion_reason = KINDS[p.kind]; } else if (p.exclusion_reason && NON_REMB.some(k => (p.exclusion_reason || "").includes(KINDS[k]))) { p.include = true; p.exclusion_reason = null; } onChange(true); renderPieces(); } },
+    // Le motif d'exclusion vient du serveur (rules.NON_REMBOURSABLES) et ne se reconnaît pas au
+    // texte affiché ici : on se fonde sur la sorte précédente. Corriger un récépissé mal reconnu
+    // ne rendait jamais la pièce au décompte.
+    const kindSel = el("select", { onchange: (e) => {
+      const avant = p.kind;
+      p.kind = e.target.value;
+      if (NON_REMB.includes(p.kind)) { p.include = false; p.exclusion_reason = KINDS[p.kind]; }
+      else if (NON_REMB.includes(avant)) { p.include = true; p.exclusion_reason = null; }
+      onChange(true); renderPieces();
+    } },
       Object.entries(KINDS).map(([v, t]) => el("option", { value: v, selected: p.kind === v ? "" : null }, t)));
     const includeCb = el("input", { type: "checkbox", onchange: (e) => { p.include = e.target.checked; if (p.include) p.exclusion_reason = null; onChange(true); renderPieces(); } });
     includeCb.checked = !!p.include;
@@ -166,7 +177,7 @@
       f("Date", "date"),
       // changer la devise redessine la fiche (les champs « Montant CHF imprimé » et « Taux »
       // n'apparaissent qu'en EUR) et suit les tarifs, comme dans l'application fenêtrée
-      f("Devise", "currency", { select: [["CHF", "CHF"], ["EUR", "EUR"]], rerender: true, after: () => { for (const fl of p.fares) fl.currency = p.currency; } }),
+      f("Devise", "currency", { select: [["CHF", "CHF"], ["EUR", "EUR"]], rerender: true, after: () => { for (const fl of p.fares) fl.currency = p.currency; renderDossier(); } }),
       f("Total de la pièce", "total", { type: "number" }),
       ...(p.currency === "EUR" ? [f("Montant CHF imprimé (si présent)", "total_chf", { type: "number" }), f("Taux sur la pièce", "rate", { type: "number" })] : []),
       f("Rubrique Excel", "rubrique", { select: rubs.map(r => [r, r]) }),
@@ -218,7 +229,9 @@
         el("td", {}, el("select", { title: "Règle de trois : coût total (H) / total participants × titrés, formule du modèle. Saisie directe : tarifs adultes connus, part État en I.", onchange: (e) => {
           const m = e.target.value;
           if (m === "direct" && (r.cout_direct == null)) r.cout_direct = Math.round(rowAmount(r) * 100) / 100;
-          if (m === "prorata" && (r.cout_total == null)) r.cout_total = r.cout_direct || 0;
+          // Passage en règle de trois : la colonne H attend le montant GLOBAL payé, pas la part de
+          // l'État (colonne I). La recopier revenait à appliquer la règle de trois une seconde fois
+          // et le montant s'effondrait en silence : la case reste à remplir.
           r.mode = m; rowsManual = true; renderRows(); // le détail des tarifs (formule Excel) est conservé pour un retour en saisie directe
         } }, [["prorata", "Règle de trois (H)"], ["direct", "Saisie directe (I)"]].map(([v, t]) => el("option", { value: v, selected: r.mode === v ? "" : null }, t)))),
         el("td", { class: "num" }, r.mode === "prorata"
@@ -282,7 +295,7 @@
     const page = dossier.pages.find(x => x.number === vPage);
     if (!page) return;
     $("#viewer-title").textContent = `Page ${vPage} / ${dossier.pages.length}` + (page.kind === "form" ? " — formulaire" : page.kind === "decompte" ? " — décompte DGEO joint" : "") + (vPiece && vPiece.page === vPage ? ` — pièce ${vPiece.numero}` : "");
-    vImg.onload = () => {
+    const placer = () => {
       if (vPiece && vPiece.page === vPage) {
         const s = vImg.clientWidth / page.width;
         const [x0, y0, x1, y1] = vPiece.bbox;
@@ -291,7 +304,11 @@
         $("#viewer-wrap").scrollTo({ top: Math.max(0, y0 * s - 40) });
       } else vHl.hidden = true;
     };
+    vImg.onload = placer;
     vImg.src = page.url;
+    // même page déjà affichée : « load » ne se déclenche pas, le cadre serait resté sur la pièce
+    // précédente
+    if (vImg.complete && vImg.naturalWidth) placer();
     $("#viewer-text").textContent = vPiece && vPiece.page === vPage ? vPiece.text : "";
   }
   $("#viewer-close").addEventListener("click", () => viewer.classList.remove("open"));
