@@ -170,4 +170,24 @@ jobs:
             Aucune installation, aucun navigateur : tout est inclus. Une seule application pour les deux outils : le menu du logo, en haut de la barre latérale, passe de Caisse écoles (saisie des pièces, pièces scannées, comptage de la caisse, journal, Excel, PDF) à Décompte DGEO (courses d'école & camps, démarré avec l'application et affiché dans la même page, avec le récapitulatif des décomptes). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
             Cette version ne contient aucun nom de personne : posez `vocabulaire-noms.js` (remis séparément) à côté de l'exécutable.
             Construit automatiquement depuis le commit ${{ github.sha }}.
-          files: ComptaBlonay-windows.zip
+
+      # L'envoi du zip (~200 Mo) par l'action échoue par intermittence, et elle supprime l'ancien
+      # fichier AVANT d'envoyer le nouveau : la page de téléchargement restait alors vide. « gh »
+      # remplace le fichier en place (--clobber) et réessaie.
+      - name: Publier le zip sur la pré-release
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for try in 1 2 3 4 5; do
+            if gh release upload compta-blonay-windows-latest ComptaBlonay-windows.zip --clobber --repo "$GITHUB_REPOSITORY"; then
+              echo "zip publié (tentative $try)"
+              exit 0
+            fi
+            echo "tentative $try échouée ; nouvelle tentative dans $((15 * try)) s"
+            sleep $((15 * try))
+          done
+          echo "::error::le zip n'a pas pu être publié sur la pré-release"
+          exit 1
