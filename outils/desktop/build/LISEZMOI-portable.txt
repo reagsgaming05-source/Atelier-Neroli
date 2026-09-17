@@ -31,11 +31,21 @@ versions (texte, et aspect en rouge ; reconnaissance à la demande pour un scan)
 un dossier de pièces (sommaire, intercalaires, pagination, signets), lister et retirer les
 commentaires d'un PDF reçu, traiter plusieurs fichiers d'un coup. Dans l'éditeur : tampons
 (Reçu le, Payé, Copie conforme…) et signatures mémorisées sur ce poste (dossier « data »).
-Caviarder ou effacer du texte garde la page nette (vectorielle) quand la police le permet.
+Caviarder ou effacer du texte garde la page nette (vectorielle) : les lettres sont retirées
+du fichier, et si une image passe sous le rectangle, seule cette image est refaite, pas la
+page entière. Sur un scan reconnu, le texte reste donc sélectionnable partout sauf sous le
+rectangle.
 
-En mode Lire, le texte se sélectionne et se copie. Une longue opération (OCR, lot) s'annule
-par le bouton en bas ou Échap ; ce qui a été contourné pendant une opération est noté dans
-le journal, en bas de la fenêtre.
+En mode Lire, le texte se sélectionne et se copie. Rechercher (Ctrl+F) ouvre un panneau qui
+flotte à côté du document : chaque occurrence est surlignée sur la page, Entrée passe à la
+suivante (Maj+Entrée à la précédente), et « mot entier » évite les faux résultats.
+
+Clic droit sur une page : pivoter, modifier, signet, copier le texte, dupliquer, extraire,
+supprimer. Clic droit sur un onglet : enregistrer, enregistrer sous, fermer, fermer les autres.
+
+Une longue opération (OCR, lot) s'annule par le bouton en bas ou Échap — la reconnaissance
+annonce le temps restant ; ce qui a été contourné pendant une opération est noté dans le
+journal, en bas de la fenêtre.
 
 Imprimer (Fichier › Imprimer) : l'application connaît vos imprimantes et envoie
 directement — imprimante choisie, recto verso, copies, livret, plusieurs pages par

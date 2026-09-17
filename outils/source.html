@@ -677,6 +677,24 @@
   }
   @keyframes pose-fenetre { from { opacity: 0; transform: translateY(10px) scale(.985); } }
   .dialog.wide { width: min(780px, 100%); }
+  .dialog.libre { position: fixed; top: 58px; right: 14px; z-index: 86; width: min(430px, calc(100vw - 28px)); max-height: min(80vh, 760px); }
+  .se-nav { display: flex; align-items: center; gap: 8px; }
+  .se-nav .tb-btn { height: 32px; border-color: var(--trait); background: var(--relief); }
+  .se-nav .compte { margin-left: auto; font-family: var(--chiffre); font-size: 12px; color: var(--texte-2); }
+  .feuille-vue .marques { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+  .feuille-vue .marques i { position: absolute; background: rgba(224, 163, 60, .38); box-shadow: 0 0 0 1px rgba(224, 163, 60, .55); border-radius: 2px; }
+  .feuille-vue .marques i.courante { background: rgba(63, 123, 242, .42); box-shadow: 0 0 0 2px var(--bleu-vif); }
+  .tile.hit-courante .sheet { box-shadow: 0 0 0 3px var(--bleu-vif), var(--ombre-levee); }
+  .apercu-tableau td.nombre { text-align: right; }
+  .menu-ctx { position: fixed; z-index: 120; min-width: 230px; padding: 6px; background: var(--feutre); border: 1px solid var(--trait); border-radius: 12px; box-shadow: var(--ombre-flottante); animation: pose-fenetre .12s var(--elan); }
+  .menu-ctx button { display: flex; align-items: center; gap: 10px; width: 100%; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--texte); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+  .menu-ctx button:hover, .menu-ctx button:focus-visible { background: var(--survol); outline: none; }
+  .menu-ctx button:disabled { color: var(--texte-3); cursor: default; background: transparent; }
+  .menu-ctx button.danger:hover { color: var(--rouge); }
+  .menu-ctx button svg { width: 15px; height: 15px; color: var(--texte-2); flex: none; }
+  .menu-ctx button span { flex: 1; }
+  .menu-ctx button kbd { font-family: var(--chiffre); font-size: 11px; color: var(--texte-3); }
+  .menu-ctx .sep { height: 1px; margin: 5px 4px; background: var(--trait-fin); }
   .dlg-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 14px; border-bottom: 1px solid var(--trait-fin); flex: none; }
   .dlg-head svg.ic { width: 18px; height: 18px; color: var(--bleu-vif); flex: none; }
   .dlg-head h2 { margin: 0; font-family: var(--titre); font-size: 21px; font-weight: 400; letter-spacing: .005em; }
@@ -1351,6 +1369,7 @@
     el.last.textContent = text || '';
   }
   const plural = (n, one, many) => n + ' ' + (n > 1 ? many : one);
+  const dureeTexte = s => s < 60 ? Math.max(1, Math.round(s)) + ' s' : Math.floor(s / 60) + ' min' + (Math.round(s % 60) ? ' ' + pad(Math.round(s % 60), 2) + ' s' : '');
   function fmtSize(bytes) {
     if (bytes < 1024) return bytes + ' o';
     if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko';
@@ -2319,6 +2338,7 @@
       x.addEventListener('click', ev => { ev.stopPropagation(); fermerOnglet(o.id); });
       t.appendChild(x);
       t.addEventListener('click', () => activerOnglet(o.id));
+      t.addEventListener('contextmenu', ev => menuOnglet(ev, o.id));
       t.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); activerOnglet(o.id); } });
       el.onglets.appendChild(t);
     });
@@ -2420,6 +2440,110 @@
     setLast(plural(moving.length, 'page déplacée', 'pages déplacées') + ' vers « ' + titreEtat(e) + ' »');
   }
   const modifieQuelquePart = () => onglets.some(o => { const e = o.id === ongletActif ? state : o.etat; return !!(e && e.touched && e.pages.length); });
+
+  // =====================================================================
+  //  Menu contextuel (clic droit) : sur une page, sur un onglet
+  //  -------------------------------------------------------------------
+  //  Plus discret que la barre d'outils : les gestes courants à portée de
+  //  souris, avec leur raccourci en rappel.
+  // =====================================================================
+  let menuCtx = null;
+  function fermerMenuCtx() {
+    if (!menuCtx) return;
+    menuCtx.remove(); menuCtx = null;
+    document.removeEventListener('mousedown', surMenuCtxMousedown, true);
+    document.removeEventListener('keydown', surMenuCtxKey, true);
+    el.canvas.removeEventListener('scroll', fermerMenuCtx);
+    window.removeEventListener('blur', fermerMenuCtx);
+    window.removeEventListener('resize', fermerMenuCtx);
+  }
+  function surMenuCtxMousedown(e) { if (menuCtx && !menuCtx.contains(e.target)) fermerMenuCtx(); }
+  function surMenuCtxKey(e) {
+    if (!menuCtx) return;
+    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); fermerMenuCtx(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); e.stopPropagation();
+      const b = Array.from(menuCtx.querySelectorAll('button:not(:disabled)'));
+      if (!b.length) return;
+      const i = b.indexOf(document.activeElement);
+      b[(i + (e.key === 'ArrowDown' ? 1 : -1) + b.length) % b.length].focus();
+    }
+  }
+  function menuContextuel(e, entrees) {
+    e.preventDefault();
+    fermerMenuCtx();
+    const m = document.createElement('div'); m.className = 'menu-ctx'; m.setAttribute('role', 'menu');
+    entrees.forEach(en => {
+      if (!en) return;
+      if (en.sep) { const sp = document.createElement('div'); sp.className = 'sep'; m.appendChild(sp); return; }
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem');
+      if (en.icon) b.appendChild(icon(en.icon));
+      const t = document.createElement('span'); t.textContent = en.label; b.appendChild(t);
+      if (en.touche) { const k = document.createElement('kbd'); k.textContent = en.touche; b.appendChild(k); }
+      if (en.disabled) b.disabled = true;
+      if (en.danger) b.classList.add('danger');
+      b.addEventListener('click', () => { fermerMenuCtx(); en.run(); });
+      m.appendChild(b);
+    });
+    document.body.appendChild(m);
+    const W = m.offsetWidth, H = m.offsetHeight;
+    m.style.left = Math.max(4, Math.min(e.clientX, window.innerWidth - W - 6)) + 'px';
+    m.style.top = Math.max(4, Math.min(e.clientY, window.innerHeight - H - 6)) + 'px';
+    menuCtx = m;
+    setTimeout(() => { if (menuCtx === m) document.addEventListener('mousedown', surMenuCtxMousedown, true); }, 0);
+    document.addEventListener('keydown', surMenuCtxKey, true);
+    el.canvas.addEventListener('scroll', fermerMenuCtx);
+    window.addEventListener('blur', fermerMenuCtx);
+    window.addEventListener('resize', fermerMenuCtx);
+    const premier = m.querySelector('button:not(:disabled)');
+    if (premier) premier.focus();
+  }
+  function menuPage(e, id) {
+    const p = state.pages.find(x => x.id === id);
+    if (!p) return;
+    if (state.vue === 'organiser' && !state.selected.has(id)) { state.selected.clear(); state.selected.add(id); state.anchor = id; updateSelectionUI(); }
+    const ids = state.vue === 'organiser' ? targetsFor(id) : [id];
+    const n = ids.length, s = n > 1 ? ' (' + n + ' pages)' : '';
+    const selection = window.getSelection ? String(window.getSelection()).trim() : '';
+    menuContextuel(e, [
+      selection ? { label: 'Copier la sélection', run: async () => { const ok = await copierTexte(selection); toast(ok ? 'Texte copié.' : 'Le presse-papiers est inaccessible ici.', ok ? '' : 'warn'); } } : null,
+      selection ? { sep: true } : null,
+      { label: 'Pivoter à droite' + s, icon: IC.rotR, touche: 'R', run: () => rotatePages(ids, 90) },
+      { label: 'Pivoter à gauche' + s, icon: IC.rotL, touche: 'Maj+R', run: () => rotatePages(ids, -90) },
+      { sep: true },
+      { label: 'Modifier la page…', icon: IC.pencil, touche: 'Entrée', run: () => openEditor(id) },
+      { label: 'Ajouter un signet', icon: IC.signet, touche: 'Ctrl+B', run: () => ajouterSignet(id) },
+      { label: 'Copier le texte de la page', icon: IC.txt, run: async () => { const t = await getPageText(p); const ok = t.trim() && await copierTexte(t); toast(ok ? 'Texte de la page copié.' : (t.trim() ? 'Le presse-papiers est inaccessible ici.' : 'Cette page n\'a pas de texte (scan sans reconnaissance ?).'), ok ? '' : 'warn'); } },
+      { sep: true },
+      { label: 'Dupliquer' + s, icon: IC.doc, run: () => duplicatePages(ids) },
+      { label: 'Extraire' + s + ' dans un PDF…', icon: IC.save, run: () => exportPages(state.pages.filter(x => ids.includes(x.id)), safeBase(el.filename.value).replace(/-modifié$/, '') + '-extrait.pdf', { noInPlace: true }) },
+      { sep: true },
+      { label: 'Supprimer' + s, icon: IC.trash, touche: 'Suppr', danger: true, run: () => deletePages(ids) },
+    ]);
+  }
+  function fermerAutresOnglets(id) {
+    const gardes = [];
+    onglets.filter(o => o.id !== id).forEach(o => {
+      const e = o.id === ongletActif ? prendreEtat() : o.etat;
+      if (e && e.touched && e.pages.length) gardes.push(o); else fermerOnglet(o.id);
+    });
+    if (ongletActif !== id) activerOnglet(id);
+    if (gardes.length) toast(plural(gardes.length, 'onglet modifié gardé', 'onglets modifiés gardés') + ' : enregistrez-le ou fermez-le à part.', 'warn');
+  }
+  function menuOnglet(e, id) {
+    const o = onglets.find(x => x.id === id);
+    if (!o) return;
+    const etat = o.id === ongletActif ? state : o.etat;
+    const avecPages = !!(etat && etat.pages && etat.pages.length);
+    menuContextuel(e, [
+      { label: state.bureau ? 'Enregistrer' : 'Exporter le PDF', icon: IC.save, touche: 'Ctrl+S', disabled: !avecPages, run: () => { activerOnglet(id); enregistrer(); } },
+      { label: 'Enregistrer sous…', touche: 'Ctrl+Maj+S', disabled: !avecPages, run: () => { activerOnglet(id); if (state.pages.length && !state.busy) exportPages(state.pages, safeBase(el.filename.value) + '.pdf'); } },
+      { sep: true },
+      { label: 'Nouvel onglet', touche: 'Ctrl+T', run: () => nouvelOnglet() },
+      { label: 'Fermer l\'onglet', touche: 'Ctrl+W', run: () => fermerOnglet(id) },
+      { label: 'Fermer les autres onglets', disabled: onglets.length < 2, run: () => fermerAutresOnglets(id) },
+    ]);
+  }
 
   // =====================================================================
   //  Lecture : le document en continu
@@ -2605,6 +2729,7 @@
     el.lecture.replaceChildren(frag);
     // Les premières pages sans attendre le défilement.
     state.pages.slice(0, 3).forEach(p => { const f = feuilles.get(p.id); if (f) lecturePeindre(f, p); });
+    if (recherche.marques) poserMarquesLecture();
     majPageCourante();
   }
 
@@ -3647,7 +3772,15 @@
       else if (j.v === 'cm') ctm = fxMat([nb(-6), nb(-5), nb(-4), nb(-3), nb(-2), nb(-1)], ctm);
       else if (j.v === 'Do' || j.v === 'BI' || j.v === 'sh') {
         const pts = [[0, 0], [1, 0], [0, 1], [1, 1]].map(q => [ctm[0] * q[0] + ctm[2] * q[1] + ctm[4], ctm[1] * q[0] + ctm[3] * q[1] + ctm[5]]);
-        out.push({ x0: Math.min.apply(null, pts.map(q => q[0])), y0: Math.min.apply(null, pts.map(q => q[1])), x1: Math.max.apply(null, pts.map(q => q[0])), y1: Math.max.apply(null, pts.map(q => q[1])) });
+        // Le nom de l'objet posé et l'endroit exact où il est écrit : c'est
+        // par là qu'on remplacera l'image par sa version caviardée.
+        const dernier = args[args.length - 1];
+        const nom = j.v === 'Do' && dernier && dernier.t === 'nom' ? dernier.v : null;
+        out.push({
+          quoi: j.v, nom, nomA: nom ? dernier.a : 0, nomB: nom ? dernier.b : 0, ctm: ctm.slice(),
+          x0: Math.min.apply(null, pts.map(q => q[0])), y0: Math.min.apply(null, pts.map(q => q[1])),
+          x1: Math.max.apply(null, pts.map(q => q[0])), y1: Math.max.apply(null, pts.map(q => q[1])),
+        });
       }
       args.length = 0;
     }
@@ -3719,32 +3852,126 @@
   function fxZonesAVider(p) {
     const g = pageGeom(p);
     const zones = [];
+    const avecFond = (r, fond) => { r.fond = fond; return r; };
     (p.ann || []).forEach(an => {
-      if (an.type === 'redact') zones.push(rectToUser({ x: an.x - 0.5, y: an.y - 0.5, w: an.w + 1, h: an.h + 1 }, g));
-      else if (an.type === 'edit' && an.efface) zones.push(rectToUser({ x: an.x, y: an.y, w: an.w, h: an.h0 || annHauteur(an) }, g));
+      if (an.type === 'redact') zones.push(avecFond(rectToUser({ x: an.x - 0.5, y: an.y - 0.5, w: an.w + 1, h: an.h + 1 }, g), an.color || '#000000'));
+      else if (an.type === 'edit' && an.efface) zones.push(avecFond(rectToUser({ x: an.x, y: an.y, w: an.w, h: an.h0 || annHauteur(an) }, g), an.bg || '#FFFFFF'));
     });
     return zones;
   }
-  // Peut-on vider ces zones proprement, en gardant la page vectorielle ?
-  // Non si une image ou un formulaire y passe (ses pixels resteraient), ou si
-  // une police du flux ne se laisse pas réécrire.
-  function fxCaviardagePropre(doc, page, p, cache) {
+  // L'image posée sous ce nom, si c'en est une : sa définition dans la page.
+  function fxImageXObjet(page, nom) {
+    const { PDFName } = PDFLib;
+    const res = page.node.Resources();
+    if (!res || typeof res.lookup !== 'function') return null;
+    const xod = res.lookup(PDFName.of('XObject'));
+    if (!xod || typeof xod.lookup !== 'function') return null;
+    const xo = xod.lookup(PDFName.of(nom));
+    const dict = xo && xo.dict ? xo.dict : xo;
+    if (!dict || typeof dict.lookup !== 'function') return null;
+    const sub = dict.lookup(PDFName.of('Subtype'));
+    const quoi = sub && sub.asString ? sub.asString() : String(sub || '');
+    if (quoi !== '/Image') return null;
+    const nb = cle => { const v = dict.lookup(PDFName.of(cle)); return v && v.asNumber ? v.asNumber() : 0; };
+    return { largeur: nb('Width'), hauteur: nb('Height') };
+  }
+  // Ajoute une image à la page sous un nom neuf (les autres pages qui
+  // partagent ces ressources ne perdent rien : on n'écrase aucun nom).
+  function fxPoserImage(doc, page, nom, ref) {
+    const { PDFName } = PDFLib;
+    let res = page.node.Resources();
+    if (!res) { res = doc.context.obj({}); page.node.set(PDFName.of('Resources'), res); }
+    let xod = res.lookup(PDFName.of('XObject'));
+    if (!xod || typeof xod.set !== 'function') { xod = doc.context.obj({}); res.set(PDFName.of('XObject'), xod); }
+    xod.set(PDFName.of(nom), ref);
+  }
+
+  // Peut-on vider ces zones en gardant la page vectorielle ? Le texte s'y
+  // prête presque toujours ; une image sous la zone, elle, doit être
+  // refaite — seule cette image-là devient du pixel, pas la page entière.
+  // Rend { propre, images } : les images à refaire, ou propre à faux quand
+  // il faut convertir toute la page, comme avant.
+  function fxCaviardageBilan(doc, page, p, cache) {
+    const rien = { propre: false, images: [] };
     const zones = fxZonesAVider(p);
-    if (!zones.length) return true;
+    if (!zones.length) return { propre: true, images: [] };
     let flux = null;
-    try { flux = fxFluxPage(doc, page); } catch (e) { signaler('Caviardage', e); return false; }
-    if (!flux) return false;
+    try { flux = fxFluxPage(doc, page); } catch (e) { signaler('Caviardage', e); return rien; }
+    if (!flux) return rien;
     let objets = [];
-    try { objets = fxXObjets(flux.octets); } catch (e) { signaler('Caviardage', e); return false; }
-    if (objets.some(o => zones.some(z => zonesSeCroisent(o, z)))) { signaler('Caviardage', 'une image passe sous la zone : la page est convertie en image', 'info'); return false; }
+    try { objets = fxXObjets(flux.octets); } catch (e) { signaler('Caviardage', e); return rien; }
+    const images = [];
+    for (const o of objets) {
+      if (!zones.some(z => zonesSeCroisent(o, z))) continue;
+      if (o.quoi !== 'Do' || !o.nom) { signaler('Caviardage', 'un dessin passe sous la zone : la page est convertie en image', 'info'); return rien; }
+      // Posée de travers, ou posée plusieurs fois : on ne sait pas la refaire
+      // pour ce seul endroit.
+      if (Math.abs(o.ctm[1]) > 1e-6 || Math.abs(o.ctm[2]) > 1e-6 || o.ctm[0] <= 0 || o.ctm[3] <= 0) { signaler('Caviardage', 'une image posée de travers passe sous la zone : la page est convertie en image', 'info'); return rien; }
+      if (objets.filter(x => x.nom === o.nom).length > 1) { signaler('Caviardage', 'la même image sert à plusieurs endroits : la page est convertie en image', 'info'); return rien; }
+      const info = fxImageXObjet(page, o.nom);
+      if (!info) { signaler('Caviardage', 'un contenu non reconnu passe sous la zone : la page est convertie en image', 'info'); return rien; }
+      images.push(Object.assign({}, o, info));
+    }
     let shows = [];
-    try { shows = fxAffichages(flux.octets, nom => fxPolice(doc, page, nom, cache)); } catch (e) { signaler('Caviardage', e); return false; }
+    try { shows = fxAffichages(flux.octets, nom => fxPolice(doc, page, nom, cache)); } catch (e) { signaler('Caviardage', e); return rien; }
     for (const sh of shows) {
       const pl = fxGlyphesDans(sh, zones);
       if (!pl.length) continue;
-      if (!sh.pol || !sh.pol.codes || !sh.crochets || fxRecrire(sh, pl) == null) { signaler('Caviardage', 'une police du flux ne se laisse pas réécrire : la page est convertie en image', 'info'); return false; }
+      if (!sh.pol || !sh.pol.codes || !sh.crochets || fxRecrire(sh, pl) == null) { signaler('Caviardage', 'une police du flux ne se laisse pas réécrire : la page est convertie en image', 'info'); return rien; }
     }
-    return true;
+    return { propre: true, images };
+  }
+
+  // Refaire les images qui passent sous une zone : la page est rendue une
+  // fois, la partie de chaque image est découpée, ce qui doit disparaître y
+  // est peint, et cela remplacera l'image d'origine. Le reste de la page ne
+  // bouge pas : texte net, fichier léger.
+  async function preparerCaviardageImages(p, images) {
+    const src = srcById(p.src);
+    if (!src || !src.pdfjs || !images.length) return [];
+    const zones = fxZonesAVider(p);
+    const page = await src.pdfjs.getPage(p.index + 1);
+    try {
+      const v1 = page.getViewport({ scale: 1, rotation: 0 });
+      // Aussi fin que l'image d'origine, sans faire exploser la mémoire.
+      let ech = 2;
+      images.forEach(o => { const large = Math.max(1, o.x1 - o.x0); if (o.largeur > 0) ech = Math.max(ech, o.largeur / large); });
+      ech = Math.max(1, Math.min(ech, 8.4, Math.sqrt(12e6 / Math.max(1, v1.width * v1.height))));
+      const vp = page.getViewport({ scale: ech, rotation: 0 });
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.ceil(vp.width)); cv.height = Math.max(1, Math.ceil(vp.height));
+      const cx = cv.getContext('2d', { alpha: false });
+      cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+      await page.render({ canvasContext: cx, viewport: vp }).promise;
+      const cadre = (x0, y0, x1, y1) => {
+        const a = vp.convertToViewportPoint(x0, y1), b = vp.convertToViewportPoint(x1, y0);
+        return { x: Math.min(a[0], b[0]), y: Math.min(a[1], b[1]), w: Math.abs(b[0] - a[0]), h: Math.abs(b[1] - a[1]) };
+      };
+      const sortie = [];
+      for (const o of images) {
+        const r = cadre(o.x0, o.y0, o.x1, o.y1);
+        const X = Math.max(0, Math.round(r.x)), Y = Math.max(0, Math.round(r.y));
+        const W = Math.min(cv.width - X, Math.round(r.w)), H = Math.min(cv.height - Y, Math.round(r.h));
+        if (!(W >= 2 && H >= 2)) continue;
+        const bout = document.createElement('canvas');
+        bout.width = W; bout.height = H;
+        const bc = bout.getContext('2d', { alpha: false });
+        bc.fillStyle = '#fff'; bc.fillRect(0, 0, W, H);
+        bc.drawImage(cv, X, Y, W, H, 0, 0, W, H);
+        let touchee = false;
+        zones.forEach(z => {
+          const q = cadre(z.x, z.y, z.x + z.w, z.y + z.h);
+          const zx = q.x - X, zy = q.y - Y;
+          if (zx + q.w <= 0 || zy + q.h <= 0 || zx >= W || zy >= H) return;
+          bc.fillStyle = z.fond || '#000000';
+          bc.fillRect(zx, zy, q.w, q.h);
+          touchee = true;
+        });
+        if (!touchee) continue;
+        sortie.push({ nom: o.nom, donnees: bout.toDataURL('image/jpeg', 0.95) });
+      }
+      return sortie;
+    } finally { page.cleanup(); }
   }
 
   // Applique des remplacements d'octets, du dernier au premier.
@@ -4017,10 +4244,10 @@
     return parShow;
   }
 
-  function fxRetoucher(doc, page, p, cache) {
+  function fxRetoucher(doc, page, p, cache, renommages) {
     const faits = new Set();
     const cibles = (p.ann || []).filter(a => a.type === 'edit' && !a.efface && a.origine);
-    if (!cibles.length && !fxZonesAVider(p).length) return faits;
+    if (!cibles.length && !fxZonesAVider(p).length && !(renommages && renommages.size)) return faits;
     let flux = null, shows = null;
     try {
       flux = fxFluxPage(doc, page);
@@ -4061,6 +4288,15 @@
       const r = fxRecrire(sh, plages);
       if (r) remplacements.push(r);
       else signaler('Effacement dans le flux', 'un affichage n\'a pas pu être réécrit ; son texte reste sous le recouvrement');
+    }
+    // L'image refaite prend la place de l'ancienne, là où la page la pose.
+    if (renommages && renommages.size) {
+      try {
+        fxXObjets(flux.octets).forEach(o => {
+          const neuf = o.nom && renommages.get(o.nom);
+          if (neuf && o.nomB > o.nomA) remplacements.push({ a: o.nomA, b: o.nomB, octets: new TextEncoder().encode('/' + neuf) });
+        });
+      } catch (e) { signaler('Caviardage', e); }
     }
     if (remplacements.length) {
       try { flux.ecrire(fxAppliquer(flux.octets, remplacements)); }
@@ -4960,6 +5196,7 @@
     return pages.every((p, i) => p.src === src.id && p.index === i);
   }
 
+  let uidImageCaviardee = 0;
   async function buildPdf(pages, opts) {
     opts = opts || {};
     const { PDFDocument, degrees } = PDFLib;
@@ -4970,19 +5207,29 @@
     // vidées du flux ; sinon (image dessous, police illisible) elle est
     // convertie en image, comme avant.
     const docsVerif = new Map(), policesVerif = new Map();
+    const imagesCaviardees = new Map();   // pageId -> [{ nom, donnees }]
     for (const p of pages) {
       if (rasterAll) { rasterSet.add(p.id); continue; }
       if (!p.ann.some(a => a.type === 'redact' || (a.type === 'edit' && a.efface))) continue;
-      let propre = false;
+      let bilan = { propre: false, images: [] };
       try {
         const src = srcById(p.src);
         if (src) {
           if (!docsVerif.has(src.id)) docsVerif.set(src.id, await loadLib(src));
           const dv = docsVerif.get(src.id);
-          propre = fxCaviardagePropre(dv, dv.getPages()[p.index], p, policesVerif);
+          bilan = fxCaviardageBilan(dv, dv.getPages()[p.index], p, policesVerif);
         }
-      } catch (e) { signaler('Caviardage', e); propre = false; }
-      if (!propre) rasterSet.add(p.id);
+      } catch (e) { signaler('Caviardage', e); bilan = { propre: false, images: [] }; }
+      // Les images concernées sont refaites tout de suite : si cela échoue,
+      // on revient à la page convertie en image, comme avant.
+      if (bilan.propre && bilan.images.length) {
+        try {
+          onProgress(0, 'Caviardage des images…');
+          const bouts = await preparerCaviardageImages(p, bilan.images);
+          if (bouts.length) imagesCaviardees.set(p.id, bouts);
+        } catch (e) { signaler('Caviardage', e); bilan.propre = false; }
+      }
+      if (!bilan.propre) { rasterSet.add(p.id); imagesCaviardees.delete(p.id); }
       onProgress(0, 'Vérification du caviardage…');
     }
 
@@ -5043,9 +5290,23 @@
       const raster = rasterSet.has(p.id);
       if (!raster) {
         page.setRotation(degrees(g.total));
+        // Les images refaites entrent dans le document sous un nom neuf ;
+        // le flux de la page ira les chercher à la place des anciennes.
+        const renommages = new Map();
+        const bouts = imagesCaviardees.get(p.id);
+        if (bouts) {
+          for (const b of bouts) {
+            try {
+              const im = await out.embedJpg(b.donnees);
+              const neuf = 'BlonayCav' + (++uidImageCaviardee);
+              fxPoserImage(out, page, neuf, im.ref);
+              renommages.set(b.nom, neuf);
+            } catch (e) { signaler('Caviardage', e); }
+          }
+        }
         // D'abord ce qui peut être réécrit dans le flux de la page : ni
         // rectangle, ni fond relevé, rien d'autre ne bouge.
-        const enPlace = fxRetoucher(out, page, p, fonts);
+        const enPlace = fxRetoucher(out, page, p, fonts, renommages);
         await drawAnnotations(out, page, p, fonts, images, enPlace);
       }
       await poserChamps(out, page, p, fonts, nomsPris);
@@ -6044,7 +6305,7 @@
     const scrim = document.createElement('div');
     scrim.className = 'scrim';
     const dlg = document.createElement('div');
-    dlg.className = 'dialog' + (o.wide ? ' wide' : '');
+    dlg.className = 'dialog' + (o.wide ? ' wide' : '') + (o.libre ? ' libre' : '');
     dlg.setAttribute('role', 'dialog');
     dlg.setAttribute('aria-modal', 'true');
     dlg.setAttribute('aria-label', o.title);
@@ -6060,9 +6321,12 @@
     const foot = document.createElement('div'); foot.className = 'dlg-foot';
     dlg.append(head, body, foot);
     scrim.appendChild(dlg);
+    // Une boîte « libre » flotte à côté du document, sans voile : on
+    // continue à lire, à défiler, à cliquer pendant qu'elle est ouverte.
+    const conteneur = o.libre ? dlg : scrim;
 
     const close = () => {
-      scrim.remove();
+      conteneur.remove();
       document.removeEventListener('keydown', onKey, true);
       openDlg = null;
       if (o.onClose) o.onClose();
@@ -6093,7 +6357,7 @@
       b.addEventListener('click', () => a.onClick(close, api));
       foot.appendChild(b);
     });
-    $('#modal-root').appendChild(scrim);
+    $('#modal-root').appendChild(conteneur);
     openDlg = api;
     const first = dlg.querySelector('input:not([type=hidden]), select, textarea, button.primary');
     if (first) setTimeout(() => { try { first.focus(); if (first.select) first.select(); } catch (_) {} }, 30);
@@ -6681,13 +6945,22 @@
   // sélectionnable et cherchable, comme après un OCR d'Acrobat.
   async function poserTexteOcr(doc, page, p, fonts) {
     if (!p.ocr || !p.ocr.mots || !p.ocr.mots.length) return;
-    if ((p.ann || []).some(a => a.type === 'redact')) return;
+    // Un mot masqué ne part pas dans le texte invisible : il disparaîtrait de
+    // la page mais se lirait encore par copier-coller. Le reste de la page,
+    // lui, garde son texte reconnu.
+    const masques = (p.ann || []).filter(a => a.type === 'redact' || (a.type === 'edit' && a.efface))
+      .map(a => ({ x: a.x - 0.5, y: a.y - 0.5, w: (a.w || 0) + 1, h: (a.type === 'redact' ? (a.h || 0) : (a.h0 || annHauteur(a))) + 1 }));
     const g = pageGeom(p);
     const font = await getFont(doc, fonts, 'Helvetica', false, false);
     page.pushOperators(PDFLib.setTextRenderingMode(PDFLib.TextRenderingMode.Invisible));
     p.ocr.mots.forEach(m => {
       const t = winAnsi(m.t);
       if (!t) return;
+      if (masques.length) {
+        const corps = ocrCorps(m);
+        const b = { x: m.x, y: ocrBase(m) - corps * 0.8, w: m.w, h: corps * 1.1 };
+        if (masques.some(z => b.x < z.x + z.w && b.x + b.w > z.x && b.y < z.y + z.h && b.y + b.h > z.y)) return;
+      }
       const w1 = font.widthOfTextAtSize(t, 1);
       if (!(w1 > 0)) return;
       const size = Math.max(3, Math.min(ocrCorps(m) * 1.3, m.w / w1));
@@ -6728,10 +7001,13 @@
           const moteur = await ocrMoteur(langues, (etat, prog) => setBusy('Préparation… ' + etat, prog || 0, { annuler: true }));
           snapshot();
           let mots = 0, faibles = 0, faites = 0, interrompu = false;
+          const t0 = Date.now();
           for (let i = 0; i < pages.length; i++) {
             const p = pages[i];
             if (annulationDemandee()) { interrompu = true; break; }
-            setBusy('Reconnaissance… page ' + (pageIndex(p.id) + 1) + ' (' + (i + 1) + '/' + pages.length + ')', i / pages.length, { annuler: true });
+            // Le temps restant, d'après les pages déjà faites.
+            const reste = i ? ' · environ ' + dureeTexte((Date.now() - t0) / i * (pages.length - i) / 1000) + ' restantes' : '';
+            setBusy('Reconnaissance… page ' + (pageIndex(p.id) + 1) + ' (' + (i + 1) + '/' + pages.length + ')' + reste, i / pages.length, { annuler: true });
             const r = await ocrPage(p, moteur);
             p.ocr = { mots: r.mots, texte: r.texte, conf: r.conf, langues: langue.value, quand: Date.now() };
             textCache.set(pkey(p), r.texte);
@@ -7825,7 +8101,7 @@
         b.append(flat);
         b.append(note('Les champs de formulaire deviennent du contenu fixe : les valeurs restent visibles mais ne sont plus modifiables.'));
         b.append(figer);
-        b.append(note('Par défaut, les annotations partent comme de vrais commentaires PDF : dans Acrobat ou un navigateur, le destinataire les voit, peut les déplacer, les modifier ou les retirer. Figées, elles font partie de la page comme de l\'encre. Les corrections de texte, les images, les signatures et les caviardages sont toujours fondus dans la page ; une page caviardée est convertie en image pour supprimer réellement le texte masqué.'));
+        b.append(note('Par défaut, les annotations partent comme de vrais commentaires PDF : dans Acrobat ou un navigateur, le destinataire les voit, peut les déplacer, les modifier ou les retirer. Figées, elles font partie de la page comme de l\'encre. Les corrections de texte, les images, les signatures et les caviardages sont toujours fondus dans la page ; une page caviardée garde son texte net, seules les lettres masquées et, s\'il y a lieu, l\'image sous le rectangle sont refaites.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Appliquer', primary: true, onClick: close => {
         snapshot(); state.flatten = flat.input.checked; state.figerAnnotations = figer.input.checked; state.touched = true; render(); close();
@@ -8088,12 +8364,17 @@
     });
     return out;
   }
-  const regexDe = (terme, casse) => new RegExp(String(terme).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), casse ? 'g' : 'gi');
+  // Le terme tel quel ; « mot entier » exige une frontière de mot des deux
+  // côtés, lettres accentuées comprises.
+  const regexDe = (terme, casse, mot) => {
+    const corps = String(terme).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(mot ? '(?<![\\p{L}\\p{N}_])' + corps + '(?![\\p{L}\\p{N}_])' : corps, (casse ? 'g' : 'gi') + 'u');
+  };
 
   // Caviarder partout : chaque occurrence est couverte d'un rectangle noir,
   // et la page convertie en image à l'export — le texte disparaît vraiment.
-  async function caviarderPartout(terme, casse, avancement) {
-    const rx = regexDe(terme, casse);
+  async function caviarderPartout(terme, casse, avancement, mot) {
+    const rx = regexDe(terme, casse, mot);
     let occurrences = 0, pages = 0;
     const ajouts = [];
     for (let i = 0; i < state.pages.length; i++) {
@@ -8125,8 +8406,8 @@
   // Remplacer partout : chaque bloc où le terme apparaît devient une
   // retouche, exactement comme si on l'avait corrigé à la main dans
   // l'éditeur — même fond relevé, mêmes polices, même mise en page.
-  async function remplacerPartout(terme, nouveau, casse, avancement) {
-    const rx = regexDe(terme, casse);
+  async function remplacerPartout(terme, nouveau, casse, avancement, mot) {
+    const rx = regexDe(terme, casse, mot);
     let occurrences = 0, pages = 0;
     const neufs = [], touchees = [];
     const remplacerDans = a => {
@@ -8182,57 +8463,132 @@
     return { occurrences, pages };
   }
 
+  // Le panneau de recherche flotte à côté du document : chaque occurrence
+  // est surlignée sur sa page, et l'on va de l'une à l'autre.
+  const recherche = { marques: null, cur: -1 };
+  function poserMarquesLecture() {
+    state.pages.forEach(p => {
+      const f = feuilles.get(p.id);
+      if (!f) return;
+      const vieux = f.querySelector('.marques');
+      if (vieux) vieux.remove();
+      const liste = recherche.marques && recherche.marques.get(p.id);
+      if (!liste || !liste.length) return;
+      const g = pageGeom(p);
+      const zone = document.createElement('div'); zone.className = 'marques';
+      liste.forEach(o => o.rects.forEach(r => {
+        const i = document.createElement('i');
+        if (o.k === recherche.cur) i.className = 'courante';
+        i.style.left = (r.x / g.Wd * 100).toFixed(3) + '%'; i.style.top = (r.y / g.Hd * 100).toFixed(3) + '%';
+        i.style.width = (r.w / g.Wd * 100).toFixed(3) + '%'; i.style.height = (r.h / g.Hd * 100).toFixed(3) + '%';
+        zone.appendChild(i);
+      }));
+      f.appendChild(zone);
+    });
+  }
+  function poserMarquesTuiles() {
+    state.pages.forEach(p => {
+      const t = tiles.get(p.id);
+      if (!t) return;
+      const liste = recherche.marques && recherche.marques.get(p.id);
+      t.classList.toggle('hit', !!(liste && liste.length));
+      t.classList.toggle('hit-courante', !!(liste && liste.some(o => o.k === recherche.cur)));
+    });
+  }
+  function effacerRecherche() { recherche.marques = null; recherche.cur = -1; poserMarquesTuiles(); poserMarquesLecture(); }
+
   function toolSearch() {
     const q = input('se-q', 'text', '');
     q.placeholder = 'Mot ou expression à rechercher';
     const rempl = input('se-r', 'text', '');
     rempl.placeholder = 'Texte de remplacement';
     const casse = checkbox('se-casse', 'Respecter la casse', false);
+    const mot = checkbox('se-mot', 'Mot entier', false);
     const results = document.createElement('div'); results.className = 'list';
     const info = note('');
-    let token = 0, total = 0;
+    const nav = document.createElement('div'); nav.className = 'se-nav';
+    const prec = document.createElement('button'); prec.type = 'button'; prec.id = 'se-prec'; prec.className = 'tb-btn'; prec.textContent = '‹ Précédent'; prec.title = 'Occurrence précédente (Maj+Entrée)';
+    const suiv = document.createElement('button'); suiv.type = 'button'; suiv.id = 'se-suiv'; suiv.className = 'tb-btn'; suiv.textContent = 'Suivant ›'; suiv.title = 'Occurrence suivante (Entrée)';
+    const compte = document.createElement('span'); compte.id = 'se-compte'; compte.className = 'compte';
+    nav.append(prec, suiv, compte);
+    let token = 0, total = 0, occ = [], cur = -1;
+    const aller = k => {
+      if (!occ.length) return;
+      cur = ((k % occ.length) + occ.length) % occ.length;
+      recherche.cur = occ[cur].k;
+      compte.textContent = (cur + 1) + ' / ' + occ.length;
+      poserMarquesTuiles(); poserMarquesLecture();
+      const o = occ[cur];
+      if (state.vue === 'lecture') {
+        const f = feuilles.get(o.pid);
+        const r = o.rects[0];
+        if (f && r) el.canvas.scrollTo({ top: Math.max(0, f.offsetTop + r.y * lectureZ - el.canvas.clientHeight * 0.4), behavior: 'smooth' });
+        else lectureAller(pageIndex(o.pid) + 1);
+      } else allerPage(o.pid);
+    };
     async function run() {
       const term = q.value.trim();
       const my = ++token;
       results.replaceChildren();
-      state.pages.forEach(p => { const t = tiles.get(p.id); if (t) t.classList.remove('hit'); });
-      total = 0;
+      total = 0; occ = []; cur = -1;
+      effacerRecherche();
+      compte.textContent = '';
       if (term.length < 2) { info.textContent = 'Saisissez au moins deux caractères.'; majBoutons(); return; }
       info.textContent = 'Recherche…';
       let found = 0;
-      const rx = regexDe(term, casse.input.checked);
+      const rx = regexDe(term, casse.input.checked, mot.input.checked);
+      const marques = new Map();
       for (let i = 0; i < state.pages.length; i++) {
         if (my !== token) return;
         const p = state.pages[i];
-        const text = await getPageText(p);
+        const { texte, morceaux } = await texteAvecPositions(p);
+        if (my !== token) return;
         rx.lastIndex = 0;
-        const m = rx.exec(text);
-        if (!m) continue;
-        found++;
-        total += (text.match(rx) || []).length;
-        const t = tiles.get(p.id); if (t) t.classList.add('hit');
-        const from = Math.max(0, m.index - 40);
-        const snippet = (from ? '…' : '') + text.slice(from, m.index) + '§§' + m[0] + '§§' + text.slice(m.index + m[0].length, m.index + m[0].length + 60) + '…';
+        let m, n = 0, premier = null;
+        const surPage = [];
+        while ((m = rx.exec(texte)) && n < 2000) {
+          if (!m[0].length) { rx.lastIndex++; continue; }
+          if (!premier) premier = m;
+          const k = occ.length;
+          const rects = rectsOccurrence(morceaux, m.index, m.index + m[0].length);
+          occ.push({ pid: p.id, k, rects });
+          surPage.push({ k, rects });
+          n++;
+        }
+        if (!n) continue;
+        found++; total += n;
+        marques.set(p.id, surPage);
+        const from = Math.max(0, premier.index - 40);
+        const snippet = (from ? '…' : '') + texte.slice(from, premier.index) + '§§' + premier[0] + '§§' + texte.slice(premier.index + premier[0].length, premier.index + premier[0].length + 60) + '…';
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'result';
-        const pn = document.createElement('span'); pn.className = 'p'; pn.textContent = 'p. ' + (i + 1);
+        const pn = document.createElement('span'); pn.className = 'p'; pn.textContent = 'p. ' + (i + 1) + (n > 1 ? ' ×' + n : '');
         const xs = document.createElement('span'); xs.className = 'x';
-        snippet.split('§§').forEach((chunk, ci) => {
+        snippet.replace(/\s+/g, ' ').split('§§').forEach((chunk, ci) => {
           if (ci === 1) { const mk = document.createElement('mark'); mk.textContent = chunk; xs.appendChild(mk); }
           else xs.appendChild(document.createTextNode(chunk));
         });
         b.append(pn, xs);
-        b.addEventListener('click', () => allerPage(p.id));
+        const k0 = surPage[0].k;
+        b.addEventListener('click', () => aller(occ.findIndex(o => o.k === k0)));
         results.appendChild(b);
         if (i % 6 === 0) await nextFrame();
       }
       if (my !== token) return;
+      recherche.marques = marques;
+      poserMarquesTuiles(); poserMarquesLecture();
       info.textContent = found ? plural(total, 'occurrence', 'occurrences') + ' sur ' + plural(found, 'page', 'pages') + ' pour « ' + term + ' »' : 'Aucun résultat pour « ' + term + ' ».';
+      compte.textContent = total ? '0 / ' + total : '';
+      if (total) aller(0);
       majBoutons();
     }
     let deb = null;
     q.addEventListener('input', () => { clearTimeout(deb); deb = setTimeout(run, 260); });
+    q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (occ.length) aller(cur + (e.shiftKey ? -1 : 1)); } });
     casse.input.addEventListener('change', run);
+    mot.input.addEventListener('change', run);
+    prec.addEventListener('click', () => aller(cur - 1));
+    suiv.addEventListener('click', () => aller(cur + 1));
     let api = null;
     const majBoutons = () => {
       if (!api) return;
@@ -8241,36 +8597,40 @@
       if (bC) { bC.disabled = !total; bC.textContent = total ? 'Caviarder tout (' + total + ')' : 'Caviarder tout'; }
     };
     api = dialog({
-      title: 'Rechercher, remplacer, caviarder', icon: IC.search, wide: true, submitOnEnter: false,
+      title: 'Rechercher, remplacer, caviarder', icon: IC.search, libre: true, submitOnEnter: false,
       build: b => {
-        b.append(rowOf([field('Recherche', q), field('Remplacer par', rempl)]));
-        b.append(casse);
+        b.append(field('Recherche', q));
+        b.append(rowOf([casse, mot], true));
+        b.append(nav);
         b.append(info);
         b.append(results);
-        b.append(note('Remplacer tout corrige chaque bloc concerné comme dans l\'éditeur : mêmes polices, même mise en page, fond relevé. Caviarder tout masque chaque occurrence d\'un rectangle noir ; la page est convertie en image à l\'export, le texte masqué disparaît vraiment.'));
+        b.append(field('Remplacer par', rempl));
+        b.append(note('Remplacer tout corrige chaque bloc concerné comme dans l\'éditeur : mêmes polices, même mise en page. Caviarder tout masque chaque occurrence d\'un rectangle noir et retire le texte du fichier à l\'export.'));
       },
-      onClose: () => { token++; state.pages.forEach(p => { const t = tiles.get(p.id); if (t) t.classList.remove('hit'); }); },
+      onClose: () => { token++; effacerRecherche(); },
       actions: [
         { label: 'Fermer', onClick: c => c() },
         { id: 'se-caviarder', label: 'Caviarder tout', onClick: async close => {
           const term = q.value.trim();
           if (term.length < 2 || !total) return;
+          const entier = mot.input.checked;
           token++; close();
           setBusy('Caviardage de « ' + term + ' »…', 0, { annuler: true });
           try {
-            const r = await caviarderPartout(term, casse.input.checked, (i, n) => setBusy('Caviardage… page ' + (i + 1) + '/' + n, i / n, { annuler: true }));
+            const r = await caviarderPartout(term, casse.input.checked, (i, n) => setBusy('Caviardage… page ' + (i + 1) + '/' + n, i / n, { annuler: true }), entier);
             setLast(r.occurrences ? plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + ' sur ' + plural(r.pages, 'page', 'pages') + ' · Ctrl+Z pour annuler' : 'Aucune occurrence trouvée sur la page.');
-            if (r.occurrences) toast(plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + '. Les pages concernées seront converties en image à l\'export.');
+            if (r.occurrences) toast(plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + '. Le texte masqué est retiré du fichier à l\'export ; la page reste nette.');
           } catch (e) { if (e && e.annule) { toast('Caviardage annulé : rien n\'a été changé.', 'warn'); return; } console.error(e); toast('Échec du caviardage : ' + e.message, 'error'); }
           finally { setBusy(''); }
         } },
         { id: 'se-remplacer', label: 'Remplacer tout', primary: true, onClick: async close => {
           const term = q.value.trim();
           if (term.length < 2 || !total) return;
+          const entier = mot.input.checked;
           token++; close();
           setBusy('Remplacement de « ' + term + ' »…', 0, { annuler: true });
           try {
-            const r = await remplacerPartout(term, rempl.value, casse.input.checked, (i, n) => setBusy('Remplacement… page ' + (i + 1) + '/' + n, i / n, { annuler: true }));
+            const r = await remplacerPartout(term, rempl.value, casse.input.checked, (i, n) => setBusy('Remplacement… page ' + (i + 1) + '/' + n, i / n, { annuler: true }), entier);
             setLast(r.occurrences ? plural(r.occurrences, 'occurrence remplacée', 'occurrences remplacées') + ' sur ' + plural(r.pages, 'page', 'pages') + ' · Ctrl+Z pour annuler' : 'Rien à remplacer : le texte n\'est pas modifiable (scan sans OCR ?).');
             if (!r.occurrences) toast('Aucun bloc modifiable ne contient « ' + term + ' ». Sur un scan, lancez d\'abord la reconnaissance de texte.', 'warn');
           } catch (e) { if (e && e.annule) { toast('Remplacement annulé : rien n\'a été changé.', 'warn'); return; } console.error(e); toast('Échec du remplacement : ' + e.message, 'error'); }
@@ -8394,35 +8754,75 @@
     if (!out.length && p.ocr && p.ocr.mots) p.ocr.mots.forEach(m => out.push({ str: m.t, x: m.x, base: ocrBase(m), w: m.w, size: ocrCorps(m) }));
     return out;
   }
+  // Un montant tel qu'il est écrit (1'234.50, CHF 1 234,50, 1'234.-) devient
+  // un nombre qu'Excel reconnaît, avec le séparateur décimal choisi.
+  const RX_MONTANT = /^\s*(?:CHF|SFr\.?|Fr\.?|€|EUR|USD|\$)?\s*([-+−]?)\s*(\d{1,3}(?:[ '’  ]\d{3})+|\d+)(?:[.,](\d{1,2}|-|–|—))?\s*(?:CHF|SFr\.?|Fr\.?|€|EUR|USD|\$)?\s*$/i;
+  function celluleNombre(c, sep) {
+    const m = RX_MONTANT.exec(String(c));
+    if (!m) return c;
+    const ent = m[2].replace(/\D/g, '');
+    const dec = m[3] == null ? '' : (/^\d+$/.test(m[3]) ? m[3] : '00');
+    return (m[1] === '-' || m[1] === '−' ? '-' : '') + ent + (dec ? sep + dec : '');
+  }
+  const separateurDecimal = () => { try { return new Intl.NumberFormat().format(1.5).includes(',') ? ',' : '.'; } catch (_) { return '.'; } };
   function toolTableau() {
     const courante = pageCouranteId();
-    const choix = select('tb-page', state.pages.map((p, i) => [String(p.id), 'Page ' + (i + 1)]), String(courante));
+    const sel = selectedPages();
+    const options = state.pages.map((p, i) => [String(p.id), 'Page ' + (i + 1)]);
+    if (sel.length > 1) options.unshift(['sel', 'Pages sélectionnées (' + sel.length + ')']);
+    if (state.pages.length > 1) options.unshift(['tout', 'Tout le document (' + state.pages.length + ' pages)']);
+    const choix = select('tb-page', options, String(courante));
+    const nombres = checkbox('tb-nombres', 'Montants en nombres : 1\'234.50 devient 1234.50, monnaie et espaces retirés', true);
+    const decimale = select('tb-decimale', [['.', 'point (1234.50)'], [',', 'virgule (1234,50)']], separateurDecimal());
     const info = note('');
     const apercu = document.createElement('div'); apercu.className = 'apercu-tableau';
     let lignes = [];
-    async function analyser() {
-      const p = state.pages.find(x => x.id === +choix.value);
-      if (!p) return;
-      info.textContent = 'Lecture de la page…';
+    const sortie = () => nombres.input.checked ? lignes.map(r => r.map(c => celluleNombre(c, decimale.value))) : lignes;
+    let jeton = 0;
+    function montrer() {
       apercu.replaceChildren();
-      const r = tableauDepuisMorceaux(await morceauxDePage(p));
-      lignes = r.lignes;
-      if (!lignes.length) { info.textContent = 'Aucun texte sur cette page. Sur un scan, lancez d\'abord la reconnaissance de texte.'; return; }
-      info.textContent = plural(lignes.length, 'ligne', 'lignes') + ' × ' + plural(r.colonnes, 'colonne', 'colonnes') + (r.colonnes < 2 ? ' — aucune colonne repérée : chaque ligne ira dans une seule cellule.' : '');
+      const l = sortie();
+      if (!l.length) return;
       const t = document.createElement('table');
-      lignes.slice(0, 60).forEach(row => {
+      l.slice(0, 60).forEach(row => {
         const tr = document.createElement('tr');
-        row.forEach(c => { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); });
+        row.forEach(c => { const td = document.createElement('td'); td.textContent = c; if (/^-?\d+([.,]\d+)?$/.test(String(c))) td.className = 'nombre'; tr.appendChild(td); });
         t.appendChild(tr);
       });
       apercu.appendChild(t);
-      if (lignes.length > 60) apercu.appendChild(note('… et ' + (lignes.length - 60) + ' autres lignes.'));
+      if (l.length > 60) apercu.appendChild(note('… et ' + (l.length - 60) + ' autres lignes.'));
+    }
+    async function analyser() {
+      const my = ++jeton;
+      const v = choix.value;
+      const pages = v === 'tout' ? state.pages.slice() : v === 'sel' ? selectedPages() : state.pages.filter(x => x.id === +v);
+      if (!pages.length) return;
+      info.textContent = pages.length > 1 ? 'Lecture de ' + pages.length + ' pages…' : 'Lecture de la page…';
+      apercu.replaceChildren();
+      lignes = [];
+      let colonnes = 0, vides = 0;
+      for (let i = 0; i < pages.length; i++) {
+        const r = tableauDepuisMorceaux(await morceauxDePage(pages[i]));
+        if (my !== jeton) return;
+        if (!r.lignes.length) vides++;
+        lignes.push(...r.lignes);
+        colonnes = Math.max(colonnes, r.colonnes);
+        if (i % 4 === 3) await nextFrame();
+      }
+      if (!lignes.length) { info.textContent = (pages.length > 1 ? 'Aucun texte sur ces pages.' : 'Aucun texte sur cette page.') + ' Sur un scan, lancez d\'abord la reconnaissance de texte.'; return; }
+      info.textContent = plural(lignes.length, 'ligne', 'lignes') + ' × ' + plural(colonnes, 'colonne', 'colonnes')
+        + (pages.length > 1 ? ' sur ' + plural(pages.length, 'page', 'pages') + (vides ? ' (' + plural(vides, 'page sans texte', 'pages sans texte') + ')' : '') : '')
+        + (colonnes < 2 ? ' — aucune colonne repérée : chaque ligne ira dans une seule cellule.' : '');
+      montrer();
     }
     choix.addEventListener('change', analyser);
+    nombres.input.addEventListener('change', montrer);
+    decimale.addEventListener('change', montrer);
     dialog({
       title: 'Copier un tableau vers Excel', icon: IC.tableau, wide: true, submitOnEnter: false,
       build: b => {
-        b.append(field('Page', choix, 'Les colonnes sont repérées d\'après les blancs qui traversent les lignes du tableau.'));
+        b.append(field('Pages', choix, 'Les colonnes sont repérées d\'après les blancs qui traversent les lignes du tableau. Sur plusieurs pages, les lignes se suivent.'));
+        b.append(rowOf([nombres, field('Séparateur décimal', decimale)], true));
         b.append(info);
         b.append(apercu);
       },
@@ -8430,11 +8830,11 @@
         { label: 'Fermer', onClick: c => c() },
         { label: 'Enregistrer en CSV', onClick: async () => {
           if (!lignes.length) { toast('Rien à enregistrer.', 'warn'); return; }
-          await deliver(tableauCsv(lignes), safeBase(el.filename.value) + '-tableau.csv', 'text/csv;charset=utf-8');
+          await deliver(tableauCsv(sortie()), safeBase(el.filename.value) + '-tableau.csv', 'text/csv;charset=utf-8');
         } },
         { label: 'Copier pour Excel', primary: true, onClick: async close => {
           if (!lignes.length) { toast('Rien à copier.', 'warn'); return; }
-          const ok = await copierTexte(tableauTsv(lignes));
+          const ok = await copierTexte(tableauTsv(sortie()));
           if (ok) { close(); toast(plural(lignes.length, 'ligne copiée', 'lignes copiées') + ' : collez dans Excel (Ctrl+V), une cellule par colonne.'); setLast('Tableau copié'); }
           else toast('Le presse-papiers est inaccessible ici : enregistrez plutôt le CSV.', 'warn');
         } },
@@ -8464,10 +8864,11 @@
           ['Alt+←', 'Décaler la page à gauche'], ['Alt+→', 'Décaler la page à droite'],
           ['Entrée', 'Ouvrir l\'éditeur de page'],
           ['Double-clic', 'Ouvrir l\'éditeur, où le texte existant se corrige par paragraphe'],
+          ['Clic droit', 'Menu de la page : pivoter, modifier, signet, copier le texte, dupliquer, extraire, supprimer — et sur un onglet : enregistrer, fermer'],
         ])));
         b.append(groupOf('Document', mk([
           ['Ctrl+O', 'Ouvrir un document (nouvel onglet)'], ['Ctrl+Maj+O', 'Ajouter au document'], ['Ctrl+S', state.bureau ? 'Enregistrer (réécrit le fichier ouvert)' : 'Exporter le PDF'], ['Ctrl+Maj+S', 'Enregistrer sous… (nouveau fichier)'], ['Ctrl+P', 'Imprimer'],
-          ['Ctrl+F', 'Rechercher, remplacer, caviarder'], ['Ctrl+B', 'Ajouter un signet'],
+          ['Ctrl+F', 'Rechercher (mot entier, occurrences surlignées, Entrée pour la suivante), remplacer, caviarder'], ['Ctrl+B', 'Ajouter un signet'],
           ['Ctrl+T', 'Nouvel onglet'], ['Ctrl+W', 'Fermer l\'onglet'], ['Ctrl+Tab', 'Onglet suivant'],
           ['Ctrl+Z', 'Annuler'], ['Ctrl+Y', 'Rétablir'], ['?', 'Cette fenêtre'],
         ])));
@@ -8496,12 +8897,16 @@
             ? 'Récupération : le travail en cours est mis de côté quelques secondes après chaque changement ; après un arrêt brutal, il est proposé au lancement suivant.'
             : 'Dans l\'application Windows, le travail en cours est mis de côté après chaque changement et proposé au lancement suivant si l\'application s\'est arrêtée brutalement.',
           'En mode Lire, le texte se sélectionne et se copie, y compris sur un scan reconnu.',
-          'Caviarder ou effacer du texte garde la page vectorielle (texte net, fichier léger) quand la police le permet ; sinon la page passe en image, comme avant. Les tracés vectoriels sous la zone restent.',
+          'Caviarder ou effacer du texte garde la page vectorielle : les lettres sont retirées du fichier, et si une image passe sous le rectangle, seule cette image est refaite — pas la page entière. Le texte du reste de la page reste net et sélectionnable.',
           'Les commentaires déjà présents dans un PDF reçu se listent et se retirent (outil Commentaires, ou depuis le volet Document).',
           'Les longues opérations (OCR, lots, assemblage) s\'interrompent : bouton Annuler en bas, ou Échap.',
           'Ce qui a été contourné pendant une opération (police illisible, lien perdu…) est noté dans le journal, en bas de la fenêtre.',
           'Comparer deux versions : reconnaissance à la demande pour les scans, et une vue « aspect » qui marque en rouge ce qui change à l\'image.',
           'Impression : qualité au choix (fine, normale, rapide). Le document part en images, à la finesse choisie — c\'est ce qui permet l\'impression directe sans autre fenêtre.',
+          'Rechercher (Ctrl+F) : le panneau flotte à côté du document, les occurrences sont surlignées sur les pages, Entrée ou Suivant passe à la suivante ; option « mot entier ».',
+          'Clic droit sur une page ou sur un onglet : les gestes courants, sans passer par la barre d\'outils.',
+          'Copier un tableau vers Excel : plusieurs pages d\'un coup, et les montants (1\'234.50, CHF 1 234.-) deviennent des nombres.',
+          'La reconnaissance de texte annonce le temps restant.',
         ].forEach(t => suite.appendChild(note(t)));
         b.append(groupOf('Et depuis', [suite]));
         const bureau = window.BlonayDesktop || null;
@@ -11064,6 +11469,17 @@
       const t = e.target.closest('.tile');
       if (!t || e.target.closest('button') || e.target.closest('input')) return;
       openEditor(+t.dataset.id);
+    });
+    // Clic droit : le menu de la page, en organisation comme en lecture.
+    el.pages.addEventListener('contextmenu', e => {
+      const t = e.target.closest('.tile');
+      if (!t || e.target.closest('input')) return;
+      menuPage(e, +t.dataset.id);
+    });
+    el.lecture.addEventListener('contextmenu', e => {
+      const f = e.target.closest('.feuille-vue');
+      if (!f) return;
+      menuPage(e, +f.dataset.id);
     });
 
     el.pages.addEventListener('keydown', e => {

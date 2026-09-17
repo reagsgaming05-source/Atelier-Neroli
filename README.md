@@ -130,8 +130,14 @@ Ce qu'une relecture complète du logiciel a fait ajouter ensuite :
   texte comme sur un scan reconnu.
 - **Caviardage et effacement sans convertir la page en image** : le texte
   visé est retiré du flux de la page, qui reste vectorielle (texte net,
-  fichier léger) quand la police le permet ; sinon la page passe en image,
-  comme avant. Les tracés vectoriels sous la zone (traits, fonds) restent.
+  fichier léger). Si une image passe sous le rectangle, **seule cette
+  image est refaite** — avec la zone peinte dans ses pixels mêmes — et non
+  la page entière : sur un scan reconnu, le texte invisible de l'OCR reste
+  donc sélectionnable partout, sauf sous le rectangle, où le mot est retiré
+  du fichier lui aussi. La page n'est convertie en image que si le contenu
+  masqué ne se laisse pas retoucher autrement (image posée de travers ou
+  servant à plusieurs endroits, dégradé, police illisible) ; le journal le
+  dit alors.
 - **Commentaires déjà présents** dans un PDF reçu : listés, et retirés d'un
   clic (outil Commentaires).
 - **Annuler** une longue opération (OCR, lot, assemblage) : bouton en bas,
@@ -141,6 +147,19 @@ Ce qu'une relecture complète du logiciel a fait ajouter ensuite :
   bouton en bas de la fenêtre l'ouvre.
 - **Comparer** : reconnaissance à la demande quand une version est un scan,
   et une vue « aspect » qui marque en rouge ce qui change à l'image.
+- **Rechercher** (Ctrl+F) : le panneau flotte à côté du document au lieu de
+  le masquer, chaque occurrence est **surlignée sur la page**, Entrée ou
+  *Suivant* passe à la suivante (Maj+Entrée à la précédente), et l'option
+  **mot entier** évite qu'« aire » trouve « affaire ».
+- **Menus contextuels** : clic droit sur une page (pivoter, modifier,
+  signet, copier le texte, dupliquer, extraire, supprimer) et sur un onglet
+  (enregistrer, enregistrer sous, nouvel onglet, fermer, fermer les autres).
+- **Tableau vers Excel sur plusieurs pages** d'un coup, les lignes se
+  suivent, et les **montants deviennent des nombres** (1'234.50 → 1234.50,
+  monnaie et espaces retirés, séparateur décimal au choix) : Excel les
+  additionne sans retouche.
+- **Reconnaissance de texte** : le temps restant est annoncé pendant le
+  travail.
 - **Impression** : qualité au choix (fine 300 ppp, normale 200, rapide 150).
   Le document part en images : c'est ce qui permet d'envoyer directement à
   l'imprimante sans autre fenêtre, et Chromium ne sait pas imprimer un PDF
@@ -234,8 +253,10 @@ publication du zip dans la pré-release à tag fixe `blonaypdf-windows-latest`.
 - **Corriger et annoter** : double-clic sur une page ouvre l'éditeur — correction du texte en
   place, texte, surlignage, cadres, dessin, tampons, signature (mémorisable), image,
   caviardage, champs à remplir. Les annotations partent en vrais commentaires PDF.
-- **Outils** (menu) : reconnaître le texte (OCR), comparer deux versions, copier un tableau
-  vers Excel, constituer un dossier de pièces, traiter plusieurs fichiers.
+- **Outils** (menu) : reconnaître le texte (OCR, temps restant annoncé), comparer deux
+  versions, copier un tableau vers Excel (plusieurs pages, montants en nombres), constituer
+  un dossier de pièces, traiter plusieurs fichiers.
+- **Clic droit** sur une page ou sur un onglet : les gestes courants, sans la barre d'outils.
 - **Enregistrer** (Ctrl+S) : réécrit le fichier ouvert. **Enregistrer sous…** (Ctrl+Maj+S) : le
   PDF assemblé dans un nouveau fichier, avec ou sans aplatissement, mot de passe possible.
 - **Imprimer** (Ctrl+P) : pages, livret, plusieurs pages par feuille, papier, échelle,
@@ -374,7 +395,9 @@ fenêtre. C'est une fonction du navigateur, pas une installation de logiciel.
 | Ctrl + O | Ouvrir des fichiers |
 | Ctrl + S | Enregistrer (application : réécrit le fichier ouvert ; navigateur : exporter) |
 | Ctrl + Maj + S | Enregistrer sous… |
-| Ctrl + F | Rechercher du texte |
+| Ctrl + F | Rechercher (mot entier, occurrences surlignées) |
+| Entrée / Maj + Entrée | Occurrence suivante / précédente |
+| Clic droit | Menu de la page, ou de l'onglet |
 | Ctrl + Z / Ctrl + Y | Annuler / Rétablir |
 | Suppr | Retirer les pages sélectionnées |
 | R / Maj + R | Pivoter à droite / à gauche |
