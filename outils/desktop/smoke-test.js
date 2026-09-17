@@ -30,6 +30,16 @@ function fabriquerPdf(n) {
 const compterPages = (octets) => (octets.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
 const compterTournees = (octets) => (octets.toString('latin1').match(/\/Rotate\s+90\b/g) || []).length;
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+// Sous Windows, un fichier du dossier de données peut rester tenu quelques
+// instants après la fermeture. Ranger le dossier d'essai est du ménage : cela
+// ne doit jamais décider du verdict du test.
+async function menage(dossier) {
+  for (let essai = 1; essai <= 6; essai++) {
+    try { fs.rmSync(dossier, { recursive: true, force: true }); return; }
+    catch (e) { await dormir(essai * 400); }
+  }
+  console.log('  (dossier d\'essai laissé sur place, Windows le tenait encore : ' + dossier + ')');
+}
 async function attendre(cond, delai, quoi) {
   const fin = Date.now() + delai;
   while (Date.now() < fin) { if (await cond()) return true; await dormir(400); }
@@ -192,12 +202,15 @@ async function tournerPage(win, n) {
   const troisieme = exe ? spawn(exe, [pdf3], { env, stdio: 'ignore' }) : spawn(require('electron'), [path.join(__dirname), pdf3, '--no-sandbox'], { env, stdio: 'ignore' });
   troisieme.on('error', () => {});
   await attendre(async () => (await docsPartout()).some((t) => /troisieme\.pdf/.test(t)), 60000, 'document ouvert en onglet');
+  // Le processus lancé a passé la main à l'instance unique : on attend qu'il
+  // ait vraiment rendu l'âme, sinon Windows tient encore le dossier de données.
+  await Promise.all([seconde, troisieme].map((p) => new Promise((r) => { if (p.exitCode !== null) return r(); p.once('exit', r); setTimeout(r, 8000); })));
   const fenetresApres = app.windows().length;
   console.log('toujours en onglet : fenêtres', fenetresAvant, '->', fenetresApres, '| documents :', JSON.stringify(await docsPartout()));
   verifier(fenetresApres === fenetresAvant, 'aucune fenêtre de plus quand le réglage est actif');
 
   await app.close();
-  fs.rmSync(dossier, { recursive: true, force: true });
+  await menage(dossier);
   console.log(ok ? 'SMOKE OK' : 'SMOKE ÉCHEC');
   process.exit(ok ? 0 : 1);
 })().catch((e) => { console.error(e); process.exit(1); });
