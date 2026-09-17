@@ -102,18 +102,36 @@ def _parse_date(s: str | None) -> dt.date | None:
         return None
 
 
+TERM_RE = re.compile(r"\d+(?:\.\d+)?(?:\*\d+(?:\.\d+)?)*")
+
+
+def _sum_of_products(expr: str) -> float | None:
+    """Valeur d'une somme de produits (« 6*2.8+2*2.1 »), ou None si ce n'est pas cette forme.
+
+    Calculée à la main : la formule vient de la page (elle peut être modifiée par l'utilisateur ou
+    par ce qui lui est envoyé) et une expression Python évaluée telle quelle pourrait bloquer le
+    programme (« 9**9**9 »)."""
+    total = 0.0
+    for term in expr.split("+"):
+        if not TERM_RE.fullmatch(term):
+            return None
+        value = 1.0
+        for factor in term.split("*"):
+            value *= float(factor)
+        total += value
+    return total
+
+
 def _direct_formula(row) -> "str | float":
     """Colonne I d'une ligne « saisie directe » : « =6*2.8+6*4.2+2*2.1 » (le détail des tarifs adultes retenus),
     ou le montant si le détail n'est pas disponible (ligne saisie à la main)."""
     amount = round(row.cout_direct or 0.0, 2)
     detail = (row.formule or "").replace(" ", "")
-    if not detail or not re.fullmatch(r"[0-9.*+EURCHF]+", detail):
+    if not detail or len(detail) > 500:
         return amount
     expr = detail.replace("EUR", "").replace("CHF", "")
-    try:
-        if abs(round(eval(expr, {"__builtins__": {}}, {}), 2) - amount) > 0.011:  # noqa: S307 (expression numérique contrôlée)
-            return amount
-    except Exception:  # noqa: BLE001
+    value = _sum_of_products(expr)
+    if value is None or abs(round(value, 2) - amount) > 0.011:
         return amount
     return f"=ROUND({expr},2)"
 

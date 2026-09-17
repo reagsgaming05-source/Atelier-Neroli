@@ -118,3 +118,42 @@ def test_direct_rows_keep_ticket_totals_and_formula_detail():
     # deux billets (aller, retour) : 2 titrés retenus sur chacun ; coût total des deux billets en H
     assert row.mode == "direct" and row.cout_direct == 79.8 and row.cout_total == 287.8
     assert row.formule == "4*19.95" and row.libelle == "pces 1-2 (4*19.95)"
+
+
+# ---------------------------------------------------------------------------
+# Relecture de septembre
+# ---------------------------------------------------------------------------
+
+
+def test_deux_pieces_eur_sans_total_ne_font_pas_echouer_le_calcul():
+    # Deux totaux illisibles ne sont pas « le même montant » : la recherche d'un taux ne doit pas
+    # tenter une division sur None. Cas atteint quand on retient malgré tout des pièces que le
+    # logiciel avait écartées : le recalcul et l'export échouaient alors en erreur.
+    d = dossier([piece(1, kind="facture", total=None, total_chf=50.0, currency="EUR", rubrique="Activité"),
+                 piece(2, kind="facture", total=None, currency="EUR", rubrique="Activité")], titres=2, eleves=19, autres=0)
+    for p in d.pieces:
+        p.include = True
+    compute_rows(d)
+    assert d.rows == []
+    assert any("Pièce 2" in w and "taux de change" in w for w in d.warnings)
+
+
+def test_montant_chf_egal_a_la_contre_valeur_dune_piece_eur_reste_dans_le_detail():
+    d = dossier([piece(1, kind="facture", total=100.0, currency="EUR", rate=1.0, rubrique="Activité"),
+                 piece(2, kind="facture", total=100.0, currency="CHF", rubrique="Activité")], titres=2, eleves=19, autres=0)
+    row = next(r for r in d.rows if r.rubrique == "Activité")
+    assert row.cout_total == 200.0
+    assert row.libelle == "pces 1-2 (100.00 EUR*1.0000 = 100.00 CHF + 100.00)"
+
+
+def test_piece_sans_tarif_adulte_ni_total_nest_pas_annoncee_dans_la_ligne():
+    # pièce retenue à la main, en saisie directe, sans tarif adulte lisible ni total
+    d = dossier([piece(1, fares=[fare("plein", 2, 2.80)], total=5.6),
+                 piece(2, fares=[fare("enfant", 3, 1.0)], total=None)], titres=2, eleves=19, autres=0)
+    d.pieces[1].include = True
+    d.pieces[1].mode = "direct"
+    compute_rows(d)
+    row = next(r for r in d.rows if r.rubrique == "Transport")
+    assert row.pieces == [1]
+    assert row.libelle == "pce 1 (2*2.80)"
+    assert any("Pièce 2" in w and "non comptée" in w for w in d.warnings)

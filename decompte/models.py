@@ -56,7 +56,7 @@ class Block(BaseModel):
         return "\n".join(l.text for l in self.lines)
 
 
-PageKind = Literal["form", "pieces", "empty"]
+PageKind = Literal["form", "pieces", "empty", "decompte"]
 
 
 class PageData(BaseModel):

@@ -165,9 +165,15 @@ FARE_CATEGORIES: list[tuple[str, re.Pattern]] = [
     ("invite", re.compile(r"invit|inv[il1]t|gratuit|offert|\bfree\b|\bfrei\b|kostenlos|mediation", re.I)),
     ("enfant", re.compile(r"jeune|enfant|\bkind|ecole|ecoles|eleve|etudiant|student|junior|scolaire|schuler|\b6-(?:24|16|15)|\bado\b", re.I)),
     ("demi", re.compile(r"demi|1/2|½|halbtax|\bhalb|reduit|ermassigt|ermaessigt|\bred\.|\babo\b|\bag\b", re.I)),
-    # « enseignant », « accompagnateur », « maître » : tarifs adultes des billets de groupe (MOB, CFF, TL…)
-    ("plein", re.compile(r"prix entier|plein tarif|tarif entier|adulte|adult|erwachsen|\bentier\b|\bnormal\b|\bstandard\b|\bplein\b|accompagnat|acc\.|enseignant|maitre|maitresse|professeur|\bprof\b|lehrer|lehrperson|begleit", re.I)),
+    ("plein", re.compile(r"prix entier|plein tarif|tarif entier|adulte|adult|erwachsen|\bentier\b|\bnormal\b|\bstandard\b|\bplein\b", re.I)),
 ]
+
+# « enseignant », « accompagnateur », « maître » : tarifs adultes des billets de groupe (MOB, CFF,
+# TL…). Ces mots sont trop courants pour être reconnus n'importe où : une facture adressée « à
+# l'attention de l'enseignant responsable » n'est pas une ligne tarifaire. Ils ne comptent donc que
+# sur une ligne courte, de la forme « 2 Enseignants CHF 8.40 ».
+STAFF_RE = re.compile(r"accompagnat|acc\.|enseignant|maitre|maitresse|professeur|\bprof\b|lehrer|lehrperson|begleit", re.I)
+STAFF_LABEL_MAX = 30
 
 TOTAL_COUNT_RE = re.compile(r"^\s*(\d{1,3})\s+(total|tot\.?)\s*$", re.I)
 QTY_PREFIX_RE = re.compile(r"^\s*(\d{1,3})\s*[xX×]?\s+(?=[A-Za-zÀ-ÿ])")
@@ -175,11 +181,21 @@ QTY_MIDDLE_RE = re.compile(r"(?:^|\s)(\d{1,3})\s*[xX×]\s*(?=\d)")
 QTY_AFTER_LABEL_RE = re.compile(r"[A-Za-zÀ-ÿ)]\s+(\d{1,3})\s+(?=\d)")
 
 
+def fare_label(line: str) -> str:
+    """Intitulé d'une ligne tarifaire : la ligne sans les montants, la devise ni la quantité."""
+    label = AMOUNT_RE.sub(" ", line)
+    label = re.sub(r"\b(CHF|SFr|Fr|frs?|EUR)\b[.:]?|€", " ", label, flags=re.I)
+    label = re.sub(r"^\s*\d{1,3}\s*[xX×]?\s+", "", label)
+    return re.sub(r"\s+", " ", label).strip(" -:|")
+
+
 def fare_category(label: str) -> str:
     n = normalize(label)
     for cat, rx in FARE_CATEGORIES:
         if rx.search(n):
             return cat
+    if STAFF_RE.search(n) and len(fare_label(label)) <= STAFF_LABEL_MAX:
+        return "plein"
     return "autre"
 
 
@@ -224,10 +240,7 @@ def parse_fare_line_ex(
             unit = v if piece_total is None or v * qty <= piece_total + 0.011 else round(v / qty, 2)
         else:
             unit = values[0]
-    label = AMOUNT_RE.sub(" ", line)
-    label = re.sub(r"\b(CHF|SFr|Fr|frs?|EUR)\b[.:]?|€", " ", label, flags=re.I)
-    label = re.sub(r"^\s*\d{1,3}\s*[xX×]?\s+", "", label)
-    label = re.sub(r"\s+", " ", label).strip(" -:|")
+    label = fare_label(line)
     fare = FareLine(label=label or cat, category=cat, qty=qty, unit_price=unit, currency=currency, source_line=line)
     if uncertain:
         fare.label += " (quantité illisible)"

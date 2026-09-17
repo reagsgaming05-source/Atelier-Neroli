@@ -159,12 +159,14 @@
     ]);
     const f = (label, key, opts = {}) => el("label", { class: "f" }, [label,
       opts.select
-        ? el("select", { onchange: (e) => { p[key] = e.target.value; onChange(true); } }, opts.select.map(([v, t]) => el("option", { value: v, selected: p[key] === v ? "" : null }, t)))
+        ? el("select", { onchange: (e) => { p[key] = e.target.value; if (opts.after) opts.after(); onChange(true); if (opts.rerender) renderPieces(); } }, opts.select.map(([v, t]) => el("option", { value: v, selected: p[key] === v ? "" : null }, t)))
         : el("input", { type: opts.type || "text", step: opts.type === "number" ? "0.01" : null, value: p[key] ?? "", onchange: (e) => { p[key] = opts.type === "number" ? num(e.target.value) : e.target.value; onChange(true); } })]);
     const fields = el("div", { class: "fields" }, [
       f("Fournisseur", "vendor"),
       f("Date", "date"),
-      f("Devise", "currency", { select: [["CHF", "CHF"], ["EUR", "EUR"]] }),
+      // changer la devise redessine la fiche (les champs « Montant CHF imprimé » et « Taux »
+      // n'apparaissent qu'en EUR) et suit les tarifs, comme dans l'application fenêtrée
+      f("Devise", "currency", { select: [["CHF", "CHF"], ["EUR", "EUR"]], rerender: true, after: () => { for (const fl of p.fares) fl.currency = p.currency; } }),
       f("Total de la pièce", "total", { type: "number" }),
       ...(p.currency === "EUR" ? [f("Montant CHF imprimé (si présent)", "total_chf", { type: "number" }), f("Taux sur la pièce", "rate", { type: "number" })] : []),
       f("Rubrique Excel", "rubrique", { select: rubs.map(r => [r, r]) }),
@@ -186,7 +188,7 @@
     fares.append(
       el("div", { class: "legend", style: "margin:6px 0 2px" }, p.fares.length ? "Tarifs par personne lus sur la pièce (mode « saisie directe » : on retient jusqu'à N titrés tarifs adultes, plein tarif d'abord)" : "Aucun tarif par personne lu → montant global (règle de trois), ou ajoutez les tarifs :"),
       table,
-      el("button", { class: "small", style: "margin-top:4px", onclick: () => { p.fares.push({ label: "Adulte", category: "plein", qty: 1, unit_price: 0, currency: p.currency || "CHF", source_line: "" }); if (p.mode !== "direct") p.mode = "direct"; renderPieces(); } }, "+ Ajouter un tarif"),
+      el("button", { class: "small", style: "margin-top:4px", onclick: () => { p.fares.push({ label: "Adulte", category: "plein", qty: 1, unit_price: 0, currency: p.currency || "CHF", source_line: "" }); if (p.mode !== "direct") p.mode = "direct"; onChange(true); renderPieces(); } }, "+ Ajouter un tarif"),
     );
     const notes = el("div", { class: "notes" });
     if (!p.include && p.exclusion_reason) notes.append(el("div", { class: "reason" }, `Exclue : ${p.exclusion_reason}`));

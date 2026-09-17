@@ -141,3 +141,28 @@ def test_mob_group_ticket_teacher_fares_are_adult_fares():
     assert ("plein", 1, 26.00) in cats
     assert ("enfant", 18, 9.00) in cats
     assert sum(f.qty for f in p.adult_fares()) == 3
+
+
+# ---------------------------------------------------------------------------
+# Relecture de septembre
+# ---------------------------------------------------------------------------
+
+
+def test_mention_enseignant_dans_une_phrase_nest_pas_un_tarif():
+    p = analyse_block(block(["Facture", "A l'attention de l'enseignant responsable CHF 250.00", "Total CHF 250.00"]), 1)
+    assert p.fares == []
+    assert p.total == 250.0
+
+
+def test_ligne_tarifaire_enseignant_reste_un_tarif_adulte():
+    p = analyse_block(block(["MOB Golden Pass", "2 Enseignants CHF 8.40", "24 Jeune 6-16 CHF 4.20", "CHF 117.60"]), 1)
+    cats = {(f.category, f.qty, f.unit_price) for f in p.fares}
+    assert ("plein", 2, 8.40) in cats
+    assert ("enfant", 24, 4.20) in cats
+
+
+def test_page_de_decompte_reste_un_dossier_valide():
+    from decompte.models import Dossier, PageData
+
+    d = Dossier(id="t", pages=[PageData(number=1, kind="decompte", width=595, height=842)])
+    assert Dossier.model_validate(d.model_dump()).pages[0].kind == "decompte"

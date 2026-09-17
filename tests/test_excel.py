@@ -91,3 +91,22 @@ def test_direct_row_writes_ticket_total_and_formula():
     d3 = make("course", [DecompteRow(rubrique="Transport", libelle="pce 1", mode="direct", cout_direct=19.0, formule="2*10.00 EUR*0.9500")])
     ws3 = load(build_workbook(d3))
     assert ws3["I12"].value == "=ROUND(2*10.00*0.9500,2)"
+
+
+# ---------------------------------------------------------------------------
+# Relecture de septembre
+# ---------------------------------------------------------------------------
+
+
+def test_formule_de_ligne_hostile_ou_incoherente_donne_le_montant():
+    from decompte.excel import _direct_formula
+
+    # « 9**9**9 » : une expression Python évaluée telle quelle bloquerait le programme
+    row = DecompteRow(rubrique="Transport", libelle="pce 1", mode="direct", cout_direct=33.6, formule="9**9**9")
+    assert _direct_formula(row) == 33.6
+    # formule qui ne retombe pas sur le montant (ligne retouchée à la main) : le montant fait foi
+    assert _direct_formula(DecompteRow(rubrique="Transport", libelle="pce 1", mode="direct", cout_direct=33.6, formule="2*2.80")) == 33.6
+    # formule cohérente : elle est écrite dans la case
+    assert _direct_formula(DecompteRow(rubrique="Transport", libelle="pce 1", mode="direct", cout_direct=33.6, formule="6*2.80 + 6*2.80")) == "=ROUND(6*2.80+6*2.80,2)"
+    # tarifs en EUR : la devise est retirée, le taux reste un facteur
+    assert _direct_formula(DecompteRow(rubrique="Transport", libelle="pce 1", mode="direct", cout_direct=21.7, formule="2*10.00 EUR*1.0850")) == "=ROUND(2*10.00*1.0850,2)"

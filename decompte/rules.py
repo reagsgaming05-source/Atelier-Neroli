@@ -138,7 +138,16 @@ def _eur_rate_for(piece: Piece, dossier: Dossier) -> Optional[float]:
         return piece.rate
     for other in dossier.pieces:
         # reçu de carte / relevé mentionnant le même montant EUR avec sa contre-valeur CHF
-        if other is not piece and other.currency == "EUR" and other.total == piece.total and other.total_chf:
+        # (deux totaux illisibles ne sont pas « le même montant » : sans ce garde-fou, une division
+        # par None faisait échouer le recalcul et l'export)
+        if (
+            other is not piece
+            and other.currency == "EUR"
+            and other.total
+            and piece.total is not None
+            and other.total == piece.total
+            and other.total_chf
+        ):
             return other.total_chf / other.total
         if other is not piece and other.kind in ("recu_carte", "taux_change") and other.rate:
             return other.rate
@@ -173,7 +182,7 @@ def compute_rows(dossier: Dossier) -> None:
             continue
         rub = normalize_rubrique(p.rubrique, dossier.type_activite)
         key = (rub, p.mode)
-        g = groups.setdefault(key, {"numeros": [], "ids": [], "parts": OrderedDict(), "amounts": [], "eur_parts": [], "totals": []})
+        g = groups.setdefault(key, {"numeros": [], "ids": [], "parts": OrderedDict(), "amounts": [], "chf_parts": [], "eur_parts": [], "totals": []})
         rate = _eur_rate_for(p, dossier)
         if p.currency == "EUR" and rate is None:
             warnings.append(f"[calcul] Pièce {p.numero} en EUR sans taux de change : non comptée. Indiquez le taux EUR→CHF.")
@@ -196,10 +205,15 @@ def compute_rows(dossier: Dossier) -> None:
                     mode = "prorata"
                 else:
                     warnings.append(f"[calcul] Pièce {p.numero} : aucun tarif adulte retenu et total illisible : non comptée.")
+                    # retirée du groupe : sinon son numéro figurait dans le libellé de la ligne
+                    # (« pces 1-2 ») alors qu'elle ne compte pour rien
+                    g["numeros"].pop()
+                    g["ids"].pop()
+                    continue
         if mode != p.mode:
             g["numeros"].pop(); g["ids"].pop()
             key = (rub, mode)
-            g = groups.setdefault(key, {"numeros": [], "ids": [], "parts": OrderedDict(), "amounts": [], "eur_parts": [], "totals": []})
+            g = groups.setdefault(key, {"numeros": [], "ids": [], "parts": OrderedDict(), "amounts": [], "chf_parts": [], "eur_parts": [], "totals": []})
             g["numeros"].append(p.numero or str(p.id))
             g["ids"].append(p.id)
         if mode == "direct":
@@ -211,6 +225,9 @@ def compute_rows(dossier: Dossier) -> None:
                 g["totals"].append(round(p.total * rate, 2) if p.currency == "EUR" else round(p.total, 2))
         else:
             if p.total is None:
+                warnings.append(f"[calcul] Pièce {p.numero} : total illisible, non comptée.")
+                g["numeros"].pop()
+                g["ids"].pop()
                 continue
             if p.currency == "EUR":
                 chf = round(p.total * rate, 2)
@@ -218,6 +235,7 @@ def compute_rows(dossier: Dossier) -> None:
                 g["amounts"].append(chf)
             else:
                 g["amounts"].append(round(p.total, 2))
+                g["chf_parts"].append(round(p.total, 2))
 
     rows: list[DecompteRow] = []
     order = rubriques_for(dossier.type_activite)
@@ -248,8 +266,9 @@ def compute_rows(dossier: Dossier) -> None:
                 parts = []
                 for numero, eur, rate, chf, printed in g["eur_parts"]:
                     parts.append(f"{_fmt(eur)} EUR = {_fmt(chf)} CHF" if printed else f"{_fmt(eur)} EUR*{rate:.4f} = {_fmt(chf)} CHF")
-                others = [a for a in g["amounts"] if a not in [e[3] for e in g["eur_parts"]]]
-                parts += [_fmt(a) for a in others]
+                # les montants en francs sont listés à part : les repérer par leur valeur ferait
+                # disparaître un montant CHF égal par hasard à la contre-valeur d'une pièce en EUR
+                parts += [_fmt(a) for a in g["chf_parts"]]
                 detail = f" ({' + '.join(parts)})"
             elif len(g["amounts"]) > 1:
                 detail = f" ({' + '.join(_fmt(a) for a in g['amounts'])})"
