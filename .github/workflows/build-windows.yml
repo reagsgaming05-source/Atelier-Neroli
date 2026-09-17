@@ -32,7 +32,7 @@ jobs:
 
       - name: Tests unitaires
         run: |
-          pip install pytest
+          pip install pytest -r requirements-dev.txt
           python -m pytest tests -q --ignore=tests/test_samples.py
 
       - name: Tesseract portable (installateur UB Mannheim extrait avec 7-Zip + langues fra/deu)
