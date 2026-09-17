@@ -828,7 +828,12 @@
       if (prev && frag) {
         const before = normalizeAccount(prev.text);
         const merged = normalizeAccount(prev.text + frag[1]);
-        if (merged && merged !== before) {
+        // On ne recolle que sur une ligne visiblement inachevée : compte illisible tel quel, ou
+        // compte terminé par un séparateur auquel il manque la sous-rubrique (« 51000.3151. » +
+        // « 00 »). Sans cela un nombre isolé de la colonne voisine allongerait un compte déjà
+        // complet (« 9100. 104 » + « 50 » → 9100.1045) et le compte de caisse disparaîtrait.
+        const inacheve = !before || (/[.,;:]\s*$/.test(prev.text) && merged && merged.split('.').length === 3 && before.split('.').length === 2);
+        if (merged && merged !== before && inacheve) {
           if (issues) issues.push(`Compte ${colName.toUpperCase()} lu sur deux lignes (« ${prev.text} » + « ${l.text.trim()} ») : ${merged} retenu`);
           prev.text = prev.text + frag[1];
           prev.words = prev.words.concat(l.words);
@@ -928,7 +933,11 @@
     const topWords = words.filter((w) => w.y < yHeader - 6);
     for (const w of topWords.slice().sort((a, b) => a.x - b.x)) {
       if (col(w.x) !== 'somme') continue;
-      const t = ocrDigits(w.str.trim()).replace(/[^\d]/g, '');
+      const raw = w.str.trim();
+      // le mot doit déjà contenir un chiffre : sinon « B », « S » ou « No », corrigés en 8, 5 et 0
+      // par ocrDigits, passeraient pour le numéro de la pièce et arrêteraient la recherche
+      if (!/\d/.test(raw)) continue;
+      const t = ocrDigits(raw).replace(/[^\d]/g, '');
       if (/^\d{1,3}$/.test(t)) { no = parseInt(t, 10); noRaw = w.str; noWords = [w]; break; }
     }
     if (no == null) {
@@ -1457,16 +1466,21 @@
     sortEntries(entries);
 
     // Numéro manquant : proposé d'après l'ordre des pages ; date manquante : date de la pièce précédente
-    const withNo = entries.filter((e) => e.no != null);
-    for (const e of entries) {
-      if (e.no == null) {
-        const before = withNo.filter((x) => x.page < e.page || (x.page === e.page && (x.part || 0) < (e.part || 0)));
-        if (before.length) {
-          const prev = before[before.length - 1];
-          e.no = prev.no + 1;
-          addDoubt(e, 'no', `Numéro ${e.no} proposé (pièce qui suit la n° ${prev.no}) : à vérifier`);
-        }
-      }
+    const pageOrder = (a, b) => a.page - b.page || (a.part || 0) - (b.part || 0);
+    const used = new Set(entries.filter((e) => e.no != null).map((e) => Number(e.no)));
+    const numbered = entries.filter((e) => e.no != null).sort(pageOrder);
+    for (const e of entries.filter((x) => x.no == null).sort(pageOrder)) {
+      const before = numbered.filter((x) => pageOrder(x, e) < 0);
+      if (!before.length) continue;
+      const prev = before[before.length - 1];
+      const n = prev.no + 1;
+      e.no = n;
+      // la pièce prend sa place parmi les numérotées : celle d'après repart d'elle, sinon deux
+      // pièces sans numéro qui se suivent recevraient toutes les deux le numéro du même voisin
+      numbered.push(e); numbered.sort(pageOrder);
+      if (used.has(n)) addDoubt(e, 'no', `Numéro ${n} proposé (pièce qui suit la n° ${prev.no}) mais ce numéro est déjà pris : à corriger`);
+      else addDoubt(e, 'no', `Numéro ${n} proposé (pièce qui suit la n° ${prev.no}) : à vérifier`);
+      used.add(n);
     }
     // L'ordre des pages n'est pas un indice fiable : les classeurs contiennent des copies de
     // pièces antérieures jointes comme justificatifs. Les trous et les doublons de numéros sont

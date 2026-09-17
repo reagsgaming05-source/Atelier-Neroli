@@ -135,7 +135,7 @@ function createWindow() {
       .catch((e) => logLine(`thème DGEO : ${e.message}`));
   });
   dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage du logiciel de décompte…', true));
-  launchDgeo();
+  launchDgeo().catch((e) => logLine(`Décompte DGEO : ${(e && e.message) || e}`));
 
   mainWindow.on('resize', layoutViews);
   mainWindow.on('closed', () => { mainWindow = null; caisseView = null; dgeoView = null; });
@@ -163,7 +163,7 @@ function dgeoPlaceholder(title, message, spinner) {
 // Le dossier decompte/ (version portable de Décompte DGEO) est posé à côté de l'exécutable ;
 // son serveur est lancé en mode --web sur un port libre et affiché dans le second onglet.
 // En développement : DECOMPTE_CMD (ex. « python -m decompte ») avec DECOMPTE_CWD.
-const dgeo = { proc: null, url: null, target: null, proxy: null, status: 'off', starting: null };
+const dgeo = { proc: null, url: null, target: null, proxy: null, status: 'off', starting: null, lastExcelId: null, lastExcelAt: 0 };
 
 /** État de la fenêtre pour la barre d'onglets (et le test de fumée). */
 function shellState() {
@@ -181,6 +181,9 @@ function notifyCaisse(channel, payload) {
 function dgeoCommand() {
   if (process.env.DECOMPTE_CMD) {
     const parts = process.env.DECOMPTE_CMD.split(/\s+/);
+    // chemin vers un fichier : vérifié tout de suite, pour dire « non inclus » plutôt que d'attendre
+    // l'échec du lancement (un simple nom de commande est laissé au PATH)
+    if (/[\\/]/.test(parts[0]) && !fs.existsSync(parts[0])) { logLine(`DECOMPTE_CMD introuvable : ${parts[0]}`); return null; }
     return { cmd: parts[0], args: parts.slice(1), cwd: process.env.DECOMPTE_CWD || PORTABLE_DIR };
   }
   const exe = path.join(PORTABLE_DIR, 'decompte', process.platform === 'win32' ? 'DecompteDGEO.exe' : 'DecompteDGEO');
@@ -206,7 +209,7 @@ function httpOk(url) {
 
 async function startDgeo() {
   if (dgeo.status === 'ready') return dgeo.url;
-  if (dgeo.starting) return dgeo.starting;
+  if (dgeo.starting) return dgeo.starting.catch(() => null); // l'échec est signalé à l'appelant qui a lancé le démarrage
   dgeo.starting = (async () => {
     const c = dgeoCommand();
     if (!c) { dgeo.status = 'missing'; return null; }
@@ -222,16 +225,28 @@ async function startDgeo() {
       if (t && t.cmd.includes(path.sep)) env.TESSERACT_CMD = t.cmd;
     }
     dgeo.status = 'starting';
-    dgeo.proc = spawn(c.cmd, args, { cwd: c.cwd, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
-    dgeo.proc.stdout.on('data', (d) => logLine(`[dgeo] ${String(d).trim()}`));
-    dgeo.proc.stderr.on('data', (d) => logLine(`[dgeo] ${String(d).trim()}`));
-    dgeo.proc.on('exit', (code) => {
-      logLine(`Décompte DGEO arrêté (code ${code})`);
+    const child = spawn(c.cmd, args, { cwd: c.cwd, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    dgeo.proc = child;
+    child.stdout.on('data', (d) => logLine(`[dgeo] ${String(d).trim()}`));
+    child.stderr.on('data', (d) => logLine(`[dgeo] ${String(d).trim()}`));
+    // Arrêt du programme : la passerelle qui le précède est fermée avec lui, sinon un relancement
+    // laisserait l'ancienne à l'écoute. Le garde « dgeo.proc !== child » laisse tranquille un
+    // programme déjà relancé, et l'arrêt volontaire (stopDgeo) qui a déjà tout remis à zéro.
+    const stopped = (title, detail, msg) => {
+      if (dgeo.proc !== child) return;
+      logLine(msg);
       dgeo.proc = null;
+      if (dgeo.proxy) { try { dgeo.proxy.close(); } catch (e) { /* ignore */ } dgeo.proxy = null; }
+      dgeo.url = null; dgeo.target = null;
       dgeo.status = dgeo.status === 'ready' ? 'off' : 'failed';
-      if (dgeoView && !app.isQuitting) dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO arrêté', "Le logiciel de décompte s'est arrêté. Cliquez sur l'onglet pour le relancer (détails dans data/caisse.log)."));
+      if (dgeoView && !app.isQuitting) dgeoView.webContents.loadURL(dgeoPlaceholder(title, detail));
       pushShellState();
-    });
+    };
+    // « error » : le programme n'a pas pu être lancé (introuvable, droits refusés, DECOMPTE_CMD
+    // erroné). « exit » n'est alors jamais émis : sans cet écouteur, Node arrête l'application et
+    // l'attente ci-dessous tournerait 90 secondes dans le vide.
+    child.on('error', (e) => stopped('Décompte DGEO n\'a pas pu démarrer', `Le logiciel de décompte n'a pas pu être lancé (${e.message}). Détails dans data/caisse.log.`, `Décompte DGEO : lancement impossible (${e.message})`));
+    child.on('exit', (code) => stopped('Décompte DGEO arrêté', "Le logiciel de décompte s'est arrêté. Cliquez sur l'onglet pour le relancer (détails dans data/caisse.log).", `Décompte DGEO arrêté (code ${code})`));
     const url = `http://127.0.0.1:${port}/`;
     for (let i = 0; i < 180; i++) {
       if (!dgeo.proc) break;
@@ -251,7 +266,9 @@ async function startDgeo() {
     if (dgeo.status !== 'ready') dgeo.status = 'failed';
     return null;
   })();
-  try { return await dgeo.starting; } finally { dgeo.starting = null; }
+  try { return await dgeo.starting; }
+  catch (e) { dgeo.status = 'failed'; logLine(`Décompte DGEO : démarrage impossible (${(e && e.message) || e})`); return null; }
+  finally { dgeo.starting = null; }
 }
 
 function stopDgeo() {
@@ -294,7 +311,7 @@ ipcMain.on('dgeo:embed', (ev, rect) => {
   pushShellState();
   if (dgeoEmbed && dgeoView) {
     if (dgeo.status === 'ready') { if (!dgeoView.webContents.getURL().startsWith(dgeo.url)) dgeoView.webContents.loadURL(dgeo.url); }
-    else if (dgeo.status !== 'starting') launchDgeo(); // non démarré, arrêté ou en échec : nouvel essai
+    else if (dgeo.status !== 'starting') launchDgeo().catch((e) => logLine(`Décompte DGEO : ${(e && e.message) || e}`)); // non démarré, arrêté ou en échec : nouvel essai
   }
 });
 ipcMain.on('shell:tab', (ev, name) => { showTab(name === 'dgeo' ? 'dgeo' : 'caisse'); });
@@ -390,9 +407,20 @@ function recordDecompte(d) {
   const s = summarizeDossier(d);
   if (!s.id) return;
   const list = loadDecomptes();
-  const i = list.findIndex((x) => x.id === s.id && !x.saisi);
-  if (i >= 0) { s.excel = list[i].excel; list[i] = s; } else list.push(s);
+  // Un seul enregistrement par décompte : « dgeo:mark », « Ouvrir l'Excel » et le lien avec la pièce
+  // comptable retrouvent le décompte par son identifiant. Un doublon (décompte refait après la
+  // création de la pièce) les ferait travailler sur l'ancien enregistrement : le décompte resterait
+  // « à saisir » pour toujours et « Créer la pièce » se répéterait.
+  const i = list.findIndex((x) => x.id === s.id);
+  if (i >= 0) {
+    const old = list[i];
+    s.excel = old.excel; s.saisi = old.saisi; s.pieceId = old.pieceId;
+    if (old.saisi && old.total !== s.total) logLine(`Décompte ${s.numero || s.id} refait (total ${old.total} → ${s.total}) alors que sa pièce comptable existe déjà : à vérifier.`);
+    list[i] = s;
+  } else list.push(s);
   saveDecomptes(list);
+  // le classeur enregistré juste après appartient à ce décompte-là (voir « will-download »)
+  dgeo.lastExcelId = s.id; dgeo.lastExcelAt = Date.now();
   logLine(`Décompte DGEO terminé : ${s.numero || s.filename || s.id} – ${s.activite} ${s.classe} – total ${s.total}`);
   notifyCaisse('dgeo:new', s);
   pushShellState();
@@ -456,7 +484,11 @@ function setupDownloads() {
       item.once('done', (e, state) => {
         if (state !== 'completed') return;
         const list = loadDecomptes();
-        const d = list.slice().reverse().find((x) => !x.saisi);
+        // le décompte que Décompte DGEO vient de produire (pont « /api/excel »), et non le dernier
+        // de la liste : avec deux décomptes en attente, refaire l'Excel du plus ancien écrivait son
+        // emplacement sur le plus récent
+        const fresh = dgeo.lastExcelId && Date.now() - (dgeo.lastExcelAt || 0) < 5 * 60 * 1000 ? list.find((x) => x.id === dgeo.lastExcelId) : null;
+        const d = fresh || list.slice().reverse().find((x) => !x.saisi);
         if (d) { d.excel = item.getSavePath(); saveDecomptes(list); notifyCaisse('dgeo:new', d); }
       });
     }

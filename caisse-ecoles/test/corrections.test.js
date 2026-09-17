@@ -309,3 +309,45 @@ test('explainGap : retrouve les pièces prises dans le mauvais sens qui explique
   assert.deepEqual(P.explainGap(entries, 0.03), []);
   assert.deepEqual(P.explainGap(entries, 0), []);
 });
+
+/* ------------------------------------------------------------------ */
+/* Relecture de septembre : moteur de lecture des pièces scannées         */
+/* ------------------------------------------------------------------ */
+
+test('deux pièces de suite sans numéro reçoivent deux numéros différents', () => {
+  const mk = (page, no, somme) => ({ pageNumber: page, width: 595, height: 842, words: makeForm({ no, lines: [{ doit: '51000.3185.00', somme, avoir: '9100.104' }], total: somme, libelle: ['REMBOURSEMENT piles', 'R. Desaules'], date: '01.03.2025' }) });
+  const res = P.parseDocument([mk(1, '10', 'CHF 12.00'), mk(2, '??', 'CHF 15.00'), mk(3, '??', 'CHF 18.00')], { caisse: '9100.104' });
+  assert.deepEqual(res.entries.map((e) => e.no), [10, 11, 12]);
+  assert.ok(res.entries[2].warnings.some((w) => /Numéro 12 proposé/.test(w)));
+});
+
+test('un numéro proposé qui existe déjà est signalé comme à corriger', () => {
+  const mk = (page, no) => ({ pageNumber: page, width: 595, height: 842, words: makeForm({ no, lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Desaules'], date: '01.03.2025' }) });
+  const res = P.parseDocument([mk(1, '10'), mk(2, '??'), mk(3, '11')], { caisse: '9100.104' });
+  const propose = res.entries.find((e) => e.page === 2);
+  assert.equal(propose.no, 11);
+  assert.ok(propose.warnings.some((w) => /déjà pris/.test(w)), propose.warnings.join(' | '));
+});
+
+test('un nombre isolé sous un compte complet ne vient pas allonger ce compte', () => {
+  // colonne AVOIR : « 9100. 104 » puis, sur la ligne suivante, un « 50 » venu de la colonne voisine
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100. 104' }, { avoir: '50' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Desaules'], date: '01.03.2025' }) };
+  const info = P.analyzePage(page);
+  assert.ok(info.avoir.includes('9100.104'), `avoir lu : ${info.avoir.join(', ')}`);
+  const res = P.parseDocument([page], { caisse: '9100.104' });
+  assert.equal(res.entries[0].compte, '51000.3185.00');
+  assert.equal(res.entries[0].side, 'credit', 'caisse à l\'AVOIR : sortie de caisse, pas un sens deviné'); // caisse reconnue à l'AVOIR
+});
+
+test('un compte coupé en deux lignes est toujours recollé', () => {
+  const page = { pageNumber: 1, width: 595, height: 842, words: makeForm({ no: '12', lines: [{ doit: '51000.3151.', somme: 'CHF 12.00', avoir: '9100.104' }, { doit: '00' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Desaules'], date: '01.03.2025' }) };
+  const info = P.analyzePage(page);
+  assert.ok(info.doit.includes('51000.3151.00'), `doit lu : ${info.doit.join(', ')}`);
+});
+
+test('une lettre isolée au-dessus de l\'entête ne devient pas le numéro de la pièce', () => {
+  const words = makeForm({ no: '12', lines: [{ doit: '51000.3185.00', somme: 'CHF 12.00', avoir: '9100.104' }], total: 'CHF 12.00', libelle: ['REMBOURSEMENT piles', 'R. Desaules'], date: '01.03.2025' })
+    .concat([{ str: 'B', x: 330, y: 79, h: 10 }]); // trace de scan à gauche du numéro : 'B' se lirait 8
+  const info = P.analyzePage({ pageNumber: 1, width: 595, height: 842, words });
+  assert.equal(info.no, 12);
+});

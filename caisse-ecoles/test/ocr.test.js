@@ -113,3 +113,64 @@ test('crossFlags passent dans les écritures via parseDocument({ refine })', () 
   assert.ok(e.flags.montant.some((f) => f.level === 'ok'));
   assert.deepEqual(e.warnings, []);
 });
+
+/* ------------------------------------------------------------------ */
+/* Relecture de septembre : confrontation des lectures                    */
+/* ------------------------------------------------------------------ */
+
+const ctx2 = () => ({ index: P.buildIndex(P.learnVocabulary([{ no: 1, compte: '50000.3652.00', libelle: 'REMBOURSEMENT - Frais - A. Berger' }])), caisse: '9100.104' });
+const twoReaders = (reads) => [{ name: 'OCR local', reads }, { name: 'Tesseract', reads }];
+
+test('date bien lue dans la couche texte et contestée par l\'OCR : doute proposé, pas remplacement muet', () => {
+  // dateRaw est la ligne entière du formulaire : la date y figure bien en chiffres
+  const out = O.crossRead(fakeInfo({ dateRaw: 'Blonay, le 01.03.2025' }), twoReaders({ date: [W('02.03.2025', 90)] }), ctx2());
+  assert.equal(out.date, '2025-03-01', 'la couche texte reste retenue');
+  const d = out.crossFlags.find((f) => f.field === 'date' && f.level === 'doubt');
+  assert.ok(d, out.crossFlags.map((f) => `${f.level}:${f.message}`).join(' | '));
+  assert.deepEqual(d.action, { type: 'set', field: 'date', value: '2025-03-02' });
+});
+
+test('date abîmée dans la couche texte : l\'OCR la remplace avec un simple constat', () => {
+  const out = O.crossRead(fakeInfo({ dateRaw: 'Blonay, le Ol.O3.2O25' }), twoReaders({ date: [W('02.03.2025', 90)] }), ctx2());
+  assert.equal(out.date, '2025-03-02');
+  assert.ok(out.crossFlags.some((f) => f.field === 'date' && f.level === 'note'));
+  assert.equal(out.crossFlags.some((f) => f.field === 'date' && f.level === 'doubt'), false);
+});
+
+test('n° bien lu au milieu d\'autres mots : doute proposé ; n° abîmé : remplacé', () => {
+  const propre = O.crossRead(fakeInfo({ noRaw: 'COMPTABLE 12' }), twoReaders({ no: [W('13', 92)] }), ctx2());
+  assert.equal(propre.no, 12, 'la couche texte reste retenue');
+  const d = propre.crossFlags.find((f) => f.field === 'no' && f.level === 'doubt');
+  assert.ok(d, propre.crossFlags.map((f) => `${f.level}:${f.message}`).join(' | '));
+  assert.deepEqual(d.action, { type: 'set', field: 'no', value: 13 });
+  const abime = O.crossRead(fakeInfo({ noRaw: 'l2' }), twoReaders({ no: [W('13', 92)] }), ctx2());
+  assert.equal(abime.no, 13);
+  assert.ok(abime.crossFlags.some((f) => f.field === 'no' && f.level === 'note'));
+});
+
+test('readNo ne prend pas une lettre isolée pour un numéro', () => {
+  assert.equal(O.readNo([{ str: 'O', conf: 95 }]), null);
+  assert.equal(O.readNo([{ str: 'l', conf: 95 }]), null);
+  assert.deepEqual(O.readNo([{ str: 'lO', conf: 90 }]), { value: 10, conf: 90, raw: '10' });
+  assert.deepEqual(O.readNo([{ str: '12', conf: 95 }]), { value: 12, conf: 95, raw: '12' });
+});
+
+test('le lecteur cité pour le libellé est celui qui a lu', () => {
+  const out = O.crossRead(fakeInfo({ libelleLines: [], libelleWords: [] }), [
+    { name: 'OCR local', reads: {} },
+    { name: 'Tesseract', reads: { libelle: [W('REMBOURSEMENT', 90), W('frais', 90)] } },
+  ], ctx2());
+  const f = out.crossFlags.find((x) => x.field === 'libelle');
+  assert.ok(f && /Tesseract/.test(f.message), f ? f.message : 'aucun constat');
+});
+
+test('un seul lecteur : une lecture propre à 65 de confiance suffit', () => {
+  const index = P.buildIndex(P.learnVocabulary([{ no: 1, compte: '50000.3652.00', libelle: 'REMBOURSEMENT - Repas préparé par les élèves - A. Berger' }]));
+  const a = [{ str: 'Repas préparé par les 0^.', x: 80, y: 280, w: 130, h: 10 }];
+  const b = [];
+  let x = 80;
+  for (const t of ['Repas', 'préparé', 'par', 'les']) { b.push({ str: t, conf: 92, x, y: 280, w: t.length * 4.9, h: 10 }); x += t.length * 4.9 + 4.9; }
+  b.push({ str: 'élèves', conf: 65, x, y: 280, w: 30, h: 10 });
+  const m = O.mergeLibelle(a, b, index);
+  assert.deepEqual(m.replacements, [{ from: '0^.', to: 'élèves' }]);
+});

@@ -169,7 +169,12 @@
   }
 
   function readNo(words) {
-    const cands = cleanWords(words).map((w) => Object.assign({}, w, { str: w.str.replace(/[OoQ]/g, '0').replace(/[Il|]/g, '1').replace(/[^0-9]/g, '') }))
+    // Un jeton sans le moindre chiffre n'est retenu que s'il est entièrement fait de lettres
+    // confondues avec des chiffres (« lO » → 10) : une lettre isolée (« O », « l », « S ») n'est
+    // pas un numéro de pièce, la prendre pour telle donnerait un n° inventé.
+    const chiffrable = (t) => /\d/.test(t) || (t.length >= 2 && /^[OoQIl|]+$/.test(t));
+    const cands = cleanWords(words).filter((w) => chiffrable(String(w.str)))
+      .map((w) => Object.assign({}, w, { str: w.str.replace(/[OoQ]/g, '0').replace(/[Il|]/g, '1').replace(/[^0-9]/g, '') }))
       .filter((w) => /^\d{1,4}$/.test(w.str));
     if (!cands.length) return null;
     const best = cands.reduce((a, b) => (b.conf > a.conf ? b : a));
@@ -309,7 +314,7 @@
         }
         // sinon un seul lecteur, propre et sûr (confiance ≥ 70, ou ≥ 60 s'il est seul)
         if (!chosen) {
-          const single = props.filter((pr) => pr.clean && pr.conf >= (props.length > 1 ? 70 : 70)).sort((p, q) => q.conf - p.conf)[0];
+          const single = props.filter((pr) => pr.clean && pr.conf >= (props.length > 1 ? 70 : 60)).sort((p, q) => q.conf - p.conf)[0];
           if (single) chosen = single;
         }
         if (chosen) {
@@ -410,7 +415,10 @@
         ok('no', `N° confirmé par ${label(agreed.srcs)}`);
       } else if (agreed) {
         // les lectures OCR concordent contre la couche texte
-        if (info.noRaw && /[^0-9\s]/.test(String(info.noRaw))) {
+        // « abîmée » = le numéro retenu n'apparaît pas tel quel dans le texte lu (« l2 » pour 12).
+        // Un numéro bien lu au milieu d'autres mots (« 12 fe », « COMPTABLE 12 ») reste une lecture
+        // propre : là, un désaccord se signale et se propose, il ne s'applique pas en silence.
+        if (info.noRaw && !new RegExp(`(^|[^0-9])0*${info.no}([^0-9]|$)`).test(String(info.noRaw))) {
           out.no = agreed.value; out.noRaw = String(agreed.value);
           note('no', `N° ${agreed.value} retenu d'après ${label(agreed.srcs)} (couche texte : « ${String(info.noRaw).trim()} »)`);
         } else if (agreed.conf >= 80) {
@@ -521,7 +529,10 @@
       } else if (agreed && agreed.srcs.includes('A')) {
         ok('date', `Date confirmée par ${label(agreed.srcs)}`);
       } else if (agreed) {
-        const damaged = info.dateRaw && !/^\s*\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s*$/.test(String(info.dateRaw));
+        // dateRaw est la ligne entière (« Blonay, le 08.01.2025 ») : on cherche donc une date en
+        // chiffres *dans* la ligne. Absente (« O8.Ol.2O25 »), la couche texte est abîmée et l'OCR
+        // la remplace ; présente, le désaccord est un vrai doute, proposé à la correction.
+        const damaged = !info.dateRaw || !/\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*(?:\d{4}|\d{2})(?!\d)/.test(String(info.dateRaw));
         if (damaged) {
           out.date = agreed.value; out.dateRaw = String(agreed.value);
           note('date', `Date ${disp(agreed.value)} retenue d'après ${label(agreed.srcs)} (couche texte : « ${String(info.dateRaw).trim()} »)`);
@@ -535,12 +546,15 @@
 
     // ---- Libellé
     {
-      const lists = R.map((r) => r.v.libelle).filter((l) => l && l.length);
+      // R[0] n'est pas forcément le lecteur retenu : si le premier n'a rien lu, lists[0] vient d'un
+      // autre. On garde le nom à côté de la lecture pour ne pas citer le mauvais lecteur.
+      const sources = R.filter((r) => r.v.libelle && r.v.libelle.length);
+      const lists = sources.map((r) => r.v.libelle);
       if (lists.length) {
         const bLines = P.groupLines(cleanWords(lists[0])).map((l) => l.text).filter((t) => /[A-Za-z0-9]/.test(t));
         if (!(info.libelleLines || []).length || primaryB) {
           if (bLines.length) out.libelleLines = bLines;
-          if (!(info.libelleLines || []).length) note('libelle', `Libellé lu par ${R[0].name}`);
+          if (!(info.libelleLines || []).length) note('libelle', `Libellé lu par ${sources[0].name}`);
         } else if (info.libelleWords && info.libelleWords.length) {
           const m = mergeLibelle(info.libelleWords, lists, index);
           if (m.replacements.length) {

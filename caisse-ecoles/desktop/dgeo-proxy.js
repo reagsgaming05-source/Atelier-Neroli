@@ -89,7 +89,10 @@ function startProxy(opts) {
         r.pipe(res);
       });
       up.on('error', (e) => {
-        if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
+        // réponse déjà commencée : ajouter le message d'erreur collerait du JSON à la suite du
+        // fichier déjà transmis (et fausserait content-length) ; mieux vaut couper.
+        if (res.headersSent || res.writableEnded) { log(`Décompte DGEO injoignable en cours de réponse : ${e.message}`); try { res.destroy(); } catch (err) { /* ignore */ } return; }
+        res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ detail: `Décompte DGEO injoignable : ${e.message}` }));
       });
       if (body) up.end(body); else req.pipe(up);
@@ -113,7 +116,10 @@ function startProxy(opts) {
         });
       });
       up.on('error', (e) => {
-        if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
+        // réponse déjà commencée : ajouter le message d'erreur collerait du JSON à la suite du
+        // fichier déjà transmis (et fausserait content-length) ; mieux vaut couper.
+        if (res.headersSent || res.writableEnded) { log(`Décompte DGEO injoignable en cours de réponse : ${e.message}`); try { res.destroy(); } catch (err) { /* ignore */ } return; }
+        res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ detail: `Décompte DGEO injoignable : ${e.message}` }));
       });
       up.end(body);
