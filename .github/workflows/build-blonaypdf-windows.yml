@@ -159,18 +159,54 @@ jobs:
             Construite depuis le commit 0ed7dac.
           files: outils/BlonayPDF-v1-windows.zip
 
+      # Le zip fait 120 Mo, et son téléversement échoue de temps en temps
+      # (« Error saving asset »). L'action qui le posait supprimait l'ancien
+      # fichier avant d'envoyer le nouveau : un envoi manqué laissait la release
+      # sans rien, et les collègues devant un lien mort — c'est arrivé. On pose
+      # donc le zip nous-mêmes, en réessayant, et on ne déclare l'étape réussie
+      # qu'après avoir vu le fichier en ligne, à la bonne taille.
       - name: Publier la version portable (pré-release « blonaypdf-windows-latest »)
         if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: blonaypdf-windows-latest
-          name: "Blonay PDF — Windows portable (dernière version)"
-          prerelease: true
-          body: |
-            Version portable Windows : décompressez le zip, puis double-cliquez sur `BlonayPDF.exe`.
-            Aucune installation, aucun navigateur : tout est inclus (lecture, organisation, correction du texte, annotations, formulaires, impression directe avec livret).
-            Version 2 : reconnaissance de texte locale (OCR, français et allemand), dossier de pièces, remplacer et caviarder partout, tableau vers Excel, tampons et signatures mémorisés, traitement par lots, vrais commentaires PDF, comparaison de deux versions, signets et lecture deux pages, onglets.
-            La version 1 reste disponible telle quelle dans la release « Blonay PDF — version 1 » (`blonaypdf-v1`).
-            Aucune donnée ne quitte le PC. Voir `LISEZMOI-portable.txt` dans le dossier.
-            Construit automatiquement depuis le commit ${{ github.sha }}.
-          files: BlonayPDF-windows.zip
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $tag = 'blonaypdf-windows-latest'
+          $titre = 'Blonay PDF — Windows portable (dernière version)'
+          # Guillemets simples : le texte contient des accents graves, qui sont
+          # le caractère d'échappement de PowerShell dans une chaîne double.
+          $notes = @'
+          Version portable Windows : décompressez le zip, puis double-cliquez sur `BlonayPDF.exe`.
+          Aucune installation, aucun navigateur : tout est inclus (lecture, organisation, correction du texte, annotations, formulaires, impression directe avec livret).
+          Version 2 : reconnaissance de texte locale (OCR, français et allemand), dossier de pièces, remplacer et caviarder partout, tableau vers Excel, tampons et signatures mémorisés, traitement par lots, vrais commentaires PDF, comparaison de deux versions, signets et lecture deux pages, onglets.
+          La version 1 reste disponible telle quelle dans la release « Blonay PDF — version 1 » (`blonaypdf-v1`).
+          Aucune donnée ne quitte le PC. Voir `LISEZMOI-portable.txt` dans le dossier.
+          Construit automatiquement depuis le commit ${{ github.sha }}.
+          '@
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release edit $tag --title $titre --notes $notes --prerelease=true
+          } else {
+            gh release create $tag --title $titre --notes $notes --prerelease
+          }
+          if ($LASTEXITCODE -ne 0) { throw "Impossible de préparer la release $tag." }
+
+          $attente = 2
+          for ($essai = 1; $essai -le 5; $essai++) {
+            gh release upload $tag BlonayPDF-windows.zip --clobber
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($essai -eq 5) { throw "Le zip n'a pas pu être posé sur $tag après cinq tentatives." }
+            Write-Host "Téléversement manqué (tentative $essai). Nouvelle tentative dans $attente s."
+            Start-Sleep -Seconds $attente
+            $attente = $attente * 2
+          }
+
+          $attendu = (Get-Item BlonayPDF-windows.zip).Length
+          $pose = gh release view $tag --json assets --jq '.assets[] | select(.name == "BlonayPDF-windows.zip") | .size'
+          if (-not $pose) { throw "La release $tag n'a pas de zip : le lien de téléchargement serait mort." }
+          if ([int64]$pose -ne $attendu) { throw "Le zip posé fait $pose octets au lieu de $attendu." }
+          Write-Host "Zip publié : $pose octets."
