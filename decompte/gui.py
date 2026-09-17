@@ -363,9 +363,16 @@ class App(tk.Tk):
         win.update_idletasks()
         win.geometry(f"+{self.winfo_rootx() + 380}+{self.winfo_rooty() + 260}")
         win.grab_set()
-        # La croix ne ferme pas la fenêtre : la détruire pendant l'analyse laissait poll() écrire
-        # dans des widgets détruits (TclError) et le résultat de la lecture était perdu.
-        win.protocol("WM_DELETE_WINDOW", lambda: None)
+        def fermer() -> None:
+            if win.winfo_exists():
+                win.grab_release()
+                win.destroy()
+
+        # La croix referme la fenêtre sans interrompre la lecture : poll() sait travailler sans
+        # elle et charge le dossier quand il arrive. Avant, la détruire faisait écrire dans des
+        # widgets disparus (TclError) et le résultat était perdu ; l'interdire enfermait
+        # l'utilisateur devant une barre de progression dont rien ne le sortait.
+        win.protocol("WM_DELETE_WINDOW", fermer)
         # Une file par analyse : deux lectures lancées à la suite ne se volent plus leurs messages
         # (la seconde chargeait le dossier de la première).
         q: "queue.Queue" = queue.Queue()
@@ -379,11 +386,6 @@ class App(tk.Tk):
                 q.put(("error", str(exc)))
 
         threading.Thread(target=worker, daemon=True).start()
-
-        def fermer() -> None:
-            if win.winfo_exists():
-                win.grab_release()
-                win.destroy()
 
         def poll() -> None:
             vivante = win.winfo_exists()

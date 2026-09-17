@@ -80,7 +80,15 @@
       field("N° de dossier (course / camp n°)", "numero", { placeholder: "ex. ANS100325" }),
       // les rubriques des pièces dépendent du type : les fiches sont redessinées, sinon les
       // rubriques du camp (Hébergement, Nourriture, Cuisinière) restaient inaccessibles
-      field("Type d'activité (modèle Excel)", "type_activite", { select: [["course", "Course d'école"], ["camp", "Camp"]], recompute: true, rerender: () => renderPieces() }),
+      field("Type d'activité (modèle Excel)", "type_activite", { select: [["course", "Course d'école"], ["camp", "Camp"]], recompute: true, rerender: () => {
+        // Les rubriques absentes du nouveau modèle repassent à « Autre », comme le serveur le
+        // fait : sinon la fiche montrait la première rubrique de la liste alors que la pièce en
+        // gardait une autre, et le classeur partait sur « Autre ».
+        const dispo = RUBRIQUES[dossier.type_activite] || RUBRIQUES.course;
+        for (const p of dossier.pieces) if (!dispo.includes(p.rubrique)) p.rubrique = "Autre";
+        for (const r of dossier.rows) if (!dispo.includes(r.rubrique)) r.rubrique = "Autre";
+        renderPieces(); renderRows();
+      } }),
       field("Classe(s)", "classe"),
       field("Enseignant-e responsable", "enseignant"),
       field("Nom de l'activité", "activite"),
@@ -275,8 +283,11 @@
       if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
       const blob = await r.blob();
       const cd = r.headers.get("Content-Disposition") || "";
+      // filename* (RFC 5987) d'abord : il porte le nom complet, filename n'en a qu'une version ASCII
+      const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(cd);
       const m = /filename="?([^";]+)"?/.exec(cd);
-      const a = el("a", { href: URL.createObjectURL(blob), download: m ? m[1] : "decompte.xlsx" });
+      const nom = utf8 ? decodeURIComponent(utf8[1]) : (m ? m[1] : "decompte.xlsx");
+      const a = el("a", { href: URL.createObjectURL(blob), download: nom });
       document.body.append(a); a.click(); a.remove();
     } catch (err) { alert("Génération impossible : " + err.message); } finally { btn.disabled = false; }
   });

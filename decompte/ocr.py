@@ -140,10 +140,12 @@ def _normalize_textlayer_numbers(words: list[Word]) -> list[Word]:
         if i + 1 < len(words):
             n = words[i + 1]
             same_line = abs(n.cy - w.cy) < max(w.h, n.h) * 0.6
-            # l'écart doit aussi être positif : sur une ligne lue de droite à gauche, recoller
-            # donnait un mot dont x1 < x0, dont l'intervalle inversé fausse la découpe en colonnes
+            # L'écart ne doit pas être franchement négatif : sur une ligne lue de droite à gauche,
+            # recoller donnait un mot dont x1 < x0, dont l'intervalle inversé fausse la découpe en
+            # colonnes. Un léger chevauchement reste admis : les cadres de mots des OCR de scanner
+            # se recouvrent souvent d'une fraction de pixel, et c'est justement ce cas qu'on recolle.
             gap = n.x0 - w.x1
-            if same_line and re.fullmatch(r"\d+[.,]", w.text) and re.fullmatch(r"\d{2}", n.text) and 0 <= gap < w.h * 1.5:
+            if same_line and re.fullmatch(r"\d+[.,]", w.text) and re.fullmatch(r"\d{2}", n.text) and -0.25 * w.h <= gap < w.h * 1.5:
                 out.append(Word(x0=w.x0, y0=min(w.y0, n.y0), x1=n.x1, y1=max(w.y1, n.y1), text=w.text + n.text, conf=min(w.conf, n.conf)))
                 i += 2
                 continue
@@ -177,7 +179,8 @@ def rotate_image(img: Image.Image, rotation: int) -> Image.Image:
 
 def words_from_tesseract(img: Image.Image, langs: str, psm: int = 11) -> list[Word]:
     gray = img.convert("L")
-    data = pytesseract.image_to_data(gray, lang=langs, config=f"--psm {psm}", output_type=pytesseract.Output.DICT)
+    # timeout : un tesseract bloqué laissait l'analyse (et la fenêtre de progression) sans fin
+    data = pytesseract.image_to_data(gray, lang=langs, config=f"--psm {psm}", output_type=pytesseract.Output.DICT, timeout=120)
     words: list[Word] = []
     for i, text in enumerate(data["text"]):
         text = (text or "").strip()

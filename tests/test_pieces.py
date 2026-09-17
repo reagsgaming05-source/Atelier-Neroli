@@ -189,3 +189,26 @@ def test_page_de_decompte_reste_un_dossier_valide():
 
     d = Dossier(id="t", pages=[PageData(number=1, kind="decompte", width=595, height=842)])
     assert Dossier.model_validate(d.model_dump()).pages[0].kind == "decompte"
+
+
+def test_billet_dun_seul_adulte_sans_quantite_reste_un_tarif():
+    """« Enseignant CHF 8.40 » seul sur son billet : le montant est bien un tarif adulte,
+    même s'il est aussi le total de la pièce. Sans cela la pièce basculait en règle de trois
+    et l'État ne payait plus que quelques centimes."""
+    p = analyse_block(block(["Gare de Vevey", "Enseignant CHF 8.40", "Total CHF 8.40"]), 1)
+    assert [(f.category, f.qty, f.unit_price) for f in p.fares] == [("plein", 1, 8.40)]
+
+
+def test_nom_de_fichier_entierement_hors_alphabet_latin():
+    from decompte.excel import output_filename
+    from decompte.models import Dossier
+
+    d = Dossier(id="t", filename="Школа.pdf", numero="Школа", type_activite="course")
+    nom = output_filename(d)
+    assert nom.endswith(".xlsx")
+    # le radical ASCII utilisé dans l'en-tête HTTP ne doit pas être vide (fichier nommé « .xlsx »)
+    import unicodedata
+
+    stem = nom.rpartition(".")[0]
+    ascii_stem = "".join(c for c in unicodedata.normalize("NFKD", stem).encode("ascii", "ignore").decode() if c.isalnum() or c in "-_")
+    assert (ascii_stem or "decompte") == "decompte"

@@ -119,7 +119,9 @@ def excel(payload: dict) -> Response:
     # lettre hors de cet alphabet (ł, ě, ş) faisait échouer l'export en erreur 500. On donne donc
     # une version simplifiée en filename, et le nom complet en filename* (RFC 5987, lu par les
     # navigateurs et par la fenêtre « Enregistrer sous » de l'application).
-    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode() or "decompte.xlsx"
+    stem, dot, ext = name.rpartition(".")
+    ascii_stem = "".join(ch for ch in unicodedata.normalize("NFKD", stem).encode("ascii", "ignore").decode() if ch.isalnum() or ch in "-_")
+    ascii_name = f"{ascii_stem or 'decompte'}.{ext}" if dot else (ascii_stem or "decompte")
     quoted = urllib.parse.quote(name, safe="")
     return Response(
         content=data,

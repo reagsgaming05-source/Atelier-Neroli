@@ -198,8 +198,14 @@ def _staff_fare_line(line: str, piece_total: Optional[float]) -> bool:
     (c'est-à-dire un prix unitaire, et non la somme à payer)."""
     if QTY_PREFIX_RE.match(line) or QTY_MIDDLE_RE.search(line) or QTY_AFTER_LABEL_RE.search(line):
         return True
-    if len(fare_label(line)) > STAFF_LABEL_MAX:
+    label = fare_label(line)
+    if len(label) > STAFF_LABEL_MAX:
         return False
+    # Intitulé qui n'est (presque) que le mot de fonction — « Enseignant », « Enseignants »,
+    # « Begleitperson » : ligne tarifaire, même seule et même pour le montant total de la pièce
+    # (billet d'un seul adulte). « Facture enseignant responsable », lui, garde des mots autour.
+    if len(re.sub(r"[^a-z]", "", STAFF_RE.sub(" ", normalize(label)))) <= 4:
+        return True
     if piece_total is None:
         return True
     return all(abs(a.value - piece_total) > 0.011 for a in find_amounts([line]))
