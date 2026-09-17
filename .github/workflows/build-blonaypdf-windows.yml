@@ -176,6 +176,10 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $false
           $tag = 'blonaypdf-windows-latest'
           $titre = 'Blonay PDF — Windows portable (dernière version)'
+          # Le job travaille dans outils/ ; le zip, lui, est écrit à la racine
+          # du dépôt. Chemin absolu, pour ne pas dépendre de l'un ni de l'autre.
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'BlonayPDF-windows.zip'
+          if (-not (Test-Path $zip)) { throw "Zip introuvable : $zip" }
           # Guillemets simples : le texte contient des accents graves, qui sont
           # le caractère d'échappement de PowerShell dans une chaîne double.
           $notes = @'
@@ -197,7 +201,7 @@ jobs:
 
           $attente = 2
           for ($essai = 1; $essai -le 5; $essai++) {
-            gh release upload $tag BlonayPDF-windows.zip --clobber
+            gh release upload $tag $zip --clobber
             if ($LASTEXITCODE -eq 0) { break }
             if ($essai -eq 5) { throw "Le zip n'a pas pu être posé sur $tag après cinq tentatives." }
             Write-Host "Téléversement manqué (tentative $essai). Nouvelle tentative dans $attente s."
@@ -205,7 +209,7 @@ jobs:
             $attente = $attente * 2
           }
 
-          $attendu = (Get-Item BlonayPDF-windows.zip).Length
+          $attendu = (Get-Item $zip).Length
           $pose = gh release view $tag --json assets --jq '.assets[] | select(.name == "BlonayPDF-windows.zip") | .size'
           if (-not $pose) { throw "La release $tag n'a pas de zip : le lien de téléchargement serait mort." }
           if ([int64]$pose -ne $attendu) { throw "Le zip posé fait $pose octets au lieu de $attendu." }
