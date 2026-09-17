@@ -104,3 +104,26 @@ test('passerelle : /api/analyse nettoyé, le reste transmis tel quel', async () 
   if (target.closeAllConnections) target.closeAllConnections();
   await new Promise((r) => target.close(r));
 });
+
+/* ------------------------------------------------------------------ */
+/* Audit : une page ordinaire ne doit pas passer pour une pièce comptable */
+/* ------------------------------------------------------------------ */
+
+test("une page qui emploie les mots « somme », « doit » et « avoir » n'est pas retirée du dossier", async () => {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  // formulaire de couverture de Blonay : les trois mots y figurent dans des phrases ordinaires
+  const p = doc.addPage([595.28, 841.89]);
+  const lignes = [
+    "Decompte d'une course d'ecole - Classe participante : 5P/3",
+    "La somme versee par la commune doit figurer ci-dessous.",
+    "L'enseignant doit avoir joint tous les justificatifs.",
+    'Budget accorde : CHF 600.00 - Total des depenses : CHF 143.95',
+  ];
+  lignes.forEach((l, i) => p.drawText(l, { x: 50, y: 760 - i * 20, size: 11, font }));
+  const bytes = Buffer.from(await doc.save());
+  const pages = await D.inspect(bytes);
+  assert.deepEqual(pages.map((x) => x.form), [false], 'page prise à tort pour une pièce comptable');
+  const res = await D.clean(bytes, { skipFirst: true });
+  assert.deepEqual(res.removed, [], 'le formulaire de couverture ne doit pas être retiré');
+});

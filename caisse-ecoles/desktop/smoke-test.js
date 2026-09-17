@@ -52,8 +52,38 @@ async function findPage(app, pred, timeoutMs) {
     return e ? { no: e.no, date: e.date, compte: e.compte, credit: e.credit, libelle: e.libelle } : null;
   });
   console.log('pièce synthétique :', JSON.stringify(entry));
+
+  // deux formulaires « PIÈCE COMPTABLE » sur une même page : les deux écritures doivent survivre
+  // à une relecture (fin de l'OCR, changement de mode…), sans perte ni doublon
+  const deuxFormulaires = await win.evaluate(() => {
+    const A = window.CaisseApp;
+    const form = (no, dy, doit, somme, avoir, libelle, date) => {
+      const w = (str, x, y) => ({ str, x, y: y + dy, h: 10 });
+      const out = [w('PIECE', 79, 82), w('COMPTABLE', 114, 82), w(no, 349, 79), w('DOIT', 79, 114), w('SOMME', 338, 112), w('AVOIR', 410, 112), w('Libellé', 342, 220), w('Total', 78, 390)];
+      doit.split(' ').forEach((t, i) => out.push(w(t, 155 + i * 31, 142)));
+      somme.split(' ').forEach((t, i) => out.push(w(t, 332 + i * 24, 142)));
+      avoir.split(' ').forEach((t, i) => out.push(w(t, 454 + i * 28, 142)));
+      somme.split(' ').forEach((t, i) => out.push(w(t, 332 + i * 24, 388)));
+      libelle.forEach((l, li) => l.split(' ').forEach((t, i) => out.push(w(t, 78 + i * 40, 261 + li * 14))));
+      date.split(' ').forEach((t, i) => out.push(w(t, 56 + i * 14, 425)));
+      return out;
+    };
+    const words = form('10', 0, '51000.3185.00', 'CHF 12.00', '9100.104', ['REMBOURSEMENT piles', 'R. Desaules'], '01.03.2025')
+      .concat(form('11', 420, '9100.104', 'CHF 300.00', '51000.4392.20', ['PARTICIPATION DES PARENTS', 'E. Vallon'], '02.03.2025'));
+    A.state.pages = [{ docId: 'smoke-2formulaires', pageInDoc: 1, pageNumber: 1, width: 595, height: 842, words }];
+    A.state.entries = [];
+    A.reparse();
+    const avant = A.state.entries.filter((e) => !e.manual).map((e) => e.no);
+    A.reparse(); // relecture : c'est là que les deux écritures retombaient sur le même objet
+    const apres = A.state.entries.filter((e) => !e.manual).map((e) => e.no);
+    A.state.pages = []; A.state.entries = []; A.reparse();
+    return { avant, apres };
+  });
+  console.log('deux formulaires sur une page :', JSON.stringify(deuxFormulaires));
+  const paire = (l) => Array.isArray(l) && l.length === 2 && l[0] === 10 && l[1] === 11;
   let ok = /Compta Blonay/.test(shellTitle) && /Caisse écoles/.test(title) && info.parser === 'object' && info.excel === 'object' && info.ocr && info.registre === 'object' && info.pdf === 'object' && info.files
-    && !!entry && entry.credit === 12 && entry.compte === '50000.3652.00';
+    && !!entry && entry.credit === 12 && entry.compte === '50000.3652.00'
+    && paire(deuxFormulaires.avant) && paire(deuxFormulaires.apres);
 
   // saisie d'une pièce dans la fiche -> journal -> fichiers de l'application
   await win.waitForFunction(() => window.CaisseSaisie && window.CaisseSaisie.state.reg, null, { timeout: 20000 });

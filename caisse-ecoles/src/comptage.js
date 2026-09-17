@@ -70,6 +70,7 @@
   }
   function previous(date) {
     const reg = S.state.reg;
+    if (!reg) return null;
     const p = R.previousCount(reg, date, refCount());
     if (p) return p;
     // aucun comptage plus tôt dans l'année : dernier comptage de l'année précédente
@@ -78,14 +79,17 @@
   async function loadPrevYear() {
     const reg = S.state.reg;
     if (!reg || state.prevYear.annee === reg.annee) return;
-    state.prevYear = { annee: reg.annee, last: null };
+    // On écrit dans l'objet créé pour CETTE année-là : si l'année change pendant la lecture, le
+    // résultat tardif n'atterrit plus sur le comptage de la nouvelle année.
+    const cible = { annee: reg.annee, last: null };
+    state.prevYear = cible;
     try {
       if (S.state.years.includes(reg.annee - 1)) {
         const prev = await S.state.storage.load(reg.annee - 1);
-        if (prev) state.prevYear.last = R.previousCount(prev, `${reg.annee - 1}-12-31`, null);
+        if (prev) cible.last = R.previousCount(prev, `${reg.annee - 1}-12-31`, null);
       }
     } catch (e) { /* sans année précédente */ }
-    if (state.prevYear.annee === reg.annee) refreshTotals();
+    if (state.prevYear === cible) refreshTotals();
   }
   function renderKpis(total) {
     const reg = S.state.reg;
@@ -149,6 +153,7 @@
   }
   async function saveCount() {
     const reg = S.state.reg;
+    if (!reg) { notice('err', "Aucun registre ouvert : le comptage n'a pas pu être enregistré."); return; }
     const date = els.cDate.value;
     const errs = [];
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) errs.push('Date manquante ou invalide');

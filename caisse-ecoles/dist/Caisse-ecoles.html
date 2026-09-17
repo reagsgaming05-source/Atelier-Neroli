@@ -5299,8 +5299,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       const solde = toNumber(cellValue(row.getCell(7)));
       const no = toNumber(noV);
 
-      // solde à nouveau : « Solde à nouveau », « Report », ou la ligne n° 0 avec un solde et aucun montant
-      const isOpening = !opening && debit == null && credit == null
+      // Solde à nouveau : « Solde à nouveau », « Report », ou la ligne n° 0 (ou sans n°) portant un
+      // solde et aucun montant. Deux garde-fous :
+      //  - « aucun montant » couvre la case vide ET le 0.00 saisi (Excel rend 0, pas une case vide) ;
+      //  - la ligne doit venir avant toute écriture : sinon la dernière ligne vide d'un classeur,
+      //    qui porte encore la formule du solde, passait pour le solde à nouveau et le solde de
+      //    clôture devenait le solde d'ouverture (année reprise avec le double du montant réel).
+      const isOpening = !opening && entries.length === 0 && !debit && !credit
         && (/solde|report|à nouveau|a nouveau/i.test(libelle) || (solde != null && (no === 0 || noV == null || noV === '')));
       if (isOpening) {
         opening = { date, amount: solde != null ? solde : 0, libelle };
@@ -5600,7 +5605,12 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
   /** Nouvelle pièce vierge, pré-remplie (n° suivant, date du jour). */
   function newPiece(reg) {
-    return normalizePiece({ id: newId(), no: nextNo(reg), date: today(), type: 'REMBOURSEMENT', objet: 'Autre', sens: 'credit' });
+    // La date proposée reste dans l'année du registre ouvert : sur un registre d'une année passée,
+    // la date du jour était refusée à l'enregistrement et devait être retapée à chaque pièce.
+    const t = today();
+    const annee = reg && reg.annee;
+    const date = annee && String(t).slice(0, 4) !== String(annee) ? `${annee}-01-01` : t;
+    return normalizePiece({ id: newId(), no: nextNo(reg), date, type: 'REMBOURSEMENT', objet: 'Autre', sens: 'credit' });
   }
 
   /**
@@ -5827,9 +5837,15 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   function piecesFromEntries(entries, source) {
     return (entries || []).map((e) => {
       const parts = String(e.libelle || '').split(' - ');
-      const type = P.typeFromLibelle(e.libelle) || '';
       const personne = parts.length >= 2 && P.looksLikePerson(parts[parts.length - 1]) ? parts[parts.length - 1] : '';
-      const desc = parts.slice(1, personne ? -1 : undefined).join(' - ');
+      // Le premier morceau n'est le type que s'il en est vraiment un : « Achat de piles - A. Berger »
+      // n'a pas de type, et « REMBOURSEMENT piles » en a un collé à sa description. Prendre
+      // aveuglément le premier morceau pour le type vidait la description, et la pièce était
+      // réécrite sans elle au premier enregistrement.
+      const head = P.splitType(parts[0] || '');
+      const type = head.type || '';
+      const tail = parts.slice(1, personne ? -1 : undefined);
+      const desc = [head.rest, ...tail].filter(Boolean).join(' - ');
       return normalizePiece({
         no: e.no, date: e.date, type, objet: P.objetOf(desc), detail: desc, personne, libelle: e.libelle, compte: e.compte,
         montant: e.debit > 0 ? e.debit : (e.credit > 0 ? e.credit : 0), sens: e.debit > 0 ? 'debit' : (e.credit > 0 ? 'credit' : null), source: source || 'scan',
@@ -6092,7 +6108,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
     // en-tête : titre, n°
     text('PIECE COMPTABLE', L.left + 8, yHead + 11, { font: bold, size: 13 });
-    centered(String(piece.no == null ? '' : piece.no).padStart(2, '0'), L.colSomme, L.colAvoir, yHead + 10, { font: bold, size: 15 });
+    // pièce sans numéro : la case reste vide (« 00 » se relisait ensuite comme la pièce n° 0)
+    const noTexte = piece.no == null || piece.no === '' ? '' : String(piece.no).padStart(2, '0');
+    centered(noTexte, L.colSomme, L.colAvoir, yHead + 10, { font: bold, size: 15 });
     text('fe', L.right - 16, yHead + 12, { size: 9 });
     // colonnes
     text('DOIT - N° du compte', L.left + 8, yCols + 9, { font: bold, size: 12 });
@@ -6184,12 +6202,17 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   function recapDescription(p) {
     const parts = [];
     const det = String(p.detail || '').trim();
-    // l'objet n'est écrit que s'il n'ouvre pas déjà le détail (pièces lues sur un scan ou reprises d'un classeur)
-    if (p.objet && p.objet !== 'Autre' && !det.toLowerCase().startsWith(String(p.objet).toLowerCase())) parts.push(p.objet);
+    // Même règle que le libellé du journal (registre.composeDescription) : l'objet n'est écrit que
+    // s'il n'est pas déjà dans le détail. Comparer le début du texte ne suffisait pas (« Camp » +
+    // « Sortie au camp de Leysin » écrivait l'activité deux fois) et le récapitulatif ne disait
+    // alors plus la même chose que le journal.
+    if (p.objet && p.objet !== 'Autre' && P.objetOf(det) !== p.objet) parts.push(p.objet);
     if (p.classe) parts.push(p.classe);
     if (p.periode) parts.push(/^(du|le|les)\b/i.test(String(p.periode).trim()) ? String(p.periode).trim() : `du ${String(p.periode).trim()}`);
-    if (p.detail) parts.push(String(p.detail).trim());
-    return parts.join(' ').replace(/\s+/g, ' ').trim() || (p.libelle || '');
+    if (det) parts.push(det);
+    let desc = parts.join(' ').replace(/\s+/g, ' ').trim();
+    if (desc) desc = desc[0].toUpperCase() + desc.slice(1);
+    return desc || (p.libelle || '');
   }
 
   /**
@@ -6322,9 +6345,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
         const tc = await page.getTextContent();
         const words = P.itemsFromTextContent(tc, vp, pdfjsLib.Util);
         const text = words.map((w) => w.str).join(' ');
-        let form = false;
-        try { form = !!P.analyzePage({ pageNumber: i, width: vp.width, height: vp.height, words }); } catch (e) { form = false; }
-        if (!form && PIECE_RE.test(text) && COLS_RE.test(text)) form = true;
+        // Reconnaissance stricte : cette page sera RETIRÉE du dossier avant l'analyse de Décompte
+        // DGEO. L'analyseur des pièces scannées, lui, accepte une page qui contient seulement
+        // « doit », « avoir » et « somme » — trois mots ordinaires qui suffisaient à faire
+        // disparaître le formulaire de couverture d'une course d'école.
+        let form = PIECE_RE.test(text);
+        if (form) {
+          let lu = false;
+          try { lu = !!P.analyzePage({ pageNumber: i, width: vp.width, height: vp.height, words }); } catch (e) { lu = false; }
+          form = lu || COLS_RE.test(text);
+        }
         pages.push({ index: i - 1, text, form, hasText: text.replace(/\s+/g, '').length > 20 });
       }
     } finally {
@@ -6934,22 +6964,31 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       refine: state.ocr.reads.size ? refineWithOcr : null,
     });
 
-    const sourceKey = (globalPage) => {
+    // Une page peut porter deux formulaires « PIÈCE COMPTABLE » : la clé retient aussi lequel,
+    // sinon les deux écritures retombaient sur le même objet à la relecture (une pièce perdue,
+    // l'autre en double dans le tableau, les totaux et le classeur produit).
+    const sourceKey = (globalPage, part) => {
       const p = state.pages.find((x) => x.pageNumber === globalPage);
-      return p ? `${p.docId}:${p.pageInDoc}` : null;
+      return p ? `${p.docId}:${p.pageInDoc}:${part == null ? '' : part}` : null;
     };
     const previous = new Map();
     for (const e of state.entries) if (e.sourceKey) previous.set(e.sourceKey, e);
     const manual = state.entries.filter((e) => e.manual);
 
     const entries = res.entries.map((e) => {
-      const key = sourceKey(e.page);
+      const key = sourceKey(e.page, e.part);
       const old = key ? previous.get(key) : null;
       if (old) {
         // garde les corrections de l'utilisateur, rafraîchit ce qui vient de l'analyse
         old.page = e.page;
+        old.part = e.part;
+        old.side = e.side;
+        // pièce validée à la main dans « Contrôle des pièces » : elle le reste, sauf nouvel
+        // avertissement. Sans cela, la fin de la relecture OCR effaçait tous les contrôles faits.
+        const valideALaMain = !!(old.seen && old.checked);
+        const nouvelAvert = e.warnings.some((w) => !old.warnings.includes(w));
         // un nouvel avertissement remet la ligne « à vérifier »
-        if (e.warnings.some((w) => !old.warnings.includes(w))) old.checked = false;
+        if (nouvelAvert) old.checked = false;
         old.warnings = e.warnings.slice();
         old.notes = (e.notes || []).slice();
         old.flags = e.flags;
@@ -6959,13 +6998,15 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
         old.raw = e.raw;
         if (!old.edited) {
           old.no = e.no; old.date = e.date; old.compte = e.compte || ''; old.libelle = e.libelle; old.debit = e.debit; old.credit = e.credit;
-          old.checked = e.warnings.length === 0;
+          old.checked = valideALaMain && !nouvelAvert ? true : e.warnings.length === 0;
         }
         return old;
       }
       return {
         id: state.nextId++,
         sourceKey: key,
+        part: e.part,
+        side: e.side,
         no: e.no,
         date: e.date,
         compte: e.compte || '',
@@ -6992,6 +7033,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     state.docWarnings = res.warnings;
     if (!state.entries.some((e) => e.id === state.selectedId)) state.selectedId = state.entries.length ? state.entries[0].id : null;
 
+    // Les constats de l'analyse sont refaits à chaque passage (fin de l'OCR, changement de mode,
+    // de compte caisse…) : ils vivent dans leur propre bloc, vidé ici, pour ne pas s'empiler.
+    // Les messages de chargement des fichiers, eux, restent où ils sont.
+    let parseBox = els.pdfNotices.querySelector('#parseNotices');
+    if (!parseBox) { parseBox = document.createElement('div'); parseBox.id = 'parseNotices'; els.pdfNotices.appendChild(parseBox); }
+    parseBox.innerHTML = '';
+
     const textPages = state.pages.filter((p) => p.words.length).length;
     if (state.docs.length) {
       els.pdfInfo.innerHTML =
@@ -7000,18 +7048,18 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
         (res.duplicates.length ? `, ${res.duplicates.length} doublon(s) ignoré(s)` : '') + '.';
     }
     if (state.pages.length && !textPages) {
-      notice(els.pdfNotices, 'err', "Ces PDF ne contiennent aucun texte : ils ont été scannés sans reconnaissance de texte (OCR). Rescannez-les en mode « PDF consultable » (option OCR du copieur) ou utilisez la fonction de reconnaissance de texte d'Acrobat, puis réessayez.");
+      notice(parseBox, 'err', "Ces PDF ne contiennent aucun texte : ils ont été scannés sans reconnaissance de texte (OCR). Rescannez-les en mode « PDF consultable » (option OCR du copieur) ou utilisez la fonction de reconnaissance de texte d'Acrobat, puis réessayez.");
     } else if (state.pages.length && !res.pieceCount) {
-      notice(els.pdfNotices, 'err', "Aucune pièce comptable n'a été reconnue (formulaire « PIÈCE COMPTABLE » avec colonnes DOIT / SOMME / AVOIR).");
+      notice(parseBox, 'err', "Aucune pièce comptable n'a été reconnue (formulaire « PIÈCE COMPTABLE » avec colonnes DOIT / SOMME / AVOIR).");
     }
     if (res.duplicates.length) {
-      notice(els.pdfNotices, 'ok', 'Pièces en double (même numéro et même montant, copie jointe à une autre pièce) ignorées : ' +
+      notice(parseBox, 'ok', 'Pièces en double (même numéro et même montant, copie jointe à une autre pièce) ignorées : ' +
         res.duplicates.map((d) => `n° ${d.no} (${escapeHtml(pageLabel(d.page))}, identique à ${escapeHtml(pageLabel(d.sameAs))})`).join(', ') + '.');
     }
-    for (const w of res.warnings) notice(els.pdfNotices, 'warn', escapeHtml(w));
+    for (const w of res.warnings) notice(parseBox, 'warn', escapeHtml(w));
     if (state.pages.length && textPages && textPages < state.pages.length) {
       const list = res.emptyPages.slice(0, 40).map((n) => `<button type="button" class="small" data-action="show-page" data-page="${n}">${escapeHtml(pageLabel(n))}</button>`).join(' ');
-      notice(els.pdfNotices, 'warn', `${state.pages.length - textPages} page(s) sans texte (tickets, photos) : normal pour les justificatifs. ` +
+      notice(parseBox, 'warn', `${state.pages.length - textPages} page(s) sans texte (tickets, photos) : normal pour les justificatifs. ` +
         `Si l'une d'elles est une pièce comptable, elle a été scannée sans reconnaissance de texte : ajoutez-la à la main (« Ajouter une écriture manuelle »). Voir : ${list}` +
         (res.emptyPages.length > 40 ? ' …' : ''));
     }
@@ -7264,7 +7312,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     else if (field === 'compte') { rememberCorrection('compte', e.compte, value); e.compte = value; setInput('compte', value); }
     else if (field === 'montant') {
       const v = Number(value);
-      if (e.credit != null && e.debit == null) { e.credit = v; setInput('credit', fmtInput(v)); } else { e.debit = v; e.credit = null; setInput('debit', fmtInput(v)); setInput('credit', ''); }
+      // Aucun montant n'était lisible : c'est le sens lu sur la pièce qui décide, pas le débit par
+      // défaut. Sinon accepter le montant proposé sur un remboursement (crédit) le basculait en
+      // débit, et le solde s'écartait du double du montant.
+      const sens = e.credit != null && e.debit == null ? 'credit'
+        : (e.debit != null ? 'debit' : (e.side === 'credit' ? 'credit' : 'debit'));
+      if (sens === 'credit') { e.credit = v; e.debit = null; setInput('credit', fmtInput(v)); setInput('debit', ''); }
+      else { e.debit = v; e.credit = null; setInput('debit', fmtInput(v)); setInput('credit', ''); }
     } else return;
     e.edited = true;
     e.resolved = Object.assign({}, e.resolved, { [field]: true });
@@ -7606,7 +7660,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     });
     renderTable();
     renderTotals();
-    const inputs = els.body.querySelectorAll('tr.entry:last-of-type input');
+    // « tr.entry:last-of-type » ne désignait jamais rien : chaque ligne est suivie d'un « tr.msgs »
+    const lignes = els.body.querySelectorAll('tr.entry');
+    const inputs = lignes.length ? lignes[lignes.length - 1].querySelectorAll('input') : [];
     if (inputs[3]) inputs[3].focus();
   });
 
@@ -8036,7 +8092,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   });
 
   /* ---------------- Étape 4 : totaux + Excel ---------------- */
-  function allEntriesForExcel() {
+  /**
+   * Écritures du lot triées par n°, sans celles déjà présentes dans la base (même n° et même
+   * montant, ou ligne entière identique quand le n° n'a pas pu être lu).
+   */
+  function freshEntries() {
     const news = state.entries.slice().sort((a, b) => {
       const na = Number(a.no); const nb = Number(b.no);
       if (isNaN(na) && isNaN(nb)) return 0;
@@ -8052,9 +8112,12 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const keyNoNum = (e) => `${e.date || ''}|${String(e.libelle || '').trim()}|${cents(e.debit)}|${cents(e.credit)}`;
     const already = new Set(exist.filter((e) => !isNaN(numNo(e))).map(key));
     const alreadyNoNum = new Set(exist.map(keyNoNum));
-    const fresh = news.filter((e) => (isNaN(numNo(e)) ? !alreadyNoNum.has(keyNoNum(e)) : !already.has(key(e))));
-    return exist.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
-      .concat(fresh.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
+    return news.filter((e) => (isNaN(numNo(e)) ? !alreadyNoNum.has(keyNoNum(e)) : !already.has(key(e))));
+  }
+
+  function allEntriesForExcel() {
+    const plain = (e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit });
+    return existingEntries().map(plain).concat(freshEntries().map(plain));
   }
 
   /**
@@ -8130,7 +8193,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   function renderBalanceCheck() {
     const v = els.checkBalance.value.trim();
     if (v === '') { els.balanceResult.innerHTML = ''; return; }
-    const reel = Number(v.replace(',', '.'));
+    // le séparateur de milliers que l'application affiche elle-même (1’234.50) et un « CHF »
+    // recopié ne doivent pas rendre le solde illisible : la vérification était alors sautée en silence
+    const reel = Number(v.replace(/chf/ig, '').replace(/[\s\u00A0’'´`]/g, '').replace(',', '.'));
     if (!isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
     const entries = entriesUpToCheckDate();
     const t = X.computeTotals(currentOpening(), entries);
@@ -8203,7 +8268,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
   function renderTotals() {
     const opening = currentOpening();
-    const tNew = X.computeTotals({ amount: 0 }, state.entries);
+    // seulement les écritures qui ne sont pas déjà dans la base : sinon, après « Ajouter au
+    // registre », les quatre tuiles ne s'additionnaient plus
+    const tNew = X.computeTotals({ amount: 0 }, freshEntries());
     const tAll = X.computeTotals(opening, allEntriesForExcel());
     const exist = existingEntries();
     const cards = [
@@ -8743,6 +8810,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
 
   function fillForm(p) {
+    // pièce qui a déjà un compte (modification, décompte pré-rempli) : il ne sera pas re-proposé
+    state.autoAccount = !p.compte;
     els.pNo.value = p.no == null ? '' : p.no;
     els.pDate.value = p.date || '';
     els.pType.value = R.TYPES.includes(p.type) ? p.type : R.TYPES[0];
@@ -8775,8 +8844,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     els.pKindField.classList.toggle('hidden', !isDecompte);
     els.pObjetField.classList.toggle('hidden', isDecompte);
     if (!isDecompte) return;
-    if (!DECOMPTE_KINDS.includes(els.pObjet.value)) els.pObjet.value = kindOfObjet(els.pObjet.value);
-    for (const r of els.pKind.querySelectorAll('input')) r.checked = r.value === els.pObjet.value;
+    // « Mini-camp » se montre sous le bouton « Camp » mais reste « Mini-camp » dans la pièce :
+    // l'écraser à la simple ouverture de la fiche changeait le libellé enregistré.
+    const MONTRE_COMME = { 'Mini-camp': 'Camp' };
+    const courant = els.pObjet.value;
+    const affiche = DECOMPTE_KINDS.includes(courant) ? courant : (MONTRE_COMME[courant] || kindOfObjet(courant));
+    if (!DECOMPTE_KINDS.includes(courant) && !MONTRE_COMME[courant]) els.pObjet.value = affiche;
+    for (const r of els.pKind.querySelectorAll('input')) r.checked = r.value === affiche;
   }
   els.pKind.addEventListener('change', () => {
     const r = els.pKind.querySelector('input:checked');
@@ -8832,7 +8906,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     els.pCompteSugg.innerHTML = sugg.length
       ? 'Habituel : ' + sugg.map((s) => `<button type="button" class="small${s.compte === els.pCompte.value ? ' primary' : ''}" data-account="${escapeHtml(s.compte)}" title="${s.n} écriture(s) de ce genre dans le classeur">${escapeHtml(s.compte)}</button>`).join(' ')
       : '<span class="legend">Aucun compte habituel connu pour ce type : choisissez dans la liste.</span>';
-    if (!els.pCompte.value && sugg.length && sugg[0].niveau <= 1) { els.pCompte.value = sugg[0].compte; state.autoAccount = true; }
+    // seulement tant que le compte n'a pas été touché à la main : sinon vider le champ le
+    // remplissait aussitôt, et le texte tapé venait s'ajouter à la suite de la proposition
+    if (state.autoAccount && !els.pCompte.value && sugg.length && sugg[0].niveau <= 1) els.pCompte.value = sugg[0].compte;
   }
 
   els.pCompteSugg.addEventListener('click', (ev) => {
@@ -8895,16 +8971,18 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     }
     els.ficheErrors.innerHTML = '';
     // justificatifs en attente -> fichiers
+    const failed = [];
     for (const f of state.pending) {
       if (p.justificatifs.some((j) => j.name === f.name)) { notice('warn', `Un justificatif nommé « ${escapeHtml(f.name)} » est déjà joint à cette pièce : le second n'a pas été ajouté.`); continue; }
       try {
         const saved = await state.storage.attach(state.reg.annee, p.id, f.name, f.bytes);
         p.justificatifs.push({ name: saved.name, size: saved.size, kind: f.kind });
       } catch (e) {
+        failed.push(f);
         notice('err', `Justificatif « ${escapeHtml(f.name)} » non enregistré : ${escapeHtml(e.message || e)}`);
       }
     }
-    state.pending = [];
+    state.pending = failed;
     const wasEdit = !!state.editingId;
     R.upsertPiece(state.reg, p);
     await saveReg();
@@ -8914,6 +8992,14 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       await refreshDgeo();
     }
     renderJournal();
+    if (failed.length) {
+      // la pièce est enregistrée mais un justificatif manque : la fiche reste ouverte sur cette
+      // pièce, avec le fichier encore en mémoire, pour réessayer sans avoir à le rechoisir
+      state.editingId = p.id;
+      els.ficheTitle.textContent = `n° ${p.no} (modification)`;
+      notice('warn', `Pièce n° ${p.no} enregistrée, mais ${failed.length} justificatif(s) n'ont pas pu l'être. La fiche reste ouverte : réessayez « Enregistrer ».`);
+      return;
+    }
     notice('ok', `Pièce n° ${p.no} ${wasEdit ? 'modifiée' : 'enregistrée'} : ${escapeHtml(p.libelle)} – ${p.sens === 'debit' ? 'Débit' : 'Crédit'} ${fmtCHF(p.montant)}.` +
       (ficheAuto.open ? ' La fiche PDF s\'ouvre dans une fenêtre : <b>Ctrl+P</b> pour l\'imprimer.' : ''));
     state.draftId = null;
@@ -8960,8 +9046,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   els.btnPiecePreview.addEventListener('click', async () => {
     const p = formPiece();
     if (!p.libelle) p.libelle = R.composeLibelle(p);
+    // les justificatifs choisis mais pas encore enregistrés figurent aussi dans l'aperçu
+    const attente = state.pending.filter((f) => !p.justificatifs.some((j) => j.name === f.name));
+    const vue = Object.assign({}, p, {
+      justificatifs: p.justificatifs.concat(attente.map((f) => ({ name: f.name, size: f.bytes.length, kind: f.kind }))),
+    });
     try {
-      const res = await F.buildPdf([p], state.reg, (piece, j) => readAttachment(piece, j));
+      const res = await F.buildPdf([vue], state.reg, (piece, j) => {
+        const f = state.pending.find((x) => x.name === j.name);
+        return f ? f.bytes : readAttachment(piece, j);
+      });
       showPreview(res.bytes);
     } catch (e) { notice('err', `Aperçu impossible : ${escapeHtml(e.message || e)}`); }
   });
@@ -9109,7 +9203,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const pieces = state.reg.pieces.filter((p) => from == null || (p.no != null && p.no >= from));
     if (!pieces.length) { notice('warn', 'Aucune pièce à imprimer.'); return; }
     const nos = pieces.map((p) => p.no).filter((n) => n != null);
-    await exportPdf(pieces, `Pièces caisse ${state.reg.annee} n° ${Math.min.apply(null, nos)} à ${Math.max.apply(null, nos)}.pdf`);
+    // aucun numéro lisible : pas de plage dans le nom (elle valait « n° Infinity à -Infinity »)
+    const plage = nos.length ? ` n° ${Math.min.apply(null, nos)} à ${Math.max.apply(null, nos)}` : '';
+    await exportPdf(pieces, `Pièces caisse ${state.reg.annee}${plage}.pdf`);
   });
 
   els.btnRegExcel.addEventListener('click', async () => {
@@ -9192,12 +9288,20 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const year = state.reg.annee;
     const pieces = R.piecesFromEntries(entries);
     const wrongYear = pieces.filter((p) => p.date && String(p.date).slice(0, 4) !== String(year));
-    if (wrongYear.length && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?`)) return 0;
-    let added = 0; let dup = 0; let sansMontant = 0; const conflicts = [];
+    // refuser ne jette plus le lot entier : seules les pièces d'une autre année sont laissées de côté
+    const skipYear = wrongYear.length > 0
+      && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?\n\nAnnuler : seules les pièces de ${year} sont ajoutées.`);
+    // deux pièces sans numéro sont la même si tout le reste concorde (comme « Reprendre un classeur »)
+    const sameLine = (a, b) => a.date === b.date && a.sens === b.sens && Math.abs((a.montant || 0) - (b.montant || 0)) < 0.005
+      && (a.libelle || R.composeLibelle(a)) === (b.libelle || R.composeLibelle(b));
+    let added = 0; let dup = 0; let sansMontant = 0; let autreAnnee = 0; const conflicts = [];
     for (let i = 0; i < pieces.length; i++) {
       const p = pieces[i];
       if (!(p.montant > 0)) { sansMontant++; continue; } // ligne sans montant lisible : rien à enregistrer
-      const same = p.no != null ? state.reg.pieces.find((x) => x.no === p.no) : null;
+      if (skipYear && wrongYear.includes(p)) { autreAnnee++; continue; }
+      const same = p.no != null
+        ? state.reg.pieces.find((x) => x.no === p.no)
+        : state.reg.pieces.find((x) => x.no == null && sameLine(x, p));
       if (same) { if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) dup++; else conflicts.push(p.no); continue; }
       if (getImage) {
         try {
@@ -9213,7 +9317,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     newPiece();
     notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
       `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}` +
-      `${sansMontant ? `, ${sansMontant} ligne(s) sans montant ignorée(s)` : ''}.`);
+      `${sansMontant ? `, ${sansMontant} ligne(s) sans montant ignorée(s)` : ''}` +
+      `${autreAnnee ? `, ${autreAnnee} pièce(s) d'une autre année laissée(s) de côté` : ''}.`);
     return added;
   }
 
@@ -9369,6 +9474,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
   function previous(date) {
     const reg = S.state.reg;
+    if (!reg) return null;
     const p = R.previousCount(reg, date, refCount());
     if (p) return p;
     // aucun comptage plus tôt dans l'année : dernier comptage de l'année précédente
@@ -9377,14 +9483,17 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   async function loadPrevYear() {
     const reg = S.state.reg;
     if (!reg || state.prevYear.annee === reg.annee) return;
-    state.prevYear = { annee: reg.annee, last: null };
+    // On écrit dans l'objet créé pour CETTE année-là : si l'année change pendant la lecture, le
+    // résultat tardif n'atterrit plus sur le comptage de la nouvelle année.
+    const cible = { annee: reg.annee, last: null };
+    state.prevYear = cible;
     try {
       if (S.state.years.includes(reg.annee - 1)) {
         const prev = await S.state.storage.load(reg.annee - 1);
-        if (prev) state.prevYear.last = R.previousCount(prev, `${reg.annee - 1}-12-31`, null);
+        if (prev) cible.last = R.previousCount(prev, `${reg.annee - 1}-12-31`, null);
       }
     } catch (e) { /* sans année précédente */ }
-    if (state.prevYear.annee === reg.annee) refreshTotals();
+    if (state.prevYear === cible) refreshTotals();
   }
   function renderKpis(total) {
     const reg = S.state.reg;
@@ -9448,6 +9557,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
   async function saveCount() {
     const reg = S.state.reg;
+    if (!reg) { notice('err', "Aucun registre ouvert : le comptage n'a pas pu être enregistré."); return; }
     const date = els.cDate.value;
     const errs = [];
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) errs.push('Date manquante ou invalide');

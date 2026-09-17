@@ -85,7 +85,9 @@
 
     // en-tête : titre, n°
     text('PIECE COMPTABLE', L.left + 8, yHead + 11, { font: bold, size: 13 });
-    centered(String(piece.no == null ? '' : piece.no).padStart(2, '0'), L.colSomme, L.colAvoir, yHead + 10, { font: bold, size: 15 });
+    // pièce sans numéro : la case reste vide (« 00 » se relisait ensuite comme la pièce n° 0)
+    const noTexte = piece.no == null || piece.no === '' ? '' : String(piece.no).padStart(2, '0');
+    centered(noTexte, L.colSomme, L.colAvoir, yHead + 10, { font: bold, size: 15 });
     text('fe', L.right - 16, yHead + 12, { size: 9 });
     // colonnes
     text('DOIT - N° du compte', L.left + 8, yCols + 9, { font: bold, size: 12 });
@@ -177,12 +179,17 @@
   function recapDescription(p) {
     const parts = [];
     const det = String(p.detail || '').trim();
-    // l'objet n'est écrit que s'il n'ouvre pas déjà le détail (pièces lues sur un scan ou reprises d'un classeur)
-    if (p.objet && p.objet !== 'Autre' && !det.toLowerCase().startsWith(String(p.objet).toLowerCase())) parts.push(p.objet);
+    // Même règle que le libellé du journal (registre.composeDescription) : l'objet n'est écrit que
+    // s'il n'est pas déjà dans le détail. Comparer le début du texte ne suffisait pas (« Camp » +
+    // « Sortie au camp de Leysin » écrivait l'activité deux fois) et le récapitulatif ne disait
+    // alors plus la même chose que le journal.
+    if (p.objet && p.objet !== 'Autre' && P.objetOf(det) !== p.objet) parts.push(p.objet);
     if (p.classe) parts.push(p.classe);
     if (p.periode) parts.push(/^(du|le|les)\b/i.test(String(p.periode).trim()) ? String(p.periode).trim() : `du ${String(p.periode).trim()}`);
-    if (p.detail) parts.push(String(p.detail).trim());
-    return parts.join(' ').replace(/\s+/g, ' ').trim() || (p.libelle || '');
+    if (det) parts.push(det);
+    let desc = parts.join(' ').replace(/\s+/g, ' ').trim();
+    if (desc) desc = desc[0].toUpperCase() + desc.slice(1);
+    return desc || (p.libelle || '');
   }
 
   /**

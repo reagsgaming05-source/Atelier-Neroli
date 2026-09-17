@@ -168,6 +168,8 @@
   }
 
   function fillForm(p) {
+    // pièce qui a déjà un compte (modification, décompte pré-rempli) : il ne sera pas re-proposé
+    state.autoAccount = !p.compte;
     els.pNo.value = p.no == null ? '' : p.no;
     els.pDate.value = p.date || '';
     els.pType.value = R.TYPES.includes(p.type) ? p.type : R.TYPES[0];
@@ -200,8 +202,13 @@
     els.pKindField.classList.toggle('hidden', !isDecompte);
     els.pObjetField.classList.toggle('hidden', isDecompte);
     if (!isDecompte) return;
-    if (!DECOMPTE_KINDS.includes(els.pObjet.value)) els.pObjet.value = kindOfObjet(els.pObjet.value);
-    for (const r of els.pKind.querySelectorAll('input')) r.checked = r.value === els.pObjet.value;
+    // « Mini-camp » se montre sous le bouton « Camp » mais reste « Mini-camp » dans la pièce :
+    // l'écraser à la simple ouverture de la fiche changeait le libellé enregistré.
+    const MONTRE_COMME = { 'Mini-camp': 'Camp' };
+    const courant = els.pObjet.value;
+    const affiche = DECOMPTE_KINDS.includes(courant) ? courant : (MONTRE_COMME[courant] || kindOfObjet(courant));
+    if (!DECOMPTE_KINDS.includes(courant) && !MONTRE_COMME[courant]) els.pObjet.value = affiche;
+    for (const r of els.pKind.querySelectorAll('input')) r.checked = r.value === affiche;
   }
   els.pKind.addEventListener('change', () => {
     const r = els.pKind.querySelector('input:checked');
@@ -257,7 +264,9 @@
     els.pCompteSugg.innerHTML = sugg.length
       ? 'Habituel : ' + sugg.map((s) => `<button type="button" class="small${s.compte === els.pCompte.value ? ' primary' : ''}" data-account="${escapeHtml(s.compte)}" title="${s.n} écriture(s) de ce genre dans le classeur">${escapeHtml(s.compte)}</button>`).join(' ')
       : '<span class="legend">Aucun compte habituel connu pour ce type : choisissez dans la liste.</span>';
-    if (!els.pCompte.value && sugg.length && sugg[0].niveau <= 1) { els.pCompte.value = sugg[0].compte; state.autoAccount = true; }
+    // seulement tant que le compte n'a pas été touché à la main : sinon vider le champ le
+    // remplissait aussitôt, et le texte tapé venait s'ajouter à la suite de la proposition
+    if (state.autoAccount && !els.pCompte.value && sugg.length && sugg[0].niveau <= 1) els.pCompte.value = sugg[0].compte;
   }
 
   els.pCompteSugg.addEventListener('click', (ev) => {
@@ -320,16 +329,18 @@
     }
     els.ficheErrors.innerHTML = '';
     // justificatifs en attente -> fichiers
+    const failed = [];
     for (const f of state.pending) {
       if (p.justificatifs.some((j) => j.name === f.name)) { notice('warn', `Un justificatif nommé « ${escapeHtml(f.name)} » est déjà joint à cette pièce : le second n'a pas été ajouté.`); continue; }
       try {
         const saved = await state.storage.attach(state.reg.annee, p.id, f.name, f.bytes);
         p.justificatifs.push({ name: saved.name, size: saved.size, kind: f.kind });
       } catch (e) {
+        failed.push(f);
         notice('err', `Justificatif « ${escapeHtml(f.name)} » non enregistré : ${escapeHtml(e.message || e)}`);
       }
     }
-    state.pending = [];
+    state.pending = failed;
     const wasEdit = !!state.editingId;
     R.upsertPiece(state.reg, p);
     await saveReg();
@@ -339,6 +350,14 @@
       await refreshDgeo();
     }
     renderJournal();
+    if (failed.length) {
+      // la pièce est enregistrée mais un justificatif manque : la fiche reste ouverte sur cette
+      // pièce, avec le fichier encore en mémoire, pour réessayer sans avoir à le rechoisir
+      state.editingId = p.id;
+      els.ficheTitle.textContent = `n° ${p.no} (modification)`;
+      notice('warn', `Pièce n° ${p.no} enregistrée, mais ${failed.length} justificatif(s) n'ont pas pu l'être. La fiche reste ouverte : réessayez « Enregistrer ».`);
+      return;
+    }
     notice('ok', `Pièce n° ${p.no} ${wasEdit ? 'modifiée' : 'enregistrée'} : ${escapeHtml(p.libelle)} – ${p.sens === 'debit' ? 'Débit' : 'Crédit'} ${fmtCHF(p.montant)}.` +
       (ficheAuto.open ? ' La fiche PDF s\'ouvre dans une fenêtre : <b>Ctrl+P</b> pour l\'imprimer.' : ''));
     state.draftId = null;
@@ -385,8 +404,16 @@
   els.btnPiecePreview.addEventListener('click', async () => {
     const p = formPiece();
     if (!p.libelle) p.libelle = R.composeLibelle(p);
+    // les justificatifs choisis mais pas encore enregistrés figurent aussi dans l'aperçu
+    const attente = state.pending.filter((f) => !p.justificatifs.some((j) => j.name === f.name));
+    const vue = Object.assign({}, p, {
+      justificatifs: p.justificatifs.concat(attente.map((f) => ({ name: f.name, size: f.bytes.length, kind: f.kind }))),
+    });
     try {
-      const res = await F.buildPdf([p], state.reg, (piece, j) => readAttachment(piece, j));
+      const res = await F.buildPdf([vue], state.reg, (piece, j) => {
+        const f = state.pending.find((x) => x.name === j.name);
+        return f ? f.bytes : readAttachment(piece, j);
+      });
       showPreview(res.bytes);
     } catch (e) { notice('err', `Aperçu impossible : ${escapeHtml(e.message || e)}`); }
   });
@@ -534,7 +561,9 @@
     const pieces = state.reg.pieces.filter((p) => from == null || (p.no != null && p.no >= from));
     if (!pieces.length) { notice('warn', 'Aucune pièce à imprimer.'); return; }
     const nos = pieces.map((p) => p.no).filter((n) => n != null);
-    await exportPdf(pieces, `Pièces caisse ${state.reg.annee} n° ${Math.min.apply(null, nos)} à ${Math.max.apply(null, nos)}.pdf`);
+    // aucun numéro lisible : pas de plage dans le nom (elle valait « n° Infinity à -Infinity »)
+    const plage = nos.length ? ` n° ${Math.min.apply(null, nos)} à ${Math.max.apply(null, nos)}` : '';
+    await exportPdf(pieces, `Pièces caisse ${state.reg.annee}${plage}.pdf`);
   });
 
   els.btnRegExcel.addEventListener('click', async () => {
@@ -617,12 +646,20 @@
     const year = state.reg.annee;
     const pieces = R.piecesFromEntries(entries);
     const wrongYear = pieces.filter((p) => p.date && String(p.date).slice(0, 4) !== String(year));
-    if (wrongYear.length && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?`)) return 0;
-    let added = 0; let dup = 0; let sansMontant = 0; const conflicts = [];
+    // refuser ne jette plus le lot entier : seules les pièces d'une autre année sont laissées de côté
+    const skipYear = wrongYear.length > 0
+      && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?\n\nAnnuler : seules les pièces de ${year} sont ajoutées.`);
+    // deux pièces sans numéro sont la même si tout le reste concorde (comme « Reprendre un classeur »)
+    const sameLine = (a, b) => a.date === b.date && a.sens === b.sens && Math.abs((a.montant || 0) - (b.montant || 0)) < 0.005
+      && (a.libelle || R.composeLibelle(a)) === (b.libelle || R.composeLibelle(b));
+    let added = 0; let dup = 0; let sansMontant = 0; let autreAnnee = 0; const conflicts = [];
     for (let i = 0; i < pieces.length; i++) {
       const p = pieces[i];
       if (!(p.montant > 0)) { sansMontant++; continue; } // ligne sans montant lisible : rien à enregistrer
-      const same = p.no != null ? state.reg.pieces.find((x) => x.no === p.no) : null;
+      if (skipYear && wrongYear.includes(p)) { autreAnnee++; continue; }
+      const same = p.no != null
+        ? state.reg.pieces.find((x) => x.no === p.no)
+        : state.reg.pieces.find((x) => x.no == null && sameLine(x, p));
       if (same) { if (Math.abs((same.montant || 0) - p.montant) < 0.005 && same.sens === p.sens) dup++; else conflicts.push(p.no); continue; }
       if (getImage) {
         try {
@@ -638,7 +675,8 @@
     newPiece();
     notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
       `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}` +
-      `${sansMontant ? `, ${sansMontant} ligne(s) sans montant ignorée(s)` : ''}.`);
+      `${sansMontant ? `, ${sansMontant} ligne(s) sans montant ignorée(s)` : ''}` +
+      `${autreAnnee ? `, ${autreAnnee} pièce(s) d'une autre année laissée(s) de côté` : ''}.`);
     return added;
   }
 

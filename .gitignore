@@ -2,6 +2,8 @@ node_modules/
 caisse-ecoles/node_modules/
 caisse-ecoles/samples/
 caisse-ecoles/src/vocabulaire-noms.js
+# version interne construite avec les noms de personnes (node build.js) : jamais versionnée
+caisse-ecoles/dist/Caisse-ecoles-avec-noms.html
 caisse-ecoles/test/out/
 *.log
 .DS_Store

@@ -119,8 +119,13 @@
       const solde = toNumber(cellValue(row.getCell(7)));
       const no = toNumber(noV);
 
-      // solde à nouveau : « Solde à nouveau », « Report », ou la ligne n° 0 avec un solde et aucun montant
-      const isOpening = !opening && debit == null && credit == null
+      // Solde à nouveau : « Solde à nouveau », « Report », ou la ligne n° 0 (ou sans n°) portant un
+      // solde et aucun montant. Deux garde-fous :
+      //  - « aucun montant » couvre la case vide ET le 0.00 saisi (Excel rend 0, pas une case vide) ;
+      //  - la ligne doit venir avant toute écriture : sinon la dernière ligne vide d'un classeur,
+      //    qui porte encore la formule du solde, passait pour le solde à nouveau et le solde de
+      //    clôture devenait le solde d'ouverture (année reprise avec le double du montant réel).
+      const isOpening = !opening && entries.length === 0 && !debit && !credit
         && (/solde|report|à nouveau|a nouveau/i.test(libelle) || (solde != null && (no === 0 || noV == null || noV === '')));
       if (isOpening) {
         opening = { date, amount: solde != null ? solde : 0, libelle };

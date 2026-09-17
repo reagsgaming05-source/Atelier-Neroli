@@ -567,22 +567,31 @@
       refine: state.ocr.reads.size ? refineWithOcr : null,
     });
 
-    const sourceKey = (globalPage) => {
+    // Une page peut porter deux formulaires « PIÈCE COMPTABLE » : la clé retient aussi lequel,
+    // sinon les deux écritures retombaient sur le même objet à la relecture (une pièce perdue,
+    // l'autre en double dans le tableau, les totaux et le classeur produit).
+    const sourceKey = (globalPage, part) => {
       const p = state.pages.find((x) => x.pageNumber === globalPage);
-      return p ? `${p.docId}:${p.pageInDoc}` : null;
+      return p ? `${p.docId}:${p.pageInDoc}:${part == null ? '' : part}` : null;
     };
     const previous = new Map();
     for (const e of state.entries) if (e.sourceKey) previous.set(e.sourceKey, e);
     const manual = state.entries.filter((e) => e.manual);
 
     const entries = res.entries.map((e) => {
-      const key = sourceKey(e.page);
+      const key = sourceKey(e.page, e.part);
       const old = key ? previous.get(key) : null;
       if (old) {
         // garde les corrections de l'utilisateur, rafraîchit ce qui vient de l'analyse
         old.page = e.page;
+        old.part = e.part;
+        old.side = e.side;
+        // pièce validée à la main dans « Contrôle des pièces » : elle le reste, sauf nouvel
+        // avertissement. Sans cela, la fin de la relecture OCR effaçait tous les contrôles faits.
+        const valideALaMain = !!(old.seen && old.checked);
+        const nouvelAvert = e.warnings.some((w) => !old.warnings.includes(w));
         // un nouvel avertissement remet la ligne « à vérifier »
-        if (e.warnings.some((w) => !old.warnings.includes(w))) old.checked = false;
+        if (nouvelAvert) old.checked = false;
         old.warnings = e.warnings.slice();
         old.notes = (e.notes || []).slice();
         old.flags = e.flags;
@@ -592,13 +601,15 @@
         old.raw = e.raw;
         if (!old.edited) {
           old.no = e.no; old.date = e.date; old.compte = e.compte || ''; old.libelle = e.libelle; old.debit = e.debit; old.credit = e.credit;
-          old.checked = e.warnings.length === 0;
+          old.checked = valideALaMain && !nouvelAvert ? true : e.warnings.length === 0;
         }
         return old;
       }
       return {
         id: state.nextId++,
         sourceKey: key,
+        part: e.part,
+        side: e.side,
         no: e.no,
         date: e.date,
         compte: e.compte || '',
@@ -625,6 +636,13 @@
     state.docWarnings = res.warnings;
     if (!state.entries.some((e) => e.id === state.selectedId)) state.selectedId = state.entries.length ? state.entries[0].id : null;
 
+    // Les constats de l'analyse sont refaits à chaque passage (fin de l'OCR, changement de mode,
+    // de compte caisse…) : ils vivent dans leur propre bloc, vidé ici, pour ne pas s'empiler.
+    // Les messages de chargement des fichiers, eux, restent où ils sont.
+    let parseBox = els.pdfNotices.querySelector('#parseNotices');
+    if (!parseBox) { parseBox = document.createElement('div'); parseBox.id = 'parseNotices'; els.pdfNotices.appendChild(parseBox); }
+    parseBox.innerHTML = '';
+
     const textPages = state.pages.filter((p) => p.words.length).length;
     if (state.docs.length) {
       els.pdfInfo.innerHTML =
@@ -633,18 +651,18 @@
         (res.duplicates.length ? `, ${res.duplicates.length} doublon(s) ignoré(s)` : '') + '.';
     }
     if (state.pages.length && !textPages) {
-      notice(els.pdfNotices, 'err', "Ces PDF ne contiennent aucun texte : ils ont été scannés sans reconnaissance de texte (OCR). Rescannez-les en mode « PDF consultable » (option OCR du copieur) ou utilisez la fonction de reconnaissance de texte d'Acrobat, puis réessayez.");
+      notice(parseBox, 'err', "Ces PDF ne contiennent aucun texte : ils ont été scannés sans reconnaissance de texte (OCR). Rescannez-les en mode « PDF consultable » (option OCR du copieur) ou utilisez la fonction de reconnaissance de texte d'Acrobat, puis réessayez.");
     } else if (state.pages.length && !res.pieceCount) {
-      notice(els.pdfNotices, 'err', "Aucune pièce comptable n'a été reconnue (formulaire « PIÈCE COMPTABLE » avec colonnes DOIT / SOMME / AVOIR).");
+      notice(parseBox, 'err', "Aucune pièce comptable n'a été reconnue (formulaire « PIÈCE COMPTABLE » avec colonnes DOIT / SOMME / AVOIR).");
     }
     if (res.duplicates.length) {
-      notice(els.pdfNotices, 'ok', 'Pièces en double (même numéro et même montant, copie jointe à une autre pièce) ignorées : ' +
+      notice(parseBox, 'ok', 'Pièces en double (même numéro et même montant, copie jointe à une autre pièce) ignorées : ' +
         res.duplicates.map((d) => `n° ${d.no} (${escapeHtml(pageLabel(d.page))}, identique à ${escapeHtml(pageLabel(d.sameAs))})`).join(', ') + '.');
     }
-    for (const w of res.warnings) notice(els.pdfNotices, 'warn', escapeHtml(w));
+    for (const w of res.warnings) notice(parseBox, 'warn', escapeHtml(w));
     if (state.pages.length && textPages && textPages < state.pages.length) {
       const list = res.emptyPages.slice(0, 40).map((n) => `<button type="button" class="small" data-action="show-page" data-page="${n}">${escapeHtml(pageLabel(n))}</button>`).join(' ');
-      notice(els.pdfNotices, 'warn', `${state.pages.length - textPages} page(s) sans texte (tickets, photos) : normal pour les justificatifs. ` +
+      notice(parseBox, 'warn', `${state.pages.length - textPages} page(s) sans texte (tickets, photos) : normal pour les justificatifs. ` +
         `Si l'une d'elles est une pièce comptable, elle a été scannée sans reconnaissance de texte : ajoutez-la à la main (« Ajouter une écriture manuelle »). Voir : ${list}` +
         (res.emptyPages.length > 40 ? ' …' : ''));
     }
@@ -897,7 +915,13 @@
     else if (field === 'compte') { rememberCorrection('compte', e.compte, value); e.compte = value; setInput('compte', value); }
     else if (field === 'montant') {
       const v = Number(value);
-      if (e.credit != null && e.debit == null) { e.credit = v; setInput('credit', fmtInput(v)); } else { e.debit = v; e.credit = null; setInput('debit', fmtInput(v)); setInput('credit', ''); }
+      // Aucun montant n'était lisible : c'est le sens lu sur la pièce qui décide, pas le débit par
+      // défaut. Sinon accepter le montant proposé sur un remboursement (crédit) le basculait en
+      // débit, et le solde s'écartait du double du montant.
+      const sens = e.credit != null && e.debit == null ? 'credit'
+        : (e.debit != null ? 'debit' : (e.side === 'credit' ? 'credit' : 'debit'));
+      if (sens === 'credit') { e.credit = v; e.debit = null; setInput('credit', fmtInput(v)); setInput('debit', ''); }
+      else { e.debit = v; e.credit = null; setInput('debit', fmtInput(v)); setInput('credit', ''); }
     } else return;
     e.edited = true;
     e.resolved = Object.assign({}, e.resolved, { [field]: true });
@@ -1239,7 +1263,9 @@
     });
     renderTable();
     renderTotals();
-    const inputs = els.body.querySelectorAll('tr.entry:last-of-type input');
+    // « tr.entry:last-of-type » ne désignait jamais rien : chaque ligne est suivie d'un « tr.msgs »
+    const lignes = els.body.querySelectorAll('tr.entry');
+    const inputs = lignes.length ? lignes[lignes.length - 1].querySelectorAll('input') : [];
     if (inputs[3]) inputs[3].focus();
   });
 
@@ -1669,7 +1695,11 @@
   });
 
   /* ---------------- Étape 4 : totaux + Excel ---------------- */
-  function allEntriesForExcel() {
+  /**
+   * Écritures du lot triées par n°, sans celles déjà présentes dans la base (même n° et même
+   * montant, ou ligne entière identique quand le n° n'a pas pu être lu).
+   */
+  function freshEntries() {
     const news = state.entries.slice().sort((a, b) => {
       const na = Number(a.no); const nb = Number(b.no);
       if (isNaN(na) && isNaN(nb)) return 0;
@@ -1685,9 +1715,12 @@
     const keyNoNum = (e) => `${e.date || ''}|${String(e.libelle || '').trim()}|${cents(e.debit)}|${cents(e.credit)}`;
     const already = new Set(exist.filter((e) => !isNaN(numNo(e))).map(key));
     const alreadyNoNum = new Set(exist.map(keyNoNum));
-    const fresh = news.filter((e) => (isNaN(numNo(e)) ? !alreadyNoNum.has(keyNoNum(e)) : !already.has(key(e))));
-    return exist.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit }))
-      .concat(fresh.map((e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit })));
+    return news.filter((e) => (isNaN(numNo(e)) ? !alreadyNoNum.has(keyNoNum(e)) : !already.has(key(e))));
+  }
+
+  function allEntriesForExcel() {
+    const plain = (e) => ({ no: e.no, date: e.date, compte: e.compte, libelle: e.libelle, debit: e.debit, credit: e.credit });
+    return existingEntries().map(plain).concat(freshEntries().map(plain));
   }
 
   /**
@@ -1763,7 +1796,9 @@
   function renderBalanceCheck() {
     const v = els.checkBalance.value.trim();
     if (v === '') { els.balanceResult.innerHTML = ''; return; }
-    const reel = Number(v.replace(',', '.'));
+    // le séparateur de milliers que l'application affiche elle-même (1’234.50) et un « CHF »
+    // recopié ne doivent pas rendre le solde illisible : la vérification était alors sautée en silence
+    const reel = Number(v.replace(/chf/ig, '').replace(/[\s\u00A0’'´`]/g, '').replace(',', '.'));
     if (!isFinite(reel)) { els.balanceResult.innerHTML = ''; return; }
     const entries = entriesUpToCheckDate();
     const t = X.computeTotals(currentOpening(), entries);
@@ -1836,7 +1871,9 @@
 
   function renderTotals() {
     const opening = currentOpening();
-    const tNew = X.computeTotals({ amount: 0 }, state.entries);
+    // seulement les écritures qui ne sont pas déjà dans la base : sinon, après « Ajouter au
+    // registre », les quatre tuiles ne s'additionnaient plus
+    const tNew = X.computeTotals({ amount: 0 }, freshEntries());
     const tAll = X.computeTotals(opening, allEntriesForExcel());
     const exist = existingEntries();
     const cards = [

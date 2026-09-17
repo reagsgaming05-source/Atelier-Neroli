@@ -28,9 +28,16 @@
         const tc = await page.getTextContent();
         const words = P.itemsFromTextContent(tc, vp, pdfjsLib.Util);
         const text = words.map((w) => w.str).join(' ');
-        let form = false;
-        try { form = !!P.analyzePage({ pageNumber: i, width: vp.width, height: vp.height, words }); } catch (e) { form = false; }
-        if (!form && PIECE_RE.test(text) && COLS_RE.test(text)) form = true;
+        // Reconnaissance stricte : cette page sera RETIRÉE du dossier avant l'analyse de Décompte
+        // DGEO. L'analyseur des pièces scannées, lui, accepte une page qui contient seulement
+        // « doit », « avoir » et « somme » — trois mots ordinaires qui suffisaient à faire
+        // disparaître le formulaire de couverture d'une course d'école.
+        let form = PIECE_RE.test(text);
+        if (form) {
+          let lu = false;
+          try { lu = !!P.analyzePage({ pageNumber: i, width: vp.width, height: vp.height, words }); } catch (e) { lu = false; }
+          form = lu || COLS_RE.test(text);
+        }
         pages.push({ index: i - 1, text, form, hasText: text.replace(/\s+/g, '').length > 20 });
       }
     } finally {

@@ -66,3 +66,33 @@ test('solde à nouveau reconnu aussi quand la ligne s\'appelle « Report »', as
   assert.equal(data.entries.length, 1);
   assert.equal(data.entries[0].no, 1);
 });
+
+/* ------------------------------------------------------------------ */
+/* Audit : reprise d'un classeur commencé à la main                       */
+/* ------------------------------------------------------------------ */
+
+test('solde à nouveau saisi 0.00 en débit et crédit reste reconnu', async () => {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Caisse');
+  ws.getRow(1).values = ['Date', 'No ', 'Compte', 'Libellé', 'Débit ', 'Crédit', 'Solde'];
+  // beaucoup de classeurs tenus à la main portent 0.00 dans les colonnes Débit et Crédit
+  ws.getRow(2).values = [new Date(Date.UTC(2026, 0, 1)), 0, '', 'Solde à nouveau', 0, 0, 2062.2];
+  ws.getRow(3).values = [new Date(Date.UTC(2026, 0, 12)), 1, '51000.3662.00', 'DECOMPTE - Course - A. Berger', null, 120];
+  const data = await X.readWorkbook(await wb.xlsx.writeBuffer());
+  assert.equal(data.opening.amount, 2062.2);
+  assert.equal(data.entries.length, 1, 'le solde à nouveau n\'est pas une écriture');
+  assert.deepEqual(X.computeTotals(data.opening, data.entries), { start: 2062.2, debits: 0, credits: 120, end: 1942.2 });
+});
+
+test('une ligne vide finale qui porte encore la formule du solde n\'est pas prise pour le solde à nouveau', async () => {
+  // classeur sans ligne « Solde à nouveau », avec des lignes pré-remplies à la fin
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Caisse');
+  ws.getRow(1).values = ['Date', 'No ', 'Compte', 'Libellé', 'Débit ', 'Crédit', 'Solde'];
+  ws.getRow(2).values = [new Date(Date.UTC(2026, 0, 12)), 1, '9100.104', 'RECETTE - Vente - N. Morel', 280, null, 280];
+  ws.getCell('G3').value = { formula: 'G2+E3-F3', result: 280 }; // ligne vide pré-remplie
+  const data = await X.readWorkbook(await wb.xlsx.writeBuffer());
+  assert.equal(data.opening.amount, 0, `solde d'ouverture lu : ${data.opening.amount}`);
+  assert.equal(data.entries.length, 1);
+  assert.equal(X.computeTotals(data.opening, data.entries).end, 280);
+});

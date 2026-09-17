@@ -98,7 +98,10 @@ if (/<!--INLINE_[A-Z_]+-->/.test(html)) throw new Error('Marqueur non remplacé 
 
 const outDir = path.join(root, 'dist');
 fs.mkdirSync(outDir, { recursive: true });
-const out = path.join(outDir, 'Caisse-ecoles.html');
+// Le dépôt est PUBLIC et dist/Caisse-ecoles.html y est versionné : la version qui contient les
+// noms de personnes s'écrit à côté, dans un fichier exclu du dépôt. Sans cela, un « git add » après
+// un `node build.js` publiait les noms.
+const out = path.join(outDir, hasNames ? 'Caisse-ecoles-avec-noms.html' : 'Caisse-ecoles.html');
 fs.writeFileSync(out, html);
 console.log(`OK -> ${path.relative(root, out)} (${(fs.statSync(out).size / 1024 / 1024).toFixed(2)} Mo)` +
-  (hasNames ? ' – avec les noms de personnes (version interne à l\'établissement)' : ' – sans les noms de personnes'));
+  (hasNames ? ' – avec les noms de personnes (version interne, jamais versionnée)' : ' – sans les noms de personnes'));

@@ -52,10 +52,14 @@ test('les noms, quand ils existent, sont dans un module séparé non versionné'
 test('aucun nom réel du classeur ne figure dans le code versionné', { skip: !fs.existsSync(namesPath) && 'vocabulaire-noms.js absent' }, () => {
   const real = new Set(require(namesPath).persons);
   const dir = path.join(__dirname, '..');
+  // dist/ en fait partie : c'est un fichier versionné, et c'est celui que « node build.js »
+  // produisait avec les noms avant qu'il n'écrive dans un fichier séparé exclu du dépôt
+  const versionne = (f) => !/-avec-noms\.html$/.test(f);
   const files = ['README.md', 'build.js']
     .concat(fs.readdirSync(path.join(dir, 'src')).filter((f) => f !== 'vocabulaire-noms.js').map((f) => path.join('src', f)))
     .concat(fs.readdirSync(path.join(dir, 'test')).map((f) => path.join('test', f)))
-    .concat(fs.readdirSync(path.join(dir, 'tools')).map((f) => path.join('tools', f)));
+    .concat(fs.readdirSync(path.join(dir, 'tools')).map((f) => path.join('tools', f)))
+    .concat(fs.existsSync(path.join(dir, 'dist')) ? fs.readdirSync(path.join(dir, 'dist')).filter(versionne).map((f) => path.join('dist', f)) : []);
   const found = [];
   for (const f of files) {
     const raw = fs.readFileSync(path.join(dir, f), 'utf8');

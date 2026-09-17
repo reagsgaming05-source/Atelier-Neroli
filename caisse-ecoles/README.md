@@ -392,7 +392,8 @@ Un test automatique vérifie qu'aucun nom ne se glisse dans le fichier versionn�
 ```bash
 cd caisse-ecoles
 npm install          # pdf.js + ExcelJS
-npm run build        # -> dist/Caisse-ecoles.html (fichier autonome)
+npm run build        # -> dist/Caisse-ecoles-avec-noms.html (version interne, jamais versionnée)
+npm run build:public # -> dist/Caisse-ecoles.html (version publique, sans les noms)
 cd desktop && npm install && npm start          # application fenêtrée depuis les sources (Electron)
 cd desktop && npm run dist:win                  # dossier portable Windows dist/win-unpacked/ (sur Windows)
 cd desktop && node smoke-test.js [chemin/exe]   # test de fumée de la fenêtre
@@ -411,7 +412,7 @@ Structure :
 - `src/excel.js` – lecture d'un classeur existant et génération du classeur au format du modèle
 - `src/app.js`, `src/index.html`, `src/app.css` – interface
 - `src/ocr.js` – seconde lecture par OCR local : prétraitement, zones, confrontation des lectures, moteur embarqué
-- `build.js` – assemble tout (avec pdf.js, ExcelJS, tesseract.js et le modèle français, pdf-lib, la police Inter) dans `dist/Caisse-ecoles.html`
+- `build.js` – assemble tout (avec pdf.js, ExcelJS, tesseract.js et le modèle français, pdf-lib, la police Inter) dans `dist/` : `Caisse-ecoles.html` sans les noms (versionné), `Caisse-ecoles-avec-noms.html` avec (exclu du dépôt)
 - `src/dossier.js` – dossier scanné pour Décompte DGEO : pages « PIÈCE COMPTABLE » retirées avant l'analyse (pdf.js, pdf-lib, analyseur)
 - `desktop/dgeo-proxy.js` – passerelle locale devant Décompte DGEO (multipart, nettoyage du dossier via la page)
 - `src/comptage.js` – comptage de la caisse (grille des coupures, soldes, historique) ; modèle dans `registre.js` (`countTotal`, `upsertCount`, `previousCount`, `balanceAt`)

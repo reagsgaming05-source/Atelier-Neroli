@@ -106,7 +106,12 @@
 
   /** Nouvelle pièce vierge, pré-remplie (n° suivant, date du jour). */
   function newPiece(reg) {
-    return normalizePiece({ id: newId(), no: nextNo(reg), date: today(), type: 'REMBOURSEMENT', objet: 'Autre', sens: 'credit' });
+    // La date proposée reste dans l'année du registre ouvert : sur un registre d'une année passée,
+    // la date du jour était refusée à l'enregistrement et devait être retapée à chaque pièce.
+    const t = today();
+    const annee = reg && reg.annee;
+    const date = annee && String(t).slice(0, 4) !== String(annee) ? `${annee}-01-01` : t;
+    return normalizePiece({ id: newId(), no: nextNo(reg), date, type: 'REMBOURSEMENT', objet: 'Autre', sens: 'credit' });
   }
 
   /**
@@ -333,9 +338,15 @@
   function piecesFromEntries(entries, source) {
     return (entries || []).map((e) => {
       const parts = String(e.libelle || '').split(' - ');
-      const type = P.typeFromLibelle(e.libelle) || '';
       const personne = parts.length >= 2 && P.looksLikePerson(parts[parts.length - 1]) ? parts[parts.length - 1] : '';
-      const desc = parts.slice(1, personne ? -1 : undefined).join(' - ');
+      // Le premier morceau n'est le type que s'il en est vraiment un : « Achat de piles - A. Berger »
+      // n'a pas de type, et « REMBOURSEMENT piles » en a un collé à sa description. Prendre
+      // aveuglément le premier morceau pour le type vidait la description, et la pièce était
+      // réécrite sans elle au premier enregistrement.
+      const head = P.splitType(parts[0] || '');
+      const type = head.type || '';
+      const tail = parts.slice(1, personne ? -1 : undefined);
+      const desc = [head.rest, ...tail].filter(Boolean).join(' - ');
       return normalizePiece({
         no: e.no, date: e.date, type, objet: P.objetOf(desc), detail: desc, personne, libelle: e.libelle, compte: e.compte,
         montant: e.debit > 0 ? e.debit : (e.credit > 0 ? e.credit : 0), sens: e.debit > 0 ? 'debit' : (e.credit > 0 ? 'credit' : null), source: source || 'scan',

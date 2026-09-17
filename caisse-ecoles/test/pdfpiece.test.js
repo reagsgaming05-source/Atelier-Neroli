@@ -87,3 +87,40 @@ test('récapitulatif des décomptes : tableau, total, pagination, texte relisibl
   assert.equal(big.total, P.round2(many.reduce((s, p) => s + p.montant, 0) + 2560));
   assert.ok(big.entrees > 0 && big.sorties > 0);
 });
+
+/* ------------------------------------------------------------------ */
+/* Audit : récapitulatif et fiche sans numéro                             */
+/* ------------------------------------------------------------------ */
+
+test('la description du récapitulatif dit la même chose que le libellé du journal', () => {
+  const cas = [
+    { objet: 'Camp', classe: '8P/3', periode: '12-16.05.2026', detail: 'Sortie au camp de Leysin' },
+    { objet: "Course d'école", classe: '5P/3', periode: '12.06.2026', detail: 'Lausanne' },
+    { objet: 'Autre', classe: '', periode: '', detail: 'achat de piles' },
+    { objet: 'Camp', classe: '', periode: '', detail: '' },
+  ];
+  for (const c of cas) {
+    const p = Object.assign({ type: 'DECOMPTE', personne: 'A. Berger', montant: 10, sens: 'credit' }, c);
+    // R.composeLibelle = « TYPE - Description - Personne » : la description doit être la même
+    const attendu = R.composeLibelle(p).split(' - ').slice(1, -1).join(' - ');
+    assert.equal(F.recapDescription(p), attendu, JSON.stringify(c));
+  }
+});
+
+test('une pièce sans numéro laisse la case vide sur la fiche, pas « 00 »', async () => {
+  const reg = R.emptyRegister(2026, { openingAmount: 0 });
+  const p = R.newPiece(reg);
+  Object.assign(p, { no: null, type: 'REMBOURSEMENT', detail: 'piles', personne: 'R. Desaules', montant: 12, sens: 'credit', compte: '51000.3185.00', date: '2026-03-01' });
+  p.libelle = R.composeLibelle(p);
+  const res = await F.buildPdf([p], reg, () => null);
+  // la fiche est relue par l'analyseur : sans numéro écrit, il n'en trouve aucun
+  const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(res.bytes), isEvalSupported: false, verbosity: 0 }).promise;
+  const page = await doc.getPage(1);
+  const vp = page.getViewport({ scale: 1 });
+  const words = P.itemsFromTextContent(await page.getTextContent(), vp, pdfjs.Util);
+  const info = P.analyzePage({ pageNumber: 1, width: vp.width, height: vp.height, words });
+  assert.equal(info.no, null, `numéro relu sur la fiche : ${info.no}`);
+  assert.equal(info.total, 12);
+  await doc.destroy();
+});

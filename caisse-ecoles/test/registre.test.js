@@ -246,3 +246,31 @@ test("écriture sans montant : ni sens ni pièce inventés ; reprise sans n° no
   assert.equal(R.mergeEntries(reg, ligne, { source: 'excel' }).added.length, 0);
   assert.equal(reg.pieces.length, 1);
 });
+
+/* ------------------------------------------------------------------ */
+/* Audit : reprise d'écritures venues d'un classeur ou d'un scan          */
+/* ------------------------------------------------------------------ */
+
+test('une écriture reprise garde sa description, avec ou sans type en tête', () => {
+  const cas = [
+    ['REMBOURSEMENT - Collation du chœur - A. Dupraz', 'REMBOURSEMENT', 'Collation du chœur', 'A. Dupraz'],
+    ['REMBOURSEMENT piles', 'REMBOURSEMENT', 'piles', ''],
+    ['Achat de matériel de bricolage - A. Berger', '', 'Achat de matériel de bricolage', 'A. Berger'],
+    ['FRAIS Timbres poste', 'FRAIS', 'Timbres poste', ''], // « FRAIS » est un type connu : il se détache
+    ['RECETTE - Vente de fondues - classe 10VG/2 - N. Morel', 'RECETTE', 'Vente de fondues - classe 10VG/2', 'N. Morel'],
+  ];
+  for (const [libelle, type, detail, personne] of cas) {
+    const [p] = R.piecesFromEntries([{ no: 1, date: '2026-01-12', compte: '9100.104', libelle, debit: 12, credit: null }], 'excel');
+    assert.equal(p.type, type, libelle);
+    assert.equal(p.detail, detail, libelle);
+    assert.equal(p.personne, personne, libelle);
+  }
+});
+
+test('le libellé recomposé d\'une écriture reprise ne perd pas la description', () => {
+  // saisie.js recompose le libellé à chaque enregistrement : il doit retomber sur le même texte
+  for (const libelle of ['Achat de matériel de bricolage - A. Berger', 'REMBOURSEMENT - Collation du chœur - A. Dupraz']) {
+    const [p] = R.piecesFromEntries([{ no: 1, date: '2026-01-12', compte: '9100.104', libelle, debit: 12, credit: null }], 'excel');
+    assert.ok(R.composeLibelle(p).toLowerCase().includes(p.detail.toLowerCase()), `« ${libelle} » → « ${R.composeLibelle(p)} »`);
+  }
+});
