@@ -1,0 +1,90 @@
+BLONAY PDF — version portable Windows
+=====================================
+
+1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau, Documents…).
+2. Double-cliquez sur BlonayPDF.exe : la fenêtre de l'application s'ouvre.
+3. Ouvrez vos PDF (Fichier › Ouvrir, ou glissez-les dans la fenêtre), travaillez, puis
+   Fichier › Enregistrer (Ctrl+S) : le fichier ouvert est réécrit, après confirmation la
+   première fois. Fichier › Enregistrer sous… (Ctrl+Maj+S) crée un nouveau fichier.
+
+Fichier › Récents rouvre les derniers documents ; la page d'accueil les liste aussi.
+Le travail en cours est mis de côté quelques secondes après chaque changement (dossier
+« data\recuperation ») et effacé à l'enregistrement : si l'application s'arrête
+brutalement, il est proposé au lancement suivant, modifications comprises.
+
+Aucune installation : tout est inclus dans le dossier. Aucun navigateur n'est utilisé.
+Aucune donnée ne quitte votre poste : les documents sont lus, modifiés et réassemblés
+dans cette fenêtre. Les réglages mémorisés (vue, zoom, thème) sont enregistrés dans le
+sous-dossier « data » à côté de l'exécutable.
+
+À SAVOIR SUR LE DOSSIER « data »
+Ce que vous mémorisez y est écrit en clair, sans mot de passe : vos tampons, vos
+signatures manuscrites, la liste de vos fichiers récents, et le travail mis de côté
+pour la récupération (qui contient une copie des documents ouverts). Quiconque
+ouvre votre session Windows, ou met la main sur la clé USB si l'application y
+tourne, peut donc lire ces documents et reposer votre signature sur un PDF.
+Trois conséquences pratiques :
+ - verrouillez votre session Windows quand vous quittez votre bureau ;
+ - ne mémorisez pas votre signature manuscrite sur un poste partagé ou sur une clé
+   USB qui circule — tracez-la au moment de signer, sans cocher « Mémoriser » ;
+ - « Fichier › Ouvrir le dossier des données » y donne accès : vous pouvez vider
+   ce que vous ne voulez pas y laisser.
+
+METTRE À JOUR
+Double-cliquez sur « Mettre-a-jour.cmd », ou posez le zip téléchargé dessus. Il remplace
+les fichiers de l'application par ceux du zip et ne touche jamais au sous-dossier
+« data » : vos tampons, votre signature mémorisée, vos récents et le travail mis de côté
+sont conservés. Il ne va rien chercher sur Internet et n'envoie rien ; c'est à vous de
+télécharger le zip. Fermez l'application avant de lancer la mise à jour : Windows
+verrouille un programme en cours, et la copie échouerait à moitié.
+Sans le script, la même chose à la main : fermez l'application, décompressez le zip
+par-dessus le dossier en acceptant de remplacer, et ne supprimez pas « data ».
+« Aide › À propos » indique la version installée, avec sa date.
+
+Si l'application est posée sur un lecteur réseau et que chacun l'ouvre par un raccourci,
+il n'y a qu'un dossier à mettre à jour : les raccourcis ne contiennent qu'un chemin, et
+tout le monde lance la nouvelle version au démarrage suivant, sans rien réinstaller.
+Attention dans ce cas : « data » est alors commun à tous ceux qui ouvrent ce dossier —
+votre signature mémorisée devient utilisable par vos collègues, et les copies de
+récupération contiennent les documents ouverts. Sur un partage, ne mémorisez pas votre
+signature, ou demandez que le dossier soit en lecture seule pour les utilisateurs :
+l'application range alors ses données dans votre profil Windows, chacun les siennes.
+
+Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un PDF, « Ouvrir avec »,
+« Choisir une autre application », puis désignez BlonayPDF.exe et cochez « Toujours ».
+Chaque PDF double-cliqué s'ouvre dans sa propre fenêtre ; pour combiner plusieurs
+documents, Fichier › Ajouter au document… ou le bouton « Ajouter un document ».
+
+Onglets : Fichier › Ouvrir ouvre chaque document dans son onglet (Ctrl+T nouvel onglet,
+Ctrl+W fermer, Ctrl+Tab suivant) ; une page glissée sur un autre onglet y déménage.
+
+Menu Outils : reconnaître le texte d'un scan (OCR, français et allemand, sur le poste),
+rechercher / remplacer / caviarder partout, copier un tableau vers Excel, comparer deux
+versions (texte, et aspect en rouge ; reconnaissance à la demande pour un scan), constituer
+un dossier de pièces (sommaire, intercalaires, pagination, signets), lister et retirer les
+commentaires d'un PDF reçu, traiter plusieurs fichiers d'un coup. Dans l'éditeur : tampons
+(Reçu le, Payé, Copie conforme…) et signatures mémorisées sur ce poste (dossier « data »).
+Caviarder ou effacer du texte garde la page nette (vectorielle) : les lettres sont retirées
+du fichier, et si une image passe sous le rectangle, seule cette image est refaite, pas la
+page entière. Sur un scan reconnu, le texte reste donc sélectionnable partout sauf sous le
+rectangle.
+
+En mode Lire, le texte se sélectionne et se copie. Rechercher (Ctrl+F) ouvre un panneau qui
+flotte à côté du document : chaque occurrence est surlignée sur la page, Entrée passe à la
+suivante (Maj+Entrée à la précédente), et « mot entier » évite les faux résultats.
+
+Clic droit sur une page : pivoter, modifier, signet, copier le texte, dupliquer, extraire,
+supprimer. Clic droit sur un onglet : enregistrer, enregistrer sous, fermer, fermer les autres.
+
+Une longue opération (OCR, lot) s'annule par le bouton en bas ou Échap — la reconnaissance
+annonce le temps restant ; ce qui a été contourné pendant une opération est noté dans le
+journal, en bas de la fenêtre.
+
+Imprimer (Fichier › Imprimer) : l'application connaît vos imprimantes et envoie
+directement — imprimante choisie, recto verso, copies, livret, plusieurs pages par
+feuille, échelle, qualité (fine, normale, rapide) — sans autre fenêtre. « Propriétés… »
+ouvre la fenêtre d'impression de Windows, avec les réglages du pilote (bac, qualité, options).
+
+Premier lancement : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
+(l'exécutable n'est pas signé). Cliquez sur « Informations complémentaires » puis
+« Exécuter quand même ». Si l'antivirus bloque le fichier, ajoutez le dossier en exception.

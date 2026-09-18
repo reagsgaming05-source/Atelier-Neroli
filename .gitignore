@@ -1,0 +1,39 @@
+# Bibliothèques récupérées depuis npm par outils/build.js
+outils/libs/
+
+# produits par outils/build.js à partir de outils/src/ : jamais commités,
+# sinon chaque changement de la source ajoute 28 Mo à l'historique. « npm run
+# build » dans outils/ les remet ; la CI et Vercel les construisent eux-mêmes.
+outils/blonay-pdf.html
+outils/blonay-pdf-hors-ligne.html
+outils/application/lanceur/blonay-pdf.html
+outils/pour-les-collegues/blonay-pdf.html
+docs/index.html
+
+# recopiées par outils/build.js depuis outils/application/, où les pose
+# « npm run icones » à partir de outils/src/marque.svg
+outils/application/lanceur/icon-32.png
+outils/application/lanceur/icon-48.png
+outils/application/lanceur/icon-256.png
+
+# produit par outils/build.js puis compressé pour être embarqué
+outils/application/lanceur/blonay-pdf.html.gz
+outils/application/lanceur/Blonay PDF.exe
+
+# produits par outils/application/lanceur/construire.sh et par le workflow
+dist/
+BlonayPDF-windows.zip
+BlonayPDF-leger-windows.zip
+
+# dépendances et produits de l'application fenêtrée (outils/desktop)
+outils/node_modules/
+outils/desktop/node_modules/
+outils/desktop/app/
+outils/desktop/dist/
+outils/desktop/.electron-cache/
+outils/desktop/construction.json
+
+# suite de bout en bout (outils/test-e2e)
+outils/test-e2e/node_modules/
+outils/test-e2e/test-results/
+outils/test-e2e/playwright-report/

@@ -1,0 +1,132 @@
+BLONAY PDF — version portable Windows
+=====================================
+
+1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau,
+   Documents…).
+2. Double-cliquez sur  Blonay PDF.exe  : la fenêtre de l'application s'ouvre.
+3. Ouvrez vos PDF, travaillez, puis « Exporter le PDF ».
+
+Aucune installation : l'application tient dans ce dossier, rien n'est écrit
+dans le registre ni dans Program Files, aucun navigateur n'est sollicité.
+Ses réglages vont dans le dossier de l'utilisateur (AppData\Local\Blonay PDF)
+— jamais dans un dossier synchronisé — et le journal blonay.log s'écrit à
+côté de l'exécutable, en cas de problème. Il ne note que ce que fait
+l'application, jamais le nom ni le contenu d'un document.
+
+POUR QUE TOUT S'OUVRE SANS AVERTISSEMENT
+-----------------------------------------
+1. Avant de décompresser : clic droit sur le fichier ZIP, Propriétés,
+   cochez « Débloquer » en bas, puis OK.
+2. Décompressez le dossier où vous voulez.
+3. Double-cliquez sur  Blonay PDF.exe
+
+L'étape 1 retire la marque « fichier venu d'internet ». Sans elle, Windows
+affiche « Windows a protégé votre ordinateur » au premier lancement : ce n'est
+pas un signe d'infection, mais le message affiché pour tout programme non signé.
+Si le message apparaît quand même : Informations complémentaires, puis Exécuter
+quand même. Il ne revient plus ensuite.
+
+UNE VRAIE FENÊTRE D'APPLICATION
+-------------------------------
+Blonay PDF.exe ouvre sa propre fenêtre Windows — son icône, son nom, sans
+onglet, sans barre d'adresse, sans navigateur dans la barre des tâches. Rien
+n'est installé : l'application utilise le moteur d'affichage WebView2 livré
+avec Windows 10 et 11.
+
+« Exporter le PDF » ouvre la boîte « Enregistrer sous » de Windows : vous
+choisissez le dossier et le nom, comme dans n'importe quelle application.
+Fermer la fenêtre avec des modifications non exportées demande d'abord
+confirmation.
+
+Si WebView2 manquait sur le poste (rare), l'application s'ouvre dans une
+fenêtre d'Edge ou de Chrome, sans rien perdre de ses fonctions.
+
+UNE SEULE ICÔNE DANS LA BARRE DES TÂCHES
+-----------------------------------------
+Lancez l'application, puis clic droit sur son bouton dans la barre des tâches,
+« Épingler à la barre des tâches ».
+
+Épinglez la fenêtre, pas le fichier .exe. Si vous épinglez les deux, vous voyez
+deux icônes : celle du raccourci et celle de la fenêtre. Avec la seule épingle
+de la fenêtre, un clic ouvre l'application, et les clics suivants reviennent à
+la fenêtre déjà ouverte, comme n'importe quelle application.
+
+Si vous aviez déjà épinglé le .exe : clic droit dessus, « Détacher de la barre
+des tâches ».
+
+Un second double-clic sur Blonay PDF.exe ne crée pas non plus de seconde
+fenêtre : il ramène celle qui est ouverte.
+
+OUVRIR LES PDF EN DOUBLE-CLIQUANT DESSUS
+-----------------------------------------
+Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un fichier
+PDF, « Ouvrir avec », « Choisir une autre application », puis « Rechercher une
+autre application sur ce PC » et désignez  Blonay PDF.exe . Cochez « Toujours »
+pour en faire le programme par défaut.
+
+Un double-clic sur un PDF ouvre alors ce document, directement et dans sa
+propre fenêtre, même si l'application est déjà ouverte. On peut aussi déposer
+un ou plusieurs fichiers (PDF ou images) sur l'icône du programme.
+
+Le document est recopié quelques instants dans le dossier de l'application,
+le temps que la fenêtre le lise, puis cette copie est effacée.
+
+IMPRIMER
+--------
+« Imprimer » envoie directement à l'imprimante par défaut de Windows, sans
+passer par la fenêtre d'impression du navigateur. Les réglages de mise en
+page (pages, livret, plusieurs pages par feuille, papier, échelle) sont ceux
+du dialogue de l'application.
+
+Le recto verso, la couleur et le bac sont ceux définis par défaut pour cette
+imprimante dans Windows : Paramètres › Imprimantes et scanners › votre
+imprimante › Préférences d'impression. Pour un livret, réglez-y « recto verso,
+retourner sur les bords courts ».
+
+Pour changer d'imprimante : changez l'imprimante par défaut de Windows. Pour
+un réglage ponctuel, « Enregistrer » produit le PDF prêt à imprimer, que
+vous imprimez ensuite d'où vous voulez.
+
+L'application garde ses propres réglages du moteur d'affichage dans son
+dossier : rien ne se mêle à votre navigateur habituel.
+
+PARE-FEU
+--------
+L'application n'ouvre aucun port et n'écoute rien. Le moteur d'affichage est
+démarré avec toutes ses fonctions de découverte réseau désactivées. Le pare-feu
+Windows n'a donc rien à signaler.
+
+CONFIDENTIALITE
+---------------
+Vos documents ne quittent jamais votre ordinateur. Ils sont lus, modifiés et
+réassemblés en mémoire, sur votre machine.
+
+Aucun envoi, aucun compte, aucun cookie, aucune mesure d'audience, aucune
+connexion internet. Les règles de sécurité de l'outil refusent toute connexion
+sortante, ce qui a été vérifié en tentant délibérément six formes d'envoi,
+toutes refusées.
+
+SI LES FICHIERS .EXE SONT INTERDITS CHEZ VOUS
+----------------------------------------------
+Double-cliquez sur le fichier HTML livré à côté. Il fait exactement la même
+chose, dans un onglet de navigateur.
+
+CE QUE L'OUTIL SAIT FAIRE
+-------------------------
+Réorganiser les pages par glisser-déposer ou par numéro, en supprimer, les
+pivoter, les dupliquer, fusionner plusieurs documents, extraire une sélection,
+insérer des pages vierges, transformer des images en pages.
+
+Corriger le texte existant d'un PDF : double-clic sur une page, outil de
+modification du texte, puis clic sur la ligne à reprendre.
+
+Détecter les pages vides d'un scan et les retirer après vérification.
+
+Annoter : texte, surlignage, cadre, dessin à main levée, signature, image,
+caviardage. Filigrane, en-tête et pied de page, numérotation des pages.
+
+Remplir les formulaires PDF. Diviser un document en plusieurs fichiers.
+Exporter en images ou en texte. Réduire la taille du fichier.
+Protéger par mot de passe avec autorisations.
+
+Aide des raccourcis clavier : touche ?
