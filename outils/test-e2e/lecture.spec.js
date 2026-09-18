@@ -74,3 +74,93 @@ test('le numéro de la page affichée suit le défilement', async ({ app, page }
   await page.press('#page-num', 'Enter');
   await expect.poll(() => page.inputValue('#page-num'), { timeout: 20000 }).toBe('5');
 });
+
+// Une sélection ne doit ramasser que le document. Le mobilier de
+// l'application — la légende sous chaque page, le bouton « Modifier », la
+// barre d'état — se trouvait entre deux couches de texte et partait avec, si
+// bien qu'on collait « 3 / 12 · rapport » et « Modifier » au milieu d'un
+// paragraphe. Le rendre non sélectionnable ne suffit pas : le navigateur le
+// ramasse quand même dès que la sélection l'enjambe.
+const denseDeux = () => require('./aide').pdfDe([
+  [{ x: 70, y: 760, taille: 12, texte: 'Commune de Blonay' },
+   { x: 70, y: 735, taille: 12, texte: 'Decompte des frais' },
+   { x: 70, y: 710, taille: 12, texte: 'Transport scolaire' }],
+  [{ x: 70, y: 760, taille: 12, texte: 'Seconde page du document' }],
+]);
+const selection = (page) => page.evaluate(() => String(document.getSelection()));
+
+test('une sélection qui déborde d\'une page ne ramasse pas l\'interface', async ({ app, page }) => {
+  await app.ouvrir('rapport.pdf', denseDeux());
+  await page.waitForSelector('#lecture .couche-texte span');
+  const feuille = page.locator('#lecture .feuille-vue').first();
+  const bf = await feuille.boundingBox();
+  const premier = await feuille.locator('.couche-texte span').first().boundingBox();
+
+  // Le geste qui posait problème : partir du texte et descendre bien au-delà
+  // du bas de la page, jusque dans la suivante.
+  await page.mouse.move(premier.x + 2, premier.y + premier.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bf.x + bf.width - 20, bf.y + bf.height + 260, { steps: 25 });
+  await page.mouse.up();
+
+  const pris = await selection(page);
+  expect(pris, 'le texte des deux pages est bien pris').toContain('Commune de Blonay');
+  expect(pris).toContain('Seconde page du document');
+  expect(pris, 'la légende de la page ne part pas avec').not.toMatch(/\d+ \/ \d+/);
+  expect(pris, 'le bouton de retouche ne part pas avec').not.toContain('Modifier');
+  expect(pris, 'la barre d\'état ne part pas avec').not.toContain('document ·');
+  expect(pris).not.toContain('pages ·');
+});
+
+test('la légende et le bouton restent lisibles à l\'écran', async ({ app, page }) => {
+  await app.ouvrir('rapport.pdf', denseDeux());
+  await page.waitForSelector('#lecture .feuille-vue .num');
+  // Le texte est posé par la feuille de style : il s'affiche sans être du
+  // contenu sélectionnable, et le lecteur d'écran a son propre libellé.
+  const legende = page.locator('#lecture .feuille-vue .num').first();
+  await expect(legende).toHaveAttribute('data-legende', /^1 \/ 2/);
+  await expect(legende).toHaveAttribute('aria-label', /^Page 1 sur 2/);
+  expect(await legende.evaluate((e) => getComputedStyle(e, '::after').content)).toContain('1 / 2');
+  const bouton = page.locator('#lecture .feuille-vue .retoucher').first();
+  await expect(bouton).toHaveAttribute('aria-label', 'Modifier cette page');
+  expect(await bouton.evaluate((e) => getComputedStyle(e, '::after').content)).toContain('Modifier');
+});
+
+test('l\'interface hors du document ne se sélectionne pas', async ({ app, page }) => {
+  await app.ouvrir('rapport.pdf', denseDeux());
+  await page.waitForSelector('#lecture .couche-texte span');
+  const dehors = await page.evaluate(() => {
+    const pris = (s) => {
+      const e = document.querySelector(s);
+      return e ? getComputedStyle(e).userSelect : 'absent';
+    };
+    return { barre: pris('.statusbar'), outils: pris('.toolbar'), cote: pris('.side'),
+      texte: pris('#lecture .couche-texte') };
+  });
+  expect(dehors.barre).toBe('none');
+  expect(dehors.outils).toBe('none');
+  expect(dehors.cote).toBe('none');
+  expect(dehors.texte, 'le texte des pages reste sélectionnable').toBe('text');
+});
+
+// L'interface est devenue non sélectionnable ; la zone de saisie de l'éditeur,
+// elle, doit le rester — sans quoi on ne peut plus ni corriger un mot ni
+// choisir ce qu'on remplace.
+test('la zone de saisie de l\'éditeur reste sélectionnable', async ({ app, page }) => {
+  await app.ouvrir('lettre.pdf', pdfTexte(['Commune de Blonay']));
+  await app.vue('organiser');
+  await page.dblclick('#pages .tile:nth-child(1)');
+  await expect(page.locator('.editor')).toBeVisible();
+  await page.click('.ed-tool[data-tool="edittext"]');
+  // La feuille est à l'échelle de la page : la ligne est posée sur la ligne de
+  // base 760, soit 82 points sous le haut d'une page de 842.
+  const feuille = await page.locator('.ed-sheet').boundingBox();
+  const k = feuille.height / 842;
+  await page.mouse.click(feuille.x + 100 * k, feuille.y + (842 - 756) * k);
+  const zone = page.locator('.ed-riche');
+  await expect(zone).toBeVisible();
+  expect(await zone.evaluate((e) => getComputedStyle(e).userSelect),
+    'sans quoi on ne pourrait plus choisir ce qu\'on remplace').not.toBe('none');
+  await page.keyboard.press('Control+a');
+  expect(await page.evaluate(() => String(document.getSelection()))).toContain('Commune');
+});

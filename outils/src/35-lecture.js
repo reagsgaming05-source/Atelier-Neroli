@@ -43,12 +43,17 @@
     const attente = document.createElement('div'); attente.className = 'attente';
     const sp = document.createElement('span'); sp.className = 'spinner';
     attente.appendChild(sp);
+    // La légende et le libellé du bouton sont posés par la feuille de style,
+    // depuis un attribut, et non écrits dans la page. Un pseudo-élément n'entre
+    // jamais dans une sélection : sans cela, un glissé qui dépasse le bas de la
+    // page collait « 2 / 12 · décompte » et « Modifier » au milieu du texte
+    // copié. Le rendre non sélectionnable ne suffit pas — le navigateur le
+    // ramasse quand même dès que la sélection l'enjambe.
     const num = document.createElement('span'); num.className = 'num';
     const ret = document.createElement('button');
     ret.type = 'button'; ret.className = 'retoucher';
+    ret.setAttribute('aria-label', 'Modifier cette page');
     ret.appendChild(icon(IC.pencil));
-    const lbl = document.createElement('span'); lbl.textContent = 'Modifier';
-    ret.appendChild(lbl);
     ret.addEventListener('click', e => { e.stopPropagation(); openEditor(+f.dataset.id); });
     f.append(cv, attente, num, ret);
     // Un double-clic sur du texte sélectionne le mot ; sur le reste, il ouvre l'éditeur.
@@ -166,8 +171,12 @@
       f.style.width = Math.round(g.Wd * lectureZ) + 'px';
       f.style.height = Math.round(g.Hd * lectureZ) + 'px';
       const src = srcById(p.src);
-      f.querySelector('.num').textContent = (i + 1) + ' / ' + state.pages.length
+      const legende = (i + 1) + ' / ' + state.pages.length
         + (src ? '  \u00b7  ' + baseName(src.name) : '');
+      const nm = f.querySelector('.num');
+      nm.dataset.legende = legende;
+      nm.setAttribute('aria-label', 'Page ' + (i + 1) + ' sur ' + state.pages.length
+        + (src ? ', ' + baseName(src.name) : ''));
       if (peintes.get(p.id) !== lectureCle(p)) {
         const att = f.querySelector('.attente');
         if (att) att.hidden = false;
