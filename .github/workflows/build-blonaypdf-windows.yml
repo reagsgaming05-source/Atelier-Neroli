@@ -104,6 +104,7 @@ jobs:
           Rename-Item dist\win-unpacked BlonayPDF
           Copy-Item ..\..\README.md dist\BlonayPDF\LISEZMOI.md
           Copy-Item build\LISEZMOI-portable.txt dist\BlonayPDF\LISEZMOI-portable.txt
+          Copy-Item build\Mettre-a-jour.cmd dist\BlonayPDF\Mettre-a-jour.cmd
           Get-ChildItem dist\BlonayPDF | Select-Object Name, Length
 
       - name: Test de fumée de l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, export)
@@ -117,6 +118,42 @@ jobs:
         working-directory: outils/desktop
         shell: pwsh
         run: Compress-Archive -Path dist\BlonayPDF -DestinationPath ..\..\BlonayPDF-windows.zip
+
+      # Le script de mise a jour est la seule chose du depot qui touche a
+      # l'installation de quelqu'un. Il est donc joue pour de vrai, sur Windows :
+      # un faux dossier deja installe, avec des donnees dedans, recoit le zip
+      # fraichement construit. Ce qui compte : data survit, l'executable est
+      # remplace, et un fichier personnel pose dans le dossier reste la.
+      - name: Le script de mise à jour préserve les données
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Capture fidèle : sans cela, les accents du script reviendraient
+          # abîmés par la console et la vérification ne voudrait rien dire.
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $poste = Join-Path $env:RUNNER_TEMP 'poste'
+          New-Item -ItemType Directory -Force -Path (Join-Path $poste 'data\recuperation') | Out-Null
+          Set-Content (Join-Path $poste 'data\tampons.json') 'MES TAMPONS'
+          Set-Content (Join-Path $poste 'data\recuperation\a.json') 'MON TRAVAIL'
+          Set-Content (Join-Path $poste 'BlonayPDF.exe') 'VIEILLE VERSION'
+          Set-Content (Join-Path $poste 'notes-du-service.txt') 'A MOI'
+          Copy-Item outils\desktop\build\Mettre-a-jour.cmd $poste
+
+          $sortie = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$env:GITHUB_WORKSPACE\BlonayPDF-windows.zip`" < NUL" 2>&1 | Out-String
+          Write-Host $sortie
+
+          $dit = { param($quoi, $vrai) if (-not $vrai) { throw "RATÉ : $quoi" }; Write-Host "  ok - $quoi" }
+          & $dit 'le script est allé au bout' ($sortie -match 'BLONAY-MAJ: OK')
+          & $dit 'les accents ressortent intacts' ($sortie -match 'Mise à jour terminée')
+          & $dit 'les tampons sont conservés' ((Get-Content (Join-Path $poste 'data\tampons.json')) -eq 'MES TAMPONS')
+          & $dit 'le travail mis de côté est conservé' ((Get-Content (Join-Path $poste 'data\recuperation\a.json')) -eq 'MON TRAVAIL')
+          & $dit 'un fichier personnel du dossier est conservé' ((Get-Content (Join-Path $poste 'notes-du-service.txt')) -eq 'A MOI')
+          & $dit 'l''exécutable a bien été remplacé' ((Get-Item (Join-Path $poste 'BlonayPDF.exe')).Length -gt 1000000)
+          & $dit 'le LISEZMOI portable est arrivé' (Test-Path (Join-Path $poste 'LISEZMOI-portable.txt'))
+          & $dit 'le script s''est mis à jour lui-même' (Test-Path (Join-Path $poste 'Mettre-a-jour.cmd'))
+
+          # Et le refus quand l'application tourne : on simule en verrouillant l'exe.
+          Remove-Item -Recurse -Force $poste
 
       # upload-artifact@v4 et action-gh-release@v2 ciblent encore Node 20 : le
       # runner les force sur Node 24 et prévient à chaque exécution. Rien n'est

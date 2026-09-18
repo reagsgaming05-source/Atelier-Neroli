@@ -9,3 +9,6 @@
 *.go   text eol=lf
 *.ico  binary
 *.png  binary
+# Sauf les scripts Windows : cmd.exe veut des fins de ligne CRLF, et un
+# « goto » derriere une fin de ligne seule ne retombe pas toujours sur ses pieds.
+*.cmd  text eol=crlf

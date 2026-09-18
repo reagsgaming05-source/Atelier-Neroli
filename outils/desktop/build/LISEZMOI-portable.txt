@@ -30,6 +30,26 @@ Trois conséquences pratiques :
  - « Fichier › Ouvrir le dossier des données » y donne accès : vous pouvez vider
    ce que vous ne voulez pas y laisser.
 
+METTRE À JOUR
+Double-cliquez sur « Mettre-a-jour.cmd », ou posez le zip téléchargé dessus. Il remplace
+les fichiers de l'application par ceux du zip et ne touche jamais au sous-dossier
+« data » : vos tampons, votre signature mémorisée, vos récents et le travail mis de côté
+sont conservés. Il ne va rien chercher sur Internet et n'envoie rien ; c'est à vous de
+télécharger le zip. Fermez l'application avant de lancer la mise à jour : Windows
+verrouille un programme en cours, et la copie échouerait à moitié.
+Sans le script, la même chose à la main : fermez l'application, décompressez le zip
+par-dessus le dossier en acceptant de remplacer, et ne supprimez pas « data ».
+« Aide › À propos » indique la version installée, avec sa date.
+
+Si l'application est posée sur un lecteur réseau et que chacun l'ouvre par un raccourci,
+il n'y a qu'un dossier à mettre à jour : les raccourcis ne contiennent qu'un chemin, et
+tout le monde lance la nouvelle version au démarrage suivant, sans rien réinstaller.
+Attention dans ce cas : « data » est alors commun à tous ceux qui ouvrent ce dossier —
+votre signature mémorisée devient utilisable par vos collègues, et les copies de
+récupération contiennent les documents ouverts. Sur un partage, ne mémorisez pas votre
+signature, ou demandez que le dossier soit en lecture seule pour les utilisateurs :
+l'application range alors ses données dans votre profil Windows, chacun les siennes.
+
 Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un PDF, « Ouvrir avec »,
 « Choisir une autre application », puis désignez BlonayPDF.exe et cochez « Toujours ».
 Chaque PDF double-cliqué s'ouvre dans sa propre fenêtre ; pour combiner plusieurs
