@@ -17,7 +17,7 @@
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
-    'journalYear', 'journalBody', 'journalTotals', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
+    'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
     'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
@@ -248,6 +248,10 @@
       justificatifs: base ? base.justificatifs : [],
       source: base ? base.source : (state.dgeo.current ? 'dgeo' : 'saisie'),
       ref: base ? base.ref : (state.dgeo.current ? (state.dgeo.current.numero || state.dgeo.current.filename || '') : ''),
+      // ouvrir une pièce lue sur un scan et l'enregistrer, c'est l'avoir vérifiée
+      scanKey: base ? base.scanKey : '',
+      aVerifier: false,
+      doutes: [],
     }));
     p.libelle = els.pLibelleEdit.checked ? els.pLibelle.value.trim() : R.composeLibelle(p);
     return p;
@@ -455,17 +459,27 @@
     els.journalBody.innerHTML = j.rows.map((r) => {
       const p = state.reg.pieces.find((x) => x.id === r.id);
       const ico = (id) => `<svg class="ico"><use href="#i-${id}"/></svg>`;
-      return `<tr data-id="${r.id}"${state.editingId === r.id ? ' class="selected"' : ''}>` +
+      const classes = [state.editingId === r.id ? 'selected' : '', p && p.aVerifier ? 'a-verifier' : ''].filter(Boolean).join(' ');
+      return `<tr data-id="${r.id}"${classes ? ` class="${classes}"` : ''}>` +
         `<td>${r.no == null ? '' : r.no}</td><td>${escapeHtml(P.isoToDisplay(r.date))}</td><td class="compte">${escapeHtml(r.compte)}</td><td class="libelle" title="${escapeHtml(r.libelle)}">${escapeHtml(r.libelle)}</td>` +
         `<td class="num">${r.debit != null ? fmtCHF(r.debit) : ''}</td><td class="num">${r.credit != null ? fmtCHF(r.credit) : ''}</td><td class="num solde">${fmtCHF(r.solde)}</td>` +
-        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
-        `<td class="acts"><button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
+        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.aVerifier ? ` <span class="tag warn" title="Lue sur un scan, pas encore vérifiée${p.doutes && p.doutes.length ? ' :\n- ' + p.doutes.join('\n- ').replace(/"/g, '') : ''}">à vérifier</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
+        `<td class="acts">${p && p.aVerifier ? `<button type="button" class="small ghost ok" data-verif="${r.id}" title="Cette lecture est juste : marquer la pièce comme vérifiée">${ico('check')}</button>` : ''}<button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
     }).join('') || '<tr><td colspan="9" class="legend">Aucune pièce dans ce registre. Remplissez la fiche à gauche : chaque pièce enregistrée apparaît ici avec le solde cumulé.</td></tr>';
     els.journalTotals.innerHTML = `<div class="t"><div class="l">Solde à nouveau</div><div class="v">${fmtCHF(j.start)}</div></div>` +
       `<div class="t"><div class="l">Débits (entrées)</div><div class="v">+ ${fmtCHF(j.debits)}</div></div>` +
       `<div class="t"><div class="l">Crédits (sorties)</div><div class="v">− ${fmtCHF(j.credits)}</div></div>` +
       `<div class="t end"><div class="l">Solde final</div><div class="v">${fmtCHF(j.end)}</div></div>` +
       `<div class="t"><div class="l">Pièces</div><div class="v">${state.reg.pieces.length}</div></div>`;
+    // pièces lues sur un scan et pas encore regardées : elles comptent dans le solde, il faut le dire
+    const aVerifier = R.pendingPieces(state.reg);
+    if (els.journalPending) {
+      els.journalPending.innerHTML = aVerifier.length
+        ? `<div class="notice warn"><b>${aVerifier.length}</b> pièce(s) lues sur un scan attendent d'être vérifiées (n° ${aVerifier.map((p) => (p.no == null ? '?' : p.no)).slice(0, 25).join(', ')}${aVerifier.length > 25 ? '…' : ''}). ` +
+          `Elles sont déjà comptées dans le solde. Ouvrez-en une pour la corriger, ou confirmez la lecture d'un coup : ` +
+          `<button type="button" class="small" data-verif-all="1">Tout marquer comme vérifié</button></div>`
+        : '';
+    }
     // sélecteur « depuis le n° » pour le PDF
     const nos = state.reg.pieces.map((p) => p.no).filter((n) => n != null);
     if (els.regPdfFrom) {
@@ -524,9 +538,28 @@
     } catch (e) { notice('err', `Récapitulatif impossible : ${escapeHtml(e.message || e)}`); }
   });
 
+  if (els.journalPending) els.journalPending.addEventListener('click', async (ev) => {
+    if (!ev.target.closest('button[data-verif-all]')) return;
+    const restent = R.pendingPieces(state.reg);
+    if (!restent.length) return;
+    if (!confirm(`Marquer comme vérifiées les ${restent.length} pièce(s) lues sur un scan ?\n\nÀ ne faire qu'après les avoir regardées : elles comptent déjà dans le solde.`)) return;
+    R.markVerified(state.reg, restent.map((p) => p.id));
+    await saveReg();
+    renderJournal();
+    notice('ok', `${restent.length} pièce(s) marquée(s) comme vérifiée(s).`);
+  });
+
   els.journalBody.addEventListener('click', async (ev) => {
     const b = ev.target.closest('button');
     if (!b) return;
+    if (b.dataset.verif) {
+      const p = state.reg.pieces.find((x) => x.id === b.dataset.verif);
+      if (!p) return;
+      R.markVerified(state.reg, [p.id]);
+      await saveReg();
+      renderJournal();
+      return;
+    }
     if (b.dataset.edit) {
       const p = state.reg.pieces.find((x) => x.id === b.dataset.edit);
       if (!p) return;

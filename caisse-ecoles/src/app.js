@@ -249,6 +249,11 @@
     return window.CaisseSaisie && window.CaisseSaisie.state ? window.CaisseSaisie.state.reg : null;
   }
 
+  // Versement du lot lu au journal (voir « Une seule liste » plus bas). Déclarés ici : l'ouverture
+  // de l'écran appelle applyMode() → refreshAll() avant que le bloc du bas ne soit exécuté.
+  let versementEnCours = false;
+  let imagesEnCours = false;
+
   function currentOpening() {
     if (state.mode === 'registre') {
       const reg = registre();
@@ -275,6 +280,11 @@
   // Par défaut, le registre de l'année : les pièces scannées viennent à la suite de celles déjà
   // saisies (ou reprises d'un classeur), et « Ajouter au registre » les y verse. Une année commencée
   // à l'ancienne se reprend par « Reprendre ces écritures dans le registre » (classeur existant).
+  function renderToRegisterButton() {
+    const b = document.getElementById('btnToRegister');
+    if (b) b.classList.toggle('hidden', state.mode === 'registre');
+  }
+
   function applyMode(mode) {
     if (!['registre', 'existing', 'new'].includes(mode)) mode = 'registre';
     state.mode = mode;
@@ -284,6 +294,7 @@
     if (els.registreBox) els.registreBox.classList.toggle('hidden', mode !== 'registre');
     try { localStorage.setItem('caisse.scan.base', mode); } catch (e) { /* ignore */ }
     renderRegistreInfo();
+    renderToRegisterButton(); // « Ajouter au registre » n'a de sens que si le registre n'est pas déjà la base
     if (state.pages.length) reparse();
     refreshAll();
   }
@@ -297,13 +308,13 @@
     const last = reg.pieces.length ? reg.pieces[reg.pieces.length - 1] : null;
     els.registreInfo.innerHTML = `Registre <b>${reg.annee}</b> (Saisie des pièces) : <b>${reg.pieces.length}</b> pièce(s), solde à nouveau <b>${fmtCHF(j.start)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}` +
       (last ? `, dernière pièce n° <b>${last.no == null ? '?' : last.no}</b>${last.date ? ` du ${escapeHtml(P.isoToDisplay(last.date))}` : ''}` : '') + `, solde actuel <b>${fmtCHF(j.end)}</b>. ` +
-      `Les pièces scannées viennent à la suite (« Ajouter au registre de l'année ») ; le fichier Excel généré ici contient tout le registre plus ce lot, sans rien compter deux fois. ` +
+      `Les pièces lues ci-dessous entrent dans ce journal dès la lecture, marquées « à vérifier » : il n'y a qu'une seule liste. ` +
       `<button type="button" class="small" data-act="goSaisie">Ouvrir la saisie des pièces</button>`;
   }
   if (els.registreInfo) els.registreInfo.addEventListener('click', (ev) => { if (ev.target.closest('button[data-act="goSaisie"]')) showPanel('panelSaisie'); });
   // le registre a changé (ouvert, pièce enregistrée, classeur repris) : la base se met à jour
   document.addEventListener('caisse:registre', () => {
-    if (state.mode !== 'registre') return;
+    if (state.mode !== 'registre' || versementEnCours) return;
     renderRegistreInfo();
     if (state.pages.length) reparse();
     refreshAll();
@@ -549,6 +560,8 @@
   els.btnClearFiles.addEventListener('click', () => {
     if (!state.docs.length) return;
     if (!confirm('Retirer tous les fichiers PDF chargés ? Les écritures reconnues (et vos corrections) seront effacées.')) return;
+    // les pièces versées au journal et pas encore vérifiées partent avec le lot
+    retirerDuJournal().then((n) => { if (n) notice(els.pdfNotices, 'ok', `${n} pièce(s) non vérifiée(s) retirée(s) du journal.`); });
     for (const d of state.docs) { try { d.doc.destroy(); } catch (e) { /* ignore */ } }
     state.docs = [];
     state.renderCache.clear();
@@ -1912,6 +1925,9 @@
 
   function refreshAll() {
     renderOpeningHint(); // signale un solde à nouveau tapé mais illisible
+    // les écritures lues entrent au journal (une seule liste) ; sans effet si rien n'a changé
+    verserAuJournal().catch((e) => console && console.warn && console.warn('versement au journal', e));
+    renderJournalLink();
     const has = state.entries.length > 0;
     els.step3.classList.toggle('hidden', !has);
     els.step4.classList.toggle('hidden', !has);
@@ -2148,6 +2164,117 @@
   // base des écritures des pièces scannées : celle choisie la dernière fois, sinon le registre de l'année
   { let base = 'registre'; try { base = localStorage.getItem('caisse.scan.base') || 'registre'; } catch (e) { /* ignore */ } applyMode(base); }
 
+  /* ---------------- Une seule liste : le lot lu entre au journal ---------------- */
+  // Les écritures lues sur les scans sont versées au registre de l'année dès la lecture, marquées
+  // « à vérifier ». Une relecture (fin de l'OCR, correction à l'écran) met à jour LA MÊME pièce ;
+  // une pièce déjà saisie à la main ne se dédouble pas, la lecture s'y rattache. Il n'y a donc
+  // plus deux listes à rapprocher : le journal est la liste.
+  function scanEntries() {
+    return state.entries.filter((e) => !e.manual && e.sourceKey).map((e) => ({
+      scanKey: e.sourceKey, no: e.no, date: e.date, compte: e.compte, libelle: e.libelle,
+      debit: e.debit, credit: e.credit, page: e.page,
+      warnings: (e.warnings || []).slice(0, 12),
+    }));
+  }
+
+  async function verserAuJournal() {
+    if (versementEnCours || state.mode !== 'registre') return null;
+    const reg = registre();
+    if (!reg || !window.CaisseSaisie || !window.CaisseRegistre) return null;
+    const entries = scanEntries();
+    if (!entries.length) return null;
+    const res = window.CaisseRegistre.syncScanBatch(reg, entries);
+    if (!(res.ajoutees.length || res.misesAJour.length || res.rattachees.length)) return res;
+    versementEnCours = true; // saveReg prévient l'écran des scans : on ne se relance pas soi-même
+    try {
+      await window.CaisseSaisie.saveReg();
+      window.CaisseSaisie.renderJournal();
+    } finally { versementEnCours = false; }
+    renderJournalLink();
+    if (res.ajoutees.length) joindreImages(res.ajoutees);
+    return res;
+  }
+
+  /** Joint l'image de chaque pièce lue (page rendue en JPEG) en justificatif, en arrière-plan. */
+  async function joindreImages(pieces) {
+    if (imagesEnCours || !window.CaisseSaisie) return;
+    const reg = registre();
+    if (!reg) return;
+    imagesEnCours = true;
+    try {
+      let n = 0;
+      for (const p of pieces) {
+        const e = state.entries.find((x) => x.sourceKey === p.scanKey);
+        if (!e || !e.page || (p.justificatifs || []).some((j) => /^scan-/.test(j.name))) continue;
+        try {
+          const img = await imagePage(e.page);
+          const vive = reg.pieces.find((x) => x.id === p.id);
+          if (!img || !vive) continue;
+          const nom = `scan-piece-${vive.no == null ? vive.id.slice(0, 6) : vive.no}.jpg`;
+          const saved = await window.CaisseSaisie.state.storage.attach(reg.annee, vive.id, nom, img);
+          vive.justificatifs.push({ name: saved.name, size: saved.size, kind: 'jpeg' });
+          n++;
+        } catch (err) { /* sans image : la pièce reste au journal */ }
+      }
+      if (n) {
+        versementEnCours = true;
+        try { await window.CaisseSaisie.saveReg(); window.CaisseSaisie.renderJournal(); } finally { versementEnCours = false; }
+      }
+    } finally { imagesEnCours = false; }
+  }
+
+  /** Page rendue en JPEG (image de la pièce, jointe en justificatif). */
+  async function imagePage(globalPage) {
+    const ref = pageRef(globalPage);
+    if (!ref) return null;
+    const page = await ref.doc.doc.getPage(ref.pageInDoc);
+    const base = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: 1200 / base.width });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
+    return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+  }
+
+  /** Retire du journal les pièces de ce lot qui n'ont pas encore été vérifiées. */
+  async function retirerDuJournal() {
+    const reg = registre();
+    if (!reg || !window.CaisseRegistre || !window.CaisseSaisie) return 0;
+    const partis = window.CaisseRegistre.removeScanBatch(reg, scanEntries().map((e) => e.scanKey));
+    if (!partis.length) return 0;
+    versementEnCours = true;
+    try { await window.CaisseSaisie.saveReg(); window.CaisseSaisie.renderJournal(); } finally { versementEnCours = false; }
+    renderJournalLink();
+    return partis.length;
+  }
+
+  function renderJournalLink() {
+    const box = document.getElementById('journalLink');
+    if (!box) return;
+    const reg = registre();
+    if (state.mode !== 'registre' || !reg || !state.entries.some((e) => !e.manual)) { box.innerHTML = ''; return; }
+    const aVerifier = window.CaisseRegistre.pendingPieces(reg).length;
+    box.innerHTML = `<div class="notice ok">Ces écritures sont <b>déjà dans le journal</b> du registre ${reg.annee} : il n'y a qu'une seule liste. ` +
+      (aVerifier ? `<b>${aVerifier}</b> pièce(s) y sont marquées « à vérifier » tant que vous ne les avez pas regardées. ` : '') +
+      `<button type="button" class="small" data-journal="voir">Ouvrir le journal</button> ` +
+      `<button type="button" class="small danger" data-journal="retirer">Retirer ce lot du journal</button></div>`;
+  }
+
+  {
+    const box = document.getElementById('journalLink');
+    if (box) box.addEventListener('click', async (ev) => {
+      const b = ev.target.closest('button[data-journal]');
+      if (!b) return;
+      if (b.dataset.journal === 'voir') { showPanel('panelSaisie'); return; }
+      const reg = registre();
+      const n = window.CaisseRegistre.pendingPieces(reg).filter((p) => p.scanKey).length;
+      if (!confirm(`Retirer du journal les ${n} pièce(s) de ce lot qui ne sont pas encore vérifiées ?\n\nCelles que vous avez déjà vérifiées restent au journal.`)) return;
+      const partis = await retirerDuJournal();
+      notice(els.pdfNotices, 'ok', `${partis} pièce(s) retirée(s) du journal.`);
+    });
+  }
+
   /* ---------------- Vers le registre de l'année (onglet Saisie) ---------------- */
   const btnToRegister = document.getElementById('btnToRegister');
   if (btnToRegister) {
@@ -2197,7 +2324,7 @@
     } catch (e) { /* ignore */ }
   }
 
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse };
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse, verserAuJournal, retirerDuJournal };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';

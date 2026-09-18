@@ -193,6 +193,7 @@
     <section class="card" id="journalCard">
       <h2><svg class="ico"><use href="#i-book"/></svg> Journal <span id="journalYear"></span></h2>
       <div class="totals" id="journalTotals"></div>
+      <div id="journalPending"></div>
       <div class="table-wrap">
         <table class="entries journal" id="journalTable">
           <thead><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th class="num">Débit</th><th class="num">Crédit</th><th class="num">Solde</th><th>Justif.</th><th></th></tr></thead>
@@ -371,11 +372,12 @@
         <div id="balanceResult" style="margin-top:12px"></div>
       </div>
     </div>
+    <div id="journalLink"></div>
     <div id="excelNotices"></div>
     <div class="toolbar">
       <button type="button" class="primary" id="btnExcel"><svg class="ico"><use href="#i-grid"/></svg> Générer le fichier Excel</button>
       <button type="button" id="btnReport"><svg class="ico"><use href="#i-file"/></svg> Rapport de contrôle</button>
-      <button type="button" id="btnToRegister" title="Ajoute ces écritures au registre de l'année (Saisie des pièces), avec l'image de chaque pièce en justificatif"><svg class="ico"><use href="#i-book"/></svg> Ajouter au registre de l'année</button>
+      <button type="button" id="btnToRegister" class="hidden" title="Verse ces écritures dans le registre de l'année (Saisie des pièces), avec l'image de chaque pièce en justificatif. Inutile quand le registre est déjà la base : les pièces lues y entrent toutes seules."><svg class="ico"><use href="#i-book"/></svg> Verser au registre de l'année</button>
       <span class="legend" id="excelHint"></span>
     </div>
   </section>

@@ -76,8 +76,13 @@ async function findPage(app, pred, timeoutMs) {
     const avant = A.state.entries.filter((e) => !e.manual).map((e) => e.no);
     A.reparse(); // relecture : c'est là que les deux écritures retombaient sur le même objet
     const apres = A.state.entries.filter((e) => !e.manual).map((e) => e.no);
-    A.state.pages = []; A.state.entries = []; A.reparse();
     return { avant, apres };
+  });
+  // ce lot d'essai quitte le journal AVANT d'effacer les écritures (le retrait s'appuie dessus)
+  await win.evaluate(async () => {
+    await window.CaisseApp.retirerDuJournal();
+    const A = window.CaisseApp;
+    A.state.pages = []; A.state.entries = []; A.reparse(); A.refreshAll();
   });
   console.log('deux formulaires sur une page :', JSON.stringify(deuxFormulaires));
 
@@ -94,13 +99,73 @@ async function findPage(app, pred, timeoutMs) {
     };
   });
   console.log('montants tapés à la main :', JSON.stringify(montants));
+
+  // UNE SEULE LISTE : une écriture lue sur un scan entre au journal tout de suite, ne s'y double
+  // pas à la relecture, et ne double pas une pièce déjà saisie à la main.
+  const uneListe = await win.evaluate(async () => {
+    const A = window.CaisseApp; const R = window.CaisseRegistre; const S = window.CaisseSaisie;
+    const form = (no, dy, doit, somme, avoir, libelle, date) => {
+      const w = (str, x, y) => ({ str, x, y: y + dy, h: 10 });
+      const out = [w('PIECE', 79, 82), w('COMPTABLE', 114, 82), w(no, 349, 79), w('DOIT', 79, 114), w('SOMME', 338, 112), w('AVOIR', 410, 112), w('Libellé', 342, 220), w('Total', 78, 390)];
+      doit.split(' ').forEach((t, i) => out.push(w(t, 155 + i * 31, 142)));
+      somme.split(' ').forEach((t, i) => out.push(w(t, 332 + i * 24, 142)));
+      avoir.split(' ').forEach((t, i) => out.push(w(t, 454 + i * 28, 142)));
+      somme.split(' ').forEach((t, i) => out.push(w(t, 332 + i * 24, 388)));
+      libelle.forEach((l, li) => l.split(' ').forEach((t, i) => out.push(w(t, 78 + i * 40, 261 + li * 14))));
+      date.split(' ').forEach((t, i) => out.push(w(t, 56 + i * 14, 425)));
+      return out;
+    };
+    const an = S.state.reg.annee;
+    // une pièce saisie à la main, que le scan retrouvera (même n°, même montant, même sens)
+    const main = R.newPiece(S.state.reg);
+    Object.assign(main, { no: 801, date: `${an}-03-01`, type: 'REMBOURSEMENT', detail: 'piles', personne: 'R. Desaules', compte: '51000.3185.00', montant: 12, sens: 'credit' });
+    main.libelle = R.composeLibelle(main);
+    R.upsertPiece(S.state.reg, main);
+    await S.saveReg(); S.renderJournal();
+    const depart = S.state.reg.pieces.length;
+    const enAttenteAvant = R.pendingPieces(S.state.reg).length;
+
+    const words = form('801', 0, '51000.3185.00', 'CHF 12.00', '9100.104', ['REMBOURSEMENT piles', 'R. Desaules'], `01.03.${an}`)
+      .concat(form('802', 420, '9100.104', 'CHF 300.00', '51000.4392.20', ['PARTICIPATION DES PARENTS', 'E. Vallon'], `02.03.${an}`));
+    A.state.pages = [{ docId: 'lot-une-liste', pageInDoc: 1, pageNumber: 1, width: 595, height: 842, words }];
+    A.state.entries = [];
+    A.reparse(); A.refreshAll();
+    await new Promise((r) => setTimeout(r, 900));
+    const apresLecture = { pieces: S.state.reg.pieces.length, aVerifier: R.pendingPieces(S.state.reg).length, lignes: document.querySelectorAll('#journalBody tr[data-id]').length };
+
+    A.reparse(); A.refreshAll(); // relecture (fin de l'OCR) : rien ne doit se dédoubler
+    await new Promise((r) => setTimeout(r, 900));
+    const apresRelecture = { pieces: S.state.reg.pieces.length, aVerifier: R.pendingPieces(S.state.reg).length };
+
+    const mainApres = S.state.reg.pieces.find((p) => p.id === main.id);
+    const retires = await A.retirerDuJournal();
+    A.state.pages = []; A.state.entries = []; A.reparse(); A.refreshAll();
+    await new Promise((r) => setTimeout(r, 300));
+    const sortie = {
+      depart, enAttenteAvant, apresLecture, apresRelecture, retires,
+      finPieces: S.state.reg.pieces.length,
+      mainIntacte: !!mainApres && mainApres.source === 'saisie' && mainApres.aVerifier === false && mainApres.montant === 12,
+      mainSurvit: !!S.state.reg.pieces.find((p) => p.id === main.id),
+    };
+    // l'essai ne laisse rien derrière lui : le registre repart comme il était
+    R.removePiece(S.state.reg, main.id);
+    await S.saveReg(); S.renderJournal();
+    sortie.registreRendu = S.state.reg.pieces.length === depart - 1;
+    return sortie;
+  });
+  console.log('une seule liste :', JSON.stringify(uneListe));
+  const uneListeOk = uneListe.apresLecture.pieces === uneListe.depart + 1 // seule la pièce 802 est neuve
+    && uneListe.apresLecture.aVerifier === uneListe.enAttenteAvant + 1 && uneListe.apresLecture.lignes === uneListe.apresLecture.pieces
+    && uneListe.apresRelecture.pieces === uneListe.apresLecture.pieces && uneListe.apresRelecture.aVerifier === uneListe.apresLecture.aVerifier
+    && uneListe.mainIntacte && uneListe.retires === 1 && uneListe.mainSurvit
+    && uneListe.finPieces === uneListe.depart && uneListe.registreRendu;
   const montantsOk = montants.checkBalance === '4’825.55' && montants.openingAmount === "2'062.20"
     && montants.regOpeningAmount === 'CHF 2 062,20'
     && JSON.stringify(montants.lu) === JSON.stringify([4825.55, 2062.2, 2062.2, null]);
   const paire = (l) => Array.isArray(l) && l.length === 2 && l[0] === 10 && l[1] === 11;
   let ok = /Compta Blonay/.test(shellTitle) && /Caisse écoles/.test(title) && info.parser === 'object' && info.excel === 'object' && info.ocr && info.registre === 'object' && info.pdf === 'object' && info.files
     && !!entry && entry.credit === 12 && entry.compte === '50000.3652.00'
-    && paire(deuxFormulaires.avant) && paire(deuxFormulaires.apres) && montantsOk;
+    && paire(deuxFormulaires.avant) && paire(deuxFormulaires.apres) && montantsOk && uneListeOk;
 
   // saisie d'une pièce dans la fiche -> journal -> fichiers de l'application
   await win.waitForFunction(() => window.CaisseSaisie && window.CaisseSaisie.state.reg, null, { timeout: 20000 });

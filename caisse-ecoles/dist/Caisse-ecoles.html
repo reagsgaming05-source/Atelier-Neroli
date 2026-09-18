@@ -292,6 +292,9 @@ table.entries.journal td.libelle { max-width: 520px; overflow: hidden; text-over
 table.entries.journal td.compte { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
 table.entries.journal td.acts { white-space: nowrap; text-align: right; }
 table.entries.journal td.acts button { margin-left: 3px; }
+/* pièce lue sur un scan, pas encore vérifiée : elle compte dans le solde, elle doit se voir */
+table.entries.journal tr.a-verifier td { background: var(--warn-soft); }
+table.entries.journal td .tag.warn { background: var(--warn); color: #fff; }
 table.entries.journal td .tag { display: inline-block; white-space: nowrap; padding: 0 6px; border-radius: 5px; font-size: 11px; font-weight: 600; background: var(--accent-soft); color: var(--accent); margin-left: 4px; vertical-align: 1px; }
 table.entries.journal td.legend { padding: 26px 12px; text-align: center; }
 
@@ -720,6 +723,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <section class="card" id="journalCard">
       <h2><svg class="ico"><use href="#i-book"/></svg> Journal <span id="journalYear"></span></h2>
       <div class="totals" id="journalTotals"></div>
+      <div id="journalPending"></div>
       <div class="table-wrap">
         <table class="entries journal" id="journalTable">
           <thead><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th class="num">Débit</th><th class="num">Crédit</th><th class="num">Solde</th><th>Justif.</th><th></th></tr></thead>
@@ -898,11 +902,12 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
         <div id="balanceResult" style="margin-top:12px"></div>
       </div>
     </div>
+    <div id="journalLink"></div>
     <div id="excelNotices"></div>
     <div class="toolbar">
       <button type="button" class="primary" id="btnExcel"><svg class="ico"><use href="#i-grid"/></svg> Générer le fichier Excel</button>
       <button type="button" id="btnReport"><svg class="ico"><use href="#i-file"/></svg> Rapport de contrôle</button>
-      <button type="button" id="btnToRegister" title="Ajoute ces écritures au registre de l'année (Saisie des pièces), avec l'image de chaque pièce en justificatif"><svg class="ico"><use href="#i-book"/></svg> Ajouter au registre de l'année</button>
+      <button type="button" id="btnToRegister" class="hidden" title="Verse ces écritures dans le registre de l'année (Saisie des pièces), avec l'image de chaque pièce en justificatif. Inutile quand le registre est déjà la base : les pièces lues y entrent toutes seules."><svg class="ico"><use href="#i-book"/></svg> Verser au registre de l'année</button>
       <span class="legend" id="excelHint"></span>
     </div>
   </section>
@@ -5588,6 +5593,12 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       justificatifs: Array.isArray(p.justificatifs) ? p.justificatifs.filter((j) => j && j.name).map((j) => ({ name: String(j.name), size: Number(j.size) || 0, kind: j.kind || kindOf(j.name) })) : [],
       source: p.source === 'scan' || p.source === 'dgeo' || p.source === 'excel' ? p.source : 'saisie',
       ref: p.ref ? String(p.ref) : '',
+      // Pièce lue sur un scan : elle entre au journal tout de suite, mais reste marquée tant
+      // qu'une personne ne l'a pas regardée. « scanKey » la relie à ce qui a été lu, pour qu'une
+      // relecture (fin de l'OCR, correction) la mette à jour au lieu d'en créer une seconde.
+      scanKey: p.scanKey ? String(p.scanKey) : '',
+      aVerifier: !!p.aVerifier,
+      doutes: Array.isArray(p.doutes) ? p.doutes.map(String).slice(0, 12) : [],
       createdAt: p.createdAt || new Date().toISOString(),
       updatedAt: p.updatedAt || new Date().toISOString(),
     };
@@ -5820,6 +5831,95 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     return reg.pieces.find((x) => x.id === p.id);
   }
 
+  /**
+   * Verse dans le registre les écritures lues sur des scans, et les y maintient à jour.
+   *
+   * Chaque écriture porte une clé stable (scanKey) : relue après l'OCR ou corrigée à l'écran,
+   * elle met à jour SA pièce au lieu d'en créer une seconde. Une écriture qui correspond à une
+   * pièce déjà saisie à la main (même n°, même montant, même sens) ne crée rien : elle se
+   * rattache à cette pièce, qui reste telle qu'elle a été saisie. Une pièce déjà vérifiée n'est
+   * plus réécrite par une relecture.
+   *
+   * Renvoie { ajoutees, misesAJour, rattachees, inchangees, sansMontant }.
+   */
+  function syncScanBatch(reg, entries, opts) {
+    opts = opts || {};
+    const res = { ajoutees: [], misesAJour: [], rattachees: [], inchangees: [], sansMontant: [] };
+    const cents = (v) => Math.round((Number(v) || 0) * 100);
+    for (const e of entries || []) {
+      const key = String(e.scanKey || '');
+      if (!key) continue;
+      const montant = P.round2(Number(e.debit) > 0 ? Number(e.debit) : (Number(e.credit) > 0 ? Number(e.credit) : 0));
+      const sens = Number(e.debit) > 0 ? 'debit' : (Number(e.credit) > 0 ? 'credit' : null);
+      if (!(montant > 0)) { res.sansMontant.push(e); continue; }
+
+      const existante = reg.pieces.find((x) => x.scanKey === key);
+      if (existante) {
+        if (!existante.aVerifier) { res.inchangees.push(existante); continue; } // vérifiée : on n'y touche plus
+        const [maj] = piecesFromEntries([e], 'scan');
+        const doutes = (e.warnings || []).map(String).slice(0, 12);
+        // rien de nouveau dans la lecture : on ne réécrit pas (sinon le registre serait enregistré
+        // à chaque rafraîchissement de l'écran)
+        const pareil = existante.no === maj.no && existante.date === maj.date && existante.compte === maj.compte
+          && existante.libelle === (maj.libelle || composeLibelle(maj)) && cents(existante.montant) === cents(maj.montant)
+          && existante.sens === maj.sens && existante.doutes.join('|') === doutes.join('|');
+        if (pareil) { res.inchangees.push(existante); continue; }
+        upsertPiece(reg, Object.assign({}, maj, {
+          id: existante.id, scanKey: key, aVerifier: true, doutes,
+          justificatifs: existante.justificatifs, createdAt: existante.createdAt,
+        }));
+        res.misesAJour.push(reg.pieces.find((x) => x.id === existante.id));
+        continue;
+      }
+
+      // déjà saisie à la main (ou reprise d'un classeur) : on s'y rattache, sans la réécrire
+      const jumelle = reg.pieces.find((x) => !x.scanKey && x.no != null && e.no != null && Number(x.no) === Number(e.no)
+        && cents(x.montant) === cents(montant) && x.sens === sens);
+      if (jumelle) {
+        jumelle.scanKey = key;
+        jumelle.updatedAt = new Date().toISOString();
+        res.rattachees.push(jumelle);
+        continue;
+      }
+
+      const [neuve] = piecesFromEntries([e], 'scan');
+      upsertPiece(reg, Object.assign({}, neuve, { scanKey: key, aVerifier: true, doutes: (e.warnings || []).slice(0, 12) }));
+      res.ajoutees.push(reg.pieces.find((x) => x.scanKey === key));
+    }
+    if (res.ajoutees.length || res.misesAJour.length || res.rattachees.length) reg.updatedAt = new Date().toISOString();
+    return res;
+  }
+
+  /** Retire du registre les pièces d'un lot scanné qui n'ont pas encore été vérifiées. */
+  function removeScanBatch(reg, keys) {
+    const garder = new Set((keys || []).map(String));
+    const partent = reg.pieces.filter((p) => p.aVerifier && p.scanKey && garder.has(p.scanKey));
+    for (const p of partent) removePiece(reg, p.id);
+    // une pièce saisie à la main à laquelle le lot s'était rattaché redevient simplement elle-même
+    for (const p of reg.pieces) if (p.scanKey && garder.has(p.scanKey)) p.scanKey = '';
+    return partent;
+  }
+
+  /** Pièces du registre encore à vérifier (lues sur un scan, jamais regardées). */
+  function pendingPieces(reg) {
+    return reg && Array.isArray(reg.pieces) ? reg.pieces.filter((p) => p.aVerifier) : [];
+  }
+
+  /** Marque des pièces comme vérifiées (leur lecture est confirmée). */
+  function markVerified(reg, ids) {
+    const cible = new Set((ids || []).map(String));
+    const faites = [];
+    for (const p of reg.pieces) {
+      if (!p.aVerifier || !cible.has(p.id)) continue;
+      p.aVerifier = false;
+      p.doutes = [];
+      p.updatedAt = new Date().toISOString();
+      faites.push(p);
+    }
+    if (faites.length) reg.updatedAt = new Date().toISOString();
+    return faites;
+  }
+
   function removePiece(reg, id) {
     const i = reg.pieces.findIndex((x) => x.id === id);
     if (i >= 0) reg.pieces.splice(i, 1);
@@ -6018,6 +6118,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     validate,
     upsertPiece,
     removePiece,
+    syncScanBatch,
+    removeScanBatch,
+    pendingPieces,
+    markVerified,
     entriesOf,
     journal,
     BILLETS,
@@ -6667,6 +6771,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     return window.CaisseSaisie && window.CaisseSaisie.state ? window.CaisseSaisie.state.reg : null;
   }
 
+  // Versement du lot lu au journal (voir « Une seule liste » plus bas). Déclarés ici : l'ouverture
+  // de l'écran appelle applyMode() → refreshAll() avant que le bloc du bas ne soit exécuté.
+  let versementEnCours = false;
+  let imagesEnCours = false;
+
   function currentOpening() {
     if (state.mode === 'registre') {
       const reg = registre();
@@ -6693,6 +6802,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   // Par défaut, le registre de l'année : les pièces scannées viennent à la suite de celles déjà
   // saisies (ou reprises d'un classeur), et « Ajouter au registre » les y verse. Une année commencée
   // à l'ancienne se reprend par « Reprendre ces écritures dans le registre » (classeur existant).
+  function renderToRegisterButton() {
+    const b = document.getElementById('btnToRegister');
+    if (b) b.classList.toggle('hidden', state.mode === 'registre');
+  }
+
   function applyMode(mode) {
     if (!['registre', 'existing', 'new'].includes(mode)) mode = 'registre';
     state.mode = mode;
@@ -6702,6 +6816,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (els.registreBox) els.registreBox.classList.toggle('hidden', mode !== 'registre');
     try { localStorage.setItem('caisse.scan.base', mode); } catch (e) { /* ignore */ }
     renderRegistreInfo();
+    renderToRegisterButton(); // « Ajouter au registre » n'a de sens que si le registre n'est pas déjà la base
     if (state.pages.length) reparse();
     refreshAll();
   }
@@ -6715,13 +6830,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const last = reg.pieces.length ? reg.pieces[reg.pieces.length - 1] : null;
     els.registreInfo.innerHTML = `Registre <b>${reg.annee}</b> (Saisie des pièces) : <b>${reg.pieces.length}</b> pièce(s), solde à nouveau <b>${fmtCHF(j.start)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}` +
       (last ? `, dernière pièce n° <b>${last.no == null ? '?' : last.no}</b>${last.date ? ` du ${escapeHtml(P.isoToDisplay(last.date))}` : ''}` : '') + `, solde actuel <b>${fmtCHF(j.end)}</b>. ` +
-      `Les pièces scannées viennent à la suite (« Ajouter au registre de l'année ») ; le fichier Excel généré ici contient tout le registre plus ce lot, sans rien compter deux fois. ` +
+      `Les pièces lues ci-dessous entrent dans ce journal dès la lecture, marquées « à vérifier » : il n'y a qu'une seule liste. ` +
       `<button type="button" class="small" data-act="goSaisie">Ouvrir la saisie des pièces</button>`;
   }
   if (els.registreInfo) els.registreInfo.addEventListener('click', (ev) => { if (ev.target.closest('button[data-act="goSaisie"]')) showPanel('panelSaisie'); });
   // le registre a changé (ouvert, pièce enregistrée, classeur repris) : la base se met à jour
   document.addEventListener('caisse:registre', () => {
-    if (state.mode !== 'registre') return;
+    if (state.mode !== 'registre' || versementEnCours) return;
     renderRegistreInfo();
     if (state.pages.length) reparse();
     refreshAll();
@@ -6967,6 +7082,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   els.btnClearFiles.addEventListener('click', () => {
     if (!state.docs.length) return;
     if (!confirm('Retirer tous les fichiers PDF chargés ? Les écritures reconnues (et vos corrections) seront effacées.')) return;
+    // les pièces versées au journal et pas encore vérifiées partent avec le lot
+    retirerDuJournal().then((n) => { if (n) notice(els.pdfNotices, 'ok', `${n} pièce(s) non vérifiée(s) retirée(s) du journal.`); });
     for (const d of state.docs) { try { d.doc.destroy(); } catch (e) { /* ignore */ } }
     state.docs = [];
     state.renderCache.clear();
@@ -8330,6 +8447,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
   function refreshAll() {
     renderOpeningHint(); // signale un solde à nouveau tapé mais illisible
+    // les écritures lues entrent au journal (une seule liste) ; sans effet si rien n'a changé
+    verserAuJournal().catch((e) => console && console.warn && console.warn('versement au journal', e));
+    renderJournalLink();
     const has = state.entries.length > 0;
     els.step3.classList.toggle('hidden', !has);
     els.step4.classList.toggle('hidden', !has);
@@ -8566,6 +8686,117 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   // base des écritures des pièces scannées : celle choisie la dernière fois, sinon le registre de l'année
   { let base = 'registre'; try { base = localStorage.getItem('caisse.scan.base') || 'registre'; } catch (e) { /* ignore */ } applyMode(base); }
 
+  /* ---------------- Une seule liste : le lot lu entre au journal ---------------- */
+  // Les écritures lues sur les scans sont versées au registre de l'année dès la lecture, marquées
+  // « à vérifier ». Une relecture (fin de l'OCR, correction à l'écran) met à jour LA MÊME pièce ;
+  // une pièce déjà saisie à la main ne se dédouble pas, la lecture s'y rattache. Il n'y a donc
+  // plus deux listes à rapprocher : le journal est la liste.
+  function scanEntries() {
+    return state.entries.filter((e) => !e.manual && e.sourceKey).map((e) => ({
+      scanKey: e.sourceKey, no: e.no, date: e.date, compte: e.compte, libelle: e.libelle,
+      debit: e.debit, credit: e.credit, page: e.page,
+      warnings: (e.warnings || []).slice(0, 12),
+    }));
+  }
+
+  async function verserAuJournal() {
+    if (versementEnCours || state.mode !== 'registre') return null;
+    const reg = registre();
+    if (!reg || !window.CaisseSaisie || !window.CaisseRegistre) return null;
+    const entries = scanEntries();
+    if (!entries.length) return null;
+    const res = window.CaisseRegistre.syncScanBatch(reg, entries);
+    if (!(res.ajoutees.length || res.misesAJour.length || res.rattachees.length)) return res;
+    versementEnCours = true; // saveReg prévient l'écran des scans : on ne se relance pas soi-même
+    try {
+      await window.CaisseSaisie.saveReg();
+      window.CaisseSaisie.renderJournal();
+    } finally { versementEnCours = false; }
+    renderJournalLink();
+    if (res.ajoutees.length) joindreImages(res.ajoutees);
+    return res;
+  }
+
+  /** Joint l'image de chaque pièce lue (page rendue en JPEG) en justificatif, en arrière-plan. */
+  async function joindreImages(pieces) {
+    if (imagesEnCours || !window.CaisseSaisie) return;
+    const reg = registre();
+    if (!reg) return;
+    imagesEnCours = true;
+    try {
+      let n = 0;
+      for (const p of pieces) {
+        const e = state.entries.find((x) => x.sourceKey === p.scanKey);
+        if (!e || !e.page || (p.justificatifs || []).some((j) => /^scan-/.test(j.name))) continue;
+        try {
+          const img = await imagePage(e.page);
+          const vive = reg.pieces.find((x) => x.id === p.id);
+          if (!img || !vive) continue;
+          const nom = `scan-piece-${vive.no == null ? vive.id.slice(0, 6) : vive.no}.jpg`;
+          const saved = await window.CaisseSaisie.state.storage.attach(reg.annee, vive.id, nom, img);
+          vive.justificatifs.push({ name: saved.name, size: saved.size, kind: 'jpeg' });
+          n++;
+        } catch (err) { /* sans image : la pièce reste au journal */ }
+      }
+      if (n) {
+        versementEnCours = true;
+        try { await window.CaisseSaisie.saveReg(); window.CaisseSaisie.renderJournal(); } finally { versementEnCours = false; }
+      }
+    } finally { imagesEnCours = false; }
+  }
+
+  /** Page rendue en JPEG (image de la pièce, jointe en justificatif). */
+  async function imagePage(globalPage) {
+    const ref = pageRef(globalPage);
+    if (!ref) return null;
+    const page = await ref.doc.doc.getPage(ref.pageInDoc);
+    const base = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: 1200 / base.width });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
+    return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+  }
+
+  /** Retire du journal les pièces de ce lot qui n'ont pas encore été vérifiées. */
+  async function retirerDuJournal() {
+    const reg = registre();
+    if (!reg || !window.CaisseRegistre || !window.CaisseSaisie) return 0;
+    const partis = window.CaisseRegistre.removeScanBatch(reg, scanEntries().map((e) => e.scanKey));
+    if (!partis.length) return 0;
+    versementEnCours = true;
+    try { await window.CaisseSaisie.saveReg(); window.CaisseSaisie.renderJournal(); } finally { versementEnCours = false; }
+    renderJournalLink();
+    return partis.length;
+  }
+
+  function renderJournalLink() {
+    const box = document.getElementById('journalLink');
+    if (!box) return;
+    const reg = registre();
+    if (state.mode !== 'registre' || !reg || !state.entries.some((e) => !e.manual)) { box.innerHTML = ''; return; }
+    const aVerifier = window.CaisseRegistre.pendingPieces(reg).length;
+    box.innerHTML = `<div class="notice ok">Ces écritures sont <b>déjà dans le journal</b> du registre ${reg.annee} : il n'y a qu'une seule liste. ` +
+      (aVerifier ? `<b>${aVerifier}</b> pièce(s) y sont marquées « à vérifier » tant que vous ne les avez pas regardées. ` : '') +
+      `<button type="button" class="small" data-journal="voir">Ouvrir le journal</button> ` +
+      `<button type="button" class="small danger" data-journal="retirer">Retirer ce lot du journal</button></div>`;
+  }
+
+  {
+    const box = document.getElementById('journalLink');
+    if (box) box.addEventListener('click', async (ev) => {
+      const b = ev.target.closest('button[data-journal]');
+      if (!b) return;
+      if (b.dataset.journal === 'voir') { showPanel('panelSaisie'); return; }
+      const reg = registre();
+      const n = window.CaisseRegistre.pendingPieces(reg).filter((p) => p.scanKey).length;
+      if (!confirm(`Retirer du journal les ${n} pièce(s) de ce lot qui ne sont pas encore vérifiées ?\n\nCelles que vous avez déjà vérifiées restent au journal.`)) return;
+      const partis = await retirerDuJournal();
+      notice(els.pdfNotices, 'ok', `${partis} pièce(s) retirée(s) du journal.`);
+    });
+  }
+
   /* ---------------- Vers le registre de l'année (onglet Saisie) ---------------- */
   const btnToRegister = document.getElementById('btnToRegister');
   if (btnToRegister) {
@@ -8615,7 +8846,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     } catch (e) { /* ignore */ }
   }
 
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse };
+  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse, verserAuJournal, retirerDuJournal };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
@@ -8706,7 +8937,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
-    'journalYear', 'journalBody', 'journalTotals', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
+    'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
     'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
@@ -8937,6 +9168,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       justificatifs: base ? base.justificatifs : [],
       source: base ? base.source : (state.dgeo.current ? 'dgeo' : 'saisie'),
       ref: base ? base.ref : (state.dgeo.current ? (state.dgeo.current.numero || state.dgeo.current.filename || '') : ''),
+      // ouvrir une pièce lue sur un scan et l'enregistrer, c'est l'avoir vérifiée
+      scanKey: base ? base.scanKey : '',
+      aVerifier: false,
+      doutes: [],
     }));
     p.libelle = els.pLibelleEdit.checked ? els.pLibelle.value.trim() : R.composeLibelle(p);
     return p;
@@ -9144,17 +9379,27 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     els.journalBody.innerHTML = j.rows.map((r) => {
       const p = state.reg.pieces.find((x) => x.id === r.id);
       const ico = (id) => `<svg class="ico"><use href="#i-${id}"/></svg>`;
-      return `<tr data-id="${r.id}"${state.editingId === r.id ? ' class="selected"' : ''}>` +
+      const classes = [state.editingId === r.id ? 'selected' : '', p && p.aVerifier ? 'a-verifier' : ''].filter(Boolean).join(' ');
+      return `<tr data-id="${r.id}"${classes ? ` class="${classes}"` : ''}>` +
         `<td>${r.no == null ? '' : r.no}</td><td>${escapeHtml(P.isoToDisplay(r.date))}</td><td class="compte">${escapeHtml(r.compte)}</td><td class="libelle" title="${escapeHtml(r.libelle)}">${escapeHtml(r.libelle)}</td>` +
         `<td class="num">${r.debit != null ? fmtCHF(r.debit) : ''}</td><td class="num">${r.credit != null ? fmtCHF(r.credit) : ''}</td><td class="num solde">${fmtCHF(r.solde)}</td>` +
-        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
-        `<td class="acts"><button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
+        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.aVerifier ? ` <span class="tag warn" title="Lue sur un scan, pas encore vérifiée${p.doutes && p.doutes.length ? ' :\n- ' + p.doutes.join('\n- ').replace(/"/g, '') : ''}">à vérifier</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
+        `<td class="acts">${p && p.aVerifier ? `<button type="button" class="small ghost ok" data-verif="${r.id}" title="Cette lecture est juste : marquer la pièce comme vérifiée">${ico('check')}</button>` : ''}<button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
     }).join('') || '<tr><td colspan="9" class="legend">Aucune pièce dans ce registre. Remplissez la fiche à gauche : chaque pièce enregistrée apparaît ici avec le solde cumulé.</td></tr>';
     els.journalTotals.innerHTML = `<div class="t"><div class="l">Solde à nouveau</div><div class="v">${fmtCHF(j.start)}</div></div>` +
       `<div class="t"><div class="l">Débits (entrées)</div><div class="v">+ ${fmtCHF(j.debits)}</div></div>` +
       `<div class="t"><div class="l">Crédits (sorties)</div><div class="v">− ${fmtCHF(j.credits)}</div></div>` +
       `<div class="t end"><div class="l">Solde final</div><div class="v">${fmtCHF(j.end)}</div></div>` +
       `<div class="t"><div class="l">Pièces</div><div class="v">${state.reg.pieces.length}</div></div>`;
+    // pièces lues sur un scan et pas encore regardées : elles comptent dans le solde, il faut le dire
+    const aVerifier = R.pendingPieces(state.reg);
+    if (els.journalPending) {
+      els.journalPending.innerHTML = aVerifier.length
+        ? `<div class="notice warn"><b>${aVerifier.length}</b> pièce(s) lues sur un scan attendent d'être vérifiées (n° ${aVerifier.map((p) => (p.no == null ? '?' : p.no)).slice(0, 25).join(', ')}${aVerifier.length > 25 ? '…' : ''}). ` +
+          `Elles sont déjà comptées dans le solde. Ouvrez-en une pour la corriger, ou confirmez la lecture d'un coup : ` +
+          `<button type="button" class="small" data-verif-all="1">Tout marquer comme vérifié</button></div>`
+        : '';
+    }
     // sélecteur « depuis le n° » pour le PDF
     const nos = state.reg.pieces.map((p) => p.no).filter((n) => n != null);
     if (els.regPdfFrom) {
@@ -9213,9 +9458,28 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     } catch (e) { notice('err', `Récapitulatif impossible : ${escapeHtml(e.message || e)}`); }
   });
 
+  if (els.journalPending) els.journalPending.addEventListener('click', async (ev) => {
+    if (!ev.target.closest('button[data-verif-all]')) return;
+    const restent = R.pendingPieces(state.reg);
+    if (!restent.length) return;
+    if (!confirm(`Marquer comme vérifiées les ${restent.length} pièce(s) lues sur un scan ?\n\nÀ ne faire qu'après les avoir regardées : elles comptent déjà dans le solde.`)) return;
+    R.markVerified(state.reg, restent.map((p) => p.id));
+    await saveReg();
+    renderJournal();
+    notice('ok', `${restent.length} pièce(s) marquée(s) comme vérifiée(s).`);
+  });
+
   els.journalBody.addEventListener('click', async (ev) => {
     const b = ev.target.closest('button');
     if (!b) return;
+    if (b.dataset.verif) {
+      const p = state.reg.pieces.find((x) => x.id === b.dataset.verif);
+      if (!p) return;
+      R.markVerified(state.reg, [p.id]);
+      await saveReg();
+      renderJournal();
+      return;
+    }
     if (b.dataset.edit) {
       const p = state.reg.pieces.find((x) => x.id === b.dataset.edit);
       if (!p) return;

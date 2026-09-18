@@ -125,12 +125,17 @@ décompte → pièce), puis publication du zip.
    « PIÈCE COMPTABLE » par pièce (relisible par l'application) suivie de ses justificatifs, pour
    toutes les pièces ou depuis un n°. Chaque ligne du journal a aussi ses boutons *Modifier*, *PDF*
    et *×*.
-5. **Pièces scannées et pièces saisies vont dans le même registre.** L'espace des pièces
-   scannées prend par défaut le registre de l'année comme base : les pièces lues viennent à la
-   suite de celles déjà saisies, **Ajouter au registre de l'année** les y verse (avec l'image de
-   chaque pièce en justificatif) et le fichier Excel généré là contient tout le registre plus le
-   lot, sans rien compter deux fois (une pièce déjà dans le registre avec le même n° et le même
-   montant est reconnue ; même n° avec un autre montant : signalé). Année commencée à l'ancienne
+5. **Une seule liste : le journal.** Les pièces lues sur un scan entrent dans le journal de
+   l'année **dès la lecture**, marquées *à vérifier* (fond orange, étiquette dans la colonne de
+   droite), avec l'image de la pièce jointe en justificatif. Elles comptent tout de suite dans le
+   solde — un bandeau sous le journal dit combien attendent d'être regardées. Quand l'OCR finit ou
+   que vous corrigez une ligne dans l'espace des pièces scannées, **c'est la même pièce qui se met
+   à jour**, jamais une seconde. Une pièce déjà saisie à la main (même n°, même montant, même
+   sens) n'est pas ajoutée une deuxième fois : la lecture s'y rattache et la pièce reste telle que
+   vous l'avez saisie. Pour confirmer une lecture : le bouton ✓ de la ligne, ou *Tout marquer comme
+   vérifié* dans le bandeau ; ouvrir la pièce dans la fiche et l'enregistrer vaut aussi
+   vérification. Pour renoncer à un lot : *Retirer ce lot du journal* dans l'espace des pièces
+   scannées — seules les pièces pas encore vérifiées partent. Année commencée à l'ancienne
    (classeur Excel tenu à la main ou produit par les pièces scannées) : **Reprendre un classeur
    Excel…** sous le journal verse ses écritures dans le registre (solde à nouveau repris si le
    registre est vide, numérotation qui continue, pièces marquées *Excel*), et la saisie reprend

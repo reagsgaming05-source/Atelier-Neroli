@@ -283,6 +283,9 @@ table.entries.journal td.libelle { max-width: 520px; overflow: hidden; text-over
 table.entries.journal td.compte { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
 table.entries.journal td.acts { white-space: nowrap; text-align: right; }
 table.entries.journal td.acts button { margin-left: 3px; }
+/* pièce lue sur un scan, pas encore vérifiée : elle compte dans le solde, elle doit se voir */
+table.entries.journal tr.a-verifier td { background: var(--warn-soft); }
+table.entries.journal td .tag.warn { background: var(--warn); color: #fff; }
 table.entries.journal td .tag { display: inline-block; white-space: nowrap; padding: 0 6px; border-radius: 5px; font-size: 11px; font-weight: 600; background: var(--accent-soft); color: var(--accent); margin-left: 4px; vertical-align: 1px; }
 table.entries.journal td.legend { padding: 26px 12px; text-align: center; }
 

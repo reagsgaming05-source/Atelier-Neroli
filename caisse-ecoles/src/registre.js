@@ -84,6 +84,12 @@
       justificatifs: Array.isArray(p.justificatifs) ? p.justificatifs.filter((j) => j && j.name).map((j) => ({ name: String(j.name), size: Number(j.size) || 0, kind: j.kind || kindOf(j.name) })) : [],
       source: p.source === 'scan' || p.source === 'dgeo' || p.source === 'excel' ? p.source : 'saisie',
       ref: p.ref ? String(p.ref) : '',
+      // Pièce lue sur un scan : elle entre au journal tout de suite, mais reste marquée tant
+      // qu'une personne ne l'a pas regardée. « scanKey » la relie à ce qui a été lu, pour qu'une
+      // relecture (fin de l'OCR, correction) la mette à jour au lieu d'en créer une seconde.
+      scanKey: p.scanKey ? String(p.scanKey) : '',
+      aVerifier: !!p.aVerifier,
+      doutes: Array.isArray(p.doutes) ? p.doutes.map(String).slice(0, 12) : [],
       createdAt: p.createdAt || new Date().toISOString(),
       updatedAt: p.updatedAt || new Date().toISOString(),
     };
@@ -316,6 +322,95 @@
     return reg.pieces.find((x) => x.id === p.id);
   }
 
+  /**
+   * Verse dans le registre les écritures lues sur des scans, et les y maintient à jour.
+   *
+   * Chaque écriture porte une clé stable (scanKey) : relue après l'OCR ou corrigée à l'écran,
+   * elle met à jour SA pièce au lieu d'en créer une seconde. Une écriture qui correspond à une
+   * pièce déjà saisie à la main (même n°, même montant, même sens) ne crée rien : elle se
+   * rattache à cette pièce, qui reste telle qu'elle a été saisie. Une pièce déjà vérifiée n'est
+   * plus réécrite par une relecture.
+   *
+   * Renvoie { ajoutees, misesAJour, rattachees, inchangees, sansMontant }.
+   */
+  function syncScanBatch(reg, entries, opts) {
+    opts = opts || {};
+    const res = { ajoutees: [], misesAJour: [], rattachees: [], inchangees: [], sansMontant: [] };
+    const cents = (v) => Math.round((Number(v) || 0) * 100);
+    for (const e of entries || []) {
+      const key = String(e.scanKey || '');
+      if (!key) continue;
+      const montant = P.round2(Number(e.debit) > 0 ? Number(e.debit) : (Number(e.credit) > 0 ? Number(e.credit) : 0));
+      const sens = Number(e.debit) > 0 ? 'debit' : (Number(e.credit) > 0 ? 'credit' : null);
+      if (!(montant > 0)) { res.sansMontant.push(e); continue; }
+
+      const existante = reg.pieces.find((x) => x.scanKey === key);
+      if (existante) {
+        if (!existante.aVerifier) { res.inchangees.push(existante); continue; } // vérifiée : on n'y touche plus
+        const [maj] = piecesFromEntries([e], 'scan');
+        const doutes = (e.warnings || []).map(String).slice(0, 12);
+        // rien de nouveau dans la lecture : on ne réécrit pas (sinon le registre serait enregistré
+        // à chaque rafraîchissement de l'écran)
+        const pareil = existante.no === maj.no && existante.date === maj.date && existante.compte === maj.compte
+          && existante.libelle === (maj.libelle || composeLibelle(maj)) && cents(existante.montant) === cents(maj.montant)
+          && existante.sens === maj.sens && existante.doutes.join('|') === doutes.join('|');
+        if (pareil) { res.inchangees.push(existante); continue; }
+        upsertPiece(reg, Object.assign({}, maj, {
+          id: existante.id, scanKey: key, aVerifier: true, doutes,
+          justificatifs: existante.justificatifs, createdAt: existante.createdAt,
+        }));
+        res.misesAJour.push(reg.pieces.find((x) => x.id === existante.id));
+        continue;
+      }
+
+      // déjà saisie à la main (ou reprise d'un classeur) : on s'y rattache, sans la réécrire
+      const jumelle = reg.pieces.find((x) => !x.scanKey && x.no != null && e.no != null && Number(x.no) === Number(e.no)
+        && cents(x.montant) === cents(montant) && x.sens === sens);
+      if (jumelle) {
+        jumelle.scanKey = key;
+        jumelle.updatedAt = new Date().toISOString();
+        res.rattachees.push(jumelle);
+        continue;
+      }
+
+      const [neuve] = piecesFromEntries([e], 'scan');
+      upsertPiece(reg, Object.assign({}, neuve, { scanKey: key, aVerifier: true, doutes: (e.warnings || []).slice(0, 12) }));
+      res.ajoutees.push(reg.pieces.find((x) => x.scanKey === key));
+    }
+    if (res.ajoutees.length || res.misesAJour.length || res.rattachees.length) reg.updatedAt = new Date().toISOString();
+    return res;
+  }
+
+  /** Retire du registre les pièces d'un lot scanné qui n'ont pas encore été vérifiées. */
+  function removeScanBatch(reg, keys) {
+    const garder = new Set((keys || []).map(String));
+    const partent = reg.pieces.filter((p) => p.aVerifier && p.scanKey && garder.has(p.scanKey));
+    for (const p of partent) removePiece(reg, p.id);
+    // une pièce saisie à la main à laquelle le lot s'était rattaché redevient simplement elle-même
+    for (const p of reg.pieces) if (p.scanKey && garder.has(p.scanKey)) p.scanKey = '';
+    return partent;
+  }
+
+  /** Pièces du registre encore à vérifier (lues sur un scan, jamais regardées). */
+  function pendingPieces(reg) {
+    return reg && Array.isArray(reg.pieces) ? reg.pieces.filter((p) => p.aVerifier) : [];
+  }
+
+  /** Marque des pièces comme vérifiées (leur lecture est confirmée). */
+  function markVerified(reg, ids) {
+    const cible = new Set((ids || []).map(String));
+    const faites = [];
+    for (const p of reg.pieces) {
+      if (!p.aVerifier || !cible.has(p.id)) continue;
+      p.aVerifier = false;
+      p.doutes = [];
+      p.updatedAt = new Date().toISOString();
+      faites.push(p);
+    }
+    if (faites.length) reg.updatedAt = new Date().toISOString();
+    return faites;
+  }
+
   function removePiece(reg, id) {
     const i = reg.pieces.findIndex((x) => x.id === id);
     if (i >= 0) reg.pieces.splice(i, 1);
@@ -514,6 +609,10 @@
     validate,
     upsertPiece,
     removePiece,
+    syncScanBatch,
+    removeScanBatch,
+    pendingPieces,
+    markVerified,
     entriesOf,
     journal,
     BILLETS,
