@@ -177,6 +177,22 @@ journal** au jour du comptage (solde à nouveau + écritures datées jusqu'à ce
 caisse / journal** : 0.00 quand la caisse correspond, sinon le montant qui manque ou qui est en
 trop, ce qui signale une pièce non enregistrée ou un montant faux.
 
+**Relevé de caisse (PDF)** : le bouton produit le formulaire officiel de la commune, rempli avec
+le comptage affiché — pas besoin de l'avoir enregistré, c'est au moment où le total tombe qu'on
+veut l'imprimer. Le document reprend la mise en page du classeur *Relevé de caisse* (feuille
+*Caisse des écoles*) : le décompte des coupures avec la quantité, la valeur et la somme, le total
+en caisse, puis le rapprochement — *Solde en caisse au* (le total compté), *Encaissement de la
+période*, *Décaissement de la période* (les entrées et les sorties du journal depuis le point de
+référence) et *Situation de la caisse au* (le comptage précédent, ou le solde à nouveau de
+l'année s'il n'y en a pas encore) — et les deux lignes de visa à signer, suivies de la mention
+des annexes. Le formulaire tombe juste par construction : référence + encaissements −
+décaissements = solde du journal. Un écart entre le total compté et le journal, ou une remarque,
+est écrit sur le document : un relevé qu'on signe ne doit pas taire un écart.
+
+Les **noms des deux signataires** se saisissent dans *L'année & les données* et restent dans les
+données locales de l'année (jamais dans le dépôt). Tant qu'ils sont vides, le relevé écrit
+*Visa du responsable* et *Visa du boursier*, comme le formulaire vierge.
+
 Quand l'écart n'est pas nul, un encadré **Où chercher** le confronte au journal : l'écart vaut
 souvent, au centime près, le montant d'une pièce (saisie deux fois, ou argent jamais passé en
 caisse) ou son **double** du côté qui correspond (pièce inscrite en entrée au lieu de sortie, ou

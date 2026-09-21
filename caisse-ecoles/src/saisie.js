@@ -14,7 +14,7 @@
   const A = window.CaisseApp || {};
   const $ = (id) => document.getElementById(id);
   const els = {};
-  for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
+  for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regVisaResp', 'regVisaBours', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
     'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'journalSearch', 'journalOnlyDoubt', 'journalCount', 'journalNumbers', 'yearBar', 'anneeNotices', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
@@ -170,6 +170,16 @@
     state.reg.opening.amount = v; await saveReg(); renderJournal();
   });
   els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); renderYearBar(); });
+  // Les deux signataires du relevé de caisse : ils vivent dans le registre (données locales de
+  // l'année), jamais dans le code — le dépôt est public.
+  for (const [el, cle] of [[els.regVisaResp, 'responsable'], [els.regVisaBours, 'boursier']]) {
+    if (!el) continue;
+    el.addEventListener('change', async () => {
+      if (!state.reg.visas) state.reg.visas = { responsable: '', boursier: '' };
+      state.reg.visas[cle] = el.value.trim();
+      await saveReg();
+    });
+  }
   if (els.btnRegOpenDir) els.btnRegOpenDir.addEventListener('click', () => { if (window.CaisseFiles) window.CaisseFiles.openDir(); });
 
   /* ---------------- Fiche ---------------- */
@@ -483,6 +493,9 @@
     if (busy !== els.regOpeningDate) els.regOpeningDate.value = reg.opening.date || '';
     if (busy !== els.regOpeningAmount) els.regOpeningAmount.value = reg.opening.amount;
     if (busy !== els.regCaisse) els.regCaisse.value = reg.caisse;
+    const v = reg.visas || {};
+    if (els.regVisaResp && busy !== els.regVisaResp) els.regVisaResp.value = v.responsable || '';
+    if (els.regVisaBours && busy !== els.regVisaBours) els.regVisaBours.value = v.boursier || '';
   }
 
   /** Bandeau d'une ligne rappelant l'année ouverte : les réglages, eux, ont leur propre espace. */

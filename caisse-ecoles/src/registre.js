@@ -44,6 +44,10 @@
       annee: y,
       caisse: opts.caisse || P.DEFAULT_CAISSE,
       opening: { date: opts.openingDate || `${y}-01-01`, amount: P.round2(Number(opts.openingAmount) || 0) },
+      // Signataires du relevé de caisse. Vides par défaut : le relevé écrit alors « Visa du
+      // responsable » / « Visa du boursier », comme le formulaire vierge. Les vrais noms sont
+      // saisis dans l'application et restent dans les données locales.
+      visas: { responsable: String(opts.visaResponsable || ''), boursier: String(opts.visaBoursier || '') },
       pieces: [],
       comptages: [],
       updatedAt: new Date().toISOString(),
@@ -55,7 +59,10 @@
     if (!raw || typeof raw !== 'object') return null;
     const annee = Number(raw.annee);
     if (!annee || annee < 1990 || annee > 2100) return null;
-    const reg = emptyRegister(annee, { caisse: raw.caisse, openingDate: raw.opening && raw.opening.date, openingAmount: raw.opening && raw.opening.amount });
+    const reg = emptyRegister(annee, {
+      caisse: raw.caisse, openingDate: raw.opening && raw.opening.date, openingAmount: raw.opening && raw.opening.amount,
+      visaResponsable: raw.visas && raw.visas.responsable, visaBoursier: raw.visas && raw.visas.boursier,
+    });
     reg.pieces = (Array.isArray(raw.pieces) ? raw.pieces : []).map((p) => normalizePiece(p)).filter(Boolean);
     sortPieces(reg);
     reg.comptages = (Array.isArray(raw.comptages) ? raw.comptages : []).map((c) => normalizeCount(c)).filter(Boolean);
@@ -230,6 +237,31 @@
       if (p.sens === 'debit') bal += p.montant; else if (p.sens === 'credit') bal -= p.montant;
     }
     return P.round2(bal);
+  }
+
+  /**
+   * Encaissements et décaissements entre deux dates, pour le relevé de caisse : ce qui est entré
+   * et sorti depuis le point de référence (le comptage précédent, ou le solde à nouveau).
+   *
+   * `from` nul veut dire « depuis le début de l'année » : les pièces sans date y sont comptées,
+   * exactement comme le fait balanceAt, pour que l'identité tienne —
+   *   situation au point de référence + encaissements − décaissements = solde du journal.
+   * Sans cela, le relevé ne tomberait pas juste dès qu'une pièce scannée est datée illisiblement.
+   */
+  function periodMovements(reg, from, to) {
+    const d2 = String(to || today());
+    const d1 = from == null ? null : String(from);
+    let enc = 0; let dec = 0; let n = 0;
+    for (const p of (reg && reg.pieces) || []) {
+      if (!(p.montant > 0)) continue;
+      if (!p.date) { if (d1 !== null) continue; } // sans date : seulement « depuis le début »
+      else if (String(p.date) > d2 || (d1 !== null && String(p.date) <= d1)) continue;
+      if (p.sens === 'debit') enc += p.montant;
+      else if (p.sens === 'credit') dec += p.montant;
+      else continue;
+      n++;
+    }
+    return { encaissements: P.round2(enc), decaissements: P.round2(dec), pieces: n };
   }
 
   /** Libellé du journal : « TYPE - Description - Personne ». */
@@ -722,6 +754,7 @@
     balanceAt,
     parseAmountInput,
     searchRows, numberChecks, explainGap,
+    periodMovements,
     piecesFromEntries, mergeEntries,
     serialize,
     parse,

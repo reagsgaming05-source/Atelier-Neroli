@@ -368,6 +368,35 @@ function verifierCopie() {
     && rc.trouVu && rc.resteNul && rc.designe && rc.parRaccourci === 1 && rc.montant299 === 18.5
     && rc.registreRendu;
 
+  // Relevé de caisse : le formulaire officiel, rempli depuis le comptage à l'écran (pas besoin
+  // de l'avoir enregistré), avec le rapprochement et les deux visas.
+  const releve = await win.evaluate(async () => {
+    const R = window.CaisseRegistre; const S = window.CaisseSaisie; const reg = S.state.reg;
+    const visasAvant = reg.visas;
+    reg.visas = { responsable: 'A. Berger', boursier: 'Ch. Dupraz' };
+    const counts = { 1000: 0, 200: 3, 100: 7, 50: 21, 20: 69, 10: 36, 5: 38, 2: 17, 1: 13, 0.5: 89, 0.2: 28, 0.1: 51, 0.05: 34 };
+    const t = R.countTotal(counts);
+    const date = `${reg.annee}-02-27`;
+    const mouv = R.periodMovements(reg, null, date);
+    const res = await window.CaissePdf.buildReleveCaissePdf(
+      { date, counts, billets: t.billets, pieces: t.pieces, total: t.total, note: '' }, reg,
+      { reference: { date: reg.opening.date, total: reg.opening.amount }, encaissements: mouv.encaissements, decaissements: mouv.decaissements,
+        ecart: Math.round((t.total - R.balanceAt(reg, date)) * 100) / 100 },
+    );
+    reg.visas = visasAvant;
+    // le bouton existe et réagit sur un comptage vide en le refusant plutôt qu'en produisant un PDF creux
+    window.CaisseApp.showPanel('panelCaisse');
+    document.getElementById('btnCountNew').click();
+    document.getElementById('btnReleve').click();
+    await new Promise((r) => setTimeout(r, 300));
+    const refus = /rien . mettre sur le relev|Aucun billet/.test(document.getElementById('countNotices').textContent);
+    document.getElementById('countNotices').innerHTML = '';
+    window.CaisseApp.showPanel('panelSaisie');
+    return { pages: res.pages, total: res.total, octets: res.bytes.length, refus, boutonLa: !!document.getElementById('btnReleve') };
+  });
+  console.log('relevé de caisse :', JSON.stringify(releve));
+  ok = ok && releve.boutonLa && releve.pages === 1 && releve.total === 4383.9 && releve.octets > 1000 && releve.refus;
+
   // nouvelle année par le petit formulaire en ligne (window.prompt n'existe pas dans Electron)
   const ny = await win.evaluate(async () => {
     const s = window.CaisseSaisie.state; const y0 = s.reg.annee;

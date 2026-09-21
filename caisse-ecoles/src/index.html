@@ -383,6 +383,7 @@
       <div class="toolbar">
         <button type="button" class="primary" id="btnCountSave"><svg class="ico"><use href="#i-save"/></svg> Enregistrer le comptage</button>
         <button type="button" id="btnCountLoadPrev" title="Remplit les quantités avec celles du dernier comptage, pour ne corriger que ce qui a changé"><svg class="ico"><use href="#i-refresh"/></svg> Reprendre le dernier comptage</button>
+        <button type="button" id="btnReleve" title="Le formulaire officiel « Relevé de caisse », rempli avec ce comptage, à imprimer et faire viser"><svg class="ico"><use href="#i-printer"/></svg> Relevé de caisse (PDF)</button>
         <span class="spacer"></span>
         <button type="button" class="ghost" id="btnCountNew"><svg class="ico"><use href="#i-plus"/></svg> Nouveau comptage</button>
       </div>
@@ -439,6 +440,15 @@
       <div class="field">
         <label for="regCaisse">Compte caisse</label>
         <input type="text" id="regCaisse" style="width:130px">
+      </div>
+      <div class="sep"></div>
+      <div class="field">
+        <label for="regVisaResp" title="Nom imprimé sur la ligne de visa du relevé de caisse">Relevé de caisse – visa du responsable</label>
+        <input type="text" id="regVisaResp" placeholder="ex. A. Berger" style="width:190px">
+      </div>
+      <div class="field">
+        <label for="regVisaBours" title="Nom imprimé sur la ligne de visa du relevé de caisse">Visa du boursier</label>
+        <input type="text" id="regVisaBours" placeholder="ex. Ch. Dupraz" style="width:190px">
       </div>
       <button type="button" class="small hidden" id="btnRegOpenDir" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button>
     </div>

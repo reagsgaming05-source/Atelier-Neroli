@@ -964,6 +964,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       <div class="toolbar">
         <button type="button" class="primary" id="btnCountSave"><svg class="ico"><use href="#i-save"/></svg> Enregistrer le comptage</button>
         <button type="button" id="btnCountLoadPrev" title="Remplit les quantités avec celles du dernier comptage, pour ne corriger que ce qui a changé"><svg class="ico"><use href="#i-refresh"/></svg> Reprendre le dernier comptage</button>
+        <button type="button" id="btnReleve" title="Le formulaire officiel « Relevé de caisse », rempli avec ce comptage, à imprimer et faire viser"><svg class="ico"><use href="#i-printer"/></svg> Relevé de caisse (PDF)</button>
         <span class="spacer"></span>
         <button type="button" class="ghost" id="btnCountNew"><svg class="ico"><use href="#i-plus"/></svg> Nouveau comptage</button>
       </div>
@@ -1020,6 +1021,15 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       <div class="field">
         <label for="regCaisse">Compte caisse</label>
         <input type="text" id="regCaisse" style="width:130px">
+      </div>
+      <div class="sep"></div>
+      <div class="field">
+        <label for="regVisaResp" title="Nom imprimé sur la ligne de visa du relevé de caisse">Relevé de caisse – visa du responsable</label>
+        <input type="text" id="regVisaResp" placeholder="ex. A. Berger" style="width:190px">
+      </div>
+      <div class="field">
+        <label for="regVisaBours" title="Nom imprimé sur la ligne de visa du relevé de caisse">Visa du boursier</label>
+        <input type="text" id="regVisaBours" placeholder="ex. Ch. Dupraz" style="width:190px">
       </div>
       <button type="button" class="small hidden" id="btnRegOpenDir" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button>
     </div>
@@ -5639,6 +5649,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       annee: y,
       caisse: opts.caisse || P.DEFAULT_CAISSE,
       opening: { date: opts.openingDate || `${y}-01-01`, amount: P.round2(Number(opts.openingAmount) || 0) },
+      // Signataires du relevé de caisse. Vides par défaut : le relevé écrit alors « Visa du
+      // responsable » / « Visa du boursier », comme le formulaire vierge. Les vrais noms sont
+      // saisis dans l'application et restent dans les données locales.
+      visas: { responsable: String(opts.visaResponsable || ''), boursier: String(opts.visaBoursier || '') },
       pieces: [],
       comptages: [],
       updatedAt: new Date().toISOString(),
@@ -5650,7 +5664,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (!raw || typeof raw !== 'object') return null;
     const annee = Number(raw.annee);
     if (!annee || annee < 1990 || annee > 2100) return null;
-    const reg = emptyRegister(annee, { caisse: raw.caisse, openingDate: raw.opening && raw.opening.date, openingAmount: raw.opening && raw.opening.amount });
+    const reg = emptyRegister(annee, {
+      caisse: raw.caisse, openingDate: raw.opening && raw.opening.date, openingAmount: raw.opening && raw.opening.amount,
+      visaResponsable: raw.visas && raw.visas.responsable, visaBoursier: raw.visas && raw.visas.boursier,
+    });
     reg.pieces = (Array.isArray(raw.pieces) ? raw.pieces : []).map((p) => normalizePiece(p)).filter(Boolean);
     sortPieces(reg);
     reg.comptages = (Array.isArray(raw.comptages) ? raw.comptages : []).map((c) => normalizeCount(c)).filter(Boolean);
@@ -5825,6 +5842,31 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       if (p.sens === 'debit') bal += p.montant; else if (p.sens === 'credit') bal -= p.montant;
     }
     return P.round2(bal);
+  }
+
+  /**
+   * Encaissements et décaissements entre deux dates, pour le relevé de caisse : ce qui est entré
+   * et sorti depuis le point de référence (le comptage précédent, ou le solde à nouveau).
+   *
+   * `from` nul veut dire « depuis le début de l'année » : les pièces sans date y sont comptées,
+   * exactement comme le fait balanceAt, pour que l'identité tienne —
+   *   situation au point de référence + encaissements − décaissements = solde du journal.
+   * Sans cela, le relevé ne tomberait pas juste dès qu'une pièce scannée est datée illisiblement.
+   */
+  function periodMovements(reg, from, to) {
+    const d2 = String(to || today());
+    const d1 = from == null ? null : String(from);
+    let enc = 0; let dec = 0; let n = 0;
+    for (const p of (reg && reg.pieces) || []) {
+      if (!(p.montant > 0)) continue;
+      if (!p.date) { if (d1 !== null) continue; } // sans date : seulement « depuis le début »
+      else if (String(p.date) > d2 || (d1 !== null && String(p.date) <= d1)) continue;
+      if (p.sens === 'debit') enc += p.montant;
+      else if (p.sens === 'credit') dec += p.montant;
+      else continue;
+      n++;
+    }
+    return { encaissements: P.round2(enc), decaissements: P.round2(dec), pieces: n };
   }
 
   /** Libellé du journal : « TYPE - Description - Personne ». */
@@ -6317,6 +6359,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     balanceAt,
     parseAmountInput,
     searchRows, numberChecks, explainGap,
+    periodMovements,
     piecesFromEntries, mergeEntries,
     serialize,
     parse,
@@ -6342,6 +6385,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   'use strict';
 
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  // Coupures du relevé de caisse, dans l'ordre du formulaire. Mêmes valeurs que CaisseRegistre :
+  // le module PDF ne dépend pas du registre, mais un test vérifie que les deux listes concordent.
+  const R_BILLETS = [1000, 200, 100, 50, 20, 10];
+  const R_PIECES = [5, 2, 1, 0.5, 0.2, 0.1, 0.05];
   const A4 = [595.28, 841.89];
   const BLACK = rgb(0, 0, 0);
   const GREY = rgb(0.55, 0.55, 0.55);
@@ -6618,7 +6665,139 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     return { bytes, pages: doc.getPageCount(), total, sorties, entrees };
   }
 
-  return { buildPdf, buildRecapPdf, recapDescription, drawPiece, fmtCHF, A4 };
+  /**
+   * Relevé de caisse : le formulaire officiel de la commune, en PDF.
+   *
+   * Reprend la mise en page du classeur « Relevé de caisse » (feuille « Caisse des écoles ») :
+   * le décompte des coupures avec la quantité, la valeur et la somme ; le total en caisse ; puis
+   * le rapprochement avec la période précédente — situation de référence, encaissements,
+   * décaissements, solde compté — et les deux visas à signer.
+   *
+   *   comptage : { date, counts, billets, pieces, total, note }
+   *   opts     : { reference: { date, total, libelle }, encaissements, decaissements, ecart }
+   * Renvoie { bytes, pages, total }.
+   */
+  async function buildReleveCaissePdf(comptage, reg, opts) {
+    opts = opts || {};
+    const doc = await PDFDocument.create();
+    const titre = 'Caisse des écoles';
+    doc.setTitle(`Relevé de caisse – ${P.isoToDisplay(comptage.date)}`);
+    doc.setProducer('Caisse écoles');
+    doc.setCreator('Caisse écoles');
+    const normal = await doc.embedFont(StandardFonts.Helvetica);
+    const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const page = doc.addPage(A4);
+
+    // Trois colonnes, aux largeurs du classeur : libellé large, puis quantité/valeur et somme.
+    const left = 62; const right = A4[0] - 62;
+    const colB = left + 212; const colC = colB + 131; // débuts des colonnes « billets » et « Somme »
+    const wB = 131; const wC = right - colC;
+    const S = 11; // corps de texte, comme le classeur (Arial 12 ≈ Helvetica 11 à l'œil)
+
+    const txt = (font, str, x, y, size, color) => page.drawText(safe(font, str), { x, y, size: size || S, font, color: color || BLACK });
+    const center = (font, str, x, w, y, size, color) => {
+      const t = safe(font, str); const sz = size || S;
+      page.drawText(t, { x: x + (w - font.widthOfTextAtSize(t, sz)) / 2, y, size: sz, font, color: color || BLACK });
+    };
+    const box = (x, y, w, h) => page.drawRectangle({ x, y, width: w, height: h, borderWidth: 0.8, borderColor: BLACK });
+    /** Montant du formulaire : « 4'383.90 », sans le préfixe CHF (la colonne s'appelle « Somme »). */
+    const somme = (v) => fmtCHF(v).replace('CHF ', '');
+
+    let y = A4[1] - 66;
+    txt(bold, titre, left, y, 15);
+    y -= 30;
+
+    // Situation au : [date encadrée]
+    const hCell = 19;
+    txt(normal, 'Situation au :', left, y + 5);
+    box(colB, y, wB, hCell);
+    center(normal, P.isoToDisplay(comptage.date), colB, wB, y + 5);
+    y -= 34;
+
+    // En-tête du décompte
+    center(bold, 'Quantité', left, 212, y);
+    center(bold, 'billets', colB, wB, y);
+    center(bold, 'Somme', colC, wC, y);
+    y -= 20;
+
+    const counts = comptage.counts || {};
+    const ligne = (denom) => {
+      const n = Math.max(0, Math.floor(Number(counts[String(denom)]) || 0));
+      box(left, y, 212, hCell);
+      center(normal, String(n), left, 212, y + 5);
+      center(normal, somme(denom), colB, wB, y + 5); // le formulaire écrit la coupure à deux décimales
+      center(normal, somme(P.round2(denom * n)), colC, wC, y + 5);
+      y -= hCell + 2;
+    };
+    for (const d of R_BILLETS) ligne(d);
+    y -= 8;
+    center(bold, 'pièces', colB, wB, y + 5);
+    y -= 18;
+    for (const d of R_PIECES) ligne(d);
+
+    // Total en caisse
+    y -= 12;
+    txt(bold, 'Total en caisse', left, y + 5, 12);
+    box(colC, y, wC, hCell);
+    center(bold, somme(comptage.total), colC, wC, y + 5, 12);
+    y -= 40;
+
+    // Rapprochement : Date | Somme
+    page.drawLine({ start: { x: colB, y: y + 17 }, end: { x: right, y: y + 17 }, thickness: 0.8, color: BLACK });
+    center(normal, 'Date', colB, wB, y);
+    center(normal, 'Somme', colC, wC, y);
+    y -= 26;
+
+    const ref = opts.reference || null;
+    const rang = (libelle, date, montant, gras) => {
+      const f = gras ? bold : normal;
+      txt(f, libelle, left, y + 5);
+      box(colB, y, wB, hCell);
+      if (date) center(normal, P.isoToDisplay(date), colB, wB, y + 5);
+      box(colC, y, wC, hCell);
+      if (montant != null) center(f, somme(montant), colC, wC, y + 5);
+      y -= hCell + 7;
+    };
+    rang('Solde en caisse au :', comptage.date, comptage.total, true);
+    rang('Encaissement de la période :', null, opts.encaissements == null ? null : opts.encaissements);
+    rang('Décaissement de la période :', null, opts.decaissements == null ? null : opts.decaissements);
+    rang(ref && ref.libelle ? ref.libelle : 'Situation de la caisse au :', ref && ref.date, ref ? ref.total : null);
+
+    // Le bas du formulaire est ancré, pas coulé : les visas et la mention des annexes gardent
+    // leur place quelle que soit la longueur de ce qui précède. Laissé au fil du texte, « Annexes »
+    // passait sous le bord de la page dès qu'une remarque était saisie.
+    const yAnnexes = 58;
+    const yVisa2 = yAnnexes + 46;
+    const yVisa1 = yVisa2 + 46;
+    const visas = (reg && reg.visas) || {};
+    [[yVisa1, 'responsable', visas.responsable], [yVisa2, 'boursier', visas.boursier]].forEach(([yy, role, nom]) => {
+      txt(normal, nom ? `Visa de ${nom}` : `Visa du ${role}`, left, yy + 6);
+      page.drawLine({ start: { x: colB, y: yy + 2 }, end: { x: right, y: yy + 2 }, thickness: 0.6, color: BLACK });
+    });
+    txt(normal, 'Annexes : pièces justificatives', left, yAnnexes);
+
+    // Entre le rapprochement et les visas : l'écart et la remarque, dans la place disponible.
+    // Un relevé qu'on signe ne doit pas taire un écart — on l'écrit en toutes lettres plutôt que
+    // de laisser le formulaire sembler tomber juste.
+    const notes = [];
+    const ecart = Number(opts.ecart) || 0;
+    if (Math.abs(ecart) >= 0.005) {
+      notes.push(`Écart avec le journal au ${P.isoToDisplay(comptage.date)} : ${ecart > 0 ? '+ ' : '- '}${somme(Math.abs(ecart))} ` +
+        `(${ecart > 0 ? "plus d'argent en caisse que dans le journal" : "il manque de l'argent par rapport au journal"}).`);
+    }
+    if (comptage.note) notes.push(`Remarque : ${comptage.note}`);
+    if (notes.length) {
+      const lignes = notes.reduce((acc, n) => acc.concat(wrap(normal, 9.5, n, right - left)), []);
+      const dispo = Math.max(0, Math.floor((y - (yVisa1 + 24)) / 13));
+      let yy = y - 4;
+      for (const l of lignes.slice(0, dispo)) { txt(normal, l, left, yy, 9.5, GREY); yy -= 13; }
+    }
+
+    const bytes = await doc.save();
+    return { bytes, pages: doc.getPageCount(), total: comptage.total };
+  }
+
+  return { buildPdf, buildRecapPdf, buildReleveCaissePdf, recapDescription, drawPiece, fmtCHF, A4 };
 });
 
 </script>
@@ -9133,7 +9312,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   const A = window.CaisseApp || {};
   const $ = (id) => document.getElementById(id);
   const els = {};
-  for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
+  for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regVisaResp', 'regVisaBours', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
     'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'journalSearch', 'journalOnlyDoubt', 'journalCount', 'journalNumbers', 'yearBar', 'anneeNotices', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
@@ -9289,6 +9468,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     state.reg.opening.amount = v; await saveReg(); renderJournal();
   });
   els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); renderYearBar(); });
+  // Les deux signataires du relevé de caisse : ils vivent dans le registre (données locales de
+  // l'année), jamais dans le code — le dépôt est public.
+  for (const [el, cle] of [[els.regVisaResp, 'responsable'], [els.regVisaBours, 'boursier']]) {
+    if (!el) continue;
+    el.addEventListener('change', async () => {
+      if (!state.reg.visas) state.reg.visas = { responsable: '', boursier: '' };
+      state.reg.visas[cle] = el.value.trim();
+      await saveReg();
+    });
+  }
   if (els.btnRegOpenDir) els.btnRegOpenDir.addEventListener('click', () => { if (window.CaisseFiles) window.CaisseFiles.openDir(); });
 
   /* ---------------- Fiche ---------------- */
@@ -9602,6 +9791,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (busy !== els.regOpeningDate) els.regOpeningDate.value = reg.opening.date || '';
     if (busy !== els.regOpeningAmount) els.regOpeningAmount.value = reg.opening.amount;
     if (busy !== els.regCaisse) els.regCaisse.value = reg.caisse;
+    const v = reg.visas || {};
+    if (els.regVisaResp && busy !== els.regVisaResp) els.regVisaResp.value = v.responsable || '';
+    if (els.regVisaBours && busy !== els.regVisaBours) els.regVisaBours.value = v.boursier || '';
   }
 
   /** Bandeau d'une ligne rappelant l'année ouverte : les réglages, eux, ont leur propre espace. */
@@ -10082,9 +10274,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   const P = window.CaisseParser;
   const R = window.CaisseRegistre;
   const S = window.CaisseSaisie;
+  const F = window.CaissePdf; // relevé de caisse en PDF
   const $ = (id) => document.getElementById(id);
   const els = {};
-  for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cPistes', 'cTitle', 'countErrors', 'btnCountSave', 'btnCountLoadPrev', 'btnCountNew', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
+  for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cPistes', 'cTitle', 'btnReleve', 'countErrors', 'btnCountSave', 'btnCountLoadPrev', 'btnCountNew', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
   if (!els.cRows || !S) return;
 
   const state = { editingId: null, shownYear: null, prevYear: { annee: null, last: null } };
@@ -10267,6 +10460,63 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     renderHistory();
     $('countCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  /**
+   * Relevé de caisse : le formulaire officiel de la commune, rempli avec ce qui est à l'écran.
+   * Il marche sur un comptage enregistré comme sur celui qu'on est en train de faire — c'est au
+   * moment où le total tombe qu'on veut l'imprimer, pas après un détour par l'enregistrement.
+   *
+   * Le point de référence est le comptage précédent s'il y en a un, sinon le solde à nouveau de
+   * l'année : c'est ce que porte le formulaire rempli à la main (« Situation de la caisse au
+   * 20.12.2024 »), la clôture de l'année d'avant.
+   */
+  function releveData(comptage) {
+    const reg = S.state.reg;
+    const prev = previous(comptage.date);
+    const reference = prev
+      ? { date: prev.date, total: prev.total }
+      : { date: reg.opening.date, total: reg.opening.amount };
+    const mouv = R.periodMovements(reg, prev ? prev.date : null, comptage.date);
+    return {
+      reference,
+      encaissements: mouv.encaissements,
+      decaissements: mouv.decaissements,
+      ecart: P.round2(comptage.total - R.balanceAt(reg, comptage.date)),
+    };
+  }
+
+  async function openReleve(comptage, win) {
+    const reg = S.state.reg;
+    const res = await F.buildReleveCaissePdf(comptage, reg, releveData(comptage));
+    const url = URL.createObjectURL(new Blob([res.bytes], { type: 'application/pdf' }));
+    // la fenêtre est ouverte avant la construction (un navigateur bloque window.open après un await)
+    const w = win && !win.closed ? win : window.open(url, '_blank');
+    if (w && w !== win) { /* ouverte ici */ } else if (w) { try { w.location.replace(url); } catch (e) { w.location = url; } }
+    if (!w) notice('warn', `Le relevé n'a pas pu s'ouvrir tout seul (fenêtre bloquée) : <button type="button" data-open-pdf="${url}">Ouvrir le relevé</button>`);
+    setTimeout(() => URL.revokeObjectURL(url), 180000);
+    return res;
+  }
+
+  if (els.btnReleve) els.btnReleve.addEventListener('click', async () => {
+    const reg = S.state.reg;
+    if (!reg) { notice('err', 'Aucun registre ouvert.'); return; }
+    const date = els.cDate.value;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { notice('err', 'Date du comptage manquante ou invalide : le relevé n\'a pas été produit.'); return; }
+    const counts = readCounts();
+    if (!Object.keys(counts).length) { notice('err', 'Aucun billet ni aucune pièce compté(e) : il n\'y a rien à mettre sur le relevé.'); return; }
+    const t = R.countTotal(counts);
+    const w = window.open('', '_blank'); // ouverte dans le clic, remplie après
+    try {
+      await openReleve({ date, counts, billets: t.billets, pieces: t.pieces, total: t.total, note: els.cNote.value.trim() }, w);
+    } catch (e) {
+      if (w && !w.closed) w.close();
+      notice('err', `Le relevé n'a pas pu être produit : ${escapeHtml(e && e.message ? e.message : e)}`);
+    }
+  });
+  if (els.countNotices) els.countNotices.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-open-pdf]');
+    if (b) window.open(b.dataset.openPdf, '_blank');
+  });
+
   async function saveCount() {
     const reg = S.state.reg;
     if (!reg) { notice('err', "Aucun registre ouvert : le comptage n'a pas pu être enregistré."); return; }

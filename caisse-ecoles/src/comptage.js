@@ -10,9 +10,10 @@
   const P = window.CaisseParser;
   const R = window.CaisseRegistre;
   const S = window.CaisseSaisie;
+  const F = window.CaissePdf; // relevé de caisse en PDF
   const $ = (id) => document.getElementById(id);
   const els = {};
-  for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cPistes', 'cTitle', 'countErrors', 'btnCountSave', 'btnCountLoadPrev', 'btnCountNew', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
+  for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cPistes', 'cTitle', 'btnReleve', 'countErrors', 'btnCountSave', 'btnCountLoadPrev', 'btnCountNew', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
   if (!els.cRows || !S) return;
 
   const state = { editingId: null, shownYear: null, prevYear: { annee: null, last: null } };
@@ -195,6 +196,63 @@
     renderHistory();
     $('countCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  /**
+   * Relevé de caisse : le formulaire officiel de la commune, rempli avec ce qui est à l'écran.
+   * Il marche sur un comptage enregistré comme sur celui qu'on est en train de faire — c'est au
+   * moment où le total tombe qu'on veut l'imprimer, pas après un détour par l'enregistrement.
+   *
+   * Le point de référence est le comptage précédent s'il y en a un, sinon le solde à nouveau de
+   * l'année : c'est ce que porte le formulaire rempli à la main (« Situation de la caisse au
+   * 20.12.2024 »), la clôture de l'année d'avant.
+   */
+  function releveData(comptage) {
+    const reg = S.state.reg;
+    const prev = previous(comptage.date);
+    const reference = prev
+      ? { date: prev.date, total: prev.total }
+      : { date: reg.opening.date, total: reg.opening.amount };
+    const mouv = R.periodMovements(reg, prev ? prev.date : null, comptage.date);
+    return {
+      reference,
+      encaissements: mouv.encaissements,
+      decaissements: mouv.decaissements,
+      ecart: P.round2(comptage.total - R.balanceAt(reg, comptage.date)),
+    };
+  }
+
+  async function openReleve(comptage, win) {
+    const reg = S.state.reg;
+    const res = await F.buildReleveCaissePdf(comptage, reg, releveData(comptage));
+    const url = URL.createObjectURL(new Blob([res.bytes], { type: 'application/pdf' }));
+    // la fenêtre est ouverte avant la construction (un navigateur bloque window.open après un await)
+    const w = win && !win.closed ? win : window.open(url, '_blank');
+    if (w && w !== win) { /* ouverte ici */ } else if (w) { try { w.location.replace(url); } catch (e) { w.location = url; } }
+    if (!w) notice('warn', `Le relevé n'a pas pu s'ouvrir tout seul (fenêtre bloquée) : <button type="button" data-open-pdf="${url}">Ouvrir le relevé</button>`);
+    setTimeout(() => URL.revokeObjectURL(url), 180000);
+    return res;
+  }
+
+  if (els.btnReleve) els.btnReleve.addEventListener('click', async () => {
+    const reg = S.state.reg;
+    if (!reg) { notice('err', 'Aucun registre ouvert.'); return; }
+    const date = els.cDate.value;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { notice('err', 'Date du comptage manquante ou invalide : le relevé n\'a pas été produit.'); return; }
+    const counts = readCounts();
+    if (!Object.keys(counts).length) { notice('err', 'Aucun billet ni aucune pièce compté(e) : il n\'y a rien à mettre sur le relevé.'); return; }
+    const t = R.countTotal(counts);
+    const w = window.open('', '_blank'); // ouverte dans le clic, remplie après
+    try {
+      await openReleve({ date, counts, billets: t.billets, pieces: t.pieces, total: t.total, note: els.cNote.value.trim() }, w);
+    } catch (e) {
+      if (w && !w.closed) w.close();
+      notice('err', `Le relevé n'a pas pu être produit : ${escapeHtml(e && e.message ? e.message : e)}`);
+    }
+  });
+  if (els.countNotices) els.countNotices.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-open-pdf]');
+    if (b) window.open(b.dataset.openPdf, '_blank');
+  });
+
   async function saveCount() {
     const reg = S.state.reg;
     if (!reg) { notice('err', "Aucun registre ouvert : le comptage n'a pas pu être enregistré."); return; }

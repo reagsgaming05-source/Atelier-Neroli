@@ -11,6 +11,10 @@
   'use strict';
 
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  // Coupures du relevé de caisse, dans l'ordre du formulaire. Mêmes valeurs que CaisseRegistre :
+  // le module PDF ne dépend pas du registre, mais un test vérifie que les deux listes concordent.
+  const R_BILLETS = [1000, 200, 100, 50, 20, 10];
+  const R_PIECES = [5, 2, 1, 0.5, 0.2, 0.1, 0.05];
   const A4 = [595.28, 841.89];
   const BLACK = rgb(0, 0, 0);
   const GREY = rgb(0.55, 0.55, 0.55);
@@ -287,5 +291,137 @@
     return { bytes, pages: doc.getPageCount(), total, sorties, entrees };
   }
 
-  return { buildPdf, buildRecapPdf, recapDescription, drawPiece, fmtCHF, A4 };
+  /**
+   * Relevé de caisse : le formulaire officiel de la commune, en PDF.
+   *
+   * Reprend la mise en page du classeur « Relevé de caisse » (feuille « Caisse des écoles ») :
+   * le décompte des coupures avec la quantité, la valeur et la somme ; le total en caisse ; puis
+   * le rapprochement avec la période précédente — situation de référence, encaissements,
+   * décaissements, solde compté — et les deux visas à signer.
+   *
+   *   comptage : { date, counts, billets, pieces, total, note }
+   *   opts     : { reference: { date, total, libelle }, encaissements, decaissements, ecart }
+   * Renvoie { bytes, pages, total }.
+   */
+  async function buildReleveCaissePdf(comptage, reg, opts) {
+    opts = opts || {};
+    const doc = await PDFDocument.create();
+    const titre = 'Caisse des écoles';
+    doc.setTitle(`Relevé de caisse – ${P.isoToDisplay(comptage.date)}`);
+    doc.setProducer('Caisse écoles');
+    doc.setCreator('Caisse écoles');
+    const normal = await doc.embedFont(StandardFonts.Helvetica);
+    const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const page = doc.addPage(A4);
+
+    // Trois colonnes, aux largeurs du classeur : libellé large, puis quantité/valeur et somme.
+    const left = 62; const right = A4[0] - 62;
+    const colB = left + 212; const colC = colB + 131; // débuts des colonnes « billets » et « Somme »
+    const wB = 131; const wC = right - colC;
+    const S = 11; // corps de texte, comme le classeur (Arial 12 ≈ Helvetica 11 à l'œil)
+
+    const txt = (font, str, x, y, size, color) => page.drawText(safe(font, str), { x, y, size: size || S, font, color: color || BLACK });
+    const center = (font, str, x, w, y, size, color) => {
+      const t = safe(font, str); const sz = size || S;
+      page.drawText(t, { x: x + (w - font.widthOfTextAtSize(t, sz)) / 2, y, size: sz, font, color: color || BLACK });
+    };
+    const box = (x, y, w, h) => page.drawRectangle({ x, y, width: w, height: h, borderWidth: 0.8, borderColor: BLACK });
+    /** Montant du formulaire : « 4'383.90 », sans le préfixe CHF (la colonne s'appelle « Somme »). */
+    const somme = (v) => fmtCHF(v).replace('CHF ', '');
+
+    let y = A4[1] - 66;
+    txt(bold, titre, left, y, 15);
+    y -= 30;
+
+    // Situation au : [date encadrée]
+    const hCell = 19;
+    txt(normal, 'Situation au :', left, y + 5);
+    box(colB, y, wB, hCell);
+    center(normal, P.isoToDisplay(comptage.date), colB, wB, y + 5);
+    y -= 34;
+
+    // En-tête du décompte
+    center(bold, 'Quantité', left, 212, y);
+    center(bold, 'billets', colB, wB, y);
+    center(bold, 'Somme', colC, wC, y);
+    y -= 20;
+
+    const counts = comptage.counts || {};
+    const ligne = (denom) => {
+      const n = Math.max(0, Math.floor(Number(counts[String(denom)]) || 0));
+      box(left, y, 212, hCell);
+      center(normal, String(n), left, 212, y + 5);
+      center(normal, somme(denom), colB, wB, y + 5); // le formulaire écrit la coupure à deux décimales
+      center(normal, somme(P.round2(denom * n)), colC, wC, y + 5);
+      y -= hCell + 2;
+    };
+    for (const d of R_BILLETS) ligne(d);
+    y -= 8;
+    center(bold, 'pièces', colB, wB, y + 5);
+    y -= 18;
+    for (const d of R_PIECES) ligne(d);
+
+    // Total en caisse
+    y -= 12;
+    txt(bold, 'Total en caisse', left, y + 5, 12);
+    box(colC, y, wC, hCell);
+    center(bold, somme(comptage.total), colC, wC, y + 5, 12);
+    y -= 40;
+
+    // Rapprochement : Date | Somme
+    page.drawLine({ start: { x: colB, y: y + 17 }, end: { x: right, y: y + 17 }, thickness: 0.8, color: BLACK });
+    center(normal, 'Date', colB, wB, y);
+    center(normal, 'Somme', colC, wC, y);
+    y -= 26;
+
+    const ref = opts.reference || null;
+    const rang = (libelle, date, montant, gras) => {
+      const f = gras ? bold : normal;
+      txt(f, libelle, left, y + 5);
+      box(colB, y, wB, hCell);
+      if (date) center(normal, P.isoToDisplay(date), colB, wB, y + 5);
+      box(colC, y, wC, hCell);
+      if (montant != null) center(f, somme(montant), colC, wC, y + 5);
+      y -= hCell + 7;
+    };
+    rang('Solde en caisse au :', comptage.date, comptage.total, true);
+    rang('Encaissement de la période :', null, opts.encaissements == null ? null : opts.encaissements);
+    rang('Décaissement de la période :', null, opts.decaissements == null ? null : opts.decaissements);
+    rang(ref && ref.libelle ? ref.libelle : 'Situation de la caisse au :', ref && ref.date, ref ? ref.total : null);
+
+    // Le bas du formulaire est ancré, pas coulé : les visas et la mention des annexes gardent
+    // leur place quelle que soit la longueur de ce qui précède. Laissé au fil du texte, « Annexes »
+    // passait sous le bord de la page dès qu'une remarque était saisie.
+    const yAnnexes = 58;
+    const yVisa2 = yAnnexes + 46;
+    const yVisa1 = yVisa2 + 46;
+    const visas = (reg && reg.visas) || {};
+    [[yVisa1, 'responsable', visas.responsable], [yVisa2, 'boursier', visas.boursier]].forEach(([yy, role, nom]) => {
+      txt(normal, nom ? `Visa de ${nom}` : `Visa du ${role}`, left, yy + 6);
+      page.drawLine({ start: { x: colB, y: yy + 2 }, end: { x: right, y: yy + 2 }, thickness: 0.6, color: BLACK });
+    });
+    txt(normal, 'Annexes : pièces justificatives', left, yAnnexes);
+
+    // Entre le rapprochement et les visas : l'écart et la remarque, dans la place disponible.
+    // Un relevé qu'on signe ne doit pas taire un écart — on l'écrit en toutes lettres plutôt que
+    // de laisser le formulaire sembler tomber juste.
+    const notes = [];
+    const ecart = Number(opts.ecart) || 0;
+    if (Math.abs(ecart) >= 0.005) {
+      notes.push(`Écart avec le journal au ${P.isoToDisplay(comptage.date)} : ${ecart > 0 ? '+ ' : '- '}${somme(Math.abs(ecart))} ` +
+        `(${ecart > 0 ? "plus d'argent en caisse que dans le journal" : "il manque de l'argent par rapport au journal"}).`);
+    }
+    if (comptage.note) notes.push(`Remarque : ${comptage.note}`);
+    if (notes.length) {
+      const lignes = notes.reduce((acc, n) => acc.concat(wrap(normal, 9.5, n, right - left)), []);
+      const dispo = Math.max(0, Math.floor((y - (yVisa1 + 24)) / 13));
+      let yy = y - 4;
+      for (const l of lignes.slice(0, dispo)) { txt(normal, l, left, yy, 9.5, GREY); yy -= 13; }
+    }
+
+    const bytes = await doc.save();
+    return { bytes, pages: doc.getPageCount(), total: comptage.total };
+  }
+
+  return { buildPdf, buildRecapPdf, buildReleveCaissePdf, recapDescription, drawPiece, fmtCHF, A4 };
 });
