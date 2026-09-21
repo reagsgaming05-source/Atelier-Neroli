@@ -333,7 +333,14 @@
 
   // "A. Dupraz", "Ch. Marendaz", "A.-L. Delacroix", "F.N. Ravel", "J. Tissot (donné à ...)", "Mme Dupont"
   // L'initiale peut avoir été lue « l » ou « 1 » à la place de « I » (confusion fréquente).
-  const PERSON_RE = /^((?:[A-ZÀ-Ýl1][a-zà-ÿ]{0,3}\.\s*-?\s*)+)\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+)*)(.*)$/;
+  // Le séparateur après l'initiale s'écrit « \s*(?:-\s*)? » et non « \s*-?\s* » : avec deux \s*
+  // autour d'un tiret facultatif, chaque espace pouvait être consommé par l'un ou par l'autre, soit
+  // 2^n chemins à explorer avant d'échouer. Sur « A. A. A. … » — ce qu'un OCR produit sur une ligne
+  // brouillée — l'application se figeait : 0,6 s à 24 répétitions, 9 s à 28, des minutes au-delà.
+  const PERSON_RE = /^((?:[A-ZÀ-Ýl1][a-zà-ÿ]{0,3}\.\s*(?:-\s*)?)+)\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+)*)(.*)$/;
+  // Un nom de personne ne fait pas 500 caractères. Au-delà, c'est du bruit de lecture : on tranche
+  // avant d'y passer du temps, quelle que soit la forme de la ligne.
+  const PERSON_MAX = 120;
 
   /**
    * Remet en majuscule une initiale lue en minuscule (« l. Scoziero »). Le « l » minuscule et le
@@ -358,7 +365,7 @@
 
   function looksLikePerson(line) {
     const t = String(line || '').trim();
-    if (!t) return false;
+    if (!t || t.length > PERSON_MAX) return false;
     if (PERSON_RE.test(t)) return true;
     if (/^(Mme|Mlle|M\.|Mr|M)\s+[A-ZÀ-Ý]/.test(t)) return true;
     return false;

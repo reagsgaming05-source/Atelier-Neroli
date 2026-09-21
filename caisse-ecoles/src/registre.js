@@ -43,7 +43,7 @@
       version: VERSION,
       annee: y,
       caisse: opts.caisse || P.DEFAULT_CAISSE,
-      opening: { date: opts.openingDate || `${y}-01-01`, amount: P.round2(Number(opts.openingAmount) || 0) },
+      opening: { date: opts.openingDate || `${y}-01-01`, amount: soldeOk(opts.openingAmount) },
       // Signataires du relevé de caisse. Vides par défaut : le relevé écrit alors « Visa du
       // responsable » / « Visa du boursier », comme le formulaire vierge. Les vrais noms sont
       // saisis dans l'application et restent dans les données locales.
@@ -71,9 +71,34 @@
     return reg;
   }
 
+  /**
+   * Montant tel qu'il entre dans le registre. Il ne vient pas toujours de la fiche : une
+   * sauvegarde restaurée, un classeur repris ou une lecture de scan peuvent porter n'importe quoi.
+   *  - hors des nombres finis → 0. « 1e309 » vaut Infinity, et round2 fait déjà passer 1e308 à
+   *    Infinity en multipliant par 100 : une seule pièce rendait tout le journal infini ;
+   *  - négatif → 0. Le sens porte déjà l'entrée ou la sortie ; un montant négatif restauré
+   *    inversait l'écriture en silence (une sortie de −50 augmentait le solde).
+   * Zéro est le bon refus : validate() le signale, la pièce reste visible et corrigeable, au lieu
+   * d'être perdue ou de fausser le solde sans rien dire.
+   */
+  function montantOk(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0;
+    const r = P.round2(n);
+    return Number.isFinite(r) && r > 0 ? r : 0;
+  }
+
+  /** Solde à nouveau : un solde peut être négatif (report d'une erreur), mais jamais infini. */
+  function soldeOk(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0;
+    const r = P.round2(n);
+    return Number.isFinite(r) ? r : 0;
+  }
+
   function normalizePiece(p) {
     if (!p || typeof p !== 'object') return null;
-    const montant = P.round2(Number(p.montant) || 0);
+    const montant = montantOk(p.montant);
     return {
       id: String(p.id || newId()),
       no: p.no == null || p.no === '' || !Number.isFinite(Number(p.no)) ? null : Number(p.no),
@@ -165,12 +190,24 @@
   const DENOMS = BILLETS.concat(PIECES);
   const denomKey = (d) => String(d);
 
+  /**
+   * Nombre de coupures comptées : un entier positif et vraisemblable. Sans borne, « 1e309 » tapé
+   * ou restauré rendait le total du comptage infini, donc l'écart de caisse aussi.
+   * Un million de billets d'une même coupure, c'est déjà bien au-delà d'une caisse d'école.
+   */
+  const QUANTITE_MAX = 1000000;
+  function quantiteOk(v) {
+    const n = Math.floor(Number(v));
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.min(n, QUANTITE_MAX);
+  }
+
   /** Montants d'un comptage { '100': 3, '0.5': 2, … } -> { billets, pieces, total }. */
   function countTotal(counts) {
     counts = counts || {};
     let billets = 0; let pieces = 0;
-    for (const d of BILLETS) billets += d * (Math.max(0, Math.floor(Number(counts[denomKey(d)]))) || 0);
-    for (const d of PIECES) pieces += d * (Math.max(0, Math.floor(Number(counts[denomKey(d)]))) || 0);
+    for (const d of BILLETS) billets += d * quantiteOk(counts[denomKey(d)]);
+    for (const d of PIECES) pieces += d * quantiteOk(counts[denomKey(d)]);
     billets = P.round2(billets); pieces = P.round2(pieces);
     return { billets, pieces, total: P.round2(billets + pieces) };
   }
@@ -179,7 +216,9 @@
     if (!c || typeof c !== 'object') return null;
     const counts = {};
     for (const d of DENOMS) {
-      const n = Math.max(0, Math.floor(Number((c.counts || {})[denomKey(d)]) || 0));
+      // la quantité stockée est bornée comme celle qu'on additionne : sinon le comptage
+      // enregistré ne dirait pas la même chose que son propre total
+      const n = quantiteOk((c.counts || {})[denomKey(d)]);
       if (n) counts[denomKey(d)] = n;
     }
     const t = countTotal(counts);
