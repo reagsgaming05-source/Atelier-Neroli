@@ -270,6 +270,104 @@ function verifierCopie() {
   ok = ok && sep.deplaces && sep.rappelle && sep.renvoie && sep.recopie && sep.depotAvantReglages
     && sep.replie && /compte caisse/.test(sep.resume) && /OCR/.test(sep.resume);
 
+  // Retrouver et contrôler : recherche dans le journal, trous dans la suite des numéros,
+  // écart de caisse qui désigne la pièce, Ctrl+Entrée sur la fiche.
+  const rc = await win.evaluate(async () => {
+    const R = window.CaisseRegistre; const S = window.CaisseSaisie; const reg = S.state.reg;
+    window.CaisseApp.showPanel('panelSaisie');
+    const mk = (no, jour, type, detail, personne, compte, montant, sens) => {
+      const p = R.newPiece(reg);
+      Object.assign(p, { no, date: `${reg.annee}-05-${String(jour).padStart(2, '0')}`, type, detail, personne, compte, montant, sens });
+      p.libelle = R.composeLibelle(p); R.upsertPiece(reg, p);
+    };
+    // le bloc se suffit à lui-même : la suite des numéros part de la dernière pièce en place,
+    // sinon le trou testé serait un saut de deux cents numéros, pas la pièce oubliée du quotidien
+    const base = reg.pieces.reduce((m, p) => (Number.isInteger(p.no) && p.no > m ? p.no : m), 0);
+    const avant = reg.pieces.length;
+    // une caisse d'école a un solde positif : sans solde à nouveau, le journal serait négatif et
+    // aucun comptage ne pourrait l'atteindre. Remis comme avant à la fin du bloc.
+    const ouvertureAvant = reg.opening.amount;
+    const nextAvant = R.nextNo(reg);
+    const els0 = document.getElementById('journalSearch');
+    reg.opening.amount = 3000;
+    mk(base + 1, 4, 'REMBOURSEMENT', 'collation du chœur', 'A. Berger', '51000.3662.50', 29.7, 'credit');
+    mk(base + 3, 9, 'AVANCE', 'camp de Leysin', 'L. Duvernay', '52000.3662.00', 1200, 'credit'); // base+2 sauté
+    await S.saveReg(); S.renderJournal();
+    const lignes = () => Array.from(document.querySelectorAll('#journalBody tr[data-id]')).length;
+    const toutes = lignes();
+    const champ = document.getElementById('journalSearch');
+    const tape = (t) => { champ.value = t; S.renderJournal(); };
+    tape('duvernay');
+    const parNom = lignes();
+    tape(String(base + 3));
+    const parNo = lignes();
+    tape('zzz-introuvable');
+    const rien = lignes();
+    const messageVide = /Aucune pièce ne correspond/.test(document.getElementById('journalBody').textContent);
+    document.querySelector('#journalBody button[data-search-clear]').click();
+    const apresVidage = lignes();
+    // filtre « seulement à vérifier »
+    const casePendantes = document.getElementById('journalOnlyDoubt');
+    casePendantes.checked = true; casePendantes.dispatchEvent(new Event('change'));
+    const pendantes = lignes();
+    casePendantes.checked = false; casePendantes.dispatchEvent(new Event('change'));
+    // trou dans la suite : le 202 manque, et le message doit le situer entre ses voisins
+    const nums = document.getElementById('journalNumbers').textContent;
+    const trouVu = /manquant/.test(nums)
+      && nums.includes(`n° ${base + 2}`) && nums.includes(`n° ${base + 1}`) && nums.includes(`n° ${base + 3}`);
+    // écart de caisse : le journal moins la pièce 203 (1200) → l'écart doit la désigner
+    // Écart de caisse : on met dans la caisse exactement le solde du journal PLUS le montant de
+    // la pièce base+3, pour que l'écart vaille son montant au centime près. Le panneau doit la
+    // nommer, pas seulement dire qu'il manque de l'argent.
+    const auJour = `${reg.annee}-05-31`;
+    window.CaisseApp.showPanel('panelCaisse');
+    document.getElementById('cDate').value = auJour;
+    document.getElementById('cDate').dispatchEvent(new Event('change', { bubbles: true }));
+    const cible = Math.round((R.balanceAt(reg, auJour) + 1200) * 100) / 100;
+    let reste = Math.round(cible * 100);
+    for (const inp of document.querySelectorAll('#cRows input[data-denom]')) {
+      const d = Math.round(Number(inp.dataset.denom) * 100);
+      const n = reste > 0 ? Math.floor(reste / d) : 0;
+      reste -= n * d;
+      inp.value = String(n); inp.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    const cKpis = document.getElementById('cKpis').textContent;
+    const texte = document.getElementById('cPistes').textContent;
+    const designe = texte.includes(`n° ${base + 3}`) && /Où chercher/.test(texte);
+    const resteNul = reste === 0; // la cible devait être exprimable en coupures
+    window.CaisseApp.showPanel('panelSaisie');
+    void cKpis;
+    reg.opening.amount = ouvertureAvant; await S.saveReg(); S.renderJournal();
+    // Ctrl+Entrée sur la fiche enregistre la pièce
+    const avantRaccourci = reg.pieces.length;
+    document.getElementById('pNo').value = '299';
+    document.getElementById('pDate').value = `${reg.annee}-05-20`;
+    document.getElementById('pType').value = 'FRAIS'; document.getElementById('pType').dispatchEvent(new Event('change'));
+    document.getElementById('pPersonne').value = 'S. Monod';
+    document.getElementById('pCompte').value = '51000.3185.00';
+    document.getElementById('pMontant').value = '18.50';
+    document.getElementById('pMontant').dispatchEvent(new Event('input'));
+    document.getElementById('pDetail').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true }));
+    await new Promise((r) => setTimeout(r, 900));
+    const parRaccourci = reg.pieces.length - avantRaccourci;
+    const piece299 = reg.pieces.find((p) => p.no === 299);
+    const montant299 = piece299 ? piece299.montant : null;
+    // le bloc rend le registre tel qu'il l'a trouvé : les blocs suivants comptent dessus
+    for (const no of [base + 1, base + 3, 299]) {
+      const p = reg.pieces.find((x) => x.no === no);
+      if (p) R.removePiece(reg, p.id);
+    }
+    if (els0) els0.value = '';
+    await S.saveReg(); S.renderJournal();
+    const registreRendu = reg.pieces.length === avant && R.nextNo(reg) === nextAvant;
+    return { avant, toutes, parNom, parNo, rien, messageVide, apresVidage, pendantes, trouVu, designe, resteNul, parRaccourci, montant299, registreRendu };
+  });
+  console.log('retrouver & contrôler :', JSON.stringify(rc));
+  ok = ok && rc.parNom === 1 && rc.parNo === 1 && rc.rien === 0 && rc.messageVide
+    && rc.apresVidage === rc.toutes && rc.pendantes < rc.toutes
+    && rc.trouVu && rc.resteNul && rc.designe && rc.parRaccourci === 1 && rc.montant299 === 18.5
+    && rc.registreRendu;
+
   // nouvelle année par le petit formulaire en ligne (window.prompt n'existe pas dans Electron)
   const ny = await win.evaluate(async () => {
     const s = window.CaisseSaisie.state; const y0 = s.reg.annee;

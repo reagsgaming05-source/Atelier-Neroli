@@ -12,7 +12,7 @@
   const S = window.CaisseSaisie;
   const $ = (id) => document.getElementById(id);
   const els = {};
-  for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cTitle', 'countErrors', 'btnCountSave', 'btnCountLoadPrev', 'btnCountNew', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
+  for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cPistes', 'cTitle', 'countErrors', 'btnCountSave', 'btnCountLoadPrev', 'btnCountNew', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
   if (!els.cRows || !S) return;
 
   const state = { editingId: null, shownYear: null, prevYear: { annee: null, last: null } };
@@ -107,7 +107,51 @@
       tile(diffPrev == null ? '' : diffPrev >= 0 ? 'ok' : 'warn', 'Variation depuis le dernier comptage', diffPrev == null ? '–' : signed(diffPrev), prev ? `entre le ${fmtDate(prev.date)} et le ${fmtDate(date)}` : '') +
       tile('', `Solde du journal au ${fmtDate(date)}`, fmtCHF(book), 'solde à nouveau + écritures jusqu\'à cette date') +
       tile(same ? 'ok' : 'err', 'Écart caisse / journal', same ? '0.00 ✓' : signed(ecart), same ? 'la caisse correspond au journal' : ecart > 0 ? 'il y a plus d\'argent en caisse que dans le journal : une entrée non enregistrée ?' : 'il manque de l\'argent par rapport au journal : une sortie non enregistrée ?');
+    renderPistes(reg, ecart, date, same);
   }
+
+  /**
+   * Où chercher quand la caisse ne tombe pas juste. Le montant de l'écart ne dit rien par
+   * lui-même ; mais il vaut souvent, au centime près, le montant d'une pièce du journal, ou son
+   * double — et là on sait quoi aller regarder. Chaque piste renvoie à la pièce dans le journal.
+   *
+   * Ce sont des pistes, pas un verdict : si plusieurs pièces portent le même montant, on le dit
+   * au lieu de désigner la première au hasard.
+   */
+  function renderPistes(reg, ecart, date, same) {
+    if (!els.cPistes) return;
+    if (same) { els.cPistes.innerHTML = ''; return; }
+    const pistes = R.explainGap(reg, ecart, date);
+    const lien = (p) => `<button type="button" class="numlink" data-piste-no="${p.no == null ? '' : p.no}">n° ${p.no == null ? '?' : p.no}</button>`;
+    const parts = [];
+    const sens = pistes.filter((x) => x.genre === 'sens');
+    const montant = pistes.filter((x) => x.genre === 'montant');
+    const numero = pistes.find((x) => x.genre === 'numero');
+    if (sens.length === 1) {
+      const p = sens[0].piece;
+      parts.push(`L'écart vaut exactement <b>deux fois</b> le montant de la pièce ${lien(p)} (${fmtCHF(p.montant)}), du côté qui correspond : elle est peut-être inscrite en <b>${p.sens === 'debit' ? 'entrée (débit)' : 'sortie (crédit)'}</b> alors qu'elle devrait être de l'autre côté.`);
+    } else if (sens.length > 1) {
+      parts.push(`<b>${sens.length} pièces</b> valent la moitié de l'écart du bon côté : l'une d'elles est peut-être inscrite à l'envers (${sens.slice(0, 8).map((x) => lien(x.piece)).join(' ')}).`);
+    }
+    if (montant.length === 1) {
+      const p = montant[0].piece;
+      parts.push(`L'écart vaut exactement le montant de la pièce ${lien(p)} du ${fmtDate(p.date)} (${fmtCHF(p.montant)}) : saisie deux fois, ou argent jamais passé en caisse ?`);
+    } else if (montant.length > 1 && montant.length <= 8) {
+      parts.push(`<b>${montant.length} pièces</b> valent exactement le montant de l'écart : ${montant.map((x) => lien(x.piece)).join(' ')}.`);
+    } else if (montant.length > 8) {
+      parts.push(`<b>${montant.length} pièces</b> du journal valent exactement le montant de l'écart : trop nombreuses pour être une piste.`);
+    }
+    if (numero) {
+      parts.push(`La suite des numéros a <b>${numero.total} trou${numero.total > 1 ? 's' : ''}</b> (n° ${numero.manquants.join(', ')}${numero.total > numero.manquants.length ? '…' : ''}) : une pièce reçue et jamais saisie expliquerait un écart.`);
+    }
+    els.cPistes.innerHTML = parts.length
+      ? `<div class="notice warn" style="margin-top:12px"><b>Où chercher :</b> ${parts.join(' ')}</div>`
+      : '<div class="notice" style="margin-top:12px">Aucune pièce du journal ne correspond à cet écart, et la suite des numéros est complète : l\'écart ne vient pas d\'une seule pièce mal saisie.</div>';
+  }
+  if (els.cPistes) els.cPistes.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-piste-no]');
+    if (b && S.chercherDansJournal) S.chercherDansJournal(b.dataset.pisteNo);
+  });
 
   /* ---------------- historique ---------------- */
   function renderHistory() {

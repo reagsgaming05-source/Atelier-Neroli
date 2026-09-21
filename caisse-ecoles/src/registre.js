@@ -444,6 +444,102 @@
     return { rows, start: reg.opening.amount, debits: P.round2(debits), credits: P.round2(credits), end: solde };
   }
 
+  /**
+   * Recherche libre dans les lignes du journal. Plusieurs mots = toutes les conditions
+   * (« berger camp »).
+   *
+   * Un nombre seul (« 47 ») est le geste le plus courant : c'est un numéro de pièce, et il doit
+   * rendre la pièce 47, pas les quarante lignes dont le compte ou la date contient « 47 ». Un
+   * nombre nu se compare donc en entier — au n°, au montant, ou à un groupe complet du compte ou
+   * de la date. Dès qu'il y a un séparateur (« 12.06.2026 », « 9206.101 ») ou du texte, on
+   * revient à une recherche par morceau, qui est ce qu'on attend en tapant un bout de nom.
+   *
+   * Le solde affiché reste celui de la ligne dans l'année : on filtre l'affichage, jamais le calcul.
+   */
+  function searchRows(rows, query) {
+    const q = String(query == null ? '' : query).trim().toLowerCase();
+    if (!q) return rows || [];
+    const mots = q.split(/\s+/);
+    const groupes = (t) => String(t || '').split(/[^0-9]+/).filter(Boolean);
+    return (rows || []).filter((r) => {
+      const montant = r.debit != null ? r.debit : r.credit;
+      const libelle = String(r.libelle || '').toLowerCase();
+      const compte = String(r.compte || '').toLowerCase();
+      const dates = [String(r.date || ''), P.isoToDisplay(r.date || '') || ''];
+      const montants = montant == null ? [] : [String(montant), Number(montant).toFixed(2)];
+      return mots.every((m) => {
+        if (/^\d+$/.test(m)) {
+          const n = Number(m);
+          if (r.no != null && Number(r.no) === n) return true;
+          if (montant != null && Number(montant) === n) return true;
+          // groupes comparés tels qu'ils sont écrits : « 06 » trouve juin, « 6 » ne le trouve pas
+          // par accident en cherchant la pièce 6, et « 3 » ne ramène pas tout le mois de mars
+          if (groupes(compte).some((g) => g === m)) return true;
+          if (dates.some((d) => groupes(d).some((g) => g === m))) return true;
+          return libelle.includes(m);
+        }
+        return [libelle, compte].concat(dates.map((d) => d.toLowerCase())).concat(montants).some((f) => f.includes(m));
+      });
+    });
+  }
+
+  /**
+   * Suite des numéros de pièces de l'année : trous et doublons. Le n° est le lien avec le papier —
+   * un trou, c'est une pièce comptable qui n'a jamais été saisie, et on ne s'en aperçoit
+   * autrement qu'au comptage suivant ou à la clôture.
+   */
+  function numberChecks(reg) {
+    const nos = (reg && reg.pieces ? reg.pieces : [])
+      .map((p) => p.no).filter((n) => Number.isInteger(n) && n > 0);
+    const counts = new Map();
+    for (const n of nos) counts.set(n, (counts.get(n) || 0) + 1);
+    const doublons = Array.from(counts.entries()).filter(([, c]) => c > 1).map(([n]) => n).sort((a, b) => a - b);
+    const manquants = [];
+    if (nos.length) {
+      // depuis 1 : une année qui commence à 12 a onze pièces d'avance, ce n'est pas un trou
+      for (let n = Math.min.apply(null, nos); n <= Math.max.apply(null, nos); n++) if (!counts.has(n)) manquants.push(n);
+    }
+    const sansNo = (reg && reg.pieces ? reg.pieces : []).filter((p) => !Number.isInteger(p.no) || p.no <= 0).length;
+    // Regroupés en plages : après une reprise de classeur la numérotation peut sauter de 200,
+    // et lister 200 numéros ne dit rien. « 2–200, 202 » se lit d'un coup d'œil.
+    const plages = [];
+    for (const n of manquants) {
+      const last = plages[plages.length - 1];
+      if (last && n === last[1] + 1) last[1] = n; else plages.push([n, n]);
+    }
+    return { manquants, plages, doublons, sansNo, premier: nos.length ? Math.min.apply(null, nos) : null, dernier: nos.length ? Math.max.apply(null, nos) : null };
+  }
+
+  /**
+   * Pourquoi la caisse ne tombe pas juste. L'écart seul ne dit rien ; il vaut souvent le montant
+   * d'une pièce, et alors on sait où regarder :
+   *  - écart = ± le montant d'une pièce du journal → pièce saisie en double, ou argent jamais
+   *    passé en caisse ;
+   *  - écart = ± deux fois le montant d'une pièce → elle est du mauvais côté (débit au lieu de
+   *    crédit) : la corriger déplace le solde du double de son montant ;
+   *  - un n° manquant dans la suite → la pièce papier correspondante n'a pas été saisie.
+   * Ne renvoie que des correspondances au centime près : une piste fausse coûte plus qu'aucune.
+   */
+  function explainGap(reg, ecart, dateISO) {
+    const cents = (v) => Math.round((Number(v) || 0) * 100);
+    const e = cents(ecart);
+    const pistes = [];
+    if (!reg || !reg.pieces || e === 0) return pistes;
+    const jusqua = dateISO || null;
+    const candidates = reg.pieces.filter((p) => p.montant > 0 && (!jusqua || !p.date || p.date <= jusqua));
+    for (const p of candidates) {
+      const m = cents(p.montant);
+      // la pièce compte dans le solde avec son signe : +m au débit, −m au crédit
+      const signe = p.sens === 'debit' ? 1 : -1;
+      // l'enlever ramènerait le solde de −signe×m, donc comblerait un écart de +signe×m… au signe près
+      if (m === Math.abs(e)) pistes.push({ genre: 'montant', piece: p, ecart: ecart });
+      else if (2 * m === Math.abs(e) && signe * e < 0) pistes.push({ genre: 'sens', piece: p, ecart: ecart });
+    }
+    const n = numberChecks(reg);
+    if (n.manquants.length) pistes.push({ genre: 'numero', manquants: n.manquants.slice(0, 10), total: n.manquants.length });
+    return pistes;
+  }
+
   /** Pièces créées depuis des écritures lues sur des PDF scannés (source « scan ») ou reprises d'un classeur Excel (« excel »). */
   function piecesFromEntries(entries, source) {
     return (entries || []).map((e) => {
@@ -625,6 +721,7 @@
     previousCount,
     balanceAt,
     parseAmountInput,
+    searchRows, numberChecks, explainGap,
     piecesFromEntries, mergeEntries,
     serialize,
     parse,

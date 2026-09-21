@@ -17,7 +17,7 @@
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
-    'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'yearBar', 'anneeNotices', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
+    'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'journalSearch', 'journalOnlyDoubt', 'journalCount', 'journalNumbers', 'yearBar', 'anneeNotices', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
     'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
@@ -26,6 +26,8 @@
   const state = { storage: null, reg: null, editingId: null, pending: [], years: [], previewUrl: null, dgeo: { list: [], current: null } };
 
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  /** Accord au pluriel des compteurs affichés en permanence : « 1 pièce », « 5 pièces ». */
+  const plur = (n, mot, pluriel) => `${n} ${n > 1 ? (pluriel || mot + 's') : mot}`;
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = v.toFixed(2).split('.'); return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
   /** Les messages s'affichent sur la page regardée : sinon un message de restauration partait
    *  sur la page de saisie pendant qu'on est dans « L'année & les données ». */
@@ -343,6 +345,15 @@
   }
 
   // enregistrement
+  // Ctrl+Entrée depuis n'importe quel champ de la fiche : trente pièces à la suite, c'est trente
+  // allers-retours vers la souris en moins. Le raccourci existait déjà dans le tableau des
+  // pièces scannées ; la fiche ne l'avait pas.
+  const ficheCard = $('ficheCard');
+  if (ficheCard) ficheCard.addEventListener('keydown', (ev) => {
+    if (!(ev.ctrlKey || ev.metaKey) || ev.key !== 'Enter') return;
+    ev.preventDefault();
+    if (!els.btnPieceSave.disabled) els.btnPieceSave.click();
+  });
   els.btnPieceSave.addEventListener('click', async () => {
     const p = formPiece();
     const errs = R.validate(p, state.reg);
@@ -481,7 +492,7 @@
     const j = R.journal(reg);
     els.yearBar.innerHTML =
       `<span class="y">${reg.annee}</span>` +
-      `<span class="i"><b>${reg.pieces.length}</b> pièce(s)</span>` +
+      `<span class="i"><b>${reg.pieces.length}</b> ${reg.pieces.length > 1 ? 'pièces' : 'pièce'}</span>` +
       `<span class="i">solde à nouveau <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}</span>` +
       `<span class="i">solde actuel <b>${fmtCHF(j.end)}</b></span>` +
       `<span class="i">compte caisse <b>${escapeHtml(reg.caisse)}</b></span>` +
@@ -491,11 +502,63 @@
     if (ev.target.closest('button[data-annee]') && A.showPanel) A.showPanel('panelAnnee');
   });
 
+  /**
+   * Suite des numéros de l'année. Le n° est le lien avec la pièce papier : un trou, c'est une
+   * pièce reçue et jamais saisie, et sans ce contrôle on ne s'en aperçoit qu'au comptage suivant
+   * ou à la clôture. Le même contrôle existait déjà pour un lot scanné, pas pour l'année.
+   *
+   * Dire qu'il manque le n° 47 ne suffit pas : ce qu'on veut savoir, c'est quand il aurait dû
+   * être saisi. On donne donc les dates de ses deux voisins.
+   */
+  function renderNumberChecks() {
+    if (!els.journalNumbers || !state.reg) return;
+    const c = R.numberChecks(state.reg);
+    const parNo = new Map();
+    for (const p of state.reg.pieces) if (Number.isInteger(p.no)) parNo.set(p.no, p);
+    const jour = (n) => { const p = parNo.get(n); return p && p.date ? P.isoToDisplay(p.date) : null; };
+    // le n° manquant situé entre ses voisins présents : « le 47, entre le 46 (03.03) et le 48 (09.03) »
+    const situer = (n) => {
+      let av = n - 1; while (av >= c.premier && !parNo.has(av)) av--;
+      let ap = n + 1; while (ap <= c.dernier && !parNo.has(ap)) ap++;
+      const bouts = [];
+      if (parNo.has(av) && jour(av)) bouts.push(`après le n° ${av} du ${jour(av)}`);
+      if (parNo.has(ap) && jour(ap)) bouts.push(`avant le n° ${ap} du ${jour(ap)}`);
+      return `<b>n° ${n}</b>${bouts.length ? ` (${bouts.join(', ')})` : ''}`;
+    };
+    const chip = (n) => `<button type="button" class="numlink" data-search-nums="${n}" title="Chercher le n° ${n} dans le journal">${n}</button>`;
+    const parts = [];
+    if (c.plages.length) {
+      // un trou d'un seul numéro est une pièce manquante : on la situe. Une plage large vient
+      // d'une reprise ou d'un changement de numérotation : on la nomme sans prétendre la situer.
+      const dire = ([a, b]) => (a === b ? situer(a) : `<b>n° ${a} à ${b}</b> (${b - a + 1})`);
+      const montres = c.plages.slice(0, 5).map(dire).join(' · ');
+      const n = c.manquants.length;
+      parts.push(`<b>${n} numéro${n > 1 ? 's' : ''} manquant${n > 1 ? 's' : ''}</b> dans la suite ${c.premier}–${c.dernier} : ${montres}` +
+        `${c.plages.length > 5 ? ` et ${c.plages.length - 5} autres intervalles` : ''}. Une pièce reçue et pas encore saisie ?`);
+    }
+    if (c.doublons.length) parts.push(`<b>Numéro${c.doublons.length > 1 ? 's' : ''} employé${c.doublons.length > 1 ? 's' : ''} deux fois</b> : ${c.doublons.slice(0, 25).map(chip).join(' ')}.`);
+    if (c.sansNo) parts.push(`<b>${c.sansNo} pièce${c.sansNo > 1 ? 's' : ''} sans numéro.</b>`);
+    els.journalNumbers.innerHTML = parts.length ? `<div class="notice warn">${parts.join(' ')}</div>` : '';
+  }
+
   function renderJournal() {
     renderYearBar();
     renderRegFields();
     const j = R.journal(state.reg);
-    els.journalBody.innerHTML = j.rows.map((r) => {
+    // On filtre l'affichage, jamais le calcul : le solde de chaque ligne reste celui de l'année,
+    // et les totaux au-dessus restent ceux de l'année entière.
+    const q = els.journalSearch ? els.journalSearch.value : '';
+    const doutesSeuls = !!(els.journalOnlyDoubt && els.journalOnlyDoubt.checked);
+    let vues = R.searchRows(j.rows, q);
+    if (doutesSeuls) {
+      const enAttente = new Set(R.pendingPieces(state.reg).map((p) => p.id));
+      vues = vues.filter((r) => enAttente.has(r.id));
+    }
+    const filtre = !!(String(q).trim() || doutesSeuls);
+    if (els.journalCount) {
+      els.journalCount.textContent = filtre ? `${plur(vues.length, 'ligne')} sur ${j.rows.length}` : '';
+    }
+    els.journalBody.innerHTML = vues.map((r) => {
       const p = state.reg.pieces.find((x) => x.id === r.id);
       const ico = (id) => `<svg class="ico"><use href="#i-${id}"/></svg>`;
       const classes = [state.editingId === r.id ? 'selected' : '', p && p.aVerifier ? 'a-verifier' : ''].filter(Boolean).join(' ');
@@ -504,17 +567,20 @@
         `<td class="num">${r.debit != null ? fmtCHF(r.debit) : ''}</td><td class="num">${r.credit != null ? fmtCHF(r.credit) : ''}</td><td class="num solde">${fmtCHF(r.solde)}</td>` +
         `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.aVerifier ? ` <span class="tag warn" title="Lue sur un scan, pas encore vérifiée${p.doutes && p.doutes.length ? ' :\n- ' + p.doutes.join('\n- ').replace(/"/g, '') : ''}">à vérifier</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
         `<td class="acts">${p && p.aVerifier ? `<button type="button" class="small ghost ok" data-verif="${r.id}" title="Cette lecture est juste : marquer la pièce comme vérifiée">${ico('check')}</button>` : ''}<button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
-    }).join('') || '<tr><td colspan="9" class="legend">Aucune pièce dans ce registre. Remplissez la fiche à gauche : chaque pièce enregistrée apparaît ici avec le solde cumulé.</td></tr>';
+    }).join('') || `<tr><td colspan="9" class="legend">${filtre
+      ? `Aucune pièce ne correspond${String(q).trim() ? ` à « ${escapeHtml(String(q).trim())} »` : ''}. <button type="button" class="small ghost" data-search-clear="1">Tout afficher</button>`
+      : 'Aucune pièce dans ce registre. Remplissez la fiche à gauche : chaque pièce enregistrée apparaît ici avec le solde cumulé.'}</td></tr>`;
     els.journalTotals.innerHTML = `<div class="t"><div class="l">Solde à nouveau</div><div class="v">${fmtCHF(j.start)}</div></div>` +
       `<div class="t"><div class="l">Débits (entrées)</div><div class="v">+ ${fmtCHF(j.debits)}</div></div>` +
       `<div class="t"><div class="l">Crédits (sorties)</div><div class="v">− ${fmtCHF(j.credits)}</div></div>` +
       `<div class="t end"><div class="l">Solde final</div><div class="v">${fmtCHF(j.end)}</div></div>` +
       `<div class="t"><div class="l">Pièces</div><div class="v">${state.reg.pieces.length}</div></div>`;
+    renderNumberChecks();
     // pièces lues sur un scan et pas encore regardées : elles comptent dans le solde, il faut le dire
     const aVerifier = R.pendingPieces(state.reg);
     if (els.journalPending) {
       els.journalPending.innerHTML = aVerifier.length
-        ? `<div class="notice warn"><b>${aVerifier.length}</b> pièce(s) lues sur un scan attendent d'être vérifiées (n° ${aVerifier.map((p) => (p.no == null ? '?' : p.no)).slice(0, 25).join(', ')}${aVerifier.length > 25 ? '…' : ''}). ` +
+        ? `<div class="notice warn"><b>${aVerifier.length}</b> ${aVerifier.length > 1 ? 'pièces lues sur un scan attendent' : 'pièce lue sur un scan attend'} d'être vérifiée${aVerifier.length > 1 ? 's' : ''} (n° ${aVerifier.map((p) => (p.no == null ? '?' : p.no)).slice(0, 25).join(', ')}${aVerifier.length > 25 ? '…' : ''}). ` +
           `Elles sont déjà comptées dans le solde. Ouvrez-en une pour la corriger, ou confirmez la lecture d'un coup : ` +
           `<button type="button" class="small" data-verif-all="1">Tout marquer comme vérifié</button></div>`
         : '';
@@ -588,9 +654,47 @@
     notice('ok', `${restent.length} pièce(s) marquée(s) comme vérifiée(s).`);
   });
 
+  /* ---------------- Chercher dans le journal ---------------- */
+  // Le registre de référence porte 267 écritures pour une année : retrouver une pièce est le geste
+  // le plus fréquent, et il se faisait à la molette.
+  let rechercheDifferee = null;
+  function relancerRecherche() {
+    clearTimeout(rechercheDifferee);
+    rechercheDifferee = setTimeout(renderJournal, 120); // une frappe rapide ne redessine pas 267 lignes à chaque lettre
+  }
+  if (els.journalSearch) {
+    els.journalSearch.addEventListener('input', relancerRecherche);
+    els.journalSearch.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && els.journalSearch.value) { ev.stopPropagation(); els.journalSearch.value = ''; renderJournal(); }
+    });
+  }
+  if (els.journalOnlyDoubt) els.journalOnlyDoubt.addEventListener('change', renderJournal);
+  /** Poser une recherche depuis ailleurs (un n° en double, une piste d'écart de caisse). */
+  function chercherDansJournal(texte) {
+    if (!els.journalSearch) return;
+    els.journalSearch.value = String(texte == null ? '' : texte);
+    if (els.journalOnlyDoubt) els.journalOnlyDoubt.checked = false;
+    if (A.showPanel) A.showPanel('panelSaisie');
+    renderJournal();
+    els.journalSearch.focus();
+    els.journalSearch.select();
+    const carte = $('journalCard');
+    if (carte) carte.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  if (els.journalNumbers) els.journalNumbers.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-search-nums]');
+    if (b) chercherDansJournal(b.dataset.searchNums);
+  });
+
   els.journalBody.addEventListener('click', async (ev) => {
     const b = ev.target.closest('button');
     if (!b) return;
+    if (b.dataset.searchClear) {
+      if (els.journalSearch) els.journalSearch.value = '';
+      if (els.journalOnlyDoubt) els.journalOnlyDoubt.checked = false;
+      renderJournal();
+      return;
+    }
     if (b.dataset.verif) {
       const p = state.reg.pieces.find((x) => x.id === b.dataset.verif);
       if (!p) return;
@@ -841,6 +945,6 @@
     refreshLibelle();
   });
 
-  window.CaisseSaisie = { state, init, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto };
+  window.CaisseSaisie = { state, init, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal };
   init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
 })();

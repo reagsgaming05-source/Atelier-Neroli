@@ -129,11 +129,20 @@ décompte → pièce), puis publication du zip.
    justificatifs selon les deux cases sous les boutons ; le réglage est mémorisé.
    Pour un **DECOMPTE**, la liste des objets laisse place à deux choix explicites : *Course
    d'école* ou *Camp*.
-4. **Fichier Excel de l'année** : même format que le classeur ; **PDF des pièces** : une page
+4. **Retrouver et contrôler.** Au-dessus du journal, un champ cherche une pièce par n°, nom,
+   objet, compte, date ou montant (`berger camp` = les deux conditions ; `47` = la pièce 47, pas
+   les lignes dont le compte contient 47 ; `12.06.2026` = ce jour-là). La case *Seulement les
+   pièces à vérifier* isole les lectures de scan pas encore confirmées. On filtre l'affichage,
+   jamais le calcul : le solde de chaque ligne reste celui de l'année.
+   Sous la recherche, la **suite des numéros** est contrôlée en permanence : un n° sauté est une
+   pièce reçue et jamais saisie, et le message la situe entre ses voisins (« n° 3, après le n° 2
+   du 07.03, avant le n° 4 du 12.03 »). Les numéros employés deux fois sont cliquables.
+   Raccourci : **Ctrl+Entrée** depuis n'importe quel champ de la fiche enregistre la pièce.
+5. **Fichier Excel de l'année** : même format que le classeur ; **PDF des pièces** : une page
    « PIÈCE COMPTABLE » par pièce (relisible par l'application) suivie de ses justificatifs, pour
    toutes les pièces ou depuis un n°. Chaque ligne du journal a aussi ses boutons *Modifier*, *PDF*
    et *×*.
-5. **Une seule liste : le journal.** Les pièces lues sur un scan entrent dans le journal de
+6. **Une seule liste : le journal.** Les pièces lues sur un scan entrent dans le journal de
    l'année **dès la lecture**, marquées *à vérifier* (fond orange, étiquette dans la colonne de
    droite), avec l'image de la pièce jointe en justificatif. Elles comptent tout de suite dans le
    solde — un bandeau sous le journal dit combien attendent d'être regardées. Quand l'OCR finit ou
@@ -149,9 +158,9 @@ décompte → pièce), puis publication du zip.
    registre est vide, numérotation qui continue, pièces marquées *Excel*), et la saisie reprend
    dans la fiche. Le bouton *Reprendre ces écritures dans le registre* de l'espace des pièces
    scannées fait la même chose depuis un classeur chargé là.
-6. Version portable : un décompte terminé dans l'onglet **Décompte DGEO** apparaît au-dessus de
+7. Version portable : un décompte terminé dans l'onglet **Décompte DGEO** apparaît au-dessus de
    la fiche ; *Créer la pièce* la pré-remplit (voir plus haut, *Pont entre les deux onglets*).
-7. **Récapitulatif des décomptes** : dans l'outil *Décompte DGEO* (sélecteur en tête de la barre
+8. **Récapitulatif des décomptes** : dans l'outil *Décompte DGEO* (sélecteur en tête de la barre
    latérale), espace *Récapitulatif*. Les pièces DECOMPTE de l'année du registre ouvert, filtrées
    (courses d'école, camps ou les deux), à cocher ; *Générer le récapitulatif (PDF)* produit un
    document avec le n° de chaque décompte, la date, la description, l'enseignant-e, la référence
@@ -166,7 +175,15 @@ le **dernier solde compté** avec sa date (le comptage précédent, au besoin ce
 d'avant), le **nouveau solde compté** avec sa date, la variation entre les deux, le **solde du
 journal** au jour du comptage (solde à nouveau + écritures datées jusqu'à ce jour) et l'**écart
 caisse / journal** : 0.00 quand la caisse correspond, sinon le montant qui manque ou qui est en
-trop, ce qui signale une pièce non enregistrée ou un montant faux. *Enregistrer le comptage* le
+trop, ce qui signale une pièce non enregistrée ou un montant faux.
+
+Quand l'écart n'est pas nul, un encadré **Où chercher** le confronte au journal : l'écart vaut
+souvent, au centime près, le montant d'une pièce (saisie deux fois, ou argent jamais passé en
+caisse) ou son **double** du côté qui correspond (pièce inscrite en entrée au lieu de sortie, ou
+l'inverse : la corriger déplace le solde de deux fois son montant). Le n° est cliquable et ouvre
+la pièce dans le journal. Si plusieurs pièces portent le même montant, c'est dit au lieu d'en
+désigner une au hasard ; si rien ne correspond et que la suite des numéros est complète, c'est dit
+aussi — l'écart ne vient alors pas d'une seule pièce mal saisie. *Enregistrer le comptage* le
 range dans l'historique de l'année (date, billets, pièces, total, solde du journal, écart,
 remarque), conservé dans `registre.json` avec les pièces ; chaque comptage peut être repris pour
 correction ou supprimé. *Reprendre le dernier comptage* pré-remplit les quantités du comptage
@@ -180,19 +197,21 @@ lancé :
 1. Copier `dist/Caisse-ecoles.html` sur le PC (clé USB, courriel, téléchargement depuis GitHub).
 2. Double-cliquer dessus : il s'ouvre dans le navigateur (Edge, Chrome, Firefox). Rien n'est
    envoyé sur internet, tout se passe dans le navigateur ; l'application fonctionne hors ligne.
-3. **Étape 1 – Base des écritures** : par défaut *Registre de l'année* (celui de la saisie des
+3. **Étape 1 – Vos pièces scannées (PDF)** : glisser un ou plusieurs PDF de pièces (ex.
+   `Pce 01 à 33.pdf`, `Pce 34 à 60.pdf`). C'est la première chose de l'écran. Les fichiers sont
+   classés par nom (ordre naturel) et listés avec leur nombre de pièces ; on peut les
+   monter/descendre, en retirer, en ajouter plus tard sans perdre les corrections déjà faites.
+   Les PDF doivent avoir été scannés avec reconnaissance de texte (PDF « consultable »), ce que
+   fait le copieur.
+4. **Réglages de la lecture** (volet replié sous la zone de dépôt, avec un résumé d'une ligne de
+   son état) : par défaut *Registre de l'année* (celui de la saisie des
    pièces : les pièces scannées viennent à la suite, et le fichier Excel produit contient tout).
    *Classeur Excel existant* ajoute les pièces à la suite d'un classeur en cours (et permet de
    reprendre ses écritures dans le registre) ; *Nouveau classeur* demande la date et le montant du
    solde à nouveau (le solde final du dernier fichier généré est proposé d'un clic). **Aucun
    classeur n'est nécessaire pour lire les pièces** : la base de référence est intégrée à
    l'application. Vérifier le n° du compte caisse (`9100.104` par défaut).
-4. **Étape 2 – PDF** : glisser un ou plusieurs PDF de pièces (ex. `Pce 01 à 33.pdf`,
-   `Pce 34 à 60.pdf`). Les fichiers sont classés par nom (ordre naturel) et listés avec leur
-   nombre de pièces ; on peut les monter/descendre, en retirer, en ajouter plus tard sans perdre
-   les corrections déjà faites. Les PDF doivent avoir été scannés avec reconnaissance de texte
-   (PDF « consultable »), ce que fait le copieur.
-5. **Étape 3 – Vérification** : seules les lignes ⚠ **orange** demandent un contrôle ; les lignes
+5. **Étape 2 – Vérification** : seules les lignes ⚠ **orange** demandent un contrôle ; les lignes
    ✓ vertes ont été lues sans ambiguïté. Dans une ligne orange, **la cellule en doute est colorée**
    (numéro, date, compte, libellé ou montant), la raison s'affiche sous la ligne et au survol.
    Les cellules **bleues** signalent une correction automatique (mot, nom ou compte caisse mal lu).
@@ -202,7 +221,7 @@ lancé :
    tous ses doutes sont traités. Trois aides pour aller vite : la case *Afficher seulement les
    lignes à vérifier*, le bouton *✓ Vérifié → suivante*, et le raccourci **Ctrl + Entrée** qui
    valide la ligne affichée et saute à la suivante. On peut aussi ajouter une écriture manuelle.
-6. **Étape 4 – Contrôle et fichier Excel** : le tableau de contrôle récapitule le lot (suite des
+6. **Étape 3 – Contrôle et fichier Excel** : le tableau de contrôle récapitule le lot (suite des
    numéros, doublons, lignes à vérifier, pièces jamais affichées, totaux). Inscrire le **solde réel
    compté en caisse** : l'application affiche l'écart avec le solde calculé, nomme les pièces qui
    l'expliquent exactement (sens inversé, pièce comptée deux fois) et propose la correction.

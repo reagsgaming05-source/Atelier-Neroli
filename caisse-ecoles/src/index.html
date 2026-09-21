@@ -145,7 +145,7 @@
       </div>
       <div id="ficheErrors"></div>
       <div class="toolbar">
-        <button type="button" class="primary" id="btnPieceSave"><svg class="ico"><use href="#i-save"/></svg> Enregistrer la pièce → journal</button>
+        <button type="button" class="primary" id="btnPieceSave" title="Ctrl+Entrée depuis n'importe quel champ de la fiche"><svg class="ico"><use href="#i-save"/></svg> Enregistrer la pièce → journal <span class="kbd">Ctrl+↵</span></button>
         <button type="button" id="btnPiecePreview"><svg class="ico"><use href="#i-eye"/></svg> Aperçu de la fiche</button>
         <span class="spacer"></span>
         <button type="button" class="ghost" id="btnPieceNew"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle pièce</button>
@@ -166,6 +166,13 @@
     <section class="card" id="journalCard">
       <h2><svg class="ico"><use href="#i-book"/></svg> Journal <span id="journalYear"></span></h2>
       <div class="totals" id="journalTotals"></div>
+      <div class="jsearch">
+        <svg class="ico"><use href="#i-search"/></svg>
+        <input type="search" id="journalSearch" placeholder="Chercher une pièce : n°, nom, objet, compte, date, montant…" autocomplete="off" aria-label="Chercher dans le journal">
+        <label class="check legend"><input type="checkbox" id="journalOnlyDoubt"> Seulement les pièces à vérifier</label>
+        <span class="legend" id="journalCount"></span>
+      </div>
+      <div id="journalNumbers"></div>
       <div id="journalPending"></div>
       <div class="table-wrap">
         <table class="entries journal" id="journalTable">
@@ -383,6 +390,7 @@
     <section class="card" id="countSoldes">
       <h2><svg class="ico"><use href="#i-wallet"/></svg> Soldes</h2>
       <div class="totals kpi-col" id="cKpis"></div>
+      <div id="cPistes"></div>
       <div class="hint" style="margin-top:12px">Le <b>dernier solde compté</b> est le comptage précédent enregistré (l'année précédente si besoin). Le <b>solde du journal</b> est le solde à nouveau plus toutes les écritures datées jusqu'au jour du comptage : s'il y a un écart, une pièce manque dans le journal ou un montant est faux.</div>
     </section>
   </div>
