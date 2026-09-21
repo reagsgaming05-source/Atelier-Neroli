@@ -17,7 +17,7 @@
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
-    'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
+    'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'yearBar', 'anneeNotices', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
     'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
@@ -27,11 +27,18 @@
 
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = v.toFixed(2).split('.'); return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
+  /** Les messages s'affichent sur la page regardée : sinon un message de restauration partait
+   *  sur la page de saisie pendant qu'on est dans « L'année & les données ». */
+  function noticeBox() {
+    const annee = document.getElementById('panelAnnee');
+    if (els.anneeNotices && annee && !annee.classList.contains('hidden')) return els.anneeNotices;
+    return els.regNotices;
+  }
   function notice(kind, html, opts) {
     const div = document.createElement('div');
     div.className = `notice ${kind}`;
     div.innerHTML = html;
-    els.regNotices.prepend(div);
+    noticeBox().prepend(div);
     // opts.keep : message qui contient un bouton à cliquer (fiche PDF bloquée) — il reste affiché
     if (!(opts && opts.keep)) setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
   }
@@ -160,7 +167,7 @@
     }
     state.reg.opening.amount = v; await saveReg(); renderJournal();
   });
-  els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); });
+  els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); renderYearBar(); });
   if (els.btnRegOpenDir) els.btnRegOpenDir.addEventListener('click', () => { if (window.CaisseFiles) window.CaisseFiles.openDir(); });
 
   /* ---------------- Fiche ---------------- */
@@ -454,7 +461,39 @@
   }
 
   /* ---------------- Journal ---------------- */
+  /** Les réglages de l'année vivent maintenant sur un autre écran que le journal : ils doivent
+   *  être recopiés du registre à chaque changement, sinon on y lit une valeur périmée — et un
+   *  simple passage dans le champ la réécrirait dans le registre. Le champ qu'on est en train de
+   *  remplir est laissé tranquille. */
+  function renderRegFields() {
+    const reg = state.reg;
+    if (!reg || !els.regOpeningDate) return;
+    const busy = document.activeElement;
+    if (busy !== els.regOpeningDate) els.regOpeningDate.value = reg.opening.date || '';
+    if (busy !== els.regOpeningAmount) els.regOpeningAmount.value = reg.opening.amount;
+    if (busy !== els.regCaisse) els.regCaisse.value = reg.caisse;
+  }
+
+  /** Bandeau d'une ligne rappelant l'année ouverte : les réglages, eux, ont leur propre espace. */
+  function renderYearBar() {
+    if (!els.yearBar || !state.reg) return;
+    const reg = state.reg;
+    const j = R.journal(reg);
+    els.yearBar.innerHTML =
+      `<span class="y">${reg.annee}</span>` +
+      `<span class="i"><b>${reg.pieces.length}</b> pièce(s)</span>` +
+      `<span class="i">solde à nouveau <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}</span>` +
+      `<span class="i">solde actuel <b>${fmtCHF(j.end)}</b></span>` +
+      `<span class="i">compte caisse <b>${escapeHtml(reg.caisse)}</b></span>` +
+      `<button type="button" class="small ghost" data-annee="1">Changer d'année, solde à nouveau…</button>`;
+  }
+  if (els.yearBar) els.yearBar.addEventListener('click', (ev) => {
+    if (ev.target.closest('button[data-annee]') && A.showPanel) A.showPanel('panelAnnee');
+  });
+
   function renderJournal() {
+    renderYearBar();
+    renderRegFields();
     const j = R.journal(state.reg);
     els.journalBody.innerHTML = j.rows.map((r) => {
       const p = state.reg.pieces.find((x) => x.id === r.id);
@@ -657,8 +696,6 @@
     const includeOther = otherYears > 0 && confirm(`${otherYears} écriture(s) du classeur ne sont pas de l'année ${reg.annee} du registre ouvert. Les reprendre quand même ?`);
     const r = R.mergeEntries(reg, data.entries, { source: 'excel', opening: data.opening, otherYears: includeOther });
     await saveReg();
-    els.regOpeningDate.value = reg.opening.date || '';
-    els.regOpeningAmount.value = reg.opening.amount;
     renderJournal();
     newPiece();
     if (A && A.learnEntries) A.learnEntries(data.entries);

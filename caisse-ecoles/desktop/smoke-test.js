@@ -22,8 +22,23 @@ async function findPage(app, pred, timeoutMs) {
   }
 }
 
+// Electron charge desktop/app/Caisse-ecoles.html, une copie produite par prepare-app.js. Si on
+// oublie de la refaire après une modification de src/, le test passe sur l'ancienne application
+// et ne prouve rien : on s'arrête plutôt que de rendre un vert trompeur.
+function verifierCopie() {
+  const fs = require('fs');
+  const copie = path.join(__dirname, 'app', 'Caisse-ecoles.html');
+  const source = path.join(__dirname, '..', 'dist', 'Caisse-ecoles.html');
+  if (!fs.existsSync(copie)) throw new Error('desktop/app/Caisse-ecoles.html manque : lancez `node desktop/prepare-app.js`.');
+  if (!fs.existsSync(source)) return; // construite ailleurs (paquet, CI) : rien à comparer
+  if (fs.statSync(source).mtimeMs > fs.statSync(copie).mtimeMs) {
+    throw new Error('desktop/app/Caisse-ecoles.html est plus ancienne que dist/Caisse-ecoles.html : lancez `npm run build:public && node desktop/prepare-app.js`.');
+  }
+}
+
 (async () => {
   const exe = process.argv[2];
+  if (!exe) verifierCopie();
   const app = await electron.launch(exe ? { executablePath: exe, args: [] } : { args: [path.join(__dirname)] });
   const shell = await findPage(app, (u) => /shell\.html/.test(u));
   const win = await findPage(app, (u) => /Caisse-ecoles\.html/.test(u));
@@ -218,6 +233,42 @@ async function findPage(app, pred, timeoutMs) {
   });
   console.log('décomptes :', JSON.stringify(recapInfo));
   ok = ok && recapInfo.kindShown && recapInfo.kinds.join('|') === "Course d'école|Camp" && recapInfo.inDgeoTool && recapInfo.rows >= 1 && recapInfo.pages >= 1 && recapInfo.total >= 143.95;
+
+  // Séparation des espaces : ce qu'on règle une fois par année (année, solde à nouveau, compte
+  // caisse, reprise d'un classeur, sauvegardes) a quitté l'écran de saisie pour « L'année & les
+  // données » ; la saisie n'en garde qu'un bandeau de rappel, et les réglages de lecture des
+  // pièces scannées sont repliés sous la zone de dépôt.
+  const sep = await win.evaluate(async () => {
+    const dans = (panneau, id) => !!document.getElementById(panneau).querySelector('#' + id);
+    const S = window.CaisseSaisie;
+    // les réglages ne sont plus sur l'écran de saisie, mais sur le leur
+    const deplaces = ['regYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'btnRegExcelIn', 'btnRegExport', 'btnRegImport']
+      .every((id) => dans('panelAnnee', id) && !dans('panelSaisie', id));
+    // la saisie garde un bandeau d'une ligne qui rappelle l'essentiel, et y renvoie
+    const bar = document.getElementById('yearBar');
+    const rappelle = /solde à nouveau/.test(bar.textContent) && /compte caisse/.test(bar.textContent)
+      && bar.textContent.includes(String(S.state.reg.annee));
+    bar.querySelector('button[data-annee]').click();
+    const renvoie = !document.getElementById('panelAnnee').classList.contains('hidden')
+      && document.getElementById('panelSaisie').classList.contains('hidden');
+    // le solde à nouveau changé ailleurs se relit sur l'écran des réglages (pas de valeur périmée)
+    S.state.reg.opening.amount = 1234.5; await S.saveReg(); S.renderJournal();
+    const recopie = document.getElementById('regOpeningAmount').value === '1234.5';
+    S.state.reg.opening.amount = 0; await S.saveReg(); S.renderJournal();
+    // pièces scannées : la zone de dépôt d'abord, les réglages repliés avec leur résumé
+    window.CaisseApp.showPanel('panelScan');
+    const scan = document.getElementById('panelScan');
+    const noeuds = Array.from(scan.children);
+    const depotAvantReglages = noeuds.indexOf(document.getElementById('step2')) < noeuds.indexOf(document.getElementById('step1'));
+    const step1 = document.getElementById('step1');
+    const replie = step1.tagName === 'DETAILS' && !step1.open;
+    const resume = document.getElementById('step1Resume').textContent;
+    window.CaisseApp.showPanel('panelSaisie');
+    return { deplaces, rappelle, renvoie, recopie, depotAvantReglages, replie, resume };
+  });
+  console.log('espaces séparés :', JSON.stringify(sep));
+  ok = ok && sep.deplaces && sep.rappelle && sep.renvoie && sep.recopie && sep.depotAvantReglages
+    && sep.replie && /compte caisse/.test(sep.resume) && /OCR/.test(sep.resume);
 
   // nouvelle année par le petit formulaire en ligne (window.prompt n'existe pas dans Electron)
   const ny = await win.evaluate(async () => {

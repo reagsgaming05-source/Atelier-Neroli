@@ -70,6 +70,7 @@
     existingBox: $('existingBox'),
     registreBox: $('registreBox'),
     registreInfo: $('registreInfo'),
+    step1Resume: $('step1Resume'),
     openingHint: $('openingHint'),
     vocabInfo: $('vocabInfo'),
     xlsxFile: $('xlsxFile'),
@@ -276,10 +277,11 @@
   const baseLabel = () => (state.mode === 'registre' ? 'le registre' : 'le classeur');
   const numNo = (e) => (e.no == null || e.no === '' ? NaN : Number(e.no));
 
-  /* ---------------- Étape 1 : base des écritures ---------------- */
-  // Par défaut, le registre de l'année : les pièces scannées viennent à la suite de celles déjà
-  // saisies (ou reprises d'un classeur), et « Ajouter au registre » les y verse. Une année commencée
-  // à l'ancienne se reprend par « Reprendre ces écritures dans le registre » (classeur existant).
+  /* ---------------- Réglages de la lecture : base des écritures ---------------- */
+  // Par défaut, le registre de l'année : les pièces lues y entrent toutes seules, à la suite de
+  // celles déjà saisies. Sur une autre base (nouveau classeur, classeur existant), il faut un geste
+  // explicite : « Verser au registre de l'année ». Une année commencée à l'ancienne se reprend par
+  // « Reprendre ces écritures dans le registre » (classeur existant).
   function renderToRegisterButton() {
     const b = document.getElementById('btnToRegister');
     if (b) b.classList.toggle('hidden', state.mode === 'registre');
@@ -294,11 +296,23 @@
     if (els.registreBox) els.registreBox.classList.toggle('hidden', mode !== 'registre');
     try { localStorage.setItem('caisse.scan.base', mode); } catch (e) { /* ignore */ }
     renderRegistreInfo();
-    renderToRegisterButton(); // « Ajouter au registre » n'a de sens que si le registre n'est pas déjà la base
+    renderStep1Resume();
+    renderToRegisterButton(); // « Verser au registre » n'a de sens que si le registre n'est pas déjà la base
     if (state.pages.length) reparse();
     refreshAll();
   }
   els.modeRadios.forEach((r) => r.addEventListener('change', () => applyMode(document.querySelector('input[name="mode"]:checked').value)));
+
+  // Les réglages de lecture sont repliés : le titre doit dire en une ligne ce qu'ils valent
+  // aujourd'hui, pour qu'on n'ait pas à les déplier juste pour vérifier.
+  function renderStep1Resume() {
+    if (!els.step1Resume) return;
+    const base = state.mode === 'new' ? 'nouveau classeur'
+      : state.mode === 'existing' ? 'classeur Excel existant'
+      : "registre de l'année";
+    const ocr = els.optOcr && els.optOcr.checked ? 'OCR activé' : 'OCR désactivé';
+    els.step1Resume.textContent = `— ${base}, compte caisse ${getCaisse()}, ${ocr}`;
+  }
 
   function renderRegistreInfo() {
     if (!els.registreInfo) return;
@@ -368,10 +382,11 @@
   els.openingAmount.addEventListener('input', refreshAll);
   els.caisse.addEventListener('change', () => {
     try { localStorage.setItem('caisse.compte', els.caisse.value); } catch (e) { /* ignore */ }
+    renderStep1Resume();
     if (state.pages.length) { reparse(); refreshAll(); }
   });
 
-  /* ---------------- Étape 2 : PDF (plusieurs fichiers) ---------------- */
+  /* ---------------- Étape 1 : PDF (plusieurs fichiers) ---------------- */
   els.btnPickPdf.addEventListener('click', () => els.pdfFile.click());
   els.pdfFile.addEventListener('change', () => {
     const files = Array.from(els.pdfFile.files || []);
@@ -438,7 +453,7 @@
     if (state.pages.length) {
       const detected = P.detectCaisseAccount(state.pages);
       if (detected && detected !== getCaisse()) {
-        notice(els.pdfNotices, 'warn', `Le compte le plus fréquent sur les pièces est <b>${escapeHtml(detected)}</b>, alors que le compte caisse réglé est <b>${escapeHtml(getCaisse())}</b>. Vérifiez le réglage à l'étape 1.`);
+        notice(els.pdfNotices, 'warn', `Le compte le plus fréquent sur les pièces est <b>${escapeHtml(detected)}</b>, alors que le compte caisse réglé est <b>${escapeHtml(getCaisse())}</b>. Vérifiez-le dans « Réglages de la lecture ».`);
       }
     }
     reparse();
@@ -958,12 +973,13 @@
     }
     els.optOcr.addEventListener('change', () => {
       try { localStorage.setItem('caisse.ocr', els.optOcr.checked ? '1' : '0'); } catch (e) { /* ignore */ }
+      renderStep1Resume();
       if (els.optOcr.checked && state.pages.length) startCrossReading();
       else if (!els.optOcr.checked) { state.ocr.run++; state.ocr.status = 'off'; setOcrStatus(); }
     });
   }
 
-  /* ---------------- Étape 3 : tableau ---------------- */
+  /* ---------------- Étape 2 : tableau ---------------- */
   function rowIssues(e) {
     const errs = [];
     if (!e.date) errs.push('Date manquante');
@@ -1714,7 +1730,7 @@
     w.document.close();
   });
 
-  /* ---------------- Étape 4 : totaux + Excel ---------------- */
+  /* ---------------- Étape 3 : totaux + Excel ---------------- */
   /**
    * Écritures du lot triées par n°, sans celles déjà présentes dans la base (même n° et même
    * montant, ou ligne entière identique quand le n° n'a pas pu être lu).
@@ -1745,7 +1761,7 @@
 
   /**
    * Contrôles du lot : séquence des numéros, doublons, lignes non contrôlées.
-   * Sert à la fois au tableau de l'étape 4 et au refus de générer un fichier douteux.
+   * Sert à la fois au tableau de l'étape 3 et au refus de générer un fichier douteux.
    */
   function lotChecks() {
     const news = state.entries;

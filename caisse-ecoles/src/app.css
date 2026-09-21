@@ -142,6 +142,30 @@ a { color: var(--accent); }
   display: inline-flex; align-items: center; justify-content: center; flex: none;
   width: 26px; height: 26px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 650;
 }
+/* Carte repliable : un réglage qu'on ouvre quand on en a besoin, replié le reste du temps,
+   pour que l'action principale de la page reste la première chose qu'on voit. */
+.card.fold { padding: 0; }
+.card.fold > summary {
+  list-style: none; cursor: pointer; padding: 14px 22px; margin: 0;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 15px; font-weight: 650; letter-spacing: -0.01em; color: var(--ink);
+  border-radius: var(--radius);
+}
+.card.fold > summary::-webkit-details-marker { display: none; }
+.card.fold > summary:hover { background: var(--surface-2); }
+.card.fold > summary .ico { color: var(--accent); flex: none; }
+.card.fold > summary .legend { font-weight: 500; }
+.card.fold > summary::after {
+  content: ''; margin-left: auto; flex: none; width: 8px; height: 8px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translate(-2px, -2px); transition: transform .15s ease;
+}
+.card.fold[open] > summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.card.fold[open] > summary { border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; }
+.card.fold > :not(summary) { margin-left: 22px; margin-right: 22px; }
+.card.fold > summary + * { margin-top: 18px; }
+.card.fold > :not(summary):last-child { margin-bottom: 20px; }
+
 .card.flat { box-shadow: none; }
 .card.tone { background: var(--surface-2); }
 
@@ -283,6 +307,14 @@ table.entries.journal td.libelle { max-width: 520px; overflow: hidden; text-over
 table.entries.journal td.compte { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
 table.entries.journal td.acts { white-space: nowrap; text-align: right; }
 table.entries.journal td.acts button { margin-left: 3px; }
+/* Bandeau d'une ligne rappelant l'année ouverte, en tête de la saisie : les réglages eux-mêmes
+   vivent dans l'espace « L'année & les données ». */
+.yearbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; margin-bottom: 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-sm); font-size: 13px; color: var(--muted); }
+.yearbar .y { font-family: var(--font-display, inherit); font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+.yearbar .i b { color: var(--ink); font-weight: 600; }
+.yearbar button { margin-left: auto; }
+
 /* pièce lue sur un scan, pas encore vérifiée : elle compte dans le solde, elle doit se voir */
 table.entries.journal tr.a-verifier td { background: var(--warn-soft); }
 table.entries.journal td .tag.warn { background: var(--warn); color: #fff; }

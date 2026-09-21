@@ -151,6 +151,30 @@ a { color: var(--accent); }
   display: inline-flex; align-items: center; justify-content: center; flex: none;
   width: 26px; height: 26px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 650;
 }
+/* Carte repliable : un réglage qu'on ouvre quand on en a besoin, replié le reste du temps,
+   pour que l'action principale de la page reste la première chose qu'on voit. */
+.card.fold { padding: 0; }
+.card.fold > summary {
+  list-style: none; cursor: pointer; padding: 14px 22px; margin: 0;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 15px; font-weight: 650; letter-spacing: -0.01em; color: var(--ink);
+  border-radius: var(--radius);
+}
+.card.fold > summary::-webkit-details-marker { display: none; }
+.card.fold > summary:hover { background: var(--surface-2); }
+.card.fold > summary .ico { color: var(--accent); flex: none; }
+.card.fold > summary .legend { font-weight: 500; }
+.card.fold > summary::after {
+  content: ''; margin-left: auto; flex: none; width: 8px; height: 8px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translate(-2px, -2px); transition: transform .15s ease;
+}
+.card.fold[open] > summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.card.fold[open] > summary { border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; }
+.card.fold > :not(summary) { margin-left: 22px; margin-right: 22px; }
+.card.fold > summary + * { margin-top: 18px; }
+.card.fold > :not(summary):last-child { margin-bottom: 20px; }
+
 .card.flat { box-shadow: none; }
 .card.tone { background: var(--surface-2); }
 
@@ -292,6 +316,14 @@ table.entries.journal td.libelle { max-width: 520px; overflow: hidden; text-over
 table.entries.journal td.compte { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
 table.entries.journal td.acts { white-space: nowrap; text-align: right; }
 table.entries.journal td.acts button { margin-left: 3px; }
+/* Bandeau d'une ligne rappelant l'année ouverte, en tête de la saisie : les réglages eux-mêmes
+   vivent dans l'espace « L'année & les données ». */
+.yearbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; margin-bottom: 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-sm); font-size: 13px; color: var(--muted); }
+.yearbar .y { font-family: var(--font-display, inherit); font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+.yearbar .i b { color: var(--ink); font-weight: 600; }
+.yearbar button { margin-left: auto; }
+
 /* pièce lue sur un scan, pas encore vérifiée : elle compte dans le solde, elle doit se voir */
 table.entries.journal tr.a-verifier td { background: var(--warn-soft); }
 table.entries.journal td .tag.warn { background: var(--warn); color: #fff; }
@@ -562,6 +594,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></symbol>
   <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
   <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 8.5 4.5L12 11 3.5 6.5 12 2z"/><path d="m3.5 11.5 8.5 4.5 8.5-4.5M3.5 16.5 12 21l8.5-4.5"/></symbol>
   <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -590,6 +623,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
+    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année et les données"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année &amp; les données<small>Solde à nouveau, sauvegardes</small></span></button>
   </nav>
   <nav class="nav hidden" id="dgeoNav">
     <div class="section">Décompte DGEO</div>
@@ -621,36 +655,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     </div>
   </header>
 
-  <section class="card">
-    <h2><svg class="ico"><use href="#i-calendar"/></svg> Registre de l'année</h2>
-    <div class="regbar">
-      <div class="field">
-        <label for="regYear">Année</label>
-        <select id="regYear" style="width:120px"></select>
-      </div>
-      <button type="button" class="small" id="btnNewYear" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle année</button>
-      <span class="hidden" id="newYearBox" style="display:inline-flex;gap:6px;align-items:center;align-self:flex-end">
-        <input type="number" id="newYearInput" min="1990" max="2100" step="1" style="width:110px;height:36px" aria-label="Nouvelle année du registre">
-        <button type="button" class="small primary" id="btnNewYearOk" style="height:36px">Créer</button>
-        <button type="button" class="small ghost" id="btnNewYearCancel" style="height:36px">Annuler</button>
-      </span>
-      <div class="sep"></div>
-      <div class="field">
-        <label for="regOpeningDate">Solde à nouveau le</label>
-        <input type="date" id="regOpeningDate">
-      </div>
-      <div class="field">
-        <label for="regOpeningAmount">Solde à nouveau (CHF)</label>
-        <input type="text" inputmode="decimal" id="regOpeningAmount" placeholder="ex. 2062.20" style="width:150px">
-      </div>
-      <div class="field">
-        <label for="regCaisse">Compte caisse</label>
-        <input type="text" id="regCaisse" style="width:130px">
-      </div>
-      <button type="button" class="small hidden" id="btnRegOpenDir" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button>
-    </div>
-    <div class="legend" id="regInfo"></div>
-  </section>
+  <div class="yearbar" id="yearBar"></div>
 
   <div class="layout2">
     <section class="card" id="ficheCard">
@@ -732,14 +737,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       </div>
       <div class="toolbar">
         <button type="button" class="primary" id="btnRegExcel"><svg class="ico"><use href="#i-grid"/></svg> Fichier Excel de l'année</button>
-        <button type="button" id="btnRegExcelIn" title="Reprend dans ce registre les écritures d'un classeur Excel de l'année (année commencée à l'ancienne, à la main ou avec les pièces scannées) : rien n'est compté deux fois, la numérotation continue"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un classeur Excel…</button>
-        <input type="file" id="regExcelFile" accept=".xlsx" class="hidden">
         <button type="button" id="btnRegPdf"><svg class="ico"><use href="#i-printer"/></svg> PDF des pièces</button>
         <select id="regPdfFrom" style="height:36px"></select>
-        <span class="spacer"></span>
-        <button type="button" class="small ghost" id="btnRegExport" title="Copie du registre (fichier JSON)"><svg class="ico"><use href="#i-download"/></svg> Sauvegarde</button>
-        <button type="button" class="small ghost" id="btnRegImport" title="Reprendre une sauvegarde"><svg class="ico"><use href="#i-upload"/></svg> Restaurer…</button>
-        <input type="file" id="regImportFile" accept="application/json,.json" class="hidden">
       </div>
       <div id="regNotices"></div>
     </section>
@@ -755,8 +754,31 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     </div>
   </header>
 
-  <section class="card" id="step1">
-    <h2><span class="n">1</span> Base des écritures</h2>
+  <section class="card" id="step2">
+    <h2><span class="n">1</span> Vos pièces comptables scannées (PDF)</h2>
+    <div class="dropzone" id="dropzone">
+      <svg class="ico lg"><use href="#i-upload"/></svg>
+      <div><strong>Glissez un ou plusieurs PDF ici</strong> ou <button type="button" class="link" id="btnPickPdf">choisissez des fichiers</button></div>
+      <div class="fine">Les pièces peuvent être réparties dans plusieurs fichiers (« Pce 01 à 33.pdf », « Pce 34 à 60.pdf ») : ajoutez-en à tout moment et mettez-les dans l'ordre ci-dessous. Les PDF scannés avec reconnaissance de texte (« PDF consultable », comme ceux du copieur) sont lus plus vite ; les autres passent par l'OCR.</div>
+      <input type="file" id="pdfFile" accept="application/pdf,.pdf" multiple class="hidden">
+    </div>
+    <progress id="pdfProgress" max="100" value="0" class="hidden"></progress>
+    <div id="pdfListBox" class="hidden">
+      <div class="toolbar">
+        <span class="legend"><b>Fichiers chargés</b> – ordre des pièces : utilisez ▲ ▼ ou le tri par nom.</span>
+        <span class="spacer"></span>
+        <button type="button" class="small" id="btnSortFiles"><svg class="ico"><use href="#i-list"/></svg> Trier par nom</button>
+        <button type="button" class="small danger" id="btnClearFiles"><svg class="ico"><use href="#i-trash"/></svg> Tout retirer</button>
+      </div>
+      <table class="files" id="pdfList"></table>
+    </div>
+    <div class="info" id="pdfInfo"></div>
+    <div class="ocr-status hidden" id="ocrStatus"></div>
+    <div id="pdfNotices"></div>
+  </section>
+
+  <details class="card fold" id="step1">
+    <summary><svg class="ico"><use href="#i-sliders"/></svg> Réglages de la lecture <span class="legend" id="step1Resume"></span></summary>
     <div class="choice seg">
       <label><input type="radio" name="mode" value="registre" checked> Registre de l'année (Saisie des pièces)</label>
       <label><input type="radio" name="mode" value="existing"> Classeur Excel existant</label>
@@ -801,33 +823,10 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
         Tout se passe sur ce PC, sans réseau ; comptez environ une seconde par pièce.</span></label>
     </div>
     <div class="legend" id="vocabInfo" style="margin-top:12px"></div>
-  </section>
-
-  <section class="card" id="step2">
-    <h2><span class="n">2</span> Pièces comptables (PDF scannés)</h2>
-    <div class="dropzone" id="dropzone">
-      <svg class="ico lg"><use href="#i-upload"/></svg>
-      <div><strong>Glissez un ou plusieurs PDF ici</strong> ou <button type="button" class="link" id="btnPickPdf">choisissez des fichiers</button></div>
-      <div class="fine">Les pièces peuvent être réparties dans plusieurs fichiers (« Pce 01 à 33.pdf », « Pce 34 à 60.pdf ») : ajoutez-en à tout moment et mettez-les dans l'ordre ci-dessous. Les PDF scannés avec reconnaissance de texte (« PDF consultable », comme ceux du copieur) sont lus plus vite ; les autres passent par l'OCR.</div>
-      <input type="file" id="pdfFile" accept="application/pdf,.pdf" multiple class="hidden">
-    </div>
-    <progress id="pdfProgress" max="100" value="0" class="hidden"></progress>
-    <div id="pdfListBox" class="hidden">
-      <div class="toolbar">
-        <span class="legend"><b>Fichiers chargés</b> – ordre des pièces : utilisez ▲ ▼ ou le tri par nom.</span>
-        <span class="spacer"></span>
-        <button type="button" class="small" id="btnSortFiles"><svg class="ico"><use href="#i-list"/></svg> Trier par nom</button>
-        <button type="button" class="small danger" id="btnClearFiles"><svg class="ico"><use href="#i-trash"/></svg> Tout retirer</button>
-      </div>
-      <table class="files" id="pdfList"></table>
-    </div>
-    <div class="info" id="pdfInfo"></div>
-    <div class="ocr-status hidden" id="ocrStatus"></div>
-    <div id="pdfNotices"></div>
-  </section>
+  </details>
 
   <section class="card hidden" id="step3">
-    <h2><span class="n">3</span> Vérification des écritures</h2>
+    <h2><span class="n">2</span> Vérification des écritures</h2>
     <div class="hint">
       Seules les lignes <span class="chip warn">⚠ orange</span> demandent un contrôle : la cellule en doute est colorée, l'explication apparaît sous la ligne
       et au survol. Les lignes <span class="chip ok">✓ vertes</span> ont été lues sans ambiguïté (montant lu sur la pièce, compte caisse d'un seul côté, comptes connus…). Le montant retenu est le <b>Total</b> en bas de la pièce ; la colonne SOMME, souvent vide, sert seulement de confirmation.
@@ -879,7 +878,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   </section>
 
   <section class="card hidden" id="step4">
-    <h2><span class="n">4</span> Contrôle et fichier Excel</h2>
+    <h2><span class="n">3</span> Contrôle et fichier Excel</h2>
     <div class="totals" id="totals"></div>
     <div class="control-grid">
       <div>
@@ -958,6 +957,66 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       </table>
     </div>
     <div id="countNotices"></div>
+  </section>
+</div>
+
+<div id="panelAnnee" class="panel hidden">
+  <header class="page-head">
+    <div>
+      <h1>L'année &amp; les données</h1>
+      <p>Ce qu'on règle une fois par année : l'année ouverte, le solde à nouveau, le compte caisse. Et la maintenance des données : reprendre un classeur commencé à la main, faire une sauvegarde, en restaurer une.</p>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2><svg class="ico"><use href="#i-calendar"/></svg> Année ouverte</h2>
+    <div class="regbar">
+      <div class="field">
+        <label for="regYear">Année</label>
+        <select id="regYear" style="width:120px"></select>
+      </div>
+      <button type="button" class="small" id="btnNewYear" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle année</button>
+      <span class="hidden" id="newYearBox" style="display:inline-flex;gap:6px;align-items:center;align-self:flex-end">
+        <input type="number" id="newYearInput" min="1990" max="2100" step="1" style="width:110px;height:36px" aria-label="Nouvelle année du registre">
+        <button type="button" class="small primary" id="btnNewYearOk" style="height:36px">Créer</button>
+        <button type="button" class="small ghost" id="btnNewYearCancel" style="height:36px">Annuler</button>
+      </span>
+      <div class="sep"></div>
+      <div class="field">
+        <label for="regOpeningDate">Solde à nouveau le</label>
+        <input type="date" id="regOpeningDate">
+      </div>
+      <div class="field">
+        <label for="regOpeningAmount">Solde à nouveau (CHF)</label>
+        <input type="text" inputmode="decimal" id="regOpeningAmount" placeholder="ex. 2062.20" style="width:150px">
+      </div>
+      <div class="field">
+        <label for="regCaisse">Compte caisse</label>
+        <input type="text" id="regCaisse" style="width:130px">
+      </div>
+      <button type="button" class="small hidden" id="btnRegOpenDir" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button>
+    </div>
+    <div class="legend" id="regInfo"></div>
+  </section>
+
+  <section class="card">
+    <h2><svg class="ico"><use href="#i-upload"/></svg> Reprendre une année commencée à l'ancienne</h2>
+    <p class="legend">Si l'année a été tenue dans un classeur Excel (à la main, ou produit par les pièces scannées), ses écritures se versent ici dans le registre : rien n'est compté deux fois, la numérotation continue, les pièces reprises sont marquées <i>Excel</i> dans le journal.</p>
+    <div class="toolbar">
+      <button type="button" id="btnRegExcelIn"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un classeur Excel…</button>
+      <input type="file" id="regExcelFile" accept=".xlsx" class="hidden">
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><svg class="ico"><use href="#i-shield"/></svg> Sauvegardes</h2>
+    <p class="legend">Une sauvegarde est une copie du registre de l'année (un fichier JSON) : le journal, les pièces et les comptages. Gardez-en une hors du PC. La restauration remplace le registre de l'année ouverte par celui de la sauvegarde.</p>
+    <div class="toolbar">
+      <button type="button" id="btnRegExport"><svg class="ico"><use href="#i-download"/></svg> Faire une sauvegarde</button>
+      <button type="button" id="btnRegImport"><svg class="ico"><use href="#i-upload"/></svg> Restaurer une sauvegarde…</button>
+      <input type="file" id="regImportFile" accept="application/json,.json" class="hidden">
+    </div>
+    <div id="anneeNotices"></div>
   </section>
 </div>
 
@@ -6592,6 +6651,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     existingBox: $('existingBox'),
     registreBox: $('registreBox'),
     registreInfo: $('registreInfo'),
+    step1Resume: $('step1Resume'),
     openingHint: $('openingHint'),
     vocabInfo: $('vocabInfo'),
     xlsxFile: $('xlsxFile'),
@@ -6798,10 +6858,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   const baseLabel = () => (state.mode === 'registre' ? 'le registre' : 'le classeur');
   const numNo = (e) => (e.no == null || e.no === '' ? NaN : Number(e.no));
 
-  /* ---------------- Étape 1 : base des écritures ---------------- */
-  // Par défaut, le registre de l'année : les pièces scannées viennent à la suite de celles déjà
-  // saisies (ou reprises d'un classeur), et « Ajouter au registre » les y verse. Une année commencée
-  // à l'ancienne se reprend par « Reprendre ces écritures dans le registre » (classeur existant).
+  /* ---------------- Réglages de la lecture : base des écritures ---------------- */
+  // Par défaut, le registre de l'année : les pièces lues y entrent toutes seules, à la suite de
+  // celles déjà saisies. Sur une autre base (nouveau classeur, classeur existant), il faut un geste
+  // explicite : « Verser au registre de l'année ». Une année commencée à l'ancienne se reprend par
+  // « Reprendre ces écritures dans le registre » (classeur existant).
   function renderToRegisterButton() {
     const b = document.getElementById('btnToRegister');
     if (b) b.classList.toggle('hidden', state.mode === 'registre');
@@ -6816,11 +6877,23 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (els.registreBox) els.registreBox.classList.toggle('hidden', mode !== 'registre');
     try { localStorage.setItem('caisse.scan.base', mode); } catch (e) { /* ignore */ }
     renderRegistreInfo();
-    renderToRegisterButton(); // « Ajouter au registre » n'a de sens que si le registre n'est pas déjà la base
+    renderStep1Resume();
+    renderToRegisterButton(); // « Verser au registre » n'a de sens que si le registre n'est pas déjà la base
     if (state.pages.length) reparse();
     refreshAll();
   }
   els.modeRadios.forEach((r) => r.addEventListener('change', () => applyMode(document.querySelector('input[name="mode"]:checked').value)));
+
+  // Les réglages de lecture sont repliés : le titre doit dire en une ligne ce qu'ils valent
+  // aujourd'hui, pour qu'on n'ait pas à les déplier juste pour vérifier.
+  function renderStep1Resume() {
+    if (!els.step1Resume) return;
+    const base = state.mode === 'new' ? 'nouveau classeur'
+      : state.mode === 'existing' ? 'classeur Excel existant'
+      : "registre de l'année";
+    const ocr = els.optOcr && els.optOcr.checked ? 'OCR activé' : 'OCR désactivé';
+    els.step1Resume.textContent = `— ${base}, compte caisse ${getCaisse()}, ${ocr}`;
+  }
 
   function renderRegistreInfo() {
     if (!els.registreInfo) return;
@@ -6890,10 +6963,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   els.openingAmount.addEventListener('input', refreshAll);
   els.caisse.addEventListener('change', () => {
     try { localStorage.setItem('caisse.compte', els.caisse.value); } catch (e) { /* ignore */ }
+    renderStep1Resume();
     if (state.pages.length) { reparse(); refreshAll(); }
   });
 
-  /* ---------------- Étape 2 : PDF (plusieurs fichiers) ---------------- */
+  /* ---------------- Étape 1 : PDF (plusieurs fichiers) ---------------- */
   els.btnPickPdf.addEventListener('click', () => els.pdfFile.click());
   els.pdfFile.addEventListener('change', () => {
     const files = Array.from(els.pdfFile.files || []);
@@ -6960,7 +7034,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (state.pages.length) {
       const detected = P.detectCaisseAccount(state.pages);
       if (detected && detected !== getCaisse()) {
-        notice(els.pdfNotices, 'warn', `Le compte le plus fréquent sur les pièces est <b>${escapeHtml(detected)}</b>, alors que le compte caisse réglé est <b>${escapeHtml(getCaisse())}</b>. Vérifiez le réglage à l'étape 1.`);
+        notice(els.pdfNotices, 'warn', `Le compte le plus fréquent sur les pièces est <b>${escapeHtml(detected)}</b>, alors que le compte caisse réglé est <b>${escapeHtml(getCaisse())}</b>. Vérifiez-le dans « Réglages de la lecture ».`);
       }
     }
     reparse();
@@ -7480,12 +7554,13 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     }
     els.optOcr.addEventListener('change', () => {
       try { localStorage.setItem('caisse.ocr', els.optOcr.checked ? '1' : '0'); } catch (e) { /* ignore */ }
+      renderStep1Resume();
       if (els.optOcr.checked && state.pages.length) startCrossReading();
       else if (!els.optOcr.checked) { state.ocr.run++; state.ocr.status = 'off'; setOcrStatus(); }
     });
   }
 
-  /* ---------------- Étape 3 : tableau ---------------- */
+  /* ---------------- Étape 2 : tableau ---------------- */
   function rowIssues(e) {
     const errs = [];
     if (!e.date) errs.push('Date manquante');
@@ -8236,7 +8311,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     w.document.close();
   });
 
-  /* ---------------- Étape 4 : totaux + Excel ---------------- */
+  /* ---------------- Étape 3 : totaux + Excel ---------------- */
   /**
    * Écritures du lot triées par n°, sans celles déjà présentes dans la base (même n° et même
    * montant, ou ligne entière identique quand le n° n'a pas pu être lu).
@@ -8267,7 +8342,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
   /**
    * Contrôles du lot : séquence des numéros, doublons, lignes non contrôlées.
-   * Sert à la fois au tableau de l'étape 4 et au refus de générer un fichier douteux.
+   * Sert à la fois au tableau de l'étape 3 et au refus de générer un fichier douteux.
    */
   function lotChecks() {
     const news = state.entries;
@@ -8937,7 +9012,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
-    'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
+    'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'yearBar', 'anneeNotices', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
     'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
@@ -8947,11 +9022,18 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = v.toFixed(2).split('.'); return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
+  /** Les messages s'affichent sur la page regardée : sinon un message de restauration partait
+   *  sur la page de saisie pendant qu'on est dans « L'année & les données ». */
+  function noticeBox() {
+    const annee = document.getElementById('panelAnnee');
+    if (els.anneeNotices && annee && !annee.classList.contains('hidden')) return els.anneeNotices;
+    return els.regNotices;
+  }
   function notice(kind, html, opts) {
     const div = document.createElement('div');
     div.className = `notice ${kind}`;
     div.innerHTML = html;
-    els.regNotices.prepend(div);
+    noticeBox().prepend(div);
     // opts.keep : message qui contient un bouton à cliquer (fiche PDF bloquée) — il reste affiché
     if (!(opts && opts.keep)) setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
   }
@@ -9080,7 +9162,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     }
     state.reg.opening.amount = v; await saveReg(); renderJournal();
   });
-  els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); });
+  els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); renderYearBar(); });
   if (els.btnRegOpenDir) els.btnRegOpenDir.addEventListener('click', () => { if (window.CaisseFiles) window.CaisseFiles.openDir(); });
 
   /* ---------------- Fiche ---------------- */
@@ -9374,7 +9456,39 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   }
 
   /* ---------------- Journal ---------------- */
+  /** Les réglages de l'année vivent maintenant sur un autre écran que le journal : ils doivent
+   *  être recopiés du registre à chaque changement, sinon on y lit une valeur périmée — et un
+   *  simple passage dans le champ la réécrirait dans le registre. Le champ qu'on est en train de
+   *  remplir est laissé tranquille. */
+  function renderRegFields() {
+    const reg = state.reg;
+    if (!reg || !els.regOpeningDate) return;
+    const busy = document.activeElement;
+    if (busy !== els.regOpeningDate) els.regOpeningDate.value = reg.opening.date || '';
+    if (busy !== els.regOpeningAmount) els.regOpeningAmount.value = reg.opening.amount;
+    if (busy !== els.regCaisse) els.regCaisse.value = reg.caisse;
+  }
+
+  /** Bandeau d'une ligne rappelant l'année ouverte : les réglages, eux, ont leur propre espace. */
+  function renderYearBar() {
+    if (!els.yearBar || !state.reg) return;
+    const reg = state.reg;
+    const j = R.journal(reg);
+    els.yearBar.innerHTML =
+      `<span class="y">${reg.annee}</span>` +
+      `<span class="i"><b>${reg.pieces.length}</b> pièce(s)</span>` +
+      `<span class="i">solde à nouveau <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}</span>` +
+      `<span class="i">solde actuel <b>${fmtCHF(j.end)}</b></span>` +
+      `<span class="i">compte caisse <b>${escapeHtml(reg.caisse)}</b></span>` +
+      `<button type="button" class="small ghost" data-annee="1">Changer d'année, solde à nouveau…</button>`;
+  }
+  if (els.yearBar) els.yearBar.addEventListener('click', (ev) => {
+    if (ev.target.closest('button[data-annee]') && A.showPanel) A.showPanel('panelAnnee');
+  });
+
   function renderJournal() {
+    renderYearBar();
+    renderRegFields();
     const j = R.journal(state.reg);
     els.journalBody.innerHTML = j.rows.map((r) => {
       const p = state.reg.pieces.find((x) => x.id === r.id);
@@ -9577,8 +9691,6 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const includeOther = otherYears > 0 && confirm(`${otherYears} écriture(s) du classeur ne sont pas de l'année ${reg.annee} du registre ouvert. Les reprendre quand même ?`);
     const r = R.mergeEntries(reg, data.entries, { source: 'excel', opening: data.opening, otherYears: includeOther });
     await saveReg();
-    els.regOpeningDate.value = reg.opening.date || '';
-    els.regOpeningAmount.value = reg.opening.amount;
     renderJournal();
     newPiece();
     if (A && A.learnEntries) A.learnEntries(data.entries);

@@ -1,17 +1,24 @@
 # Caisse écoles – Saisie des pièces comptables et journal de caisse
 
-Application locale, sans installation, en deux onglets :
+Application locale, sans installation. Un écran = un travail, dans la barre latérale :
 
 - **Saisie des pièces** : la fiche « PIÈCE COMPTABLE » se remplit dans l'application (n°, date,
   type, objet, classe, personne, compte proposé, montant, sens fixé par le libellé, justificatifs
   joints). Chaque pièce enregistrée entre dans le journal de l'année, conservé dans les fichiers
   de l'application ; à la fin : le fichier Excel de l'année et le PDF des pièces (fiche +
-  justificatifs).
+  justificatifs). En tête, un bandeau d'une ligne rappelle l'année ouverte, le solde à nouveau,
+  le solde actuel et le compte caisse — les réglages eux-mêmes sont ailleurs.
 - **Pièces scannées (PDF)** : lecture des pièces déjà remplies à la main et scannées, avec
-  lectures croisées (couche texte, OCR local, Tesseract natif), et ajout au registre.
+  lectures croisées (couche texte, OCR local, Tesseract natif). La zone où déposer les PDF est la
+  première chose de l'écran ; les réglages de lecture sont repliés dessous, avec un résumé d'une
+  ligne de leur état. Les pièces lues entrent dans le journal de l'année dès la lecture.
 - **Compter la caisse** : nombre de billets (1000, 200, 100, 50, 20, 10) et de pièces (5, 2, 1,
   50, 20, 10 et 5 centimes), total compté, dernier solde compté et nouveau solde avec leurs
   dates, écart avec le solde du journal à cette date, historique des comptages dans le registre.
+- **L'année & les données** : ce qu'on règle une fois par année (année ouverte, solde à nouveau,
+  compte caisse) et la maintenance (reprendre un classeur commencé à la main, faire une
+  sauvegarde, en restaurer une). On n'y va presque jamais : c'est pour cela qu'il a son écran,
+  au lieu d'encombrer la saisie.
 
 La version portable Windows s'appelle **Compta Blonay** : une seule application pour les deux
 outils du dépôt. Le logo en tête de la barre latérale est un menu déroulant qui passe de
@@ -59,7 +66,7 @@ qu'un programme à ouvrir, `ComptaBlonay.exe` : au démarrage, il lance en arri�
 local de Décompte DGEO sur un port libre (le menu du logo indique *démarre…* puis, une fois
 Décompte DGEO choisi, affiche le logiciel complet, avec toutes ses fonctions : analyse du dossier
 PDF, effectifs, pièces, part État, décompte Excel) et l'arrête à la fermeture de la fenêtre.
-Raccourci : Ctrl+4 ; Ctrl+1 à Ctrl+3 ramènent aux espaces de Caisse écoles. Ses dossiers vont
+Raccourci : Ctrl+5 ; Ctrl+1 à Ctrl+4 ramènent aux espaces de Caisse écoles. Ses dossiers vont
 dans `data/decompte/`, à côté des registres de la caisse. Si le serveur s'arrête, rechoisir
 Décompte DGEO dans le menu le relance ; sans le dossier `decompte/`, le menu l'indique. Dans le
 fichier HTML seul, Décompte DGEO n'affiche qu'une explication : il fait partie de l'application
@@ -105,7 +112,8 @@ décompte → pièce), puis publication du zip.
 1. **Année** : le registre de l'année en cours s'ouvre (ou se crée avec, comme solde à nouveau,
    le solde final de l'année précédente). Chaque année est un registre séparé, conservé dans
    `data/caisse/<année>/` à côté de l'exécutable (version portable) ou dans le navigateur
-   (fichier HTML seul) ; *Sauvegarde (JSON)* / *Restaurer…* pour copier ou reprendre un registre.
+   (fichier HTML seul). Tout cela se règle dans l'espace **L'année & les données** ; la saisie
+   n'en garde que le bandeau de rappel, dont le bouton *Changer d'année, solde à nouveau…* y mène.
 2. **Fiche** : n° (proposé), date, **type d'écriture** (REMBOURSEMENT, AVANCE, DECOMPTE,
    PARTICIPATION DES PARENTS…), **objet** (course d'école, camp, mini-camp, voyage d'étude, cours de
    ski, collation, repas, matériel…), classe, dates de l'activité, détail, personne. Le libellé du
@@ -303,7 +311,7 @@ logique : 123 remboursements et 37 avances, tous en sortie ; 18 participations, 
 ## Lectures croisées : OCR local, Tesseract natif, moteur historique
 
 La couche texte du PDF (produite par le copieur) est lue instantanément ; c'est elle qui remplit le
-tableau. Ensuite, si l'option *Seconde lecture par OCR local* est cochée (étape 1, par défaut),
+tableau. Ensuite, si l'option *Lectures croisées par OCR local* est cochée (volet *Réglages de la lecture*, par défaut),
 chaque pièce est relue sur son image par un moteur de reconnaissance de caractères embarqué dans
 le fichier HTML (Tesseract, logiciel libre, exécuté en WebAssembly dans le navigateur) :
 
@@ -421,7 +429,7 @@ Structure :
 - `src/dossier.js` – dossier scanné pour Décompte DGEO : pages « PIÈCE COMPTABLE » retirées avant l'analyse (pdf.js, pdf-lib, analyseur)
 - `desktop/dgeo-proxy.js` – passerelle locale devant Décompte DGEO (multipart, nettoyage du dossier via la page)
 - `src/comptage.js` – comptage de la caisse (grille des coupures, soldes, historique) ; modèle dans `registre.js` (`countTotal`, `upsertCount`, `previousCount`, `balanceAt`)
-- `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Compter la caisse, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
+- `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Compter la caisse / L'année & les données, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
 - `src/registre.js` – registre des pièces par année : modèle, libellé composé, validation, journal, stockage (fichiers ou navigateur)
 - `src/pdfpiece.js` – fiche « PIÈCE COMPTABLE » en PDF (pdf-lib) avec justificatifs
 - `src/saisie.js` – onglet de saisie (fiche, journal, Excel, PDF, sauvegarde)
@@ -432,7 +440,7 @@ Structure :
 - Le PDF doit contenir une couche texte (scan avec OCR). Un PDF « image » seule est signalé
   et ne peut pas être traité.
 - L'OCR du scanner peut confondre certains caractères ; les corrections automatiques couvrent les
-  cas fréquents, mais la relecture à l'étape 3 reste nécessaire.
+  cas fréquents, mais la relecture à l'étape 2 (*Vérification des écritures*) reste nécessaire.
 - Une pièce scannée sans couche texte n'est pas reconnue : les pages sans texte sont listées
   avec un bouton pour les afficher, et la pièce peut être ajoutée à la main.
 - Quand une pièce porte plusieurs comptes de contrepartie, le premier est proposé et la

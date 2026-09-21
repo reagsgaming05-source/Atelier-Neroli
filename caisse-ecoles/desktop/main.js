@@ -532,8 +532,9 @@ function buildMenu() {
         { label: 'Saisie des pièces', accelerator: 'CmdOrCtrl+1', click: () => openPanel('panelSaisie') },
         { label: 'Pièces scannées', accelerator: 'CmdOrCtrl+2', click: () => openPanel('panelScan') },
         { label: 'Compter la caisse', accelerator: 'CmdOrCtrl+3', click: () => openPanel('panelCaisse') },
-        { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+4', click: () => openPanel('panelDgeo') },
-        { label: 'Récapitulatif des décomptes', accelerator: 'CmdOrCtrl+5', click: () => openPanel('panelRecap') },
+        { label: "L'année & les données", accelerator: 'CmdOrCtrl+4', click: () => openPanel('panelAnnee') },
+        { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+5', click: () => openPanel('panelDgeo') },
+        { label: 'Récapitulatif des décomptes', accelerator: 'CmdOrCtrl+6', click: () => openPanel('panelRecap') },
       ],
     },
     {
