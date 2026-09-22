@@ -4,7 +4,7 @@
 // décision testée ici — celle du dossier de données.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ouRanger, cheminReseau, POURQUOI, MARQUEUR } = require('../desktop/ou-ranger');
+const { ouRanger, cheminReseau, POURQUOI, MARQUEUR, nomDeDossier, listerComptes } = require('../desktop/ou-ranger');
 
 // Une sonde qui répond ce qu'on lui dit, et qui note ce qu'on lui a demandé :
 // sur un partage, on ne veut même pas qu'un dossier « data » soit créé.
@@ -69,4 +69,37 @@ test('chaque raison a une phrase à montrer dans « À propos »', () => {
     assert.ok(POURQUOI[pourquoi] && POURQUOI[pourquoi].length > 20,
       'la raison « ' + pourquoi + ' » s\'explique à l\'utilisateur');
   }
+});
+
+// comptes.txt est écrit à la main, souvent au Bloc-notes, et les noms d'ici
+// portent des accents. Selon la version de Windows, il arrive en UTF-8 avec ou
+// sans marque d'ordre, en UTF-16, ou dans l'ancien codage de Windows. Lu de
+// travers, « Sophie Müller » deviendrait un dossier au nom abîmé.
+const NOMS = 'Sophie Müller\nJoséphine Aebi\n';
+const ATTENDU = ['Joséphine Aebi', 'Sophie Müller'];
+
+test('la liste des comptes se lit quel que soit l\'enregistrement du Bloc-notes', () => {
+  const bom = Buffer.concat([Buffer.from([0xEF, 0xBB, 0xBF]), Buffer.from(NOMS, 'utf8')]);
+  assert.deepEqual(listerComptes(Buffer.from(NOMS, 'utf8'), []), ATTENDU, 'UTF-8 sans marque');
+  assert.deepEqual(listerComptes(bom, []), ATTENDU, 'UTF-8 avec marque d\'ordre');
+  assert.deepEqual(listerComptes(Buffer.concat([Buffer.from([0xFF, 0xFE]), Buffer.from(NOMS, 'utf16le')]), []),
+    ATTENDU, 'UTF-16 petit-boutiste');
+  assert.deepEqual(listerComptes(Buffer.from(NOMS, 'latin1'), []), ATTENDU, 'ancien codage de Windows');
+  assert.deepEqual(listerComptes(NOMS, []), ATTENDU, 'et une chaîne, comme avant');
+});
+
+test('commentaires, lignes vides et doublons sont écartés de la liste', () => {
+  const brut = '# le secrétariat\n\nMarie\n  Sophie  \nMarie\n';
+  assert.deepEqual(listerComptes(brut, ['sophie', 'Zoé']), ['Marie', 'Sophie', 'Zoé'],
+    'un dossier « sophie » déjà là ne fait pas doublon avec « Sophie » de la liste');
+});
+
+test('un nom impossible sous Windows ne devient pas un dossier', () => {
+  assert.equal(nomDeDossier('Marie\\Dupont'), 'Marie Dupont', 'la barre oblique inverse est écartée');
+  assert.equal(nomDeDossier(':*?"<>|'), null, 'un nom qui n\'est fait que de caractères interdits');
+  assert.equal(nomDeDossier('Greffe : accueil'), 'Greffe accueil', 'les interdits sautent, le reste demeure');
+  assert.equal(nomDeDossier('  '), null);
+  assert.equal(nomDeDossier('LPT1'), null, 'un nom réservé par Windows');
+  assert.equal(nomDeDossier('Marie.'), 'Marie', 'Windows n\'aime pas le point final');
+  assert.equal(nomDeDossier('x'.repeat(80)).length, 48, 'un nom trop long est coupé');
 });

@@ -59,8 +59,9 @@ function ecrireChoix(nom) {
 // Les comptes proposés : ceux de comptes.txt, plus ceux qui ont déjà un
 // dossier dans data/.
 function comptesConnus() {
-  let lignes = '';
-  try { lignes = fs.readFileSync(path.join(PORTABLE_DIR, COMPTES), 'utf8'); } catch (e) { /* fichier vide ou absent */ }
+  // Lu en octets : listerComptes reconnaît le codage (voir lireTexte).
+  let lignes = Buffer.alloc(0);
+  try { lignes = fs.readFileSync(path.join(PORTABLE_DIR, COMPTES)); } catch (e) { /* fichier vide ou absent */ }
   let dossiers = [];
   try {
     dossiers = fs.readdirSync(DOSSIER_DATA(), { withFileTypes: true })

@@ -46,6 +46,24 @@ function nomDeDossier(nom) {
   return propre;
 }
 
+// comptes.txt est écrit à la main, souvent au Bloc-notes, et les noms d'ici
+// portent des accents. Selon la version de Windows et le choix fait en
+// enregistrant, le fichier arrive en UTF-8, avec ou sans marque d'ordre, ou
+// encore dans l'ancien codage de Windows. Le lire en UTF-8 sans regarder
+// donnerait « Sophie M�ller » — et un dossier à ce nom-là.
+function lireTexte(octets) {
+  const b = Buffer.isBuffer(octets) ? octets : Buffer.from(String(octets || ''), 'utf8');
+  if (b.length >= 3 && b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF) return b.slice(3).toString('utf8');
+  if (b.length >= 2 && b[0] === 0xFF && b[1] === 0xFE) return b.slice(2).toString('utf16le');
+  if (b.length >= 2 && b[0] === 0xFE && b[1] === 0xFF) {
+    const inverse = Buffer.from(b.slice(2));
+    for (let i = 0; i + 1 < inverse.length; i += 2) { const t = inverse[i]; inverse[i] = inverse[i + 1]; inverse[i + 1] = t; }
+    return inverse.toString('utf16le');
+  }
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(b); }
+  catch (e) { return b.toString('latin1'); } // ancien codage de Windows
+}
+
 // Les noms proposés au choix : ceux que l'administrateur a écrits dans
 // comptes.txt, et ceux qui ont déjà un dossier dans data/. Les lignes vides et
 // celles qui commencent par # sont des commentaires.
@@ -55,7 +73,7 @@ function listerComptes(lignesDuFichier, dossiersExistants) {
     const n = nomDeDossier(brut);
     if (n && !vus.has(n.toLowerCase())) vus.set(n.toLowerCase(), n);
   };
-  String(lignesDuFichier || '').split(/\r?\n/).forEach((l) => {
+  lireTexte(lignesDuFichier).split(/\r?\n/).forEach((l) => {
     const t = l.trim();
     if (t && !t.startsWith('#')) ajouter(t);
   });
@@ -105,4 +123,4 @@ const POURQUOI = {
   'lecture-seule': 'Le dossier de l\u2019application est en lecture seule : vos données sont dans votre profil Windows.',
 };
 
-module.exports = { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI };
+module.exports = { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, lireTexte, POURQUOI };
