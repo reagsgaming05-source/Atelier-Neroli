@@ -49,6 +49,12 @@ const pkgTessCore = require(vendor('tesseract.js-core/package.json')).version;
 const pkgXl = require(vendor('exceljs/package.json')).version;
 const pdflib = read(vendor('pdf-lib/dist/pdf-lib.min.js'));
 const pkgPdfLib = require(vendor('pdf-lib/package.json')).version;
+// Code QR de la pièce : l'écrire (qrcode-generator) et le relire sur un scan (jsQR).
+// Deux modules minuscules, sans dépendance : voir src/marque.js.
+const qrgen = read(vendor('qrcode-generator/dist/qrcode.js'));
+const jsqr = read(vendor('jsqr/dist/jsQR.js'));
+const pkgQr = require(vendor('qrcode-generator/package.json')).version;
+const pkgJsqr = require(vendor('jsqr/package.json')).version;
 
 let html = read(src('index.html'));
 
@@ -89,6 +95,8 @@ inline('<!--INLINE_PARSER-->', scriptTag(read(src('parser.js'))));
 inline('<!--INLINE_OCR-->', scriptTag(read(src('ocr.js'))));
 inline('<!--INLINE_EXCEL-->', scriptTag(read(src('excel.js'))));
 inline('<!--INLINE_REGISTRE-->', scriptTag(read(src('registre.js'))));
+inline('<!--INLINE_QR-->', `<!-- qrcode-generator ${pkgQr} (MIT) et jsQR ${pkgJsqr} (Apache-2.0) -->\n` + scriptTag(qrgen) + '\n' + scriptTag(jsqr));
+inline('<!--INLINE_MARQUE-->', scriptTag(read(src('marque.js'))));
 inline('<!--INLINE_PDFPIECE-->', scriptTag(read(src('pdfpiece.js'))));
 inline('<!--INLINE_DOSSIER-->', scriptTag(read(src('dossier.js'))));
 inline('<!--INLINE_CARNET-->', scriptTag(read(src('carnet.js'))));

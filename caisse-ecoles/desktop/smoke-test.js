@@ -222,6 +222,37 @@ function verifierCopie() {
     return { no: p.no, libelle: p.libelle, compte: p.compte, sens: p.sens, montant: p.montant, rows: j.rows.length, end: j.end, storedPieces: stored ? JSON.parse(stored).pieces.length : null, pdfPages: pdf.pages, journalRows: document.querySelectorAll('#journalBody tr[data-id]').length };
   });
   console.log('pièce saisie :', JSON.stringify(saisie));
+
+  // La marque de la pièce, de bout en bout : la fiche est imprimée avec son petit code QR, on la
+  // rend en image comme le ferait un scanner, et on relit le code. C'est le seul endroit qui
+  // éprouve la chaîne entière — dessin PDF, rendu, décodage — parce qu'il faut un canevas.
+  const marque = await win.evaluate(async () => {
+    const s = window.CaisseSaisie.state;
+    const p = s.reg.pieces[s.reg.pieces.length - 1];
+    const { bytes } = await window.CaissePdf.buildPdf([p], s.reg, () => null);
+    const doc = await window.pdfjsLib.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
+    const page = await doc.getPage(1);
+    // 150 points par pouce, la résolution ordinaire d'un copieur : viewport à 150/72
+    const vp = page.getViewport({ scale: 150 / 72 });
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    const img = ctx.getImageData(0, 0, c.width, c.height);
+    const t0 = performance.now();
+    const trouve = window.CaisseMarque.chercher(img.data, img.width, img.height);
+    const ms = Math.round(performance.now() - t0);
+    await doc.destroy();
+    return {
+      page: [c.width, c.height],
+      lu: trouve ? trouve.marque : null,
+      attendu: { annee: s.reg.annee, id: p.id },
+      ms,
+    };
+  });
+  console.log('marque de la pièce :', JSON.stringify(marque));
+  ok = ok && marque.lu && marque.lu.id === marque.attendu.id && marque.lu.annee === marque.attendu.annee;
   ok = ok && saisie.compte === '51000.3662.00' && saisie.sens === 'credit' && saisie.montant === 143.95 && saisie.journalRows === saisie.rows && saisie.pdfPages === 1 && /DECOMPTE - Course d'école 5P\/3 du 12\.06\./.test(saisie.libelle) && (saisie.storedPieces === null || saisie.storedPieces === saisie.rows);
   // décomptes : choix course d'école / camp sur la fiche ; récapitulatif PDF des décomptes cochés,
   // dans l'espace « Récapitulatif » de l'outil Décompte DGEO

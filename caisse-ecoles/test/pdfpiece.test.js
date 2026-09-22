@@ -124,3 +124,74 @@ test('une pièce sans numéro laisse la case vide sur la fiche, pas « 00 »', a
   assert.equal(info.total, 12);
   await doc.destroy();
 });
+
+/* ---------------- La marque de la pièce sur la fiche ---------------- */
+// Le petit code QR imprimé dans la marge : c'est lui qui, au scan de la pile de fiches signées,
+// ouvre un document et dit de quelle pièce il s'agit. Ce qu'on vérifie ici est sa place sur la
+// feuille ; qu'il se relise est éprouvé dans marque.test.js, et de bout en bout dans le test de
+// fumée (qui, lui, sait rendre une page de PDF en image).
+const M = require('../src/marque.js');
+
+/** Dessine une vraie fiche et rend les rectangles posés dans la zone de la marque. */
+async function ficheAvecMarque(over) {
+  const reg = R.emptyRegister(2026, { openingAmount: 0, caisse: '9100.104' });
+  const piece = R.newPiece(reg);
+  Object.assign(piece, {
+    no: 12, date: '2026-03-03', type: 'REMBOURSEMENT', detail: 'collation du chœur',
+    personne: 'A. Berger', compte: '51000.3662.50', montant: 29.7, sens: 'credit',
+  }, over || {});
+  piece.libelle = R.composeLibelle(piece);
+  const doc = await PDFDocument.create();
+  const page = doc.addPage(F.A4);
+  const fonts = { normal: await doc.embedFont('Helvetica'), bold: await doc.embedFont('Helvetica-Bold') };
+  const rects = [];
+  const vrai = page.drawRectangle.bind(page);
+  page.drawRectangle = (r) => { rects.push(r); return vrai(r); };
+  F.drawPiece(page, fonts, piece, reg);
+  return { reg, piece, page, rects, doc };
+}
+
+test('la fiche porte la marque de sa pièce', async () => {
+  const { reg, piece, rects } = await ficheAvecMarque();
+  const dansLaMarque = rects.filter((r) => r.x >= F.MARQUE.x - 0.01 && r.y >= F.MARQUE.y - 0.01);
+  // un fond blanc plus les bandes noires du code
+  assert.ok(dansLaMarque.length > 20, `${dansLaMarque.length} rectangle(s) dans la zone : le code manque`);
+  // la marque attendue tient dans un code de 25 modules
+  assert.equal(M.grille(M.ecrire(reg.annee, piece.id)).n, 25);
+});
+
+test('la marque reste dans la marge : elle ne recouvre aucune ligne du formulaire', async () => {
+  const { rects } = await ficheAvecMarque();
+  const dansLaMarque = rects.filter((r) => r.x >= F.MARQUE.x - 0.01 && r.y >= F.MARQUE.y - 0.01);
+  for (const r of dansLaMarque) {
+    assert.ok(r.x + r.width <= F.MARQUE.x + F.MARQUE.taille + 0.01, 'le code déborde à droite');
+    assert.ok(r.y + r.height <= F.MARQUE.y + F.MARQUE.taille + 0.01, 'le code déborde en haut');
+    assert.ok(r.y >= F.L.top, 'le code descend dans le cadre du formulaire');
+    assert.ok(r.x + r.width <= F.A4[0], 'le code sort de la feuille');
+    assert.ok(r.y + r.height <= F.A4[1], 'le code sort de la feuille');
+  }
+  // 16 mm : assez grand pour un copieur, assez petit pour ne pas se voir
+  assert.ok(F.MARQUE.taille >= 40 && F.MARQUE.taille <= 60, `${F.MARQUE.taille} points de côté`);
+});
+
+test('une pièce sans identifiant s\'imprime quand même, simplement sans marque', async () => {
+  const { rects } = await ficheAvecMarque({ id: '' });
+  const dansLaMarque = rects.filter((r) => r.x >= F.MARQUE.x - 0.01 && r.y >= F.MARQUE.y - 0.01);
+  assert.equal(dansLaMarque.length, 0);
+  // et la fiche elle-même a bien été dessinée (le cadre de signature est un rectangle)
+  assert.ok(rects.length > 0);
+});
+
+test('la fiche produite pèse à peine plus qu\'avant la marque', async () => {
+  // le code est dessiné en bandes : s'il l'était carré par carré, une année de pièces gonflerait
+  const reg = R.emptyRegister(2026, { openingAmount: 0, caisse: '9100.104' });
+  const pieces = [];
+  for (let i = 1; i <= 20; i++) {
+    const p = R.newPiece(reg);
+    Object.assign(p, { no: i, date: '2026-03-03', type: 'FRAIS', detail: 'piles', personne: 'A. Berger', compte: '51000.3185.00', montant: 12, sens: 'credit' });
+    p.libelle = R.composeLibelle(p);
+    pieces.push(p);
+  }
+  const { bytes } = await F.buildPdf(pieces, reg, null, {});
+  assert.ok(bytes.length < 120000, `${bytes.length} octets pour 20 fiches marquées`);
+});

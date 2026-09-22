@@ -5,9 +5,9 @@
  * produite est relisible par l'analyseur de l'application.
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('pdf-lib'), require('./parser.js'));
-  else root.CaissePdf = factory(root.PDFLib, root.CaisseParser);
-})(typeof self !== 'undefined' ? self : this, function (PDFLib, P) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('pdf-lib'), require('./parser.js'), require('./marque.js'));
+  else root.CaissePdf = factory(root.PDFLib, root.CaisseParser, root.CaisseMarque);
+})(typeof self !== 'undefined' ? self : this, function (PDFLib, P, M) {
   'use strict';
 
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
@@ -29,6 +29,13 @@
     libLines: 11, // bande du libellé
     rowTotal: 22,
   };
+
+  /**
+   * Place du code QR de la pièce : dans la marge haute, à l'aplomb du bord droit du cadre.
+   * 46 points = 16 mm de côté, soit 0,64 mm par module — lisible par un copieur à 200 points par
+   * pouce. Hors du cadre : il ne recouvre aucune ligne du formulaire et ne gêne pas la lecture.
+   */
+  const MARQUE = { taille: 46, x: L.right - 46, y: 792 };
 
   function fmtCHF(v) {
     const n = Number(v) || 0;
@@ -68,6 +75,15 @@
 
     // en-tête de page (nom du fichier, comme sur les scans)
     text('pcecomptable', 265, 815, { size: 9, color: GREY });
+    // Marque de la pièce : un petit code QR dans la marge. Au scan de la pile de fiches signées,
+    // c'est lui qui ouvre un document et dit de quelle pièce il s'agit (voir marque.js). Il ne
+    // porte que l'année et l'identifiant — ni nom, ni montant. Une fiche qui ne peut pas être
+    // marquée s'imprime quand même : la marque est un service, pas une condition.
+    const marque = M && piece.id ? M.ecrire(reg.annee, piece.id) : '';
+    if (marque) {
+      try { M.dessiner(page, marque, { x: MARQUE.x, y: MARQUE.y, taille: MARQUE.taille, rgb }); }
+      catch (e) { /* une fiche sans code vaut mieux qu'une fiche non imprimée */ }
+    }
 
     let y = L.top;
     // cadre et lignes
@@ -423,5 +439,5 @@
     return { bytes, pages: doc.getPageCount(), total: comptage.total };
   }
 
-  return { buildPdf, buildRecapPdf, buildReleveCaissePdf, recapDescription, drawPiece, fmtCHF, A4 };
+  return { buildPdf, buildRecapPdf, buildReleveCaissePdf, recapDescription, drawPiece, fmtCHF, A4, MARQUE, L };
 });
