@@ -2074,7 +2074,15 @@
   const appTabs = document.getElementById('appTabs');
   // Espaces de l'outil Décompte DGEO : sa page (panelDgeo) et le récapitulatif des décomptes
   const DGEO_PANELS = ['panelDgeo', 'panelRecap'];
-  const toolOf = (id) => (DGEO_PANELS.includes(id) ? 'dgeo' : 'caisse');
+  // Espaces listés dans LES DEUX barres (voir index.html). Ils n'appartiennent à aucun outil : on
+  // reste dans celui où l'on se trouve. Sans cela, ouvrir la Boîte de réception depuis Décompte
+  // DGEO renvoyait la barre latérale sur Caisse écoles — on était sorti de l'outil sans l'avoir
+  // demandé, et le chemin par lequel on était venu avait disparu.
+  const PANNEAUX_PARTAGES = ['panelReception'];
+  const toolOf = (id) => {
+    if (PANNEAUX_PARTAGES.includes(id)) return currentTool;
+    return DGEO_PANELS.includes(id) ? 'dgeo' : 'caisse';
+  };
   function showPanel(id) {
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
     if (toolEls.dgeoNav) {
@@ -2253,7 +2261,17 @@
   }
   if (appTabs) {
     appTabs.addEventListener('click', (ev) => { const b = ev.target.closest('.apptab'); if (b) showPanel(b.dataset.panel); });
-    try { const saved = localStorage.getItem('caisse.onglet'); if (saved && saved !== 'panelSaisie' && document.getElementById(saved)) showPanel(saved); } catch (e) { /* ignore */ }
+    try {
+      const saved = localStorage.getItem('caisse.onglet');
+      // Un espace partagé ne dit pas à lui seul dans quel outil on était : c'est l'outil mémorisé
+      // qui le dit. Sans cela, quitter l'application depuis la Boîte de réception ouverte côté
+      // Décompte DGEO la rouvrait côté Caisse écoles.
+      if (saved && PANNEAUX_PARTAGES.includes(saved)) {
+        const outil = localStorage.getItem('caisse.outil');
+        if (outil === 'dgeo' || outil === 'caisse') syncTool(outil);
+      }
+      if (saved && saved !== 'panelSaisie' && document.getElementById(saved)) showPanel(saved);
+    } catch (e) { /* ignore */ }
   }
   // base des écritures des pièces scannées : celle choisie la dernière fois, sinon le registre de l'année
   { let base = 'registre'; try { base = localStorage.getItem('caisse.scan.base') || 'registre'; } catch (e) { /* ignore */ } applyMode(base); }

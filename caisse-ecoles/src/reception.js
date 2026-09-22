@@ -279,8 +279,12 @@
     etat.documents = liste;
     const compteur = $('receptionCompte');
     if (compteur) compteur.textContent = liste.length ? plur(liste.length, 'document en attente', 'documents en attente') : 'rien en attente';
-    const badge = $('navBadgeReception');
-    if (badge) { badge.textContent = liste.length ? String(liste.length) : ''; badge.classList.toggle('hidden', !liste.length); }
+    // La Boîte de réception est listée dans les deux barres latérales : elle a donc deux pastilles,
+    // et les deux doivent dire la même chose. On les prend par leur marque, pas par un identifiant.
+    for (const badge of document.querySelectorAll('[data-badge-reception]')) {
+      badge.textContent = liste.length ? String(liste.length) : '';
+      badge.classList.toggle('hidden', !liste.length);
+    }
     hote.innerHTML = liste.length
       ? liste.map(ligne).join('')
       : '<div class="dvide">Rien en attente. Les scans déposés par le copieur dans le dossier surveillé arrivent ici tout seuls.</div>';

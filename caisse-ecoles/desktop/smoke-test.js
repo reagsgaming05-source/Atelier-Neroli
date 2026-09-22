@@ -767,6 +767,7 @@ function verifierCopie() {
         etats: liste.map((d) => d.etat).sort(),
         nos: liste.map((d) => (d.piece ? d.piece.no : null)).sort(),
         badge: (document.getElementById('navBadgeReception') || {}).textContent || '',
+        badgeDgeo: (document.getElementById('navBadgeReceptionDgeo') || {}).textContent || '',
       };
     });
 
@@ -949,6 +950,43 @@ function verifierCopie() {
   // est un <iframe>, et l'événement qui sert à mettre la veille en pause pendant un rechargement
   // de la page se déclenche aussi pour un cadre interne : sans la garde « seulement la page
   // elle-même », le premier aperçu arrêtait la veille pour de bon, sans rien dire.
+  // La Boîte de réception est listée dans les deux barres latérales. Le piège : chaque espace
+  // appartenait à un outil, donc y aller depuis Décompte DGEO ramenait la barre sur Caisse
+  // écoles — on sortait de l'outil sans l'avoir demandé, et le chemin d'accès disparaissait.
+  const deuxChemins = await win.evaluate(async () => {
+    const barre = document.getElementById('dgeoNav');
+    const depuisDgeo = barre && barre.querySelector('.apptab[data-panel="panelReception"]');
+    const depuisCaisse = document.getElementById('appTabs').querySelector('.apptab[data-panel="panelReception"]');
+    if (!depuisDgeo || !depuisCaisse) return { erreur: 'entrée absente d\'une des deux barres' };
+    const ouvert = () => !document.getElementById('panelReception').classList.contains('hidden');
+    const outil = () => (document.getElementById('dgeoNav').classList.contains('hidden') ? 'caisse' : 'dgeo');
+
+    // on passe à Décompte DGEO, puis on ouvre la Boîte de réception depuis SA barre
+    document.querySelector('#toolMenu button[data-tool="dgeo"]').click();
+    await new Promise((r) => setTimeout(r, 250));
+    const outilAvant = outil();
+    depuisDgeo.click();
+    await new Promise((r) => setTimeout(r, 250));
+    const depuisDgeoOk = { ouvert: ouvert(), outil: outil(), marque: depuisDgeo.classList.contains('active') };
+
+    // et depuis Caisse écoles, on reste côté caisse
+    document.querySelector('#toolMenu button[data-tool="caisse"]').click();
+    await new Promise((r) => setTimeout(r, 250));
+    depuisCaisse.click();
+    await new Promise((r) => setTimeout(r, 250));
+    const depuisCaisseOk = { ouvert: ouvert(), outil: outil(), marque: depuisCaisse.classList.contains('active') };
+
+    window.CaisseApp.showPanel('panelSaisie');
+    return { outilAvant, depuisDgeo: depuisDgeoOk, depuisCaisse: depuisCaisseOk };
+  });
+  console.log('Boîte de réception des deux côtés :', JSON.stringify(deuxChemins));
+  if (deuxChemins.erreur) throw new Error(deuxChemins.erreur);
+  if (deuxChemins.outilAvant !== 'dgeo') throw new Error('le passage à Décompte DGEO n\'a pas eu lieu');
+  if (!deuxChemins.depuisDgeo.ouvert || !deuxChemins.depuisDgeo.marque) throw new Error('la Boîte de réception ne s\'ouvre pas depuis la barre de Décompte DGEO');
+  if (deuxChemins.depuisDgeo.outil !== 'dgeo') throw new Error('y aller depuis Décompte DGEO fait sortir de l\'outil');
+  if (!deuxChemins.depuisCaisse.ouvert || !deuxChemins.depuisCaisse.marque) throw new Error('la Boîte de réception ne s\'ouvre pas depuis la barre de Caisse écoles');
+  if (deuxChemins.depuisCaisse.outil !== 'caisse') throw new Error('y aller depuis Caisse écoles fait sortir de l\'outil');
+
   const apresApercu = await win.evaluate(async () => (await window.CaisseScan.etat()).veilleEnMarche);
   console.log('la veille survit à un aperçu :', apresApercu);
   if (!apresApercu) throw new Error('la veille s\'est arrêtée après l\'affichage d\'un document dans le cadre');
@@ -958,7 +996,7 @@ function verifierCopie() {
     && reception.affiche.chemin === reception.regle.depot
     && reception.affiche.note.length > 20
     && reception.boite.lignes === 3 && reception.boite.etats.join('|') === 'trouvee|trouvee|trouvee'
-    && reception.boite.badge === '3'
+    && reception.boite.badge === '3' && reception.boite.badgeDgeo === '3'
     && reception.jointe.justificatifs.includes('piece-signee.pdf')
     && reception.jointe.contamines.length === 0
     && reception.jointe.reste === 2

@@ -60,7 +60,7 @@
     <div class="section">Espaces</div>
     <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
-    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, à valider</small></span><span class="navbadge hidden" id="navBadgeReception" title="Documents scannés en attente de validation"></span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, à valider</small></span><span class="navbadge hidden" id="navBadgeReception" data-badge-reception title="Documents scannés en attente de validation"></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
     <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes</small></span></button>
     <button type="button" class="apptab" data-panel="panelDonnees" title="Les listes de l'application"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Données<small>Comptes, classes, noms</small></span></button>
@@ -71,8 +71,9 @@
     <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier et effectifs"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-pieces" title="Pièces justificatives"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Pièces justificatives<small>Tickets retenus</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
-    <div class="section">Récapitulatif</div>
+    <div class="section">Décomptes</div>
     <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Décomptes à faire, scans du copieur</small></span><span class="navbadge hidden" id="navBadgeReceptionDgeo" data-badge-reception title="Documents scannés en attente de validation"></span></button>
     <div class="navnote">
       <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>

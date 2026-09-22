@@ -765,7 +765,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <div class="section">Espaces</div>
     <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
-    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, à valider</small></span><span class="navbadge hidden" id="navBadgeReception" title="Documents scannés en attente de validation"></span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, à valider</small></span><span class="navbadge hidden" id="navBadgeReception" data-badge-reception title="Documents scannés en attente de validation"></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
     <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes</small></span></button>
     <button type="button" class="apptab" data-panel="panelDonnees" title="Les listes de l'application"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Données<small>Comptes, classes, noms</small></span></button>
@@ -776,8 +776,9 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier et effectifs"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-pieces" title="Pièces justificatives"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Pièces justificatives<small>Tickets retenus</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
-    <div class="section">Récapitulatif</div>
+    <div class="section">Décomptes</div>
     <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Décomptes à faire, scans du copieur</small></span><span class="navbadge hidden" id="navBadgeReceptionDgeo" data-badge-reception title="Documents scannés en attente de validation"></span></button>
     <div class="navnote">
       <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
@@ -22542,7 +22543,15 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   const appTabs = document.getElementById('appTabs');
   // Espaces de l'outil Décompte DGEO : sa page (panelDgeo) et le récapitulatif des décomptes
   const DGEO_PANELS = ['panelDgeo', 'panelRecap'];
-  const toolOf = (id) => (DGEO_PANELS.includes(id) ? 'dgeo' : 'caisse');
+  // Espaces listés dans LES DEUX barres (voir index.html). Ils n'appartiennent à aucun outil : on
+  // reste dans celui où l'on se trouve. Sans cela, ouvrir la Boîte de réception depuis Décompte
+  // DGEO renvoyait la barre latérale sur Caisse écoles — on était sorti de l'outil sans l'avoir
+  // demandé, et le chemin par lequel on était venu avait disparu.
+  const PANNEAUX_PARTAGES = ['panelReception'];
+  const toolOf = (id) => {
+    if (PANNEAUX_PARTAGES.includes(id)) return currentTool;
+    return DGEO_PANELS.includes(id) ? 'dgeo' : 'caisse';
+  };
   function showPanel(id) {
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
     if (toolEls.dgeoNav) {
@@ -22721,7 +22730,17 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   }
   if (appTabs) {
     appTabs.addEventListener('click', (ev) => { const b = ev.target.closest('.apptab'); if (b) showPanel(b.dataset.panel); });
-    try { const saved = localStorage.getItem('caisse.onglet'); if (saved && saved !== 'panelSaisie' && document.getElementById(saved)) showPanel(saved); } catch (e) { /* ignore */ }
+    try {
+      const saved = localStorage.getItem('caisse.onglet');
+      // Un espace partagé ne dit pas à lui seul dans quel outil on était : c'est l'outil mémorisé
+      // qui le dit. Sans cela, quitter l'application depuis la Boîte de réception ouverte côté
+      // Décompte DGEO la rouvrait côté Caisse écoles.
+      if (saved && PANNEAUX_PARTAGES.includes(saved)) {
+        const outil = localStorage.getItem('caisse.outil');
+        if (outil === 'dgeo' || outil === 'caisse') syncTool(outil);
+      }
+      if (saved && saved !== 'panelSaisie' && document.getElementById(saved)) showPanel(saved);
+    } catch (e) { /* ignore */ }
   }
   // base des écritures des pièces scannées : celle choisie la dernière fois, sinon le registre de l'année
   { let base = 'registre'; try { base = localStorage.getItem('caisse.scan.base') || 'registre'; } catch (e) { /* ignore */ } applyMode(base); }
@@ -25280,8 +25299,12 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     etat.documents = liste;
     const compteur = $('receptionCompte');
     if (compteur) compteur.textContent = liste.length ? plur(liste.length, 'document en attente', 'documents en attente') : 'rien en attente';
-    const badge = $('navBadgeReception');
-    if (badge) { badge.textContent = liste.length ? String(liste.length) : ''; badge.classList.toggle('hidden', !liste.length); }
+    // La Boîte de réception est listée dans les deux barres latérales : elle a donc deux pastilles,
+    // et les deux doivent dire la même chose. On les prend par leur marque, pas par un identifiant.
+    for (const badge of document.querySelectorAll('[data-badge-reception]')) {
+      badge.textContent = liste.length ? String(liste.length) : '';
+      badge.classList.toggle('hidden', !liste.length);
+    }
     hote.innerHTML = liste.length
       ? liste.map(ligne).join('')
       : '<div class="dvide">Rien en attente. Les scans déposés par le copieur dans le dossier surveillé arrivent ici tout seuls.</div>';
