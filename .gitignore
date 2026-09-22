@@ -37,3 +37,9 @@ outils/desktop/construction.json
 outils/test-e2e/node_modules/
 outils/test-e2e/test-results/
 outils/test-e2e/playwright-report/
+
+# captures et PDF du mode d'emploi : refaits par outils/guide/faire-le-guide.js,
+# comme les pages de l'application. Un PDF de 2 Mo par retouche de l'interface
+# n'a rien à faire dans l'historique.
+outils/guide/captures/
+outils/guide/*.pdf

@@ -105,3 +105,21 @@ test('le texte de la page part dans le PDF tel qu\'il était', async ({ app }) =
   expect(texte).toContain('Commune de Blonay');
   expect(texte).toContain('Montant : 1240.00');
 });
+
+// Sans document, la barre d'onglets est masquée. Elle sortait alors de la
+// grille de l'espace de travail : le panneau de gauche et la table remontaient
+// dans la rangée qui se dimensionne au contenu, et s'arrêtaient en plein
+// milieu d'une fenêtre haute, laissant une bande vide sous la zone de dépôt.
+test('sans document, le panneau et la table descendent jusqu\'en bas', async ({ app, page }) => {
+  await app.pretAvecExemple();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.click('#doc-list .doc-rm');
+  await expect(page.locator('#dropzone')).toBeVisible();
+  await expect(page.locator('#onglets')).toBeHidden();
+  const bas = await page.evaluate(() => {
+    const b = (s) => Math.round(document.querySelector(s).getBoundingClientRect().bottom);
+    return { espace: b('.workspace'), panneau: b('.side'), table: b('#canvas') };
+  });
+  expect(bas.panneau, 'le panneau va jusqu\'en bas de l\'espace de travail').toBe(bas.espace);
+  expect(bas.table, 'la table aussi').toBe(bas.espace);
+});

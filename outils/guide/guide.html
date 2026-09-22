@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Blonay PDF — mode d'emploi</title>
+<style>
+  /* Un document qui s'imprime : A4, marges généreuses, rien de décoratif qui
+     coûte de l'encre. Les polices sont celles du poste — aucune n'est allée
+     se chercher sur Internet. */
+  @page { size: A4; margin: 18mm 16mm 20mm; }
+
+  :root {
+    --encre: #16181d;
+    --gris: #55606e;
+    --gris-clair: #8892a0;
+    --trait: #d8dde3;
+    --rouge: #b81e16;
+    --fond-doux: #f4f6f8;
+    --serif: "Bitstream Charter", Charter, Georgia, "Liberation Serif", serif;
+    --sans: "Liberation Sans", Arial, Helvetica, sans-serif;
+    --mono: "DejaVu Sans Mono", "Liberation Mono", Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--encre); background: #fff;
+    font-family: var(--serif); font-size: 10.6pt; line-height: 1.52;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  p { margin: 0 0 8pt; text-align: justify; hyphens: auto; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+
+  h1, h2, h3 { font-family: var(--sans); line-height: 1.2; break-after: avoid; }
+  h2 {
+    break-before: page; margin: 0 0 10pt; padding-bottom: 5pt;
+    font-size: 17pt; font-weight: 700; letter-spacing: -.01em;
+    border-bottom: 2.5pt solid var(--rouge);
+  }
+  h2 .num { color: var(--rouge); margin-right: 8pt; }
+  h3 { margin: 14pt 0 5pt; font-size: 11.5pt; font-weight: 700; }
+  h4 { font-family: var(--sans); font-size: 10pt; margin: 10pt 0 3pt; font-weight: 700; }
+
+  /* ---------- couverture ---------- */
+  .couverture { height: 235mm; display: flex; flex-direction: column; justify-content: center; break-after: page; }
+  .couverture .marque { width: 58pt; height: 58pt; margin-bottom: 22pt; }
+  .couverture h1 { font-size: 34pt; margin: 0 0 4pt; letter-spacing: -.02em; }
+  .couverture .sous { font-family: var(--sans); font-size: 15pt; color: var(--gris); margin: 0 0 26pt; }
+  .couverture .barre { width: 90pt; height: 3pt; background: var(--rouge); margin-bottom: 26pt; }
+  .couverture .quoi { font-size: 11.5pt; max-width: 118mm; color: var(--encre); }
+  .couverture .pied { margin-top: auto; font-family: var(--sans); font-size: 8.5pt; color: var(--gris-clair); }
+
+  /* ---------- sommaire ---------- */
+  .sommaire { break-after: page; }
+  .sommaire h2 { break-before: auto; }
+  .sommaire ol { font-family: var(--sans); font-size: 10.5pt; margin: 0; padding-left: 16pt; }
+  .sommaire li { margin-bottom: 4.5pt; }
+  .sommaire li span { color: var(--gris); }
+
+  /* ---------- figures ---------- */
+  figure { margin: 10pt 0 12pt; break-inside: avoid; }
+  figure img { display: block; width: 100%; border: .6pt solid var(--trait); border-radius: 2pt; }
+  figure img.petite { width: 66mm; margin: 0 auto; }
+  figure.paire { display: flex; gap: 6mm; }
+  figure.paire .moitie { flex: 1; min-width: 0; }
+  figure.paire img { width: 100%; }
+  figure.paire figcaption { margin-top: 4pt; }
+  figcaption {
+    font-family: var(--sans); font-size: 8.4pt; color: var(--gris);
+    margin-top: 4pt; padding-left: 2pt; border-left: 2pt solid var(--trait); padding: 2pt 0 2pt 6pt;
+  }
+
+  /* ---------- listes d'étapes ---------- */
+  ol.etapes { margin: 0 0 10pt; padding-left: 0; list-style: none; counter-reset: pas; }
+  ol.etapes > li {
+    position: relative; padding-left: 20pt; margin-bottom: 7pt; counter-increment: pas;
+    break-inside: avoid;
+  }
+  ol.etapes > li::before {
+    content: counter(pas); position: absolute; left: 0; top: .5pt;
+    width: 13pt; height: 13pt; border-radius: 50%; background: var(--rouge); color: #fff;
+    font-family: var(--sans); font-size: 8pt; font-weight: 700; line-height: 13pt; text-align: center;
+  }
+  ul.points { margin: 0 0 10pt; padding-left: 14pt; }
+  ul.points li { margin-bottom: 4pt; }
+
+  /* ---------- encadrés ---------- */
+  .note, .attention {
+    break-inside: avoid; margin: 10pt 0; padding: 8pt 10pt;
+    background: var(--fond-doux); border-left: 3pt solid var(--gris-clair); border-radius: 0 3pt 3pt 0;
+    font-size: 10pt;
+  }
+  .attention { background: #fdf3f2; border-left-color: var(--rouge); }
+  .note p:last-child, .attention p:last-child { margin-bottom: 0; }
+  .note .titre, .attention .titre {
+    font-family: var(--sans); font-size: 8.5pt; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--gris); margin-bottom: 3pt;
+  }
+  .attention .titre { color: var(--rouge); }
+
+  /* ---------- tableaux ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 9.6pt; margin: 8pt 0 12pt; break-inside: avoid; }
+  th, td { text-align: left; padding: 4.5pt 6pt; border-bottom: .6pt solid var(--trait); vertical-align: top; }
+  th { font-family: var(--sans); font-size: 8.5pt; text-transform: uppercase; letter-spacing: .05em; color: var(--gris); border-bottom-width: 1.2pt; }
+  td.touche { white-space: nowrap; width: 44mm; }
+  kbd {
+    font-family: var(--sans); font-size: 8.6pt; padding: 1pt 4pt;
+    border: .6pt solid var(--trait); border-bottom-width: 1.6pt; border-radius: 3pt; background: #fbfcfd;
+  }
+  code { font-family: var(--mono); font-size: 9.2pt; background: var(--fond-doux); padding: .5pt 3pt; border-radius: 2pt; }
+  .chemin { font-family: var(--mono); font-size: 9pt; }
+
+  .lede { font-size: 11.4pt; color: var(--gris); margin-bottom: 12pt; }
+  .deux { column-count: 2; column-gap: 9mm; }
+  .deux h4 { break-after: avoid; margin-top: 0; }
+  .deux > div { break-inside: avoid; margin-bottom: 9pt; }
+</style>
+</head>
+<body>
+
+<!-- =================================================== couverture -->
+<section class="couverture">
+  <svg class="marque" viewBox="0 0 26 26" role="img" aria-label="Blonay PDF">
+    <rect width="26" height="26" rx="7" fill="#D4322A"/>
+    <path d="M7.2 4.4h7l4.6 4.6v13H7.2z" fill="#FBFAF7"/>
+    <path d="M14.2 4.4v4.6h4.6z" fill="#F2705C"/>
+    <path d="M9.4 4.4h3.6v9.6l-1.8-1.7-1.8 1.7z" fill="#AF1C14"/>
+    <path d="M9.4 16.8h7M9.4 19.2h4.4" stroke="#AF1C14" stroke-width="1.45" stroke-linecap="round"/>
+  </svg>
+  <h1>Blonay PDF</h1>
+  <p class="sous">Mode d'emploi du greffe</p>
+  <div class="barre"></div>
+  <p class="quoi">
+    Lire, réorganiser, corriger, signer, tamponner, protéger et imprimer des PDF,
+    sans rien installer et sans qu'aucun document ne quitte le poste.
+    Ce guide part de la première connexion et fait le tour de ce que l'application sait faire.
+  </p>
+  <p class="pied">Les captures de ce guide sont prises sur l'application elle-même. Le document qui y figure est un exemple : il ne contient aucune donnée réelle.</p>
+</section>
+
+<!-- =================================================== sommaire -->
+<section class="sommaire">
+  <h2>Sommaire</h2>
+  <ol>
+    <li>La première fois : créer son compte <span>— et ne plus y revenir</span></li>
+    <li>La fenêtre en un coup d'œil</li>
+    <li>Ouvrir un document</li>
+    <li>Lire, et prendre du texte</li>
+    <li>Rechercher, remplacer, caviarder partout</li>
+    <li>Organiser les pages</li>
+    <li>Corriger et annoter une page</li>
+    <li>Tampons et signature</li>
+    <li>Enregistrer, exporter, imprimer</li>
+    <li>Protéger un document</li>
+    <li>Les outils du quotidien</li>
+    <li>Si l'application s'arrête brutalement</li>
+    <li>Mettre à jour</li>
+    <li>Où sont mes affaires</li>
+    <li>Raccourcis clavier</li>
+  </ol>
+</section>
+
+<!-- =================================================== 1 -->
+<section>
+<h2><span class="num">1</span>La première fois : créer son compte</h2>
+
+<p class="lede">Une seule chose est à faire au premier lancement, et elle ne se refait jamais.</p>
+
+<p>L'application est posée une fois pour toutes sur le serveur. Chacune l'ouvre par le raccourci de son bureau : il n'y a rien à installer, rien à copier, et personne n'a besoin d'être administrateur de son poste.</p>
+
+<h3>Créer son compte</h3>
+<ol class="etapes">
+  <li>Double-cliquez sur le raccourci <strong>Blonay PDF</strong>.</li>
+  <li>La fenêtre de connexion s'ouvre. Écrivez votre <strong>prénom et nom</strong>, puis choisissez un <strong>mot de passe</strong> — quatre caractères au minimum — et répétez-le.</li>
+  <li>Cliquez sur <strong>Créer mon compte</strong>. L'application redémarre une fois, toute seule, puis s'ouvre sur votre espace.</li>
+</ol>
+
+<figure>
+  <img class="petite" src="captures/c1-creation.png" alt="La fenêtre de création de compte">
+  <figcaption>Le premier lancement : prénom et nom, un mot de passe, et c'est fini.</figcaption>
+</figure>
+
+<div class="note">
+  <div class="titre">Pourquoi ce redémarrage</div>
+  <p>Vos tampons et votre signature ne vivent pas dans un fichier ordinaire, mais dans l'espace de travail que l'application ouvre au tout début de son démarrage. Il faut donc qu'elle sache qui vous êtes <em>avant</em> d'ouvrir quoi que ce soit. Elle redémarre une fois, et une seule.</p>
+</div>
+
+<h3>Les fois suivantes : rien à faire</h3>
+<p>Une fois connectée, vous le restez. L'application se rouvre directement sur vos affaires, sans jamais redemander le mot de passe — au deuxième lancement comme au centième. Il ne revient que dans trois cas : vous vous êtes déconnectée par <strong>Fichier&nbsp;› Se déconnecter</strong>, vous ouvrez l'application depuis un poste où vous n'êtes jamais venue, ou quelqu'un d'autre a ouvert sa session Windows sur cet ordinateur.</p>
+
+<h3>Se connecter depuis un autre poste</h3>
+<p>Votre compte vit sur le serveur, pas sur un ordinateur en particulier. Depuis n'importe quel poste du secrétariat, cliquez sur votre nom dans la liste, tapez votre mot de passe, et vous retrouvez vos tampons, votre signature et vos documents récents.</p>
+
+<figure class="paire">
+  <div class="moitie">
+    <img src="captures/c2-liste.png" alt="La liste des comptes">
+    <figcaption>Les comptes se créent au fur et à mesure : chaque personne déjà passée apparaît dans la liste. « Créer un compte… » est là pour les suivantes.</figcaption>
+  </div>
+  <div class="moitie">
+    <img src="captures/c3-motdepasse.png" alt="La demande du mot de passe">
+    <figcaption>Le mot de passe, une fois. Ensuite la connexion tient jusqu'à la déconnexion.</figcaption>
+  </div>
+</figure>
+
+<div class="attention">
+  <div class="titre">Mot de passe oublié</div>
+  <p>Il n'est enregistré nulle part : impossible de le retrouver, même en ouvrant les fichiers de l'application. Pour retrouver l'accès, adressez-vous à la personne qui s'occupe de l'installation : elle remet le compte à zéro, et vous en choisissez un neuf à la connexion suivante — vos tampons, votre signature et vos récents sont intacts.</p>
+</div>
+
+<div class="note">
+  <div class="titre">Ce que le mot de passe fait, et ce qu'il ne fait pas</div>
+  <p>Il empêche d'ouvrir l'application sous le nom d'une collègue, donc de reposer sa signature sur un document. Il ne ferme pas le dossier lui-même : qui ouvre le lecteur réseau dans l'Explorateur Windows voit les dossiers de chacune. Fermer cette porte-là relève des droits d'accès du serveur, et de votre informaticien.</p>
+</div>
+</section>
+
+<!-- =================================================== 2 -->
+<section>
+<h2><span class="num">2</span>La fenêtre en un coup d'œil</h2>
+
+<p class="lede">Tout tient dans une seule fenêtre : une barre en haut, un panneau à gauche, la table de travail au milieu.</p>
+
+<figure>
+  <img src="captures/a1-accueil.png" alt="La fenêtre à l'ouverture">
+  <figcaption>À l'ouverture, sans document : déposez vos PDF sur la table, ou cliquez sur « Choisir des fichiers ».</figcaption>
+</figure>
+
+<div class="deux">
+  <div>
+    <h4>La barre du haut</h4>
+    <p>À gauche, le bouton d'ouverture et les flèches <strong>Annuler</strong> / <strong>Rétablir</strong>. Au milieu, les deux façons de regarder le document : <strong>Lire</strong> et <strong>Organiser</strong>, le zoom, la vue deux pages, la sélection et la loupe. À droite, le thème, l'aide, <strong>Imprimer</strong>, le nom du fichier et le bouton <strong>Enregistrer</strong>.</p>
+  </div>
+  <div>
+    <h4>Le panneau de gauche</h4>
+    <p>Trois onglets. <strong>Documents</strong> liste ce qui est ouvert, avec le nombre de pages et la taille. <strong>Outils</strong> range tout ce que l'application sait faire, par famille. <strong>Plan</strong> montre les signets du document et permet d'en ajouter.</p>
+  </div>
+  <div>
+    <h4>La table</h4>
+    <p>Le document, soit page après page en lecture, soit en vignettes qu'on déplace à la souris. C'est là qu'on dépose les fichiers.</p>
+  </div>
+  <div>
+    <h4>La barre du bas</h4>
+    <p>Le nombre de pages, le dernier geste effectué, l'avancement des opérations longues avec un bouton pour les interrompre, et le journal de ce qui a été contourné.</p>
+  </div>
+</div>
+
+<h3>Les menus</h3>
+<table>
+  <tr><td class="touche"><strong>Fichier</strong></td><td>Ouvrir, Récents, Ajouter au document, Nouvel onglet, Nouvelle fenêtre, Enregistrer, Enregistrer sous, Imprimer, Ouvrir le dossier des données, Se déconnecter, Quitter.</td></tr>
+  <tr><td class="touche"><strong>Affichage</strong></td><td>Lire, Organiser les pages, Deux pages côte à côte, les onglets, le zoom, le thème clair ou sombre, le plein écran.</td></tr>
+  <tr><td class="touche"><strong>Outils</strong></td><td>Éditeur de page, Rechercher, Signet, Reconnaître le texte, Comparer deux versions, Copier un tableau vers Excel, Constituer un dossier de pièces, Traiter plusieurs fichiers.</td></tr>
+  <tr><td class="touche"><strong>Aide</strong></td><td>Raccourcis clavier (<kbd>F1</kbd>), et À propos — qui indique la version installée, votre compte et où vont vos données.</td></tr>
+</table>
+</section>
+
+<!-- =================================================== 3 -->
+<section>
+<h2><span class="num">3</span>Ouvrir un document</h2>
+
+<p>Quatre chemins mènent au même endroit, au choix :</p>
+<ul class="points">
+  <li><strong>Glissez le fichier</strong> depuis l'Explorateur et lâchez-le sur la fenêtre. Plusieurs d'un coup, si besoin.</li>
+  <li><strong>Double-cliquez sur un PDF</strong> dans l'Explorateur : il s'ouvre dans l'application.</li>
+  <li><strong>Fichier&nbsp;› Ouvrir…</strong> (<kbd>Ctrl</kbd> + <kbd>O</kbd>).</li>
+  <li><strong>Fichier&nbsp;› Récents</strong>, ou la liste des récents sur la page d'accueil.</li>
+</ul>
+
+<p>Les images <strong>JPEG</strong>, <strong>PNG</strong> et <strong>WebP</strong> s'ouvrent aussi : chacune devient une page.</p>
+
+<h3>Plusieurs documents à la fois</h3>
+<p><strong>Ouvrir</strong> place chaque document dans son propre onglet : ils restent séparés. <strong>Ajouter au document</strong> (<kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>O</kbd>) les réunit au contraire en un seul, chaque page gardant la couleur de son origine dans la marge — c'est ainsi qu'on fusionne. Une page se glisse d'un onglet à l'autre à la souris.</p>
+
+<div class="attention">
+  <div class="titre">Un PDF protégé par mot de passe</div>
+  <p>Il s'ouvre : l'application demande le mot de passe au moment de l'ouverture.</p>
+</div>
+</section>
+
+<!-- =================================================== 4 -->
+<section>
+<h2><span class="num">4</span>Lire, et prendre du texte</h2>
+
+<p class="lede">La vue <strong>Lire</strong> est celle qui s'ouvre par défaut : les pages s'enchaînent, comme dans une liseuse.</p>
+
+<figure>
+  <img src="captures/a2-lire.png" alt="La vue Lire">
+  <figcaption>Le document en lecture. Le zoom, la vue deux pages et le numéro de page sont dans la barre du haut ; le champ en bas à droite saute à une page précise.</figcaption>
+</figure>
+
+<h3>Sélectionner et copier du texte</h3>
+<p>Le texte se prend à la souris, comme dans un traitement de texte, et se copie avec <kbd>Ctrl</kbd> + <kbd>C</kbd>. Cela vaut aussi pour un document scanné, à condition d'avoir lancé la reconnaissance de texte (chapitre 11).</p>
+
+<figure>
+  <img src="captures/a3-selection-texte.png" alt="Du texte sélectionné dans la page">
+  <figcaption>Un passage sélectionné. Seul le texte du document est pris : les numéros de page et les boutons de l'application ne partent pas avec, même si le geste les traverse.</figcaption>
+</figure>
+
+<div class="note">
+  <div class="titre">Modifier une page depuis la lecture</div>
+  <p>Le bouton <strong>Modifier</strong>, en haut à droite de chaque page, ouvre directement l'éditeur sur cette page-là (chapitre 7).</p>
+</div>
+</section>
+
+<!-- =================================================== 5 -->
+<section>
+<h2><span class="num">5</span>Rechercher, remplacer, caviarder partout</h2>
+
+<p><kbd>Ctrl</kbd> + <kbd>F</kbd> ouvre le panneau de recherche. Il flotte à côté du document au lieu de le masquer, et chaque occurrence est surlignée sur la page.</p>
+
+<figure>
+  <img src="captures/a4-recherche.png" alt="Le panneau de recherche">
+  <figcaption>Les occurrences sont listées avec leur page et leur contexte : un clic y mène. <kbd>Entrée</kbd> passe à la suivante, <kbd>Maj</kbd> + <kbd>Entrée</kbd> à la précédente.</figcaption>
+</figure>
+
+<ul class="points">
+  <li><strong>Mot entier</strong> évite qu'« aire » trouve « affaire ».</li>
+  <li><strong>Remplacer tout</strong> corrige chaque passage dans le fichier lui-même, en gardant la police, la taille et la mise en page d'origine.</li>
+  <li><strong>Caviarder tout</strong> masque chaque occurrence d'un rectangle noir <em>et retire le texte du fichier</em>. Ce n'est pas un trait de feutre : le mot ne se retrouve pas par copier-coller dans le document exporté.</li>
+</ul>
+
+<div class="attention">
+  <div class="titre">À vérifier avant d'envoyer</div>
+  <p>Le caviardage porte sur ce que la recherche a trouvé. Sur un document scanné, il faut donc avoir lancé la reconnaissance de texte au préalable, sans quoi il n'y a rien à trouver — et rien à retirer.</p>
+</div>
+</section>
+
+<!-- =================================================== 6 -->
+<section>
+<h2><span class="num">6</span>Organiser les pages</h2>
+
+<p class="lede">La vue <strong>Organiser</strong> pose toutes les pages sur la table, en vignettes.</p>
+
+<figure>
+  <img src="captures/a5-organiser.png" alt="La vue Organiser">
+  <figcaption>Chaque page porte son numéro et l'origine dont elle vient. Le numéro sous la vignette s'écrit directement : tapez 3 et la page part en troisième position.</figcaption>
+</figure>
+
+<h3>Déplacer, retirer, pivoter</h3>
+<ul class="points">
+  <li><strong>Glissez</strong> une page à sa nouvelle place, ou tapez le numéro voulu sous la vignette.</li>
+  <li><strong>Cliquez</strong> pour sélectionner, <kbd>Maj</kbd> + clic pour une plage, <kbd>Ctrl</kbd> + <kbd>A</kbd> pour tout.</li>
+  <li><kbd>R</kbd> pivote à droite, <kbd>Maj</kbd> + <kbd>R</kbd> à gauche, <kbd>Suppr</kbd> retire.</li>
+  <li><strong>Clic droit</strong> sur une page : pivoter, modifier, poser un signet, copier le texte, dupliquer, extraire, supprimer.</li>
+</ul>
+
+<figure>
+  <img src="captures/a6-selection.png" alt="Plusieurs pages sélectionnées">
+  <figcaption>Dès qu'une page est sélectionnée, une barre apparaît en bas : elle agit sur toute la sélection, y compris pour la déplacer d'un bloc à un numéro précis.</figcaption>
+</figure>
+
+<h3>Assembler et découper</h3>
+<p>Dans le panneau <strong>Outils</strong>, famille <em>Pages</em> : insérer des <strong>pages vierges</strong> (A4, A5, A3, Letter, Legal, portrait ou paysage), <strong>ajouter des images</strong>, <strong>détecter les pages vides</strong> d'un scan puis les retirer après vérification, <strong>diviser le document</strong> (une page par fichier, par lots ou par plages, réunis dans une archive ZIP), et <strong>redimensionner</strong> toutes les pages à un format standard avec marge.</p>
+</section>
+
+<!-- =================================================== 7 -->
+<section>
+<h2><span class="num">7</span>Corriger et annoter une page</h2>
+
+<p class="lede">Un double-clic sur une page ouvre l'éditeur. Tout s'y fait à la souris, et rien n'est définitif tant que vous n'avez pas enregistré.</p>
+
+<figure>
+  <img src="captures/a8-editeur.png" alt="L'éditeur de page">
+  <figcaption>La colonne d'outils, à gauche : sélectionner, modifier le texte existant, ajouter du texte, surligner, encadrer, dessiner, caviarder, ajouter un champ, tamponner, signer, insérer une image.</figcaption>
+</figure>
+
+<h3>Corriger le texte existant</h3>
+<p>C'est l'outil le plus utile, et le moins évident. Il repère les lignes de la page et les encadre. Un clic dans un encadré reprend le texte tel quel — sa taille, sa police approchée, la couleur de l'encre et celle du fond, relevées sur la page — et le curseur se pose là où vous avez cliqué. Ce que vous écrivez remplace l'ancien.</p>
+
+<figure>
+  <img src="captures/a9-corriger-texte.png" alt="Les blocs de texte encadrés">
+  <figcaption>Les blocs modifiables, encadrés par l'outil. Une case permet d'effacer réellement le texte d'origine plutôt que de le recouvrir.</figcaption>
+</figure>
+
+<div class="note">
+  <div class="titre">Recouvrir ou effacer</div>
+  <p>Par défaut, le texte corrigé est posé par-dessus l'ancien, qui reste dans le fichier. Pour qu'il disparaisse vraiment — et ne se retrouve pas par copier-coller — cochez l'effacement. La page reste nette ; l'application ne la convertit en image qu'en dernier recours, et le journal le signale quand elle a dû le faire.</p>
+</div>
+
+<h3>Annoter</h3>
+<p>Surligner, encadrer, dessiner à main levée, écrire un commentaire, insérer une image. Chaque annotation se déplace, se redimensionne et se supprime. À l'enregistrement, ces annotations partent comme de <strong>vrais commentaires PDF</strong> : le destinataire les retrouve, les déplace ou les retire dans Acrobat. L'outil <strong>Aplatir</strong> permet au contraire de les figer dans la page.</p>
+</section>
+
+<!-- =================================================== 8 -->
+<section>
+<h2><span class="num">8</span>Tampons et signature</h2>
+
+<p>Dans l'éditeur, l'outil <strong>Tampon</strong> propose les mentions courantes, déjà datées du jour : Reçu le, Payé, Traité le, Copie conforme, Visé, Approuvé, Refusé, Confidentiel, Urgent, Original, Brouillon, Pour information.</p>
+
+<figure>
+  <img src="captures/a10-tampon.png" alt="La fenêtre des tampons">
+  <figcaption>Choisissez un tampon, puis cliquez sur la page à l'endroit où le poser. Il se déplace ensuite comme n'importe quelle annotation.</figcaption>
+</figure>
+
+<ol class="etapes">
+  <li>Ouvrez la page dans l'éditeur (double-clic), puis l'outil <strong>Tampon</strong>.</li>
+  <li>Cliquez le tampon voulu — ou composez le vôtre dans « Votre tampon », où <code>{date}</code> devient la date du jour.</li>
+  <li>Cliquez sur la page à l'endroit voulu.</li>
+</ol>
+
+<h3>Mémoriser ses tampons et sa signature</h3>
+<p>Le bouton <strong>Mémoriser</strong> garde un tampon personnel pour les fois suivantes. L'outil <strong>Signer</strong> fonctionne de même : tracez votre signature à la souris, et mémorisez-la si vous voulez la retrouver.</p>
+
+<div class="attention">
+  <div class="titre">Ce qui est mémorisé, et où</div>
+  <p>Tampons et signatures restent sur le serveur, dans <em>votre</em> dossier, jamais dans un PDF tant que vous ne les y posez pas. Sur un poste partagé ou une clé USB qui circule, mieux vaut tracer sa signature au moment de signer et ne pas la mémoriser.</p>
+</div>
+</section>
+
+<!-- =================================================== 9 -->
+<section>
+<h2><span class="num">9</span>Enregistrer, exporter, imprimer</h2>
+
+<h3>Enregistrer</h3>
+<p><strong>Enregistrer</strong> (<kbd>Ctrl</kbd> + <kbd>S</kbd>) réécrit le fichier ouvert — avec une confirmation la première fois pour chaque fichier, pour qu'on ne remplace jamais un original sans le vouloir. <strong>Enregistrer sous…</strong> (<kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>S</kbd>) crée un nouveau fichier et laisse l'original tranquille.</p>
+
+<figure>
+  <img src="captures/a11-exporter.png" alt="La fenêtre d'enregistrement">
+  <figcaption>L'enregistrement rassemble ce qui part dans le fichier : le document complet ou seulement les pages choisies.</figcaption>
+</figure>
+
+<h3>Exporter autrement</h3>
+<ul class="points">
+  <li><strong>En images</strong> : PNG ou JPEG, en 72, 150 ou 300 points par pouce.</li>
+  <li><strong>Le texte</strong> du document, dans un fichier <code>.txt</code>.</li>
+  <li><strong>Une version allégée</strong> : les pages deviennent des images, et l'application compare les tailles avant et après.</li>
+</ul>
+
+<h3>Imprimer</h3>
+<p><strong>Imprimer</strong> (<kbd>Ctrl</kbd> + <kbd>P</kbd>) envoie directement à l'imprimante, sans passer par une autre fenêtre. La qualité se choisit : fine (300 ppp), normale (200) ou rapide (150). L'impression en livret est disponible.</p>
+</section>
+
+<!-- =================================================== 10 -->
+<section>
+<h2><span class="num">10</span>Protéger un document</h2>
+
+<figure>
+  <img src="captures/a12-proteger.png" alt="La fenêtre de protection">
+  <figcaption>Mot de passe d'ouverture, mot de passe propriétaire, et le détail des autorisations.</figcaption>
+</figure>
+
+<ul class="points">
+  <li><strong>Mot de passe d'ouverture</strong> : sans lui, le document ne s'ouvre pas. Chiffrement AES-256.</li>
+  <li><strong>Mot de passe propriétaire</strong> : le document s'ouvre, mais certaines actions restent fermées.</li>
+  <li><strong>Autorisations</strong> : impression, copie du texte, modification, annotation, remplissage des formulaires, réorganisation des pages.</li>
+  <li><strong>Aplatir</strong> fige les champs de formulaire et les annotations : plus personne ne les modifie.</li>
+</ul>
+
+<div class="attention">
+  <div class="titre">Le mot de passe voyage à part</div>
+  <p>Un document protégé n'a d'intérêt que si le mot de passe ne part pas dans le même courriel que lui.</p>
+</div>
+
+<h3>Formulaires</h3>
+<p>Les champs d'un PDF de formulaire — texte, cases à cocher, listes, boutons — sont détectés et remplissables dans l'application. Les valeurs peuvent rester modifiables, ou être figées. Si les pages sont réorganisées ou fusionnées, elles sont figées automatiquement, faute de quoi la saisie serait perdue.</p>
+</section>
+
+<!-- =================================================== 11 -->
+<section>
+<h2><span class="num">11</span>Les outils du quotidien</h2>
+
+<figure>
+  <img src="captures/a7-outils.png" alt="Le panneau Outils">
+  <figcaption>Le panneau <strong>Outils</strong> : tout ce que l'application sait faire, rangé par famille.</figcaption>
+</figure>
+
+<h3>Reconnaître le texte d'un scan (OCR)</h3>
+<p>Un document scanné n'est qu'une image : rien ne s'y cherche ni ne s'y sélectionne. La reconnaissance de texte y remédie, <strong>en français et en allemand</strong>, entièrement sur le poste — rien n'est envoyé nulle part. Le temps restant est annoncé pendant le travail, et l'opération s'interrompt par le bouton en bas de la fenêtre ou par <kbd>Échap</kbd>. Le texte reconnu sert ensuite à la recherche, au remplacement, au tableau et à la correction, et repart dans le PDF exporté : invisible, mais sélectionnable et cherchable.</p>
+
+<h3>Copier un tableau vers Excel</h3>
+<p>Les colonnes sont repérées d'après les blancs qui traversent les lignes. Le résultat se colle dans Excel (<kbd>Ctrl</kbd> + <kbd>V</kbd>, une cellule par colonne) ou s'enregistre en CSV. Les montants deviennent de vrais nombres — <code>1'234.50</code> devient <code>1234.50</code>, monnaie et espaces retirés — et Excel les additionne sans retouche.</p>
+
+<figure>
+  <img src="captures/a13-tableau.png" alt="Copier un tableau vers Excel">
+  <figcaption>Le tableau relu avant d'être copié, colonne par colonne. Sur plusieurs pages, les lignes se suivent.</figcaption>
+</figure>
+
+<h3>Constituer un dossier de pièces</h3>
+<p>Chaque document ouvert devient une pièce numérotée : sommaire en tête, intercalaires « Pièce n° », mention sur chaque page, pagination continue et un signet par pièce.</p>
+
+<figure>
+  <img src="captures/a14-dossier.png" alt="Constituer un dossier de pièces">
+  <figcaption>De quoi monter un bordereau complet sans assembler les pièces à la main.</figcaption>
+</figure>
+
+<h3>Comparer deux versions</h3>
+<p>Les deux documents sont posés côte à côte, page par page, les mots retirés et ajoutés en couleur. Si l'une des versions est un scan, la reconnaissance se lance à la demande. Une vue « aspect » marque en rouge ce qui change à l'image.</p>
+
+<h3>Traiter plusieurs fichiers</h3>
+<p>Pages vides, compression, numérotation, protection, images en PDF, séparation, extraction du texte — en série sur plusieurs fichiers, sans toucher au document ouvert. Les résultats arrivent dans une archive ZIP.</p>
+
+<h3>Le journal</h3>
+<p>Quand une opération a dû contourner quelque chose — une police illisible, un lien perdu, un commentaire ignoré —, elle ne le tait pas : le bouton en bas de la fenêtre ouvre le journal.</p>
+</section>
+
+<!-- =================================================== 12 -->
+<section>
+<h2><span class="num">12</span>Si l'application s'arrête brutalement</h2>
+
+<p>Le travail en cours est mis de côté quelques secondes après chaque changement, et effacé dès que vous enregistrez. Si l'ordinateur s'éteint, si Windows redémarre pour une mise à jour, si l'application se ferme d'elle-même, il ne se perd rien : au lancement suivant, elle propose de reprendre là où vous en étiez, modifications comprises.</p>
+
+<div class="note">
+  <div class="titre">Ce qui est mis de côté</div>
+  <p>Une copie des documents ouverts et de vos modifications, dans votre dossier de données. Elle disparaît à l'enregistrement, ou quand vous fermez volontairement.</p>
+</div>
+</section>
+
+<!-- =================================================== 13 -->
+<section>
+<h2><span class="num">13</span>Mettre à jour</h2>
+
+<p>L'application est posée à un seul endroit, sur le serveur. Pour la mettre à jour, il n'y a donc qu'un dossier à remplacer : les raccourcis ne contiennent qu'un chemin, et tout le monde lance la nouvelle version au lancement suivant, sans rien réinstaller.</p>
+
+<ol class="etapes">
+  <li><strong>Fermez l'application</strong> sur tous les postes. Windows verrouille un programme en cours, et la copie échouerait à moitié.</li>
+  <li>Téléchargez le nouveau zip et posez-le dans le dossier de l'application.</li>
+  <li>Double-cliquez sur <span class="chemin">Mettre-a-jour.cmd</span> — ou faites glisser le zip dessus.</li>
+</ol>
+
+<div class="note">
+  <div class="titre">Vos affaires sont conservées</div>
+  <p>Le script remplace les fichiers de l'application et ne touche jamais au dossier <span class="chemin">data</span> : tampons, signatures, récents et travail mis de côté restent en place. Il ne va rien chercher sur Internet et n'envoie rien ; c'est vous qui apportez le zip. <strong>Aide&nbsp;› À propos</strong> indique la version installée et sa date.</p>
+</div>
+</section>
+
+<!-- =================================================== 14 -->
+<section>
+<h2><span class="num">14</span>Où sont mes affaires</h2>
+
+<p>Chaque personne a son dossier sur le serveur, à l'intérieur du dossier <span class="chemin">data</span> de l'application. On y trouve les tampons mémorisés, la signature, la liste des documents récents, les réglages d'affichage et le travail mis de côté pour la récupération. <strong>Fichier&nbsp;› Ouvrir le dossier des données</strong> y donne accès directement : vous pouvez y faire le ménage quand vous le souhaitez.</p>
+
+<h3>Rien ne sort du poste</h3>
+<p>Les documents sont lus, modifiés et réassemblés dans la fenêtre, sur l'ordinateur. Aucun fichier n'est envoyé nulle part : ni à un service en ligne, ni à un serveur d'analyse, ni à l'éditeur du logiciel. La reconnaissance de texte elle-même tourne sur le poste. L'application n'a besoin d'aucun accès Internet pour fonctionner.</p>
+
+<div class="attention">
+  <div class="titre">Le bon réflexe</div>
+  <p>Verrouillez votre session Windows en quittant votre bureau (<kbd>Windows</kbd> + <kbd>L</kbd>). C'est ce qui protège le mieux ce que vous avez ouvert.</p>
+</div>
+</section>
+
+<!-- =================================================== 15 -->
+<section>
+<h2><span class="num">15</span>Raccourcis clavier</h2>
+
+<p><kbd>F1</kbd>, ou <strong>Aide&nbsp;› Raccourcis clavier</strong>, affiche cette liste dans l'application.</p>
+
+<table>
+  <tr><th>Touche</th><th>Action</th></tr>
+  <tr><td class="touche">Clic</td><td>Sélectionner ou désélectionner une page</td></tr>
+  <tr><td class="touche"><kbd>Maj</kbd> + clic</td><td>Sélectionner une plage de pages</td></tr>
+  <tr><td class="touche">Double-clic</td><td>Ouvrir l'éditeur de page</td></tr>
+  <tr><td class="touche">Un chiffre</td><td>Déplacer la page vers ce numéro</td></tr>
+  <tr><td class="touche">Clic droit</td><td>Menu de la page, ou de l'onglet</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>A</kbd></td><td>Tout sélectionner</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>O</kbd></td><td>Ouvrir des fichiers</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>O</kbd></td><td>Ajouter au document ouvert</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>Enregistrer (réécrit le fichier ouvert)</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>S</kbd></td><td>Enregistrer sous…</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>P</kbd></td><td>Imprimer</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>F</kbd></td><td>Rechercher, remplacer, caviarder</td></tr>
+  <tr><td class="touche"><kbd>Entrée</kbd> / <kbd>Maj</kbd> + <kbd>Entrée</kbd></td><td>Occurrence suivante / précédente</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>B</kbd></td><td>Ajouter un signet</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td>Annuler / Rétablir</td></tr>
+  <tr><td class="touche"><kbd>Suppr</kbd></td><td>Retirer les pages sélectionnées</td></tr>
+  <tr><td class="touche"><kbd>R</kbd> / <kbd>Maj</kbd> + <kbd>R</kbd></td><td>Pivoter à droite / à gauche</td></tr>
+  <tr><td class="touche"><kbd>Alt</kbd> + <kbd>←</kbd> / <kbd>→</kbd></td><td>Décaler la page d'une position</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>1</kbd> / <kbd>Ctrl</kbd> + <kbd>2</kbd></td><td>Vue Lire / Organiser</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>T</kbd> / <kbd>Ctrl</kbd> + <kbd>W</kbd></td><td>Nouvel onglet / Fermer l'onglet</td></tr>
+  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>Tab</kbd></td><td>Onglet suivant</td></tr>
+  <tr><td class="touche"><kbd>Échap</kbd></td><td>Fermer une fenêtre, ou interrompre une opération longue</td></tr>
+  <tr><td class="touche"><kbd>F1</kbd></td><td>Afficher tous les raccourcis</td></tr>
+</table>
+</section>
+
+</body>
+</html>

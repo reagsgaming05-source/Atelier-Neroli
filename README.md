@@ -518,6 +518,26 @@ La version hébergée porte la même politique, élargie au strict nécessaire p
 servir ses propres fichiers. L'hébergeur voit la demande de la page, comme tout
 serveur web, jamais les documents traités.
 
+## Mode d'emploi en PDF
+
+Un manuel pour le secrétariat — la première connexion, puis le tour de
+l'application — se fabrique d'une commande :
+
+```bash
+cd outils && npm run guide          # poste avec écran
+xvfb-run npm run guide              # Linux sans écran
+```
+
+Deux temps. `guide/captures.js` ouvre l'application, y fait les gestes d'une
+utilisatrice et photographie chaque écran ; `guide/guide.html` est ensuite
+imprimé en PDF par Chromium. Les captures ne sont donc ni dessinées ni
+retouchées : une qui ne correspond plus au logiciel se voit à la relecture, et
+le guide se refait quand l'interface bouge. Le document qui pose dans les
+captures est fabriqué par `guide/exemple.js`, porte EXEMPLE en filigrane et ne
+contient aucune donnée réelle.
+
+Les captures et le PDF ne sont pas versionnés, comme les pages construites.
+
 ## Tests
 
 Le comportement est vérifié dans Chromium : réorganisation, rotation avec

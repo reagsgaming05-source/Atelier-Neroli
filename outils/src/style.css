@@ -216,8 +216,12 @@
   /* ---------- espace de travail ---------- */
   .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 272px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   /* ---------- onglets : plusieurs documents dans la fenêtre ---------- */
+  /* Les rangées sont dites, jamais devinées. Sans cela, la barre d'onglets
+     masquée — elle l'est tant qu'un seul document est ouvert — sort de la
+     grille, le panneau et la table remontent dans la première rangée, qui se
+     dimensionne au contenu, et s'arrêtent avant le bas de la fenêtre. */
   .onglets {
-    grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 3px; padding: 6px 10px 0; min-width: 0;
+    grid-row: 1; grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 3px; padding: 6px 10px 0; min-width: 0;
     background: var(--feutre); border-bottom: 1px solid var(--trait); overflow-x: auto; overflow-y: hidden;
   }
   .onglets[hidden] { display: none; }
@@ -239,7 +243,7 @@
   .onglet-plus:hover { color: var(--texte); border-color: var(--texte-3); }
   .onglet-plus svg { width: 13px; height: 13px; }
   .side {
-    display: flex; flex-direction: column; min-height: 0;
+    grid-row: 2; display: flex; flex-direction: column; min-height: 0;
     background: var(--feutre); border-right: 1px solid var(--trait);
   }
   .tabs { display: flex; gap: 3px; padding: 10px 12px 2px; flex: none; }
@@ -328,7 +332,7 @@
 
   /* ---------- la table lumineuse ---------- */
   .canvas {
-    position: relative; min-width: 0; min-height: 0; overflow: auto; padding: 24px 24px 44px;
+    grid-row: 2; position: relative; min-width: 0; min-height: 0; overflow: auto; padding: 24px 24px 44px;
     background:
       radial-gradient(120% 70% at 50% -10%, rgba(255, 255, 255, .045), transparent 60%),
       var(--table);
