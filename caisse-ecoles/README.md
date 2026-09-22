@@ -483,7 +483,8 @@ Ce qui est prévu, et éprouvé :
 | le copieur écrit encore | rien n'est pris : la taille doit être immobile depuis un moment **et** le PDF doit se terminer (`%%EOF`) |
 | PDF coupé net | rangé dans `à revoir\`, avec une note disant pourquoi |
 | plusieurs postes sur le même dossier | réservation par déplacement atomique dans `.encours\<poste>\` : un scan n'est pris que par un poste |
-| un poste s'éteint en plein travail | ses scans sont repris par un autre après deux heures |
+| l'application ouverte deux fois sur le même PC | chaque exécution marque ses réservations : la seconde fenêtre ne reprend pas ce que la première est en train de lire |
+| un poste s'éteint en plein travail | ses scans sont repris par un autre après deux heures (dix minutes s'il s'agit d'une autre fenêtre du même PC) |
 | serveur injoignable | signalé à l'écran, la veille continue et reprend au retour |
 | feuille scannée à l'envers, de travers | le code se lit dans les quatre orientations |
 | « PDF compact » du copieur | la redondance du code (25 %) encaisse l'écrasement des nuances |

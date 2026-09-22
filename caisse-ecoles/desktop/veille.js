@@ -36,6 +36,14 @@ const REVOIR = 'à revoir';
 const PATIENCE_MS = 10 * 60 * 1000;
 const STABILITE_MS = 4000;
 const REPRISE_MS = 2 * 60 * 60 * 1000;
+/**
+ * Délai avant de reprendre un scan laissé par une AUTRE instance du même poste. L'application
+ * peut être ouverte deux fois sur la même machine — c'est vite fait avec un exécutable portable —
+ * et les deux partagent alors le dossier de travail du poste. Dix minutes : plus long que la
+ * lecture d'une grosse pile passée à l'OCR, assez court pour qu'un redémarrage ne fasse pas
+ * attendre deux heures.
+ */
+const GRACE_MS = 10 * 60 * 1000;
 const QUEUE_EOF = 2048; // on cherche « %%EOF » dans la fin du fichier
 
 /** Nom de fichier utilisable sous Windows, sans accent ni caractère interdit. */
@@ -117,6 +125,13 @@ function creerVeille(opts) {
   const maintenant = opts.maintenant || (() => Date.now());
   const stabiliteMs = opts.stabiliteMs == null ? STABILITE_MS : Number(opts.stabiliteMs);
   const repriseMs = opts.repriseMs == null ? REPRISE_MS : Number(opts.repriseMs);
+  const graceMs = opts.graceMs == null ? GRACE_MS : Number(opts.graceMs);
+  /**
+   * Marque de CETTE exécution. Deux instances de l'application sur la même machine ont le même
+   * nom de poste et donc le même dossier de travail : sans cette marque, la seconde reprendrait
+   * les scans que la première est en train de lire, et les lui ferait disparaître sous les mains.
+   */
+  const instance = Math.random().toString(36).slice(2, 7);
   const patienceMs = opts.patienceMs == null ? PATIENCE_MS : Number(opts.patienceMs);
   const journal = opts.journal || (() => {});
   const traiter = opts.traiter || (async () => ({ ok: false, raison: 'aucun lecteur' }));
@@ -213,14 +228,21 @@ function creerVeille(opts) {
         if (!/\.pdf$/i.test(n)) continue;
         const chemin = path.join(dir, n);
         const r = reservationDe(n);
-        if (p !== poste) {
+        // À nous, et à nous seuls : ce que CETTE exécution a réservé. Un tour ne se superpose
+        // jamais à lui-même, donc un tel fichier ne peut être qu'un travail interrompu.
+        const mien = p === poste && r.tag && r.tag === instance;
+        if (!mien) {
           let depuis = r.depuis;
           if (depuis == null) {
             // nom sans horodatage (fichier posé à la main) : faute de mieux, la date du fichier
             try { depuis = (await fsp.stat(chemin)).mtimeMs; } catch (e) { continue; }
           }
-          if (maintenant() - depuis < repriseMs) continue;
-          noter(`reprise d'un scan laissé par ${p} : ${r.nom}`);
+          // même poste, autre exécution : une seconde fenêtre ouverte, ou un plantage précédent
+          const attente = p === poste ? graceMs : repriseMs;
+          if (maintenant() - depuis < attente) continue;
+          noter(p === poste
+            ? `reprise d'un scan laissé par une autre exécution de ce poste : ${r.nom}`
+            : `reprise d'un scan laissé par ${p} : ${r.nom}`);
         }
         repris.push({ chemin, nom: r.nom });
       }
@@ -237,8 +259,8 @@ function creerVeille(opts) {
    * intéresse est depuis quand un poste retient ce scan, et cela, seul le nom le dit.
    */
   function reservationDe(nomReserve) {
-    const m = /^(\d{10,})-[a-z0-9]+-(.*)$/i.exec(nomReserve);
-    return m ? { depuis: Number(m[1]), nom: m[2] } : { depuis: null, nom: nomReserve };
+    const m = /^(\d{10,})-([a-z0-9]+)-(.*)$/i.exec(nomReserve);
+    return m ? { depuis: Number(m[1]), tag: m[2], nom: m[3] } : { depuis: null, tag: '', nom: nomReserve };
   }
 
   /**
@@ -249,8 +271,7 @@ function creerVeille(opts) {
   async function reserver(racine, nom) {
     const dir = path.join(racine, ENCOURS, poste);
     await fsp.mkdir(dir, { recursive: true });
-    const alea = Math.random().toString(36).slice(2, 7);
-    const cible = path.join(dir, `${maintenant()}-${alea}-${nom}`);
+    const cible = path.join(dir, `${maintenant()}-${instance}-${nom}`);
     try {
       await fsp.rename(path.join(racine, nom), cible);
       return cible;
@@ -374,9 +395,9 @@ function creerVeille(opts) {
     if (minuteur) { clearInterval(minuteur); minuteur = null; }
   }
 
-  const etat = () => Object.assign({ poste, actif: !!minuteur, enCours }, compteur);
+  const etat = () => Object.assign({ poste, instance, actif: !!minuteur, enCours }, compteur);
 
-  return { tour, demarrer, arreter, etat, poste };
+  return { tour, demarrer, arreter, etat, poste, instance };
 }
 
 module.exports = { creerVeille, nomPropre, pdfEntier, ENCOURS, TRAITE, REVOIR };

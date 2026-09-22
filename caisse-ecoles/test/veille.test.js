@@ -171,17 +171,49 @@ test('un poste éteint en plein travail ne retient pas le scan éternellement', 
   } finally { d.jeter(); }
 });
 
-test('nos propres restes sont repris au démarrage suivant', async () => {
+test('notre propre travail interrompu est repris au tour suivant', async () => {
   const d = dossierTemporaire('reprise');
   try {
     const octets = await pdfExemple(['pièce']);
+    const ctx = veille(d, { poste: 'POSTE-A' });
+    // ce que CETTE exécution a réservé porte sa marque : un tour ne se superposant jamais à
+    // lui-même, un tel fichier ne peut être qu'un travail interrompu — on le reprend aussitôt
     const mien = path.join(d.chemin, '.encours', 'POSTE-A');
     fs.mkdirSync(mien, { recursive: true });
-    fs.writeFileSync(path.join(mien, '1700000000000-bbb-interrompu.pdf'), octets);
-    const ctx = veille(d, { poste: 'POSTE-A' });
-    await tours(ctx, 2);
+    fs.writeFileSync(path.join(mien, `1700000000000-${ctx.v.instance}-interrompu.pdf`), octets);
+    await tours(ctx, 1);
     assert.equal(ctx.lus.length, 1, 'notre propre travail interrompu n\'a pas été repris');
     assert.match(ctx.lus[0].nom, /interrompu/);
+  } finally { d.jeter(); }
+});
+
+test('l\'application ouverte deux fois sur le même PC : la seconde ne vole pas la première', async () => {
+  // Deux fenêtres de Compta Blonay, c'est vite fait avec un exécutable portable. Les deux ont le
+  // même nom de poste, donc le même dossier de travail. Sans marque d'exécution, la seconde
+  // reprenait les scans que la première était en train de lire et les lui faisait disparaître
+  // des mains — c'est exactement la panne que ce test interdit.
+  const d = dossierTemporaire('deux-fenetres');
+  try {
+    const octets = await pdfExemple(['pièce']);
+    const h = horlogeFactice();
+    const un = veille(d, { poste: 'PC-BUREAU', horloge: h, graceMs: 600000 });
+    const deux = veille(d, { poste: 'PC-BUREAU', horloge: h, graceMs: 600000 });
+    assert.notEqual(un.v.instance, deux.v.instance, 'deux exécutions doivent se distinguer');
+
+    // la première réserve un scan, et met du temps à le lire
+    const mien = path.join(d.chemin, '.encours', 'PC-BUREAU');
+    fs.mkdirSync(mien, { recursive: true });
+    const enCours = path.join(mien, `${h.maintenant()}-${un.v.instance}-en-cours.pdf`);
+    fs.writeFileSync(enCours, octets);
+
+    // la seconde tourne pendant ce temps : elle ne doit pas y toucher
+    await tours(deux, 3, 60000);
+    assert.deepEqual(deux.lus, [], 'la seconde fenêtre a repris un scan de la première');
+    assert.ok(fs.existsSync(enCours), 'le scan a disparu des mains de la première fenêtre');
+
+    // mais si la première ne revient jamais, le scan n'est pas perdu pour autant
+    await tours(deux, 2, 700000);
+    assert.equal(deux.lus.length, 1, 'un scan abandonné par une fenêtre fermée reste bloqué pour toujours');
   } finally { d.jeter(); }
 });
 
