@@ -197,9 +197,14 @@ jobs:
           # un « appuyez sur une touche » : elle attend que la fenêtre se ferme,
           # puis rouvre l'application. Sans quoi la personne se retrouverait
           # devant une console, sans son logiciel.
+          # Dans un fichier, pas dans un tuyau : l'application que la mise à jour
+          # rouvre hériterait de la sortie, et PowerShell attendrait la fermeture
+          # du tuyau — donc celle de l'application. Le premier essai y est resté.
           $env:BLONAY_MAJ_AUTO = '1'
-          $auto = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$env:GITHUB_WORKSPACE\BlonayPDF-windows.zip`" < NUL" 2>&1 | Out-String
+          $journal = Join-Path $env:RUNNER_TEMP 'maj-auto.txt'
+          cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$env:GITHUB_WORKSPACE\BlonayPDF-windows.zip`" > `"$journal`" 2>&1 < NUL"
           Remove-Item Env:\BLONAY_MAJ_AUTO
+          $auto = Get-Content $journal -Raw -Encoding utf8
           Write-Host $auto
           & $dit 'la mise à jour automatique va au bout' ($auto -match 'BLONAY-MAJ: OK')
           & $dit 'elle rouvre l''application au lieu d''attendre une touche' ($auto -match 'Redémarrage de l''application')

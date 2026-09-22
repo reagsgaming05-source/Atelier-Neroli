@@ -136,7 +136,10 @@ rem Repere en ASCII pur : lisible par un script quel que soit l'encodage.
 echo BLONAY-MAJ: OK
 if defined BLONAY_MAJ_AUTO (
   echo   Redémarrage de l'application…
-  start "" "%DOSSIER%BlonayPDF.exe"
+  rem Les flux sont detournes vers nul : sans cela l'application heriterait de
+  rem la sortie du script, et le programme qui l'a lance attendrait la fermeture
+  rem du tuyau — donc celle de l'application, qui vient a peine de s'ouvrir.
+  start "" "%DOSSIER%BlonayPDF.exe" >nul 2>&1
   exit /b 0
 )
 echo   Lancez BlonayPDF.exe ; « Aide › À propos » indique la version installée.
