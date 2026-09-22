@@ -85,12 +85,24 @@ def propose(dossier: Dossier) -> None:
             else:
                 p.include = True
                 p.exclusion_reason = None
-        # doublons probables (ex. lettre d'accompagnement + facture du même montant)
+        # Deux pièces du même montant. Ce peut être un vrai doublon — une lettre d'accompagnement
+        # qui répète le montant de la facture —, mais aussi deux nuitées ou deux repas au même
+        # prix : dans une auberge, quatre nuits font quatre fois la même somme. Les écarter d'office
+        # faisait disparaître les trois quarts d'un hébergement sans rien dire, et une pièce écartée
+        # ne se réclame pas toute seule. On les garde donc toutes, et on le signale : c'est la
+        # personne qui tranche, la pièce en main.
         if p.include and p.mode == "prorata" and p.total is not None and p.kind in ("facture", "autre"):
             key = (p.currency or "CHF", round(p.total, 2))
             if key in seen_totals:
-                p.include = False
-                p.exclusion_reason = f"Doublon probable de la pièce {seen_totals[key]} (même montant {p.total:.2f})"
+                jumelle = seen_totals[key]
+                p.notes.append(
+                    f"Même montant que la pièce {jumelle} ({p.total:.2f}) : deux nuitées ou deux repas"
+                    " au même prix, ou bien la même dépense comptée deux fois — à vérifier."
+                )
+                dossier.warnings.append(
+                    f"Pièces {jumelle} et {p.id} : même montant ({p.total:.2f}). Les deux sont comptées ;"
+                    " décochez-en une s'il s'agit de la même dépense."
+                )
             else:
                 seen_totals[key] = p.id
     if dossier.taux_eur_chf is None:

@@ -80,16 +80,29 @@ Mode serveur local (interface dans le navigateur, optionnel) : `./run.sh --web -
 
 Les PDF analysés et les images de pages sont conservés dans le dossier `data/` (local).
 
+## À quoi sert ce décompte
+
+La commune paie la sortie ou le camp, enseignant-e-s compris. Mais la commune n'est pas
+l'employeur des enseignant-e-s : c'est l'État. Ce décompte chiffre donc **ce qu'ont coûté les
+enseignant-e-s de l'État pendant l'activité**, et c'est cette part-là que l'État rembourse à la
+commune. Les élèves et les accompagnant-e-s non titrés restent à la charge de la commune.
+
+C'est ce qui explique le reste : pourquoi on ne retient que les *accompagnants titrés*, pourquoi
+un billet de groupe se découpe en tarifs adultes, et pourquoi une facture globale se partage au
+prorata du nombre de personnes.
+
 ## Règles appliquées
 
 | Situation | Traitement |
 |---|---|
 | Récépissé (bulletin de versement QR), reçu de carte, pièce « taux de change » | **Jamais** retenus comme pièce (seul le ticket / la facture fait foi). Ils servent uniquement à retrouver un montant CHF ou un taux. |
-| Billet avec tarifs par personne (ex. Mobilis « 3 Prix entier CHF 2.80 », MOB « 2 enseignants demi-tarif ») | **Saisie directe** (colonne I, écrite comme formule du détail) : pour chaque billet on retient au plus *N titrés* tarifs adultes, **d'abord les plein tarifs, puis les demi-tarifs**. Le coût total des billets est écrit en colonne H à titre d'information. Libellé : `pces 1-4 (6*2.80 + 6*4.20 + 2*2.10)`. |
+| Billet avec tarifs par personne (ex. Mobilis « 3 Prix entier CHF 2.80 », MOB « 2 enseignants demi-tarif ») | **Saisie directe** (colonne I, écrite comme formule du détail) : pour chaque billet on retient au plus *N titrés* tarifs adultes, **d'abord les plein tarifs, puis les demi-tarifs** — un enfant a forcément un demi-tarif, donc le plein tarif d'un billet est celui d'un adulte ; s'il reste un-e titré-e à couvrir, on prend ensuite un demi-tarif. Le coût total des billets est écrit en colonne H à titre d'information. Libellé : `pces 1-4 (6*2.80 + 6*4.20 + 2*2.10)`. |
 | Facture / montant global (bus, hôtel, auberge de jeunesse, musée ou activité au prix de groupe…) : le prix adulte n'est pas connu | **Règle de trois** (colonne H + formule du modèle) : coût total × titrés ÷ total participants. Libellé : `pce 2` ou `pces 2-3 (300.00 + 150.00)`. |
 | Accompagnants invités à 0.00 (ex. « INVITE MEDIATION ») ou aucun tarif adulte sur la pièce | Rien à charge de l'État : pièce exclue avec motif (modifiable). Retenue quand même, elle passe par la règle de trois sur son total (jamais une ligne vide). |
 | Pièce en EUR | Montant CHF imprimé sur la pièce s'il existe, sinon taux d'une pièce « taux de change » / reçu de carte du dossier, sinon taux saisi dans l'interface. Le libellé montre la conversion (`45.00 EUR*0.9500 = 42.75 CHF`). |
-| Deux pièces de même montant (lettre + facture) | La seconde est signalée comme doublon probable et exclue (modifiable). |
+| Deux pièces de même montant | **Les deux sont comptées**, avec un avertissement sur la pièce et sur le dossier. Ce n'est pas forcément un doublon : quatre nuits dans une auberge font quatre fois la même somme. Écarter la seconde d'office faisait disparaître les trois quarts d'un hébergement sans rien dire, et une pièce écartée ne se réclame pas toute seule. S'il s'agit bien de la même dépense (lettre d'accompagnement qui répète une facture), décochez-en une. |
+| Nourriture sur une **course d'école** | Le modèle officiel de la course n'a pas de rubrique *Nourriture* : ces pièces vont dans *Autre*, en règle de trois. Un repas au restaurant ou de grosses courses pour tout le monde y ont leur place. Un petit achat (bonbons, goûter) ne vaut la peine que s'il pèse — de l'ordre d'une centaine de francs pour une vingtaine d'élèves ; en dessous, décochez-le. |
+| Frais de **cuisinière** (camp) | En pratique, dans *Nourriture*, en règle de trois. La ligne *Cuisinière* existe dans le modèle officiel du camp et reste disponible à la main, mais rien n'y est envoyé automatiquement. |
 | Rubriques | Course d'école : Transport / Activité / Autre. Camp : Nourriture / Hébergement / Transport / Activité / Autre / Cuisinière. Seules les rubriques utilisées apparaissent dans l'Excel, comme dans les décomptes établis à la main. |
 
 Le logiciel corrige aussi les quantités mal lues sur un billet grâce au nombre de personnes
@@ -99,7 +112,10 @@ Le logiciel corrige aussi les quantités mal lues sur un billet grâce au nombre
 ## Limites connues
 
 - L'écriture manuscrite (effectifs, n° de pièces écrits à la main) n'est pas lue de façon
-  fiable : vérifiez toujours les effectifs et les aperçus des pièces.
+  fiable : **les effectifs se saisissent à la main**, toujours, quoi que le formulaire ait donné.
+  Tout le calcul en dépend — sans accompagnant titré, la part de l'État vaut zéro.
+- Le libellé de chaque ligne doit porter les numéros des pièces (`pce 1`, `pces 1-3`) : c'est ce
+  qui permet de retrouver la pièce papier depuis le décompte.
 - Un scan de mauvaise qualité peut donner un texte incomplet ; le total lu et les tarifs
   sont modifiables, et une pièce manquante peut être ajoutée à la main.
 - Les décomptes déjà établis joints au PDF (page « Décompte DGEO ») sont ignorés.

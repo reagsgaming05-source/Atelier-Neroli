@@ -50,12 +50,28 @@ def test_del311025_like_dossier():
     assert d.total == 34.05  # 5.50 + 300/21*2 = 34.07 → arrondi à 0.05
 
 
-def test_non_reimbursable_kinds_excluded_and_duplicates():
+def test_non_reimbursable_kinds_excluded():
     d = dossier([piece(1, kind="facture", total=300.0, rubrique="Activité"), piece(2, kind="recepisse", total=300.0),
-                 piece(3, kind="recu_carte", total=300.0), piece(4, kind="facture", total=300.0, rubrique="Activité")], titres=2, eleves=19, autres=0)
-    assert [p.include for p in d.pieces] == [True, False, False, False]
-    assert "Doublon" in d.pieces[3].exclusion_reason
+                 piece(3, kind="recu_carte", total=300.0)], titres=2, eleves=19, autres=0)
+    assert [p.include for p in d.pieces] == [True, False, False]
     assert len(d.rows) == 1
+
+
+def test_same_amount_twice_is_flagged_but_counted():
+    """Quatre nuits à l'auberge font quatre fois le même montant.
+
+    Ces pièces étaient écartées d'office comme « doublon probable » : les trois quarts d'un
+    hébergement disparaissaient du décompte sans que rien ne le dise, et une pièce écartée ne se
+    réclame pas toute seule. Elles comptent maintenant toutes, avec un avertissement.
+    """
+    d = dossier([piece(i, kind="facture", total=300.0, rubrique="Hébergement") for i in (1, 2, 3, 4)],
+                titres=2, eleves=19, autres=0, type_activite="camp")
+    assert [p.include for p in d.pieces] == [True, True, True, True]
+    # le coût total de la ligne porte bien les quatre nuits
+    assert sum(r.cout_total or 0 for r in d.rows) == 1200.0
+    # et la personne est prévenue, sur la pièce comme sur le dossier
+    assert any("Même montant" in n for n in d.pieces[1].notes)
+    assert any("même montant" in w for w in d.warnings)
 
 
 def test_prorata_grouping_and_libelle_with_several_pieces():
