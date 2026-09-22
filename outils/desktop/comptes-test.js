@@ -27,10 +27,19 @@ const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 // Le dossier d'essai tient lieu de dossier de l'application, reconnu comme un
 // lecteur réseau ; chaque « poste » a son propre profil Windows, pour que la
 // connexion retenue ne soit pas commune.
+//
+// Ce profil se donne par BLONAY_PROFIL et non par APPDATA : sous Windows,
+// Electron ne lit pas cette variable, il demande le dossier au système. Les
+// postes partageaient donc une seule session, Sophie ouvrait celle de Marie et
+// la fenêtre de connexion n'apparaissait jamais. Rien de tel sur un vrai
+// secrétariat, où chacune a son profil Windows — mais le test ne prouvait plus
+// ce qu'il annonçait.
+const profilDe = (poste) => path.join(base, 'poste-' + poste);
+const sessionDe = (poste) => path.join(profilDe(poste), 'Blonay PDF', 'session.json');
 const lancer = (poste) => {
-  const profil = path.join(base, 'poste-' + poste);
+  const profil = profilDe(poste);
   const env = { ...process.env, BLONAY_DOSSIER_APP: base, BLONAY_RESEAU: '1',
-    APPDATA: profil, XDG_CONFIG_HOME: profil };
+    BLONAY_PROFIL: profil, XDG_CONFIG_HOME: profil };
   return electron.launch(exe ? { executablePath: exe, args: ['--no-sandbox'], env }
     : { args: [path.join(__dirname), '--no-sandbox'], env });
 };
@@ -85,6 +94,11 @@ const refermer = async (s) => { await s.e.close().catch(() => {}); await souffle
 (async () => {
   // Rien n'est préparé : ni liste de noms, ni comptes. Tout se crée à l'usage.
   await creer('bureau-1', 'Marie', 'greffe2026');
+  // Avant de s'appuyer dessus : chaque poste a bien sa session, et elle est
+  // allée là où le test l'attend. Sans quoi ce qui suit échouerait plus loin,
+  // par une attente de fenêtre interminable, au lieu de le dire ici.
+  assert.ok(fs.existsSync(sessionDe('bureau-1')), 'la session de Marie est dans le profil du poste 1');
+  assert.ok(!fs.existsSync(sessionDe('bureau-2')), 'et le poste 2 n\'en a pas hérité');
   let s = await ouvrir('bureau-1');
   assert.equal(s.dossier, path.join(base, 'data', 'Marie'), 'Marie travaille dans son dossier');
   await s.f.evaluate(() => localStorage.setItem('blonay-tampons', JSON.stringify([{ text: 'REÇU LE' }])));
@@ -109,7 +123,7 @@ const refermer = async (s) => { await s.e.close().catch(() => {}); await souffle
   // Le point de la question : on n'entre pas chez quelqu'un d'autre.
   const refus = await seConnecter('bureau-3', 'Marie', 'greffe2025');
   assert.match(refus, /incorrect/i, 'un mauvais mot de passe est refusé');
-  assert.equal(fs.existsSync(path.join(base, 'poste-bureau-3', 'Blonay PDF', 'session.json')), false,
+  assert.equal(fs.existsSync(sessionDe('bureau-3')), false,
     'et aucune session n\'est ouverte pour autant');
   dit('mauvais mot de passe : « ' + refus +' », aucune session ouverte');
 

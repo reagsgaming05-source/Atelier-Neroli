@@ -37,7 +37,12 @@ const DOSSIER_DATA = () => path.join(PORTABLE_DIR, 'data');
 // Qui utilise ce poste. Le choix est retenu ici, dans le profil Windows de la
 // personne — surtout pas sur le partage, où il serait celui de tout le monde.
 // Une entrée par installation : la même personne peut ouvrir deux dossiers.
-const fichierChoix = () => path.join(app.getPath('appData'), 'Blonay PDF', 'session.json');
+// BLONAY_PROFIL : le test des comptes joue plusieurs postes sur une seule
+// machine et doit donner à chacun son profil. Changer APPDATA n'y suffit pas —
+// sous Windows, Electron ne lit pas cette variable, il demande le dossier au
+// système, et les faux postes se retrouveraient à partager une seule session.
+const profilLocal = () => process.env.BLONAY_PROFIL || app.getPath('appData');
+const fichierChoix = () => path.join(profilLocal(), 'Blonay PDF', 'session.json');
 function lireChoix() {
   try {
     const tout = JSON.parse(fs.readFileSync(fichierChoix(), 'utf8'));
