@@ -21,22 +21,29 @@ const APP_TITLE = 'Blonay PDF';
 let CONSTRUCTION = '';
 try { CONSTRUCTION = String(JSON.parse(fs.readFileSync(path.join(__dirname, 'app', 'construction.json'), 'utf8')).construction || ''); } catch (e) { /* version de travail */ }
 const PORTABLE_DIR = path.dirname(process.execPath);
+const { MARQUEUR, ouRanger, POURQUOI } = require('./ou-ranger');
 const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
 
-// Dossier de données à côté de l'exécutable (version portable) ; sinon, dossier utilisateur.
+// Où vont les données : à côté de l'exécutable, ou dans le profil de chacun.
+// ou-ranger.js porte la décision et l'explique ; ici, seulement ce qui touche
+// au disque.
+let RANGEMENT = { ou: 'cote', pourquoi: 'portable' };
 function setupUserData() {
   // Test de fumée : un dossier de données à part, pour ne toucher ni aux
   // récents ni à la récupération de l'utilisateur.
   if (process.env.BLONAY_SMOKE_DIR) { try { app.setPath('userData', path.join(process.env.BLONAY_SMOKE_DIR, 'donnees')); } catch (e) { /* tant pis */ } return; }
   if (!app.isPackaged) return;
   const dir = path.join(PORTABLE_DIR, 'data');
-  try {
-    fs.mkdirSync(dir, { recursive: true });
-    fs.accessSync(dir, fs.constants.W_OK);
-    app.setPath('userData', dir);
-  } catch (e) {
-    // dossier non inscriptible (ex. Program Files) : emplacement par défaut de Windows
-  }
+  RANGEMENT = ouRanger(PORTABLE_DIR, {
+    marqueurPose: () => { try { return fs.existsSync(path.join(PORTABLE_DIR, MARQUEUR)); } catch (e) { return false; } },
+    dossierInscriptible: () => {
+      try { fs.mkdirSync(dir, { recursive: true }); fs.accessSync(dir, fs.constants.W_OK); return true; }
+      catch (e) { return false; }
+    },
+  });
+  // 'profil' : on ne pose rien, Electron range dans le profil Windows du compte
+  // ouvert — que le système protège déjà des autres comptes.
+  if (RANGEMENT.ou === 'cote') { try { app.setPath('userData', dir); } catch (e) { /* tant pis */ } }
 }
 setupUserData();
 
@@ -413,7 +420,8 @@ function buildMenu() {
             detail: 'Organiser, corriger, annoter, remplir et imprimer des PDF.\n\n' +
               'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (les documents sont lus, ' +
               'modifiés et réassemblés dans cette fenêtre).\n\n' +
-              'Dossier des données : ' + app.getPath('userData') + '\n\n' +
+              'Dossier des données : ' + app.getPath('userData') + '\n' +
+              (POURQUOI[RANGEMENT.pourquoi] || '') + '\n\n' +
               'Electron ' + process.versions.electron + ' – Chromium ' + process.versions.chrome,
           }),
         },

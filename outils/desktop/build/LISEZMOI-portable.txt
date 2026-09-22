@@ -41,14 +41,24 @@ Sans le script, la même chose à la main : fermez l'application, décompressez 
 par-dessus le dossier en acceptant de remplacer, et ne supprimez pas « data ».
 « Aide › À propos » indique la version installée, avec sa date.
 
+PLUSIEURS PERSONNES, UNE SEULE INSTALLATION
 Si l'application est posée sur un lecteur réseau et que chacun l'ouvre par un raccourci,
 il n'y a qu'un dossier à mettre à jour : les raccourcis ne contiennent qu'un chemin, et
 tout le monde lance la nouvelle version au démarrage suivant, sans rien réinstaller.
-Attention dans ce cas : « data » est alors commun à tous ceux qui ouvrent ce dossier —
-votre signature mémorisée devient utilisable par vos collègues, et les copies de
-récupération contiennent les documents ouverts. Sur un partage, ne mémorisez pas votre
-signature, ou demandez que le dossier soit en lecture seule pour les utilisateurs :
-l'application range alors ses données dans votre profil Windows, chacun les siennes.
+
+Dans ce cas, chacun garde ses propres données : ses tampons, sa signature mémorisée, ses
+récents et son travail mis de côté vont dans son profil Windows, que le système protège
+des autres comptes. Personne ne peut donc reposer la signature d'un collègue ni lire les
+documents qu'il avait ouverts.
+
+L'application le décide seule quand le chemin est de la forme \\serveur\partage\...
+Si votre partage est monté sur une lettre de lecteur (S:, Z:...), rien ne le distingue
+d'un disque local : posez alors à côté de BlonayPDF.exe un fichier vide nommé
+   donnees-par-utilisateur.txt
+et le choix sera le même. Un dossier en lecture seule pour les utilisateurs produit aussi
+cet effet, et protège l'installation par la même occasion.
+
+« Aide › À propos » indique toujours où vos données sont rangées, et pourquoi.
 
 Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un PDF, « Ouvrir avec »,
 « Choisir une autre application », puis désignez BlonayPDF.exe et cochez « Toujours ».

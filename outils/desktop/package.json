@@ -32,6 +32,7 @@
     },
     "files": [
       "main.js",
+      "ou-ranger.js",
       "preload.js",
       "app/**",
       "build/icon.png",
