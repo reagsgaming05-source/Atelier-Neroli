@@ -137,7 +137,8 @@ jobs:
           Set-Content (Join-Path $poste 'data\recuperation\a.json') 'MON TRAVAIL'
           Set-Content (Join-Path $poste 'BlonayPDF.exe') 'VIEILLE VERSION'
           Set-Content (Join-Path $poste 'notes-du-service.txt') 'A MOI'
-          Copy-Item outils\desktop\build\Mettre-a-jour.cmd $poste
+          # Le job travaille dans outils/ : chemins absolus depuis l'espace de travail.
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'outils\desktop\build\Mettre-a-jour.cmd') $poste
 
           $sortie = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$env:GITHUB_WORKSPACE\BlonayPDF-windows.zip`" < NUL" 2>&1 | Out-String
           Write-Host $sortie
