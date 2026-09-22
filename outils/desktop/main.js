@@ -23,7 +23,7 @@ try { CONSTRUCTION = String(JSON.parse(fs.readFileSync(path.join(__dirname, 'app
 // BLONAY_DOSSIER_APP : le test de fumée fait passer un dossier d'essai pour le
 // dossier de l'application, afin que le choix du rangement se joue pour de vrai.
 const PORTABLE_DIR = process.env.BLONAY_DOSSIER_APP || path.dirname(process.execPath);
-const { MARQUEUR, COMPTES, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
+const { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
 
 // Où vont les données : à côté de l'exécutable, ou dans le profil de chacun.
@@ -70,6 +70,25 @@ function comptesConnus() {
   return listerComptes(lignes, dossiers);
 }
 
+// Un lecteur réseau monté sur une lettre (P:, S:…) ne se distingue pas d'un
+// disque local par son chemin. Windows, lui, le sait : « net use P: » répond
+// pour un lecteur mappé et échoue pour un disque. La fenêtre de la commande est
+// masquée — sinon une console noire clignoterait à chaque lancement — et le
+// temps est borné : un serveur qui ne répond pas ne doit pas retenir l'ouverture.
+// BLONAY_RESEAU : pour éprouver ce chemin ailleurs que sur un vrai partage.
+function surLeReseau() {
+  if (process.env.BLONAY_RESEAU) return process.env.BLONAY_RESEAU !== '0';
+  if (cheminReseau(PORTABLE_DIR)) return true;
+  if (process.platform !== 'win32') return false;
+  const lettre = /^([A-Za-z]):[\\/]/.exec(PORTABLE_DIR || '');
+  if (!lettre) return false;
+  try {
+    require('child_process').execFileSync('net', ['use', lettre[1] + ':'],
+      { windowsHide: true, stdio: ['ignore', 'ignore', 'ignore'], timeout: 4000 });
+    return true;
+  } catch (e) { return false; } // disque local, ou « net » indisponible
+}
+
 function setupUserData() {
   // Test de fumée : un dossier de données à part, pour ne toucher ni aux
   // récents ni à la récupération de l'utilisateur.
@@ -81,6 +100,7 @@ function setupUserData() {
   const dir = DOSSIER_DATA();
   RANGEMENT = ouRanger(PORTABLE_DIR, {
     comptesOuverts: () => { try { return fs.existsSync(path.join(PORTABLE_DIR, COMPTES)); } catch (e) { return false; } },
+    surLeReseau,
     marqueurPose: () => { try { return fs.existsSync(path.join(PORTABLE_DIR, MARQUEUR)); } catch (e) { return false; } },
     dossierInscriptible: () => {
       try { fs.mkdirSync(dir, { recursive: true }); fs.accessSync(dir, fs.constants.W_OK); return true; }

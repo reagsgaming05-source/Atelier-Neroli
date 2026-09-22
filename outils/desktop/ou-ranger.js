@@ -105,11 +105,21 @@ function cheminReseau(chemin) {
 // posées que si la précédente n'a pas déjà tranché — inutile de créer un
 // dossier « data » sur un partage qu'on a justement décidé d'éviter.
 function ouRanger(dossierExe, sonde) {
-  // Les comptes passent avant tout le reste : c'est un choix explicite, pose
-  // par la personne qui installe, et il vaut aussi sur un partage.
-  if (sonde.comptesOuverts && sonde.comptesOuverts()) return { ou: 'comptes', pourquoi: 'comptes' };
-  if (cheminReseau(dossierExe)) return { ou: 'profil', pourquoi: 'reseau' };
+  // Le choix contraire, s'il a ete pose, l'emporte sur tout : quelqu'un a
+  // decide que les donnees vivraient dans le profil Windows de chacun.
   if (sonde.marqueurPose()) return { ou: 'profil', pourquoi: 'marqueur' };
+  // Une liste de comptes posee a cote de l'executable : c'est explicite.
+  if (sonde.comptesOuverts && sonde.comptesOuverts()) {
+    if (sonde.dossierInscriptible()) return { ou: 'comptes', pourquoi: 'comptes' };
+    return { ou: 'profil', pourquoi: 'lecture-seule' };
+  }
+  // Sur un lecteur reseau, plusieurs personnes ouvrent la meme application :
+  // chacune son dossier, sans que personne n'ait rien eu a preparer. La liste
+  // se construit d'elle-meme, un nom a la fois.
+  if (sonde.surLeReseau && sonde.surLeReseau()) {
+    if (sonde.dossierInscriptible()) return { ou: 'comptes', pourquoi: 'reseau' };
+    return { ou: 'profil', pourquoi: 'lecture-seule' };
+  }
   if (!sonde.dossierInscriptible()) return { ou: 'profil', pourquoi: 'lecture-seule' };
   return { ou: 'cote', pourquoi: 'portable' };
 }
@@ -117,8 +127,8 @@ function ouRanger(dossierExe, sonde) {
 // Ce qu'on affiche dans « À propos », sous le chemin.
 const POURQUOI = {
   comptes: 'Chaque personne a son dossier dans « data » : ses tampons, sa signature et ses récents ne sont qu\u2019à elle.',
+  reseau: 'L\u2019application est sur un lecteur réseau : chaque personne a son dossier dans « data », avec ses tampons, sa signature et ses récents.',
   portable: 'Version portable : vos réglages suivent l\u2019application.',
-  reseau: 'L\u2019application est sur un lecteur réseau : chacun garde ses propres tampons, signatures et récents.',
   marqueur: 'Réglé par « donnees-par-utilisateur.txt » : chacun garde ses propres tampons, signatures et récents.',
   'lecture-seule': 'Le dossier de l\u2019application est en lecture seule : vos données sont dans votre profil Windows.',
 };

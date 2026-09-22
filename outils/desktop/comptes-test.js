@@ -25,9 +25,9 @@ const dit = (quoi) => console.log('  ' + quoi);
 // Le dossier d'essai tient lieu de dossier de l'application ; le « profil
 // Windows » de chacune est un dossier à part (XDG_CONFIG_HOME sous Linux,
 // APPDATA sous Windows) pour que le choix retenu ne soit pas commun.
-const lancer = (qui) => {
+const lancer = (qui, extra) => {
   const profil = path.join(base, 'poste-' + qui);
-  const env = { ...process.env, BLONAY_DOSSIER_APP: base, APPDATA: profil, XDG_CONFIG_HOME: profil };
+  const env = { ...process.env, BLONAY_DOSSIER_APP: base, APPDATA: profil, XDG_CONFIG_HOME: profil, ...extra };
   return electron.launch(exe ? { executablePath: exe, args: ['--no-sandbox'], env }
     : { args: [path.join(__dirname), '--no-sandbox'], env });
 };
@@ -43,20 +43,21 @@ function menage() {
 }
 const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function choisir(qui) {
-  const e = await lancer(qui);
+async function choisir(qui, extra) {
+  const e = await lancer(qui, extra);
   const f = await e.firstWindow();
-  await f.waitForSelector('.compte', { timeout: 60000 });
+  await f.waitForSelector('.compte, #nom', { timeout: 60000 });
   const proposes = await f.locator('.compte span:last-child').allTextContents();
-  await f.locator('.compte', { hasText: qui }).click();
+  if (proposes.includes(qui)) await f.locator('.compte', { hasText: qui }).click();
+  else { await f.fill('#nom', qui); await f.click('#ajouter'); }
   await e.close().catch(() => {});
   await souffler(1500);
   menage();
   return proposes;
 }
 
-async function ouvrir(qui) {
-  const e = await lancer(qui);
+async function ouvrir(qui, extra) {
+  const e = await lancer(qui, extra);
   const f = await e.firstWindow();
   await f.waitForSelector('#app-toolbar:not([hidden])', { timeout: 90000 });
   return { e, f, dossier: await e.evaluate(({ app }) => app.getPath('userData')) };
@@ -91,8 +92,19 @@ async function ouvrir(qui) {
   await s.e.close().catch(() => {}); await souffler(800); menage();
   dit('Sophie : ' + s.dossier + ', et aucun tampon de Marie');
 
+  // Sur un lecteur réseau, les comptes s'ouvrent d'eux-mêmes : rien à poser à
+  // côté de l'exécutable, la liste se construit un nom à la fois.
+  fs.rmSync(path.join(base, 'comptes.txt'));
+  const auto = { BLONAY_RESEAU: '1' };
+  const vus = await choisir('Nadia', auto);
+  assert.deepEqual(vus, ['Marie', 'Sophie'], 'les dossiers déjà là servent de liste, sans comptes.txt');
+  const n = await ouvrir('Nadia', auto);
+  assert.equal(n.dossier, path.join(base, 'data', 'Nadia'), 'Nadia a son dossier, sans que rien n\'ait été préparé');
+  await n.e.close().catch(() => {}); await souffler(800); menage();
+  dit('réseau sans comptes.txt : ' + n.dossier);
+
   const dossiers = fs.readdirSync(path.join(base, 'data')).sort();
-  assert.deepEqual(dossiers, ['Marie', 'Sophie'], 'un dossier par personne dans data/');
+  assert.deepEqual(dossiers, ['Marie', 'Nadia', 'Sophie'], 'un dossier par personne dans data/');
   dit('data/ : ' + dossiers.join(', '));
 
   try { fs.rmSync(base, { recursive: true, force: true }); } catch (e) { /* ménage sans importance */ }

@@ -8,6 +8,13 @@ const { ouRanger, cheminReseau, POURQUOI, MARQUEUR, nomDeDossier, listerComptes 
 
 // Une sonde qui répond ce qu'on lui dit, et qui note ce qu'on lui a demandé :
 // sur un partage, on ne veut même pas qu'un dossier « data » soit créé.
+const sondeComplete = (o) => ({
+  marqueurPose: () => !!o.marqueur,
+  comptesOuverts: () => !!o.comptes,
+  surLeReseau: () => !!o.reseau,
+  dossierInscriptible: () => o.ecrit !== false,
+});
+
 const sonde = (marqueur, inscriptible) => {
   const vues = [];
   return {
@@ -36,10 +43,26 @@ test('un disque local n\'est pas un partage, même écrit en forme longue', () =
   assert.equal(cheminReseau(undefined), false);
 });
 
-test('sur un partage, chacun range dans son profil', () => {
-  const s = sonde(false, true);
-  assert.deepEqual(ouRanger('\\\\serveur\\commun\\BlonayPDF', s), { ou: 'profil', pourquoi: 'reseau' });
-  assert.deepEqual(s.vues, [], 'le disque n\'est même pas interrogé : aucun dossier « data » n\'est créé sur le partage');
+test('sur un lecteur réseau, les comptes s\'ouvrent d\'eux-mêmes', () => {
+  // C'est le cas d'un secrétariat : l'application posée sur le serveur, et
+  // personne n'a rien eu à préparer. Chacune choisit son nom au premier
+  // lancement et retrouve ensuite ses affaires.
+  assert.deepEqual(ouRanger('\\\\serveur\\commun\\BlonayPDF', sondeComplete({ reseau: true })),
+    { ou: 'comptes', pourquoi: 'reseau' });
+  assert.deepEqual(ouRanger('P:\\Outils\\BlonayPDF', sondeComplete({ reseau: true })),
+    { ou: 'comptes', pourquoi: 'reseau' });
+});
+
+test('un partage en lecture seule renvoie au profil Windows', () => {
+  // Sans pouvoir écrire dans data, il n'y a pas de dossier par personne à
+  // créer : chacune retombe sur son profil, et personne n'est bloqué.
+  assert.deepEqual(ouRanger('P:\\Outils\\BlonayPDF', sondeComplete({ reseau: true, ecrit: false })),
+    { ou: 'profil', pourquoi: 'lecture-seule' });
+});
+
+test('le marqueur l\'emporte sur tout : profil Windows, même sur un partage', () => {
+  assert.deepEqual(ouRanger('P:\\Outils\\BlonayPDF', sondeComplete({ reseau: true, marqueur: true })),
+    { ou: 'profil', pourquoi: 'marqueur' });
 });
 
 test('le marqueur force le rangement par utilisateur, lettre de lecteur comprise', () => {
@@ -49,23 +72,24 @@ test('le marqueur force le rangement par utilisateur, lettre de lecteur comprise
   assert.deepEqual(ouRanger('S:\\Outils\\BlonayPDF', s), { ou: 'profil', pourquoi: 'marqueur' });
   assert.ok(!s.vues.includes('inscriptible'), 'inutile de tâter le dossier, c\'est déjà tranché');
   assert.equal(MARQUEUR, 'donnees-par-utilisateur.txt');
+  // Et la liste posée à la main ouvre les comptes, même hors réseau.
+  assert.deepEqual(ouRanger('C:\\Outils\\BlonayPDF', sondeComplete({ comptes: true })),
+    { ou: 'comptes', pourquoi: 'comptes' });
 });
 
 test('un dossier en lecture seule renvoie aussi au profil', () => {
-  assert.deepEqual(ouRanger('C:\\Program Files\\BlonayPDF', sonde(false, false)),
+  assert.deepEqual(ouRanger('C:\\Program Files\\BlonayPDF', sondeComplete({ ecrit: false })),
     { ou: 'profil', pourquoi: 'lecture-seule' });
 });
 
 test('sur une clé USB ou un poste seul, rien ne change : les données suivent l\'application', () => {
-  const s = sonde(false, true);
-  assert.deepEqual(ouRanger('E:\\BlonayPDF', s), { ou: 'cote', pourquoi: 'portable' });
-  assert.deepEqual(ouRanger('C:\\Users\\moi\\Bureau\\BlonayPDF', sonde(false, true)),
+  assert.deepEqual(ouRanger('E:\\BlonayPDF', sondeComplete({})), { ou: 'cote', pourquoi: 'portable' });
+  assert.deepEqual(ouRanger('C:\\Users\\moi\\Bureau\\BlonayPDF', sondeComplete({})),
     { ou: 'cote', pourquoi: 'portable' });
-  assert.deepEqual(s.vues, ['marqueur', 'inscriptible'], 'les deux questions sont posées dans cet ordre');
 });
 
 test('chaque raison a une phrase à montrer dans « À propos »', () => {
-  for (const pourquoi of ['portable', 'reseau', 'marqueur', 'lecture-seule']) {
+  for (const pourquoi of ['portable', 'reseau', 'marqueur', 'lecture-seule', 'comptes']) {
     assert.ok(POURQUOI[pourquoi] && POURQUOI[pourquoi].length > 20,
       'la raison « ' + pourquoi + ' » s\'explique à l\'utilisateur');
   }

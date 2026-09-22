@@ -51,24 +51,28 @@ récents et son travail mis de côté vont dans son profil Windows, que le syst�
 des autres comptes. Personne ne peut donc reposer la signature d'un collègue ni lire les
 documents qu'il avait ouverts.
 
-UN COMPTE PAR PERSONNE (recommandé pour un secrétariat)
-Posez à côté de BlonayPDF.exe un fichier nommé
-   comptes.txt
-avec un nom par ligne (les lignes vides et celles commençant par # sont ignorées) :
-   # le secrétariat
-   Marie Dupont
-   Sophie Martin
-Au premier lancement, chacune choisit son nom dans une petite fenêtre. L'application
-redémarre une fois, et c'est fini : les fois suivantes elle s'ouvre directement. Le choix
-est retenu dans le profil Windows de la personne, pas sur le partage — chacune peut donc
-choisir un nom différent sur son poste.
+UN COMPTE PAR PERSONNE — RIEN À PRÉPARER
+Posez simplement le dossier de l'application sur le lecteur réseau, et faites un raccourci
+sur chaque bureau. L'application reconnaît qu'elle tourne depuis un lecteur réseau et
+ouvre les comptes d'elle-même.
+
+Au premier lancement, chacune écrit son nom dans une petite fenêtre. L'application
+redémarre une fois, et c'est fini : les fois suivantes elle s'ouvre directement. Les
+personnes déjà passées apparaissent dans la liste — on clique sur son nom, sans le
+retaper. Le choix est retenu dans le profil Windows de chacune, pas sur le serveur.
 
 Chacune a alors son dossier : data\Marie Dupont, data\Sophie Martin… avec ses tampons, sa
 signature, ses récents et son travail mis de côté. « Aide › À propos » rappelle sous quel
-nom on travaille, et « Fichier › Changer d'utilisateur… » permet d'en changer.
+nom on travaille, « Fichier › Changer d'utilisateur… » permet d'en changer.
 
-Un nom absent de la liste peut être ajouté depuis la fenêtre de choix ; son dossier est
-créé au passage. Ajouter une ligne à comptes.txt revient au même.
+Pour que les noms soient proposés dès le premier jour, sans que personne ait à les taper,
+posez à côté de BlonayPDF.exe un fichier « comptes.txt », un nom par ligne (les lignes
+vides et celles commençant par # sont ignorées) :
+   # le secrétariat
+   Marie Dupont
+   Sophie Martin
+Ce n'est pas obligatoire : la liste se construit toute seule. Ce fichier ouvre aussi les
+comptes sur un disque local, si vous partagez un poste.
 
 CE QUE LES COMPTES FONT, ET CE QU'ILS NE FONT PAS
 Ils rangent : chacune retrouve ses affaires et ne travaille pas avec celles d'une autre.
@@ -79,17 +83,10 @@ demandez à votre informaticien de donner à chaque dossier data\<nom> les droit
 seule personne concernée : Windows sait le faire, l'application non.
 
 L'AUTRE FAÇON : LE PROFIL WINDOWS
-Sans comptes.txt, et si l'application est sur un partage, chacune a ses données dans son
-profil Windows — que le système protège déjà des autres comptes. C'est plus sûr, mais les
-données ne suivent pas d'un poste à l'autre, et rien n'est visible dans data.
-L'application le décide seule quand le chemin est de la forme \\serveur\partage\...
-Si votre partage est monté sur une lettre de lecteur (S:, Z:...), rien ne le distingue
-d'un disque local : posez alors à côté de BlonayPDF.exe un fichier vide nommé
-   donnees-par-utilisateur.txt
-et le choix sera le même. Un dossier en lecture seule pour les utilisateurs produit aussi
-cet effet, et protège l'installation par la même occasion.
-
-« Aide › À propos » indique toujours où vos données sont rangées, et pourquoi.
+Si vous préférez que rien ne soit visible dans data, posez à côté de BlonayPDF.exe un
+fichier vide nommé « donnees-par-utilisateur.txt » : chacune aura ses données dans son
+profil Windows, que le système protège déjà des autres comptes. Plus sûr, mais les données
+ne suivent pas d'un poste à l'autre. Un dossier en lecture seule produit le même effet.
 
 Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un PDF, « Ouvrir avec »,
 « Choisir une autre application », puis désignez BlonayPDF.exe et cochez « Toujours ».
