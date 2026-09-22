@@ -25,6 +25,43 @@
 // s'éprouve sans Windows ni Electron.
 
 const MARQUEUR = 'donnees-par-utilisateur.txt';
+// Le fichier qui ouvre les comptes : une ligne par personne, et l'application
+// demande au premier lancement qui l'ouvre.
+const COMPTES = 'comptes.txt';
+
+// Un nom saisi devient un nom de dossier. Windows refuse \ / : * ? " < > | et
+// quelques noms reserves (CON, PRN, AUX, NUL, COM1...), et se moque des
+// espaces et des points en fin de nom.
+const RESERVES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+function nomDeDossier(nom) {
+  const propre = String(nom == null ? '' : nom)
+    .replace(/[\\/:*?"<>|]/g, ' ')
+    .replace(/[\x00-\x1f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[. ]+$/, '')
+    .slice(0, 48)
+    .trim();
+  if (!propre || RESERVES.test(propre)) return null;
+  return propre;
+}
+
+// Les noms proposés au choix : ceux que l'administrateur a écrits dans
+// comptes.txt, et ceux qui ont déjà un dossier dans data/. Les lignes vides et
+// celles qui commencent par # sont des commentaires.
+function listerComptes(lignesDuFichier, dossiersExistants) {
+  const vus = new Map();
+  const ajouter = (brut) => {
+    const n = nomDeDossier(brut);
+    if (n && !vus.has(n.toLowerCase())) vus.set(n.toLowerCase(), n);
+  };
+  String(lignesDuFichier || '').split(/\r?\n/).forEach((l) => {
+    const t = l.trim();
+    if (t && !t.startsWith('#')) ajouter(t);
+  });
+  (dossiersExistants || []).forEach(ajouter);
+  return Array.from(vus.values()).sort((a, b) => a.localeCompare(b, 'fr'));
+}
 
 // Un chemin UNC désigne un partage : \\serveur\partage\dossier.
 // Deux pièges, et ils se ressemblent : « \\?\C:\… » est la forme longue d'un
@@ -50,6 +87,9 @@ function cheminReseau(chemin) {
 // posées que si la précédente n'a pas déjà tranché — inutile de créer un
 // dossier « data » sur un partage qu'on a justement décidé d'éviter.
 function ouRanger(dossierExe, sonde) {
+  // Les comptes passent avant tout le reste : c'est un choix explicite, pose
+  // par la personne qui installe, et il vaut aussi sur un partage.
+  if (sonde.comptesOuverts && sonde.comptesOuverts()) return { ou: 'comptes', pourquoi: 'comptes' };
   if (cheminReseau(dossierExe)) return { ou: 'profil', pourquoi: 'reseau' };
   if (sonde.marqueurPose()) return { ou: 'profil', pourquoi: 'marqueur' };
   if (!sonde.dossierInscriptible()) return { ou: 'profil', pourquoi: 'lecture-seule' };
@@ -58,10 +98,11 @@ function ouRanger(dossierExe, sonde) {
 
 // Ce qu'on affiche dans « À propos », sous le chemin.
 const POURQUOI = {
+  comptes: 'Chaque personne a son dossier dans « data » : ses tampons, sa signature et ses récents ne sont qu\u2019à elle.',
   portable: 'Version portable : vos réglages suivent l\u2019application.',
   reseau: 'L\u2019application est sur un lecteur réseau : chacun garde ses propres tampons, signatures et récents.',
   marqueur: 'Réglé par « donnees-par-utilisateur.txt » : chacun garde ses propres tampons, signatures et récents.',
   'lecture-seule': 'Le dossier de l\u2019application est en lecture seule : vos données sont dans votre profil Windows.',
 };
 
-module.exports = { MARQUEUR, cheminReseau, ouRanger, POURQUOI };
+module.exports = { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI };

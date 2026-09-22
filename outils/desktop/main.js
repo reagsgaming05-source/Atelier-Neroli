@@ -20,27 +20,85 @@ const APP_TITLE = 'Blonay PDF';
 // Date et commit de construction, posés par build.js puis prepare-app.js.
 let CONSTRUCTION = '';
 try { CONSTRUCTION = String(JSON.parse(fs.readFileSync(path.join(__dirname, 'app', 'construction.json'), 'utf8')).construction || ''); } catch (e) { /* version de travail */ }
-const PORTABLE_DIR = path.dirname(process.execPath);
-const { MARQUEUR, ouRanger, POURQUOI } = require('./ou-ranger');
+// BLONAY_DOSSIER_APP : le test de fumée fait passer un dossier d'essai pour le
+// dossier de l'application, afin que le choix du rangement se joue pour de vrai.
+const PORTABLE_DIR = process.env.BLONAY_DOSSIER_APP || path.dirname(process.execPath);
+const { MARQUEUR, COMPTES, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
 
 // Où vont les données : à côté de l'exécutable, ou dans le profil de chacun.
 // ou-ranger.js porte la décision et l'explique ; ici, seulement ce qui touche
 // au disque.
 let RANGEMENT = { ou: 'cote', pourquoi: 'portable' };
+let PROFIL = null; // le compte choisi, en mode « comptes »
+const DOSSIER_DATA = () => path.join(PORTABLE_DIR, 'data');
+
+// Qui utilise ce poste. Le choix est retenu ici, dans le profil Windows de la
+// personne — surtout pas sur le partage, où il serait celui de tout le monde.
+// Une entrée par installation : la même personne peut ouvrir deux dossiers.
+const fichierChoix = () => path.join(app.getPath('appData'), 'Blonay PDF', 'choix-du-compte.json');
+function lireChoix() {
+  try {
+    const tout = JSON.parse(fs.readFileSync(fichierChoix(), 'utf8'));
+    return nomDeDossier(tout[PORTABLE_DIR.toLowerCase()]);
+  } catch (e) { return null; }
+}
+function ecrireChoix(nom) {
+  try {
+    const f = fichierChoix();
+    let tout = {};
+    try { tout = JSON.parse(fs.readFileSync(f, 'utf8')) || {}; } catch (e) { /* premier passage */ }
+    if (nom) tout[PORTABLE_DIR.toLowerCase()] = nom;
+    else delete tout[PORTABLE_DIR.toLowerCase()];
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.writeFileSync(f, JSON.stringify(tout, null, 2));
+    return true;
+  } catch (e) { return false; }
+}
+
+// Les comptes proposés : ceux de comptes.txt, plus ceux qui ont déjà un
+// dossier dans data/.
+function comptesConnus() {
+  let lignes = '';
+  try { lignes = fs.readFileSync(path.join(PORTABLE_DIR, COMPTES), 'utf8'); } catch (e) { /* fichier vide ou absent */ }
+  let dossiers = [];
+  try {
+    dossiers = fs.readdirSync(DOSSIER_DATA(), { withFileTypes: true })
+      .filter((d) => d.isDirectory() && d.name !== 'recuperation').map((d) => d.name);
+  } catch (e) { /* data pas encore créé */ }
+  return listerComptes(lignes, dossiers);
+}
+
 function setupUserData() {
   // Test de fumée : un dossier de données à part, pour ne toucher ni aux
   // récents ni à la récupération de l'utilisateur.
-  if (process.env.BLONAY_SMOKE_DIR) { try { app.setPath('userData', path.join(process.env.BLONAY_SMOKE_DIR, 'donnees')); } catch (e) { /* tant pis */ } return; }
-  if (!app.isPackaged) return;
-  const dir = path.join(PORTABLE_DIR, 'data');
+  if (!process.env.BLONAY_DOSSIER_APP && process.env.BLONAY_SMOKE_DIR) {
+    try { app.setPath('userData', path.join(process.env.BLONAY_SMOKE_DIR, 'donnees')); } catch (e) { /* tant pis */ }
+    return;
+  }
+  if (!app.isPackaged && !process.env.BLONAY_DOSSIER_APP) return;
+  const dir = DOSSIER_DATA();
   RANGEMENT = ouRanger(PORTABLE_DIR, {
+    comptesOuverts: () => { try { return fs.existsSync(path.join(PORTABLE_DIR, COMPTES)); } catch (e) { return false; } },
     marqueurPose: () => { try { return fs.existsSync(path.join(PORTABLE_DIR, MARQUEUR)); } catch (e) { return false; } },
     dossierInscriptible: () => {
       try { fs.mkdirSync(dir, { recursive: true }); fs.accessSync(dir, fs.constants.W_OK); return true; }
       catch (e) { return false; }
     },
   });
+  // Un dossier par personne, dans data/. Le compte est lu avant que quoi que
+  // ce soit ne soit ouvert : les tampons et les signatures vivent dans le
+  // stockage local du moteur d'affichage, qui suit le dossier de données —
+  // le fixer trop tard les mélangerait.
+  if (RANGEMENT.ou === 'comptes') {
+    PROFIL = lireChoix();
+    if (PROFIL) {
+      const sien = path.join(dir, PROFIL);
+      try { fs.mkdirSync(sien, { recursive: true }); app.setPath('userData', sien); }
+      catch (e) { PROFIL = null; }
+    }
+    return; // sans compte choisi, on demandera une fois la fenêtre possible
+  }
   // 'profil' : on ne pose rien, Electron range dans le profil Windows du compte
   // ouvert — que le système protège déjà des autres comptes.
   if (RANGEMENT.ou === 'cote') { try { app.setPath('userData', dir); } catch (e) { /* tant pis */ } }
@@ -367,6 +425,21 @@ function buildMenu() {
         { label: 'Imprimer…', accelerator: 'CmdOrCtrl+P', click: () => envoyer('imprimer') },
         { type: 'separator' },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
+        ...(RANGEMENT.ou === 'comptes' ? [{
+          label: 'Changer d\u2019utilisateur…',
+          click: async () => {
+            const r = await dialog.showMessageBox({
+              type: 'question', buttons: ['Changer d\u2019utilisateur', 'Annuler'], defaultId: 1, cancelId: 1,
+              message: 'Ouvrir Blonay PDF sous un autre nom ?',
+              detail: 'L\u2019application redémarre et redemande qui vous êtes. Rien n\u2019est effacé : '
+                + 'le dossier de ' + (PROFIL || 'chacun') + ' reste tel quel.',
+            });
+            if (r.response !== 0) return;
+            ecrireChoix(null);
+            app.relaunch();
+            app.exit(0);
+          },
+        }] : []),
         { type: 'separator' },
         { label: 'Fermer l\'onglet', accelerator: 'CmdOrCtrl+W', click: () => envoyer('fermer-onglet') },
         { label: 'Fermer la fenêtre', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
@@ -420,6 +493,7 @@ function buildMenu() {
             detail: 'Organiser, corriger, annoter, remplir et imprimer des PDF.\n\n' +
               'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (les documents sont lus, ' +
               'modifiés et réassemblés dans cette fenêtre).\n\n' +
+              (PROFIL ? 'Compte : ' + PROFIL + '\n' : '') +
               'Dossier des données : ' + app.getPath('userData') + '\n' +
               (POURQUOI[RANGEMENT.pourquoi] || '') + '\n\n' +
               'Electron ' + process.versions.electron + ' – Chromium ' + process.versions.chrome,
@@ -431,7 +505,44 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+// « Qui êtes-vous ? », une seule fois par personne et par poste. La fenêtre
+// tourne dans une session en mémoire : elle ne doit rien écrire dans un dossier
+// de données qu'on n'a justement pas encore choisi.
+function demanderLeCompte() {
+  const fen = new BrowserWindow({
+    width: 460, height: 540, resizable: false, minimizable: false, maximizable: false,
+    fullscreenable: false, title: APP_TITLE, show: false, autoHideMenuBar: true,
+    backgroundColor: '#191F25',
+    webPreferences: { preload: path.join(__dirname, 'choix-preload.js'), partition: 'choix-du-compte' },
+  });
+  fen.removeMenu();
+  fen.once('ready-to-show', () => fen.show());
+  fen.loadFile(path.join(__dirname, 'choix-profil.html'));
+  // Refermée sans rien choisir : on ne peut pas travailler sans dossier.
+  fen.on('closed', () => { if (!PROFIL) app.exit(0); });
+}
+
+// Le compte choisi est retenu, puis l'application redémarre : le dossier de
+// données doit être fixé avant que quoi que ce soit ne soit ouvert, et c'est
+// au tout début du démarrage que cela se joue. Une fois par personne.
+function poserLeCompte(nom) {
+  const propre = nomDeDossier(nom);
+  if (!propre) return false;
+  try { fs.mkdirSync(path.join(DOSSIER_DATA(), propre), { recursive: true }); } catch (e) { return false; }
+  if (!ecrireChoix(propre)) return false;
+  PROFIL = propre;
+  app.relaunch();
+  app.exit(0);
+  return true;
+}
+
 app.whenReady().then(() => {
+  if (RANGEMENT.ou === 'comptes' && !PROFIL) {
+    ipcMain.handle('blonay:comptes', () => comptesConnus());
+    ipcMain.handle('blonay:compte-choisi', (_e, nom) => poserLeCompte(nom));
+    demanderLeCompte();
+    return;
+  }
   setupNetwork();
   setupDownloads();
   setupIpc();

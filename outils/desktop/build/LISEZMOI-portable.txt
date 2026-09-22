@@ -51,6 +51,37 @@ récents et son travail mis de côté vont dans son profil Windows, que le syst�
 des autres comptes. Personne ne peut donc reposer la signature d'un collègue ni lire les
 documents qu'il avait ouverts.
 
+UN COMPTE PAR PERSONNE (recommandé pour un secrétariat)
+Posez à côté de BlonayPDF.exe un fichier nommé
+   comptes.txt
+avec un nom par ligne (les lignes vides et celles commençant par # sont ignorées) :
+   # le secrétariat
+   Marie Dupont
+   Sophie Martin
+Au premier lancement, chacune choisit son nom dans une petite fenêtre. L'application
+redémarre une fois, et c'est fini : les fois suivantes elle s'ouvre directement. Le choix
+est retenu dans le profil Windows de la personne, pas sur le partage — chacune peut donc
+choisir un nom différent sur son poste.
+
+Chacune a alors son dossier : data\Marie Dupont, data\Sophie Martin… avec ses tampons, sa
+signature, ses récents et son travail mis de côté. « Aide › À propos » rappelle sous quel
+nom on travaille, et « Fichier › Changer d'utilisateur… » permet d'en changer.
+
+Un nom absent de la liste peut être ajouté depuis la fenêtre de choix ; son dossier est
+créé au passage. Ajouter une ligne à comptes.txt revient au même.
+
+CE QUE LES COMPTES FONT, ET CE QU'ILS NE FONT PAS
+Ils rangent : chacune retrouve ses affaires et ne travaille pas avec celles d'une autre.
+Ils ne protègent pas : ce ne sont pas des comptes avec mot de passe. Qui ouvre le dossier
+du partage dans l'Explorateur peut lire le dossier d'une collègue — donc sa signature et
+les copies de récupération, qui contiennent les documents ouverts. Si c'est important,
+demandez à votre informaticien de donner à chaque dossier data\<nom> les droits de la
+seule personne concernée : Windows sait le faire, l'application non.
+
+L'AUTRE FAÇON : LE PROFIL WINDOWS
+Sans comptes.txt, et si l'application est sur un partage, chacune a ses données dans son
+profil Windows — que le système protège déjà des autres comptes. C'est plus sûr, mais les
+données ne suivent pas d'un poste à l'autre, et rien n'est visible dans data.
 L'application le décide seule quand le chemin est de la forme \\serveur\partage\...
 Si votre partage est monté sur une lettre de lecteur (S:, Z:...), rien ne le distingue
 d'un disque local : posez alors à côté de BlonayPDF.exe un fichier vide nommé

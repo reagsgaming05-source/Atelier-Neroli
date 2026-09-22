@@ -114,6 +114,15 @@ jobs:
           node smoke-test.js dist\BlonayPDF\BlonayPDF.exe
           Remove-Item dist\BlonayPDF\data -Recurse -Force -ErrorAction SilentlyContinue
 
+      # Les comptes : deux personnes sur la meme installation, chacune ses
+      # tampons. Joue sur l'executable empaquete, parce que le dossier de
+      # donnees se fixe au tout debut du demarrage et qu'une erreur la ne se
+      # verrait qu'en production.
+      - name: Comptes — chacune ses tampons, sur l'exécutable empaqueté
+        working-directory: outils/desktop
+        shell: pwsh
+        run: node comptes-test.js dist\BlonayPDF\BlonayPDF.exe
+
       - name: Archive zip
         working-directory: outils/desktop
         shell: pwsh

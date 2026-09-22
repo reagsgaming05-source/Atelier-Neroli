@@ -15,7 +15,8 @@
     "start": "npm run prepare-app && electron .",
     "dist:win": "npm run prepare-app && electron-builder --win dir",
     "dist:linux": "npm run prepare-app && electron-builder --linux dir",
-    "smoke": "node smoke-test.js"
+    "smoke": "node smoke-test.js",
+    "comptes": "node comptes-test.js"
   },
   "devDependencies": {
     "electron": "33.4.11",
@@ -34,6 +35,8 @@
       "main.js",
       "ou-ranger.js",
       "preload.js",
+      "choix-preload.js",
+      "choix-profil.html",
       "app/**",
       "build/icon.png",
       "build/icon.ico"
