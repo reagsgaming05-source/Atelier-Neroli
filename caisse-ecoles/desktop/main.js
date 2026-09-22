@@ -540,6 +540,25 @@ ipcMain.handle('classement:ouvrir', (ev, sousDossier) => {
   return shell.openPath(dir);
 });
 ipcMain.handle('classement:racine', () => DECOMPTES());
+/**
+ * Déplace un scan d'un bac à l'autre : « à faire » -> « fait », quand la personne coche dans
+ * l'application. Sans cela l'écran et le dossier se contrediraient, et c'est le dossier qu'on
+ * ouvre quand on est pressé. Un fichier absent (déplacé à la main, jamais scanné) n'est pas une
+ * erreur : il n'y a simplement rien à déplacer.
+ */
+ipcMain.handle('classement:deplacer', (ev, deSous, versSous, nom) => {
+  const propre = safeName(nom);
+  const source = path.join(sousDossierSur(deSous), propre);
+  if (!fs.existsSync(source)) return { deplace: false, raison: 'absent' };
+  const dest = sousDossierSur(versSous);
+  fs.mkdirSync(dest, { recursive: true });
+  let cible = path.join(dest, propre);
+  const ext = path.extname(propre); const stem = propre.slice(0, propre.length - ext.length);
+  let k = 1;
+  while (fs.existsSync(cible)) cible = path.join(dest, `${stem} (${k++})${ext}`);
+  fs.renameSync(source, cible);
+  return { deplace: true, chemin: cible };
+});
 
 /* ---------------- Nettoyage du dossier DGEO par la page Caisse écoles ---------------- */
 // La page a déjà pdf.js, pdf-lib et l'analyseur des pièces : la passerelle lui confie le dossier,

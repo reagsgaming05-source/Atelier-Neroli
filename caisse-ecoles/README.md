@@ -500,7 +500,15 @@ scan signé va se poser, en plus d'être joint à sa ligne du journal.
 Le genre vient de ce qui est déjà coché sur la fiche (*Camp* / *Course d'école*), pas du code QR :
 celui-ci désigne la pièce, et la pièce porte le reste. Un décompte reclassé après coup n'oblige
 donc pas à réimprimer quoi que ce soit. Le bouton *Ouvrir les décomptes* mène à ce dossier :
-c'est l'explorateur qui dit ce qu'il reste à faire, sans passer par l'application.
+l'explorateur dit ce qu'il reste à faire sans passer par l'application.
+
+**Et la même chose dans l'application.** En haut de la Boîte de réception, *Décomptes à faire*
+montre le même bac, groupé *Camp* / *Course d'école* : n°, date, objet, enseignant-e, montant.
+La liste est faite depuis le journal, pas depuis le dossier — un décompte coché apparaît donc
+dès l'enregistrement de la fiche, avant même d'être imprimé, et la mention **signée** dit ceux
+dont le scan est revenu. *Voir* ouvre ce scan dans la fenêtre ; *Fait* décoche la case et
+descend le fichier de `Décomptes\À faire\…` vers `Décomptes\`. Le dossier et la liste disent
+donc toujours la même chose, quel que soit le côté par lequel on range.
 
 *Ranger automatiquement*, dans les réglages, saute l'étape 4 pour les pièces reconnues sans
 ambiguïté. C'est décoché au départ, et volontairement : un classement qui se trompe une fois sur
@@ -588,7 +596,7 @@ Structure :
 - `src/combo.js` – liste déroulante d'un champ : `attach()` pour un champ libre, `fromSelect()` pour une liste fermée du navigateur (le `<select>` reste en place, caché, et garde la valeur)
 - `src/marque.js` – la marque de la pièce : écrire le code QR (qrcode-generator), le poser sur la fiche, le relire sur un scan (jsQR)
 - `src/pile.js` – découpe d'une pile scannée aux marques, et rapprochement de chaque document avec sa pièce (sans dépendance, éprouvé sur table)
-- `src/reception.js` – boîte de réception : lecture des pages, découpe, validation, justificatif joint à la pièce
+- `src/reception.js` – boîte de réception : lecture des pages, découpe, validation, justificatif joint à la pièce, et bac des décomptes à faire (liste tenue depuis le journal)
 - `desktop/veille.js` – surveillance du dossier scanné : stabilité du fichier, réservation atomique entre postes, rangement dans `traité\` ou `à revoir\` (sans dépendance)
 - `src/carnet.js` – carnet des données : ajouts et retraits de l'utilisateur sur les cinq listes, lecture tolérante d'un fichier abîmé, `appliquer()` rend le vocabulaire vu à travers le carnet (sans dépendance, éprouvé hors navigateur)
 - `src/donnees.js` – espace « Données » : les cinq cartes, l'ajout, le retrait, la remise, la copie du carnet

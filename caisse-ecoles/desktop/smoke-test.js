@@ -661,6 +661,25 @@ function verifierCopie() {
     });
     const scanDir = regle.depot;
     if (!scanDir || !fs.existsSync(scanDir)) throw new Error(`dossier de dépôt absent : ${scanDir}`);
+
+    // Le dépôt et le bac vivent dans les données de l'application : ils survivent d'un essai à
+    // l'autre. On efface donc ce que NOS passages précédents y ont laissé — et rien d'autre, le
+    // bac pouvant contenir de vrais décomptes. Sans ça, le deuxième essai sur un même poste
+    // compte les restes du premier (vu : trois fichiers « fait » au lieu d'un).
+    const racineBac = await win.evaluate(() => window.CaisseScan.racineClassement());
+    const aNous = (f) => /^900 /.test(f) || /SKM_C224e26040112000/.test(f);
+    const balayer = (d) => {
+      let entrees = [];
+      try { entrees = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+      for (const e of entrees) {
+        const complet = path.join(d, e.name);
+        if (e.isDirectory()) balayer(complet);
+        else if (aNous(e.name)) fs.rmSync(complet, { force: true });
+      }
+    };
+    balayer(racineBac);
+    balayer(scanDir);
+
     fs.writeFileSync(path.join(scanDir, 'SKM_C224e26040112000.pdf'), Buffer.from(pile.octets));
 
     // deux regards espacés : un fichier n'est pris que si sa taille n'a pas bougé depuis un moment
@@ -730,7 +749,7 @@ function verifierCopie() {
       const racine = jointe.racineDecomptes;
       const dossier = path.join(racine, 'À faire', 'Camp');
       let fichiers = [];
-      try { fichiers = fs.readdirSync(dossier); } catch (e) { fichiers = []; }
+      try { fichiers = fs.readdirSync(dossier).filter((f) => /^900 /.test(f)); } catch (e) { fichiers = []; }
       return { dossier, fichiers };
     })();
 
@@ -746,6 +765,36 @@ function verifierCopie() {
       }
       return out;
     });
+
+    // Les décomptes à faire, dans l'application : le même contenu que le dossier, lu dans le
+    // registre. « Fait » doit sortir le décompte du bac — à l'écran ET dans le dossier.
+    const aFaire = await win.evaluate(async (no) => {
+      window.CaisseApp.showPanel('panelReception');
+      await new Promise((r) => setTimeout(r, 400));
+      window.CaisseReception.rendreDecomptes();
+      const lignes = Array.from(document.querySelectorAll('#decomptesListe .dligne'));
+      const avant = {
+        combien: lignes.length,
+        groupes: Array.from(document.querySelectorAll('#decomptesListe .dgroupe-t')).map((e) => e.textContent.trim().split(' ')[0]),
+        signee: /signée/.test((lignes[0] || {}).textContent || ''),
+        texte: ((lignes[0] || {}).textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60),
+      };
+      const s = window.CaisseSaisie.state;
+      const p = s.reg.pieces.find((x) => x.no === no);
+      document.querySelector(`[data-fait="${p.id}"]`).click();
+      await new Promise((r) => setTimeout(r, 1200));
+      return {
+        avant,
+        apres: document.querySelectorAll('#decomptesListe .dligne').length,
+        encoreAFaire: !!window.CaisseSaisie.state.reg.pieces.find((x) => x.no === no).decompteAFaire,
+      };
+    }, pile.faites[0].no);
+
+    const bacApres = (() => {
+      const racine = jointe.racineDecomptes;
+      const lire = (d) => { try { return fs.readdirSync(d).filter((f) => f.endsWith('.pdf') && /^900 /.test(f)); } catch (e) { return []; } };
+      return { aFaire: lire(path.join(racine, 'À faire', 'Camp')), fait: lire(racine) };
+    })();
 
     // le chemin est affiché en toutes lettres : c'est ce qu'on vient chercher sur cet écran
     const affiche = await win.evaluate(() => ({
@@ -764,7 +813,7 @@ function verifierCopie() {
       window.CaisseApp.showPanel('panelSaisie');
     });
 
-    return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, bac, evasion, affiche, ranges };
+    return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, bac, aFaire, bacApres, evasion, affiche, ranges };
   })();
   console.log('boîte de réception :', JSON.stringify(reception));
   ok = ok && reception.pilePages === 3
@@ -779,6 +828,10 @@ function verifierCopie() {
     && reception.jointe.reste === 2
     && reception.bac.fichiers.length === 1 && /^900 /.test(reception.bac.fichiers[0]) && /\.pdf$/.test(reception.bac.fichiers[0])
     && Object.values(reception.evasion).every((v) => v === 'refusé')
+    && reception.aFaire.avant.combien === 1 && reception.aFaire.avant.signee
+    && reception.aFaire.avant.groupes.join('|') === 'Camp'
+    && reception.aFaire.apres === 0 && reception.aFaire.encoreAFaire === false
+    && reception.bacApres.aFaire.length === 0 && reception.bacApres.fait.length === 1
     && reception.rejoint.ok && reception.rejoint.noms.filter((n) => n === 'piece-signee.pdf').length === 1
     && reception.rejoint.noms.length === 1
     && reception.ranges.some((f) => f.startsWith('traité/'))

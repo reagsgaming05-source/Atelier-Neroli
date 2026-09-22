@@ -285,6 +285,7 @@
       ? liste.map(ligne).join('')
       : '<div class="dvide">Rien en attente. Les scans déposés par le copieur dans le dossier surveillé arrivent ici tout seuls.</div>';
     for (const d of liste) dessinerApercu(d.id);
+    rendreDecomptes();
   }
 
   /** Première page du document, en vignette : de quoi reconnaître la pièce d'un coup d'œil. */
@@ -339,6 +340,99 @@
     try { await S.retirer(id); } catch (e) { /* ignore */ }
     etat.apercus.delete(id);
     await rafraichir();
+  }
+
+  /* ---------------- Les décomptes à faire, dans l'application ---------------- */
+  /*
+   * Le même contenu que le dossier « Décomptes\À faire », mais lu dans le registre plutôt que sur
+   * le disque. C'est plus juste : le registre connaît aussi les décomptes dont le scan signé n'est
+   * pas encore revenu, et le dossier ne peut pas les montrer.
+   */
+
+  const registreOuvert = () => (window.CaisseSaisie && window.CaisseSaisie.state && window.CaisseSaisie.state.reg) || null;
+  const aSonScan = (p) => (p.justificatifs || []).some((j) => j.name === L.NOM_SIGNEE);
+
+  function decomptesAFaire() {
+    const reg = registreOuvert();
+    if (!reg) return [];
+    return (reg.pieces || [])
+      .filter((p) => String(p.type || '').toUpperCase() === 'DECOMPTE' && p.decompteAFaire)
+      .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || (a.no || 0) - (b.no || 0));
+  }
+
+  function ligneDecompte(p) {
+    const genre = L.genreDeDecompte(p.objet);
+    const scan = aSonScan(p);
+    const description = String(p.libelle || '').replace(/^[A-ZÀ-Ý' ]+ - /, '').trim() || '(sans libellé)';
+    return `<div class="dligne" data-piece="${escapeHtml(p.id)}">
+  <span class="dval">n° ${escapeHtml(p.no == null ? '?' : p.no)}</span>
+  <span class="ddetail" style="flex:1;white-space:normal">${escapeHtml(description)}</span>
+  <span class="chip ${scan ? 'ok' : 'warn'}" title="${scan ? 'La fiche signée est revenue du copieur' : 'La fiche signée n\'a pas encore été scannée'}">${scan ? 'signée' : 'pas encore scannée'}</span>
+  <span class="dn">${escapeHtml(fmtCHF(p.montant))}</span>
+  ${scan ? `<button type="button" class="small" data-voir-piece="${escapeHtml(p.id)}"><svg class="ico sm"><use href="#i-eye"/></svg> Voir</button>` : ''}
+  <button type="button" class="small primary" data-fait="${escapeHtml(p.id)}" title="Le décompte est établi : retirer de « à faire »"><svg class="ico sm"><use href="#i-check"/></svg> Fait</button>
+</div>`;
+  }
+
+  function rendreDecomptes() {
+    const boite = $('decomptesListe');
+    if (!boite) return;
+    const tous = decomptesAFaire();
+    const compteur = $('decomptesCompte');
+    const reg = registreOuvert();
+    if (compteur) compteur.textContent = tous.length ? `${plur(tous.length, 'décompte')} · ${reg ? reg.annee : ''}` : (reg ? `rien à faire · ${reg.annee}` : '');
+    if (!tous.length) {
+      boite.innerHTML = '<div class="dvide">Aucun décompte à faire. Cochez « Décompte à faire » sur la fiche d\'un DECOMPTE pour qu\'il apparaisse ici.</div>';
+      return;
+    }
+    const groupes = [['Camp', tous.filter((p) => L.genreDeDecompte(p.objet) === 'Camp')],
+      ["Course d'école", tous.filter((p) => L.genreDeDecompte(p.objet) !== 'Camp')]];
+    boite.innerHTML = groupes.filter(([, l]) => l.length).map(([titre, l]) => (
+      `<div class="dgroupe"><div class="dgroupe-t">${escapeHtml(titre)} <span class="legend">${plur(l.length, 'décompte')}</span></div>` +
+      `<div class="dliste" style="max-height:none;margin-top:8px">${l.map(ligneDecompte).join('')}</div></div>`
+    )).join('');
+  }
+
+  /** Le décompte est établi : il sort du bac, à l'écran comme dans le dossier. */
+  async function marquerFait(id) {
+    const reg = registreOuvert();
+    if (!reg) return;
+    const piece = (reg.pieces || []).find((p) => p.id === id);
+    if (!piece) return;
+    const avant = L.rangement(piece); // là où son scan se trouve aujourd'hui
+    piece.decompteAFaire = false;
+    const apres = L.rangement(piece);
+    try {
+      await window.CaisseSaisie.saveReg();
+    } catch (e) {
+      piece.decompteAFaire = true;
+      majBandeau(`Registre non enregistré : ${(e && e.message) || e}`, 'err');
+      return;
+    }
+    let dit = '';
+    if (avant && apres && avant.dossier !== apres.dossier && S && S.deplacer) {
+      try {
+        const r = await S.deplacer(avant.dossier, apres.dossier, avant.nom);
+        dit = r && r.deplace ? ` Son scan est passé dans <b>Décomptes</b>.` : '';
+      } catch (e) { dit = ` <span style="color:var(--err)">Scan non déplacé : ${escapeHtml((e && e.message) || e)}</span>`; }
+    }
+    if (window.CaisseSaisie.renderJournal) { try { window.CaisseSaisie.renderJournal(); } catch (e) { /* ignore */ } }
+    majBandeau(`Décompte n° ${piece.no} marqué fait.${dit}`);
+    rendreDecomptes();
+  }
+
+  /** Le scan signé d'une pièce, tel qu'il est joint à sa ligne du journal. */
+  async function voirPiece(id) {
+    const reg = registreOuvert();
+    const storage = R.storage();
+    if (!reg || !storage) return;
+    let octets = null;
+    try { octets = await storage.read(reg.annee, id, L.NOM_SIGNEE); } catch (e) { octets = null; }
+    if (!octets) { majBandeau('Le scan signé de cette pièce est introuvable.', 'warn'); return; }
+    const url = URL.createObjectURL(new Blob([octets], { type: 'application/pdf' }));
+    const f = $('receptionFrame');
+    if (f) { f.src = url; $('receptionApercu').classList.remove('hidden'); f.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
   }
 
   /* ---------------- Réglages ---------------- */
@@ -429,6 +523,15 @@
   }
   if ($('btnReceptionDossier')) $('btnReceptionDossier').addEventListener('click', () => S.ouvrirDossier());
   if ($('btnOuvrirDecomptes')) $('btnOuvrirDecomptes').addEventListener('click', () => S.ouvrirClassement());
+  if ($('btnOuvrirDecomptes2')) $('btnOuvrirDecomptes2').addEventListener('click', () => S.ouvrirClassement());
+  if ($('decomptesListe')) {
+    $('decomptesListe').addEventListener('click', (ev) => {
+      const f = ev.target.closest('[data-fait]');
+      if (f) { marquerFait(f.dataset.fait); return; }
+      const v = ev.target.closest('[data-voir-piece]');
+      if (v) voirPiece(v.dataset.voirPiece);
+    });
+  }
   if ($('btnDepotOuvrir')) $('btnDepotOuvrir').addEventListener('click', () => S.ouvrirDepot());
   if ($('btnDepotCopier')) {
     $('btnDepotCopier').addEventListener('click', async () => {
@@ -469,5 +572,5 @@
     }, 5000);
   }
 
-  window.CaisseReception = { depouiller, joindre, rafraichir, majReglages };
+  window.CaisseReception = { depouiller, joindre, rafraichir, majReglages, rendreDecomptes, decomptesAFaire, marquerFait };
 })();

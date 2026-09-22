@@ -71,6 +71,7 @@ contextBridge.exposeInMainWorld('CaisseScan', {
   poser: (sousDossier, nom, octets) => ipcRenderer.invoke('classement:poser', sousDossier, nom, octets),
   ouvrirClassement: (sousDossier) => ipcRenderer.invoke('classement:ouvrir', sousDossier),
   racineClassement: () => ipcRenderer.invoke('classement:racine'),
+  deplacer: (deSous, versSous, nom) => ipcRenderer.invoke('classement:deplacer', deSous, versSous, nom),
 });
 
 // Pont Décompte DGEO → Caisse écoles : décomptes terminés (Excel généré dans l'autre onglet),

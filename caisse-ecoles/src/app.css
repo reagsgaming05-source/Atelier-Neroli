@@ -688,3 +688,9 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   display: block; padding: 10px 12px; border-radius: 8px; background: #fff; border: 1px solid var(--line);
   font-family: var(--mono); font-size: 12.5px; color: var(--ink); word-break: break-all; user-select: all;
 }
+
+/* les décomptes à faire, groupés comme le dossier : Camp / Course d'école */
+.dgroupe + .dgroupe { margin-top: 16px; }
+.dgroupe-t { font-size: 12px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); }
+.dgroupe .dligne { gap: 12px; }
+.dgroupe .dligne .dval { flex: none; font-variant-numeric: tabular-nums; }
