@@ -24,6 +24,12 @@ const { creerVeille } = require('./veille.js');
 const APP_TITLE = 'Compta Blonay';
 const PORTABLE_DIR = path.dirname(process.execPath);
 
+// Français, quelle que soit la langue de Windows. Chromium habille en anglais ce que la page ne
+// dessine pas elle-même : les champs « date » (03/09/2026 se lit alors mois/jour — un relevé de
+// caisse mal daté), le bouton des champs « fichier » (« Choose File ») et le menu du clic droit.
+// Le commutateur doit être posé avant que l'application ne soit prête.
+app.commandLine.appendSwitch('lang', 'fr-CH');
+
 // Dossier de données à côté de l'exécutable (version portable) ; sinon, dossier utilisateur.
 function setupUserData() {
   if (!app.isPackaged) return;
@@ -122,6 +128,20 @@ function createWindow() {
     return { action: 'deny' };
   });
   caisseView.webContents.once('did-finish-load', () => { if (mainWindow && !mainWindow.isVisible()) { mainWindow.show(); logLine('interface démarrée'); } });
+
+  // La veille ne tourne que quand la page peut répondre. C'est elle qui lit les piles : tant que
+  // son code n'est pas en place, un scan qui lui serait confié partirait dans le vide, et le
+  // fichier finirait dans « À revoir » au bout des dix minutes d'attente — alors qu'il n'a rien.
+  // Laissé dans le dossier du copieur, il sera simplement pris au tour suivant.
+  caisseView.webContents.on('did-finish-load', () => { caissePrete = true; demarrerVeille(); });
+  // Seulement la page elle-même : « did-start-loading » se déclenche aussi pour un cadre interne,
+  // et l'aperçu d'un PDF en est un — la veille se serait arrêtée au premier aperçu sans repartir.
+  caisseView.webContents.on('did-start-navigation', (a, b, c, d) => {
+    const principal = a && typeof a === 'object' && 'isMainFrame' in a ? a.isMainFrame : d; // deux signatures selon la version d'Electron
+    if (!principal) return;
+    caissePrete = false;
+    if (veille) { veille.arreter(); logLine('veille en pause : la page se recharge'); }
+  });
 
   // Onglet 2 : Décompte DGEO (serveur local embarqué, démarré avec l'application)
   dgeoView = new WebContentsView({ webPreferences: { contextIsolation: true, nodeIntegration: false } });
@@ -374,13 +394,15 @@ const DEPOT = () => path.join(app.getPath('userData'), 'Scans');
 /** Une adresse que le copieur peut viser : \\serveur\partage\… */
 const estReseau = (p) => /^\\\\[^\\]/.test(String(p || ''));
 let veille = null;
+/** La page Caisse écoles a fini de charger : elle écoute les scans entrants (voir reception.js). */
+let caissePrete = false;
 const scansEnCours = new Map();
 let scanSeq = 0;
 
 /** Confie un scan à la page et attend sa réponse. Sans page, le fichier n'est pas pris. */
 function lireScanDansLaPage(nom, octets) {
   return new Promise((resolve) => {
-    if (!caisseView || caisseView.webContents.isDestroyed()) { resolve({ ok: false, raison: "l'application n'est pas encore prête" }); return; }
+    if (!caisseView || caisseView.webContents.isDestroyed() || !caissePrete) { resolve({ ok: false, raison: "l'application n'est pas encore prête" }); return; }
     const id = ++scanSeq;
     scansEnCours.set(id, resolve);
     caisseView.webContents.send('scan:entrant', { id, nom, octets, auto: loadSettings().scanAuto === true });
@@ -410,6 +432,8 @@ function dossiersSurveilles() {
 function demarrerVeille() {
   const s = loadSettings();
   if (veille) veille.arreter();
+  // appelée au chargement de la page, au changement de réglages et par « Regarder maintenant »
+  if (!caissePrete) { logLine('veille en attente : la page Caisse écoles n\'est pas encore chargée'); return veille; }
   veille = creerVeille({
     dossiers: dossiersSurveilles,
     poste: os.hostname(),
@@ -431,7 +455,12 @@ ipcMain.handle('scan:etat', () => {
     auto: s.scanAuto === true,
     intervalle: s.scanIntervalle || 5000,
     reception: RECEPTION(),
-  }, veille ? veille.etat() : { poste: os.hostname(), tours: 0, traites: 0, revoir: 0, erreurs: 0 });
+  }, veille ? veille.etat() : { poste: os.hostname(), tours: 0, traites: 0, revoir: 0, erreurs: 0 }, {
+    // « actif » ci-dessus est la case à cocher : ce que la personne a demandé. Celui-ci dit si la
+    // veille tourne VRAIMENT — elle n'est mise en route qu'une fois la page capable de lire une
+    // pile, et elle s'arrête le temps d'un rechargement.
+    veilleEnMarche: !!(veille && veille.etat().actif),
+  });
 });
 ipcMain.handle('scan:ouvrir-depot', () => { try { fs.mkdirSync(DEPOT(), { recursive: true }); } catch (e) { /* ignore */ } return shell.openPath(DEPOT()); });
 ipcMain.handle('scan:regler', (ev, patchObj) => {
@@ -459,6 +488,7 @@ ipcMain.handle('scan:choisir-dossier', async () => {
 /** Un tour tout de suite, sans attendre le minuteur (bouton « Regarder maintenant »). */
 ipcMain.handle('scan:regarder', async () => {
   if (!veille) demarrerVeille();
+  if (!veille) return { reserves: 0, attentes: 0, erreurs: ["l'application n'est pas encore prête"] };
   const r = await veille.tour();
   return { reserves: r.reserves.length, attentes: r.attentes.length, erreurs: r.erreurs.map((e) => e.message) };
 });
@@ -802,7 +832,9 @@ const idOk = (id) => /^[A-Za-z0-9_-]{1,40}$/.test(String(id));
 function safeName(name) {
   // pas de chemin, pas de caractères interdits sous Windows, pas de caractères de contrôle
   const base = path.basename(String(name || 'fichier')).replace(/[<>:"/\\|?*]/g, '_').replace(/[^\x20-\x7e -￿]/g, '_').trim();
-  return base || 'fichier';
+  // « . » et « .. » survivaient à basename() et désignaient le dossier parent, jamais un fichier
+  if (!base || base === '.' || base === '..') return 'fichier';
+  return base;
 }
 function regDir(y) { return path.join(REG_ROOT(), String(y)); }
 ipcMain.handle('files:dir', () => REG_ROOT());
@@ -884,8 +916,9 @@ app.whenReady().then(() => {
   setupDgeoBridge();
   buildMenu();
   createWindow();
-  // la veille démarre APRÈS la fenêtre : un partage injoignable ne doit pas retenir l'ouverture
-  setTimeout(() => { try { demarrerVeille(); } catch (e) { logLine(`veille : ${e && e.message ? e.message : e}`); } }, 1500);
+  // la veille démarre quand la page Caisse écoles a fini de charger (voir createWindow) : après la
+  // fenêtre, pour qu'un partage injoignable ne retienne pas l'ouverture, et jamais avant que la
+  // page puisse répondre — sinon le premier scan du matin part « à revoir » sans avoir été lu
 });
 
 app.on('window-all-closed', () => app.quit());

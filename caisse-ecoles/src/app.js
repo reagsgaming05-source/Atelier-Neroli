@@ -227,7 +227,7 @@
       ` <button type="button" class="small" id="btnUseLast">Reprendre comme solde à nouveau</button>`;
     const b = $('btnUseLast');
     if (b) b.addEventListener('click', () => {
-      els.openingAmount.value = last.amount;
+      els.openingAmount.value = fmtCHF(last.amount);
       if (last.date) els.openingDate.value = last.date;
       refreshAll();
     });
@@ -378,7 +378,7 @@
         (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le registre de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le registre de l'année</button>` : '');
       state.existing.buffer = buf;
       const saisi = window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value);
-      if (!saisi) els.openingAmount.value = totals.end;
+      if (!saisi) els.openingAmount.value = fmtCHF(totals.end);
       // apprentissage du vocabulaire (mots, noms, comptes) pour corriger l'OCR
       state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(data.entries));
       saveVocab();

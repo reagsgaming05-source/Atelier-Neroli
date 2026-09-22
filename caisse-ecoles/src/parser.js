@@ -165,8 +165,25 @@
       .replace(/[Bb]/g, '8');
   }
 
+  /**
+   * Arrondi au centime. « Math.round(n * 100) / 100 » se trompe sur les demi-centimes : 1.005 vaut
+   * 100.49999999999999 une fois multiplié par 100, et rendait 1.00 au lieu de 1.01. On décale la
+   * virgule par le texte du nombre, où le demi-centime est resté un demi, et on arrondit au large
+   * de zéro — comme le fait une caisse : −0.005 rend −0.01, pas 0.
+   */
   function round2(n) {
-    return Math.round(n * 100) / 100;
+    if (!Number.isFinite(n)) return n;
+    const x = n * 100;
+    // Un montant absurde déborde et vaut l'infini, comme avant : c'est ce qui le fait rejeter
+    // plus loin (voir montantOk et soldeOk dans registre.js).
+    if (!Number.isFinite(x)) return x;
+    // Hors de cette plage, le texte du nombre passe en notation exponentielle (« 1e-7 ») et le
+    // décalage de virgule par le texte ne veut plus rien dire. Il n'y a de toute façon plus de
+    // centime à sauver ni en dessous ni au-dessus.
+    if (Math.abs(n) < 1e-6 || Math.abs(n) >= 1e15) return Math.round(x) / 100;
+    const signe = n < 0 ? -1 : 1;
+    const centimes = Math.round(Number(`${Math.abs(n)}e+2`));
+    return signe * Number(`${centimes}e-2`);
   }
 
   function uniq(arr) {

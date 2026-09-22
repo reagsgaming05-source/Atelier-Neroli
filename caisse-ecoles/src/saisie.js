@@ -192,7 +192,7 @@
     try { localStorage.setItem('caisse.registre.annee', String(year)); } catch (e) { /* ignore */ }
     renderYears();
     els.regOpeningDate.value = reg.opening.date || '';
-    els.regOpeningAmount.value = reg.opening.amount;
+    els.regOpeningAmount.value = fmtCHF(reg.opening.amount);
     els.regCaisse.value = reg.caisse;
     els.journalYear.textContent = String(reg.annee);
     const loc = await state.storage.location();
@@ -255,7 +255,7 @@
     const v = R.parseAmountInput(els.regOpeningAmount.value);
     if (v == null) {
       notice('err', `« ${escapeHtml(els.regOpeningAmount.value)} » n'est pas un montant : le solde à nouveau n'a pas été modifié.`);
-      els.regOpeningAmount.value = state.reg.opening.amount;
+      els.regOpeningAmount.value = fmtCHF(state.reg.opening.amount);
       return;
     }
     state.reg.opening.amount = v; await saveReg(); renderJournal();
@@ -592,7 +592,7 @@
     if (!reg || !els.regOpeningDate) return;
     const busy = document.activeElement;
     if (busy !== els.regOpeningDate) els.regOpeningDate.value = reg.opening.date || '';
-    if (busy !== els.regOpeningAmount) els.regOpeningAmount.value = reg.opening.amount;
+    if (busy !== els.regOpeningAmount) els.regOpeningAmount.value = fmtCHF(reg.opening.amount);
     if (busy !== els.regCaisse) els.regCaisse.value = reg.caisse;
     const v = reg.visas || {};
     if (els.regVisaResp && busy !== els.regVisaResp) els.regVisaResp.value = v.responsable || '';

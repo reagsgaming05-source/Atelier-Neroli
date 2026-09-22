@@ -47,6 +47,17 @@ function verifierCopie() {
   win.on('pageerror', (e) => console.log('[pageerror]', e.message));
   await win.waitForLoadState('domcontentloaded');
   await win.waitForSelector('#regYear', { state: 'attached' });
+
+  // Le registre vit dans les données de l'application et survit d'un essai à l'autre. Sur un poste
+  // qui a déjà servi, les pièces des passages précédents s'ajoutent aux nôtres et faussent tout ce
+  // qui se compte : une recherche par numéro qui devait rendre une ligne en rendait treize. On
+  // note donc ce qu'il y avait AVANT, et on le remet à l'identique à la fin. (Vu pour de vrai :
+  // deux essais de suite sur le même poste, le second en échec sans rien avoir cassé.)
+  const avantTout = await win.evaluate(() => {
+    const s = window.CaisseSaisie.state;
+    return { annee: s.reg.annee, ids: (s.reg.pieces || []).map((p) => p.id) };
+  });
+
   const title = await win.title();
   const shellTitle = await shell.title();
   const info = await win.evaluate(() => ({
@@ -106,16 +117,50 @@ function verifierCopie() {
   // les champs de montant acceptent le séparateur de milliers que l'application affiche elle-même
   // (un champ « number » vidait la valeur et le contrôle était sauté en silence)
   const montants = await win.evaluate(() => {
-    const R = window.CaisseRegistre;
+    const R = window.CaisseRegistre; const S = window.CaisseSaisie;
     const essai = (id, texte) => { const el = document.getElementById(id); el.value = texte; return el.value; };
-    return {
+    const lus = {
       checkBalance: essai('checkBalance', '4’825.55'),
       openingAmount: essai('openingAmount', "2'062.20"),
       regOpeningAmount: essai('regOpeningAmount', 'CHF 2 062,20'),
       lu: [R.parseAmountInput('4’825.55'), R.parseAmountInput("2'062.20"), R.parseAmountInput('CHF 2 062,20'), R.parseAmountInput('abc')],
     };
+    // Et ce que le champ REDONNE à voir. Le solde à nouveau y était réécrit tel quel : 2062.2,
+    // deux chiffres après la virgule perdus en route, sur le montant d'ouverture de l'année.
+    // On remet ensuite la valeur d'avant : les étapes suivantes comptent sur ce registre.
+    const avant = S.state.reg.opening.amount;
+    try {
+      S.state.reg.opening.amount = 2062.2;
+      S.renderJournal();
+      lus.rendu = document.getElementById('regOpeningAmount').value;
+      lus.renduRelu = R.parseAmountInput(lus.rendu);
+    } finally {
+      S.state.reg.opening.amount = avant;
+      S.renderJournal();
+    }
+    lus.remisEnPlace = S.state.reg.opening.amount === avant;
+    return lus;
   });
   console.log('montants tapés à la main :', JSON.stringify(montants));
+  if (montants.rendu !== "2'062.20") throw new Error(`le solde à nouveau se réaffiche « ${montants.rendu} » au lieu de « 2'062.20 »`);
+  if (montants.renduRelu !== 2062.2) throw new Error(`le montant réaffiché ne se relit pas : ${montants.renduRelu}`);
+  if (!montants.remisEnPlace) throw new Error('le solde à nouveau d\'essai n\'a pas été remis en place');
+
+  // L'interface est en français même si Windows ne l'est pas. Ce que la page ne dessine pas
+  // elle-même, Chromium l'habille dans SA langue : le champ « date » surtout, dont le gabarit
+  // passe de « mm/dd/yyyy » à « dd/mm/yyyy ». Une date de pièce lue à l'envers, c'est un relevé
+  // de caisse faux — et personne ne s'en aperçoit avant le bouclement.
+  //
+  // C'est « navigator.language » qui commande, pas « Intl » : vérifié en photographiant le champ
+  // avec et sans le commutateur. Intl garde sa langue système et n'entre pas en jeu, l'application
+  // ne s'en sert jamais sans nommer la langue (« toLocaleDateString('fr-CH') »).
+  const langue = await win.evaluate(() => ({
+    navigateur: navigator.language,
+    langues: navigator.languages,
+    intl: new Intl.DateTimeFormat().resolvedOptions().locale, // pour information : pas utilisé ici
+  }));
+  console.log('langue de l\'interface :', JSON.stringify(langue));
+  if (!/^fr/.test(langue.navigateur)) throw new Error(`interface en « ${langue.navigateur} » : les champs date s'afficheraient en mm/dd/yyyy`);
 
   // UNE SEULE LISTE : une écriture lue sur un scan entre au journal tout de suite, ne s'y double
   // pas à la relecture, et ne double pas une pièce déjà saisie à la main.
@@ -293,9 +338,11 @@ function verifierCopie() {
     bar.querySelector('button[data-annee]').click();
     const renvoie = !document.getElementById('panelAnnee').classList.contains('hidden')
       && document.getElementById('panelSaisie').classList.contains('hidden');
-    // le solde à nouveau changé ailleurs se relit sur l'écran des réglages (pas de valeur périmée)
+    // Le solde à nouveau changé ailleurs se relit sur l'écran des réglages (pas de valeur
+    // périmée), et il s'y relit COMME UN MONTANT : le champ recevait le nombre tel quel, et
+    // 1234.5 s'affichait ainsi — des centimes en moins sur le montant d'ouverture de l'année.
     S.state.reg.opening.amount = 1234.5; await S.saveReg(); S.renderJournal();
-    const recopie = document.getElementById('regOpeningAmount').value === '1234.5';
+    const recopie = document.getElementById('regOpeningAmount').value === "1'234.50";
     S.state.reg.opening.amount = 0; await S.saveReg(); S.renderJournal();
     // pièces scannées : la zone de dépôt d'abord, les réglages repliés avec leur résumé
     window.CaisseApp.showPanel('panelScan');
@@ -657,10 +704,32 @@ function verifierCopie() {
     const regle = await win.evaluate(async () => {
       await window.CaisseScan.regler({ scanDossiers: [], scanActif: true, scanAuto: false });
       const e = await window.CaisseScan.etat();
-      return { depot: e.depot, depotReseau: e.depotReseau, dossiers: e.dossiers.map((d) => d.chemin), auto: e.auto };
+      return { depot: e.depot, depotReseau: e.depotReseau, dossiers: e.dossiers.map((d) => d.chemin), auto: e.auto, actif: e.actif, enMarche: e.veilleEnMarche };
     });
     const scanDir = regle.depot;
     if (!scanDir || !fs.existsSync(scanDir)) throw new Error(`dossier de dépôt absent : ${scanDir}`);
+    // La veille tourne. Elle ne démarre plus sur un minuteur posé au lancement, mais quand cette
+    // page a fini de charger : c'est elle qui lit les piles, et un scan confié trop tôt partait
+    // dans le vide, pour finir « à revoir » dix minutes plus tard sans avoir été lu.
+    if (!regle.enMarche) throw new Error('la veille du dossier scanné ne tourne pas');
+
+    // Un nom de justificatif ne désigne jamais un dossier : « .. » ressortait tel quel de
+    // safeName() et visait le dossier parent des pièces.
+    const noms = await win.evaluate(async () => {
+      const an = window.CaisseSaisie.state.reg.annee;
+      const id = window.CaisseSaisie.state.reg.pieces[0].id;
+      const octets = new Uint8Array([1, 2, 3]);
+      const pose = await window.CaisseFiles.attach(an, id, '..', octets);
+      // sans la garde, cette lecture vise le dossier des pièces et lève EISDIR : on veut que le
+      // test échoue sur le nom, qui dit ce qui ne va pas, pas sur l'erreur système
+      let relu = null; let erreur = '';
+      try { const b = await window.CaisseFiles.read(an, id, '..'); relu = b ? b.length : null; }
+      catch (e) { erreur = String((e && e.message) || e); }
+      try { await window.CaisseFiles.remove(an, id, pose.name); } catch (e) { /* rien à retirer */ }
+      return { pose: pose.name, relu, erreur };
+    });
+    console.log('nom de justificatif hostile :', JSON.stringify(noms));
+    if (noms.pose === '..' || noms.pose.includes('..')) throw new Error(`« .. » accepté comme nom de fichier : ${noms.pose}`);
 
     // Le dépôt et le bac vivent dans les données de l'application : ils survivent d'un essai à
     // l'autre. On efface donc ce que NOS passages précédents y ont laissé — et rien d'autre, le
@@ -1118,6 +1187,26 @@ function verifierCopie() {
     console.log('Décompte DGEO : non inclus');
     if (process.env.SMOKE_DGEO === '1') ok = false;
   }
+  // On retire les pièces que CET essai a créées, et rien d'autre : le prochain repart du même
+  // registre que celui-ci. Sans ça, le test n'est juste qu'une fois par poste.
+  const menage = await win.evaluate(async (avant) => {
+    const S = window.CaisseSaisie; const R = window.CaisseRegistre;
+    if (!S.state.reg || S.state.reg.annee !== avant.annee) return { saute: true };
+    const connues = new Set(avant.ids);
+    const nouvelles = (S.state.reg.pieces || []).filter((p) => !connues.has(p.id));
+    for (const p of nouvelles) R.removePiece(S.state.reg, p.id);
+    await S.saveReg();
+    return { retirees: nouvelles.length, reste: S.state.reg.pieces.length, attendu: avant.ids.length };
+  }, avantTout);
+  console.log('registre remis comme trouvé :', JSON.stringify(menage));
+  // Seul un SURPLUS est un défaut : c'est lui qui fausse le tour suivant. Une pièce en moins veut
+  // dire qu'on a nettoyé un reste d'un essai interrompu (numéro qui tombait sur un des nôtres),
+  // et c'est très bien ainsi.
+  if (!menage.saute && menage.reste > menage.attendu) {
+    console.log(`ATTENTION : ${menage.reste} pièce(s) au lieu de ${menage.attendu} — le prochain essai partirait faussé`);
+    ok = false;
+  }
+
   await app.close();
   console.log(ok ? 'SMOKE OK' : 'SMOKE ÉCHEC');
   process.exit(ok ? 0 : 1);

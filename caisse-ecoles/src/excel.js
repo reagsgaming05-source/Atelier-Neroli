@@ -87,8 +87,17 @@
     return null;
   }
 
+  // Même arrondi que parser.js (round2), recopié ici parce que ce module ne dépend que d'ExcelJS.
+  // Les deux doivent rendre le même centime : sinon le classeur remis ne dit pas ce que l'écran
+  // affiche. Le pourquoi du détour par le texte est expliqué dans parser.js.
   function round2(n) {
-    return Math.round(n * 100) / 100;
+    if (!Number.isFinite(n)) return n;
+    const x = n * 100;
+    if (!Number.isFinite(x)) return x;
+    if (Math.abs(n) < 1e-6 || Math.abs(n) >= 1e15) return Math.round(x) / 100;
+    const signe = n < 0 ? -1 : 1;
+    const centimes = Math.round(Number(`${Math.abs(n)}e+2`));
+    return signe * Number(`${centimes}e-2`);
   }
 
   /* ------------------------------------------------------------------ */

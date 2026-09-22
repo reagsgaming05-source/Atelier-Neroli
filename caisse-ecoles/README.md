@@ -63,6 +63,12 @@ le fichier `vocabulaire-noms.js` (remis séparément, jamais publié) à côté 
 il est lu au démarrage (menu *Aide → À propos* indique s'il a été trouvé). Sans lui, les noms
 s'apprennent en chargeant un classeur existant.
 
+**L'application est en français même si Windows ne l'est pas.** Ce que la page ne dessine pas
+elle-même, Windows l'habille dans sa langue : sur un poste en anglais, les champs *date*
+affichaient `mm/dd/yyyy` et le bouton des champs *fichier* disait « Choose File ». Une date de
+pièce lue à l'envers — le 3 septembre pris pour le 9 mars — ne se voit pas avant le bouclement.
+L'application impose donc sa langue au démarrage : le champ date affiche `jj/mm/aaaa` partout.
+
 Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
 
@@ -343,6 +349,14 @@ Une lecture de scan n'est jamais certaine à 100 %. Trois garde-fous se complèt
    camp peut aller dans les deux sens, aucune règle ne le signale ; le rapprochement, si). Elle
    nomme les pièces et propose d'inverser leur sens en un clic, après vérification sur la pièce.
 
+**Le centime.** Tous les montants sont arrondis au centime au même endroit (`round2`, recopié à
+l'identique dans `excel.js` pour que le classeur remis dise exactement ce que l'écran affiche).
+La formule évidente — multiplier par cent, arrondir, diviser — est fausse sur les demi-centimes :
+`1.005` vaut `100.49999999999999` une fois multiplié, et redescendait donc à `1.00`. Un centime
+perdu ne se voit pas, mais c'est un centime que le rapprochement de caisse ne retrouvera jamais.
+L'arrondi décale la virgule par le texte du nombre, où le demi est resté un demi, et arrondit au
+large de zéro comme le ferait une caisse (`−0.005` rend `−0.01`).
+
 ### Logique des libellés
 
 Le type d'écriture en tête du libellé fixe le sens du mouvement de caisse, quoi qu'indique la
@@ -537,6 +551,7 @@ Ce qui est prévu, et éprouvé :
 | l'application ouverte deux fois sur le même PC | chaque exécution marque ses réservations : la seconde fenêtre ne reprend pas ce que la première est en train de lire |
 | un poste s'éteint en plein travail | ses scans sont repris par un autre après deux heures (dix minutes s'il s'agit d'une autre fenêtre du même PC) |
 | serveur injoignable | signalé à l'écran, la veille continue et reprend au retour |
+| un scan attend déjà dans le dossier quand on ouvre l'application | rien n'est pris avant que la page sache lire une pile : la veille ne démarre qu'une fois l'application chargée, et se met en pause le temps d'un rechargement. Le scan reste dans le dossier et part au tour suivant, au lieu de finir dans `à revoir\` |
 | feuille scannée à l'envers, de travers | le code se lit dans les quatre orientations |
 | « PDF compact » du copieur | la redondance du code (25 %) encaisse l'écrasement des nuances |
 | pile posée à l'envers, vieille pièce sans code | présentée telle quelle, jamais rattachée au hasard |

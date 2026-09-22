@@ -3183,8 +3183,25 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       .replace(/[Bb]/g, '8');
   }
 
+  /**
+   * Arrondi au centime. « Math.round(n * 100) / 100 » se trompe sur les demi-centimes : 1.005 vaut
+   * 100.49999999999999 une fois multiplié par 100, et rendait 1.00 au lieu de 1.01. On décale la
+   * virgule par le texte du nombre, où le demi-centime est resté un demi, et on arrondit au large
+   * de zéro — comme le fait une caisse : −0.005 rend −0.01, pas 0.
+   */
   function round2(n) {
-    return Math.round(n * 100) / 100;
+    if (!Number.isFinite(n)) return n;
+    const x = n * 100;
+    // Un montant absurde déborde et vaut l'infini, comme avant : c'est ce qui le fait rejeter
+    // plus loin (voir montantOk et soldeOk dans registre.js).
+    if (!Number.isFinite(x)) return x;
+    // Hors de cette plage, le texte du nombre passe en notation exponentielle (« 1e-7 ») et le
+    // décalage de virgule par le texte ne veut plus rien dire. Il n'y a de toute façon plus de
+    // centime à sauver ni en dessous ni au-dessus.
+    if (Math.abs(n) < 1e-6 || Math.abs(n) >= 1e15) return Math.round(x) / 100;
+    const signe = n < 0 ? -1 : 1;
+    const centimes = Math.round(Number(`${Math.abs(n)}e+2`));
+    return signe * Number(`${centimes}e-2`);
   }
 
   function uniq(arr) {
@@ -5577,8 +5594,17 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     return null;
   }
 
+  // Même arrondi que parser.js (round2), recopié ici parce que ce module ne dépend que d'ExcelJS.
+  // Les deux doivent rendre le même centime : sinon le classeur remis ne dit pas ce que l'écran
+  // affiche. Le pourquoi du détour par le texte est expliqué dans parser.js.
   function round2(n) {
-    return Math.round(n * 100) / 100;
+    if (!Number.isFinite(n)) return n;
+    const x = n * 100;
+    if (!Number.isFinite(x)) return x;
+    if (Math.abs(n) < 1e-6 || Math.abs(n) >= 1e15) return Math.round(x) / 100;
+    const signe = n < 0 ? -1 : 1;
+    const centimes = Math.round(Number(`${Math.abs(n)}e+2`));
+    return signe * Number(`${centimes}e-2`);
   }
 
   /* ------------------------------------------------------------------ */
@@ -20669,7 +20695,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       ` <button type="button" class="small" id="btnUseLast">Reprendre comme solde à nouveau</button>`;
     const b = $('btnUseLast');
     if (b) b.addEventListener('click', () => {
-      els.openingAmount.value = last.amount;
+      els.openingAmount.value = fmtCHF(last.amount);
       if (last.date) els.openingDate.value = last.date;
       refreshAll();
     });
@@ -20820,7 +20846,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le registre de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le registre de l'année</button>` : '');
       state.existing.buffer = buf;
       const saisi = window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value);
-      if (!saisi) els.openingAmount.value = totals.end;
+      if (!saisi) els.openingAmount.value = fmtCHF(totals.end);
       // apprentissage du vocabulaire (mots, noms, comptes) pour corriger l'OCR
       state.vocab = P.mergeVocabulary(state.vocab, P.learnVocabulary(data.entries));
       saveVocab();
@@ -23128,7 +23154,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     try { localStorage.setItem('caisse.registre.annee', String(year)); } catch (e) { /* ignore */ }
     renderYears();
     els.regOpeningDate.value = reg.opening.date || '';
-    els.regOpeningAmount.value = reg.opening.amount;
+    els.regOpeningAmount.value = fmtCHF(reg.opening.amount);
     els.regCaisse.value = reg.caisse;
     els.journalYear.textContent = String(reg.annee);
     const loc = await state.storage.location();
@@ -23191,7 +23217,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const v = R.parseAmountInput(els.regOpeningAmount.value);
     if (v == null) {
       notice('err', `« ${escapeHtml(els.regOpeningAmount.value)} » n'est pas un montant : le solde à nouveau n'a pas été modifié.`);
-      els.regOpeningAmount.value = state.reg.opening.amount;
+      els.regOpeningAmount.value = fmtCHF(state.reg.opening.amount);
       return;
     }
     state.reg.opening.amount = v; await saveReg(); renderJournal();
@@ -23528,7 +23554,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     if (!reg || !els.regOpeningDate) return;
     const busy = document.activeElement;
     if (busy !== els.regOpeningDate) els.regOpeningDate.value = reg.opening.date || '';
-    if (busy !== els.regOpeningAmount) els.regOpeningAmount.value = reg.opening.amount;
+    if (busy !== els.regOpeningAmount) els.regOpeningAmount.value = fmtCHF(reg.opening.amount);
     if (busy !== els.regCaisse) els.regCaisse.value = reg.caisse;
     const v = reg.visas || {};
     if (els.regVisaResp && busy !== els.regVisaResp) els.regVisaResp.value = v.responsable || '';
