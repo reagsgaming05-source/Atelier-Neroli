@@ -349,6 +349,16 @@ table.entries.journal td.acts button { margin-left: 3px; }
 /* les comptes déjà employés pour ce genre d'écriture : c'est presque toujours l'un d'eux */
 .combo-item.fort b { color: var(--accent); }
 .combo-item.fort + .combo-item:not(.fort) { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 10px; }
+/* dans une cellule du tableau des pièces scannées : la liste ne doit pas élargir la colonne */
+/* le champ tenait sa largeur de lui-même ; c'est maintenant le conteneur qui la porte, sinon
+   la cellule se rétrécit et le numéro de compte n'est plus lisible */
+table.entries td .combo { display: block; width: 132px; }
+table.entries td .combo > input { width: 100%; }
+table.entries td .combo-pop { min-width: 260px; }
+/* le volet de révision, à droite de l'image de la pièce */
+#rvSide .combo { display: block; }
+#rvSide .combo > input { width: 100%; }
+
 .combo-vide { padding: 10px 12px; font-size: 12.5px; color: var(--muted); max-width: 320px; white-space: normal; }
 
 /* Raccourci clavier rappelé sur le bouton, et n° cliquable dans un message de contrôle. */

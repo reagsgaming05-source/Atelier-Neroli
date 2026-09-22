@@ -186,7 +186,16 @@ function verifierCopie() {
   await win.waitForFunction(() => window.CaisseSaisie && window.CaisseSaisie.state.reg, null, { timeout: 20000 });
   await win.evaluate(() => window.CaisseApp.showPanel('panelSaisie')); // l'application rouvre le dernier espace utilisé
   const year = await win.evaluate(() => window.CaisseSaisie.state.reg.annee);
-  await win.selectOption('#pType', 'DECOMPTE');
+  // le type se choisit dans la liste déroulante, comme le fait l'utilisateur : le <select>
+  // d'origine reste caché derrière et porte toujours la valeur
+  await win.evaluate(() => {
+    const champ = document.getElementById('pType').previousElementSibling.querySelector('input');
+    champ.value = 'DECOMPTE';
+    champ.dispatchEvent(new Event('input', { bubbles: true }));
+    champ.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    champ.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  });
+  await win.waitForFunction(() => document.getElementById('pType').value === 'DECOMPTE', null, { timeout: 5000 });
   await win.check('#pKind input[value="Course d\'école"]'); // pour un DECOMPTE, la liste des objets laisse place au choix course d'école / camp
   await win.fill('#pClasse', '5P/3');
   await win.fill('#pPeriode', '12.06.' + year);
@@ -443,6 +452,76 @@ function verifierCopie() {
     && liste.parUsage > 0 && liste.parUsage < liste.total
     && liste.messageVide && liste.apresChoix.fermee && /^\d/.test(liste.apresChoix.valeur)
     && liste.libre === '12345.6789.00' && liste.autres;
+
+  // Toutes les listes de l'application sont la même liste déroulante : les listes fermées du
+  // navigateur (type, objet, année, PDF depuis le n°) comme les champs libres.
+  const partout = await win.evaluate(async () => {
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+    const champDe = (id) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      if (el.tagName === 'SELECT') return el.previousElementSibling && el.previousElementSibling.querySelector('input');
+      return el.parentElement.classList.contains('combo') ? el : null;
+    };
+    const libres = ['pCompte', 'pClasse', 'pPersonne', 'regCaisse', 'regVisaResp', 'regVisaBours'];
+    const fermees = ['pType', 'pObjet', 'regYear', 'regPdfFrom'];
+    const sansListe = libres.concat(fermees).filter((id) => !champDe(id));
+
+    // une liste fermée montre le libellé, pas la valeur brute : « toutes les pièces », pas du vide
+    const pdf = champDe('regPdfFrom');
+    const montreLeLibelle = pdf && pdf.value === 'toutes les pièces' && document.getElementById('regPdfFrom').value === '';
+
+    // mode strict : un type inventé ne reste pas
+    const type = champDe('pType');
+    const avant = document.getElementById('pType').value;
+    type.value = 'N IMPORTE QUOI';
+    type.dispatchEvent(new Event('input', { bubbles: true }));
+    type.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    await pause(120);
+    const strictTenu = document.getElementById('pType').value === avant && type.value === avant;
+
+    // mode libre : un compte inconnu se garde
+    const compte = champDe('pCompte');
+    compte.value = '77777.8888.99';
+    compte.dispatchEvent(new Event('input', { bubbles: true }));
+    compte.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    await pause(120);
+    const libreTenu = compte.value === '77777.8888.99';
+    compte.value = ''; compte.dispatchEvent(new Event('input', { bubbles: true }));
+    return { sansListe, montreLeLibelle, strictTenu, libreTenu };
+  });
+  console.log('listes partout :', JSON.stringify(partout));
+  ok = ok && partout.sansListe.length === 0 && partout.montreLeLibelle && partout.strictTenu && partout.libreTenu;
+
+  // Tableau des pièces scannées : le champ où l'on corrige un compte mal lu a sa liste, et les
+  // comptes réellement lus sur la pièce y passent devant.
+  const tableau = await win.evaluate(async () => {
+    const A = window.CaisseApp;
+    const w = (str, x, y) => ({ str, x, y, h: 10 });
+    const an = window.CaisseSaisie.state.reg.annee;
+    const mots = [w('PIECE', 79, 82), w('COMPTABLE', 114, 82), w('42', 349, 79), w('DOIT', 79, 114), w('SOMME', 338, 112), w('AVOIR', 410, 112), w('Libellé', 342, 220), w('Total', 78, 390),
+      w('52000.3662.00', 155, 142), w('CHF', 332, 142), w('88.00', 356, 142), w('9100.104', 454, 142), w('CHF', 332, 388), w('88.00', 356, 388),
+      w('AVANCE', 78, 261), w('camp', 118, 261), w('L.', 78, 275), w('Duvernay', 118, 275), w(`01.05.${an}`, 56, 425)];
+    A.state.pages = [{ docId: 'd', pageInDoc: 1, pageNumber: 1, width: 595, height: 842, words: mots }];
+    A.state.entries = []; A.reparse(); A.refreshAll();
+    await new Promise((r) => setTimeout(r, 400));
+    const inp = document.querySelector('#panelScan input[data-field="compte"]');
+    const aSaListe = !!(inp && inp.parentElement.classList.contains('combo'));
+    let lignes = []; let luDevant = false;
+    if (aSaListe) {
+      inp.parentElement.querySelector('.combo-arrow').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 200));
+      lignes = Array.from(inp.parentElement.querySelectorAll('.combo-item')).map((e) => e.textContent.replace(/\s+/g, ' ').trim());
+      luDevant = /lu sur la pièce/.test(lignes[0] || '');
+      inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    }
+    await window.CaisseApp.retirerDuJournal();
+    A.state.pages = []; A.state.entries = []; A.reparse(); A.refreshAll();
+    window.CaisseApp.showPanel('panelSaisie');
+    return { aSaListe, combien: lignes.length, premiere: lignes[0] || '', luDevant };
+  });
+  console.log('comptes du tableau :', JSON.stringify(tableau));
+  ok = ok && tableau.aSaListe && tableau.combien > 5 && tableau.luDevant;
 
   // nouvelle année par le petit formulaire en ligne (window.prompt n'existe pas dans Electron)
   const ny = await win.evaluate(async () => {

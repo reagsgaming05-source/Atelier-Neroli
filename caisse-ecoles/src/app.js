@@ -103,7 +103,6 @@
     previewNav: $('previewNav'),
     previewFrame: $('previewFrame'),
     previewFields: $('previewFields'),
-    accountsList: $('accountsList'),
     totals: $('totals'),
     checkTable: $('checkTable'),
     checkBalance: $('checkBalance'),
@@ -1073,7 +1072,7 @@
         `<td class="status ${status}" title="${status === 'ok' ? 'En ordre : lu sans ambiguïté' : status === 'warn' ? 'À vérifier : voir les cellules orange' : 'Incomplet'}">${status === 'ok' ? '✓' : status === 'warn' ? '⚠' : '✖'}</td>` +
         `<td><input type="text" class="no ${a.no.cls}" title="${escapeHtml(a.no.title)}" data-field="no" value="${escapeHtml(e.no == null ? '' : e.no)}"></td>` +
         `<td><input type="text" class="date ${a.date.cls}" title="${escapeHtml(a.date.title)}" data-field="date" placeholder="jj.mm.aaaa" value="${escapeHtml(P.isoToDisplay(e.date))}"></td>` +
-        `<td><input type="text" class="compte ${a.compte.cls}" title="${escapeHtml(a.compte.title)}" data-field="compte" list="accountsList" value="${escapeHtml(e.compte)}"></td>` +
+        `<td><input type="text" class="compte ${a.compte.cls}" title="${escapeHtml(a.compte.title)}" data-field="compte" value="${escapeHtml(e.compte)}"></td>` +
         `<td class="libelle"><input type="text" class="${a.libelle.cls}" title="${escapeHtml(a.libelle.title)}" data-field="libelle" value="${escapeHtml(e.libelle)}"></td>` +
         `<td><input type="number" class="num ${a.montant.cls}" title="${escapeHtml(a.montant.title)}" step="0.01" data-field="debit" value="${fmtInput(e.debit)}"></td>` +
         `<td><input type="number" class="num ${a.montant.cls}" title="${escapeHtml(a.montant.title)}" step="0.01" data-field="credit" value="${fmtInput(e.credit)}"></td>` +
@@ -1091,12 +1090,57 @@
         body.appendChild(tr2);
       }
     }
-    // Liste des comptes connus (classeur + pièces)
-    const accounts = new Set();
-    for (const e of existingEntries()) if (e.compte) accounts.add(e.compte);
-    for (const e of state.entries) { if (e.compte) accounts.add(e.compte); (e.candidates || []).forEach((a) => accounts.add(a)); }
-    els.accountsList.innerHTML = Array.from(accounts).sort().map((a) => `<option value="${escapeHtml(a)}">`).join('');
+    brancherCombosComptes();
     renderSummary();
+  }
+
+  /**
+   * Comptes proposables pour une écriture lue sur un scan, du plus probable au moins probable.
+   *
+   * C'est ici qu'on corrige un compte mal lu, et il n'y avait aucune liste : il fallait connaître
+   * le numéro. Les comptes réellement lus sur la pièce passent devant — c'est presque toujours
+   * l'un d'eux —, puis ceux qui conviennent au type d'écriture du libellé.
+   */
+  function comptesPour(e) {
+    const R = window.CaisseRegistre;
+    let piece = null;
+    try { piece = R.piecesFromEntries([e], 'scan')[0]; } catch (err) { piece = null; }
+    const choix = R.accountChoices(piece || {}, state.vocab, registre());
+    const parNo = new Map(choix.map((c) => [c.compte, c]));
+    const sortie = [];
+    const vus = new Set();
+    for (const a of e.candidates || []) {
+      if (!a || vus.has(a)) continue;
+      vus.add(a);
+      const c = parNo.get(a) || {};
+      sortie.push({ value: a, hint: c.usage || '', note: 'lu sur la pièce', fort: true, titre: 'Ce compte figure sur la pièce scannée' });
+    }
+    for (const c of choix) {
+      if (vus.has(c.compte)) continue;
+      vus.add(c.compte);
+      sortie.push({ value: c.compte, hint: c.usage, note: c.n ? `${c.n}×` : '', fort: c.niveau <= 1 });
+    }
+    // les comptes du classeur repris, absents du vocabulaire
+    for (const x of existingEntries()) {
+      if (x.compte && !vus.has(x.compte)) { vus.add(x.compte); sortie.push({ value: x.compte, hint: '', note: '' }); }
+    }
+    return sortie;
+  }
+
+  /** Les lignes du tableau se redessinent sans cesse : chaque champ neuf reçoit sa liste. */
+  function brancherCombosComptes() {
+    const C = window.CaisseCombo;
+    if (!C) return;
+    for (const inp of els.body.querySelectorAll('input[data-field="compte"]:not([data-combo])')) {
+      const tr = inp.closest('tr[data-id]');
+      // dataset rend toujours une chaîne, alors que l'identifiant d'une écriture est un nombre :
+      // comparés strictement, ils ne se rencontraient jamais et la liste restait vide
+      const id = tr && String(tr.dataset.id);
+      C.attach(inp, () => {
+        const e = state.entries.find((x) => String(x.id) === id);
+        return e ? comptesPour(e) : [];
+      }, { vide: 'Aucun compte connu ne correspond. Le numéro tapé sera gardé tel quel.' });
+    }
   }
 
   function renderSummary() {
@@ -1607,7 +1651,7 @@
     $('rvSide').innerHTML =
       `<div class="f"><label>N° de pièce</label><input type="text" data-rv-field="no" value="${escapeHtml(e.no == null ? '' : e.no)}"></div>` +
       `<div class="f"><label>Date</label><input type="text" data-rv-field="date" value="${escapeHtml(P.isoToDisplay(e.date))}" placeholder="jj.mm.aaaa"></div>` +
-      `<div class="f"><label>Compte de contrepartie</label><input type="text" data-rv-field="compte" list="accountsList" value="${escapeHtml(e.compte)}"></div>` +
+      `<div class="f"><label>Compte de contrepartie</label><input type="text" data-rv-field="compte" value="${escapeHtml(e.compte)}"></div>` +
       `<div class="f"><label>Libellé</label><input type="text" data-rv-field="libelle" value="${escapeHtml(e.libelle)}"></div>` +
       `<div class="f amount"><div><label>Débit (entrée)</label><input type="number" step="0.01" data-rv-field="debit" value="${fmtInput(e.debit)}"></div>` +
       `<div><label>Crédit (sortie)</label><input type="number" step="0.01" data-rv-field="credit" value="${fmtInput(e.credit)}"></div></div>` +
@@ -1617,6 +1661,11 @@
       `<button type="button" id="rvSwap">↔ Inverser débit / crédit</button></div>` +
       `<div class="legend" style="margin-top:6px">La pièce est parfois remplie à l'envers (compte caisse du mauvais côté) : l'application lit ce qui est écrit et le signale, à vous de trancher.</div>` +
       `<div class="legend" style="margin-top:10px">Raccourcis : <b>→</b> ou <b>Espace</b> valide et passe à la suivante, <b>←</b> revient, <b>Échap</b> ferme.</div>`;
+    // le volet se redessine à chaque pièce : son champ de compte reçoit la même liste
+    if (window.CaisseCombo) {
+      const inp = $('rvSide').querySelector('input[data-rv-field="compte"]');
+      if (inp) window.CaisseCombo.attach(inp, () => comptesPour(e), { vide: 'Aucun compte connu ne correspond. Le numéro tapé sera gardé tel quel.' });
+    }
     $('rvOk2').addEventListener('click', () => { markReviewed(true); moveReview(1); });
     $('rvSwap').addEventListener('click', () => {
       const d = e.debit; e.debit = e.credit; e.credit = d;

@@ -124,6 +124,13 @@ décompte → pièce), puis publication du zip.
    communale ») et son côté usuel. La liste se filtre en tapant — par numéro (`3662`) comme par
    usage (`camp`) — se parcourt aux flèches, se choisit avec Entrée, et le champ reste libre : un
    compte inconnu se tape simplement. Même liste pour la classe, la personne et le compte caisse.
+   **Tous les champs à choix multiple de l'application ont la même liste** : le type d'écriture
+   (qui indique au passage son sens : entrée ou sortie de caisse), l'objet, la classe, la
+   personne, le compte caisse, les signataires du relevé, l'année ouverte, le « PDF depuis le
+   n° », et le compte de chaque ligne du tableau des pièces scannées — où les comptes réellement
+   lus sur la pièce passent en tête. Les listes fermées (type, objet, année) reviennent à la
+   dernière valeur connue si ce qui est tapé n'existe pas ; les champs libres (compte, classe,
+   nom) gardent ce qu'on écrit.
    Le compte est proposé d'office d'après le classeur 2025 pour ce type, cet objet et ce
    degré (primaire / secondaire) — par exemple DECOMPTE + course d'école + 5P → 51000.3662.00,
    AVANCE + camp + 9S → 52000.3662.00, PARTICIPATION + cours de ski → 51000.4392.20. Le **sens**
@@ -470,6 +477,7 @@ Structure :
 - `src/dossier.js` – dossier scanné pour Décompte DGEO : pages « PIÈCE COMPTABLE » retirées avant l'analyse (pdf.js, pdf-lib, analyseur)
 - `desktop/dgeo-proxy.js` – passerelle locale devant Décompte DGEO (multipart, nettoyage du dossier via la page)
 - `src/comptage.js` – comptage de la caisse (grille des coupures, soldes, historique) ; modèle dans `registre.js` (`countTotal`, `upsertCount`, `previousCount`, `balanceAt`)
+- `src/combo.js` – liste déroulante d'un champ : `attach()` pour un champ libre, `fromSelect()` pour une liste fermée du navigateur (le `<select>` reste en place, caché, et garde la valeur)
 - `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Compter la caisse / L'année & les données, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
 - `src/registre.js` – registre des pièces par année : modèle, libellé composé, validation, journal, stockage (fichiers ou navigateur)
 - `src/pdfpiece.js` – fiche « PIÈCE COMPTABLE » en PDF (pdf-lib) avec justificatifs
