@@ -694,3 +694,9 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .dgroupe-t { font-size: 12px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); }
 .dgroupe .dligne { gap: 12px; }
 .dgroupe .dligne .dval { flex: none; font-variant-numeric: tabular-nums; }
+
+/* Le trombone du journal est un bouton, mais il doit rester le discret compteur qu'il était :
+   c'est une ligne de tableau, pas une barre d'outils. Seul le survol dit qu'il se clique. */
+.clip { background: none; border: 0; padding: 2px 4px; margin: -2px -4px; color: var(--muted); font: inherit; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.clip:hover, .clip:focus-visible { background: var(--accent-soft); color: var(--accent); }
+.clip:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 1px; }

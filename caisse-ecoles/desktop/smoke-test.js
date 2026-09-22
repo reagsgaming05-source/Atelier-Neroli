@@ -733,6 +733,65 @@ function verifierCopie() {
       return { ok: r.ok, noms: (relu.justificatifs || []).map((j) => j.name) };
     }, pile.faites[0].no);
 
+    // Regarder une pièce sans passer par un fichier : le trombone du journal ouvre le document
+    // complet (la fiche PUIS ses justificatifs), et la liste de la fiche ouvre un justificatif
+    // seul. Jusqu'ici il fallait enregistrer un PDF sur le disque pour simplement le relire.
+    const documents = await win.evaluate(async (no) => {
+      const S = window.CaisseSaisie; const reg = S.state.reg;
+      const p = reg.pieces.find((x) => x.no === no);
+      if (!p) return { erreur: 'pièce introuvable' };
+      const signee = (p.justificatifs || []).find((j) => j.name === 'piece-signee.pdf');
+      const octetsDe = async (url) => (url && url.startsWith('blob:') ? new Uint8Array(await (await fetch(url)).arrayBuffer()) : null);
+      const tete = (o) => (o ? String.fromCharCode.apply(null, o.slice(0, 4)) : '');
+
+      S.renderJournal();
+      const clip = document.querySelector(`#journalBody tr[data-id="${p.id}"] button[data-apercu]`);
+      if (!clip) return { erreur: 'le trombone du journal ne se clique pas' };
+      clip.click();
+      await new Promise((r) => setTimeout(r, 1500));
+      const complet = await octetsDe(document.getElementById('ficheFrame').src);
+      const titreComplet = (document.getElementById('fichePreviewTitre') || {}).textContent || '';
+      const cadreOuvert = !document.getElementById('fichePreview').classList.contains('hidden');
+
+      // le justificatif seul, depuis la liste de la fiche
+      document.querySelector(`#journalBody tr[data-id="${p.id}"] button[data-edit]`).click();
+      await new Promise((r) => setTimeout(r, 500));
+      const ouvrir = document.querySelector('#pFilesList button[data-ouvrir^="saved:"]');
+      if (!ouvrir) return { erreur: 'pas de bouton « ouvrir » sur le justificatif' };
+      ouvrir.click();
+      await new Promise((r) => setTimeout(r, 900));
+      const seul = await octetsDe(document.getElementById('ficheFrame').src);
+      const titreSeul = (document.getElementById('fichePreviewTitre') || {}).textContent || '';
+
+      // Un justificatif image (la photo d'un ticket) : le cadre doit l'afficher tel quel. Annoncé
+      // « application/pdf », il ne s'afficherait pas du tout — d'où le type porté par le fichier.
+      const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+      const pose = await S.state.storage.attach(reg.annee, p.id, 'ticket.png', png);
+      p.justificatifs.push({ name: pose.name, size: pose.size, kind: 'png' });
+      await S.saveReg();
+      S.renderJournal();
+      document.querySelector(`#journalBody tr[data-id="${p.id}"] button[data-edit]`).click();
+      await new Promise((r) => setTimeout(r, 500));
+      const bImage = document.querySelector(`#pFilesList button[data-ouvrir="saved:${pose.name}"]`);
+      let image = { bouton: !!bImage, type: '', taille: 0 };
+      if (bImage) {
+        bImage.click();
+        await new Promise((r) => setTimeout(r, 700));
+        const url = document.getElementById('ficheFrame').src;
+        const blob = url.startsWith('blob:') ? await (await fetch(url)).blob() : null;
+        image = { bouton: true, type: blob ? blob.type : '', taille: blob ? blob.size : 0, attendu: png.length };
+      }
+      return {
+        image,
+        cadreOuvert, titreComplet, titreSeul,
+        completPdf: tete(complet) === '%PDF', seulPdf: tete(seul) === '%PDF',
+        // le document complet porte la fiche EN PLUS du scan : il est forcément plus gros
+        completTaille: complet ? complet.length : 0,
+        seulTaille: seul ? seul.length : 0,
+        seulEstLeFichier: !!(seul && signee && seul.length === signee.size),
+      };
+    }, pile.faites[0].no);
+
     // le scan d'origine a été rangé, pas détruit
     const ranges = [];
     const parcourir = (dir, prefixe) => {
@@ -813,7 +872,7 @@ function verifierCopie() {
       window.CaisseApp.showPanel('panelSaisie');
     });
 
-    return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, bac, aFaire, bacApres, evasion, affiche, ranges };
+    return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, documents, bac, aFaire, bacApres, evasion, affiche, ranges };
   })();
   console.log('boîte de réception :', JSON.stringify(reception));
   ok = ok && reception.pilePages === 3
@@ -827,6 +886,12 @@ function verifierCopie() {
     && reception.jointe.contamines.length === 0
     && reception.jointe.reste === 2
     && reception.bac.fichiers.length === 1 && /^900 /.test(reception.bac.fichiers[0]) && /\.pdf$/.test(reception.bac.fichiers[0])
+    && reception.documents.cadreOuvert && reception.documents.completPdf && reception.documents.seulPdf
+    && /n° 900/.test(reception.documents.titreComplet) && /justificatif/.test(reception.documents.titreComplet)
+    && reception.documents.completTaille > reception.documents.seulTaille
+    && reception.documents.seulEstLeFichier && reception.documents.titreSeul === 'piece-signee.pdf'
+    && reception.documents.image.bouton && reception.documents.image.type === 'image/png'
+    && reception.documents.image.taille === reception.documents.image.attendu
     && Object.values(reception.evasion).every((v) => v === 'refusé')
     && reception.aFaire.avant.combien === 1 && reception.aFaire.avant.signee
     && reception.aFaire.avant.groupes.join('|') === 'Camp'

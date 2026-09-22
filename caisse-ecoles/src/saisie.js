@@ -16,7 +16,7 @@
   const els = {};
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regVisaResp', 'regVisaBours', 'regInfo', 'btnRegOpenDir',
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
-    'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
+    'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'fichePreviewTitre', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
     'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'journalSearch', 'journalOnlyDoubt', 'journalCount', 'journalNumbers', 'yearBar', 'anneeNotices', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
     'pObjetField', 'pKindField', 'pKind', 'pAFaireField', 'pAFaire', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
@@ -425,6 +425,8 @@
     renderFiles(formPiece());
   });
   els.pFilesList.addEventListener('click', async (ev) => {
+    const o = ev.target.closest('button[data-ouvrir]');
+    if (o) { await ouvrirJustificatif(o.dataset.ouvrir); return; }
     const b = ev.target.closest('button[data-remove]');
     if (!b) return;
     const raw = b.dataset.remove; const cut = raw.indexOf(':');
@@ -442,8 +444,8 @@
   });
   function renderFiles(p) {
     const items = [];
-    for (const j of p.justificatifs || []) items.push(`<li>${escapeHtml(j.name)} <span class="legend">(${j.kind}, ${Math.round(j.size / 1024)} Ko)</span> <button type="button" class="small" data-remove="saved:${escapeHtml(j.name)}">retirer</button></li>`);
-    state.pending.forEach((f, i) => items.push(`<li>${escapeHtml(f.name)} <span class="legend">(${f.kind}, ${Math.round(f.bytes.length / 1024)} Ko, à enregistrer)</span> <button type="button" class="small" data-remove="pending:${i}">retirer</button></li>`));
+    for (const j of p.justificatifs || []) items.push(`<li>${escapeHtml(j.name)}${j.signee ? ' <span class="tag">signé</span>' : ''} <span class="legend">(${j.kind}, ${Math.round(j.size / 1024)} Ko)</span> <button type="button" class="small ghost" data-ouvrir="saved:${escapeHtml(j.name)}">ouvrir</button> <button type="button" class="small" data-remove="saved:${escapeHtml(j.name)}">retirer</button></li>`);
+    state.pending.forEach((f, i) => items.push(`<li>${escapeHtml(f.name)} <span class="legend">(${f.kind}, ${Math.round(f.bytes.length / 1024)} Ko, à enregistrer)</span> <button type="button" class="small ghost" data-ouvrir="pending:${i}">ouvrir</button> <button type="button" class="small" data-remove="pending:${i}">retirer</button></li>`));
     els.pFilesList.innerHTML = items.length ? `<ul>${items.join('')}</ul>` : '<span class="legend">Aucun justificatif joint (tickets, factures, photos : PDF, JPG ou PNG).</span>';
   }
 
@@ -555,12 +557,18 @@
       showPreview(res.bytes);
     } catch (e) { notice('err', `Aperçu impossible : ${escapeHtml(e.message || e)}`); }
   });
-  function showPreview(bytes) {
+  // Le cadre d'aperçu sert à trois choses : la fiche en cours, le document complet d'une pièce
+  // du journal, et un justificatif seul. D'où le type et le titre : un JPEG annoncé « pdf » ne
+  // s'affiche pas, et un cadre qui dit toujours « Aperçu de la fiche » ment deux fois sur trois.
+  function showPreview(bytes, type, titre) {
     hidePreview();
-    state.previewUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    state.previewUrl = URL.createObjectURL(new Blob([bytes], { type: type || 'application/pdf' }));
     els.ficheFrame.src = state.previewUrl;
+    if (els.fichePreviewTitre) els.fichePreviewTitre.textContent = titre || 'Aperçu de la fiche (et des justificatifs)';
     els.fichePreview.classList.remove('hidden');
+    els.fichePreview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
+  const TYPE_MIME = { pdf: 'application/pdf', jpeg: 'image/jpeg', png: 'image/png' };
   function hidePreview() {
     if (state.previewUrl) { URL.revokeObjectURL(state.previewUrl); state.previewUrl = null; }
     els.ficheFrame.removeAttribute('src');
@@ -671,7 +679,7 @@
       return `<tr data-id="${r.id}"${classes ? ` class="${classes}"` : ''}>` +
         `<td>${r.no == null ? '' : r.no}</td><td>${escapeHtml(P.isoToDisplay(r.date))}</td><td class="compte">${escapeHtml(r.compte)}</td><td class="libelle" title="${escapeHtml(r.libelle)}">${escapeHtml(r.libelle)}</td>` +
         `<td class="num">${r.debit != null ? fmtCHF(r.debit) : ''}</td><td class="num">${r.credit != null ? fmtCHF(r.credit) : ''}</td><td class="num solde">${fmtCHF(r.solde)}</td>` +
-        `<td>${p && p.justificatifs.length ? `<span title="${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</span>` : ''}${p && p.aVerifier ? ` <span class="tag warn" title="Lue sur un scan, pas encore vérifiée${p.doutes && p.doutes.length ? ' :\n- ' + p.doutes.join('\n- ').replace(/"/g, '') : ''}">à vérifier</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
+        `<td>${p && p.justificatifs.length ? `<button type="button" class="clip" data-apercu="${r.id}" title="Voir le document complet : la fiche et ses ${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</button>` : ''}${p && p.aVerifier ? ` <span class="tag warn" title="Lue sur un scan, pas encore vérifiée${p.doutes && p.doutes.length ? ' :\n- ' + p.doutes.join('\n- ').replace(/"/g, '') : ''}">à vérifier</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
         `<td class="acts">${p && p.aVerifier ? `<button type="button" class="small ghost ok" data-verif="${r.id}" title="Cette lecture est juste : marquer la pièce comme vérifiée">${ico('check')}</button>` : ''}<button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
     }).join('') || `<tr><td colspan="9" class="legend">${filtre
       ? `Aucune pièce ne correspond${String(q).trim() ? ` à « ${escapeHtml(String(q).trim())} »` : ''}. <button type="button" class="small ghost" data-search-clear="1">Tout afficher</button>`
@@ -810,6 +818,11 @@
       renderJournal();
       return;
     }
+    if (b.dataset.apercu) {
+      const p = state.reg.pieces.find((x) => x.id === b.dataset.apercu);
+      if (p) await voirDocument(p);
+      return;
+    }
     if (b.dataset.edit) {
       const p = state.reg.pieces.find((x) => x.id === b.dataset.edit);
       if (!p) return;
@@ -842,6 +855,41 @@
       await exportPdf([p], `Pièce ${p.no} caisse ${state.reg.annee}.pdf`);
     }
   });
+
+  // Le document complet d'une pièce du journal, montré sans passer par un fichier : jusqu'ici il
+  // fallait l'enregistrer sur le disque (bouton imprimante) pour simplement le regarder. L'aperçu
+  // s'ouvre dans le cadre de la fiche, mais il dit de quelle pièce il parle : on peut demander
+  // celui d'une ligne sans ouvrir sa fiche, et une fiche en cours de saisie n'est pas perdue.
+  async function voirDocument(p) {
+    try {
+      const res = await F.buildPdf([p], state.reg, (piece, j) => state.storage.read(state.reg.annee, piece.id, j.name));
+      showPreview(res.bytes, 'application/pdf', `Pièce n° ${p.no} : la fiche et ${plur((p.justificatifs || []).length, 'justificatif')}`);
+      if (res.skipped.length) notice('warn', `Justificatifs non inclus : ${escapeHtml(res.skipped.join(' ; '))}.`);
+    } catch (e) { notice('err', `Aperçu impossible : ${escapeHtml(e.message || e)}`); }
+  }
+
+  /** Un justificatif seul : le scan signé sans le reste, un ticket qu'on veut relire de près. */
+  async function ouvrirJustificatif(raw) {
+    const cut = raw.indexOf(':');
+    const ou = cut < 0 ? raw : raw.slice(0, cut);
+    const cle = cut < 0 ? '' : raw.slice(cut + 1); // le nom du fichier peut contenir « : »
+    let octets = null; let nom = cle; let genre = '';
+    if (ou === 'pending') {
+      const f = state.pending[Number(cle)];
+      if (!f) return;
+      octets = f.bytes; nom = f.name; genre = f.kind;
+    } else {
+      const p = state.reg.pieces.find((x) => x.id === state.editingId);
+      const j = p && (p.justificatifs || []).find((x) => x.name === cle);
+      if (!p || !j) return;
+      genre = j.kind;
+      try { octets = await state.storage.read(state.reg.annee, p.id, j.name); } catch (e) { octets = null; }
+      if (!octets) { notice('err', `Justificatif introuvable : ${escapeHtml(j.name)}.`); return; }
+    }
+    const mime = TYPE_MIME[genre];
+    if (!mime) { notice('warn', `« ${escapeHtml(nom)} » : format ${escapeHtml(genre || 'inconnu')}, pas affichable ici.`); return; }
+    showPreview(octets, mime, nom);
+  }
 
   async function exportPdf(pieces, name) {
     try {

@@ -510,6 +510,19 @@ dont le scan est revenu. *Voir* ouvre ce scan dans la fenêtre ; *Fait* décoche
 descend le fichier de `Décomptes\À faire\…` vers `Décomptes\`. Le dossier et la liste disent
 donc toujours la même chose, quel que soit le côté par lequel on range.
 
+**Relire une pièce sans produire un fichier.** Une fois le scan revenu, le trombone de la ligne
+du journal s'ouvre : il montre le **document complet** — la fiche, puis ses justificatifs, dont le
+scan signé — dans le cadre d'aperçu, sans rien enregistrer sur le disque. L'aperçu dit de quelle
+pièce il parle, si bien qu'on peut demander celui d'une ligne sans ouvrir sa fiche : une saisie en
+cours n'est pas perdue. Le bouton imprimante de la même ligne continue, lui, d'enregistrer le PDF
+comme fichier.
+
+Sur la fiche, chaque justificatif a maintenant un *ouvrir* à côté de *retirer* : il montre **ce
+fichier-là seul**, tel qu'il est enregistré — le scan signé sans la fiche regénérée, ou la photo
+d'un ticket pour la relire de près. Les PDF, les JPEG et les PNG s'affichent dans le cadre ; un
+autre format le dit plutôt que de ne rien montrer. Le justificatif posé par le copieur porte la
+mention *signé*.
+
 *Ranger automatiquement*, dans les réglages, saute l'étape 4 pour les pièces reconnues sans
 ambiguïté. C'est décoché au départ, et volontairement : un classement qui se trompe une fois sur
 dix coûte plus cher que pas de classement du tout.
