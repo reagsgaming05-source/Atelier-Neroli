@@ -20,6 +20,7 @@ const assert = require('node:assert/strict');
 const { _electron: electron } = require('playwright-core');
 const { zipDe } = require('../test/zip-dessai.js');
 const { poserLeJeton } = require('./version-posee.js');
+const { MARQUEUR } = require('./ou-ranger.js');
 
 const exe = process.argv[2];
 const base = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-maj-'));
@@ -39,6 +40,13 @@ function menage() {
 function installation(nom, fiche) {
   const d = path.join(base, nom);
   fs.mkdirSync(d, { recursive: true });
+  // Sans ce fichier, l'application demanderait d'abord qui l'ouvre, et rien
+  // ne se lancerait derrière la fenêtre de connexion. C'est le mécanisme
+  // prévu pour s'en passer, et la mise à jour n'a rien à voir avec les
+  // comptes : elle regarde le dossier de l'application, pas celui d'une
+  // personne. Les jetons des postes ouverts vont dans « data » dans les deux
+  // cas — c'est ce qui compte ici.
+  fs.writeFileSync(path.join(d, MARQUEUR), '');
   const temoin = path.join(d, 'temoin.txt');
   const script = path.join(d, 'Mettre-a-jour.cmd');
   if (process.platform === 'win32') {

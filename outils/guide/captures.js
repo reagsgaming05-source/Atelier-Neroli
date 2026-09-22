@@ -86,7 +86,9 @@ async function themeClair(f) {
 // ---------------------------------------------------------------- connexion
 async function ecransDeConnexion() {
   console.log('Écrans de connexion');
-  const env = { BLONAY_DOSSIER_APP: base, BLONAY_RESEAU: '1' };
+  // Un dossier d'essai ordinaire, sur le disque local : la connexion se demande
+  // partout, et les captures montrent ce que voit une collègue.
+  const env = { BLONAY_DOSSIER_APP: base };
 
   // Premier lancement : aucun compte n'existe, l'écran de création s'ouvre.
   let app = await lancer({ ...env, BLONAY_PROFIL: path.join(base, 'poste-1') });

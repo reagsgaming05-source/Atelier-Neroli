@@ -24,9 +24,12 @@ const base = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-comptes-'));
 const dit = (quoi) => console.log('  ' + quoi);
 const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Le dossier d'essai tient lieu de dossier de l'application, reconnu comme un
-// lecteur réseau ; chaque « poste » a son propre profil Windows, pour que la
-// connexion retenue ne soit pas commune.
+// Le dossier d'essai tient lieu de dossier de l'application. Rien ne le fait
+// passer pour un lecteur réseau : c'est un dossier temporaire ordinaire, sur
+// le disque local, exactement comme une application décompressée sur le
+// Bureau. C'est voulu — la connexion se demande partout, et ce test le prouve.
+// Chaque « poste » a son propre profil Windows, pour que la connexion retenue
+// ne soit pas commune.
 //
 // Ce profil se donne par BLONAY_PROFIL et non par APPDATA : sous Windows,
 // Electron ne lit pas cette variable, il demande le dossier au système. Les
@@ -38,7 +41,7 @@ const profilDe = (poste) => path.join(base, 'poste-' + poste);
 const sessionDe = (poste) => path.join(profilDe(poste), 'Blonay PDF', 'session.json');
 const lancer = (poste) => {
   const profil = profilDe(poste);
-  const env = { ...process.env, BLONAY_DOSSIER_APP: base, BLONAY_RESEAU: '1',
+  const env = { ...process.env, BLONAY_DOSSIER_APP: base,
     BLONAY_PROFIL: profil, XDG_CONFIG_HOME: profil };
   return electron.launch(exe ? { executablePath: exe, args: ['--no-sandbox'], env }
     : { args: [path.join(__dirname), '--no-sandbox'], env });
@@ -92,6 +95,26 @@ async function ouvrir(poste) {
 const refermer = async (s) => { await s.e.close().catch(() => {}); await souffler(800); menage(); };
 
 (async () => {
+  // Un « data » hérité d'une version qui ne demandait rien à personne : elle y
+  // rangeait directement le stockage du moteur d'affichage. Ces dossiers-là ne
+  // sont pas des comptes, et n'ont rien à faire dans la liste.
+  ['Cache', 'Local Storage', 'GPUCache', 'Partitions']
+    .forEach((n) => fs.mkdirSync(path.join(base, 'data', n), { recursive: true }));
+
+  // La première chose, avant toute fenêtre de travail : qui êtes-vous ?
+  {
+    const e = await lancer('bureau-1');
+    const f = await e.firstWindow();
+    await f.waitForSelector('#ecran-creation:not([hidden])', { timeout: 60000 });
+    assert.match(f.url(), /choix-profil\.html$/,
+      'la fenêtre de connexion est la première, et il n\'y en a pas d\'autre');
+    assert.equal(await f.locator('.compte').count(), 0,
+      'aucun dossier du moteur d\'affichage n\'est proposé comme compte');
+    await e.close().catch(() => {});
+    menage();
+    dit('premier lancement : la connexion, et rien d\'autre');
+  }
+
   // Rien n'est préparé : ni liste de noms, ni comptes. Tout se crée à l'usage.
   await creer('bureau-1', 'Marie', 'greffe2026');
   // Avant de s'appuyer dessus : chaque poste a bien sa session, et elle est
@@ -140,11 +163,16 @@ const refermer = async (s) => { await s.e.close().catch(() => {}); await souffle
   assert.match(fiche, /scrypt/, 'seulement son empreinte');
   dit('fiche de Marie : empreinte scrypt, pas de mot de passe');
 
-  // Les dossiers, et eux seuls : « data » porte aussi des fichiers à nous, dont
-  // le jeton qui dit quels postes ont l'application ouverte.
+  // Les comptes, et eux seuls : « data » porte aussi des fichiers à nous, dont
+  // le jeton qui dit quels postes ont l'application ouverte, et les dossiers
+  // du moteur d'affichage laissés par la version d'avant. C'est la fiche qui
+  // fait le compte.
   const dossiers = fs.readdirSync(path.join(base, 'data'), { withFileTypes: true })
-    .filter((d) => d.isDirectory()).map((d) => d.name).sort();
+    .filter((d) => d.isDirectory() && fs.existsSync(path.join(base, 'data', d.name, 'compte.json')))
+    .map((d) => d.name).sort();
   assert.deepEqual(dossiers, ['Marie', 'Sophie'], 'un dossier par personne dans data/');
+  assert.ok(fs.existsSync(path.join(base, 'data', 'Local Storage')),
+    'et l\'héritage de la version d\'avant n\'a pas été effacé au passage');
   dit('data/ : ' + dossiers.join(', '));
 
   try { fs.rmSync(base, { recursive: true, force: true }); } catch (e) { /* ménage sans importance */ }

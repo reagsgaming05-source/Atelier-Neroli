@@ -195,7 +195,7 @@ texte* : elle tourne sur le poste, rien n'est envoyé.
 1. Téléchargez **`BlonayPDF-windows.zip`** depuis la page *Releases* du dépôt (version
    « Blonay PDF — Windows portable (dernière version) »).
 2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
-3. Double-cliquez sur **`BlonayPDF.exe`** : la fenêtre de l'application s'ouvre.
+3. Double-cliquez sur **`BlonayPDF.exe`** : l'application demande qui vous êtes, puis s'ouvre.
 
 Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le registre ni dans
 *Program Files*, aucun navigateur n'est sollicité, aucune donnée ne quitte le PC. Les réglages
@@ -212,6 +212,34 @@ verrouiller sa session en quittant son bureau, ne pas mémoriser sa signature su
 partagé ou une clé qui circule (la tracer au moment de signer, sans cocher « Mémoriser »), et
 se servir de *Fichier › Ouvrir le dossier des données* pour vider ce qu'on ne veut pas y
 laisser.
+
+### Se connecter
+
+**La connexion est la première chose que l'on voit**, et aucune fenêtre de travail ne s'ouvre
+avant. Au premier lancement on crée son compte — prénom et nom, puis un mot de passe de quatre
+caractères au minimum ; l'application redémarre une fois et c'est fini. Ensuite elle reste
+connectée : elle se rouvre directement sur les affaires de la personne, sans jamais redemander
+le mot de passe, jusqu'à *Fichier › Se déconnecter*. Chacune a son dossier — `data/Marie
+Dupont/`, `data/Sophie Martin/` — avec ses tampons, sa signature, ses récents et son travail
+mis de côté, et une même personne retrouve ses affaires depuis n'importe quel poste.
+
+Le mot de passe n'est enregistré nulle part : seule une empreinte scrypt l'est, avec un sel par
+compte (`outils/desktop/comptes.js`). Il n'y a donc pas de « mot de passe oublié » automatique —
+pour redonner l'accès, on retire la ligne `motDePasse` de `data/<nom>/compte.json` et la
+personne en choisit un neuf à la connexion suivante, sans rien perdre.
+
+Ce que le mot de passe protège : ouvrir le compte d'une autre **depuis l'application**. Ce
+qu'il ne protège pas : les fichiers eux-mêmes, que l'Explorateur montre à qui ouvre le dossier
+du partage. Le verrou est sur la porte de l'application, pas sur celle du dossier — seuls les
+droits NTFS ferment celle-là.
+
+La décision est dans `outils/desktop/ou-ranger.js`, éprouvée sans Windows ni Electron
+(`outils/test/rangement.test.js`). Deux cas, et deux seulement, n'ouvrent pas de comptes : un
+fichier vide nommé `donnees-par-utilisateur.txt` posé à côté de l'exécutable, qui dit
+explicitement de s'appuyer sur les sessions Windows à la place ; et un dossier d'application en
+lecture seule, où aucune fiche de compte ne pourrait être écrite — mieux vaut alors ranger dans
+le profil Windows de chacun que laisser quelqu'un devant une connexion impossible. *Aide › À
+propos* dit dans quel cas on est, et sous quel nom on travaille.
 
 La fenêtre a son menu — *Fichier* (Ouvrir, Récents, Ajouter au document, Nouvelle fenêtre,
 Enregistrer, Enregistrer sous…, Imprimer, dossier des données), *Affichage* (Lire, Organiser,

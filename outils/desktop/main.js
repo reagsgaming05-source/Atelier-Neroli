@@ -32,9 +32,13 @@ const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = require('./c
 const { miseAJourPosee, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons } = require('./version-posee');
 const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
 
-// Où vont les données : à côté de l'exécutable, ou dans le profil de chacun.
+// Où vont les données : dans le dossier de la personne connectée, ou dans le
+// profil Windows de chacun quand les comptes ne peuvent pas s'ouvrir.
 // ou-ranger.js porte la décision et l'explique ; ici, seulement ce qui touche
 // au disque.
+// La valeur de départ, « cote », ne vaut que pour une exécution depuis les
+// sources : rien n'est alors installé, il n'y a ni compte ni connexion à
+// demander, et les données restent dans data/ à côté du code.
 let RANGEMENT = { ou: 'cote', pourquoi: 'portable' };
 let PROFIL = null; // le compte choisi, en mode « comptes »
 const DOSSIER_DATA = () => path.join(PORTABLE_DIR, 'data');
@@ -115,8 +119,19 @@ function connexion(nom, motDePasse) {
   return ouvrirLaSession(propre);
 }
 
-// Les comptes proposés : ceux de comptes.txt, plus ceux qui ont déjà un
-// dossier dans data/.
+// Les comptes proposés : ceux de comptes.txt, plus ceux qui portent déjà leur
+// fiche dans data/.
+//
+// C'est la fiche qui fait le compte, et non le simple fait d'être un dossier.
+// « data » n'appartient pas qu'à nous : une version d'avant, qui ne demandait
+// rien à personne, y rangeait directement le stockage du moteur d'affichage —
+// « Cache », « Local Storage », « GPUCache », « Partitions »… Listés comme des
+// noms, ils se seraient retrouvés proposés à la connexion.
+//
+// Un dossier d'une toute première version des comptes, sans fiche parce qu'il
+// n'y avait pas encore de mot de passe, n'est pas proposé non plus — mais son
+// nom réécrit à l'identique dans « Créer un compte » y repose une fiche, et
+// ses affaires sont là, intactes.
 function comptesConnus() {
   // Lu en octets : listerComptes reconnaît le codage (voir lireTexte).
   let lignes = Buffer.alloc(0);
@@ -124,7 +139,8 @@ function comptesConnus() {
   let dossiers = [];
   try {
     dossiers = fs.readdirSync(DOSSIER_DATA(), { withFileTypes: true })
-      .filter((d) => d.isDirectory() && d.name !== 'recuperation').map((d) => d.name);
+      .filter((d) => d.isDirectory() && fs.existsSync(path.join(DOSSIER_DATA(), d.name, FICHE)))
+      .map((d) => d.name);
   } catch (e) { /* data pas encore créé */ }
   return listerComptes(lignes, dossiers);
 }

@@ -57,14 +57,13 @@ il n'y a qu'un dossier à mettre à jour : les raccourcis ne contiennent qu'un c
 tout le monde lance la nouvelle version au démarrage suivant, sans rien réinstaller.
 
 Dans ce cas, chacun garde ses propres données : ses tampons, sa signature mémorisée, ses
-récents et son travail mis de côté vont dans son profil Windows, que le système protège
-des autres comptes. Personne ne peut donc reposer la signature d'un collègue ni lire les
-documents qu'il avait ouverts.
+récents et son travail mis de côté vont dans son dossier à lui, dans « data ». Personne ne
+peut donc reposer la signature d'un collègue ni lire les documents qu'il avait ouverts.
 
 UN COMPTE PAR PERSONNE — RIEN À PRÉPARER
-Posez le dossier de l'application sur le lecteur réseau, et faites un raccourci sur chaque
-bureau. L'application reconnaît qu'elle tourne depuis un lecteur réseau et demande alors
-une connexion.
+La connexion est la première chose que l'on voit au lancement, partout : sur un partage,
+sur une clé USB, sur un dossier décompressé pour essayer. Aucune fenêtre de travail ne
+s'ouvre avant. Il n'y a rien à préparer et rien à activer.
 
 Au premier lancement, chacune crée son compte : prénom et nom, puis un mot de passe
 (quatre caractères au minimum). L'application redémarre une fois, et c'est fini. Ensuite
@@ -98,8 +97,14 @@ L'AUTRE FAÇON : LE PROFIL WINDOWS, SANS COMPTE NI MOT DE PASSE
 Si vous préférez vous appuyer seulement sur les sessions Windows, posez à côté de
 BlonayPDF.exe un fichier vide nommé « donnees-par-utilisateur.txt » : chacune aura ses
 données dans son profil Windows, que le système protège déjà des autres comptes, et
-l'application ne demandera jamais de mot de passe. Plus sûr pour les fichiers, mais les
-données ne suivent pas d'un poste à l'autre, et rien n'est visible dans data.
+l'application ne demandera jamais de mot de passe. C'est la seule façon de ne pas voir la
+fenêtre de connexion. Plus sûr pour les fichiers, mais les données ne suivent pas d'un
+poste à l'autre, et rien n'est visible dans data.
+
+Une exception, qui ne se décide pas : si le dossier de l'application est en lecture seule,
+aucune fiche de compte ne peut y être écrite. L'application ne demande alors pas de
+connexion et range les données dans le profil Windows de chacun, plutôt que de laisser
+quelqu'un devant une connexion impossible. « Aide › À propos » le dit.
 
 Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un PDF, « Ouvrir avec »,
 « Choisir une autre application », puis désignez BlonayPDF.exe et cochez « Toujours ».

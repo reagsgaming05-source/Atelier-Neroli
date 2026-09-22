@@ -50,8 +50,9 @@
   .erreur[hidden] { display: none; }
   .lien { border: 0; background: none; color: var(--texte-2); font: inherit; font-size: 12.5px; cursor: pointer; padding: 6px 2px; text-align: left; }
   .lien:hover { color: var(--texte); text-decoration: underline; }
-  .rangee { margin-top: auto; padding-top: 12px; align-items: center; justify-content: space-between; }
+  .rangee { margin-top: auto; padding-top: 12px; align-items: center; justify-content: flex-end; }
   .rangee { display: flex; gap: 8px; }
+  .rangee .lien { margin-right: auto; }
   #ecran-liste .liste { flex: 1; }
   input {
     min-width: 0; width: 100%; height: 34px; flex: none; padding: 0 11px; border-radius: 8px;
@@ -123,7 +124,7 @@
   const SOUS = {
     liste: 'Choisissez votre compte pour continuer.',
     connexion: 'Votre mot de passe, une fois. La connexion tient jusqu\u2019à la déconnexion.',
-    creation: 'Votre compte sera créé sur le serveur, avec vos tampons et vos récents.',
+    creation: 'Votre compte gardera vos tampons, votre signature et vos récents.',
   };
   let choisi = '';
 
@@ -143,7 +144,9 @@
 
   window.comptes.liste().then((noms) => {
     const liste = $('liste');
-    if (!noms.length) { montrer('creation'); return; }
+    // Le tout premier lancement : personne n'est encore passé par ici, et
+    // « Retour » ne mènerait qu'à une liste vide.
+    if (!noms.length) { $('retour-n').hidden = true; montrer('creation'); return; }
     noms.forEach((c, i) => {
       const b = document.createElement('button');
       b.type = 'button';
@@ -166,7 +169,7 @@
     });
   });
 
-  $('vers-creation').addEventListener('click', () => montrer('creation'));
+  $('vers-creation').addEventListener('click', () => { $('retour-n').hidden = false; montrer('creation'); });
   $('retour-c').addEventListener('click', () => montrer('liste'));
   $('retour-n').addEventListener('click', () => montrer('liste'));
 

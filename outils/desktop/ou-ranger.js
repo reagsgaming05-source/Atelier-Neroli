@@ -2,24 +2,28 @@
 // sa signature mémorisée, ses fichiers récents, et les copies de travail mises
 // de côté pour la récupération après un arrêt brutal.
 //
-// À côté de l'exécutable, c'est la version portable : l'application et ses
-// réglages voyagent ensemble sur une clé USB, et rien ne reste sur le poste.
-// C'est le comportement par défaut, et il est juste tant qu'une seule personne
-// ouvre ce dossier.
+// La règle est simple : on demande qui ouvre l'application, et chacune range
+// ses affaires dans son propre dossier. C'est la première chose que l'on voit
+// au lancement, avant toute fenêtre de travail.
 //
-// Posée sur un lecteur réseau, la même application est ouverte par plusieurs
-// personnes — un secrétariat, par exemple. Le dossier « data » leur serait
-// commun : la signature mémorisée par l'une pourrait être reposée par une
-// autre sur n'importe quel PDF, et les copies de récupération, qui contiennent
-// les documents ouverts, seraient lisibles par tout le service. Chacune range
-// donc ses données dans son profil Windows, que le système protège déjà des
-// autres comptes.
+// Ça ne l'était pas : les comptes ne s'ouvraient que sur un lecteur réseau
+// reconnu comme tel, ou si une liste avait été posée à la main à côté de
+// l'exécutable. Une application décompressée sur le Bureau pour l'essayer, ou
+// posée sur un partage monté sur une lettre que « net use » ne reconnaissait
+// pas, n'a jamais rien demandé à personne — et le dossier « data » était alors
+// commun : la signature mémorisée par l'une pouvait être reposée par une autre
+// sur n'importe quel PDF, et les copies de récupération, qui contiennent les
+// documents ouverts, étaient lisibles par tout le service. Reconnaître le
+// partage était la mauvaise question ; la bonne est « qui êtes-vous ? », et
+// elle se pose partout.
 //
-// Deux façons d'y arriver, parce qu'un partage ne se reconnaît pas toujours :
-//  - un chemin UNC (\\serveur\partage\…) est repéré tout seul ;
-//  - un fichier « donnees-par-utilisateur.txt » posé à côté de l'exécutable
-//    force le même choix, pour les partages montés sur une lettre de lecteur
-//    (S:\, Z:\…) que rien ne distingue d'un disque local.
+// Deux exceptions, et elles se justifient toutes les deux :
+//  - le dossier de l'application est en lecture seule : aucune fiche de compte
+//    ne peut y être écrite, chacun retombe sur son profil Windows plutôt que de
+//    rester devant une connexion impossible ;
+//  - un fichier « donnees-par-utilisateur.txt » posé à côté de l'exécutable :
+//    quelqu'un a décidé qu'il n'y aurait pas de comptes ici et que les données
+//    iraient dans le profil Windows de chacun, que le système protège déjà.
 //
 // La décision est ici, séparée de ce qui touche au disque, pour qu'elle
 // s'éprouve sans Windows ni Electron.
@@ -99,34 +103,33 @@ function cheminReseau(chemin) {
 
 // Rend l'endroit choisi et la raison, pour que l'application puisse le dire à
 // qui se demande où sont passés ses tampons.
-//   'cote'   : le sous-dossier data, à côté de l'exécutable
-//   'profil' : l'emplacement par défaut de Windows, propre à chaque compte
-// `sonde` porte les deux questions qui demandent le disque ; elles ne sont
-// posées que si la précédente n'a pas déjà tranché — inutile de créer un
-// dossier « data » sur un partage qu'on a justement décidé d'éviter.
+//   'comptes' : un dossier par personne dans data/, ouvert par un mot de passe
+//   'profil'  : l'emplacement par défaut de Windows, propre à chaque compte
+// `sonde` porte les questions qui demandent le disque ; elles ne sont posées
+// que si la précédente n'a pas déjà tranché. Les deux dernières ne changent
+// plus la décision, seulement la phrase montrée dans « À propos ».
 function ouRanger(dossierExe, sonde) {
   // Le choix contraire, s'il a ete pose, l'emporte sur tout : quelqu'un a
-  // decide que les donnees vivraient dans le profil Windows de chacun.
+  // decide que les donnees vivraient dans le profil Windows de chacun, et
+  // qu'on n'ouvrirait pas de comptes. C'est la seule facon de ne pas voir la
+  // fenetre de connexion.
   if (sonde.marqueurPose()) return { ou: 'profil', pourquoi: 'marqueur' };
-  // Une liste de comptes posee a cote de l'executable : c'est explicite.
-  if (sonde.comptesOuverts && sonde.comptesOuverts()) {
-    if (sonde.dossierInscriptible()) return { ou: 'comptes', pourquoi: 'comptes' };
-    return { ou: 'profil', pourquoi: 'lecture-seule' };
-  }
-  // Sur un lecteur reseau, plusieurs personnes ouvrent la meme application :
-  // chacune son dossier, sans que personne n'ait rien eu a preparer. La liste
-  // se construit d'elle-meme, un nom a la fois.
-  if (sonde.surLeReseau && sonde.surLeReseau()) {
-    if (sonde.dossierInscriptible()) return { ou: 'comptes', pourquoi: 'reseau' };
-    return { ou: 'profil', pourquoi: 'lecture-seule' };
-  }
+  // Sans pouvoir ecrire a cote de l'executable, il n'y a ni fiche de compte a
+  // poser ni dossier a creer : chacun retombe sur son profil Windows, et
+  // personne n'est bloque devant une connexion impossible.
   if (!sonde.dossierInscriptible()) return { ou: 'profil', pourquoi: 'lecture-seule' };
-  return { ou: 'cote', pourquoi: 'portable' };
+  // Partout ailleurs, on demande qui ouvre l'application. Une liste de comptes
+  // posee a cote de l'executable, ou un lecteur reseau, ne changent plus la
+  // decision : seulement ce qu'on en dit dans « A propos ».
+  if (sonde.comptesOuverts && sonde.comptesOuverts()) return { ou: 'comptes', pourquoi: 'comptes' };
+  if (sonde.surLeReseau && sonde.surLeReseau()) return { ou: 'comptes', pourquoi: 'reseau' };
+  return { ou: 'comptes', pourquoi: 'poste' };
 }
 
 // Ce qu'on affiche dans « À propos », sous le chemin.
 const POURQUOI = {
   comptes: 'Chaque personne a son dossier dans « data » : ses tampons, sa signature et ses récents ne sont qu\u2019à elle.',
+  poste: 'Vous êtes connectée : votre dossier dans « data » porte vos tampons, votre signature et vos récents, et personne d\u2019autre ne l\u2019ouvre depuis l\u2019application.',
   reseau: 'L\u2019application est sur un lecteur réseau : chaque personne a son dossier dans « data », avec ses tampons, sa signature et ses récents.',
   portable: 'Version portable : vos réglages suivent l\u2019application.',
   marqueur: 'Réglé par « donnees-par-utilisateur.txt » : chacun garde ses propres tampons, signatures et récents.',

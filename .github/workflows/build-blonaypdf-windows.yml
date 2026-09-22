@@ -123,7 +123,12 @@ jobs:
       # tampons. Joue sur l'executable empaquete, parce que le dossier de
       # donnees se fixe au tout debut du demarrage et qu'une erreur la ne se
       # verrait qu'en production.
-      - name: Comptes — chacune ses tampons, sur l'exécutable empaqueté
+      #
+      # Le dossier d'essai est un dossier local ordinaire : rien ne le fait
+      # passer pour un lecteur reseau. C'est le defaut qu'on a corrige — la
+      # connexion ne s'ouvrait que sur un partage reconnu, et une installation
+      # posee ailleurs ne demandait jamais rien a personne.
+      - name: Comptes — la connexion d'abord, puis chacune ses tampons
         working-directory: outils/desktop
         shell: pwsh
         run: node comptes-test.js dist\BlonayPDF\BlonayPDF.exe

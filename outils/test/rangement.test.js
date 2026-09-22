@@ -82,14 +82,36 @@ test('un dossier en lecture seule renvoie aussi au profil', () => {
     { ou: 'profil', pourquoi: 'lecture-seule' });
 });
 
-test('sur une clé USB ou un poste seul, rien ne change : les données suivent l\'application', () => {
-  assert.deepEqual(ouRanger('E:\\BlonayPDF', sondeComplete({})), { ou: 'cote', pourquoi: 'portable' });
+test('sur un poste ordinaire aussi, la connexion est demandée', () => {
+  // Le défaut d'avant, et celui qu'on corrige : hors partage reconnu et sans
+  // liste posée à la main, l'application ne demandait rien. Décompressée sur
+  // le Bureau pour l'essayer, ou posée sur un partage monté sur une lettre que
+  // « net use » ne reconnaît pas, elle ouvrait un dossier « data » commun à
+  // tout le monde sans que personne ne s'en aperçoive.
   assert.deepEqual(ouRanger('C:\\Users\\moi\\Bureau\\BlonayPDF', sondeComplete({})),
-    { ou: 'cote', pourquoi: 'portable' });
+    { ou: 'comptes', pourquoi: 'poste' });
+  assert.deepEqual(ouRanger('E:\\BlonayPDF', sondeComplete({})), { ou: 'comptes', pourquoi: 'poste' });
+  // Et le partage que rien ne trahit — c'est le cas du secrétariat, un P: que
+  // « net use » n'a pas su reconnaître — mène désormais au même endroit.
+  assert.deepEqual(ouRanger('P:\\Outils\\BlonayPDF', sondeComplete({})),
+    { ou: 'comptes', pourquoi: 'poste' });
+});
+
+test('la seule façon de ne pas voir la connexion est de l\'avoir demandé', () => {
+  // Deux sorties, et deux seulement : le fichier posé exprès, et un dossier
+  // où l'on ne peut rien écrire. Tout le reste ouvre les comptes.
+  const sorties = [
+    ouRanger('E:\\BlonayPDF', sondeComplete({ marqueur: true })),
+    ouRanger('E:\\BlonayPDF', sondeComplete({ ecrit: false })),
+  ];
+  sorties.forEach((r) => assert.equal(r.ou, 'profil'));
+  const dehors = [{}, { reseau: true }, { comptes: true }, { reseau: true, comptes: true }];
+  dehors.forEach((cas) => assert.equal(ouRanger('E:\\BlonayPDF', sondeComplete(cas)).ou, 'comptes',
+    'cas ' + JSON.stringify(cas)));
 });
 
 test('chaque raison a une phrase à montrer dans « À propos »', () => {
-  for (const pourquoi of ['portable', 'reseau', 'marqueur', 'lecture-seule', 'comptes']) {
+  for (const pourquoi of ['portable', 'reseau', 'marqueur', 'lecture-seule', 'comptes', 'poste']) {
     assert.ok(POURQUOI[pourquoi] && POURQUOI[pourquoi].length > 20,
       'la raison « ' + pourquoi + ' » s\'explique à l\'utilisateur');
   }
