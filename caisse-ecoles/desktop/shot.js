@@ -49,7 +49,7 @@ function verifierCopie() {
     }
   });
   await win.waitForTimeout(600);
-  for (const [panel, nom] of [['panelSaisie', 'saisie'], ['panelScan', 'scan'], ['panelAnnee', 'annee'], ['panelCaisse', 'caisse']]) {
+  for (const [panel, nom] of [['panelSaisie', 'saisie'], ['panelScan', 'scan'], ['panelAnnee', 'annee'], ['panelDonnees', 'donnees'], ['panelCaisse', 'caisse']]) {
     await win.evaluate((p) => window.CaisseApp.showPanel(p), panel);
     await win.waitForTimeout(500);
     await win.screenshot({ path: path.join(out, `${nom}.png`), fullPage: true });

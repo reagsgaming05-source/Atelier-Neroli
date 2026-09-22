@@ -30,7 +30,7 @@
   const plur = (n, mot, pluriel) => `${n} ${n > 1 ? (pluriel || mot + 's') : mot}`;
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = v.toFixed(2).split('.'); return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
   /** Les messages s'affichent sur la page regardée : sinon un message de restauration partait
-   *  sur la page de saisie pendant qu'on est dans « L'année & les données ». */
+   *  sur la page de saisie pendant qu'on est dans « L'année ». */
   function noticeBox() {
     const annee = document.getElementById('panelAnnee');
     if (els.anneeNotices && annee && !annee.classList.contains('hidden')) return els.anneeNotices;
@@ -51,8 +51,21 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 60000);
     return null;
   }
-  const vocab = () => (A.state && A.state.vocab) || window.CaisseVocab || P.emptyVocabulary();
+  // Le vocabulaire vu à travers le carnet des données (espace « Données ») : ce qu'on y a ajouté
+  // s'y trouve, ce qu'on en a retiré n'y est plus.
+  const vocab = () => (A.vocabActif && A.vocabActif()) || (A.state && A.state.vocab) || window.CaisseVocab || P.emptyVocabulary();
   const C = window.CaisseCombo;
+  const K = window.CaisseCarnet || null;
+  /** Vrai/faux : cette valeur a-t-elle encore sa place dans les listes ? */
+  const garde = (genre) => (K ? K.garde(K.actuel(), genre) : () => true);
+  /** Les listes fermées, carnet compris : un type ou un objet ajouté doit pouvoir être choisi. */
+  const TYPES = () => (K ? K.fusionner(R.TYPES, K.actuel(), 'types') : R.TYPES);
+  const OBJETS = () => (K ? K.fusionner(P.OBJET_LIST, K.actuel(), 'objets') : P.OBJET_LIST);
+  /**
+   * Le sens d'un type d'écriture : la logique des libellés d'abord (elle fait règle), puis ce qui
+   * a été déclaré en ajoutant le type dans l'espace « Données » — un type nouveau n'a que cela.
+   */
+  const sensDe = (type) => R.sensFor(type) || (K ? K.sensDeType(K.actuel(), type) : null);
 
   /* ---------------- Registre ---------------- */
   async function init() {
@@ -76,14 +89,16 @@
       const x = cle === 'classe' ? p.classe : p.personne;
       if (x) vus.add(x);
     }
-    return Array.from(vus).sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
+    // une valeur retirée ne doit pas revenir par les pièces de l'année
+    const ok = garde(cle === 'classe' ? 'classes' : 'personnes');
+    return Array.from(vus).filter(ok).sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
   }
 
   /** Les listes déroulantes de la fiche et des réglages de l'année. */
   function brancherCombos() {
     if (!C) return;
     const NIVEAU = ['pour ce type, cet objet et ce degré', 'pour ce type et cet objet', 'pour ce type'];
-    const comptes = () => R.accountChoices(formPiece(), vocab(), state.reg).map((c) => ({
+    const comptes = () => R.accountChoices(formPiece(), vocab(), state.reg).filter((c) => garde('comptes')(c.compte)).map((c) => ({
       value: c.compte,
       hint: c.usage,
       note: c.n ? `${c.n}×` : '',
@@ -96,6 +111,7 @@
     C.attach(els.pPersonne, () => connus('personne').map((x) => ({ value: x })), { vide: 'Aucun nom connu ne correspond.' });
     // le compte caisse est un compte comme un autre : même liste, sans le tri par pertinence
     const tousComptes = () => (vocab().accounts || []).slice().sort().map((x) => ({ value: x, hint: usageBrut(x) }));
+    // (vocab() porte déjà les ajouts du carnet et plus les retraits : rien à filtrer ici)
     C.attach(els.regCaisse, tousComptes, { vide: 'Aucun compte connu ne correspond.' });
     // les deux signataires du relevé sont des personnes : même liste que la fiche
     const personnes = () => connus('personne').map((x) => ({ value: x }));
@@ -107,10 +123,10 @@
     // dernière valeur connue si ce qui est tapé n'existe pas.
     const SENS = { debit: 'entrée en caisse', credit: 'sortie de caisse' };
     C.fromSelect(els.pType, {
-      items: () => R.TYPES.map((t) => ({ value: t, hint: SENS[R.sensFor(t)] || 'selon la pièce' })),
-      vide: "Aucun type ne correspond. Les types sont fixés par l'établissement.",
+      items: () => TYPES().map((t) => ({ value: t, hint: SENS[sensDe(t)] || 'selon la pièce' })),
+      vide: "Aucun type ne correspond. Les types s'ajoutent dans l'espace « Données ».",
     });
-    C.fromSelect(els.pObjet, { vide: 'Aucun objet ne correspond.' });
+    C.fromSelect(els.pObjet, { vide: "Aucun objet ne correspond. Les objets s'ajoutent dans l'espace « Données »." });
     C.fromSelect(els.regYear, { vide: 'Aucune année ne correspond.' });
     // « toutes les pièces » ou « depuis le n° X » : une entrée par pièce, donc une liste qui défile
     C.fromSelect(els.regPdfFrom, { vide: 'Aucun numéro ne correspond.' });
@@ -129,12 +145,28 @@
     setList(els.regClassList, (v.classTokens || []).slice().sort((a, b) => a.localeCompare(b, 'fr', { numeric: true })));
     setList(els.regPersonList, (v.persons || []).slice().sort((a, b) => a.localeCompare(b, 'fr')));
     setList(els.regAccountList, (v.accounts || []).slice().sort());
-    if (els.pType && !els.pType.options.length) {
-      els.pType.innerHTML = R.TYPES.map((t) => `<option value="${t}">${t}</option>`).join('');
-    }
-    if (els.pObjet && !els.pObjet.options.length) {
-      els.pObjet.innerHTML = P.OBJET_LIST.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
-    }
+    remplirSelect(els.pType, TYPES());
+    remplirSelect(els.pObjet, OBJETS());
+  }
+
+  /**
+   * Refait les options d'une liste fermée en gardant la valeur en place. Cette valeur peut ne plus
+   * être dans la liste — un objet retiré de l'espace « Données » alors qu'une pièce ouverte le
+   * porte : elle est alors conservée en queue, sans quoi la fiche affichée changerait toute seule.
+   */
+  function remplirSelect(el, valeurs) {
+    if (!el) return;
+    const avant = el.value;
+    const liste = avant && valeurs.indexOf(avant) < 0 ? valeurs.concat([avant]) : valeurs;
+    el.innerHTML = liste.map((x) => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+    el.value = avant;
+  }
+
+  /** Le carnet des données a changé : les listes de cet espace le relisent. */
+  function majListes() {
+    fillLists();
+    if (C) C.syncAll();
+    refreshSuggestions();
   }
 
   async function openYear(year) {
@@ -276,8 +308,8 @@
     // le sens enregistré est conservé tel quel ; s'il ne suit pas la logique du type (pièce remplie
     // à l'envers, conservée ainsi), la case « forcer » est cochée pour qu'il reste modifiable
     const force = $('pSensForce');
-    if (force) force.checked = !!(p.sens && R.sensFor(p.type) && p.sens !== R.sensFor(p.type));
-    setSens(p.sens || R.sensFor(p.type), !p.sens);
+    if (force) force.checked = !!(p.sens && sensDe(p.type) && p.sens !== sensDe(p.type));
+    setSens(p.sens || sensDe(p.type), !p.sens);
     refreshKind();
     renderFiles(p);
     refreshSuggestions();
@@ -340,7 +372,7 @@
   function setSens(sens, fromType) {
     els.pSensDebit.checked = sens === 'debit';
     els.pSensCredit.checked = sens === 'credit';
-    const logic = R.sensFor(els.pType.value);
+    const logic = sensDe(els.pType.value);
     const forced = !!$('pSensForce') && $('pSensForce').checked;
     const locked = !!logic && !forced;
     els.pSensDebit.disabled = locked; els.pSensCredit.disabled = locked;
@@ -1016,6 +1048,6 @@
     refreshLibelle();
   });
 
-  window.CaisseSaisie = { state, init, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal };
+  window.CaisseSaisie = { state, init, majListes, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal };
   init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
 })();

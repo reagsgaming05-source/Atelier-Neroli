@@ -91,10 +91,12 @@ inline('<!--INLINE_EXCEL-->', scriptTag(read(src('excel.js'))));
 inline('<!--INLINE_REGISTRE-->', scriptTag(read(src('registre.js'))));
 inline('<!--INLINE_PDFPIECE-->', scriptTag(read(src('pdfpiece.js'))));
 inline('<!--INLINE_DOSSIER-->', scriptTag(read(src('dossier.js'))));
+inline('<!--INLINE_CARNET-->', scriptTag(read(src('carnet.js'))));
 inline('<!--INLINE_COMBO-->', scriptTag(read(src('combo.js'))));
 inline('<!--INLINE_APP-->', scriptTag(read(src('app.js'))));
 inline('<!--INLINE_SAISIE-->', scriptTag(read(src('saisie.js'))));
 inline('<!--INLINE_COMPTAGE-->', scriptTag(read(src('comptage.js'))));
+inline('<!--INLINE_DONNEES-->', scriptTag(read(src('donnees.js'))));
 if (/<!--INLINE_[A-Z_]+-->/.test(html)) throw new Error('Marqueur non remplacé dans index.html');
 
 const outDir = path.join(root, 'dist');

@@ -61,7 +61,8 @@
     <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
-    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année et les données"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année &amp; les données<small>Solde à nouveau, sauvegardes</small></span></button>
+    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes</small></span></button>
+    <button type="button" class="apptab" data-panel="panelDonnees" title="Les listes de l'application"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Données<small>Comptes, classes, noms</small></span></button>
   </nav>
   <nav class="nav hidden" id="dgeoNav">
     <div class="section">Décompte DGEO</div>
@@ -409,8 +410,8 @@
 <div id="panelAnnee" class="panel hidden">
   <header class="page-head">
     <div>
-      <h1>L'année &amp; les données</h1>
-      <p>Ce qu'on règle une fois par année : l'année ouverte, le solde à nouveau, le compte caisse. Et la maintenance des données : reprendre un classeur commencé à la main, faire une sauvegarde, en restaurer une.</p>
+      <h1>L'année</h1>
+      <p>Ce qu'on règle une fois par année : l'année ouverte, le solde à nouveau, le compte caisse, les visas du relevé. Et le registre de cette année : reprendre un classeur commencé à la main, faire une sauvegarde, en restaurer une. Les listes proposées par l'application (comptes, classes, noms) sont dans l'espace <b>Données</b>.</p>
     </div>
   </header>
 
@@ -473,6 +474,30 @@
     </div>
     <div id="anneeNotices"></div>
   </section>
+</div>
+
+<div id="panelDonnees" class="panel hidden">
+  <header class="page-head">
+    <div>
+      <h1>Données</h1>
+      <p>Les listes que l'application propose partout : comptes, classes, personnes, objets, types d'écriture. Ajoutez ce qui manque, retirez ce qui ne sert plus — c'est gardé sur ce PC et repris à chaque ouverture. Retirer ne change aucune pièce déjà enregistrée : seules les listes déroulantes cessent de la proposer.</p>
+    </div>
+  </header>
+
+  <section class="card tone flat">
+    <div class="row" style="align-items:center">
+      <div class="field" style="flex:1;min-width:260px">
+        <div class="legend" id="donneesResume"></div>
+        <div class="legend" id="donneesOu" style="margin-top:4px"></div>
+      </div>
+      <button type="button" class="small" id="btnDonneesCopie" title="Un fichier JSON à garder, ou à reprendre sur un autre PC"><svg class="ico"><use href="#i-download"/></svg> Copie du carnet</button>
+      <button type="button" class="small" id="btnDonneesReprendre"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un carnet…</button>
+      <input type="file" id="donneesFile" accept="application/json,.json" class="hidden">
+    </div>
+    <div class="legend" style="margin-top:10px"><svg class="ico sm"><use href="#i-shield"/></svg> Ces listes ne sortent pas du PC : elles ne sont ni publiées, ni envoyées nulle part. Les noms de personnes en font partie.</div>
+  </section>
+
+  <div id="donneesCartes"></div>
 </div>
 
 <div id="panelDgeo" class="panel hidden">
@@ -550,9 +575,11 @@
 <!--INLINE_REGISTRE-->
 <!--INLINE_PDFPIECE-->
 <!--INLINE_DOSSIER-->
+<!--INLINE_CARNET-->
 <!--INLINE_COMBO-->
 <!--INLINE_APP-->
 <!--INLINE_SAISIE-->
 <!--INLINE_COMPTAGE-->
+<!--INLINE_DONNEES-->
 </body>
 </html>

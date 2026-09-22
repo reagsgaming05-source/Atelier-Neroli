@@ -308,7 +308,7 @@ table.entries.journal td.compte { font-family: var(--mono); font-size: 12px; col
 table.entries.journal td.acts { white-space: nowrap; text-align: right; }
 table.entries.journal td.acts button { margin-left: 3px; }
 /* Bandeau d'une ligne rappelant l'année ouverte, en tête de la saisie : les réglages eux-mêmes
-   vivent dans l'espace « L'année & les données ». */
+   vivent dans l'espace « L'année ». */
 .yearbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; margin-bottom: 14px;
   background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-sm); font-size: 13px; color: var(--muted); }
 .yearbar .y { font-family: var(--font-display, inherit); font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
@@ -622,3 +622,41 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .dgeo-form-fields .warn { color: var(--warn); }
 .dgeo-form .empty { padding: 30px 18px; text-align: center; color: var(--muted); font-size: 13px; }
 .zoom-overlay img { display: block; max-width: 92vw; max-height: 86vh; border-radius: 8px; }
+
+/* ---------------------------------------------------------------- espace « Données »
+   Les listes que l'application propose, tenues à la main : une ligne par valeur, d'où elle vient,
+   à quoi elle sert, combien de pièces de l'année s'en servent, et de quoi la retirer.
+   Les listes sont longues (une centaine de comptes) : elles défilent dans leur carte. */
+.dfiltre { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; }
+.dfiltre > .ico { color: var(--muted); flex: none; }
+.dfiltre input[type="search"] { flex: 1 1 240px; min-width: 0; height: 34px; }
+.dliste {
+  margin-top: 12px; max-height: 340px; overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff;
+}
+.dligne { display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; border-bottom: 1px solid #eef2f7; font-size: 13px; }
+.dliste .dligne:last-child { border-bottom: 0; }
+.dligne:hover { background: #f8fafc; }
+.dval { font-weight: 550; color: var(--ink); }
+.dval.mono { font-family: var(--mono); font-size: 12.5px; }
+.dorig {
+  flex: none; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: var(--surface-2); color: var(--muted);
+}
+.dorig.ajout { background: var(--accent-soft); color: var(--accent); }
+.ddetail { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dspacer { flex: 1; min-width: 6px; }
+.dn { flex: none; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.dligne button { flex: none; padding: 0 7px; height: 26px; }
+.dvide { padding: 14px 12px; font-size: 12.5px; color: var(--muted); }
+/* ce qu'on a retiré des listes : rien n'est perdu, tout se remet d'un clic */
+.dretires { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 12.5px; }
+.dretires b { color: var(--ink-2); }
+.dchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.dchip {
+  display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px;
+  border-radius: 999px; font-size: 12px; background: #fff; color: var(--ink-2); border: 1px solid var(--line-2);
+}
+.dchip .ico { color: var(--muted); }
+.dchip:hover { border-color: var(--accent); color: var(--accent); }
+.dchip:hover .ico { color: var(--accent); }

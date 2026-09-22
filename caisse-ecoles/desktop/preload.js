@@ -45,6 +45,9 @@ contextBridge.exposeInMainWorld('CaisseFiles', {
   read: (year, id, name) => ipcRenderer.invoke('files:read', year, id, name).then((b) => (b ? new Uint8Array(b) : null)),
   remove: (year, id, name) => ipcRenderer.invoke('files:remove', year, id, name),
   openDir: () => ipcRenderer.invoke('files:open-dir'),
+  // carnet des données : les listes tenues à la main (espace « Données »)
+  loadCarnet: () => ipcRenderer.invoke('files:load-carnet'),
+  saveCarnet: (text) => ipcRenderer.invoke('files:save-carnet', text),
 });
 
 // Pont Décompte DGEO → Caisse écoles : décomptes terminés (Excel généré dans l'autre onglet),

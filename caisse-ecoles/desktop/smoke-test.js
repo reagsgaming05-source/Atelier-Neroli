@@ -308,8 +308,17 @@ function verifierCopie() {
     const tape = (t) => { champ.value = t; S.renderJournal(); };
     tape('duvernay');
     const parNom = lignes();
+    // Chercher par numéro. Compter les lignes ne dit rien de juste : « 5 » trouve aussi « 5P/3 »
+    // dans un libellé, et le numéro dépend de ce que le registre portait déjà. Ce qui doit tenir,
+    // c'est que la pièce cherchée soit là et que chaque ligne rendue porte bien ce nombre.
     tape(String(base + 3));
-    const parNo = lignes();
+    // textContent colle les cellules l'une à l'autre : « 8 » suivi de « 09.05.2026 » donnerait
+    // « 809.05… », où le numéro cherché n'est plus un nombre à lui seul. On les sépare.
+    const rangees = Array.from(document.querySelectorAll('#journalBody tr[data-id]'))
+      .map((tr) => Array.from(tr.cells).map((td) => td.textContent.trim()).join(' | '));
+    const parNo = rangees.length;
+    const parNoCible = rangees.some((t) => t.split(' | ')[0] === String(base + 3));
+    const parNoPropre = rangees.every((t) => new RegExp(`(^|\\D)${base + 3}(\\D|$)`).test(t));
     tape('zzz-introuvable');
     const rien = lignes();
     const messageVide = /Aucune pièce ne correspond/.test(document.getElementById('journalBody').textContent);
@@ -369,10 +378,10 @@ function verifierCopie() {
     if (els0) els0.value = '';
     await S.saveReg(); S.renderJournal();
     const registreRendu = reg.pieces.length === avant && R.nextNo(reg) === nextAvant;
-    return { avant, toutes, parNom, parNo, rien, messageVide, apresVidage, pendantes, trouVu, designe, resteNul, parRaccourci, montant299, registreRendu };
+    return { avant, toutes, parNom, parNo, parNoCible, parNoPropre, rien, messageVide, apresVidage, pendantes, trouVu, designe, resteNul, parRaccourci, montant299, registreRendu };
   });
   console.log('retrouver & contrôler :', JSON.stringify(rc));
-  ok = ok && rc.parNom === 1 && rc.parNo === 1 && rc.rien === 0 && rc.messageVide
+  ok = ok && rc.parNom === 1 && rc.parNo >= 1 && rc.parNoCible && rc.parNoPropre && rc.rien === 0 && rc.messageVide
     && rc.apresVidage === rc.toutes && rc.pendantes < rc.toutes
     && rc.trouVu && rc.resteNul && rc.designe && rc.parRaccourci === 1 && rc.montant299 === 18.5
     && rc.registreRendu;
@@ -522,6 +531,70 @@ function verifierCopie() {
   });
   console.log('comptes du tableau :', JSON.stringify(tableau));
   ok = ok && tableau.aSaListe && tableau.combien > 5 && tableau.luDevant;
+
+  // Espace « Données » : ce qu'on y ajoute apparaît dans les listes de la fiche, ce qu'on en
+  // retire en disparaît, et le carnet est bien écrit dans les fichiers de l'application — c'est
+  // ce qui fait qu'une classe créée une fois est là au prochain démarrage.
+  const donnees = await win.evaluate(async () => {
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+    const K = window.CaisseCarnet;
+    const A = window.CaisseApp;
+    const avant = K.serialize(K.actuel());
+    const ouvrir = async (id) => {
+      const inp = document.getElementById(id);
+      inp.parentElement.querySelector('.combo-arrow').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      await pause(180);
+      const lignes = Array.from(inp.parentElement.querySelectorAll('.combo-item')).map((e) => e.textContent.replace(/\s+/g, ' ').trim());
+      inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await pause(60);
+      return lignes;
+    };
+
+    A.showPanel('panelDonnees');
+    await pause(250);
+    const cartes = Array.from(document.querySelectorAll('[data-carte]')).map((e) => e.dataset.carte);
+
+    // 1. ajouter une classe qui n'existe nulle part
+    document.getElementById('d-classes-val').value = '12VG/2';
+    document.querySelector('[data-ajouter="classes"]').click();
+    await pause(350);
+    const ajoutee = K.ajoutsDe(K.actuel(), 'classes').some((x) => x.valeur === '12VG/2');
+    const classeProposee = (await ouvrir('pClasse')).some((t) => t.includes('12VG/2'));
+
+    // 2. retirer un compte dont aucune pièce de l'année ne se sert (pas de question posée)
+    const libre = Array.from(document.querySelectorAll('[data-carte="comptes"] .dligne'))
+      .find((l) => !l.querySelector('.dn'));
+    const cible = libre ? libre.querySelector('[data-retirer]').dataset.valeur : '';
+    const avantRetrait = (await ouvrir('pCompte')).some((t) => t.includes(cible));
+    if (libre) libre.querySelector('[data-retirer]').click();
+    await pause(350);
+    const apresRetrait = (await ouvrir('pCompte')).some((t) => t.includes(cible));
+
+    // 3. le carnet est écrit dans les fichiers de l'application
+    let ecrit = '';
+    try { ecrit = (await window.CaisseFiles.loadCarnet()) || ''; } catch (e) { ecrit = ''; }
+    const garde = ecrit.includes('12VG/2') && (!cible || ecrit.includes(cible));
+
+    // 4. remettre le compte retiré : il revient dans la liste
+    const chip = document.querySelector('[data-remettre="comptes"]');
+    if (chip) chip.click();
+    await pause(350);
+    const remis = (await ouvrir('pCompte')).some((t) => t.includes(cible));
+
+    // on laisse le PC comme on l'a trouvé
+    K.poser(K.parse(avant));
+    try { await window.CaisseFiles.saveCarnet(avant); } catch (e) { /* ignore */ }
+    window.CaisseDonnees.rendre();
+    window.CaisseSaisie.majListes();
+    A.showPanel('panelSaisie');
+    await pause(150);
+    const nettoye = !(await ouvrir('pClasse')).some((t) => t.includes('12VG/2'));
+    return { cartes, ajoutee, classeProposee, cible, avantRetrait, apresRetrait, garde, remis, nettoye };
+  });
+  console.log('espace données :', JSON.stringify(donnees));
+  ok = ok && donnees.cartes.length === 5 && donnees.ajoutee && donnees.classeProposee
+    && donnees.cible && donnees.avantRetrait && !donnees.apresRetrait && donnees.garde
+    && donnees.remis && donnees.nettoye;
 
   // nouvelle année par le petit formulaire en ligne (window.prompt n'existe pas dans Electron)
   const ny = await win.evaluate(async () => {

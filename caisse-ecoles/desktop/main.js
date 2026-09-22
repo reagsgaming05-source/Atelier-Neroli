@@ -532,9 +532,10 @@ function buildMenu() {
         { label: 'Saisie des pièces', accelerator: 'CmdOrCtrl+1', click: () => openPanel('panelSaisie') },
         { label: 'Pièces scannées', accelerator: 'CmdOrCtrl+2', click: () => openPanel('panelScan') },
         { label: 'Compter la caisse', accelerator: 'CmdOrCtrl+3', click: () => openPanel('panelCaisse') },
-        { label: "L'année & les données", accelerator: 'CmdOrCtrl+4', click: () => openPanel('panelAnnee') },
-        { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+5', click: () => openPanel('panelDgeo') },
-        { label: 'Récapitulatif des décomptes', accelerator: 'CmdOrCtrl+6', click: () => openPanel('panelRecap') },
+        { label: "L'année", accelerator: 'CmdOrCtrl+4', click: () => openPanel('panelAnnee') },
+        { label: 'Données', accelerator: 'CmdOrCtrl+5', click: () => openPanel('panelDonnees') },
+        { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+6', click: () => openPanel('panelDgeo') },
+        { label: 'Récapitulatif des décomptes', accelerator: 'CmdOrCtrl+7', click: () => openPanel('panelRecap') },
       ],
     },
     {
@@ -627,6 +628,24 @@ ipcMain.handle('files:remove', (ev, y, id, name) => {
   return true;
 });
 ipcMain.handle('files:open-dir', () => shell.openPath(REG_ROOT()));
+
+// Carnet des données (espace « Données ») : les listes tenues à la main — comptes, classes, noms,
+// objets, types. Un seul fichier à côté des registres, qui ne dépend d'aucune année et que la
+// mise à jour de l'exécutable ne touche pas.
+const CARNET = () => path.join(REG_ROOT(), 'donnees.json');
+ipcMain.handle('files:load-carnet', () => {
+  try { return fs.existsSync(CARNET()) ? fs.readFileSync(CARNET(), 'utf8') : null; } catch (e) { return null; }
+});
+ipcMain.handle('files:save-carnet', (ev, text) => {
+  fs.mkdirSync(REG_ROOT(), { recursive: true });
+  const f = CARNET();
+  const tmp = f + '.tmp';
+  fs.writeFileSync(tmp, String(text));
+  // la copie de la veille reste : un carnet écrasé par erreur se rattrape
+  if (fs.existsSync(f)) fs.copyFileSync(f, f.replace(/\.json$/, '.bak.json'));
+  fs.renameSync(tmp, f);
+  return true;
+});
 
 // Troisième lecteur (Tesseract natif) au service de la page
 ipcMain.handle('ocr:info', () => {

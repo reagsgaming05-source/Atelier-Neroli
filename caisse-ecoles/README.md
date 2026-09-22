@@ -15,10 +15,15 @@ Application locale, sans installation. Un écran = un travail, dans la barre lat
 - **Compter la caisse** : nombre de billets (1000, 200, 100, 50, 20, 10) et de pièces (5, 2, 1,
   50, 20, 10 et 5 centimes), total compté, dernier solde compté et nouveau solde avec leurs
   dates, écart avec le solde du journal à cette date, historique des comptages dans le registre.
-- **L'année & les données** : ce qu'on règle une fois par année (année ouverte, solde à nouveau,
-  compte caisse) et la maintenance (reprendre un classeur commencé à la main, faire une
-  sauvegarde, en restaurer une). On n'y va presque jamais : c'est pour cela qu'il a son écran,
+- **L'année** : ce qu'on règle une fois par année (année ouverte, solde à nouveau, compte caisse,
+  visas du relevé) et la maintenance du registre (reprendre un classeur commencé à la main, faire
+  une sauvegarde, en restaurer une). On n'y va presque jamais : c'est pour cela qu'il a son écran,
   au lieu d'encombrer la saisie.
+- **Données** : les listes que l'application propose partout — comptes comptables, classes,
+  personnes, objets, types d'écriture. On y ajoute ce qui manque, on en retire ce qui ne sert
+  plus ; c'est gardé sur le PC et repris à chaque ouverture. Retirer ne change aucune pièce déjà
+  enregistrée : seules les listes déroulantes cessent de la proposer. Voir *Le carnet des
+  données*.
 
 La version portable Windows s'appelle **Compta Blonay** : une seule application pour les deux
 outils du dépôt. Le logo en tête de la barre latérale est un menu déroulant qui passe de
@@ -66,7 +71,7 @@ qu'un programme à ouvrir, `ComptaBlonay.exe` : au démarrage, il lance en arri�
 local de Décompte DGEO sur un port libre (le menu du logo indique *démarre…* puis, une fois
 Décompte DGEO choisi, affiche le logiciel complet, avec toutes ses fonctions : analyse du dossier
 PDF, effectifs, pièces, part État, décompte Excel) et l'arrête à la fermeture de la fenêtre.
-Raccourci : Ctrl+5 ; Ctrl+1 à Ctrl+4 ramènent aux espaces de Caisse écoles. Ses dossiers vont
+Raccourci : Ctrl+6 ; Ctrl+1 à Ctrl+5 ramènent aux espaces de Caisse écoles. Ses dossiers vont
 dans `data/decompte/`, à côté des registres de la caisse. Si le serveur s'arrête, rechoisir
 Décompte DGEO dans le menu le relance ; sans le dossier `decompte/`, le menu l'indique. Dans le
 fichier HTML seul, Décompte DGEO n'affiche qu'une explication : il fait partie de l'application
@@ -112,7 +117,7 @@ décompte → pièce), puis publication du zip.
 1. **Année** : le registre de l'année en cours s'ouvre (ou se crée avec, comme solde à nouveau,
    le solde final de l'année précédente). Chaque année est un registre séparé, conservé dans
    `data/caisse/<année>/` à côté de l'exécutable (version portable) ou dans le navigateur
-   (fichier HTML seul). Tout cela se règle dans l'espace **L'année & les données** ; la saisie
+   (fichier HTML seul). Tout cela se règle dans l'espace **L'année** ; la saisie
    n'en garde que le bandeau de rappel, dont le bouton *Changer d'année, solde à nouveau…* y mène.
 2. **Fiche** : n° (proposé), date, **type d'écriture** (REMBOURSEMENT, AVANCE, DECOMPTE,
    PARTICIPATION DES PARENTS…), **objet** (course d'école, camp, mini-camp, voyage d'étude, cours de
@@ -202,7 +207,7 @@ des annexes. Le formulaire tombe juste par construction : référence + encaisse
 décaissements = solde du journal. Un écart entre le total compté et le journal, ou une remarque,
 est écrit sur le document : un relevé qu'on signe ne doit pas taire un écart.
 
-Les **noms des deux signataires** se saisissent dans *L'année & les données* et restent dans les
+Les **noms des deux signataires** se saisissent dans *L'année* et restent dans les
 données locales de l'année (jamais dans le dépôt). Tant qu'ils sont vides, le relevé écrit
 *Visa du responsable* et *Visa du boursier*, comme le formulaire vierge.
 
@@ -448,6 +453,37 @@ cette version qui est versionnée dans `dist/`). Une version téléchargée depu
 de la même manière, sans la correction des noms ; charger une fois un classeur les rétablit.
 Un test automatique vérifie qu'aucun nom ne se glisse dans le fichier versionné.
 
+## Le carnet des données
+
+La base de référence et l'apprentissage automatique donnent des listes déjà justes, mais ils ne
+savent rien d'une classe qui vient d'être créée ni d'un compte qui vient d'être ouvert. L'espace
+**Données** ajoute ce qui manque et retire ce qui ne sert plus, pour les cinq listes à choix de
+l'application :
+
+| Liste | Où elle sert | Particularité |
+|---|---|---|
+| Comptes comptables | compte de contrepartie, compte caisse, compte d'une pièce scannée | on peut noter à quoi le compte sert, ce mot s'affiche dans la liste |
+| Classes | champ *Classe*, reconnaissance des classes dans les libellés lus | |
+| Personnes | champ *Personne*, visas du relevé de caisse | jamais publié : voir ci-dessus |
+| Objets | objet de l'activité (libellé, compte proposé) | l'ordre de la liste intégrée est gardé, « Autre » en dernier |
+| Types d'écriture | premier mot du libellé | on déclare son sens (entrée, sortie, ou selon la pièce) |
+
+Le carnet ne porte que la différence : ce qu'on a ajouté, ce qu'on a retiré. Il est relu à
+chaque ouverture et s'applique partout — listes déroulantes, comptes proposés, correction des
+lectures. **« Retiré » l'emporte durablement** : les pièces scannées enrichissent le vocabulaire
+toutes seules, et sans cela un compte retiré serait revenu à la première relecture. Retirer ne
+touche à aucune écriture : une pièce déjà enregistrée garde son compte, son libellé et son
+montant ; si la valeur est employée par des pièces de l'année ouverte, l'application le dit et
+demande confirmation. Tout se remet d'un clic (les valeurs retirées figurent en bas de leur carte).
+
+| Version | Où le carnet est gardé |
+|---|---|
+| application fenêtrée | `<données de l'application>/caisse/donnees.json`, avec une copie `donnees.bak.json` |
+| fichier HTML seul | mémoire locale du navigateur (`caisse.donnees`) |
+
+*Copie du carnet* en exporte un fichier JSON — à garder, ou à reprendre sur un autre PC
+(*Reprendre un carnet…*, qui remplace celui du PC après confirmation).
+
 ## Développement
 
 ```bash
@@ -478,11 +514,13 @@ Structure :
 - `desktop/dgeo-proxy.js` – passerelle locale devant Décompte DGEO (multipart, nettoyage du dossier via la page)
 - `src/comptage.js` – comptage de la caisse (grille des coupures, soldes, historique) ; modèle dans `registre.js` (`countTotal`, `upsertCount`, `previousCount`, `balanceAt`)
 - `src/combo.js` – liste déroulante d'un champ : `attach()` pour un champ libre, `fromSelect()` pour une liste fermée du navigateur (le `<select>` reste en place, caché, et garde la valeur)
-- `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Compter la caisse / L'année & les données, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
+- `src/carnet.js` – carnet des données : ajouts et retraits de l'utilisateur sur les cinq listes, lecture tolérante d'un fichier abîmé, `appliquer()` rend le vocabulaire vu à travers le carnet (sans dépendance, éprouvé hors navigateur)
+- `src/donnees.js` – espace « Données » : les cinq cartes, l'ajout, le retrait, la remise, la copie du carnet
+- `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Compter la caisse / L'année / Données, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
 - `src/registre.js` – registre des pièces par année : modèle, libellé composé, validation, journal, stockage (fichiers ou navigateur)
 - `src/pdfpiece.js` – fiche « PIÈCE COMPTABLE » en PDF (pdf-lib) avec justificatifs
 - `src/saisie.js` – onglet de saisie (fiche, journal, Excel, PDF, sauvegarde)
-- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre à onglets, Décompte DGEO démarré avec l'application, pont décompte → pièce, fichiers du registre, dossier `data/`, fichier des noms), `shell.html` (barre d'onglets Compta Blonay, badge des décomptes à saisir), `dgeo-theme.css` (thème injecté dans la page de Décompte DGEO pour le même aspect : police, couleurs, arrondis), `preload.js` (`CaisseFiles`, `CaisseNative`, `CaisseDgeo`), `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
+- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre à onglets, Décompte DGEO démarré avec l'application, pont décompte → pièce, fichiers du registre, dossier `data/`, fichier des noms), `shell.html` (barre d'onglets Compta Blonay, badge des décomptes à saisir), `dgeo-theme.css` (thème injecté dans la page de Décompte DGEO pour le même aspect : police, couleurs, arrondis), `preload.js` (`CaisseFiles` — registres, justificatifs et carnet des données —, `CaisseNative`, `CaisseDgeo`), `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
 
 ## Limites
 

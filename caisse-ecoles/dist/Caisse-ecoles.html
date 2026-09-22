@@ -317,7 +317,7 @@ table.entries.journal td.compte { font-family: var(--mono); font-size: 12px; col
 table.entries.journal td.acts { white-space: nowrap; text-align: right; }
 table.entries.journal td.acts button { margin-left: 3px; }
 /* Bandeau d'une ligne rappelant l'année ouverte, en tête de la saisie : les réglages eux-mêmes
-   vivent dans l'espace « L'année & les données ». */
+   vivent dans l'espace « L'année ». */
 .yearbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; margin-bottom: 14px;
   background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-sm); font-size: 13px; color: var(--muted); }
 .yearbar .y { font-family: var(--font-display, inherit); font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
@@ -632,6 +632,44 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .dgeo-form .empty { padding: 30px 18px; text-align: center; color: var(--muted); font-size: 13px; }
 .zoom-overlay img { display: block; max-width: 92vw; max-height: 86vh; border-radius: 8px; }
 
+/* ---------------------------------------------------------------- espace « Données »
+   Les listes que l'application propose, tenues à la main : une ligne par valeur, d'où elle vient,
+   à quoi elle sert, combien de pièces de l'année s'en servent, et de quoi la retirer.
+   Les listes sont longues (une centaine de comptes) : elles défilent dans leur carte. */
+.dfiltre { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; }
+.dfiltre > .ico { color: var(--muted); flex: none; }
+.dfiltre input[type="search"] { flex: 1 1 240px; min-width: 0; height: 34px; }
+.dliste {
+  margin-top: 12px; max-height: 340px; overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff;
+}
+.dligne { display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; border-bottom: 1px solid #eef2f7; font-size: 13px; }
+.dliste .dligne:last-child { border-bottom: 0; }
+.dligne:hover { background: #f8fafc; }
+.dval { font-weight: 550; color: var(--ink); }
+.dval.mono { font-family: var(--mono); font-size: 12.5px; }
+.dorig {
+  flex: none; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: var(--surface-2); color: var(--muted);
+}
+.dorig.ajout { background: var(--accent-soft); color: var(--accent); }
+.ddetail { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dspacer { flex: 1; min-width: 6px; }
+.dn { flex: none; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.dligne button { flex: none; padding: 0 7px; height: 26px; }
+.dvide { padding: 14px 12px; font-size: 12.5px; color: var(--muted); }
+/* ce qu'on a retiré des listes : rien n'est perdu, tout se remet d'un clic */
+.dretires { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 12.5px; }
+.dretires b { color: var(--ink-2); }
+.dchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.dchip {
+  display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px;
+  border-radius: 999px; font-size: 12px; background: #fff; color: var(--ink-2); border: 1px solid var(--line-2);
+}
+.dchip .ico { color: var(--muted); }
+.dchip:hover { border-color: var(--accent); color: var(--accent); }
+.dchip:hover .ico { color: var(--accent); }
+
 </style>
 </head>
 <body>
@@ -688,7 +726,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
-    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année et les données"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année &amp; les données<small>Solde à nouveau, sauvegardes</small></span></button>
+    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes</small></span></button>
+    <button type="button" class="apptab" data-panel="panelDonnees" title="Les listes de l'application"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Données<small>Comptes, classes, noms</small></span></button>
   </nav>
   <nav class="nav hidden" id="dgeoNav">
     <div class="section">Décompte DGEO</div>
@@ -1036,8 +1075,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 <div id="panelAnnee" class="panel hidden">
   <header class="page-head">
     <div>
-      <h1>L'année &amp; les données</h1>
-      <p>Ce qu'on règle une fois par année : l'année ouverte, le solde à nouveau, le compte caisse. Et la maintenance des données : reprendre un classeur commencé à la main, faire une sauvegarde, en restaurer une.</p>
+      <h1>L'année</h1>
+      <p>Ce qu'on règle une fois par année : l'année ouverte, le solde à nouveau, le compte caisse, les visas du relevé. Et le registre de cette année : reprendre un classeur commencé à la main, faire une sauvegarde, en restaurer une. Les listes proposées par l'application (comptes, classes, noms) sont dans l'espace <b>Données</b>.</p>
     </div>
   </header>
 
@@ -1100,6 +1139,30 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     </div>
     <div id="anneeNotices"></div>
   </section>
+</div>
+
+<div id="panelDonnees" class="panel hidden">
+  <header class="page-head">
+    <div>
+      <h1>Données</h1>
+      <p>Les listes que l'application propose partout : comptes, classes, personnes, objets, types d'écriture. Ajoutez ce qui manque, retirez ce qui ne sert plus — c'est gardé sur ce PC et repris à chaque ouverture. Retirer ne change aucune pièce déjà enregistrée : seules les listes déroulantes cessent de la proposer.</p>
+    </div>
+  </header>
+
+  <section class="card tone flat">
+    <div class="row" style="align-items:center">
+      <div class="field" style="flex:1;min-width:260px">
+        <div class="legend" id="donneesResume"></div>
+        <div class="legend" id="donneesOu" style="margin-top:4px"></div>
+      </div>
+      <button type="button" class="small" id="btnDonneesCopie" title="Un fichier JSON à garder, ou à reprendre sur un autre PC"><svg class="ico"><use href="#i-download"/></svg> Copie du carnet</button>
+      <button type="button" class="small" id="btnDonneesReprendre"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un carnet…</button>
+      <input type="file" id="donneesFile" accept="application/json,.json" class="hidden">
+    </div>
+    <div class="legend" style="margin-top:10px"><svg class="ico sm"><use href="#i-shield"/></svg> Ces listes ne sortent pas du PC : elles ne sont ni publiées, ni envoyées nulle part. Les noms de personnes en font partie.</div>
+  </section>
+
+  <div id="donneesCartes"></div>
 </div>
 
 <div id="panelDgeo" class="panel hidden">
@@ -7051,6 +7114,341 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 </script>
 <script>
 /*
+ * Carnet des données : les listes tenues à la main, qui restent sur ce PC.
+ *
+ * L'application connaît déjà des comptes, des classes, des noms, des objets et des types : ils
+ * viennent de la base de référence intégrée et de ce qui a été lu dans les classeurs. Mais une
+ * classe nouvelle, un compte qui vient d'être ouvert, un nom qui arrive, n'y sont pas — et il n'y
+ * avait aucun moyen de les y mettre autrement qu'en les tapant chaque fois.
+ *
+ * Le carnet porte deux choses, et seulement deux : ce qu'on a ajouté, ce qu'on a retiré.
+ *   ajouts  : ce qui n'existait nulle part et qu'on veut voir dans les listes ;
+ *   retires : ce que les listes proposaient et qu'on ne veut plus voir.
+ *
+ * Retirer ne touche à aucune écriture : une pièce déjà enregistrée garde son compte, son libellé
+ * et son montant. Seules les listes proposées changent. Et « retiré » l'emporte durablement : les
+ * pièces scannées enrichissent le vocabulaire toutes seules, et sans cela un compte retiré serait
+ * revenu à la première relecture.
+ *
+ * Module sans dépendance, pour être éprouvé en dehors du navigateur.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.CaisseCarnet = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const GENRES = ['comptes', 'classes', 'personnes', 'objets', 'types'];
+  /** Au singulier, tel qu'on en parle à l'écran. */
+  const NOM = {
+    comptes: 'compte',
+    classes: 'classe',
+    personnes: 'personne',
+    objets: 'objet',
+    types: "type d'écriture",
+  };
+  /** Avec son article, pour les phrases de l'écran des données. */
+  const ARTICLE = {
+    comptes: 'un compte',
+    classes: 'une classe',
+    personnes: 'une personne',
+    objets: 'un objet',
+    types: "un type d'écriture",
+  };
+  const MAX = 80; // longueur d'une valeur
+  const MAX_NOTE = 120;
+  const MAX_LISTE = 2000; // garde-fou d'un fichier abîmé ou bricolé
+  const CLE_LOCALE = 'caisse.donnees';
+  const COMPTE_RE = /^\d{4,5}\.\d{3,4}(?:\.\d{2})?$/;
+
+  const sansAccent = (t) => String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '');
+  /** Deux écritures d'une même valeur (« a. berger » et « A. Berger ») ne font qu'une entrée. */
+  const cle = (genre, valeur) => sansAccent(valeur).toLowerCase().replace(/\s+/g, ' ').trim();
+
+  function vide() {
+    const c = { version: 1, ajouts: {}, retires: {} };
+    for (const g of GENRES) { c.ajouts[g] = []; c.retires[g] = []; }
+    return c;
+  }
+
+  /** Copie de travail : chaque modification rend un carnet neuf, jamais l'ancien modifié. */
+  function copie(carnet) {
+    const src = carnet && carnet.ajouts ? carnet : vide();
+    const c = { version: 1, ajouts: {}, retires: {} };
+    for (const g of GENRES) {
+      c.ajouts[g] = (src.ajouts[g] || []).map((x) => Object.assign({}, x));
+      c.retires[g] = (src.retires[g] || []).slice();
+    }
+    return c;
+  }
+
+  /**
+   * Lit un carnet enregistré. Un fichier abîmé, bricolé à la main ou venu d'ailleurs ne doit pas
+   * faire tomber l'application : ce qui n'est pas reconnu est laissé de côté, le reste est gardé.
+   * Seules les clés attendues sont lues, donc rien de ce que contient le fichier n'atteint les
+   * objets de l'application.
+   */
+  function parse(texte) {
+    const c = vide();
+    let brut = null;
+    try { brut = typeof texte === 'string' ? JSON.parse(texte) : texte; } catch (e) { return c; }
+    if (!brut || typeof brut !== 'object') return c;
+    const ajouts = brut.ajouts && typeof brut.ajouts === 'object' ? brut.ajouts : {};
+    const retires = brut.retires && typeof brut.retires === 'object' ? brut.retires : {};
+    for (const g of GENRES) {
+      const va = Array.isArray(ajouts[g]) ? ajouts[g] : [];
+      for (const x of va.slice(0, MAX_LISTE)) {
+        const valeur = normaliser(g, x && typeof x === 'object' ? x.valeur : x);
+        if (!valeur || valeur.length > MAX) continue;
+        const item = { valeur };
+        if (x && typeof x === 'object') {
+          const note = String(x.note == null ? '' : x.note).replace(/\s+/g, ' ').trim();
+          if (note) item.note = note.slice(0, MAX_NOTE);
+          if (x.sens === 'debit' || x.sens === 'credit') item.sens = x.sens;
+        }
+        if (!c.ajouts[g].some((y) => cle(g, y.valeur) === cle(g, valeur))) c.ajouts[g].push(item);
+      }
+      const vr = Array.isArray(retires[g]) ? retires[g] : [];
+      for (const x of vr.slice(0, MAX_LISTE)) {
+        const valeur = normaliser(g, x);
+        if (!valeur || valeur.length > MAX) continue;
+        if (!c.retires[g].some((y) => cle(g, y) === cle(g, valeur))) c.retires[g].push(valeur);
+      }
+      // une valeur ne peut pas être à la fois ajoutée et retirée
+      c.retires[g] = c.retires[g].filter((v) => !c.ajouts[g].some((a) => cle(g, a.valeur) === cle(g, v)));
+    }
+    return c;
+  }
+
+  function serialize(carnet) {
+    return JSON.stringify(copie(carnet), null, 2);
+  }
+
+  /** La forme sous laquelle la valeur sera écrite partout : « 5p/3 » et « 5P / 3 » font « 5P/3 ». */
+  function normaliser(genre, valeur) {
+    let v = String(valeur == null ? '' : valeur).replace(/\s+/g, ' ').trim();
+    if (!v) return '';
+    if (genre === 'comptes') v = v.replace(/\s+/g, '');
+    else if (genre === 'classes') v = v.replace(/\s*\/\s*/g, '/').toUpperCase();
+    else if (genre === 'types') v = v.toUpperCase();
+    else if (genre === 'objets') v = v.charAt(0).toUpperCase() + v.slice(1);
+    return v;
+  }
+
+  /**
+   * Ce qu'on s'apprête à ajouter tient-il debout ? Rend { ok, valeur, message, avertissement }.
+   * Un avertissement n'empêche pas d'ajouter : la forme habituelle d'un compte est celle de la
+   * commune, mais l'application n'a pas à décider qu'un numéro inconnu est faux.
+   */
+  function verifier(genre, valeur) {
+    if (GENRES.indexOf(genre) < 0) return { ok: false, message: 'Genre de donnée inconnu.' };
+    const v = normaliser(genre, valeur);
+    if (!v) return { ok: false, message: `Tapez ${ARTICLE[genre]} avant d'ajouter.` };
+    if (v.length > MAX) return { ok: false, message: `C'est trop long : ${MAX} caractères au plus.` };
+    if (genre === 'comptes') {
+      if (!/\d/.test(v)) return { ok: false, message: 'Un numéro de compte, ce sont des chiffres : « 51000.3662.00 ».' };
+      if (!COMPTE_RE.test(v)) return { ok: true, valeur: v, avertissement: "Ce numéro n'a pas la forme habituelle (51000.3662.00) : il est gardé tel quel." };
+    }
+    if (genre === 'classes' && !/\d/.test(v)) {
+      return { ok: true, valeur: v, avertissement: "Une classe porte d'ordinaire un degré : « 5P/3 », « 9S »." };
+    }
+    if (genre === 'personnes' && !/[A-Za-zÀ-ÿ]/.test(v)) {
+      return { ok: false, message: 'Un nom, ce sont des lettres : « A. Berger ».' };
+    }
+    return { ok: true, valeur: v };
+  }
+
+  const ajoutsDe = (carnet, genre) => ((carnet && carnet.ajouts && carnet.ajouts[genre]) || []);
+  /** Les valeurs retirées des listes, dans l'ordre où on les a retirées. */
+  const retiresDe = (carnet, genre) => ((carnet && carnet.retires && carnet.retires[genre]) || []);
+
+  /**
+   * Ajoute une valeur. `extra` : { note } pour un compte (à quoi il sert),
+   * { sens: 'debit' | 'credit' } pour un type d'écriture.
+   */
+  function ajouter(carnet, genre, valeur, extra) {
+    const v = verifier(genre, valeur);
+    if (!v.ok) return { carnet: carnet || vide(), ok: false, message: v.message };
+    const c = copie(carnet);
+    const k = cle(genre, v.valeur);
+    c.retires[genre] = c.retires[genre].filter((x) => cle(genre, x) !== k);
+    const item = { valeur: v.valeur };
+    if (extra && extra.note != null) {
+      const note = String(extra.note).replace(/\s+/g, ' ').trim();
+      if (note) item.note = note.slice(0, MAX_NOTE);
+    }
+    if (extra && (extra.sens === 'debit' || extra.sens === 'credit')) item.sens = extra.sens;
+    const i = c.ajouts[genre].findIndex((x) => cle(genre, x.valeur) === k);
+    if (i >= 0) c.ajouts[genre][i] = item; else c.ajouts[genre].push(item);
+    return { carnet: c, ok: true, valeur: v.valeur, avertissement: v.avertissement, deja: i >= 0 };
+  }
+
+  /**
+   * Retire une valeur des listes. Qu'elle vienne de la base intégrée, d'un classeur relu ou de
+   * nos propres ajouts ne change rien : elle est inscrite parmi les retirées, et elle le reste.
+   */
+  function retirer(carnet, genre, valeur) {
+    if (GENRES.indexOf(genre) < 0) return { carnet: carnet || vide(), ok: false, message: 'Genre de donnée inconnu.' };
+    const v = normaliser(genre, valeur);
+    if (!v) return { carnet: carnet || vide(), ok: false, message: 'Rien à retirer.' };
+    const c = copie(carnet);
+    const k = cle(genre, v);
+    c.ajouts[genre] = c.ajouts[genre].filter((x) => cle(genre, x.valeur) !== k);
+    if (!c.retires[genre].some((x) => cle(genre, x) === k)) c.retires[genre].push(v);
+    return { carnet: c, ok: true, valeur: v };
+  }
+
+  /** Remet dans les listes une valeur retirée, sans en faire un ajout à nous. */
+  function remettre(carnet, genre, valeur) {
+    if (GENRES.indexOf(genre) < 0) return { carnet: carnet || vide(), ok: false, message: 'Genre de donnée inconnu.' };
+    const c = copie(carnet);
+    const k = cle(genre, normaliser(genre, valeur));
+    const avant = c.retires[genre].length;
+    c.retires[genre] = c.retires[genre].filter((x) => cle(genre, x) !== k);
+    return { carnet: c, ok: c.retires[genre].length !== avant };
+  }
+
+  /** Rend une fonction vrai/faux : cette valeur a-t-elle sa place dans les listes ? */
+  function garde(carnet, genre) {
+    const hors = new Set(retiresDe(carnet, genre).map((x) => cle(genre, x)));
+    if (!hors.size) return () => true;
+    return (valeur) => !hors.has(cle(genre, valeur));
+  }
+
+  const TRI = {
+    comptes: (a, b) => String(a).localeCompare(String(b)),
+    classes: (a, b) => String(a).localeCompare(String(b), 'fr', { numeric: true }),
+    personnes: (a, b) => String(a).localeCompare(String(b), 'fr'),
+  };
+
+  /**
+   * La liste telle qu'elle doit être proposée : la base, moins les retirées, plus les nôtres.
+   * `opts.trier` : comparateur, ou rien pour garder l'ordre de la base (l'ordre des objets et des
+   * types dit quelque chose — « Autre » vient en dernier).
+   */
+  function fusionner(base, carnet, genre, opts) {
+    opts = opts || {};
+    const ok = garde(carnet, genre);
+    const vus = new Set();
+    const out = [];
+    const pousser = (x) => {
+      const v = String(x == null ? '' : x);
+      if (!v) return;
+      const k = cle(genre, v);
+      if (vus.has(k) || !ok(v)) return;
+      vus.add(k);
+      out.push(v);
+    };
+    for (const x of base || []) pousser(x);
+    for (const a of ajoutsDe(carnet, genre)) pousser(a.valeur);
+    if (opts.trier) out.sort(opts.trier);
+    return out;
+  }
+
+  // Le vocabulaire est reconstruit à chaque frappe (libellé, comptes proposés) : sans cette
+  // mémoire d'un coup, les mêmes listes se refabriquaient des dizaines de fois par seconde.
+  //
+  // L'identité de l'objet ne suffit pas à dire qu'il n'a pas changé : le vocabulaire appris
+  // grandit par ajout dans les mêmes tableaux (un nom tapé dans la fiche, une pièce relue), sans
+  // que l'objet soit remplacé. On retient donc aussi la longueur des trois listes qui nous
+  // concernent — elles ne peuvent que s'allonger.
+  let cache = { v: null, c: null, taille: '', out: null };
+  const taille = (v) => `${(v.accounts || []).length}|${(v.classTokens || []).length}|${(v.persons || []).length}`;
+
+  /**
+   * Le vocabulaire de l'application, vu à travers le carnet : comptes, classes et noms ajoutés
+   * s'y trouvent, retirés n'y sont plus. Tout le reste passe tel quel. C'est le seul point de
+   * passage : listes déroulantes, comptes proposés et correction des lectures en dépendent.
+   */
+  function appliquer(vocab, carnet) {
+    vocab = vocab || {};
+    carnet = carnet || actuel();
+    const t = taille(vocab);
+    if (cache.v === vocab && cache.c === carnet && cache.taille === t && cache.out) return cache.out;
+    const out = Object.assign({}, vocab);
+    out.accounts = fusionner(vocab.accounts, carnet, 'comptes', { trier: TRI.comptes });
+    out.classTokens = fusionner(vocab.classTokens, carnet, 'classes', { trier: TRI.classes });
+    out.persons = fusionner(vocab.persons, carnet, 'personnes', { trier: TRI.personnes });
+    cache = { v: vocab, c: carnet, taille: t, out };
+    return out;
+  }
+
+  /** Ce qu'on a noté à côté d'un compte ajouté (« Camp de ski », « Bibliothèque »), ou ''. */
+  function noteDe(carnet, genre, valeur) {
+    const k = cle(genre, normaliser(genre, valeur));
+    const x = ajoutsDe(carnet, genre).find((y) => cle(genre, y.valeur) === k);
+    return (x && x.note) || '';
+  }
+
+  /**
+   * Le sens déclaré d'un type ajouté à la main. Les types intégrés tiennent leur sens de la
+   * logique des libellés ; un type nouveau n'a que ce qu'on en a dit.
+   */
+  function sensDeType(carnet, type) {
+    const k = cle('types', normaliser('types', type));
+    const x = ajoutsDe(carnet, 'types').find((y) => cle('types', y.valeur) === k);
+    return (x && x.sens) || null;
+  }
+
+  /** De quoi afficher un compteur : { comptes: { ajoutes, retires }, … , total }. */
+  function resume(carnet) {
+    const out = { total: 0 };
+    for (const g of GENRES) {
+      const a = ajoutsDe(carnet, g).length;
+      const r = retiresDe(carnet, g).length;
+      out[g] = { ajoutes: a, retires: r };
+      out.total += a + r;
+    }
+    return out;
+  }
+
+  /* ---------------- Où le carnet est gardé ---------------- */
+
+  /**
+   * Dans l'application fenêtrée : un fichier à côté des registres, qui survit aux mises à jour.
+   * Dans un navigateur : la mémoire locale de la page. Sans l'un ni l'autre : rien n'est gardé,
+   * et l'écran des données le dit plutôt que de faire semblant.
+   */
+  function depot() {
+    const F = typeof window !== 'undefined' ? window.CaisseFiles : null;
+    if (F && F.loadCarnet && F.saveCarnet) {
+      return {
+        kind: 'fichiers',
+        ou: () => Promise.resolve(F.dir()).then((d) => `${d} (donnees.json)`),
+        charger: async () => parse(await F.loadCarnet()),
+        enregistrer: async (c) => { await F.saveCarnet(serialize(c)); },
+      };
+    }
+    if (typeof localStorage !== 'undefined') {
+      return {
+        kind: 'navigateur',
+        ou: async () => 'mémoire du navigateur (faites une copie du carnet de temps en temps)',
+        charger: async () => parse(localStorage.getItem(CLE_LOCALE)),
+        enregistrer: async (c) => { localStorage.setItem(CLE_LOCALE, serialize(c)); },
+      };
+    }
+    return { kind: 'aucun', ou: async () => 'nulle part : les ajouts seront perdus en fermant', charger: async () => vide(), enregistrer: async () => {} };
+  }
+
+  /* ---------------- Le carnet en cours ---------------- */
+  // Un seul carnet pour toute l'application : la saisie, les pièces scannées et l'écran des
+  // données lisent le même, et une modification se voit partout sans être transmise de main en main.
+  let courant = vide();
+  const actuel = () => courant;
+  const poser = (c) => { courant = c && c.ajouts ? c : vide(); return courant; };
+
+  return {
+    GENRES, NOM, ARTICLE, CLE_LOCALE,
+    vide, parse, serialize, normaliser, verifier,
+    ajouter, retirer, remettre,
+    ajoutsDe, retiresDe, garde, fusionner, appliquer, noteDe, sensDeType, resume,
+    depot, actuel, poser,
+  };
+});
+
+</script>
+<script>
+/*
  * Liste déroulante d'un champ : partout où plusieurs valeurs sont possibles, la même chose —
  * un champ où l'on tape, et une liste qu'on ouvre, qu'on filtre et qu'on parcourt.
  *
@@ -7312,6 +7710,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   'use strict';
 
   const P = window.CaisseParser;
+  const K = window.CaisseCarnet || null; // carnet des données (espace « Données »)
   const X = window.CaisseExcel;
   const pdfjsLib = window.pdfjsLib;
   const O = window.CaisseOCR || null; // seconde lecture par OCR local (src/ocr.js)
@@ -7469,6 +7868,14 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       html = 'Aucune base de référence intégrée : chargez un classeur pour améliorer la lecture des libellés.';
     }
     if (added) html += ` <span style="color:#2563eb">+ ${added} élément(s) appris sur ce PC.</span>`;
+    if (K) {
+      const r = K.resume(K.actuel());
+      const aj = K.GENRES.reduce((n, g) => n + r[g].ajoutes, 0);
+      const re = K.GENRES.reduce((n, g) => n + r[g].retires, 0);
+      if (aj || re) {
+        html += ` <span style="color:#2563eb">Espace <b>Données</b> : ${aj} ajout(s), ${re} retrait(s).</span>`;
+      }
+    }
     // Logique comptable des libellés (voir TYPE_LOGIC dans parser.js)
     const logic = P.TYPE_LOGIC || {};
     const list = (side) => {
@@ -7481,6 +7888,24 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     els.vocabInfo.innerHTML = html;
   }
   state.vocab = loadVocab();
+
+  /**
+   * Le vocabulaire tel que l'application doit s'en servir : celui qu'elle a appris, plus les
+   * ajouts de l'espace « Données », moins ce qui en a été retiré. C'est le seul vocabulaire que
+   * lisent les listes, les comptes proposés et la correction des lectures ; `state.vocab` reste
+   * la part apprise, celle qu'on enregistre.
+   */
+  function vocabActif() { return K ? K.appliquer(state.vocab, K.actuel()) : state.vocab; }
+  /**
+   * Le carnet des données a changé. Les listes déroulantes lisent le carnet au moment de
+   * s'ouvrir : elles n'ont rien à faire. Le tableau des pièces scannées, lui, porte des champs
+   * déjà posés — il est redessiné, ce qui leur rend une liste à jour.
+   */
+  function majDonnees() {
+    renderVocabInfo();
+    if (state.entries.length) renderTable();
+  }
+
   renderVocabInfo();
 
   /* ---------------- Solde à nouveau proposé d'après la dernière utilisation ---------------- */
@@ -7900,7 +8325,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const res = P.parseDocument(state.pages, {
       caisse,
       history,
-      vocabulary: state.vocab,
+      vocabulary: vocabActif(),
       // n° déjà pris, avec leur montant : une pièce identique déjà enregistrée n'est pas signalée
       existingNumbers: existing.filter((e) => !isNaN(numNo(e))).map((e) => ({ no: numNo(e), debit: e.debit, credit: e.credit })),
       refine: state.ocr.reads.size ? refineWithOcr : null,
@@ -8158,7 +8583,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       try { o.native = window.CaisseNative ? await window.CaisseNative.ocrInfo() : { available: false }; } catch (e) { o.native = { available: false }; }
     }
     const nativeRec = o.native.available ? (png, opts) => window.CaisseNative.ocrRecognize(png, opts) : null;
-    const index = P.buildIndex(state.vocab || P.emptyVocabulary());
+    const index = P.buildIndex(vocabActif() || P.emptyVocabulary());
     try {
       if (!o.engine) o.engine = await O.createEngine();
     } catch (e) {
@@ -8410,24 +8835,26 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     const R = window.CaisseRegistre;
     let piece = null;
     try { piece = R.piecesFromEntries([e], 'scan')[0]; } catch (err) { piece = null; }
-    const choix = R.accountChoices(piece || {}, state.vocab, registre());
+    const choix = R.accountChoices(piece || {}, vocabActif(), registre());
+    // un compte retiré dans l'espace « Données » ne revient ni par le registre, ni par la pièce
+    const garde = K ? K.garde(K.actuel(), 'comptes') : () => true;
     const parNo = new Map(choix.map((c) => [c.compte, c]));
     const sortie = [];
     const vus = new Set();
     for (const a of e.candidates || []) {
-      if (!a || vus.has(a)) continue;
+      if (!a || vus.has(a) || !garde(a)) continue;
       vus.add(a);
       const c = parNo.get(a) || {};
       sortie.push({ value: a, hint: c.usage || '', note: 'lu sur la pièce', fort: true, titre: 'Ce compte figure sur la pièce scannée' });
     }
     for (const c of choix) {
-      if (vus.has(c.compte)) continue;
+      if (vus.has(c.compte) || !garde(c.compte)) continue;
       vus.add(c.compte);
       sortie.push({ value: c.compte, hint: c.usage, note: c.n ? `${c.n}×` : '', fort: c.niveau <= 1 });
     }
     // les comptes du classeur repris, absents du vocabulaire
     for (const x of existingEntries()) {
-      if (x.compte && !vus.has(x.compte)) { vus.add(x.compte); sortie.push({ value: x.compte, hint: '', note: '' }); }
+      if (x.compte && !vus.has(x.compte) && garde(x.compte)) { vus.add(x.compte); sortie.push({ value: x.compte, hint: '', note: '' }); }
     }
     return sortie;
   }
@@ -9682,7 +10109,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     let changed = false;
     for (const p of (extra.persons || [])) if (p && P.looksLikePerson(p) && !v.persons.includes(p)) { v.persons.push(p); changed = true; }
     for (const c of (extra.classTokens || [])) if (c && !v.classTokens.includes(c)) { v.classTokens.push(c); changed = true; }
-    if (changed) { saveVocab(); renderVocabInfo(); }
+    // objet neuf : les listes mémorisent le vocabulaire qu'elles ont lu, et un tableau allongé
+    // dans le même objet serait passé inaperçu
+    if (changed) { state.vocab = Object.assign({}, v); saveVocab(); renderVocabInfo(); }
   }
 
   /** Les écritures d'un classeur repris dans le registre enrichissent le vocabulaire (mots, noms, comptes). */
@@ -9694,7 +10123,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     } catch (e) { /* ignore */ }
   }
 
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse, verserAuJournal, retirerDuJournal };
+  window.CaisseApp = { state, vocabActif, majDonnees, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse, verserAuJournal, retirerDuJournal };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
@@ -9798,7 +10227,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   const plur = (n, mot, pluriel) => `${n} ${n > 1 ? (pluriel || mot + 's') : mot}`;
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = v.toFixed(2).split('.'); return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
   /** Les messages s'affichent sur la page regardée : sinon un message de restauration partait
-   *  sur la page de saisie pendant qu'on est dans « L'année & les données ». */
+   *  sur la page de saisie pendant qu'on est dans « L'année ». */
   function noticeBox() {
     const annee = document.getElementById('panelAnnee');
     if (els.anneeNotices && annee && !annee.classList.contains('hidden')) return els.anneeNotices;
@@ -9819,8 +10248,21 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     setTimeout(() => URL.revokeObjectURL(a.href), 60000);
     return null;
   }
-  const vocab = () => (A.state && A.state.vocab) || window.CaisseVocab || P.emptyVocabulary();
+  // Le vocabulaire vu à travers le carnet des données (espace « Données ») : ce qu'on y a ajouté
+  // s'y trouve, ce qu'on en a retiré n'y est plus.
+  const vocab = () => (A.vocabActif && A.vocabActif()) || (A.state && A.state.vocab) || window.CaisseVocab || P.emptyVocabulary();
   const C = window.CaisseCombo;
+  const K = window.CaisseCarnet || null;
+  /** Vrai/faux : cette valeur a-t-elle encore sa place dans les listes ? */
+  const garde = (genre) => (K ? K.garde(K.actuel(), genre) : () => true);
+  /** Les listes fermées, carnet compris : un type ou un objet ajouté doit pouvoir être choisi. */
+  const TYPES = () => (K ? K.fusionner(R.TYPES, K.actuel(), 'types') : R.TYPES);
+  const OBJETS = () => (K ? K.fusionner(P.OBJET_LIST, K.actuel(), 'objets') : P.OBJET_LIST);
+  /**
+   * Le sens d'un type d'écriture : la logique des libellés d'abord (elle fait règle), puis ce qui
+   * a été déclaré en ajoutant le type dans l'espace « Données » — un type nouveau n'a que cela.
+   */
+  const sensDe = (type) => R.sensFor(type) || (K ? K.sensDeType(K.actuel(), type) : null);
 
   /* ---------------- Registre ---------------- */
   async function init() {
@@ -9844,14 +10286,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       const x = cle === 'classe' ? p.classe : p.personne;
       if (x) vus.add(x);
     }
-    return Array.from(vus).sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
+    // une valeur retirée ne doit pas revenir par les pièces de l'année
+    const ok = garde(cle === 'classe' ? 'classes' : 'personnes');
+    return Array.from(vus).filter(ok).sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
   }
 
   /** Les listes déroulantes de la fiche et des réglages de l'année. */
   function brancherCombos() {
     if (!C) return;
     const NIVEAU = ['pour ce type, cet objet et ce degré', 'pour ce type et cet objet', 'pour ce type'];
-    const comptes = () => R.accountChoices(formPiece(), vocab(), state.reg).map((c) => ({
+    const comptes = () => R.accountChoices(formPiece(), vocab(), state.reg).filter((c) => garde('comptes')(c.compte)).map((c) => ({
       value: c.compte,
       hint: c.usage,
       note: c.n ? `${c.n}×` : '',
@@ -9864,6 +10308,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     C.attach(els.pPersonne, () => connus('personne').map((x) => ({ value: x })), { vide: 'Aucun nom connu ne correspond.' });
     // le compte caisse est un compte comme un autre : même liste, sans le tri par pertinence
     const tousComptes = () => (vocab().accounts || []).slice().sort().map((x) => ({ value: x, hint: usageBrut(x) }));
+    // (vocab() porte déjà les ajouts du carnet et plus les retraits : rien à filtrer ici)
     C.attach(els.regCaisse, tousComptes, { vide: 'Aucun compte connu ne correspond.' });
     // les deux signataires du relevé sont des personnes : même liste que la fiche
     const personnes = () => connus('personne').map((x) => ({ value: x }));
@@ -9875,10 +10320,10 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     // dernière valeur connue si ce qui est tapé n'existe pas.
     const SENS = { debit: 'entrée en caisse', credit: 'sortie de caisse' };
     C.fromSelect(els.pType, {
-      items: () => R.TYPES.map((t) => ({ value: t, hint: SENS[R.sensFor(t)] || 'selon la pièce' })),
-      vide: "Aucun type ne correspond. Les types sont fixés par l'établissement.",
+      items: () => TYPES().map((t) => ({ value: t, hint: SENS[sensDe(t)] || 'selon la pièce' })),
+      vide: "Aucun type ne correspond. Les types s'ajoutent dans l'espace « Données ».",
     });
-    C.fromSelect(els.pObjet, { vide: 'Aucun objet ne correspond.' });
+    C.fromSelect(els.pObjet, { vide: "Aucun objet ne correspond. Les objets s'ajoutent dans l'espace « Données »." });
     C.fromSelect(els.regYear, { vide: 'Aucune année ne correspond.' });
     // « toutes les pièces » ou « depuis le n° X » : une entrée par pièce, donc une liste qui défile
     C.fromSelect(els.regPdfFrom, { vide: 'Aucun numéro ne correspond.' });
@@ -9897,12 +10342,28 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     setList(els.regClassList, (v.classTokens || []).slice().sort((a, b) => a.localeCompare(b, 'fr', { numeric: true })));
     setList(els.regPersonList, (v.persons || []).slice().sort((a, b) => a.localeCompare(b, 'fr')));
     setList(els.regAccountList, (v.accounts || []).slice().sort());
-    if (els.pType && !els.pType.options.length) {
-      els.pType.innerHTML = R.TYPES.map((t) => `<option value="${t}">${t}</option>`).join('');
-    }
-    if (els.pObjet && !els.pObjet.options.length) {
-      els.pObjet.innerHTML = P.OBJET_LIST.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
-    }
+    remplirSelect(els.pType, TYPES());
+    remplirSelect(els.pObjet, OBJETS());
+  }
+
+  /**
+   * Refait les options d'une liste fermée en gardant la valeur en place. Cette valeur peut ne plus
+   * être dans la liste — un objet retiré de l'espace « Données » alors qu'une pièce ouverte le
+   * porte : elle est alors conservée en queue, sans quoi la fiche affichée changerait toute seule.
+   */
+  function remplirSelect(el, valeurs) {
+    if (!el) return;
+    const avant = el.value;
+    const liste = avant && valeurs.indexOf(avant) < 0 ? valeurs.concat([avant]) : valeurs;
+    el.innerHTML = liste.map((x) => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+    el.value = avant;
+  }
+
+  /** Le carnet des données a changé : les listes de cet espace le relisent. */
+  function majListes() {
+    fillLists();
+    if (C) C.syncAll();
+    refreshSuggestions();
   }
 
   async function openYear(year) {
@@ -10044,8 +10505,8 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     // le sens enregistré est conservé tel quel ; s'il ne suit pas la logique du type (pièce remplie
     // à l'envers, conservée ainsi), la case « forcer » est cochée pour qu'il reste modifiable
     const force = $('pSensForce');
-    if (force) force.checked = !!(p.sens && R.sensFor(p.type) && p.sens !== R.sensFor(p.type));
-    setSens(p.sens || R.sensFor(p.type), !p.sens);
+    if (force) force.checked = !!(p.sens && sensDe(p.type) && p.sens !== sensDe(p.type));
+    setSens(p.sens || sensDe(p.type), !p.sens);
     refreshKind();
     renderFiles(p);
     refreshSuggestions();
@@ -10108,7 +10569,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
   function setSens(sens, fromType) {
     els.pSensDebit.checked = sens === 'debit';
     els.pSensCredit.checked = sens === 'credit';
-    const logic = R.sensFor(els.pType.value);
+    const logic = sensDe(els.pType.value);
     const forced = !!$('pSensForce') && $('pSensForce').checked;
     const locked = !!logic && !forced;
     els.pSensDebit.disabled = locked; els.pSensCredit.disabled = locked;
@@ -10784,7 +11245,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     refreshLibelle();
   });
 
-  window.CaisseSaisie = { state, init, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal };
+  window.CaisseSaisie = { state, init, majListes, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal };
   init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
 })();
 
@@ -11117,6 +11578,447 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
 
   window.CaisseComptage = { state, render, newCount, readCounts };
   render();
+})();
+
+</script>
+<script>
+/*
+ * L'espace « Données » : les listes de l'application, tenues à la main.
+ *
+ * Un écran, un travail : ici on ne saisit aucune pièce, on règle ce que les listes déroulantes
+ * proposeront partout ailleurs. Cinq listes — comptes, classes, personnes, objets, types
+ * d'écriture — avec, pour chacune, ce que l'application connaît déjà, ce qu'on y a ajouté, et ce
+ * qu'on en a retiré. Tout est gardé sur ce PC (voir carnet.js) et rien n'en sort.
+ *
+ * Dépend de window.CaisseCarnet, CaisseParser, CaisseRegistre, et lit l'état de CaisseApp
+ * (vocabulaire) et CaisseSaisie (registre de l'année ouverte) pour dire d'où vient chaque valeur.
+ */
+(function () {
+  'use strict';
+
+  const C = window.CaisseCarnet;
+  const P = window.CaisseParser;
+  const R = window.CaisseRegistre;
+  const A = window.CaisseApp || {};
+  const $ = (id) => document.getElementById(id);
+  const hote = $('donneesCartes');
+  if (!C || !hote) return;
+
+  const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const sansAccent = (t) => String(t == null ? '' : t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const plur = (n, mot, pluriel) => `${n} ${n > 1 ? (pluriel || mot + 's') : mot}`;
+
+  const vocabBrut = () => (A.state && A.state.vocab) || window.CaisseVocab || {};
+  const registre = () => (window.CaisseSaisie && window.CaisseSaisie.state && window.CaisseSaisie.state.reg) || null;
+  const pieces = () => (registre() && registre().pieces) || [];
+
+  /* ---------------- Les cinq listes ---------------- */
+  /**
+   * Pour chaque genre : ce que l'application propose d'elle-même (`base`), ce que la valeur vaut
+   * dans une pièce (`champ`, pour compter les emplois de l'année) et l'ordre d'affichage.
+   */
+  const LISTES = [
+    {
+      genre: 'comptes',
+      titre: 'Comptes comptables',
+      icone: 'i-book',
+      quoi: 'Le compte de contrepartie de la fiche, le compte caisse, et le compte de chaque pièce scannée.',
+      exemple: '51000.3662.00',
+      champ: (p) => p.compte,
+      base: () => (vocabBrut().accounts || []),
+      integres: () => ((window.CaisseVocab && window.CaisseVocab.accounts) || []),
+      trier: (a, b) => String(a).localeCompare(String(b)),
+      note: { libelle: 'À quoi il sert', exemple: 'ex. Camps et courses d\'école' },
+      mono: true,
+    },
+    {
+      genre: 'classes',
+      titre: 'Classes',
+      icone: 'i-users',
+      quoi: 'Le champ « Classe » de la fiche, et la reconnaissance des classes dans les libellés lus.',
+      exemple: '5P/3',
+      champ: (p) => p.classe,
+      base: () => (vocabBrut().classTokens || []),
+      integres: () => ((window.CaisseVocab && window.CaisseVocab.classTokens) || []),
+      trier: (a, b) => String(a).localeCompare(String(b), 'fr', { numeric: true }),
+    },
+    {
+      genre: 'personnes',
+      titre: 'Personnes',
+      icone: 'i-users',
+      quoi: 'Le champ « Personne » de la fiche et les deux visas du relevé de caisse.',
+      exemple: 'A. Berger',
+      champ: (p) => p.personne,
+      base: () => (vocabBrut().persons || []),
+      integres: () => ((window.CaisseVocabNoms && window.CaisseVocabNoms.persons) || []),
+      trier: (a, b) => String(a).localeCompare(String(b), 'fr'),
+    },
+    {
+      genre: 'objets',
+      titre: 'Objets',
+      icone: 'i-list',
+      quoi: "L'objet de l'activité, qui entre dans le libellé et pèse sur le compte proposé.",
+      exemple: 'Sortie au musée',
+      champ: (p) => p.objet,
+      base: () => (P.OBJET_LIST || []),
+      integres: () => (P.OBJET_LIST || []),
+      trier: null, // l'ordre de la liste intégrée dit quelque chose : « Autre » vient en dernier
+    },
+    {
+      genre: 'types',
+      titre: "Types d'écriture",
+      icone: 'i-pen',
+      quoi: "Le premier mot du libellé. Il commande le sens de l'écriture : dites-le en ajoutant un type.",
+      exemple: 'SUBVENTION',
+      champ: (p) => p.type,
+      base: () => (R.TYPES || []),
+      integres: () => (R.TYPES || []),
+      trier: null,
+      sens: true,
+    },
+  ];
+  const listeDe = (genre) => LISTES.find((l) => l.genre === genre);
+
+  /* ---------------- Où le carnet est gardé ---------------- */
+  const depot = C.depot();
+  let pret = false;
+
+  /* ---------------- Lecture : d'où vient chaque valeur ---------------- */
+
+  /**
+   * Toutes les valeurs d'un genre, avec leur origine et leur emploi.
+   * origine : 'ajout' (ajoutée ici), 'base' (intégrée à l'application), 'appris' (venue d'un
+   * classeur repris, d'une pièce scannée ou d'une saisie). `n` : pièces de l'année qui s'en servent.
+   */
+  function valeurs(l) {
+    const carnet = C.actuel();
+    const emplois = new Map();
+    for (const p of pieces()) {
+      const v = l.champ(p);
+      if (!v) continue;
+      const k = sansAccent(v);
+      emplois.set(k, (emplois.get(k) || 0) + 1);
+    }
+    const integres = new Set(l.integres().map(sansAccent));
+    const ajoutes = new Set(C.ajoutsDe(carnet, l.genre).map((x) => sansAccent(x.valeur)));
+    const ok = C.garde(carnet, l.genre);
+
+    const vus = new Set();
+    const out = [];
+    const pousser = (v) => {
+      const k = sansAccent(v);
+      if (!v || vus.has(k)) return;
+      vus.add(k);
+      if (!ok(v)) return; // retirée : elle apparaît dans la section du bas
+      out.push({
+        valeur: String(v),
+        origine: ajoutes.has(k) ? 'ajout' : (integres.has(k) ? 'base' : 'appris'),
+        n: emplois.get(k) || 0,
+        note: C.noteDe(carnet, l.genre, v),
+        sens: C.sensDeType(carnet, v),
+      });
+    };
+    for (const v of l.base()) pousser(v);
+    for (const p of pieces()) pousser(l.champ(p));
+    for (const a of C.ajoutsDe(carnet, l.genre)) pousser(a.valeur);
+    if (l.trier) out.sort((a, b) => l.trier(a.valeur, b.valeur));
+    return out;
+  }
+
+  /** À quoi servent les comptes, d'après le classeur de référence et l'année en cours. */
+  function usages() {
+    const m = new Map();
+    try {
+      const faux = { type: '', objet: 'Autre', classe: '', detail: '' };
+      for (const c of R.accountChoices(faux, vocabBrut(), registre())) if (c.usage) m.set(c.compte, c.usage);
+    } catch (e) { /* liste sans étiquettes : ce n'est pas une raison de ne rien afficher */ }
+    return m;
+  }
+
+  /* ---------------- Affichage ---------------- */
+
+  const SENS_MOT = { debit: 'entrée en caisse', credit: 'sortie de caisse' };
+  /** De quoi écrire « elle apparaît » pour une classe et « il apparaît » pour un compte. */
+  const PRONOM = { comptes: 'il', classes: 'elle', personnes: 'ce nom', objets: 'il', types: 'il' };
+  const ORIGINE = {
+    ajout: { texte: 'ajouté', titre: 'Ajouté ici, gardé sur ce PC' },
+    base: { texte: 'intégré', titre: "Connu de l'application depuis la base de référence" },
+    appris: { texte: 'appris', titre: "Vu dans un classeur repris, une pièce scannée ou une saisie" },
+  };
+
+  function carteHtml(l) {
+    const g = l.genre;
+    const champNote = l.note
+      ? `<div class="field" style="flex:1;min-width:200px"><label for="d-${g}-note">${escapeHtml(l.note.libelle)} <span class="legend">(facultatif)</span></label><input type="text" id="d-${g}-note" placeholder="${escapeHtml(l.note.exemple)}"></div>`
+      : '';
+    const champSens = l.sens
+      ? `<div class="field"><label for="d-${g}-sens">Sens de l'écriture</label><select id="d-${g}-sens" style="height:36px">` +
+        '<option value="">selon la pièce</option><option value="debit">entrée en caisse (débit)</option><option value="credit">sortie de caisse (crédit)</option>' +
+        '</select></div>'
+      : '';
+    return `<section class="card" data-carte="${g}">
+  <h2><svg class="ico"><use href="#${l.icone}"/></svg> ${escapeHtml(l.titre)} <span class="legend" data-compteur="${g}"></span></h2>
+  <p class="legend">${escapeHtml(l.quoi)}</p>
+  <div class="row">
+    <div class="field"><label for="d-${g}-val">Ajouter</label><input type="text" id="d-${g}-val" data-val="${g}" placeholder="${escapeHtml(l.exemple)}"${l.mono ? ' style="font-family:var(--mono);font-size:13px;width:170px"' : ''}></div>
+    ${champNote}${champSens}
+    <button type="button" class="small primary" data-ajouter="${g}" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-plus"/></svg> Ajouter</button>
+  </div>
+  <div data-msg="${g}"></div>
+  <div class="dfiltre hidden" data-boite-filtre="${g}">
+    <svg class="ico"><use href="#i-search"/></svg>
+    <input type="search" data-filtre="${g}" placeholder="Filtrer la liste…" autocomplete="off" aria-label="Filtrer ${escapeHtml(l.titre.toLowerCase())}">
+  </div>
+  <div class="dliste" data-liste="${g}"></div>
+  <div data-retires="${g}"></div>
+</section>`;
+  }
+
+  const filtres = {};
+
+  function rendreListe(l) {
+    const g = l.genre;
+    const boite = hote.querySelector(`[data-liste="${g}"]`);
+    if (!boite) return;
+    const tout = valeurs(l);
+    const use = g === 'comptes' ? usages() : null;
+    const q = sansAccent(filtres[g] || '').trim();
+    const montres = q ? tout.filter((x) => sansAccent(`${x.valeur} ${x.note || ''} ${(use && use.get(x.valeur)) || ''}`).includes(q)) : tout;
+
+    const compteur = hote.querySelector(`[data-compteur="${g}"]`);
+    const ajoutes = tout.filter((x) => x.origine === 'ajout').length;
+    if (compteur) {
+      compteur.textContent = `${plur(tout.length, 'valeur')}${ajoutes ? ` · ${ajoutes} de vous` : ''}`;
+    }
+    const filtre = hote.querySelector(`[data-boite-filtre="${g}"]`);
+    if (filtre) filtre.classList.toggle('hidden', tout.length <= 12);
+
+    if (!montres.length) {
+      boite.innerHTML = `<div class="dvide">${q ? 'Rien dans cette liste ne correspond au filtre.' : 'Cette liste est vide.'}</div>`;
+    } else {
+      boite.innerHTML = montres.map((x) => {
+        const o = ORIGINE[x.origine];
+        const detail = x.note || (use && use.get(x.valeur)) || '';
+        const sens = x.sens ? SENS_MOT[x.sens] : '';
+        return `<div class="dligne">
+  <span class="dval${l.mono ? ' mono' : ''}">${escapeHtml(x.valeur)}</span>
+  <span class="dorig ${x.origine}" title="${escapeHtml(o.titre)}">${o.texte}</span>
+  ${detail ? `<span class="ddetail">${escapeHtml(detail)}</span>` : ''}
+  ${sens ? `<span class="ddetail">${escapeHtml(sens)}</span>` : ''}
+  <span class="dspacer"></span>
+  ${x.n ? `<span class="dn" title="Pièces de l'année ouverte qui s'en servent">${x.n}×</span>` : ''}
+  <button type="button" class="small ghost" data-retirer="${g}" data-valeur="${escapeHtml(x.valeur)}" title="Retirer des listes (les pièces déjà enregistrées n'y perdent rien)"><svg class="ico sm"><use href="#i-x"/></svg></button>
+</div>`;
+      }).join('');
+      if (q && montres.length < tout.length) {
+        boite.insertAdjacentHTML('beforeend', `<div class="dvide">${plur(tout.length - montres.length, 'autre valeur', 'autres valeurs')} hors du filtre.</div>`);
+      }
+    }
+
+    const retires = C.retiresDe(C.actuel(), g);
+    const boiteR = hote.querySelector(`[data-retires="${g}"]`);
+    if (boiteR) {
+      boiteR.innerHTML = retires.length
+        ? `<div class="dretires"><b>${plur(retires.length, 'valeur retirée', 'valeurs retirées')} des listes</b> ` +
+          `<span class="legend">— elles ne sont plus proposées ; les pièces déjà enregistrées les gardent.</span><div class="dchips">` +
+          retires.map((v) => `<button type="button" class="dchip" data-remettre="${g}" data-valeur="${escapeHtml(v)}" title="Remettre dans les listes">${escapeHtml(v)} <svg class="ico sm"><use href="#i-refresh"/></svg></button>`).join('') +
+          '</div></div>'
+        : '';
+    }
+  }
+
+  function rendre() {
+    for (const l of LISTES) rendreListe(l);
+    const r = C.resume(C.actuel());
+    const info = $('donneesResume');
+    if (info) {
+      info.innerHTML = r.total
+        ? `Le carnet porte <b>${plur(C.GENRES.reduce((n, g) => n + r[g].ajoutes, 0), 'ajout')}</b> et ` +
+          `<b>${plur(C.GENRES.reduce((n, g) => n + r[g].retires, 0), 'retrait')}</b>.`
+        : "Le carnet est vide : les listes sont celles que l'application connaît d'elle-même.";
+    }
+  }
+
+  function message(genre, kind, texte) {
+    const boite = hote.querySelector(`[data-msg="${genre}"]`);
+    if (!boite) return;
+    boite.innerHTML = `<div class="notice ${kind}">${texte}</div>`;
+    const n = boite.firstChild;
+    setTimeout(() => { if (n && n.parentNode === boite) n.remove(); }, kind === 'err' ? 9000 : 6000);
+  }
+
+  /* ---------------- Modifications ---------------- */
+
+  /** Enregistre le carnet, puis remet d'accord toutes les listes de l'application. */
+  async function appliquer(carnet, genre, kind, texte) {
+    C.poser(carnet);
+    try {
+      await depot.enregistrer(carnet);
+    } catch (e) {
+      message(genre, 'err', `Le carnet n'a pas pu être enregistré : ${escapeHtml(e && e.message ? e.message : String(e))}. La modification vaut pour cette séance seulement.`);
+      rendre();
+      prevenir();
+      return;
+    }
+    rendre();
+    prevenir();
+    if (texte) message(genre, kind || 'ok', texte);
+  }
+
+  /** Les listes déroulantes, les listes de secours et les comptes proposés relisent le carnet. */
+  function prevenir() {
+    if (A.majDonnees) { try { A.majDonnees(); } catch (e) { /* ignore */ } }
+    const S = window.CaisseSaisie;
+    if (S && S.majListes) { try { S.majListes(); } catch (e) { /* ignore */ } }
+  }
+
+  function ajouter(genre) {
+    const l = listeDe(genre);
+    if (!l) return;
+    const champ = $(`d-${genre}-val`);
+    const note = l.note ? $(`d-${genre}-note`) : null;
+    const sens = l.sens ? $(`d-${genre}-sens`) : null;
+    const brut = champ ? champ.value : '';
+    const extra = {};
+    if (note && note.value.trim()) extra.note = note.value;
+    if (sens && sens.value) extra.sens = sens.value;
+
+    // déjà dans les listes : le dire plutôt que de faire semblant d'ajouter
+    const propre = C.normaliser(genre, brut);
+    if (propre && !C.retiresDe(C.actuel(), genre).some((x) => sansAccent(x) === sansAccent(propre))) {
+      const deja = valeurs(l).find((x) => sansAccent(x.valeur) === sansAccent(propre));
+      if (deja && deja.origine !== 'ajout') {
+        message(genre, 'warn', `<b>${escapeHtml(deja.valeur)}</b> est déjà dans la liste (${ORIGINE[deja.origine].texte}) : rien à ajouter.`);
+        if (champ) { champ.value = ''; champ.focus(); }
+        return;
+      }
+    }
+
+    const res = C.ajouter(C.actuel(), genre, brut, extra);
+    if (!res.ok) { message(genre, 'err', escapeHtml(res.message)); return; }
+    if (champ) { champ.value = ''; champ.focus(); }
+    if (note) note.value = '';
+    if (sens) { sens.value = ''; if (Combo) Combo.syncAll(); }
+    const quoi = `<b>${escapeHtml(res.valeur)}</b>`;
+    const texte = res.avertissement
+      ? `${quoi} ajouté. ${escapeHtml(res.avertissement)}`
+      : `${quoi} ${res.deja ? 'mis à jour' : (genre === 'classes' ? 'ajoutée' : 'ajouté')} : ${PRONOM[genre]} apparaît maintenant dans les listes.`;
+    appliquer(res.carnet, genre, res.avertissement ? 'warn' : 'ok', texte);
+  }
+
+  function retirer(genre, valeur) {
+    const l = listeDe(genre);
+    if (!l) return;
+    const n = pieces().filter((p) => sansAccent(l.champ(p)) === sansAccent(valeur)).length;
+    if (n && !window.confirm(
+      `${valeur} est employé par ${plur(n, 'pièce')} du registre ouvert.\n\n` +
+      'Le retirer ne change aucune de ces pièces : elles gardent leur libellé, leur compte et leur montant. ' +
+      "Seules les listes déroulantes cessent de le proposer.\n\nLe retirer quand même ?")) return;
+    const res = C.retirer(C.actuel(), genre, valeur);
+    if (!res.ok) return;
+    const e = genre === 'classes' ? 'e' : '';
+    appliquer(res.carnet, genre, 'ok', `<b>${escapeHtml(res.valeur)}</b> retiré${e} des listes. Vous pouvez ${genre === 'classes' ? 'la' : 'le'} remettre en bas de cette carte.`);
+  }
+
+  function remettre(genre, valeur) {
+    const res = C.remettre(C.actuel(), genre, valeur);
+    if (!res.ok) return;
+    appliquer(res.carnet, genre, 'ok', `<b>${escapeHtml(valeur)}</b> est de nouveau proposé dans les listes.`);
+  }
+
+  /* ---------------- Copie du carnet ---------------- */
+
+  async function copier() {
+    const blob = new Blob([C.serialize(C.actuel())], { type: 'application/json' });
+    const nom = `donnees-caisse-${new Date().toISOString().slice(0, 10)}.json`;
+    if (A.saveBlob) await A.saveBlob(blob, nom);
+    else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = nom; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    }
+  }
+
+  async function reprendre(file) {
+    let texte = '';
+    try { texte = await file.text(); } catch (e) { texte = ''; }
+    const lu = C.parse(texte);
+    const r = C.resume(lu);
+    if (!r.total) {
+      message('comptes', 'err', "Ce fichier ne contient aucune donnée reconnaissable : le carnet n'a pas été touché.");
+      return;
+    }
+    const ici = C.resume(C.actuel());
+    if (ici.total && !window.confirm(
+      `Le fichier porte ${plur(r.total, 'entrée')}.\n` +
+      `Le carnet de ce PC en porte ${ici.total}.\n\n` +
+      'Reprendre le fichier remplace entièrement le carnet de ce PC. Continuer ?')) return;
+    appliquer(lu, 'comptes', 'ok', `Carnet repris : ${r.total} entrée(s). Les listes sont à jour.`);
+  }
+
+  /* ---------------- Branchements ---------------- */
+
+  hote.innerHTML = LISTES.map(carteHtml).join('');
+  // le sens d'un type est un choix parmi trois : même liste déroulante que partout ailleurs
+  const Combo = window.CaisseCombo;
+  if (Combo) Combo.fromSelect($('d-types-sens'), { vide: "Entrée, sortie, ou selon la pièce : c'est tout." });
+
+  hote.addEventListener('click', (ev) => {
+    const a = ev.target.closest('[data-ajouter]');
+    if (a) { ajouter(a.dataset.ajouter); return; }
+    const d = ev.target.closest('[data-retirer]');
+    if (d) { retirer(d.dataset.retirer, d.dataset.valeur); return; }
+    const b = ev.target.closest('[data-remettre]');
+    if (b) { remettre(b.dataset.remettre, b.dataset.valeur); }
+  });
+  hote.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter') return;
+    const champ = ev.target.closest('input[data-val], input[id$="-note"]');
+    if (!champ) return;
+    const carte = champ.closest('[data-carte]');
+    if (!carte) return;
+    ev.preventDefault();
+    ajouter(carte.dataset.carte);
+  });
+  hote.addEventListener('input', (ev) => {
+    const f = ev.target.closest('input[data-filtre]');
+    if (!f) return;
+    filtres[f.dataset.filtre] = f.value;
+    rendreListe(listeDe(f.dataset.filtre));
+  });
+
+  if ($('btnDonneesCopie')) $('btnDonneesCopie').addEventListener('click', copier);
+  if ($('btnDonneesReprendre')) $('btnDonneesReprendre').addEventListener('click', () => $('donneesFile').click());
+  if ($('donneesFile')) {
+    $('donneesFile').addEventListener('change', async (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      ev.target.value = '';
+      if (f) await reprendre(f);
+    });
+  }
+
+  /* ---------------- Démarrage ---------------- */
+
+  (async function init() {
+    let carnet = C.vide();
+    try { carnet = await depot.charger(); } catch (e) { /* carnet illisible : on repart d'un carnet vide sans rien écraser */ }
+    C.poser(carnet);
+    pret = true;
+    const ou = $('donneesOu');
+    if (ou) {
+      try {
+        const l = await depot.ou();
+        ou.innerHTML = depot.kind === 'aucun'
+          ? `<span style="color:var(--err)">Rien ne peut être gardé ici : ${escapeHtml(l)}.</span>`
+          : `Gardé dans ${depot.kind === 'fichiers' ? 'les fichiers de l\'application' : 'la mémoire de ce navigateur'} : <code>${escapeHtml(l)}</code>`;
+      } catch (e) { ou.textContent = ''; }
+    }
+    prevenir();
+    rendre();
+  })();
+
+  // Le registre de l'année s'ouvre après nous : ses pièces disent quelles valeurs sont employées.
+  window.CaisseDonnees = { rendre: () => { if (pret) rendre(); }, valeurs: (g) => valeurs(listeDe(g)) };
 })();
 
 </script>

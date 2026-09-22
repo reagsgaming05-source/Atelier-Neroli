@@ -7,6 +7,7 @@
   'use strict';
 
   const P = window.CaisseParser;
+  const K = window.CaisseCarnet || null; // carnet des données (espace « Données »)
   const X = window.CaisseExcel;
   const pdfjsLib = window.pdfjsLib;
   const O = window.CaisseOCR || null; // seconde lecture par OCR local (src/ocr.js)
@@ -164,6 +165,14 @@
       html = 'Aucune base de référence intégrée : chargez un classeur pour améliorer la lecture des libellés.';
     }
     if (added) html += ` <span style="color:#2563eb">+ ${added} élément(s) appris sur ce PC.</span>`;
+    if (K) {
+      const r = K.resume(K.actuel());
+      const aj = K.GENRES.reduce((n, g) => n + r[g].ajoutes, 0);
+      const re = K.GENRES.reduce((n, g) => n + r[g].retires, 0);
+      if (aj || re) {
+        html += ` <span style="color:#2563eb">Espace <b>Données</b> : ${aj} ajout(s), ${re} retrait(s).</span>`;
+      }
+    }
     // Logique comptable des libellés (voir TYPE_LOGIC dans parser.js)
     const logic = P.TYPE_LOGIC || {};
     const list = (side) => {
@@ -176,6 +185,24 @@
     els.vocabInfo.innerHTML = html;
   }
   state.vocab = loadVocab();
+
+  /**
+   * Le vocabulaire tel que l'application doit s'en servir : celui qu'elle a appris, plus les
+   * ajouts de l'espace « Données », moins ce qui en a été retiré. C'est le seul vocabulaire que
+   * lisent les listes, les comptes proposés et la correction des lectures ; `state.vocab` reste
+   * la part apprise, celle qu'on enregistre.
+   */
+  function vocabActif() { return K ? K.appliquer(state.vocab, K.actuel()) : state.vocab; }
+  /**
+   * Le carnet des données a changé. Les listes déroulantes lisent le carnet au moment de
+   * s'ouvrir : elles n'ont rien à faire. Le tableau des pièces scannées, lui, porte des champs
+   * déjà posés — il est redessiné, ce qui leur rend une liste à jour.
+   */
+  function majDonnees() {
+    renderVocabInfo();
+    if (state.entries.length) renderTable();
+  }
+
   renderVocabInfo();
 
   /* ---------------- Solde à nouveau proposé d'après la dernière utilisation ---------------- */
@@ -595,7 +622,7 @@
     const res = P.parseDocument(state.pages, {
       caisse,
       history,
-      vocabulary: state.vocab,
+      vocabulary: vocabActif(),
       // n° déjà pris, avec leur montant : une pièce identique déjà enregistrée n'est pas signalée
       existingNumbers: existing.filter((e) => !isNaN(numNo(e))).map((e) => ({ no: numNo(e), debit: e.debit, credit: e.credit })),
       refine: state.ocr.reads.size ? refineWithOcr : null,
@@ -853,7 +880,7 @@
       try { o.native = window.CaisseNative ? await window.CaisseNative.ocrInfo() : { available: false }; } catch (e) { o.native = { available: false }; }
     }
     const nativeRec = o.native.available ? (png, opts) => window.CaisseNative.ocrRecognize(png, opts) : null;
-    const index = P.buildIndex(state.vocab || P.emptyVocabulary());
+    const index = P.buildIndex(vocabActif() || P.emptyVocabulary());
     try {
       if (!o.engine) o.engine = await O.createEngine();
     } catch (e) {
@@ -1105,24 +1132,26 @@
     const R = window.CaisseRegistre;
     let piece = null;
     try { piece = R.piecesFromEntries([e], 'scan')[0]; } catch (err) { piece = null; }
-    const choix = R.accountChoices(piece || {}, state.vocab, registre());
+    const choix = R.accountChoices(piece || {}, vocabActif(), registre());
+    // un compte retiré dans l'espace « Données » ne revient ni par le registre, ni par la pièce
+    const garde = K ? K.garde(K.actuel(), 'comptes') : () => true;
     const parNo = new Map(choix.map((c) => [c.compte, c]));
     const sortie = [];
     const vus = new Set();
     for (const a of e.candidates || []) {
-      if (!a || vus.has(a)) continue;
+      if (!a || vus.has(a) || !garde(a)) continue;
       vus.add(a);
       const c = parNo.get(a) || {};
       sortie.push({ value: a, hint: c.usage || '', note: 'lu sur la pièce', fort: true, titre: 'Ce compte figure sur la pièce scannée' });
     }
     for (const c of choix) {
-      if (vus.has(c.compte)) continue;
+      if (vus.has(c.compte) || !garde(c.compte)) continue;
       vus.add(c.compte);
       sortie.push({ value: c.compte, hint: c.usage, note: c.n ? `${c.n}×` : '', fort: c.niveau <= 1 });
     }
     // les comptes du classeur repris, absents du vocabulaire
     for (const x of existingEntries()) {
-      if (x.compte && !vus.has(x.compte)) { vus.add(x.compte); sortie.push({ value: x.compte, hint: '', note: '' }); }
+      if (x.compte && !vus.has(x.compte) && garde(x.compte)) { vus.add(x.compte); sortie.push({ value: x.compte, hint: '', note: '' }); }
     }
     return sortie;
   }
@@ -2377,7 +2406,9 @@
     let changed = false;
     for (const p of (extra.persons || [])) if (p && P.looksLikePerson(p) && !v.persons.includes(p)) { v.persons.push(p); changed = true; }
     for (const c of (extra.classTokens || [])) if (c && !v.classTokens.includes(c)) { v.classTokens.push(c); changed = true; }
-    if (changed) { saveVocab(); renderVocabInfo(); }
+    // objet neuf : les listes mémorisent le vocabulaire qu'elles ont lu, et un tableau allongé
+    // dans le même objet serait passé inaperçu
+    if (changed) { state.vocab = Object.assign({}, v); saveVocab(); renderVocabInfo(); }
   }
 
   /** Les écritures d'un classeur repris dans le registre enrichissent le vocabulaire (mots, noms, comptes). */
@@ -2389,7 +2420,7 @@
     } catch (e) { /* ignore */ }
   }
 
-  window.CaisseApp = { state, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse, verserAuJournal, retirerDuJournal };
+  window.CaisseApp = { state, vocabActif, majDonnees, addPdfFiles, reparse, refreshAll, gotoNextDoubt, selectEntry, startCrossReading, applyFieldValue, saveBlob, rememberVocabulary, learnEntries, applyMode, showPanel, getCaisse, verserAuJournal, retirerDuJournal };
 
   els.btnExcel.addEventListener('click', async () => {
     els.excelNotices.innerHTML = '';
