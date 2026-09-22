@@ -944,6 +944,14 @@ function verifierCopie() {
     return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, documents, bac, aFaire, bacApres, evasion, affiche, ranges };
   })();
   console.log('boîte de réception :', JSON.stringify(reception));
+
+  // La veille tourne TOUJOURS après avoir affiché des documents dans le cadre d'aperçu. Ce cadre
+  // est un <iframe>, et l'événement qui sert à mettre la veille en pause pendant un rechargement
+  // de la page se déclenche aussi pour un cadre interne : sans la garde « seulement la page
+  // elle-même », le premier aperçu arrêtait la veille pour de bon, sans rien dire.
+  const apresApercu = await win.evaluate(async () => (await window.CaisseScan.etat()).veilleEnMarche);
+  console.log('la veille survit à un aperçu :', apresApercu);
+  if (!apresApercu) throw new Error('la veille s\'est arrêtée après l\'affichage d\'un document dans le cadre');
   ok = ok && reception.pilePages === 3
     && reception.regle.dossiers.length === 0 && reception.regle.auto === false
     && /[\\/]Scans$/.test(reception.regle.depot)

@@ -63,11 +63,16 @@ le fichier `vocabulaire-noms.js` (remis séparément, jamais publié) à côté 
 il est lu au démarrage (menu *Aide → À propos* indique s'il a été trouvé). Sans lui, les noms
 s'apprennent en chargeant un classeur existant.
 
-**L'application est en français même si Windows ne l'est pas.** Ce que la page ne dessine pas
-elle-même, Windows l'habille dans sa langue : sur un poste en anglais, les champs *date*
-affichaient `mm/dd/yyyy` et le bouton des champs *fichier* disait « Choose File ». Une date de
-pièce lue à l'envers — le 3 septembre pris pour le 9 mars — ne se voit pas avant le bouclement.
-L'application impose donc sa langue au démarrage : le champ date affiche `jj/mm/aaaa` partout.
+**Les dates s'affichent en français même si Windows ne l'est pas.** Les champs *date* ne sont pas
+dessinés par l'application : c'est Windows qui les habille, dans sa langue. Sur un poste en
+anglais ils affichaient `mm/dd/yyyy`, et le 3 septembre se lisait alors 9 mars — une date de pièce
+lue à l'envers ne se voit pas avant le bouclement. L'application impose donc sa langue au
+démarrage, et le champ affiche `jj/mm/aaaa` partout (vérifié en photographiant le champ avec et
+sans).
+
+Le bouton des champs *fichier*, lui, continue d'afficher « Choose File » : ce texte-là ne suit pas
+le réglage. Il n'a pas de conséquence sur ce qui est enregistré, et les boutons de l'application
+qui ouvrent un fichier sont, eux, en français.
 
 Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.

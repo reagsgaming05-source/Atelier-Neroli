@@ -24,9 +24,11 @@ const { creerVeille } = require('./veille.js');
 const APP_TITLE = 'Compta Blonay';
 const PORTABLE_DIR = path.dirname(process.execPath);
 
-// Français, quelle que soit la langue de Windows. Chromium habille en anglais ce que la page ne
-// dessine pas elle-même : les champs « date » (03/09/2026 se lit alors mois/jour — un relevé de
-// caisse mal daté), le bouton des champs « fichier » (« Choose File ») et le menu du clic droit.
+// Français, quelle que soit la langue de Windows. Les champs « date » ne sont pas dessinés par la
+// page : Chromium les habille dans SA langue, et sur un poste en anglais le gabarit passe à
+// « mm/dd/yyyy » — 03/09/2026 se lit alors 9 mars, et une date de pièce lue à l'envers ne se voit
+// pas avant le bouclement. Vérifié en photographiant le champ avec et sans ce commutateur.
+// (Le bouton des champs « fichier » reste « Choose File » : ce texte-là ne suit pas le réglage.)
 // Le commutateur doit être posé avant que l'application ne soit prête.
 app.commandLine.appendSwitch('lang', 'fr-CH');
 
