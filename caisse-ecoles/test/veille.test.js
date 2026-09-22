@@ -134,13 +134,19 @@ test('deux postes sur le même dossier : chaque scan est pris une fois et une se
       await pause(5);
     }
 
+    // Le journal des deux postes, pour que l'échec dise ce qui s'est passé plutôt que de se
+    // contenter d'un compte faux — cette course ne s'est montrée que sous Windows.
+    const journal = a.lignes.concat(b.lignes).filter((l) => /impossible|abandonn|à revoir|reprise/.test(l)).join('\n  ');
+    const dit = journal ? `\n  ${journal}` : '';
+
     const pris = a.lus.concat(b.lus).map((x) => x.nom).sort();
-    assert.equal(pris.length, 20, `${pris.length} document(s) traité(s) au lieu de 20`);
-    assert.equal(new Set(pris).size, 20, 'un même scan a été traité deux fois');
+    assert.equal(pris.length, 20, `${pris.length} document(s) traité(s) au lieu de 20${dit}`);
+    assert.equal(new Set(pris).size, 20, `un même scan a été traité deux fois${dit}`);
     assert.ok(a.lus.length > 0 && b.lus.length > 0, 'un seul poste a tout pris : l\'entrelacement ne prouve rien');
     // rien ne traîne : tout est rangé
-    assert.deepEqual(d.tout().filter((f) => /^scan-\d+\.pdf$/.test(f)), []);
-    assert.equal(d.tout().filter((f) => f.startsWith('traité/')).length, 20);
+    assert.deepEqual(d.tout().filter((f) => /^scan-\d+\.pdf$/.test(f)), [], `des scans sont restés à la racine${dit}`);
+    assert.equal(d.tout().filter((f) => f.startsWith('traité/')).length, 20, `tout n'est pas rangé${dit}`);
+    assert.deepEqual(d.tout().filter((f) => f.startsWith('à revoir/')), [], `des scans sains sont partis « à revoir »${dit}`);
   } finally { d.jeter(); }
 });
 

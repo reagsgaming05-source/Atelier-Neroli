@@ -693,6 +693,19 @@ function verifierCopie() {
       };
     }, pile.faites[0].no);
 
+    // rescanner la même pièce doit REMPLACER son scan signé : le stockage par fichiers cherche
+    // un nom libre quand le nom est pris, et sans précaution la pièce en accumulerait deux
+    const rejoint = await win.evaluate(async (attendu) => {
+      const s = window.CaisseSaisie.state;
+      const p = s.reg.pieces.find((x) => x.no === attendu);
+      if (!p) return { erreur: 'pièce introuvable' };
+      const { bytes } = await window.CaissePdf.buildPdf([p], s.reg, () => null);
+      const r = await window.CaisseReception.joindre({ marque: { annee: s.reg.annee, id: p.id }, piece: p, octets: bytes });
+      await new Promise((x) => setTimeout(x, 600));
+      const relu = window.CaisseSaisie.state.reg.pieces.find((x) => x.no === attendu);
+      return { ok: r.ok, noms: (relu.justificatifs || []).map((j) => j.name) };
+    }, pile.faites[0].no);
+
     // le scan d'origine a été rangé, pas détruit
     const ranges = [];
     const parcourir = (dir, prefixe) => {
@@ -715,7 +728,7 @@ function verifierCopie() {
       window.CaisseApp.showPanel('panelSaisie');
     });
 
-    return { pilePages: pile.pages, regle, vu, boite, jointe, ranges };
+    return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, ranges };
   })();
   fs.rmSync(scanDir, { recursive: true, force: true });
   console.log('boîte de réception :', JSON.stringify(reception));
@@ -726,6 +739,8 @@ function verifierCopie() {
     && reception.jointe.justificatifs.includes('piece-signee.pdf')
     && reception.jointe.contamines.length === 0
     && reception.jointe.reste === 2
+    && reception.rejoint.ok && reception.rejoint.noms.filter((n) => n === 'piece-signee.pdf').length === 1
+    && reception.rejoint.noms.length === 1
     && reception.ranges.some((f) => f.startsWith('traité/'))
     && !reception.ranges.some((f) => /^SKM_/.test(f));
 

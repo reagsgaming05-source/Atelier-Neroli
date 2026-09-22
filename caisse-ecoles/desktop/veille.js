@@ -52,6 +52,11 @@ function nomPropre(nom) {
   return (propre || 'scan').slice(0, 80);
 }
 
+/** Le fichier ou le dossier est-il là ? Pour dire lequel des deux côtés manque à un renommage. */
+async function existe(p) {
+  try { await fsp.access(p); return true; } catch (e) { return false; }
+}
+
 const deuxChiffres = (n) => String(n).padStart(2, '0');
 function jour(ms) {
   const d = new Date(ms);
@@ -130,7 +135,15 @@ function creerVeille(opts) {
     try { journal(`[veille] ${ligne}`); } catch (e) { /* le journal ne doit jamais faire tomber la veille */ }
   }
 
-  /** Range un fichier réservé, selon ce que la page a répondu. */
+  /**
+   * Range un fichier réservé, selon ce que la page a répondu.
+   *
+   * Un échec de rangement ne doit jamais faire tomber le tour : sur un partage réseau, le fichier
+   * réservé peut disparaître sous nos pieds (antivirus, sauvegarde, quelqu'un qui fait le ménage)
+   * et le dossier de destination peut devenir injoignable entre deux instants. On le dit — en
+   * nommant lequel des deux côtés manque, parce que « ENOENT » sur un renommage ne le dit pas —
+   * et on passe au fichier suivant.
+   */
   async function classer(racine, chemin, nomOrigine, resultat) {
     const t = maintenant();
     const ok = !!(resultat && resultat.ok);
@@ -139,7 +152,16 @@ function creerVeille(opts) {
     await fsp.mkdir(dest, { recursive: true });
     const base = ok ? `${jour(t)}_${nomPropre(resultat.nom || nomOrigine)}` : `${jour(t)}_${nomPropre(nomOrigine)}`;
     const nom = await nomLibre(dest, base, '.pdf');
-    await fsp.rename(chemin, path.join(dest, nom));
+    try {
+      await fsp.rename(chemin, path.join(dest, nom));
+    } catch (e) {
+      const sourceLa = await existe(chemin);
+      const destLa = await existe(dest);
+      noter(`rangement impossible : ${nomOrigine} — ${(e && e.code) || ''} ${(e && e.message) || e}` +
+        ` [source ${sourceLa ? 'présente' : 'DISPARUE'}, dossier ${sous} ${destLa ? 'présent' : 'ABSENT'}]`);
+      compteur.erreurs += 1;
+      return { sous, nom, ok: false, echecRangement: true };
+    }
     if (!ok) {
       // pourquoi ce scan n'a pas pu entrer : la note vit à côté du fichier, pas seulement au journal
       const raison = (resultat && resultat.raison) || 'lecture impossible';
@@ -160,7 +182,7 @@ function creerVeille(opts) {
     try {
       octets = await fsp.readFile(chemin);
     } catch (e) {
-      await classer(racine, chemin, nomOrigine, { ok: false, raison: `fichier illisible (${e && e.message ? e.message : e})` });
+      await classer(racine, chemin, nomOrigine, { ok: false, raison: `fichier illisible (${(e && e.code) || ''} ${(e && e.message) || e})`.trim() });
       return;
     }
     let resultat = null;
@@ -257,7 +279,13 @@ function creerVeille(opts) {
     // d'abord nos restes et ceux d'un poste tombé
     for (const r of await reprendre(racine)) {
       sortie.reserves.push(r);
-      await lireEtClasser(racine, r.chemin, r.nom);
+      try {
+        await lireEtClasser(racine, r.chemin, r.nom);
+      } catch (e) {
+        sortie.erreurs.push({ dossier: racine, message: `${r.nom} : ${(e && e.message) || e}` });
+        compteur.erreurs += 1;
+        noter(`reprise abandonnée : ${r.nom} — ${(e && e.message) || e}`);
+      }
     }
 
     for (const nom of noms) {
@@ -270,11 +298,10 @@ function creerVeille(opts) {
       const t = maintenant();
       const vu = vus.get(chemin);
       if (!vu || vu.taille !== st.size || vu.mtime !== st.mtimeMs) {
-        vus.set(chemin, { taille: st.size, mtime: st.mtimeMs, depuis: t, vuLe: t });
+        vus.set(chemin, { taille: st.size, mtime: st.mtimeMs, depuis: t });
         sortie.attentes.push({ nom, raison: 'taille en mouvement' });
         continue;
       }
-      vu.vuLe = t;
       if (t - vu.depuis < stabiliteMs) { sortie.attentes.push({ nom, raison: 'trop récent' }); continue; }
 
       if (!(await pdfEntier(chemin))) {
@@ -294,12 +321,20 @@ function creerVeille(opts) {
       vus.delete(chemin);
       if (!chemin2) continue; // un autre poste a été plus rapide
       sortie.reserves.push({ chemin: chemin2, nom });
-      await lireEtClasser(racine, chemin2, nom);
+      try {
+        await lireEtClasser(racine, chemin2, nom);
+      } catch (e) {
+        // Un scan qui résiste ne doit pas priver les dix-neuf autres de leur tour. Il reste dans
+        // notre dossier de travail, et le tour suivant le reprendra.
+        sortie.erreurs.push({ dossier: racine, message: `${nom} : ${(e && e.message) || e}` });
+        compteur.erreurs += 1;
+        noter(`scan abandonné pour ce tour : ${nom} — ${(e && e.message) || e}`);
+      }
     }
 
     // mémoire des fichiers disparus : sans ce ménage, elle grandirait sans fin
-    for (const [c, v] of vus) {
-      if (c.startsWith(racine + path.sep) && v.vuLe !== maintenant() && !noms.includes(path.basename(c))) vus.delete(c);
+    for (const c of Array.from(vus.keys())) {
+      if (c.startsWith(racine + path.sep) && !noms.includes(path.basename(c))) vus.delete(c);
     }
     return sortie;
   }

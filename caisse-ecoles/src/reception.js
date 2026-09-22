@@ -125,14 +125,24 @@
     const piece = (reg.pieces || []).find((p) => p.id === doc.marque.id);
     if (!piece) return { ok: false, raison: `la pièce n'est plus dans le registre ${annee}` };
 
+    // Rescanner une pièce doit REMPLACER son scan signé, pas en empiler un second. Le stockage
+    // par fichiers cherche un nom libre quand le nom est pris (« piece-signee (1).pdf ») : sans
+    // ce retrait préalable, une pièce repassée au copieur accumulerait les exemplaires, et le PDF
+    // des pièces les imprimerait tous.
+    const deja = (piece.justificatifs || []).find((j) => j.name === L.NOM_SIGNEE);
+    if (deja) {
+      try { await storage.remove(annee, piece.id, L.NOM_SIGNEE); } catch (e) { /* le fichier sera écrasé ou renommé */ }
+      piece.justificatifs = piece.justificatifs.filter((j) => j.name !== L.NOM_SIGNEE);
+    }
     let saved = null;
     try {
       saved = await storage.attach(annee, piece.id, L.NOM_SIGNEE, doc.octets);
     } catch (e) {
+      if (deja) piece.justificatifs.push(deja); // l'ancien reste inscrit : on n'efface pas une trace pour rien
       return { ok: false, raison: `justificatif non enregistré (${(e && e.message) || e})` };
     }
     piece.justificatifs = (piece.justificatifs || []).filter((j) => j.name !== saved.name);
-    piece.justificatifs.push({ name: saved.name, size: saved.size, kind: 'pdf' });
+    piece.justificatifs.push({ name: saved.name, size: saved.size, kind: 'pdf', signee: true });
     try {
       await storage.save(reg);
     } catch (e) {
@@ -363,7 +373,7 @@
     $('receptionDossiers').addEventListener('click', async (ev) => {
       const b = ev.target.closest('[data-oublier]');
       if (!b) return;
-      const restants = (etat.reglages.dossiers || []).filter((d) => d.chemin !== b.dataset.oublier);
+      const restants = ((etat.reglages && etat.reglages.dossiers) || []).filter((d) => d.chemin !== b.dataset.oublier);
       await regler({ scanDossiers: restants });
     });
   }
