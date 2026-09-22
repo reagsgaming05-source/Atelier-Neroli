@@ -12,6 +12,7 @@ Application locale, sans installation. Un écran = un travail, dans la barre lat
   lectures croisées (couche texte, OCR local, Tesseract natif). La zone où déposer les PDF est la
   première chose de l'écran ; les réglages de lecture sont repliés dessous, avec un résumé d'une
   ligne de leur état. Les pièces lues entrent dans le journal de l'année dès la lecture.
+- **Boîte de réception** : les scans du copieur entrent tout seuls. Voir *Du copieur au journal*.
 - **Compter la caisse** : nombre de billets (1000, 200, 100, 50, 20, 10) et de pièces (5, 2, 1,
   50, 20, 10 et 5 centimes), total compté, dernier solde compté et nouveau solde avec leurs
   dates, écart avec le solde du journal à cette date, historique des comptages dans le registre.
@@ -71,7 +72,7 @@ qu'un programme à ouvrir, `ComptaBlonay.exe` : au démarrage, il lance en arri�
 local de Décompte DGEO sur un port libre (le menu du logo indique *démarre…* puis, une fois
 Décompte DGEO choisi, affiche le logiciel complet, avec toutes ses fonctions : analyse du dossier
 PDF, effectifs, pièces, part État, décompte Excel) et l'arrête à la fermeture de la fenêtre.
-Raccourci : Ctrl+6 ; Ctrl+1 à Ctrl+5 ramènent aux espaces de Caisse écoles. Ses dossiers vont
+Raccourci : Ctrl+7 ; Ctrl+1 à Ctrl+6 ramènent aux espaces de Caisse écoles. Ses dossiers vont
 dans `data/decompte/`, à côté des registres de la caisse. Si le serveur s'arrête, rechoisir
 Décompte DGEO dans le menu le relance ; sans le dossier `decompte/`, le menu l'indique. Dans le
 fichier HTML seul, Décompte DGEO n'affiche qu'une explication : il fait partie de l'application
@@ -453,6 +454,47 @@ cette version qui est versionnée dans `dist/`). Une version téléchargée depu
 de la même manière, sans la correction des noms ; charger une fois un classeur les rétablit.
 Un test automatique vérifie qu'aucun nom ne se glisse dans le fichier versionné.
 
+## Du copieur au journal
+
+La fiche « PIÈCE COMPTABLE » imprimée porte un petit code QR de 16 mm, dans la marge haute au
+bord droit du cadre. Il ne contient que l'année et l'identifiant de la pièce — ni nom, ni
+montant, ni libellé : une feuille qui traîne ou qui part chez un tiers ne dit rien à personne.
+
+    CB1-2026-PLX9K2M3ABCDE
+
+Le trajet, une fois le copieur réglé en « numériser vers un dossier » (SMB) :
+
+1. vous imprimez les fiches, l'enseignant-e signe ;
+2. vous empilez et vous passez tout au copieur **en un seul envoi** ;
+3. l'application prend le PDF dans le dossier surveillé, **découpe la pile à chaque code** — la
+   page qui porte un code ouvre un document, qui court jusqu'au code suivant, donc une fiche
+   emporte ses justificatifs — et rend chaque document à **sa** ligne du journal ;
+4. chaque document attend votre accord dans la **Boîte de réception**, puis vient se joindre à sa
+   pièce comme justificatif signé (`piece-signee.pdf`).
+
+*Ranger automatiquement*, dans les réglages, saute l'étape 4 pour les pièces reconnues sans
+ambiguïté. C'est décoché au départ, et volontairement : un classement qui se trompe une fois sur
+dix coûte plus cher que pas de classement du tout.
+
+Ce qui est prévu, et éprouvé :
+
+| Le cas | Ce que fait l'application |
+|---|---|
+| le copieur écrit encore | rien n'est pris : la taille doit être immobile depuis un moment **et** le PDF doit se terminer (`%%EOF`) |
+| PDF coupé net | rangé dans `à revoir\`, avec une note disant pourquoi |
+| plusieurs postes sur le même dossier | réservation par déplacement atomique dans `.encours\<poste>\` : un scan n'est pris que par un poste |
+| un poste s'éteint en plein travail | ses scans sont repris par un autre après deux heures |
+| serveur injoignable | signalé à l'écran, la veille continue et reprend au retour |
+| feuille scannée à l'envers, de travers | le code se lit dans les quatre orientations |
+| « PDF compact » du copieur | la redondance du code (25 %) encaisse l'écrasement des nuances |
+| pile posée à l'envers, vieille pièce sans code | présentée telle quelle, jamais rattachée au hasard |
+| même fiche passée deux fois | signalée « déjà dans cette pile » ; à vous de remplacer ou d'écarter |
+| **dans tous les cas** | le fichier d'origine est déplacé dans `traité\AAAA-MM`, **jamais détruit** |
+
+Les dossiers surveillés se règlent dans la Boîte de réception (une liste : un copieur sait
+souvent envoyer vers plusieurs destinations). Les documents en attente de validation vivent dans
+les données de l'application, pas sur le partage : fermer l'application ne perd rien.
+
 ## Le carnet des données
 
 La base de référence et l'apprentissage automatique donnent des listes déjà justes, mais ils ne
@@ -514,13 +556,17 @@ Structure :
 - `desktop/dgeo-proxy.js` – passerelle locale devant Décompte DGEO (multipart, nettoyage du dossier via la page)
 - `src/comptage.js` – comptage de la caisse (grille des coupures, soldes, historique) ; modèle dans `registre.js` (`countTotal`, `upsertCount`, `previousCount`, `balanceAt`)
 - `src/combo.js` – liste déroulante d'un champ : `attach()` pour un champ libre, `fromSelect()` pour une liste fermée du navigateur (le `<select>` reste en place, caché, et garde la valeur)
+- `src/marque.js` – la marque de la pièce : écrire le code QR (qrcode-generator), le poser sur la fiche, le relire sur un scan (jsQR)
+- `src/pile.js` – découpe d'une pile scannée aux marques, et rapprochement de chaque document avec sa pièce (sans dépendance, éprouvé sur table)
+- `src/reception.js` – boîte de réception : lecture des pages, découpe, validation, justificatif joint à la pièce
+- `desktop/veille.js` – surveillance du dossier scanné : stabilité du fichier, réservation atomique entre postes, rangement dans `traité\` ou `à revoir\` (sans dépendance)
 - `src/carnet.js` – carnet des données : ajouts et retraits de l'utilisateur sur les cinq listes, lecture tolérante d'un fichier abîmé, `appliquer()` rend le vocabulaire vu à travers le carnet (sans dépendance, éprouvé hors navigateur)
 - `src/donnees.js` – espace « Données » : les cinq cartes, l'ajout, le retrait, la remise, la copie du carnet
-- `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Compter la caisse / L'année / Données, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
+- `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Boîte de réception / Compter la caisse / L'année / Données, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
 - `src/registre.js` – registre des pièces par année : modèle, libellé composé, validation, journal, stockage (fichiers ou navigateur)
 - `src/pdfpiece.js` – fiche « PIÈCE COMPTABLE » en PDF (pdf-lib) avec justificatifs
 - `src/saisie.js` – onglet de saisie (fiche, journal, Excel, PDF, sauvegarde)
-- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre à onglets, Décompte DGEO démarré avec l'application, pont décompte → pièce, fichiers du registre, dossier `data/`, fichier des noms), `shell.html` (barre d'onglets Compta Blonay, badge des décomptes à saisir), `dgeo-theme.css` (thème injecté dans la page de Décompte DGEO pour le même aspect : police, couleurs, arrondis), `preload.js` (`CaisseFiles` — registres, justificatifs et carnet des données —, `CaisseNative`, `CaisseDgeo`), `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
+- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre à onglets, Décompte DGEO démarré avec l'application, pont décompte → pièce, fichiers du registre, dossier `data/`, fichier des noms), `shell.html` (barre d'onglets Compta Blonay, badge des décomptes à saisir), `dgeo-theme.css` (thème injecté dans la page de Décompte DGEO pour le même aspect : police, couleurs, arrondis), `preload.js` (`CaisseFiles` — registres, justificatifs et carnet des données —, `CaisseScan` — veille du dossier scanné et boîte de réception —, `CaisseNative`, `CaisseDgeo`), `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
 
 ## Limites
 

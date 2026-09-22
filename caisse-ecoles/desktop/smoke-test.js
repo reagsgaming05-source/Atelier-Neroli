@@ -11,6 +11,8 @@
  *   SMOKE_NATIVE=1 : exige le lecteur natif ; SMOKE_DGEO=1 : exige Décompte DGEO
  */
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const { _electron: electron } = require('playwright-core');
 
 async function findPage(app, pred, timeoutMs) {
@@ -622,6 +624,111 @@ function verifierCopie() {
     const nettoye = !(await ouvrir('pClasse')).some((t) => t.includes('12VG/2'));
     return { cartes, ajoutee, classeProposee, cible, avantRetrait, apresRetrait, garde, remis, nettoye };
   });
+  // Boîte de réception : la chaîne entière du copieur. On imprime trois fiches marquées, on en
+  // fait une pile (c'est ce que produit le copieur quand on lui passe le tas signé), on la dépose
+  // dans un dossier surveillé, et on vérifie que chaque document retrouve SA pièce.
+  const scanDir = fs.mkdtempSync(path.join(os.tmpdir(), 'compta-scan-'));
+  const reception = await (async () => {
+    // trois pièces neuves, et la pile de leurs fiches
+    const pile = await win.evaluate(async () => {
+      const R = window.CaisseRegistre; const S = window.CaisseSaisie; const reg = S.state.reg;
+      const faites = [];
+      for (let i = 0; i < 3; i++) {
+        const p = R.newPiece(reg);
+        Object.assign(p, { no: 900 + i, date: `${reg.annee}-04-0${i + 1}`, type: 'FRAIS', objet: 'Matériel',
+          detail: `pile ${i + 1}`, personne: 'T. Morel', compte: '51000.3185.00', montant: 10 + i, sens: 'credit' });
+        p.libelle = R.composeLibelle(p);
+        R.upsertPiece(reg, p);
+        faites.push({ id: p.id, no: p.no });
+      }
+      await S.saveReg();
+      const pieces = faites.map((f) => reg.pieces.find((p) => p.id === f.id));
+      const { bytes, pages } = await window.CaissePdf.buildPdf(pieces, reg, () => null);
+      return { annee: reg.annee, faites, pages, octets: Array.from(bytes) };
+    });
+
+    fs.writeFileSync(path.join(scanDir, 'SKM_C224e26040112000.pdf'), Buffer.from(pile.octets));
+
+    // le dossier est réglé depuis l'écran, comme le ferait l'utilisateur
+    const regle = await win.evaluate(async (dir) => {
+      await window.CaisseScan.regler({ scanDossiers: [{ chemin: dir }], scanActif: true, scanAuto: false });
+      const e = await window.CaisseScan.etat();
+      return { dossiers: e.dossiers.map((d) => d.chemin), auto: e.auto };
+    }, scanDir);
+
+    // deux regards espacés : un fichier n'est pris que si sa taille n'a pas bougé depuis un moment
+    await win.evaluate(() => window.CaisseScan.regarder());
+    await win.waitForTimeout(5200);
+    const vu = await win.evaluate(() => window.CaisseScan.regarder());
+    await win.waitForFunction(() => document.querySelectorAll('#receptionListe .rec').length >= 3, null, { timeout: 120000 })
+      .catch(() => {});
+
+    const boite = await win.evaluate(async () => {
+      window.CaisseApp.showPanel('panelReception');
+      await new Promise((r) => setTimeout(r, 300));
+      const liste = await window.CaisseScan.liste();
+      return {
+        lignes: document.querySelectorAll('#receptionListe .rec').length,
+        etats: liste.map((d) => d.etat).sort(),
+        nos: liste.map((d) => (d.piece ? d.piece.no : null)).sort(),
+        badge: (document.getElementById('navBadgeReception') || {}).textContent || '',
+      };
+    });
+
+    // on valide le premier : son scan signé doit venir se joindre à SA pièce, et à aucune autre
+    const jointe = await win.evaluate(async (attendu) => {
+      const liste = await window.CaisseScan.liste();
+      const cible = liste.find((d) => d.etat === 'trouvee' && d.piece && d.piece.no === attendu);
+      if (!cible) return { erreur: 'document introuvable dans la boîte' };
+      document.querySelector(`[data-joindre="${cible.id}"]`).click();
+      await new Promise((r) => setTimeout(r, 1500));
+      const reg = window.CaisseSaisie.state.reg;
+      const p = reg.pieces.find((x) => x.id === cible.marque.id);
+      const autres = reg.pieces.filter((x) => x.id !== cible.marque.id && (x.justificatifs || []).some((j) => j.name === 'piece-signee.pdf'));
+      return {
+        pieceNo: p ? p.no : null,
+        justificatifs: p ? (p.justificatifs || []).map((j) => j.name) : [],
+        contamines: autres.map((x) => x.no),
+        reste: (await window.CaisseScan.liste()).length,
+      };
+    }, pile.faites[0].no);
+
+    // le scan d'origine a été rangé, pas détruit
+    const ranges = [];
+    const parcourir = (dir, prefixe) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const rel = prefixe ? `${prefixe}/${e.name}` : e.name;
+        if (e.isDirectory()) parcourir(path.join(dir, e.name), rel);
+        else ranges.push(rel);
+      }
+    };
+    parcourir(scanDir, '');
+
+    // on laisse le poste comme on l'a trouvé
+    await win.evaluate(async () => {
+      for (const d of await window.CaisseScan.liste()) await window.CaisseScan.retirer(d.id);
+      await window.CaisseScan.regler({ scanDossiers: [], scanAuto: false });
+      const s = window.CaisseSaisie.state;
+      for (const p of s.reg.pieces.filter((x) => x.no >= 900)) window.CaisseRegistre.removePiece(s.reg, p.id);
+      await s.storage.save(s.reg);
+      window.CaisseSaisie.renderJournal();
+      window.CaisseApp.showPanel('panelSaisie');
+    });
+
+    return { pilePages: pile.pages, regle, vu, boite, jointe, ranges };
+  })();
+  fs.rmSync(scanDir, { recursive: true, force: true });
+  console.log('boîte de réception :', JSON.stringify(reception));
+  ok = ok && reception.pilePages === 3
+    && reception.regle.dossiers.length === 1 && reception.regle.auto === false
+    && reception.boite.lignes === 3 && reception.boite.etats.join('|') === 'trouvee|trouvee|trouvee'
+    && reception.boite.badge === '3'
+    && reception.jointe.justificatifs.includes('piece-signee.pdf')
+    && reception.jointe.contamines.length === 0
+    && reception.jointe.reste === 2
+    && reception.ranges.some((f) => f.startsWith('traité/'))
+    && !reception.ranges.some((f) => /^SKM_/.test(f));
+
   console.log('espace données :', JSON.stringify(donnees));
   ok = ok && donnees.cartes.length === 5 && donnees.ajoutee && donnees.classeProposee
     && donnees.cible && donnees.avantRetrait && !donnees.apresRetrait && donnees.garde

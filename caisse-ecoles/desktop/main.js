@@ -16,8 +16,10 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const http = require('http');
 const net = require('net');
+const os = require('os');
 const nativeOcr = require('./native-ocr.js');
 const dgeoProxy = require('./dgeo-proxy.js');
+const { creerVeille } = require('./veille.js');
 
 const APP_TITLE = 'Compta Blonay';
 const PORTABLE_DIR = path.dirname(process.execPath);
@@ -325,7 +327,17 @@ ipcMain.handle('shell:state', () => shellState());
 
 /* ---------------- Réglages (data/caisse/reglages.json) ---------------- */
 const SETTINGS_FILE = () => path.join(REG_ROOT(), 'reglages.json');
-const SETTINGS_DEFAULT = { dgeoSkipFirst: true };
+const SETTINGS_DEFAULT = {
+  dgeoSkipFirst: true,
+  // Veille du dossier scanné. Une LISTE de dossiers, pas un chemin : un copieur sait souvent
+  // envoyer vers plusieurs destinations (un bouton = un dossier), et cela ne coûte rien de plus.
+  scanDossiers: [],
+  scanActif: true,
+  scanIntervalle: 5000,
+  // Ranger sans demander. Décoché au départ, et c'est voulu : un classement qui se trompe une
+  // fois sur dix coûte plus cher que pas de classement du tout.
+  scanAuto: false,
+};
 function loadSettings() {
   try { return Object.assign({}, SETTINGS_DEFAULT, JSON.parse(fs.readFileSync(SETTINGS_FILE(), 'utf8'))); } catch (e) { return Object.assign({}, SETTINGS_DEFAULT); }
 }
@@ -337,6 +349,120 @@ function saveSettings(patchObj) {
 }
 ipcMain.handle('settings:get', () => loadSettings());
 ipcMain.handle('settings:set', (ev, patchObj) => saveSettings(patchObj && typeof patchObj === 'object' ? patchObj : {}));
+
+/* ---------------- Veille du dossier scanné ---------------- */
+/*
+ * Le copieur dépose ses PDF dans un dossier du serveur ; la veille les y prend et les confie à la
+ * page, qui a pdf.js, l'OCR et l'analyseur. Même mécanisme que le nettoyage des dossiers DGEO
+ * ci-dessous : le processus principal ne lit aucun PDF lui-même.
+ *
+ * Le dossier de réception (les documents découpés, en attente de validation) vit dans les données
+ * de l'application, pas sur le partage : ce qui attend une validation attend sur ce poste.
+ */
+const RECEPTION = () => path.join(REG_ROOT(), 'reception');
+let veille = null;
+const scansEnCours = new Map();
+let scanSeq = 0;
+
+/** Confie un scan à la page et attend sa réponse. Sans page, le fichier n'est pas pris. */
+function lireScanDansLaPage(nom, octets) {
+  return new Promise((resolve) => {
+    if (!caisseView || caisseView.webContents.isDestroyed()) { resolve({ ok: false, raison: "l'application n'est pas encore prête" }); return; }
+    const id = ++scanSeq;
+    scansEnCours.set(id, resolve);
+    caisseView.webContents.send('scan:entrant', { id, nom, octets, auto: loadSettings().scanAuto === true });
+    // une pile de trente pages passée à l'OCR peut être longue : on laisse le temps, mais pas l'éternité
+    setTimeout(() => {
+      if (scansEnCours.delete(id)) resolve({ ok: false, raison: 'la lecture a dépassé dix minutes' });
+    }, 600000);
+  });
+}
+ipcMain.on('scan:resultat', (ev, r) => {
+  if (!r || typeof r !== 'object') return;
+  const resolve = scansEnCours.get(r.id);
+  if (!resolve) return;
+  scansEnCours.delete(r.id);
+  resolve({ ok: !!r.ok, raison: String(r.raison || ''), nom: r.nom ? String(r.nom) : '' });
+});
+
+function demarrerVeille() {
+  const s = loadSettings();
+  if (veille) veille.arreter();
+  veille = creerVeille({
+    dossiers: () => (loadSettings().scanDossiers || []).filter((d) => d && d.chemin),
+    poste: os.hostname(),
+    journal: logLine,
+    traiter: ({ nom, octets }) => lireScanDansLaPage(nom, octets),
+  });
+  if (s.scanActif !== false) veille.demarrer(Number(s.scanIntervalle) || 5000);
+  return veille;
+}
+
+ipcMain.handle('scan:etat', () => {
+  const s = loadSettings();
+  return Object.assign({ dossiers: s.scanDossiers || [], actif: s.scanActif !== false, auto: s.scanAuto === true, intervalle: s.scanIntervalle || 5000, reception: RECEPTION() },
+    veille ? veille.etat() : { poste: os.hostname(), tours: 0, traites: 0, revoir: 0, erreurs: 0 });
+});
+ipcMain.handle('scan:regler', (ev, patchObj) => {
+  const p = patchObj && typeof patchObj === 'object' ? patchObj : {};
+  const propre = {};
+  if (Array.isArray(p.scanDossiers)) {
+    propre.scanDossiers = p.scanDossiers
+      .map((d) => ({ chemin: String((d && d.chemin) || '').trim() }))
+      .filter((d) => d.chemin).slice(0, 10);
+  }
+  if (typeof p.scanActif === 'boolean') propre.scanActif = p.scanActif;
+  if (typeof p.scanAuto === 'boolean') propre.scanAuto = p.scanAuto;
+  const s = saveSettings(propre);
+  demarrerVeille();
+  return s;
+});
+ipcMain.handle('scan:choisir-dossier', async () => {
+  const r = await dialog.showOpenDialog(mainWindow, {
+    title: 'Dossier où le copieur dépose ses scans',
+    properties: ['openDirectory'],
+    buttonLabel: 'Surveiller ce dossier',
+  });
+  return r.canceled || !r.filePaths.length ? null : r.filePaths[0];
+});
+/** Un tour tout de suite, sans attendre le minuteur (bouton « Regarder maintenant »). */
+ipcMain.handle('scan:regarder', async () => {
+  if (!veille) demarrerVeille();
+  const r = await veille.tour();
+  return { reserves: r.reserves.length, attentes: r.attentes.length, erreurs: r.erreurs.map((e) => e.message) };
+});
+
+/* La réception : les documents découpés, en attente de validation. */
+const recOk = (id) => /^[A-Za-z0-9_-]{1,60}$/.test(String(id));
+ipcMain.handle('reception:deposer', (ev, id, fiche, octets) => {
+  if (!recOk(id)) throw new Error('identifiant invalide');
+  const dir = path.join(RECEPTION(), String(id));
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'document.pdf'), Buffer.from(octets));
+  fs.writeFileSync(path.join(dir, 'fiche.json'), JSON.stringify(fiche || {}, null, 1));
+  return true;
+});
+ipcMain.handle('reception:liste', () => {
+  try {
+    return fs.readdirSync(RECEPTION()).filter(recOk).map((id) => {
+      try {
+        const fiche = JSON.parse(fs.readFileSync(path.join(RECEPTION(), id, 'fiche.json'), 'utf8'));
+        return Object.assign({ id }, fiche);
+      } catch (e) { return { id, abime: true }; }
+    });
+  } catch (e) { return []; }
+});
+ipcMain.handle('reception:lire', (ev, id) => {
+  if (!recOk(id)) throw new Error('identifiant invalide');
+  const f = path.join(RECEPTION(), String(id), 'document.pdf');
+  return fs.existsSync(f) ? fs.readFileSync(f) : null;
+});
+ipcMain.handle('reception:retirer', (ev, id) => {
+  if (!recOk(id)) throw new Error('identifiant invalide');
+  fs.rmSync(path.join(RECEPTION(), String(id)), { recursive: true, force: true });
+  return true;
+});
+ipcMain.handle('reception:ouvrir-dossier', () => shell.openPath(RECEPTION()));
 
 /* ---------------- Nettoyage du dossier DGEO par la page Caisse écoles ---------------- */
 // La page a déjà pdf.js, pdf-lib et l'analyseur des pièces : la passerelle lui confie le dossier,
@@ -531,11 +657,12 @@ function buildMenu() {
       submenu: [
         { label: 'Saisie des pièces', accelerator: 'CmdOrCtrl+1', click: () => openPanel('panelSaisie') },
         { label: 'Pièces scannées', accelerator: 'CmdOrCtrl+2', click: () => openPanel('panelScan') },
-        { label: 'Compter la caisse', accelerator: 'CmdOrCtrl+3', click: () => openPanel('panelCaisse') },
-        { label: "L'année", accelerator: 'CmdOrCtrl+4', click: () => openPanel('panelAnnee') },
-        { label: 'Données', accelerator: 'CmdOrCtrl+5', click: () => openPanel('panelDonnees') },
-        { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+6', click: () => openPanel('panelDgeo') },
-        { label: 'Récapitulatif des décomptes', accelerator: 'CmdOrCtrl+7', click: () => openPanel('panelRecap') },
+        { label: 'Boîte de réception', accelerator: 'CmdOrCtrl+3', click: () => openPanel('panelReception') },
+        { label: 'Compter la caisse', accelerator: 'CmdOrCtrl+4', click: () => openPanel('panelCaisse') },
+        { label: "L'année", accelerator: 'CmdOrCtrl+5', click: () => openPanel('panelAnnee') },
+        { label: 'Données', accelerator: 'CmdOrCtrl+6', click: () => openPanel('panelDonnees') },
+        { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+7', click: () => openPanel('panelDgeo') },
+        { label: 'Récapitulatif des décomptes', accelerator: 'CmdOrCtrl+8', click: () => openPanel('panelRecap') },
       ],
     },
     {
@@ -661,8 +788,10 @@ app.whenReady().then(() => {
   setupDgeoBridge();
   buildMenu();
   createWindow();
+  // la veille démarre APRÈS la fenêtre : un partage injoignable ne doit pas retenir l'ouverture
+  setTimeout(() => { try { demarrerVeille(); } catch (e) { logLine(`veille : ${e && e.message ? e.message : e}`); } }, 1500);
 });
 
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', () => { app.isQuitting = true; stopDgeo(); });
+app.on('before-quit', () => { app.isQuitting = true; if (veille) veille.arreter(); stopDgeo(); });
 app.on('will-quit', stopDgeo);

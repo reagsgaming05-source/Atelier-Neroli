@@ -50,6 +50,24 @@ contextBridge.exposeInMainWorld('CaisseFiles', {
   saveCarnet: (text) => ipcRenderer.invoke('files:save-carnet', text),
 });
 
+// Veille du dossier scanné : le copieur y dépose ses PDF, l'application les y prend (voir
+// veille.js et main.js). La page reçoit les octets, découpe la pile aux codes QR et range.
+contextBridge.exposeInMainWorld('CaisseScan', {
+  etat: () => ipcRenderer.invoke('scan:etat'),
+  regler: (patchObj) => ipcRenderer.invoke('scan:regler', patchObj),
+  choisirDossier: () => ipcRenderer.invoke('scan:choisir-dossier'),
+  regarder: () => ipcRenderer.invoke('scan:regarder'),
+  // le processus principal confie un scan complet ; la page répond par scan:resultat
+  onEntrant: (cb) => ipcRenderer.on('scan:entrant', (ev, d) => cb(d)),
+  resultat: (r) => ipcRenderer.send('scan:resultat', r),
+  // documents découpés en attente de validation, gardés dans les données de l'application
+  deposer: (id, fiche, octets) => ipcRenderer.invoke('reception:deposer', id, fiche, octets),
+  liste: () => ipcRenderer.invoke('reception:liste'),
+  lire: (id) => ipcRenderer.invoke('reception:lire', id).then((b) => (b ? new Uint8Array(b) : null)),
+  retirer: (id) => ipcRenderer.invoke('reception:retirer', id),
+  ouvrirDossier: () => ipcRenderer.invoke('reception:ouvrir-dossier'),
+});
+
 // Pont Décompte DGEO → Caisse écoles : décomptes terminés (Excel généré dans l'autre onglet),
 // proposés dans la fiche comme pièce DECOMPTE pré-remplie ; voir main.js.
 contextBridge.exposeInMainWorld('CaisseDgeo', {

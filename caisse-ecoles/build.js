@@ -105,6 +105,8 @@ inline('<!--INLINE_APP-->', scriptTag(read(src('app.js'))));
 inline('<!--INLINE_SAISIE-->', scriptTag(read(src('saisie.js'))));
 inline('<!--INLINE_COMPTAGE-->', scriptTag(read(src('comptage.js'))));
 inline('<!--INLINE_DONNEES-->', scriptTag(read(src('donnees.js'))));
+inline('<!--INLINE_PILE-->', scriptTag(read(src('pile.js'))));
+inline('<!--INLINE_RECEPTION-->', scriptTag(read(src('reception.js'))));
 if (/<!--INLINE_[A-Z_]+-->/.test(html)) throw new Error('Marqueur non remplacé dans index.html');
 
 const outDir = path.join(root, 'dist');

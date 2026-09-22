@@ -60,6 +60,7 @@
     <div class="section">Espaces</div>
     <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, à valider</small></span><span class="navbadge hidden" id="navBadgeReception" title="Documents scannés en attente de validation"></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
     <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes</small></span></button>
     <button type="button" class="apptab" data-panel="panelDonnees" title="Les listes de l'application"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Données<small>Comptes, classes, noms</small></span></button>
@@ -407,6 +408,41 @@
   </section>
 </div>
 
+<div id="panelReception" class="panel hidden">
+  <header class="page-head">
+    <div>
+      <h1>Boîte de réception</h1>
+      <p>Les fiches imprimées portent un petit code QR. Vous les faites signer, vous empilez, et vous scannez toute la pile en un passage vers le dossier surveillé : l'application découpe à chaque code et rend chaque document à sa pièce. Rien n'entre au journal sans votre accord.</p>
+    </div>
+  </header>
+
+  <section class="card" id="receptionReglages">
+    <h2><svg class="ico"><use href="#i-folder"/></svg> Dossier surveillé</h2>
+    <p class="legend">Le dossier où le copieur dépose ses numérisations (« numériser vers un dossier », SMB). L'application y prend les PDF entiers, les range ensuite dans <code>traité\AAAA-MM</code>, ou dans <code>à revoir</code> si la lecture a échoué — <b>le fichier d'origine n'est jamais détruit</b>. Plusieurs postes peuvent surveiller le même dossier : un scan donné n'est pris que par un seul.</p>
+    <div id="receptionDossiers" class="dliste" style="max-height:180px"></div>
+    <div class="toolbar">
+      <button type="button" class="small" id="btnScanAjouter"><svg class="ico"><use href="#i-plus"/></svg> Ajouter un dossier…</button>
+      <button type="button" class="small" id="btnScanRegarder"><svg class="ico"><use href="#i-refresh"/></svg> Regarder maintenant</button>
+      <button type="button" class="small ghost" id="btnReceptionDossier"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier de réception</button>
+    </div>
+    <div class="toolbar" style="gap:18px">
+      <label class="check legend" style="align-items:center"><input type="checkbox" id="optScanActif" checked style="margin-top:0"> Surveiller le dossier</label>
+      <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optScanAuto"> <span>Ranger automatiquement les pièces reconnues, sans me demander. <i>Décoché au départ : un classement qui se trompe une fois sur dix coûte plus cher que pas de classement du tout.</i></span></label>
+    </div>
+    <div class="legend" id="receptionInfo" style="margin-top:10px"></div>
+  </section>
+
+  <section class="card">
+    <h2><span class="left"><svg class="ico"><use href="#i-scan"/></svg> Documents scannés <span class="legend" id="receptionCompte"></span></span></h2>
+    <div id="receptionEtat" class="notice ok hidden"></div>
+    <div id="receptionListe"></div>
+    <div id="receptionApercu" class="hidden">
+      <div class="toolbar top"><span class="legend">Aperçu du document</span><span class="spacer"></span><button type="button" class="small" id="btnReceptionFermer"><svg class="ico"><use href="#i-x"/></svg> Fermer</button></div>
+      <iframe id="receptionFrame"></iframe>
+    </div>
+  </section>
+</div>
+
 <div id="panelAnnee" class="panel hidden">
   <header class="page-head">
     <div>
@@ -583,5 +619,7 @@
 <!--INLINE_SAISIE-->
 <!--INLINE_COMPTAGE-->
 <!--INLINE_DONNEES-->
+<!--INLINE_PILE-->
+<!--INLINE_RECEPTION-->
 </body>
 </html>
