@@ -1,15 +1,16 @@
 /*
- * Les comptes : un secrétariat pose l'application sur un partage, chacune
- * choisit son nom une fois, et retrouve ensuite ses affaires — sans voir
- * celles des autres.
+ * Les comptes : chacune crée le sien au fur et à mesure, avec un mot de passe,
+ * et reste connectée jusqu'à ce qu'elle se déconnecte.
  *
  *   node comptes-test.js                       # depuis les sources
  *   node comptes-test.js chemin\BlonayPDF.exe  # sur le dossier empaqueté
  *
- * Ce qui est vraiment vérifié ici, et qu'une relecture ne garantit pas : les
- * tampons et les signatures ne vivent pas dans un fichier à nous mais dans le
- * stockage local du moteur d'affichage, qui suit le dossier de données. Si le
- * dossier était fixé trop tard, ou mal, deux personnes les partageraient sans
+ * Deux choses qu'une relecture ne garantit pas, et qu'on vérifie ici. D'abord
+ * qu'une personne ne peut pas ouvrir le compte d'une autre : c'est toute la
+ * raison d'être du mot de passe. Ensuite que les affaires sont vraiment
+ * séparées — les tampons et les signatures ne vivent pas dans un fichier à
+ * nous mais dans le stockage local du moteur d'affichage, qui suit le dossier
+ * de données. Fixé trop tard, ou mal, deux personnes les partageraient sans
  * que rien ne le signale.
  */
 const { _electron: electron } = require('playwright-core');
@@ -21,90 +22,112 @@ const os = require('os');
 const exe = process.argv[2];
 const base = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-comptes-'));
 const dit = (quoi) => console.log('  ' + quoi);
+const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Le dossier d'essai tient lieu de dossier de l'application ; le « profil
-// Windows » de chacune est un dossier à part (XDG_CONFIG_HOME sous Linux,
-// APPDATA sous Windows) pour que le choix retenu ne soit pas commun.
-const lancer = (qui, extra) => {
-  const profil = path.join(base, 'poste-' + qui);
-  const env = { ...process.env, BLONAY_DOSSIER_APP: base, APPDATA: profil, XDG_CONFIG_HOME: profil, ...extra };
+// Le dossier d'essai tient lieu de dossier de l'application, reconnu comme un
+// lecteur réseau ; chaque « poste » a son propre profil Windows, pour que la
+// connexion retenue ne soit pas commune.
+const lancer = (poste) => {
+  const profil = path.join(base, 'poste-' + poste);
+  const env = { ...process.env, BLONAY_DOSSIER_APP: base, BLONAY_RESEAU: '1',
+    APPDATA: profil, XDG_CONFIG_HOME: profil };
   return electron.launch(exe ? { executablePath: exe, args: ['--no-sandbox'], env }
     : { args: [path.join(__dirname), '--no-sandbox'], env });
 };
 
-// Choisir fait redémarrer l'application : l'instance relancée échappe au
+// Se connecter fait redémarrer l'application : l'instance relancée échappe au
 // pilote et garderait le verrou d'instance unique.
 function menage() {
-  const motif = process.platform === 'win32' ? 'BlonayPDF.exe' : "node_modules/electron/dis[t]/electron";
   try {
     if (process.platform === 'win32') require('child_process').execSync('taskkill /F /IM BlonayPDF.exe /T', { stdio: 'ignore' });
-    else require('child_process').execSync('pkill -f ' + JSON.stringify(motif) + ' || true');
+    else require('child_process').execSync('pkill -f ' + JSON.stringify('node_modules/electron/dis[t]/electron') + ' || true');
   } catch (e) { /* rien à tuer */ }
 }
-const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function choisir(qui, extra) {
-  const e = await lancer(qui, extra);
+async function creer(poste, nom, mdp) {
+  const e = await lancer(poste);
   const f = await e.firstWindow();
-  await f.waitForSelector('.compte, #nom', { timeout: 60000 });
-  const proposes = await f.locator('.compte span:last-child').allTextContents();
-  if (proposes.includes(qui)) await f.locator('.compte', { hasText: qui }).click();
-  else { await f.fill('#nom', qui); await f.click('#ajouter'); }
+  await f.waitForSelector('#ecran-liste:not([hidden]), #ecran-creation:not([hidden])', { timeout: 60000 });
+  if (await f.locator('#ecran-liste').isVisible()) await f.click('#vers-creation');
+  await f.fill('#nom', nom);
+  await f.fill('#mdp1', mdp);
+  await f.fill('#mdp2', mdp);
+  await f.click('#creer');
+  await souffler(2500);
   await e.close().catch(() => {});
-  await souffler(1500);
   menage();
-  return proposes;
 }
 
-async function ouvrir(qui, extra) {
-  const e = await lancer(qui, extra);
+// Rend le message d'erreur affiché, ou '' quand la connexion est passée.
+async function seConnecter(poste, nom, mdp) {
+  const e = await lancer(poste);
+  const f = await e.firstWindow();
+  await f.waitForSelector('#ecran-liste:not([hidden])', { timeout: 60000 });
+  await f.locator('.compte', { hasText: nom }).click();
+  await f.fill('#mdp', mdp);
+  await f.click('#entrer');
+  await souffler(2500);
+  let erreur = '';
+  try { erreur = (await f.locator('#erreur-c').textContent({ timeout: 800 })) || ''; } catch (e2) { /* fenêtre partie */ }
+  await e.close().catch(() => {});
+  menage();
+  return erreur.trim();
+}
+
+async function ouvrir(poste) {
+  const e = await lancer(poste);
   const f = await e.firstWindow();
   await f.waitForSelector('#app-toolbar:not([hidden])', { timeout: 90000 });
   return { e, f, dossier: await e.evaluate(({ app }) => app.getPath('userData')) };
 }
+const refermer = async (s) => { await s.e.close().catch(() => {}); await souffler(800); menage(); };
 
 (async () => {
-  fs.writeFileSync(path.join(base, 'comptes.txt'), '# le secrétariat\nMarie\nSophie\n');
-
-  const proposes = await choisir('Marie');
-  assert.deepEqual(proposes, ['Marie', 'Sophie'], 'les deux comptes de comptes.txt sont proposés');
-  dit('comptes proposés : ' + proposes.join(', '));
-
-  // Marie revient : plus aucune question, et elle mémorise un tampon.
-  let s = await ouvrir('Marie');
+  // Rien n'est préparé : ni liste de noms, ni comptes. Tout se crée à l'usage.
+  await creer('bureau-1', 'Marie', 'greffe2026');
+  let s = await ouvrir('bureau-1');
   assert.equal(s.dossier, path.join(base, 'data', 'Marie'), 'Marie travaille dans son dossier');
   await s.f.evaluate(() => localStorage.setItem('blonay-tampons', JSON.stringify([{ text: 'REÇU LE' }])));
-  await s.e.close().catch(() => {}); await souffler(800); menage();
-  dit('Marie : ' + s.dossier + ', et un tampon mémorisé');
+  await refermer(s);
+  dit('Marie : compte créé, ' + s.dossier + ', un tampon mémorisé');
 
-  // Le choix tient : une troisième ouverture ne repose pas la question.
-  s = await ouvrir('Marie');
-  assert.equal(await s.f.evaluate(() => localStorage.getItem('blonay-tampons')) !== null, true,
-    'Marie retrouve son tampon');
-  await s.e.close().catch(() => {}); await souffler(800); menage();
-  dit('Marie : le choix tient, le tampon est retrouvé');
+  // La connexion tient : on rouvre sans rien redemander.
+  s = await ouvrir('bureau-1');
+  assert.notEqual(await s.f.evaluate(() => localStorage.getItem('blonay-tampons')), null,
+    'Marie reste connectée et retrouve son tampon');
+  await refermer(s);
+  dit('Marie : toujours connectée, sans remettre son mot de passe');
 
-  await choisir('Sophie');
-  s = await ouvrir('Sophie');
+  await creer('bureau-2', 'Sophie', 'archives!7');
+  s = await ouvrir('bureau-2');
   assert.equal(s.dossier, path.join(base, 'data', 'Sophie'), 'Sophie a son propre dossier');
   assert.equal(await s.f.evaluate(() => localStorage.getItem('blonay-tampons')), null,
-    'Sophie ne voit pas le tampon de Marie — le stockage local suit bien le dossier');
-  await s.e.close().catch(() => {}); await souffler(800); menage();
-  dit('Sophie : ' + s.dossier + ', et aucun tampon de Marie');
+    'Sophie ne voit pas le tampon de Marie');
+  await refermer(s);
+  dit('Sophie : compte créé, ' + s.dossier + ', et aucun tampon de Marie');
 
-  // Sur un lecteur réseau, les comptes s'ouvrent d'eux-mêmes : rien à poser à
-  // côté de l'exécutable, la liste se construit un nom à la fois.
-  fs.rmSync(path.join(base, 'comptes.txt'));
-  const auto = { BLONAY_RESEAU: '1' };
-  const vus = await choisir('Nadia', auto);
-  assert.deepEqual(vus, ['Marie', 'Sophie'], 'les dossiers déjà là servent de liste, sans comptes.txt');
-  const n = await ouvrir('Nadia', auto);
-  assert.equal(n.dossier, path.join(base, 'data', 'Nadia'), 'Nadia a son dossier, sans que rien n\'ait été préparé');
-  await n.e.close().catch(() => {}); await souffler(800); menage();
-  dit('réseau sans comptes.txt : ' + n.dossier);
+  // Le point de la question : on n'entre pas chez quelqu'un d'autre.
+  const refus = await seConnecter('bureau-3', 'Marie', 'greffe2025');
+  assert.match(refus, /incorrect/i, 'un mauvais mot de passe est refusé');
+  assert.equal(fs.existsSync(path.join(base, 'poste-bureau-3', 'Blonay PDF', 'session.json')), false,
+    'et aucune session n\'est ouverte pour autant');
+  dit('mauvais mot de passe : « ' + refus +' », aucune session ouverte');
+
+  // Le bon mot de passe ouvre, depuis n'importe quel poste.
+  assert.equal(await seConnecter('bureau-4', 'Marie', 'greffe2026'), '', 'le bon mot de passe passe');
+  s = await ouvrir('bureau-4');
+  assert.equal(s.dossier, path.join(base, 'data', 'Marie'), 'Marie retrouve ses affaires sur un autre poste');
+  await refermer(s);
+  dit('Marie depuis un autre poste : ' + s.dossier);
+
+  // Le mot de passe n'est écrit nulle part.
+  const fiche = fs.readFileSync(path.join(base, 'data', 'Marie', 'compte.json'), 'utf8');
+  assert.ok(!fiche.includes('greffe2026'), 'la fiche ne contient pas le mot de passe');
+  assert.match(fiche, /scrypt/, 'seulement son empreinte');
+  dit('fiche de Marie : empreinte scrypt, pas de mot de passe');
 
   const dossiers = fs.readdirSync(path.join(base, 'data')).sort();
-  assert.deepEqual(dossiers, ['Marie', 'Nadia', 'Sophie'], 'un dossier par personne dans data/');
+  assert.deepEqual(dossiers, ['Marie', 'Sophie'], 'un dossier par personne dans data/');
   dit('data/ : ' + dossiers.join(', '));
 
   try { fs.rmSync(base, { recursive: true, force: true }); } catch (e) { /* ménage sans importance */ }

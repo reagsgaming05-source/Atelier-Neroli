@@ -127,3 +127,47 @@ test('un nom impossible sous Windows ne devient pas un dossier', () => {
   assert.equal(nomDeDossier('Marie.'), 'Marie', 'Windows n\'aime pas le point final');
   assert.equal(nomDeDossier('x'.repeat(80)).length, 48, 'un nom trop long est coupé');
 });
+
+// Le mot de passe d'un compte. Ce qui compte : qu'il ne soit écrit nulle part,
+// que le bon ouvre et que le mauvais non, et qu'un compte sans mot de passe —
+// celui d'avant, ou un accès redonné par l'administrateur — puisse en recevoir un.
+const { sceller, verifier, protege, motDePasseAcceptable } = require('../desktop/comptes');
+
+test('le mot de passe n\'est pas enregistré, seulement son empreinte', () => {
+  const fiche = { nom: 'Marie', motDePasse: sceller('greffe2026') };
+  assert.ok(!JSON.stringify(fiche).includes('greffe2026'), 'le mot de passe n\'apparaît pas dans la fiche');
+  assert.equal(fiche.motDePasse.algo, 'scrypt');
+  assert.equal(fiche.motDePasse.sel.length, 32, 'un sel de seize octets');
+  assert.equal(fiche.motDePasse.empreinte.length, 64);
+});
+
+test('deux personnes avec le même mot de passe n\'ont pas la même empreinte', () => {
+  const a = sceller('bonjour'); const b = sceller('bonjour');
+  assert.notEqual(a.sel, b.sel, 'un sel par compte');
+  assert.notEqual(a.empreinte, b.empreinte, 'donc deux empreintes différentes');
+});
+
+test('le bon mot de passe ouvre, les autres non', () => {
+  const fiche = { motDePasse: sceller('archives!7') };
+  assert.equal(verifier('archives!7', fiche), true);
+  assert.equal(verifier('archives!8', fiche), false);
+  assert.equal(verifier('', fiche), false);
+  assert.equal(verifier('ARCHIVES!7', fiche), false, 'la casse compte');
+  assert.equal(verifier(null, fiche), false);
+});
+
+test('une fiche sans mot de passe, ou abîmée, n\'ouvre rien', () => {
+  assert.equal(protege({}), false);
+  assert.equal(protege({ motDePasse: {} }), false);
+  assert.equal(protege(null), false);
+  assert.equal(verifier('quoi que ce soit', {}), false);
+  assert.equal(verifier('quoi que ce soit', { motDePasse: { sel: 'zz', empreinte: 'zz' } }), false);
+  // C'est ce qui permet de redonner l'accès : l'administrateur retire la ligne
+  // du mot de passe, et la personne en pose un neuf à sa prochaine connexion.
+});
+
+test('un mot de passe trop court est refusé, avec une phrase à montrer', () => {
+  assert.match(motDePasseAcceptable('abc'), /au moins 4/);
+  assert.equal(motDePasseAcceptable('abcd'), '');
+  assert.match(motDePasseAcceptable('x'.repeat(300)), /trop long/);
+});

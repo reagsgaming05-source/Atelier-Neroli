@@ -24,6 +24,7 @@ try { CONSTRUCTION = String(JSON.parse(fs.readFileSync(path.join(__dirname, 'app
 // dossier de l'application, afin que le choix du rangement se joue pour de vrai.
 const PORTABLE_DIR = process.env.BLONAY_DOSSIER_APP || path.dirname(process.execPath);
 const { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
+const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = require('./comptes');
 const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
 
 // Où vont les données : à côté de l'exécutable, ou dans le profil de chacun.
@@ -36,7 +37,7 @@ const DOSSIER_DATA = () => path.join(PORTABLE_DIR, 'data');
 // Qui utilise ce poste. Le choix est retenu ici, dans le profil Windows de la
 // personne — surtout pas sur le partage, où il serait celui de tout le monde.
 // Une entrée par installation : la même personne peut ouvrir deux dossiers.
-const fichierChoix = () => path.join(app.getPath('appData'), 'Blonay PDF', 'choix-du-compte.json');
+const fichierChoix = () => path.join(app.getPath('appData'), 'Blonay PDF', 'session.json');
 function lireChoix() {
   try {
     const tout = JSON.parse(fs.readFileSync(fichierChoix(), 'utf8'));
@@ -54,6 +55,54 @@ function ecrireChoix(nom) {
     fs.writeFileSync(f, JSON.stringify(tout, null, 2));
     return true;
   } catch (e) { return false; }
+}
+
+// La fiche d'un compte : son nom et l'empreinte de son mot de passe. Jamais le
+// mot de passe lui-même — voir comptes.js.
+function lireFiche(nom) {
+  try { return JSON.parse(fs.readFileSync(path.join(DOSSIER_DATA(), nom, FICHE), 'utf8')) || {}; }
+  catch (e) { return {}; } // compte pas encore créé, ou fiche abîmée
+}
+function ecrireFiche(nom, fiche) {
+  try {
+    fs.mkdirSync(path.join(DOSSIER_DATA(), nom), { recursive: true });
+    fs.writeFileSync(path.join(DOSSIER_DATA(), nom, FICHE), JSON.stringify(fiche, null, 2));
+    return true;
+  } catch (e) { return false; }
+}
+
+// Créer un compte, ou se connecter au sien. Rendent un message à afficher, ou
+// rien du tout quand c'est bon.
+function creerLeCompte(nom, motDePasse) {
+  const propre = nomDeDossier(nom);
+  if (!propre) return 'Ce nom ne peut pas servir de dossier. Essayez votre prénom et votre nom.';
+  if (comptesConnus().some((n) => n.toLowerCase() === propre.toLowerCase())) {
+    return 'Ce compte existe déjà. Choisissez-le dans la liste pour vous connecter.';
+  }
+  const souci = motDePasseAcceptable(motDePasse);
+  if (souci) return souci;
+  if (!ecrireFiche(propre, { nom: propre, cree: new Date().toISOString(), motDePasse: sceller(motDePasse) })) {
+    return 'Impossible d\u2019écrire dans le dossier des données.';
+  }
+  return ouvrirLaSession(propre);
+}
+
+function connexion(nom, motDePasse) {
+  const propre = nomDeDossier(nom);
+  if (!propre) return 'Compte inconnu.';
+  const fiche = lireFiche(propre);
+  // Un compte sans mot de passe : celui d'avant, ou un mot de passe retiré par
+  // l'administrateur pour en redonner l'accès. On en pose un maintenant.
+  if (!protege(fiche)) {
+    const souci = motDePasseAcceptable(motDePasse);
+    if (souci) return souci;
+    if (!ecrireFiche(propre, Object.assign({ nom: propre }, fiche, { motDePasse: sceller(motDePasse) }))) {
+      return 'Impossible d\u2019écrire dans le dossier des données.';
+    }
+    return ouvrirLaSession(propre);
+  }
+  if (!verifier(motDePasse, fiche)) return 'Mot de passe incorrect.';
+  return ouvrirLaSession(propre);
 }
 
 // Les comptes proposés : ceux de comptes.txt, plus ceux qui ont déjà un
@@ -112,6 +161,8 @@ function setupUserData() {
   // stockage local du moteur d'affichage, qui suit le dossier de données —
   // le fixer trop tard les mélangerait.
   if (RANGEMENT.ou === 'comptes') {
+    // La connexion tient tant qu'on ne se déconnecte pas : elle est retenue
+    // dans le profil Windows de la personne, que le système protège déjà.
     PROFIL = lireChoix();
     if (PROFIL) {
       const sien = path.join(dir, PROFIL);
@@ -447,12 +498,12 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
         ...(RANGEMENT.ou === 'comptes' ? [{
-          label: 'Changer d\u2019utilisateur…',
+          label: 'Se déconnecter' + (PROFIL ? ' (' + PROFIL + ')' : ''),
           click: async () => {
             const r = await dialog.showMessageBox({
-              type: 'question', buttons: ['Changer d\u2019utilisateur', 'Annuler'], defaultId: 1, cancelId: 1,
-              message: 'Ouvrir Blonay PDF sous un autre nom ?',
-              detail: 'L\u2019application redémarre et redemande qui vous êtes. Rien n\u2019est effacé : '
+              type: 'question', buttons: ['Se déconnecter', 'Annuler'], defaultId: 1, cancelId: 1,
+              message: 'Se déconnecter de Blonay PDF ?',
+              detail: 'L\u2019application redémarre et redemandera le mot de passe. Rien n\u2019est effacé : '
                 + 'le dossier de ' + (PROFIL || 'chacun') + ' reste tel quel.',
             });
             if (r.response !== 0) return;
@@ -540,27 +591,28 @@ function demanderLeCompte() {
   fen.once('ready-to-show', () => fen.show());
   fen.loadFile(path.join(__dirname, 'choix-profil.html'));
   // Refermée sans rien choisir : on ne peut pas travailler sans dossier.
-  fen.on('closed', () => { if (!PROFIL) app.exit(0); });
+  fen.on('closed', () => { if (!PROFIL) app.exit(0); }); // sans compte, rien à ouvrir
 }
 
-// Le compte choisi est retenu, puis l'application redémarre : le dossier de
+// La connexion est retenue, puis l'application redémarre : le dossier de
 // données doit être fixé avant que quoi que ce soit ne soit ouvert, et c'est
-// au tout début du démarrage que cela se joue. Une fois par personne.
-function poserLeCompte(nom) {
-  const propre = nomDeDossier(nom);
-  if (!propre) return false;
-  try { fs.mkdirSync(path.join(DOSSIER_DATA(), propre), { recursive: true }); } catch (e) { return false; }
-  if (!ecrireChoix(propre)) return false;
-  PROFIL = propre;
+// au tout début du démarrage que cela se joue. Une fois, jusqu'à la
+// déconnexion. Rend un message d'erreur, ou rien quand c'est bon.
+function ouvrirLaSession(nom) {
+  try { fs.mkdirSync(path.join(DOSSIER_DATA(), nom), { recursive: true }); }
+  catch (e) { return 'Impossible de créer le dossier de ce compte.'; }
+  if (!ecrireChoix(nom)) return 'Impossible de retenir la connexion sur ce poste.';
+  PROFIL = nom;
   app.relaunch();
   app.exit(0);
-  return true;
+  return '';
 }
 
 app.whenReady().then(() => {
   if (RANGEMENT.ou === 'comptes' && !PROFIL) {
-    ipcMain.handle('blonay:comptes', () => comptesConnus());
-    ipcMain.handle('blonay:compte-choisi', (_e, nom) => poserLeCompte(nom));
+    ipcMain.handle('blonay:comptes', () => comptesConnus().map((nom) => ({ nom, protege: protege(lireFiche(nom)) })));
+    ipcMain.handle('blonay:connexion', (_e, nom, motDePasse) => connexion(nom, motDePasse));
+    ipcMain.handle('blonay:creer', (_e, nom, motDePasse) => creerLeCompte(nom, motDePasse));
     demanderLeCompte();
     return;
   }
