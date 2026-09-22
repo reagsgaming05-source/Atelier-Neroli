@@ -72,11 +72,32 @@ echo.
 
 rem --- 2. L'application doit etre fermee -------------------------------------
 rem Windows verrouille un executable en cours : la copie echouerait a moitie.
+rem Lancee par l'application elle-meme (BLONAY_MAJ_AUTO), la mise a jour attend
+rem qu'elle finisse de se fermer : refuser une seconde trop tot obligerait a
+rem tout recommencer a la main.
+set "ESSAIS=0"
+set "ANNONCE="
+:attente
 tasklist /FI "IMAGENAME eq BlonayPDF.exe" 2>nul | find /I "BlonayPDF.exe" >nul
-if not errorlevel 1 (
-  echo   Blonay PDF est ouvert. Fermez la fenêtre, puis relancez cette mise à jour.
-  goto :echec
+if errorlevel 1 goto :fermee
+if not defined BLONAY_MAJ_AUTO goto :ouverte
+if not defined ANNONCE (
+  set "ANNONCE=1"
+  echo   Attente de la fermeture de Blonay PDF…
 )
+set /a ESSAIS+=1
+if %ESSAIS% GEQ 30 goto :ouverte
+rem Une minute au plus, deux secondes a la fois. « ping » plutot que « timeout » :
+rem timeout.exe echoue quand l'entree standard est detournee, ce qui arrive des
+rem que le script est lance par un programme.
+ping -n 3 127.0.0.1 >nul
+goto :attente
+
+:ouverte
+echo   Blonay PDF est ouvert. Fermez la fenêtre, puis relancez cette mise à jour.
+goto :echec
+
+:fermee
 
 rem --- 3. Ouvrir le zip a l'ecart --------------------------------------------
 set "ATELIER=%TEMP%\blonay-maj-%RANDOM%%RANDOM%"
@@ -113,6 +134,11 @@ echo.
 echo   Mise à jour terminée. Vos tampons, signatures et récents sont conservés.
 rem Repere en ASCII pur : lisible par un script quel que soit l'encodage.
 echo BLONAY-MAJ: OK
+if defined BLONAY_MAJ_AUTO (
+  echo   Redémarrage de l'application…
+  start "" "%DOSSIER%BlonayPDF.exe"
+  exit /b 0
+)
 echo   Lancez BlonayPDF.exe ; « Aide › À propos » indique la version installée.
 echo.
 pause

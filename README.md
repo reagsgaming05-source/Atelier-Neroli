@@ -253,6 +253,28 @@ l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, Enregistrer sous
 place après confirmation, récupération du travail après un arrêt brutal, seconde instance), puis
 publication du zip dans la pré-release à tag fixe `blonaypdf-windows-latest`.
 
+### Mettre à jour
+
+Posez le zip téléchargé à côté de `BlonayPDF.exe`, ou dans un sous-dossier `maj`. Au
+lancement suivant, l'application lit la fiche de version que le zip porte à sa racine
+(`version.json`), la compare à la sienne, et propose de se mettre à jour : elle se ferme,
+`Mettre-a-jour.cmd` remplace ses fichiers sans toucher à `data`, puis la rouvre.
+*Aide › Rechercher une mise à jour* pose la question à la demande. Rien n'est téléchargé et
+aucune connexion n'est ouverte : c'est la personne qui apporte le zip.
+
+Sur un partage, l'application est ouverte depuis plusieurs postes à la fois. Windows
+verrouille alors les fichiers en cours d'utilisation, et `tasklist` du poste qui met à jour
+ne voit pas les autres : chaque instance laisse donc un jeton daté dans `data`, et la mise à
+jour refuse tant qu'un autre poste travaille — en le nommant. Un jeton oublié par un poste
+éteint brutalement cesse de compter au bout de deux minutes.
+
+La lecture du zip ne le décompresse pas : un zip se lit par la fin, où un index dit où
+trouver chaque fichier, et seule `version.json` est extraite — quelques centaines d'octets
+sur cent vingt mégaoctets. `outils/desktop/version-posee.js` porte cette lecture et la
+décision, éprouvées sans Windows ni fenêtre (`outils/test/maj.test.js`) ; `maj-test.js` rejoue
+les quatre situations sur l'exécutable empaqueté, et la CI vérifie que la fiche se lit dans
+l'archive que `Compress-Archive` vient d'écrire.
+
 ### Utilisation
 
 - **Ouvrir** : *Fichier › Ouvrir* (Ctrl+O, dans un nouvel onglet), glisser-déposer dans la

@@ -15,16 +15,21 @@
 const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const APP_TITLE = 'Blonay PDF';
-// Date et commit de construction, posés par build.js puis prepare-app.js.
-let CONSTRUCTION = '';
-try { CONSTRUCTION = String(JSON.parse(fs.readFileSync(path.join(__dirname, 'app', 'construction.json'), 'utf8')).construction || ''); } catch (e) { /* version de travail */ }
+// Date, commit et horodatage de construction, posés par build.js puis
+// prepare-app.js. La date sert à « À propos », et à reconnaître un zip plus
+// récent posé à côté de l'application (voir version-posee.js).
+let VERSION = {};
+try { VERSION = JSON.parse(fs.readFileSync(path.join(__dirname, 'app', 'construction.json'), 'utf8')) || {}; } catch (e) { /* version de travail */ }
+const CONSTRUCTION = String(VERSION.construction || '');
 // BLONAY_DOSSIER_APP : le test de fumée fait passer un dossier d'essai pour le
 // dossier de l'application, afin que le choix du rangement se joue pour de vrai.
 const PORTABLE_DIR = process.env.BLONAY_DOSSIER_APP || path.dirname(process.execPath);
 const { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = require('./comptes');
+const { miseAJourPosee, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons } = require('./version-posee');
 const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
 
 // Où vont les données : à côté de l'exécutable, ou dans le profil de chacun.
@@ -275,6 +280,12 @@ function recupEffacer(cle) {
 
 const fenetres = new Set();
 const fenetreActive = () => BrowserWindow.getFocusedWindow() || Array.from(fenetres).pop() || null;
+// La boîte s'accroche à une fenêtre quand il y en a une, et se pose seule
+// sinon : au démarrage, une mise à jour peut être proposée avant la première.
+const direA = (opts) => {
+  const f = fenetreActive();
+  return f ? dialog.showMessageBox(f, opts) : dialog.showMessageBox(opts);
+};
 const fenetreDe = (sender) => BrowserWindow.fromWebContents(sender);
 
 // Une seule instance. Un nouveau double-clic sur un PDF ouvre par défaut une
@@ -561,6 +572,7 @@ function buildMenu() {
       submenu: [
         { label: 'Raccourcis clavier', accelerator: 'F1', click: () => envoyer('raccourcis') },
         { type: 'separator' },
+        { label: 'Rechercher une mise à jour', click: () => { chercherUneMiseAJour(true).catch(() => {}); } },
         {
           label: 'À propos de ' + APP_TITLE,
           click: () => dialog.showMessageBox(fenetreActive(), {
@@ -613,6 +625,119 @@ function ouvrirLaSession(nom) {
   return '';
 }
 
+// =============================================================================
+//  La mise à jour qui se propose toute seule
+// =============================================================================
+// L'application est posée sur un partage et chacune l'ouvre par un raccourci.
+// Mettre à jour, c'est remplacer ce seul dossier — mais encore faut-il que
+// quelqu'un lance le script. Elle regarde donc si un zip plus récent a été posé
+// à côté d'elle, et le dit. Rien n'est téléchargé : c'est vous qui apportez le
+// zip. version-posee.js porte la lecture et la décision, éprouvées à part.
+
+// Tant qu'une fenêtre est ouverte, ce poste laisse un jeton daté dans « data ».
+// Une mise à jour lancée depuis un autre poste le verra : Windows verrouille un
+// exécutable en cours, et celui-ci tourne depuis le partage, là où « tasklist »
+// du poste voisin ne peut pas le voir.
+let MON_JETON = null;
+let BATTEMENT = null;
+function annoncerCePoste() {
+  const battre = () => { MON_JETON = poserLeJeton(DOSSIER_DATA(), os.hostname(), process.pid, Date.now()); };
+  battre();
+  nettoyerLesJetons(DOSSIER_DATA(), Date.now()); // les postes éteints d'hier
+  BATTEMENT = setInterval(battre, 30 * 1000);
+  if (BATTEMENT.unref) BATTEMENT.unref(); // ne retient pas la fermeture
+}
+
+let MAJ_VUE = false;      // proposée une fois par session, pas à chaque fenêtre
+let MAJ_DEMANDEE = null;  // le script à lancer en partant, une fois tout fermé
+
+async function chercherUneMiseAJour(demandee) {
+  // Lecture synchrone, comme tout ce qui touche au dossier de l'application :
+  // quelques dizaines de kilo-octets lus dans l'index du zip, et la fenêtre est
+  // déjà ouverte depuis plusieurs secondes quand cela se produit.
+  const trouvee = miseAJourPosee(PORTABLE_DIR, VERSION);
+  if (!trouvee) {
+    if (demandee) {
+      direA({
+        type: 'info', title: APP_TITLE, noLink: true,
+        message: 'Vous avez la version la plus récente.',
+        detail: (CONSTRUCTION || 'Version de travail') + '\n\n'
+          + 'Pour mettre à jour : posez « BlonayPDF-windows.zip » à côté de l\'application '
+          + '(ou dans un sous-dossier « maj »), et relancez-la.',
+      });
+    }
+    return;
+  }
+  if (!demandee && MAJ_VUE) return;
+  MAJ_VUE = true;
+  const { response } = await direA({
+    type: 'question', noLink: true, defaultId: 0, cancelId: 1,
+    buttons: ['Mettre à jour maintenant', 'Plus tard'],
+    title: APP_TITLE,
+    message: 'Une version plus récente est posée à côté de l\'application.',
+    detail: 'Installée : ' + (CONSTRUCTION || 'version de travail') + '\n'
+      + 'Posée : ' + (trouvee.version.construction || path.basename(trouvee.zip)) + '\n\n'
+      + 'La mise à jour ferme l\'application, remplace ses fichiers et la rouvre. '
+      + 'Vos tampons, votre signature, vos récents et le travail mis de côté sont conservés.',
+  });
+  if (response === 0) lancerLaMiseAJour(trouvee);
+}
+
+function lancerLaMiseAJour(trouvee) {
+  const script = path.join(PORTABLE_DIR, 'Mettre-a-jour.cmd');
+  if (!fs.existsSync(script)) {
+    direA({
+      type: 'warning', title: APP_TITLE, noLink: true,
+      message: 'Le script de mise à jour est introuvable.',
+      detail: 'Fermez l\'application, puis décompressez « ' + path.basename(trouvee.zip)
+        + ' » par-dessus le dossier, sans toucher à « data ».',
+    });
+    return;
+  }
+  // Une collègue encore dedans, et la copie se fait à moitié : ses fichiers
+  // ouverts sont verrouillés. Mieux vaut le dire que réparer ensuite.
+  const autres = autresPostes(DOSSIER_DATA(), MON_JETON, Date.now());
+  if (autres.length) {
+    direA({
+      type: 'warning', title: APP_TITLE, noLink: true,
+      message: 'L\'application est encore ouverte ailleurs.',
+      detail: (autres.length > 1 ? 'Ces postes l\'ont ouverte : ' : 'Ce poste l\'a ouverte : ')
+        + autres.join(', ') + '.\n\n'
+        + 'Windows verrouille les fichiers en cours d\'utilisation : la mise à jour ne se ferait '
+        + 'qu\'à moitié. Demandez qu\'on la referme, puis réessayez.',
+    });
+    return;
+  }
+  MAJ_DEMANDEE = { script, zip: trouvee.zip };
+  // Fermer peut être refusé — une fenêtre demande confirmation quand du travail
+  // n'est pas enregistré. Dans ce cas « will-quit » n'arrive jamais : la mise à
+  // jour en attente s'oublie d'elle-même, plutôt que de partir au prochain
+  // départ, des heures plus tard et sans crier gare.
+  const oubli = setTimeout(() => { MAJ_DEMANDEE = null; }, 20 * 1000);
+  if (oubli.unref) oubli.unref();
+  app.quit();
+}
+
+app.on('will-quit', () => {
+  if (BATTEMENT) clearInterval(BATTEMENT);
+  retirerLeJeton(MON_JETON);
+  if (!MAJ_DEMANDEE) return;
+  const { script, zip } = MAJ_DEMANDEE;
+  // Sous Windows, un .cmd passe par cmd.exe ; ailleurs — en essai — le script
+  // est lancé tel quel. La console reste visible : la copie prend une minute,
+  // et une fenêtre qui dit ce qu'elle fait vaut mieux qu'un écran vide.
+  const quoi = process.platform === 'win32'
+    ? { fichier: 'cmd.exe', args: ['/c', script, zip] }
+    : { fichier: script, args: [zip] };
+  try {
+    const parti = require('child_process').spawn(quoi.fichier, quoi.args, {
+      cwd: PORTABLE_DIR, detached: true, stdio: 'ignore', windowsHide: false,
+      env: Object.assign({}, process.env, { BLONAY_MAJ_AUTO: '1' }),
+    });
+    parti.unref(); // il doit nous survivre : c'est lui qui nous remplace
+  } catch (e) { /* rien à faire de plus : l'application part quand même */ }
+});
+
 app.whenReady().then(() => {
   if (RANGEMENT.ou === 'comptes' && !PROFIL) {
     ipcMain.handle('blonay:comptes', () => comptesConnus().map((nom) => ({ nom, protege: protege(lireFiche(nom)) })));
@@ -628,6 +753,17 @@ app.whenReady().then(() => {
   const initiaux = lire(fichiersDe(process.argv));
   initiaux.forEach((f) => ajouterRecent(f.chemin));
   createWindow(initiaux);
+  // Seulement là où il y a une installation à mettre à jour : empaquetée, ou
+  // le dossier d'essai que les tests font passer pour telle.
+  if (app.isPackaged || process.env.BLONAY_DOSSIER_APP) {
+    annoncerCePoste();
+    // Quelques secondes après : le partage peut prendre son temps, et une
+    // fenêtre qui tarde à s'afficher se remarque tout de suite.
+    // BLONAY_MAJ_DELAI : le test a besoin d'avoir posé ses guetteurs avant.
+    const delai = Number(process.env.BLONAY_MAJ_DELAI) || 4000;
+    const plusTard = setTimeout(() => { chercherUneMiseAJour(false).catch(() => {}); }, delai);
+    if (plusTard.unref) plusTard.unref();
+  }
 });
 
 app.on('window-all-closed', () => app.quit());

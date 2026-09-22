@@ -105,6 +105,11 @@ jobs:
           Copy-Item ..\..\README.md dist\BlonayPDF\LISEZMOI.md
           Copy-Item build\LISEZMOI-portable.txt dist\BlonayPDF\LISEZMOI-portable.txt
           Copy-Item build\Mettre-a-jour.cmd dist\BlonayPDF\Mettre-a-jour.cmd
+          # La fiche de version voyage a la racine du dossier : c'est elle que
+          # l'application lit dans un zip pose a cote d'elle pour savoir s'il
+          # est plus recent que ce qui tourne. Sans elle, la mise a jour ne se
+          # proposerait jamais (maj-test.js tombe alors).
+          Copy-Item construction.json dist\BlonayPDF\version.json
           Get-ChildItem dist\BlonayPDF | Select-Object Name, Length
 
       - name: Test de fumée de l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, export)
@@ -123,10 +128,33 @@ jobs:
         shell: pwsh
         run: node comptes-test.js dist\BlonayPDF\BlonayPDF.exe
 
+      # Une mise a jour qui se propose a tort reinstalle une version plus
+      # ancienne ; lancee pendant qu'une collegue travaille, elle laisse une
+      # installation a moitie remplacee. Les quatre cas sont joues sur
+      # l'executable empaquete.
+      - name: Mise à jour — proposée, refusée quand une collègue travaille, lancée sinon
+        working-directory: outils/desktop
+        shell: pwsh
+        run: |
+          node maj-test.js dist\BlonayPDF\BlonayPDF.exe
+          Remove-Item dist\BlonayPDF\data -Recurse -Force -ErrorAction SilentlyContinue
+
       - name: Archive zip
         working-directory: outils/desktop
         shell: pwsh
         run: Compress-Archive -Path dist\BlonayPDF -DestinationPath ..\..\BlonayPDF-windows.zip
+
+      # Les zips des tests sont ecrits a la main. Celui-ci vient de
+      # Compress-Archive : c'est la seule preuve que le lecteur de zip tient
+      # devant l'archive que les gens telechargeront vraiment.
+      - name: La fiche de version se lit dans l'archive
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'BlonayPDF-windows.zip'
+          $mod = Join-Path $env:GITHUB_WORKSPACE 'outils\desktop\version-posee.js'
+          $lu = node -e "const v = require(process.argv[1]).ficheDuZip(process.argv[2]); if (!v || !v.commit || !v.date) { console.error('fiche de version illisible dans l''archive'); process.exit(1); } console.log(v.commit + ' du ' + v.date);" $mod $zip
+          if ($LASTEXITCODE -ne 0) { throw "La fiche de version ne se lit pas dans l'archive." }
+          Write-Host "  fiche lue dans l'archive : $lu"
 
       # Le script de mise a jour est la seule chose du depot qui touche a
       # l'installation de quelqu'un. Il est donc joue pour de vrai, sur Windows :
@@ -162,8 +190,21 @@ jobs:
           & $dit 'le LISEZMOI portable est arrivé' (Test-Path (Join-Path $poste 'LISEZMOI-portable.txt'))
           & $dit 'le script s''est mis à jour lui-même' (Test-Path (Join-Path $poste 'Mettre-a-jour.cmd'))
 
-          # Et le refus quand l'application tourne : on simule en verrouillant l'exe.
-          Remove-Item -Recurse -Force $poste
+          # Lancée par l'application elle-même, la mise à jour ne s'arrête pas sur
+          # un « appuyez sur une touche » : elle attend que la fenêtre se ferme,
+          # puis rouvre l'application. Sans quoi la personne se retrouverait
+          # devant une console, sans son logiciel.
+          $env:BLONAY_MAJ_AUTO = '1'
+          $auto = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$env:GITHUB_WORKSPACE\BlonayPDF-windows.zip`" < NUL" 2>&1 | Out-String
+          Remove-Item Env:\BLONAY_MAJ_AUTO
+          Write-Host $auto
+          & $dit 'la mise à jour automatique va au bout' ($auto -match 'BLONAY-MAJ: OK')
+          & $dit 'elle rouvre l''application au lieu d''attendre une touche' ($auto -match 'Redémarrage de l''application')
+          # Elle vient d'ouvrir une fenêtre sur le runner : on la referme.
+          Start-Sleep -Seconds 5
+          taskkill /F /IM BlonayPDF.exe /T 2>$null | Out-Null
+          Start-Sleep -Seconds 2
+          Remove-Item -Recurse -Force $poste -ErrorAction SilentlyContinue
 
       # upload-artifact@v4 et action-gh-release@v2 ciblent encore Node 20 : le
       # runner les force sur Node 24 et prévient à chaque exécution. Rien n'est

@@ -140,7 +140,10 @@ const refermer = async (s) => { await s.e.close().catch(() => {}); await souffle
   assert.match(fiche, /scrypt/, 'seulement son empreinte');
   dit('fiche de Marie : empreinte scrypt, pas de mot de passe');
 
-  const dossiers = fs.readdirSync(path.join(base, 'data')).sort();
+  // Les dossiers, et eux seuls : « data » porte aussi des fichiers à nous, dont
+  // le jeton qui dit quels postes ont l'application ouverte.
+  const dossiers = fs.readdirSync(path.join(base, 'data'), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name).sort();
   assert.deepEqual(dossiers, ['Marie', 'Sophie'], 'un dossier par personne dans data/');
   dit('data/ : ' + dossiers.join(', '));
 

@@ -31,6 +31,16 @@ Trois conséquences pratiques :
    ce que vous ne voulez pas y laisser.
 
 METTRE À JOUR
+Posez simplement le zip téléchargé à côté de BlonayPDF.exe (ou dans un sous-dossier
+« maj »). Au lancement suivant, l'application le voit, le dit, et propose de se mettre
+à jour toute seule : elle se ferme, remplace ses fichiers et se rouvre. Rien n'est
+téléchargé — c'est vous qui apportez le zip — et « Aide › Rechercher une mise à jour »
+pose la question quand vous voulez.
+Si l'application est encore ouverte sur un autre poste, elle le dit et ne touche à rien :
+Windows verrouille les fichiers en cours d'utilisation, et la copie se ferait à moitié.
+Faites refermer, puis recommencez.
+
+À LA MAIN, SI VOUS PRÉFÉREZ
 Double-cliquez sur « Mettre-a-jour.cmd », ou posez le zip téléchargé dessus. Il remplace
 les fichiers de l'application par ceux du zip et ne touche jamais au sous-dossier
 « data » : vos tampons, votre signature mémorisée, vos récents et le travail mis de côté
