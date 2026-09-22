@@ -86,6 +86,17 @@ KIND_KEYWORDS: dict[str, list[str]] = {
         "recu carte", "carte bancaire", "worldline", "six payment", "sumup",
     ],
     "taux_change": ["taux de change", "exchange rate", "wechselkurs", "kurs", "cours du", "1 eur", "eur/chf", "eur ="],
+    # Ticket de caisse d'un magasin. Il porte la liste des articles, la TVA et les formules de fin
+    # de ticket — un reçu de carte seul n'a rien de tout cela, il ne prouve que le paiement.
+    # C'est ce qui les sépare : payé par carte, un ticket de caisse porte AUSSI « visa », « debit »
+    # et « contactless », et passait alors pour un reçu de carte, donc exclu du décompte. Or c'est
+    # lui la pièce justificative : le reçu de carte, lui, ne dit pas ce qui a été acheté.
+    "ticket_caisse": [
+        "articles achetes", "nombre d'articles", "nb d'articles", "anzahl artikel", "total articles",
+        "merci pour votre achat", "merci de votre visite", "merci et a bientot", "vielen dank",
+        "prix garantie", "cumulus", "supercard", "superpunkte", "m-budget", "sous-total",
+        "tva", "mwst", "taux tva", "tva incl", "iva", "rendu monnaie", "especes", "article quant",
+    ],
 }
 
 RUBRIQUE_KEYWORDS: dict[str, list[str]] = {
@@ -127,6 +138,12 @@ def classify_kind(text_norm: str) -> tuple[str, dict[str, int]]:
     sc = {k: sum(1 for kw in kws if kw in text_norm) for k, kws in KIND_KEYWORDS.items()}
     if sc["facture"] >= 2:
         return "facture", sc
+    # Le ticket de caisse d'abord : payé par carte, il porte les mots de la carte en plus des
+    # siens, et la règle « recu_carte >= 3 » plus bas l'excluait du décompte. Deux signes suffisent
+    # (les articles, la TVA, la formule de remerciement), parce qu'une pièce écartée à tort se
+    # perd en silence, alors qu'un reçu de carte gardé à tort se voit et se décoche.
+    if sc["ticket_caisse"] >= 2:
+        return "billet", sc
     if sc["billet"] >= 2 and sc["recu_carte"] < 2:
         return "billet", sc
     if sc["recu_carte"] >= 3:

@@ -119,6 +119,52 @@ def test_classify_kind_invoice_containing_recepisse():
     assert classify_kind(text)[0] == "facture"
 
 
+def test_classify_kind_till_receipt_paid_by_card():
+    """Un ticket de caisse payé par carte reste un ticket.
+
+    Il porte forcément les mots de la carte — « visa », « debit », « contactless » — et ceux-ci
+    suffisaient à le faire passer pour un reçu de carte, donc à l'exclure du décompte. Or c'est
+    lui la pièce justificative : le reçu de carte ne dit pas ce qui a été acheté. Texte relevé
+    sur un vrai ticket Coop, avec les coquilles de l'OCR.
+    """
+    ticket = normalize(
+        "Pour moi et pour toi. Gaint-Legier\n"
+        "Article Quant Prix Action Total\n"
+        "Baton. glaces vanil 1 7.30\n"
+        "Prix Garantie Sorbe 2 5.20\n"
+        "SOME CHF 25.00\n"
+        "Visa Debit 25.00\n"
+        "Debit Visa Debit contactless\n"
+        "Tatal-EFT CHF: 25.00\n"
+        "COOP SOGIETE COOPERATIVE, CHE-116.311.185 TVA\n"
+        "Nowbre d'articles achetes\n"
+        "Merci pour votre achat!"
+    )
+    kind, scores = classify_kind(ticket)
+    assert kind == "billet", f"exclu à tort ({scores})"
+    # les mots de la carte sont bien là : ce n'est pas eux qui manquaient, c'est le ticket
+    assert scores["recu_carte"] >= 3
+
+
+def test_classify_kind_card_slip_alone_stays_excluded():
+    """Le reçu de carte SEUL reste exclu : il ne prouve que le paiement, pas l'achat."""
+    recu = normalize(
+        "COOP SAINT-LEGIER Terminal 31553636 Visa Debit contactless "
+        "No de trans 000123 Code d'autorisation A00 AID: A0000000031010 "
+        "Montant achat CHF 25.00 Total EFT CHF: 25.00 Copie client Signature du titulaire"
+    )
+    assert classify_kind(recu)[0] == "recu_carte"
+
+
+def test_classify_kind_till_receipt_paid_cash():
+    """Le même ticket payé en espèces : toujours un ticket, sans aucun mot de carte."""
+    ticket = normalize(
+        "MIGROS Vevey Article Quant Prix Total Pain mi-blanc 2 2.40 "
+        "Sous-total 12.60 TVA 2.5% Especes 20.00 Rendu monnaie 7.40 Merci de votre visite"
+    )
+    assert classify_kind(ticket)[0] == "billet"
+
+
 def test_parse_fares_line_total_interpretation():
     # « 3 Adulte CHF 45.00 » où 45.00 est le total de ligne : la somme doit retomber sur le total
     fares, _ = parse_fares(["3 Adulte CHF 45.00", "10 Enfant CHF 50.00"], "CHF", 95.0)
