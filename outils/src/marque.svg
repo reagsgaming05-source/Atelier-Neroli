@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="512" height="512" role="img" aria-label="Blonay PDF">
+  <!-- La marque de Blonay PDF, et la seule copie de son dessin dans le dépôt :
+       assembler.js la pose dans la page (la tuile de la barre, celle de l'écran
+       de démarrage, l'icône d'onglet), et faire-les-icones.js en tire les PNG
+       et les .ico de l'application portable et du site.
+
+       Une feuille de papier — angles vifs, comme partout ailleurs dans
+       l'application — avec son coin replié et un signet posé dessus. Le signet
+       dit ce qu'on fait ici : on ne se contente pas de lire un PDF, on le
+       tient, on le range, on marque l'endroit.
+
+       Aplat et non dégradé : au-dessus de 96 pixels un dégradé se voit à peine,
+       en dessous pas du tout, et il multipliait par six le poids des PNG et des
+       .ico — dont l'un est embarqué dans l'exécutable. Les surfaces de
+       l'application sont plates elles aussi ; la profondeur vient des ombres.
+
+       Les couleurs de la marque ne suivent pas le thème : une marque qui change
+       de teinte selon l'heure n'est plus une marque. Le rouge du signet n'est
+       pas celui des boutons de suppression (--rouge) : il ne veut rien dire
+       d'autre que « Blonay PDF ». -->
+  <rect width="26" height="26" rx="7" fill="#D4322A"/>
+  <path d="M7.2 4.4h7l4.6 4.6v13H7.2z" fill="#FBFAF7"/>
+  <path d="M14.2 4.4v4.6h4.6z" fill="#F2705C"/>
+  <path d="M9.4 4.4h3.6v9.6l-1.8-1.7-1.8 1.7z" fill="#AF1C14"/>
+  <path d="M9.4 16.8h7M9.4 19.2h4.4" stroke="#AF1C14" stroke-width="1.45" stroke-linecap="round"/>
+</svg>

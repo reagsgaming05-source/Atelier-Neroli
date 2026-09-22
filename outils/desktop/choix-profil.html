@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Blonay PDF — qui êtes-vous ?</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --encre: #10151A; --table: #191F25; --relief: #2C353E; --trait: #2E3841;
+    --texte: #E7ECF1; --texte-2: #98A6B4; --texte-3: #64727F;
+    --marque: #D4322A; --survol: rgba(255,255,255,.055);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      color-scheme: light;
+      --encre: #FFFFFF; --table: #F1F2F4; --relief: #FFFFFF; --trait: #E2E5E9;
+      --texte: #22262C; --texte-2: #5B636E; --texte-3: #8A929D;
+      --survol: rgba(22,26,32,.06);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100vh; display: flex; flex-direction: column; gap: 14px;
+    padding: 26px 28px; background: var(--table); color: var(--texte);
+    font: 13.5px/1.45 "Segoe UI", system-ui, sans-serif; user-select: none;
+  }
+  .tete { display: flex; align-items: center; gap: 11px; flex: none; }
+  .tete svg { width: 30px; height: 30px; flex: none; }
+  h1 { margin: 0; font-size: 17px; font-weight: 600; }
+  .tete p { margin: 2px 0 0; color: var(--texte-2); font-size: 12.5px; }
+  .liste { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .compte {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 13px;
+    border: 1px solid var(--trait); border-radius: 9px; background: var(--relief);
+    color: inherit; font: inherit; text-align: left; cursor: pointer;
+  }
+  .compte:hover { border-color: var(--marque); }
+  .compte:focus-visible { outline: 2px solid var(--marque); outline-offset: 2px; }
+  .pastille, .compte .pastille {
+    width: 26px; height: 26px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    background: var(--marque); color: #fff; font-weight: 600; font-size: 12px;
+  }
+  .vide { color: var(--texte-3); font-size: 12.5px; padding: 6px 2px; }
+  .ecran { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  .ecran[hidden] { display: none; }
+  label { font-size: 11.5px; color: var(--texte-2); margin-top: 4px; }
+  .qui { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; font-weight: 600; }
+  .erreur { margin: 2px 0 0; color: #E4574C; font-size: 12px; }
+  .erreur[hidden] { display: none; }
+  .lien { border: 0; background: none; color: var(--texte-2); font: inherit; font-size: 12.5px; cursor: pointer; padding: 6px 2px; text-align: left; }
+  .lien:hover { color: var(--texte); text-decoration: underline; }
+  .rangee { margin-top: auto; padding-top: 12px; align-items: center; justify-content: space-between; }
+  .rangee { display: flex; gap: 8px; }
+  #ecran-liste .liste { flex: 1; }
+  input {
+    min-width: 0; width: 100%; height: 34px; flex: none; padding: 0 11px; border-radius: 8px;
+    border: 1px solid var(--trait); background: var(--encre); color: var(--texte);
+    font: inherit; user-select: text;
+  }
+  input:focus { outline: none; border-color: var(--marque); }
+  button.ajout {
+    height: 34px; padding: 0 15px; border-radius: 8px; border: 0;
+    background: var(--marque); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button.ajout:disabled { opacity: .4; cursor: not-allowed; }
+  .note { flex: none; color: var(--texte-3); font-size: 11.5px; margin: 0; }
+</style>
+</head>
+<body>
+  <div class="tete">
+    <svg viewBox="0 0 26 26" aria-hidden="true">
+      <rect width="26" height="26" rx="7" fill="#D4322A"/>
+      <path d="M7.2 4.4h7l4.6 4.6v13H7.2z" fill="#FBFAF7"/>
+      <path d="M14.2 4.4v4.6h4.6z" fill="#F2705C"/>
+      <path d="M9.4 4.4h3.6v9.6l-1.8-1.7-1.8 1.7z" fill="#AF1C14"/>
+      <path d="M9.4 16.8h7M9.4 19.2h4.4" stroke="#AF1C14" stroke-width="1.45" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <h1 id="titre">Blonay PDF</h1>
+      <p id="sous-titre">Choisissez votre compte pour continuer.</p>
+    </div>
+  </div>
+
+  <!-- 1. la liste des comptes -->
+  <div id="ecran-liste" class="ecran">
+    <div class="liste" id="liste"></div>
+    <button type="button" class="lien" id="vers-creation">Créer un compte…</button>
+  </div>
+
+  <!-- 2. le mot de passe du compte choisi -->
+  <form id="ecran-connexion" class="ecran" hidden>
+    <p class="qui"><span class="pastille" id="pastille-c"></span><span id="nom-choisi"></span></p>
+    <label for="mdp">Mot de passe</label>
+    <input id="mdp" type="password" autocomplete="current-password">
+    <p class="erreur" id="erreur-c" hidden></p>
+    <div class="rangee">
+      <button type="button" class="lien" id="retour-c">Retour</button>
+      <button type="submit" class="ajout" id="entrer">Se connecter</button>
+    </div>
+  </form>
+
+  <!-- 3. la création d'un compte -->
+  <form id="ecran-creation" class="ecran" hidden>
+    <label for="nom">Prénom et nom</label>
+    <input id="nom" type="text" maxlength="48" autocomplete="off" placeholder="Marie Dupont">
+    <label for="mdp1">Mot de passe</label>
+    <input id="mdp1" type="password" autocomplete="new-password">
+    <label for="mdp2">Répétez le mot de passe</label>
+    <input id="mdp2" type="password" autocomplete="new-password">
+    <p class="erreur" id="erreur-n" hidden></p>
+    <div class="rangee">
+      <button type="button" class="lien" id="retour-n">Retour</button>
+      <button type="submit" class="ajout" id="creer">Créer mon compte</button>
+    </div>
+  </form>
+
+  <p class="note">L'application redémarre une fois pour ouvrir votre dossier.</p>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const ecrans = { liste: $('ecran-liste'), connexion: $('ecran-connexion'), creation: $('ecran-creation') };
+  const SOUS = {
+    liste: 'Choisissez votre compte pour continuer.',
+    connexion: 'Votre mot de passe, une fois. La connexion tient jusqu\u2019à la déconnexion.',
+    creation: 'Votre compte sera créé sur le serveur, avec vos tampons et vos récents.',
+  };
+  let choisi = '';
+
+  function montrer(quoi) {
+    Object.keys(ecrans).forEach((k) => { ecrans[k].hidden = k !== quoi; });
+    $('sous-titre').textContent = SOUS[quoi];
+    if (quoi === 'connexion') { $('mdp').value = ''; $('erreur-c').hidden = true; $('mdp').focus(); }
+    if (quoi === 'creation') { $('erreur-n').hidden = true; $('nom').focus(); }
+  }
+  const dire = (ou, message) => { const e = $(ou); e.textContent = message; e.hidden = !message; };
+
+  // Une réponse vide veut dire que c'est bon : l'application redémarre, la
+  // fenêtre disparaît d'elle-même.
+  function suite(ou, promesse) {
+    return promesse.then((message) => { if (message) dire(ou, message); });
+  }
+
+  window.comptes.liste().then((noms) => {
+    const liste = $('liste');
+    if (!noms.length) { montrer('creation'); return; }
+    noms.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'compte';
+      const pastille = document.createElement('span');
+      pastille.className = 'pastille';
+      pastille.textContent = c.nom.slice(0, 1).toUpperCase();
+      const t = document.createElement('span');
+      t.textContent = c.nom;
+      b.append(pastille, t);
+      b.addEventListener('click', () => {
+        choisi = c.nom;
+        $('nom-choisi').textContent = c.nom;
+        $('pastille-c').textContent = c.nom.slice(0, 1).toUpperCase();
+        $('pastille-c').className = 'pastille';
+        montrer('connexion');
+      });
+      liste.appendChild(b);
+      if (i === 0) b.focus();
+    });
+  });
+
+  $('vers-creation').addEventListener('click', () => montrer('creation'));
+  $('retour-c').addEventListener('click', () => montrer('liste'));
+  $('retour-n').addEventListener('click', () => montrer('liste'));
+
+  ecrans.connexion.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!$('mdp').value) return dire('erreur-c', 'Entrez votre mot de passe.');
+    dire('erreur-c', '');
+    return suite('erreur-c', window.comptes.connexion(choisi, $('mdp').value));
+  });
+
+  ecrans.creation.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const nom = $('nom').value.trim();
+    if (!nom) return dire('erreur-n', 'Écrivez votre prénom et votre nom.');
+    if ($('mdp1').value !== $('mdp2').value) return dire('erreur-n', 'Les deux mots de passe ne sont pas les mêmes.');
+    dire('erreur-n', '');
+    return suite('erreur-n', window.comptes.creer(nom, $('mdp1').value));
+  });
+</script>
+</body>
+</html>
