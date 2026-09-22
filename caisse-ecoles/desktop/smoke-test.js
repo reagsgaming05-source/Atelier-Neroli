@@ -627,7 +627,6 @@ function verifierCopie() {
   // Boîte de réception : la chaîne entière du copieur. On imprime trois fiches marquées, on en
   // fait une pile (c'est ce que produit le copieur quand on lui passe le tas signé), on la dépose
   // dans un dossier surveillé, et on vérifie que chaque document retrouve SA pièce.
-  const scanDir = fs.mkdtempSync(path.join(os.tmpdir(), 'compta-scan-'));
   const reception = await (async () => {
     // trois pièces neuves, et la pile de leurs fiches
     const pile = await win.evaluate(async () => {
@@ -647,14 +646,16 @@ function verifierCopie() {
       return { annee: reg.annee, faites, pages, octets: Array.from(bytes) };
     });
 
-    fs.writeFileSync(path.join(scanDir, 'SKM_C224e26040112000.pdf'), Buffer.from(pile.octets));
-
-    // le dossier est réglé depuis l'écran, comme le ferait l'utilisateur
-    const regle = await win.evaluate(async (dir) => {
-      await window.CaisseScan.regler({ scanDossiers: [{ chemin: dir }], scanActif: true, scanAuto: false });
+    // Le dossier de l'application : c'est là que le copieur envoie, sans rien régler. On y dépose
+    // la pile comme le ferait le copieur, et on vérifie que l'application l'y prend d'elle-même.
+    const regle = await win.evaluate(async () => {
+      await window.CaisseScan.regler({ scanDossiers: [], scanActif: true, scanAuto: false });
       const e = await window.CaisseScan.etat();
-      return { dossiers: e.dossiers.map((d) => d.chemin), auto: e.auto };
-    }, scanDir);
+      return { depot: e.depot, depotReseau: e.depotReseau, dossiers: e.dossiers.map((d) => d.chemin), auto: e.auto };
+    });
+    const scanDir = regle.depot;
+    if (!scanDir || !fs.existsSync(scanDir)) throw new Error(`dossier de dépôt absent : ${scanDir}`);
+    fs.writeFileSync(path.join(scanDir, 'SKM_C224e26040112000.pdf'), Buffer.from(pile.octets));
 
     // deux regards espacés : un fichier n'est pris que si sa taille n'a pas bougé depuis un moment
     await win.evaluate(() => window.CaisseScan.regarder());
@@ -717,6 +718,12 @@ function verifierCopie() {
     };
     parcourir(scanDir, '');
 
+    // le chemin est affiché en toutes lettres : c'est ce qu'on vient chercher sur cet écran
+    const affiche = await win.evaluate(() => ({
+      chemin: (document.getElementById('receptionDepot') || {}).textContent || '',
+      note: (document.getElementById('receptionDepotNote') || {}).textContent || '',
+    }));
+
     // on laisse le poste comme on l'a trouvé
     await win.evaluate(async () => {
       for (const d of await window.CaisseScan.liste()) await window.CaisseScan.retirer(d.id);
@@ -728,12 +735,14 @@ function verifierCopie() {
       window.CaisseApp.showPanel('panelSaisie');
     });
 
-    return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, ranges };
+    return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, affiche, ranges };
   })();
-  fs.rmSync(scanDir, { recursive: true, force: true });
   console.log('boîte de réception :', JSON.stringify(reception));
   ok = ok && reception.pilePages === 3
-    && reception.regle.dossiers.length === 1 && reception.regle.auto === false
+    && reception.regle.dossiers.length === 0 && reception.regle.auto === false
+    && /[\\/]Scans$/.test(reception.regle.depot)
+    && reception.affiche.chemin === reception.regle.depot
+    && reception.affiche.note.length > 20
     && reception.boite.lignes === 3 && reception.boite.etats.join('|') === 'trouvee|trouvee|trouvee'
     && reception.boite.badge === '3'
     && reception.jointe.justificatifs.includes('piece-signee.pdf')

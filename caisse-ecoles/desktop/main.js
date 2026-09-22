@@ -360,6 +360,19 @@ ipcMain.handle('settings:set', (ev, patchObj) => saveSettings(patchObj && typeof
  * de l'application, pas sur le partage : ce qui attend une validation attend sur ce poste.
  */
 const RECEPTION = () => path.join(REG_ROOT(), 'reception');
+/**
+ * Le dépôt de l'application : le dossier où le copieur envoie directement, sans qu'on ait rien à
+ * régler dans l'application. Il vit dans les données, donc à côté de l'exécutable — et si le
+ * dossier ComptaBlonay est posé sur le serveur, ce chemin EST une adresse du serveur, que le
+ * copieur peut viser tel quel. Surveillé d'office, il ne se retire pas.
+ *
+ * Le nom est court, sans accent et sans espace : il finit tapé dans le carnet d'adresses du
+ * copieur, et les vieux appareils y sont regardants. Il est à la racine des données plutôt que
+ * sous caisse/ pour que l'adresse à donner soit la plus courte possible.
+ */
+const DEPOT = () => path.join(app.getPath('userData'), 'Scans');
+/** Une adresse que le copieur peut viser : \\serveur\partage\… */
+const estReseau = (p) => /^\\\\[^\\]/.test(String(p || ''));
 let veille = null;
 const scansEnCours = new Map();
 let scanSeq = 0;
@@ -385,11 +398,20 @@ ipcMain.on('scan:resultat', (ev, r) => {
   resolve({ ok: !!r.ok, raison: String(r.raison || ''), nom: r.nom ? String(r.nom) : '' });
 });
 
+/** Le dépôt de l'application d'abord, puis les dossiers ajoutés à la main. */
+function dossiersSurveilles() {
+  const depot = DEPOT();
+  try { fs.mkdirSync(depot, { recursive: true }); } catch (e) { /* signalé par la veille */ }
+  const ajoutes = (loadSettings().scanDossiers || [])
+    .filter((d) => d && d.chemin && path.resolve(d.chemin) !== path.resolve(depot));
+  return [{ chemin: depot, depot: true }].concat(ajoutes);
+}
+
 function demarrerVeille() {
   const s = loadSettings();
   if (veille) veille.arreter();
   veille = creerVeille({
-    dossiers: () => (loadSettings().scanDossiers || []).filter((d) => d && d.chemin),
+    dossiers: dossiersSurveilles,
     poste: os.hostname(),
     journal: logLine,
     traiter: ({ nom, octets }) => lireScanDansLaPage(nom, octets),
@@ -400,9 +422,18 @@ function demarrerVeille() {
 
 ipcMain.handle('scan:etat', () => {
   const s = loadSettings();
-  return Object.assign({ dossiers: s.scanDossiers || [], actif: s.scanActif !== false, auto: s.scanAuto === true, intervalle: s.scanIntervalle || 5000, reception: RECEPTION() },
-    veille ? veille.etat() : { poste: os.hostname(), tours: 0, traites: 0, revoir: 0, erreurs: 0 });
+  const depot = DEPOT();
+  return Object.assign({
+    depot,
+    depotReseau: estReseau(depot),
+    dossiers: (s.scanDossiers || []).filter((d) => d && d.chemin && path.resolve(d.chemin) !== path.resolve(depot)),
+    actif: s.scanActif !== false,
+    auto: s.scanAuto === true,
+    intervalle: s.scanIntervalle || 5000,
+    reception: RECEPTION(),
+  }, veille ? veille.etat() : { poste: os.hostname(), tours: 0, traites: 0, revoir: 0, erreurs: 0 });
 });
+ipcMain.handle('scan:ouvrir-depot', () => { try { fs.mkdirSync(DEPOT(), { recursive: true }); } catch (e) { /* ignore */ } return shell.openPath(DEPOT()); });
 ipcMain.handle('scan:regler', (ev, patchObj) => {
   const p = patchObj && typeof patchObj === 'object' ? patchObj : {};
   const propre = {};

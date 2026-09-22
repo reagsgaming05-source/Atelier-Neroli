@@ -57,6 +57,7 @@ contextBridge.exposeInMainWorld('CaisseScan', {
   regler: (patchObj) => ipcRenderer.invoke('scan:regler', patchObj),
   choisirDossier: () => ipcRenderer.invoke('scan:choisir-dossier'),
   regarder: () => ipcRenderer.invoke('scan:regarder'),
+  ouvrirDepot: () => ipcRenderer.invoke('scan:ouvrir-depot'),
   // le processus principal confie un scan complet ; la page répond par scan:resultat
   onEntrant: (cb) => ipcRenderer.on('scan:entrant', (ev, d) => cb(d)),
   resultat: (r) => ipcRenderer.send('scan:resultat', r),

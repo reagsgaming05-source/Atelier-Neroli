@@ -335,12 +335,22 @@
     let r = null;
     try { r = await S.etat(); } catch (e) { r = null; }
     etat.reglages = r;
+    // Le dossier de l'application : l'adresse à donner au copieur. C'est l'information qu'on
+    // vient chercher sur cet écran, donc elle est en haut, en toutes lettres, et copiable.
+    const dep = $('receptionDepot');
+    if (dep && r) dep.textContent = r.depot || '';
+    const note = $('receptionDepotNote');
+    if (note && r) {
+      note.innerHTML = r.depotReseau
+        ? 'Cette adresse est sur le réseau : le copieur peut la viser telle quelle.'
+        : "Cette adresse est locale à ce PC. Pour que le copieur y accède, posez le dossier <b>ComptaBlonay</b> sur le serveur — ses données le suivent —, ou ajoutez plus bas le dossier réseau où il dépose déjà.";
+    }
     const box = $('receptionDossiers');
     if (box) {
       box.innerHTML = (r && r.dossiers && r.dossiers.length)
         ? r.dossiers.map((d) => `<div class="dligne"><span class="dval">${escapeHtml(d.chemin)}</span><span class="dspacer"></span>` +
           `<button type="button" class="small ghost" data-oublier="${escapeHtml(d.chemin)}" title="Ne plus surveiller ce dossier"><svg class="ico sm"><use href="#i-x"/></svg></button></div>`).join('')
-        : '<div class="dvide">Aucun dossier surveillé. Ajoutez celui où le copieur dépose ses scans (par exemple <code>P:\\Scan\\Caisse</code>).</div>';
+        : '<div class="dvide">Aucun autre dossier. Le dossier de l\'application ci-dessus suffit si le copieur peut y écrire.</div>';
     }
     const actif = $('optScanActif');
     if (actif) actif.checked = !!(r && r.actif);
@@ -405,6 +415,22 @@
     });
   }
   if ($('btnReceptionDossier')) $('btnReceptionDossier').addEventListener('click', () => S.ouvrirDossier());
+  if ($('btnDepotOuvrir')) $('btnDepotOuvrir').addEventListener('click', () => S.ouvrirDepot());
+  if ($('btnDepotCopier')) {
+    $('btnDepotCopier').addEventListener('click', async () => {
+      const chemin = (etat.reglages && etat.reglages.depot) || '';
+      if (!chemin) return;
+      try {
+        await navigator.clipboard.writeText(chemin);
+        majBandeau('Adresse copiée. Collez-la dans le réglage « numériser vers un dossier » du copieur.');
+      } catch (e) {
+        // presse-papiers refusé : on sélectionne le texte, il reste copiable à la main
+        const el = $('receptionDepot');
+        if (el) { const r = document.createRange(); r.selectNodeContents(el); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+        majBandeau('Adresse sélectionnée : copiez-la avec Ctrl+C.', 'warn');
+      }
+    });
+  }
   if ($('btnReceptionFermer')) $('btnReceptionFermer').addEventListener('click', () => $('receptionApercu').classList.add('hidden'));
 
   /* ---------------- Démarrage ---------------- */

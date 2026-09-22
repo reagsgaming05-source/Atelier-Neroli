@@ -417,8 +417,18 @@
   </header>
 
   <section class="card" id="receptionReglages">
-    <h2><svg class="ico"><use href="#i-folder"/></svg> Dossier surveillé</h2>
-    <p class="legend">Le dossier où le copieur dépose ses numérisations (« numériser vers un dossier », SMB). L'application y prend les PDF entiers, les range ensuite dans <code>traité\AAAA-MM</code>, ou dans <code>à revoir</code> si la lecture a échoué — <b>le fichier d'origine n'est jamais détruit</b>. Plusieurs postes peuvent surveiller le même dossier : un scan donné n'est pris que par un seul.</p>
+    <h2><svg class="ico"><use href="#i-folder"/></svg> Où le copieur dépose ses scans</h2>
+    <p class="legend">Réglez le copieur en « numériser vers un dossier » (SMB) et donnez-lui l'adresse ci-dessous. L'application y prend les PDF entiers, les range ensuite dans <code>traité\AAAA-MM</code>, ou dans <code>à revoir</code> si la lecture a échoué — <b>le fichier d'origine n'est jamais détruit</b>. Plusieurs postes peuvent surveiller le même dossier : un scan donné n'est pris que par un seul.</p>
+    <div class="depot">
+      <div class="depot-t"><svg class="ico sm"><use href="#i-folder"/></svg> Dossier de l'application <span class="badge-soft">surveillé d'office</span></div>
+      <code id="receptionDepot" class="depot-chemin"></code>
+      <div class="toolbar" style="margin-top:8px">
+        <button type="button" class="small" id="btnDepotCopier"><svg class="ico"><use href="#i-file"/></svg> Copier l'adresse</button>
+        <button type="button" class="small ghost" id="btnDepotOuvrir"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir</button>
+        <span class="legend" id="receptionDepotNote"></span>
+      </div>
+    </div>
+    <div class="legend" style="margin-top:14px">Vous pouvez aussi surveiller d'autres dossiers, par exemple si le copieur dépose déjà ailleurs :</div>
     <div id="receptionDossiers" class="dliste" style="max-height:180px"></div>
     <div class="toolbar">
       <button type="button" class="small" id="btnScanAjouter"><svg class="ico"><use href="#i-plus"/></svg> Ajouter un dossier…</button>

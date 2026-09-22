@@ -462,6 +462,21 @@ montant, ni libellé : une feuille qui traîne ou qui part chez un tiers ne dit 
 
     CB1-2026-PLX9K2M3ABCDE
 
+**Où le copieur envoie.** L'application tient son propre dossier de dépôt, surveillé d'office :
+
+    <dossier des données>\Scans
+
+Dans la version portable, les données vivent à côté de l'exécutable : si le dossier
+`ComptaBlonay` est posé sur le serveur, cette adresse EST une adresse du serveur, et le copieur
+peut la viser telle quelle — rien à partager, rien à régler dans l'application. L'écran
+*Boîte de réception* l'affiche en toutes lettres, avec un bouton pour la copier. D'autres
+dossiers peuvent s'ajouter à côté, si le copieur dépose déjà ailleurs.
+
+Sur le copieur (bizhub ou autre), c'est une destination « SMB » du carnet d'adresses : hôte,
+chemin du partage, un compte et un mot de passe qui ont le droit d'y écrire. Tant que ce n'est
+pas réglé, enregistrer la pièce jointe d'un scan reçu par e-mail dans ce dossier donne
+exactement le même résultat.
+
 Le trajet, une fois le copieur réglé en « numériser vers un dossier » (SMB) :
 
 1. vous imprimez les fiches, l'enseignant-e signe ;
@@ -492,9 +507,8 @@ Ce qui est prévu, et éprouvé :
 | même fiche passée deux fois | signalée « déjà dans cette pile » ; à vous de remplacer ou d'écarter |
 | **dans tous les cas** | le fichier d'origine est déplacé dans `traité\AAAA-MM`, **jamais détruit** |
 
-Les dossiers surveillés se règlent dans la Boîte de réception (une liste : un copieur sait
-souvent envoyer vers plusieurs destinations). Les documents en attente de validation vivent dans
-les données de l'application, pas sur le partage : fermer l'application ne perd rien.
+Les documents en attente de validation vivent dans les données de l'application, pas sur le
+partage : fermer l'application ne perd rien.
 
 ## Le carnet des données
 

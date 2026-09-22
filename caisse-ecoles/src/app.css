@@ -680,3 +680,11 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   .rec { flex-wrap: wrap; }
   .rec-act { flex-direction: row; }
 }
+
+/* le dossier de l'application, à donner au copieur : c'est l'information qu'on vient chercher ici */
+.depot { margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: var(--accent-soft); border: 1px solid #cddcf7; }
+.depot-t { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 10px; }
+.depot-chemin {
+  display: block; padding: 10px 12px; border-radius: 8px; background: #fff; border: 1px solid var(--line);
+  font-family: var(--mono); font-size: 12.5px; color: var(--ink); word-break: break-all; user-select: all;
+}
