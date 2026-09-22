@@ -363,6 +363,82 @@
     return P.suggestAccountFor(p.type, p.objet, degre, vocab, history);
   }
 
+  /**
+   * Tous les comptes proposables pour une pièce, du plus probable au moins probable, avec de quoi
+   * choisir sans les connaître par cœur : à quoi sert habituellement le compte, et de quel côté
+   * il tombe d'ordinaire.
+   *
+   * Les quatre « comptes habituels » suffisaient quand le bon en faisait partie ; sinon il fallait
+   * connaître le numéro et le taper. La liste complète, elle, se parcourt.
+   *
+   *   niveau 0 : déjà employé pour ce type, cet objet et ce degré
+   *   niveau 1 : pour ce type et cet objet
+   *   niveau 2 : pour ce type
+   *   niveau 3 : compte connu, jamais employé pour ce type
+   */
+  function accountChoices(p, vocab, reg) {
+    vocab = vocab || {};
+    const sugg = accountSuggestions(p, vocab, reg);
+    const rang = new Map();
+    sugg.forEach((s, i) => rang.set(s.compte, { n: s.n, niveau: s.niveau, ordre: i }));
+
+    // ce à quoi sert le compte : le couple type + objet le plus fréquent du classeur de référence
+    const usages = new Map();
+    const noter = (compte, libelle, n) => {
+      if (!compte || !libelle) return;
+      const m = usages.get(compte) || new Map();
+      m.set(libelle, (m.get(libelle) || 0) + (n || 1));
+      usages.set(compte, m);
+    };
+    // Une seule source par compte, sinon les mêmes écritures sont comptées deux fois sous deux
+    // étiquettes et la plus vague l'emporte. On préfère le détail (type + objet), et on ne
+    // retombe sur le type seul que pour les comptes qui n'ont pas d'objet connu. « Autre » n'est
+    // pas un objet : on ne l'écrit pas. Le degré est omis, ce qui fusionne primaire et secondaire.
+    const etiquette = (type, objet) => [type, objet && objet !== 'Autre' ? objet : null].filter(Boolean).join(' · ');
+    const avecObjet = new Set();
+    for (const h of vocab.objetAccounts || []) if (h && h.compte) { avecObjet.add(h.compte); noter(h.compte, etiquette(h.type, h.objet), h.n); }
+    for (const h of vocab.typeAccounts || []) if (h && h.compte && !avecObjet.has(h.compte)) noter(h.compte, etiquette(h.type, null), h.n);
+    for (const x of (reg && reg.pieces) || []) if (x.compte && x.type) noter(x.compte, etiquette(x.type, x.objet), 1);
+    const usageDe = (c) => {
+      const m = usages.get(c);
+      if (!m) return '';
+      let best = ''; let n = -1;
+      for (const [k, v] of m) if (v > n || (v === n && k.length < best.length)) { best = k; n = v; }
+      return best;
+    };
+
+    // côté habituel : une entrée en caisse ou une sortie
+    const cotes = new Map();
+    for (const a of vocab.accountSides || []) {
+      if (!a || !a.compte) continue;
+      const c = cotes.get(a.compte) || { debit: 0, credit: 0 };
+      c[a.side === 'debit' ? 'debit' : 'credit'] += a.n || 1;
+      cotes.set(a.compte, c);
+    }
+    const coteDe = (c) => {
+      const v = cotes.get(c);
+      if (!v || v.debit === v.credit) return '';
+      return v.debit > v.credit ? 'debit' : 'credit';
+    };
+
+    const tous = new Set();
+    for (const c of vocab.accounts || []) if (c) tous.add(String(c));
+    for (const x of (reg && reg.pieces) || []) if (x.compte) tous.add(String(x.compte));
+    for (const s of sugg) tous.add(String(s.compte));
+
+    return Array.from(tous).map((compte) => {
+      const r = rang.get(compte);
+      return {
+        compte,
+        n: r ? r.n : 0,
+        niveau: r ? r.niveau : 3,
+        ordre: r ? r.ordre : 0,
+        usage: usageDe(compte),
+        sens: coteDe(compte),
+      };
+    }).sort((a, b) => a.niveau - b.niveau || a.ordre - b.ordre || b.n - a.n || a.compte.localeCompare(b.compte));
+  }
+
   /** Erreurs bloquantes d'une pièce (liste vide = pièce valable). */
   function validate(p, reg) {
     const errs = [];
@@ -793,6 +869,7 @@
     balanceAt,
     parseAmountInput,
     searchRows, numberChecks, explainGap,
+    accountChoices,
     periodMovements,
     piecesFromEntries, mergeEntries,
     serialize,

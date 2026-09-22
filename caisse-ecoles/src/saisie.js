@@ -58,12 +58,42 @@
     state.storage = R.storage();
     if (!state.storage) { els.regInfo.textContent = 'Stockage indisponible dans ce navigateur.'; return; }
     fillLists();
+    brancherCombos();
     state.years = await state.storage.years();
     const thisYear = new Date().getFullYear();
     let year = state.years.length ? Math.max.apply(null, state.years) : thisYear;
     try { const saved = Number(localStorage.getItem('caisse.registre.annee')); if (saved && state.years.includes(saved)) year = saved; } catch (e) { /* ignore */ }
     await openYear(year);
     initDgeo();
+  }
+
+  /** Classes et personnes connues, du classeur de référence et de l'année en cours. */
+  function connus(cle) {
+    const v = vocab();
+    const vus = new Set((v[cle === 'classe' ? 'classTokens' : 'persons'] || []).filter(Boolean));
+    for (const p of (state.reg && state.reg.pieces) || []) {
+      const x = cle === 'classe' ? p.classe : p.personne;
+      if (x) vus.add(x);
+    }
+    return Array.from(vus).sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
+  }
+
+  /** Les listes déroulantes de la fiche et des réglages de l'année. */
+  function brancherCombos() {
+    const NIVEAU = ['pour ce type, cet objet et ce degré', 'pour ce type et cet objet', 'pour ce type'];
+    const comptes = () => R.accountChoices(formPiece(), vocab(), state.reg).map((c) => ({
+      value: c.compte,
+      hint: c.usage,
+      note: c.n ? `${c.n}×` : '',
+      fort: c.niveau <= 1,
+      // le survol dit pourquoi ce compte est proposé si haut
+      titre: c.niveau < 3 ? `${c.n} écriture(s) ${NIVEAU[c.niveau]}` : 'compte connu du classeur',
+    }));
+    makeCombo(els.pCompte, comptes, { vide: 'Aucun compte connu ne correspond. Le numéro tapé sera gardé tel quel.', onPick: () => { state.autoAccount = false; refreshSuggestions(); } });
+    makeCombo(els.pClasse, () => connus('classe').map((x) => ({ value: x })), { vide: 'Aucune classe connue ne correspond.' });
+    makeCombo(els.pPersonne, () => connus('personne').map((x) => ({ value: x })), { vide: 'Aucun nom connu ne correspond.' });
+    // le compte caisse est un compte comme un autre : même liste, sans le tri par pertinence
+    makeCombo(els.regCaisse, () => (vocab().accounts || []).slice().sort().map((x) => ({ value: x })), { vide: 'Aucun compte connu ne correspond.' });
   }
 
   function fillLists() {
@@ -182,6 +212,120 @@
   }
   if (els.btnRegOpenDir) els.btnRegOpenDir.addEventListener('click', () => { if (window.CaisseFiles) window.CaisseFiles.openDir(); });
 
+  /* ---------------- Menu déroulant sur un champ texte ---------------- */
+  /**
+   * Un champ où l'on peut taper ce qu'on veut, doublé d'une liste déroulante qu'on parcourt.
+   *
+   * Les comptes se choisissaient parmi quatre boutons « habituels » : pratique quand le bon en
+   * faisait partie, inutile sinon — il fallait connaître le numéro par cœur. La liste montre tout
+   * ce qui est connu, le plus probable en premier, avec à quoi chaque compte sert d'habitude.
+   *
+   * `items()` rend [{ value, label, hint, note, fort }]. Le champ reste libre : rien n'oblige à
+   * choisir dans la liste, une nouvelle valeur se tape simplement.
+   */
+  function makeCombo(input, items, opts) {
+    if (!input || input.dataset.combo) return null;
+    opts = opts || {};
+    input.dataset.combo = '1';
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('list'); // la liste native ferait doublon
+
+    const wrap = document.createElement('div');
+    wrap.className = 'combo';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    const arrow = document.createElement('button');
+    arrow.type = 'button'; arrow.className = 'combo-arrow'; arrow.tabIndex = -1;
+    arrow.setAttribute('aria-label', 'Voir la liste');
+    wrap.appendChild(arrow);
+    const pop = document.createElement('div');
+    pop.className = 'combo-pop hidden'; pop.setAttribute('role', 'listbox');
+    wrap.appendChild(pop);
+
+    let ouvert = false; let actif = -1; let vus = []; let enPose = false;
+    const sansAccent = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    function dessiner(filtre) {
+      const q = sansAccent(filtre).trim();
+      const tous = items() || [];
+      vus = q ? tous.filter((it) => sansAccent(`${it.value} ${it.label || ''} ${it.hint || ''}`).includes(q)) : tous;
+      if (!vus.length) {
+        pop.innerHTML = `<div class="combo-vide">${escapeHtml(opts.vide || 'Rien de connu qui corresponde. Ce que vous tapez sera gardé tel quel.')}</div>`;
+        actif = -1;
+        return;
+      }
+      pop.innerHTML = vus.map((it, i) => (
+        `<div class="combo-item${i === actif ? ' actif' : ''}${it.fort ? ' fort' : ''}" role="option" data-i="${i}"${it.titre ? ` title="${escapeHtml(it.titre)}"` : ''}>` +
+        `<b>${escapeHtml(it.label || it.value)}</b>` +
+        (it.hint ? `<span class="u">${escapeHtml(it.hint)}</span>` : '') +
+        (it.note ? `<span class="n">${escapeHtml(it.note)}</span>` : '') +
+        '</div>'
+      )).join('');
+    }
+    function montrerActif() {
+      const el = pop.querySelector('.combo-item.actif');
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    }
+    function ouvrir(filtre) {
+      dessiner(filtre == null ? '' : filtre);
+      pop.classList.remove('hidden');
+      input.setAttribute('aria-expanded', 'true');
+      ouvert = true;
+    }
+    function fermer() {
+      pop.classList.add('hidden');
+      input.setAttribute('aria-expanded', 'false');
+      ouvert = false; actif = -1;
+    }
+    function choisir(i) {
+      const it = vus[i];
+      if (!it) return;
+      input.value = it.value;
+      fermer();
+      // Les événements préviennent le reste de l'application (libellé, suggestions). Sans ce
+      // drapeau, l'écouteur « input » ci-dessous rouvrait la liste sur la valeur qu'on vient de
+      // choisir : on cliquait, et le menu se rouvrait aussitôt.
+      enPose = true;
+      try {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      } finally { enPose = false; }
+      if (opts.onPick) opts.onPick(it);
+    }
+
+    arrow.addEventListener('mousedown', (ev) => {
+      ev.preventDefault(); // garder le curseur dans le champ
+      if (ouvert) fermer(); else { ouvrir(''); input.focus(); }
+    });
+    input.addEventListener('input', () => { if (enPose) return; if (ouvert || input.value) { actif = -1; ouvrir(input.value); } });
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+        ev.preventDefault();
+        if (!ouvert) { ouvrir(input.value); actif = -1; }
+        if (!vus.length) return;
+        actif = ev.key === 'ArrowDown'
+          ? (actif + 1) % vus.length
+          : (actif <= 0 ? vus.length - 1 : actif - 1);
+        dessiner(input.value); montrerActif();
+      } else if (ev.key === 'Enter' && ouvert && actif >= 0) {
+        ev.preventDefault(); choisir(actif);
+      } else if (ev.key === 'Escape' && ouvert) {
+        ev.preventDefault(); ev.stopPropagation(); fermer();
+      } else if (ev.key === 'Tab') fermer();
+    });
+    pop.addEventListener('mousedown', (ev) => {
+      const el = ev.target.closest('.combo-item');
+      if (!el) return;
+      ev.preventDefault(); // le champ ne doit pas perdre le focus avant le clic
+      choisir(Number(el.dataset.i));
+    });
+    document.addEventListener('mousedown', (ev) => { if (ouvert && !wrap.contains(ev.target)) fermer(); });
+    input.addEventListener('blur', () => setTimeout(() => { if (ouvert && !wrap.contains(document.activeElement)) fermer(); }, 120));
+    return { ouvrir, fermer };
+  }
+
   /* ---------------- Fiche ---------------- */
   function newPiece() {
     const p = R.newPiece(state.reg);
@@ -296,21 +440,17 @@
   function refreshSuggestions() {
     const p = formPiece();
     const sugg = R.accountSuggestions(p, vocab(), state.reg).slice(0, 4);
+    // Les quatre boutons ont laissé la place à la liste déroulante du champ, qui porte TOUS les
+    // comptes et dit à quoi chacun sert. Il reste une ligne qui rappelle le plus employé.
     els.pCompteSugg.innerHTML = sugg.length
-      ? 'Habituel : ' + sugg.map((s) => `<button type="button" class="small${s.compte === els.pCompte.value ? ' primary' : ''}" data-account="${escapeHtml(s.compte)}" title="${s.n} écriture(s) de ce genre dans le classeur">${escapeHtml(s.compte)}</button>`).join(' ')
-      : '<span class="legend">Aucun compte habituel connu pour ce type : choisissez dans la liste.</span>';
+      ? `Le plus employé pour ce type : <b>${escapeHtml(sugg[0].compte)}</b> <span class="legend">(${sugg[0].n} écriture${sugg[0].n > 1 ? 's' : ''})</span>` +
+        (sugg.length > 1 ? ` <span class="legend">· ${sugg.length - 1} autre${sugg.length > 2 ? 's' : ''} possible${sugg.length > 2 ? 's' : ''}, dans la liste du champ</span>` : '')
+      : '<span class="legend">Aucun compte habituel pour ce type : ouvrez la liste du champ pour voir tous les comptes connus.</span>';
     // seulement tant que le compte n'a pas été touché à la main : sinon vider le champ le
     // remplissait aussitôt, et le texte tapé venait s'ajouter à la suite de la proposition
     if (state.autoAccount && !els.pCompte.value && sugg.length && sugg[0].niveau <= 1) els.pCompte.value = sugg[0].compte;
   }
 
-  els.pCompteSugg.addEventListener('click', (ev) => {
-    const b = ev.target.closest('button[data-account]');
-    if (!b) return;
-    els.pCompte.value = b.dataset.account;
-    state.autoAccount = false;
-    refreshSuggestions();
-  });
   els.pType.addEventListener('change', () => { setSens(null, true); refreshKind(); els.pCompte.value = ''; state.autoAccount = true; refreshSuggestions(); refreshLibelle(); });
   // objet ou classe modifiés : le compte habituel change souvent (degré, activité) -> re-proposé
   for (const id of ['pObjet', 'pClasse']) els[id].addEventListener('input', () => { if (state.autoAccount) els.pCompte.value = ''; refreshSuggestions(); refreshLibelle(); });

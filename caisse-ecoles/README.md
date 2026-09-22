@@ -118,7 +118,13 @@ décompte → pièce), puis publication du zip.
    PARTICIPATION DES PARENTS…), **objet** (course d'école, camp, mini-camp, voyage d'étude, cours de
    ski, collation, repas, matériel…), classe, dates de l'activité, détail, personne. Le libellé du
    journal se compose tout seul (`TYPE - Objet classe du dates détail - Personne`) et reste
-   modifiable. Le **compte** est proposé d'après le classeur 2025 pour ce type, cet objet et ce
+   modifiable. Le **compte** se choisit dans une **liste déroulante** qui porte tous les comptes
+   connus (ceux du classeur de référence et ceux déjà employés cette année), le plus probable en
+   tête, chacun avec ce à quoi il sert d'habitude (« DECOMPTE · Camp », « RETRAIT · Bourse
+   communale ») et son côté usuel. La liste se filtre en tapant — par numéro (`3662`) comme par
+   usage (`camp`) — se parcourt aux flèches, se choisit avec Entrée, et le champ reste libre : un
+   compte inconnu se tape simplement. Même liste pour la classe, la personne et le compte caisse.
+   Le compte est proposé d'office d'après le classeur 2025 pour ce type, cet objet et ce
    degré (primaire / secondaire) — par exemple DECOMPTE + course d'école + 5P → 51000.3662.00,
    AVANCE + camp + 9S → 52000.3662.00, PARTICIPATION + cours de ski → 51000.4392.20. Le **sens**
    est fixé par la logique des libellés (un DECOMPTE se choisit). Les **justificatifs** (PDF, JPG,

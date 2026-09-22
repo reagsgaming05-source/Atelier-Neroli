@@ -397,6 +397,53 @@ function verifierCopie() {
   console.log('relevé de caisse :', JSON.stringify(releve));
   ok = ok && releve.boutonLa && releve.pages === 1 && releve.total === 4383.9 && releve.octets > 1000 && releve.refus;
 
+  // Liste déroulante des comptes : tous les comptes connus, filtrables, parcourables au clavier,
+  // et le champ reste libre pour un numéro qu'on ne connaît pas encore.
+  const liste = await win.evaluate(async () => {
+    const champ = document.getElementById('pCompte');
+    const pop = () => champ.parentElement.querySelector('.combo-pop');
+    const lignes = () => Array.from(pop().querySelectorAll('.combo-item'));
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+    const taper = async (t) => { champ.value = t; champ.dispatchEvent(new Event('input', { bubbles: true })); await pause(60); };
+
+    champ.parentElement.querySelector('.combo-arrow').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    await pause(80);
+    const ouverte = !pop().classList.contains('hidden');
+    const total = lignes().length;
+    const defile = pop().scrollHeight > pop().clientHeight + 1; // elle doit défiler, pas déborder
+    const enTete = lignes()[0].querySelector('b').textContent;
+
+    await taper('3662');
+    const parNumero = lignes().length;
+    await taper('camp'); // on cherche aussi par ce à quoi le compte sert
+    const parUsage = lignes().length;
+    await taper('zzzz');
+    const messageVide = !!pop().querySelector('.combo-vide');
+
+    // clavier : la liste se parcourt et se choisit sans la souris, et se referme après le choix
+    await taper('');
+    champ.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await pause(60);
+    champ.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await pause(120);
+    const apresChoix = { valeur: champ.value, fermee: pop().classList.contains('hidden') };
+
+    // un compte inconnu se tape quand même : le champ n'impose pas la liste
+    await taper('12345.6789.00');
+    champ.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await pause(60);
+    const libre = champ.value;
+    await taper('');
+    const autres = ['pClasse', 'pPersonne', 'regCaisse'].every((id) => document.getElementById(id).parentElement.classList.contains('combo'));
+    return { ouverte, total, defile, enTete, parNumero, parUsage, messageVide, apresChoix, libre, autres };
+  });
+  console.log('liste des comptes :', JSON.stringify(liste));
+  ok = ok && liste.ouverte && liste.total >= 20 && liste.defile && /^\d/.test(liste.enTete)
+    && liste.parNumero > 0 && liste.parNumero < liste.total
+    && liste.parUsage > 0 && liste.parUsage < liste.total
+    && liste.messageVide && liste.apresChoix.fermee && /^\d/.test(liste.apresChoix.valeur)
+    && liste.libre === '12345.6789.00' && liste.autres;
+
   // nouvelle année par le petit formulaire en ligne (window.prompt n'existe pas dans Electron)
   const ny = await win.evaluate(async () => {
     const s = window.CaisseSaisie.state; const y0 = s.reg.annee;
