@@ -147,12 +147,15 @@ jobs:
       # Les zips des tests sont ecrits a la main. Celui-ci vient de
       # Compress-Archive : c'est la seule preuve que le lecteur de zip tient
       # devant l'archive que les gens telechargeront vraiment.
+      # Le script node est dans une chaine PowerShell a guillemets doubles :
+      # pas d'apostrophe dedans, elle y serait rendue telle quelle et couperait
+      # la chaine JavaScript en deux.
       - name: La fiche de version se lit dans l'archive
         shell: pwsh
         run: |
           $zip = Join-Path $env:GITHUB_WORKSPACE 'BlonayPDF-windows.zip'
           $mod = Join-Path $env:GITHUB_WORKSPACE 'outils\desktop\version-posee.js'
-          $lu = node -e "const v = require(process.argv[1]).ficheDuZip(process.argv[2]); if (!v || !v.commit || !v.date) { console.error('fiche de version illisible dans l''archive'); process.exit(1); } console.log(v.commit + ' du ' + v.date);" $mod $zip
+          $lu = node -e "const v = require(process.argv[1]).ficheDuZip(process.argv[2]); if (!v || !v.commit || !v.date) { console.error('fiche de version illisible dans le zip'); process.exit(1); } console.log(v.commit + ' du ' + v.date);" $mod $zip
           if ($LASTEXITCODE -ne 0) { throw "La fiche de version ne se lit pas dans l'archive." }
           Write-Host "  fiche lue dans l'archive : $lu"
 
