@@ -79,7 +79,10 @@ Currency = Literal["CHF", "EUR"]
 PieceKind = Literal["billet", "facture", "recepisse", "recu_carte", "taux_change", "autre"]
 Mode = Literal["direct", "prorata"]
 
-RUBRIQUES_COURSE = ["Transport", "Activité", "Autre"]
+# La course d'école a droit à « Nourriture » comme le camp : un repas au restaurant ou de
+# grosses courses pour la classe y vont, pas dans « Autre ». Le modèle n'impose rien —
+# excel.py écrit le nom de la rubrique dans la colonne B, ligne par ligne.
+RUBRIQUES_COURSE = ["Transport", "Activité", "Nourriture", "Autre"]
 RUBRIQUES_CAMP = ["Nourriture", "Hébergement", "Transport", "Activité", "Autre", "Cuisinière"]
 
 

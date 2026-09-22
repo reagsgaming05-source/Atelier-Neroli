@@ -1,7 +1,7 @@
 import pytest
 
 from decompte.models import Block, Line, Word
-from decompte.pieces import analyse_block, classify_kind, parse_fares
+from decompte.pieces import analyse_block, classify_kind, guess_rubrique, parse_fares
 from decompte.textutils import normalize
 
 
@@ -258,3 +258,37 @@ def test_nom_de_fichier_entierement_hors_alphabet_latin():
     stem = nom.rpartition(".")[0]
     ascii_stem = "".join(c for c in unicodedata.normalize("NFKD", stem).encode("ascii", "ignore").decode() if c.isalnum() or c in "-_")
     assert (ascii_stem or "decompte") == "decompte"
+
+
+def test_guess_rubrique_nourriture_on_a_school_outing():
+    """Un repas ou de grosses courses pour la classe vont dans « Nourriture », pas dans « Autre ».
+
+    La course d'école n'avait droit qu'à Transport / Activité / Autre : toute la nourriture y
+    tombait dans « Autre ». Le modèle Excel n'impose pourtant rien — le nom de la rubrique est
+    écrit ligne par ligne dans la colonne B.
+    """
+    from decompte.rules import normalize_rubrique, rubriques_for
+
+    assert "Nourriture" in rubriques_for("course")
+    for texte in ("coop saint-legier baton glaces prix garantie tva",
+                  "restaurant de la gare menu du jour 12 couverts"):
+        devinee = guess_rubrique(normalize(texte), "billet")
+        assert devinee == "Nourriture"
+        assert normalize_rubrique(devinee, "course") == "Nourriture"
+
+
+def test_guess_rubrique_cuisiniere_has_its_own_row():
+    """Le modèle du camp a une ligne « Cuisinière » : elle doit servir.
+
+    Rien ne l'y envoyait — aucun mot-clé ne menait à cette rubrique, et la facture d'une
+    cuisinière, qui parle forcément de repas, finissait dans « Nourriture ».
+    """
+    from decompte.rules import normalize_rubrique
+
+    for texte in ("facture salaire cuisiniere camp de leysin repas midi et soir",
+                  "honoraires cuisinier semaine du 12 au 16 mai"):
+        devinee = guess_rubrique(normalize(texte), "facture")
+        assert devinee == "Cuisinière", texte
+        assert normalize_rubrique(devinee, "camp") == "Cuisinière"
+    # la cuisine d'un chalet est une pièce, pas une personne : cela reste de l'hébergement
+    assert guess_rubrique(normalize("location chalet avec cuisine equipee dortoir"), "facture") == "Hébergement"
