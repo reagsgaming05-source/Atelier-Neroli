@@ -193,3 +193,70 @@ test('la découpe conserve toutes les pages, chacune une seule fois', () => {
     }
   }
 });
+
+/* ---------------- Le bac à courrier des décomptes ---------------- */
+/*
+ * En plus d'être attaché à sa ligne du journal, un décompte scanné est posé dans un dossier qu'on
+ * ouvre dans l'explorateur pour voir ce qu'il reste à faire. Ce classement n'est pas comptable :
+ * c'est un bac à courrier. Il ne doit donc jamais décider à la place de la personne — il range là
+ * où elle a coché, et nulle part ailleurs.
+ */
+
+const decompte = (over) => Object.assign({
+  type: 'DECOMPTE', objet: 'Camp', no: 42, classe: '9S',
+  libelle: "DECOMPTE - Camp 9S du 12-16.05.2026 Leysin - L. Duvernay",
+}, over || {});
+
+test('un décompte marqué « à faire » va dans le dossier de son genre', () => {
+  assert.equal(L.rangement(decompte({ decompteAFaire: true })).dossier, 'Décomptes/À faire/Camp');
+  assert.equal(
+    L.rangement(decompte({ decompteAFaire: true, objet: "Course d'école" })).dossier,
+    "Décomptes/À faire/Course d'école",
+  );
+});
+
+test('un décompte non marqué reste à la racine : il est gardé, il n\'y a rien à en faire', () => {
+  assert.equal(L.rangement(decompte({ decompteAFaire: false })).dossier, 'Décomptes');
+  assert.equal(L.rangement(decompte({})).dossier, 'Décomptes');
+});
+
+test('ce qui n\'est pas un décompte n\'entre pas dans ce classement', () => {
+  for (const type of ['FRAIS', 'REMBOURSEMENT', 'RECETTE', '', null]) {
+    assert.equal(L.rangement(decompte({ type, decompteAFaire: true })), null, `${type} a été rangé comme un décompte`);
+  }
+  assert.equal(L.rangement(null), null);
+  assert.equal(L.rangement({}), null);
+});
+
+test('« Mini-camp » est un camp', () => {
+  assert.equal(L.genreDeDecompte('Mini-camp'), 'Camp');
+  assert.equal(L.genreDeDecompte('Camp'), 'Camp');
+  assert.equal(L.genreDeDecompte("Course d'école"), "Course d'école");
+  // tout le reste est une course d'école : c'est le choix offert sur la fiche, il n'y en a pas de troisième
+  assert.equal(L.genreDeDecompte('Autre'), "Course d'école");
+  assert.equal(L.genreDeDecompte(''), "Course d'école");
+});
+
+test('le nom du fichier se lit dans l\'explorateur, et Windows l\'accepte', () => {
+  const nom = L.rangement(decompte({ decompteAFaire: true })).nom;
+  assert.match(nom, /^042 /, 'le numéro en tête, complété, pour que le tri soit le bon');
+  assert.ok(nom.includes('Leysin'), 'de quoi reconnaître le décompte');
+  assert.ok(!nom.startsWith('042 DECOMPTE'), 'le type est déjà dit par le dossier');
+  assert.doesNotMatch(nom, /[<>:"/\\|?*]/, 'caractère interdit sous Windows');
+  assert.match(nom, /\.pdf$/);
+});
+
+test('un libellé absurde ne fabrique pas un nom de fichier impossible', () => {
+  for (const libelle of ['', null, 'a'.repeat(400), 'DECOMPTE - <>:"/\\|?*', '   ', '...']) {
+    const nom = L.rangement(decompte({ libelle, decompteAFaire: true })).nom;
+    assert.ok(nom.length > 4 && nom.length <= 95, `nom de ${nom.length} caractères`);
+    assert.doesNotMatch(nom, /[<>:"/\\|?*]/);
+    assert.doesNotMatch(nom, /^[. ]|[. ]\.pdf$/, `nom impossible sous Windows : ${nom}`);
+  }
+});
+
+test('une pièce sans numéro reste rangeable', () => {
+  const nom = L.rangement(decompte({ no: null, decompteAFaire: true })).nom;
+  assert.match(nom, /^sans-no|^[^0-9]/);
+  assert.match(nom, /\.pdf$/);
+});

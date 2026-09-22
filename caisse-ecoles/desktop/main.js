@@ -495,6 +495,52 @@ ipcMain.handle('reception:retirer', (ev, id) => {
 });
 ipcMain.handle('reception:ouvrir-dossier', () => shell.openPath(RECEPTION()));
 
+/*
+ * Le bac à courrier des décomptes : en plus d'être attaché à sa ligne du journal, un décompte
+ * scanné est posé dans un dossier qu'on ouvre dans l'explorateur. La page dit où (voir pile.js) ;
+ * ici on écrit, et on refuse tout ce qui sortirait des données de l'application — un chemin
+ * venu de la page ne décide pas où l'on écrit sur le disque.
+ */
+const DECOMPTES = () => path.join(app.getPath('userData'), 'Décomptes');
+/**
+ * Le dossier désigné par la page, ramené à un chemin sous les données de l'application.
+ *
+ * On valide segment par segment plutôt que de s'en remettre à `path.resolve` : sous Linux,
+ * « ..\..\x » n'est qu'un nom de fichier et resolve le laisse passer ; sous Windows c'est une
+ * remontée de deux crans. Un garde-fou dont la justesse dépend du système qui lit la chaîne n'est
+ * pas un garde-fou. Nos propres chemins (voir pile.js) ne sont faits que de segments simples
+ * séparés par « / » — tout le reste est refusé, et la résolution le revérifie ensuite.
+ */
+const SEGMENT_INTERDIT = /[<>:"\\|?*]|[\u0000-\u001f]/;
+function sousDossierSur(relatif) {
+  const racine = app.getPath('userData');
+  const brut = String(relatif || '').trim();
+  if (!brut) return racine;
+  const segments = brut.split('/');
+  for (const seg of segments) {
+    if (!seg || seg === '.' || seg === '..' || SEGMENT_INTERDIT.test(seg) || /^[. ]+$|[. ]$/.test(seg)) {
+      throw new Error(`dossier refusé : « ${seg} »`);
+    }
+  }
+  const cible = path.resolve(racine, segments.join(path.sep));
+  if (cible !== racine && !cible.startsWith(racine + path.sep)) throw new Error('dossier hors des données de l\'application');
+  return cible;
+}
+ipcMain.handle('classement:poser', (ev, sousDossier, nom, octets) => {
+  const dir = sousDossierSur(sousDossier);
+  const fichier = path.join(dir, safeName(nom));
+  if (!fichier.startsWith(dir + path.sep)) throw new Error('nom de fichier invalide');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(fichier, Buffer.from(octets));
+  return fichier;
+});
+ipcMain.handle('classement:ouvrir', (ev, sousDossier) => {
+  const dir = sousDossier ? sousDossierSur(sousDossier) : DECOMPTES();
+  try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { /* ignore */ }
+  return shell.openPath(dir);
+});
+ipcMain.handle('classement:racine', () => DECOMPTES());
+
 /* ---------------- Nettoyage du dossier DGEO par la page Caisse écoles ---------------- */
 // La page a déjà pdf.js, pdf-lib et l'analyseur des pièces : la passerelle lui confie le dossier,
 // elle retire les pages « PIÈCE COMPTABLE » et renvoie le PDF (src/dossier.js).

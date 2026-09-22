@@ -18,7 +18,7 @@
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
     'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'journalSearch', 'journalOnlyDoubt', 'journalCount', 'journalNumbers', 'yearBar', 'anneeNotices', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
-    'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
+    'pObjetField', 'pKindField', 'pKind', 'pAFaireField', 'pAFaire', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
   if (!els.regYear) return; // page sans le panneau de saisie
@@ -290,6 +290,7 @@
   function fillForm(p) {
     // pièce qui a déjà un compte (modification, décompte pré-rempli) : il ne sera pas re-proposé
     state.autoAccount = !p.compte;
+    if (els.pAFaire) els.pAFaire.checked = !!p.decompteAFaire;
     els.pNo.value = p.no == null ? '' : p.no;
     els.pDate.value = p.date || '';
     els.pType.value = R.TYPES.includes(p.type) ? p.type : R.TYPES[0];
@@ -321,6 +322,7 @@
   function refreshKind() {
     const isDecompte = els.pType.value === 'DECOMPTE';
     els.pKindField.classList.toggle('hidden', !isDecompte);
+    if (els.pAFaireField) els.pAFaireField.classList.toggle('hidden', !isDecompte);
     els.pObjetField.classList.toggle('hidden', isDecompte);
     if (!isDecompte) return;
     // « Mini-camp » se montre sous le bouton « Camp » mais reste « Mini-camp » dans la pièce :
@@ -364,6 +366,8 @@
       scanKey: base ? base.scanKey : '',
       aVerifier: false,
       doutes: [],
+      // ne vaut que pour un décompte : la case est cachée pour les autres types
+      decompteAFaire: els.pType.value === 'DECOMPTE' && !!(els.pAFaire && els.pAFaire.checked),
     }));
     p.libelle = els.pLibelleEdit.checked ? els.pLibelle.value.trim() : R.composeLibelle(p);
     return p;

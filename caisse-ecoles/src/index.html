@@ -107,6 +107,7 @@
         <div class="field" style="flex:1;min-width:230px;max-width:380px"><label for="pType">Type d'écriture</label><select id="pType"></select></div>
         <div class="field" style="flex:1;min-width:190px;max-width:300px" id="pObjetField"><label for="pObjet">Objet</label><select id="pObjet"></select></div>
         <div class="field hidden" id="pKindField"><label>Décompte pour</label><div class="choice seg" id="pKind" style="margin:0"><label><input type="radio" name="pKind" value="Course d'école"> Course d'école</label><label><input type="radio" name="pKind" value="Camp"> Camp</label></div></div>
+        <div class="field hidden" id="pAFaireField"><label for="pAFaire">Reste à faire</label><label class="check legend" style="align-items:center;height:36px;white-space:nowrap"><input type="checkbox" id="pAFaire" style="margin-top:0"> <span title="Le scan signé sera posé dans Décomptes\À faire, pour le retrouver dans l'explorateur">Décompte à faire</span></label></div>
       </div>
       <div class="row">
         <div class="field"><label for="pClasse">Classe</label><input type="text" id="pClasse" placeholder="5P/3, 9S…" style="width:130px"></div>
@@ -434,6 +435,7 @@
       <button type="button" class="small" id="btnScanAjouter"><svg class="ico"><use href="#i-plus"/></svg> Ajouter un dossier…</button>
       <button type="button" class="small" id="btnScanRegarder"><svg class="ico"><use href="#i-refresh"/></svg> Regarder maintenant</button>
       <button type="button" class="small ghost" id="btnReceptionDossier"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier de réception</button>
+      <button type="button" class="small ghost" id="btnOuvrirDecomptes" title="Décomptes\À faire\Camp et Course d'école : ce qu'il reste à faire, dans l'explorateur"><svg class="ico"><use href="#i-list"/></svg> Ouvrir les décomptes</button>
     </div>
     <div class="toolbar" style="gap:18px">
       <label class="check legend" style="align-items:center"><input type="checkbox" id="optScanActif" checked style="margin-top:0"> Surveiller le dossier</label>

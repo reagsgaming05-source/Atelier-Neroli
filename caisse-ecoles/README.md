@@ -487,6 +487,21 @@ Le trajet, une fois le copieur réglé en « numériser vers un dossier » (SMB)
 4. chaque document attend votre accord dans la **Boîte de réception**, puis vient se joindre à sa
    pièce comme justificatif signé (`piece-signee.pdf`).
 
+**Le bac à courrier des décomptes.** Sur la fiche d'un DECOMPTE, une case *Décompte à faire* dit
+que le décompte DGEO reste à établir. Elle ne change rien à la comptabilité : elle décide où le
+scan signé va se poser, en plus d'être joint à sa ligne du journal.
+
+    Décomptes\
+        À faire\
+            Camp\                  décompte de camp marqué « à faire »
+            Course d'école\        idem, course d'école
+        …                          les décomptes non marqués : gardés, rien à en faire
+
+Le genre vient de ce qui est déjà coché sur la fiche (*Camp* / *Course d'école*), pas du code QR :
+celui-ci désigne la pièce, et la pièce porte le reste. Un décompte reclassé après coup n'oblige
+donc pas à réimprimer quoi que ce soit. Le bouton *Ouvrir les décomptes* mène à ce dossier :
+c'est l'explorateur qui dit ce qu'il reste à faire, sans passer par l'application.
+
 *Ranger automatiquement*, dans les réglages, saute l'étape 4 pour les pièces reconnues sans
 ambiguïté. C'est décoché au départ, et volontairement : un classement qui se trompe une fois sur
 dix coûte plus cher que pas de classement du tout.

@@ -104,5 +104,53 @@
    */
   const NOM_SIGNEE = 'piece-signee.pdf';
 
-  return { decouper, classer, resume, cle, NOM_SIGNEE };
+  /* ---------------- Où ranger un décompte scanné ---------------- */
+
+  const RACINE_DECOMPTES = 'Décomptes';
+  const A_FAIRE = 'À faire';
+
+  /** Camp ou course d'école, tels que la fiche les propose. « Mini-camp » est un camp. */
+  function genreDeDecompte(objet) {
+    const o = String(objet == null ? '' : objet).trim();
+    return /camp/i.test(o) ? 'Camp' : "Course d'école";
+  }
+
+  /** Nom de fichier lisible dans l'explorateur, et acceptable par Windows. */
+  function nomLisible(piece) {
+    const no = piece && piece.no != null && piece.no !== '' ? String(piece.no).padStart(3, '0') : 'sans-no';
+    // « DECOMPTE - Camp 9S du 12-16.05.2026 Leysin - L. Duvernay » : le type est déjà dit par le
+    // dossier, on garde ce qui distingue un décompte d'un autre.
+    const libelle = String((piece && piece.libelle) || '').replace(/^[A-ZÀ-Ý' ]+ - /, '').trim();
+    const propre = `${no} ${libelle}`
+      .replace(/[<>:"/\\|?*]/g, '-')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u001f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^[. ]+|[. ]+$/g, '');
+    return `${(propre || no).slice(0, 90)}.pdf`;
+  }
+
+  /**
+   * Le dossier où poser le scan signé d'une pièce, en plus de l'attacher à sa ligne du journal.
+   *
+   * Ce classement-là n'est pas comptable : c'est un bac à courrier. Il sert à ouvrir l'explorateur
+   * et voir d'un coup d'œil ce qu'il reste à faire, sans passer par l'application. Seuls les
+   * décomptes y ont leur place ; le reste est déjà rangé par le journal.
+   *
+   *   Décomptes/À faire/Camp/            décompte marqué « à faire » sur un camp
+   *   Décomptes/À faire/Course d'école/  idem, course d'école
+   *   Décomptes/                         décompte non marqué : gardé, rien à en faire
+   *
+   * Rend { dossier, nom } ou null si la pièce n'est pas un décompte.
+   */
+  function rangement(piece) {
+    if (!piece || String(piece.type || '').toUpperCase() !== 'DECOMPTE') return null;
+    const dossier = piece.decompteAFaire
+      ? `${RACINE_DECOMPTES}/${A_FAIRE}/${genreDeDecompte(piece.objet)}`
+      : RACINE_DECOMPTES;
+    return { dossier, nom: nomLisible(piece) };
+  }
+
+  return { decouper, classer, resume, cle, NOM_SIGNEE, rangement, genreDeDecompte, nomLisible, RACINE_DECOMPTES, A_FAIRE };
 });

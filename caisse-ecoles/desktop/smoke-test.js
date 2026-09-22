@@ -632,10 +632,16 @@ function verifierCopie() {
     const pile = await win.evaluate(async () => {
       const R = window.CaisseRegistre; const S = window.CaisseSaisie; const reg = S.state.reg;
       const faites = [];
+      // la première est un décompte de camp « à faire » : son scan doit se poser dans le bac
+      const modeles = [
+        { type: 'DECOMPTE', objet: 'Camp', classe: '9S', detail: 'camp de Leysin', decompteAFaire: true },
+        { type: 'FRAIS', objet: 'Matériel', detail: 'pile 2' },
+        { type: 'FRAIS', objet: 'Matériel', detail: 'pile 3' },
+      ];
       for (let i = 0; i < 3; i++) {
         const p = R.newPiece(reg);
-        Object.assign(p, { no: 900 + i, date: `${reg.annee}-04-0${i + 1}`, type: 'FRAIS', objet: 'Matériel',
-          detail: `pile ${i + 1}`, personne: 'T. Morel', compte: '51000.3185.00', montant: 10 + i, sens: 'credit' });
+        Object.assign(p, { no: 900 + i, date: `${reg.annee}-04-0${i + 1}`,
+          personne: 'T. Morel', compte: '51000.3185.00', montant: 10 + i, sens: 'credit' }, modeles[i]);
         p.libelle = R.composeLibelle(p);
         R.upsertPiece(reg, p);
         faites.push({ id: p.id, no: p.no });
@@ -691,6 +697,7 @@ function verifierCopie() {
         justificatifs: p ? (p.justificatifs || []).map((j) => j.name) : [],
         contamines: autres.map((x) => x.no),
         reste: (await window.CaisseScan.liste()).length,
+        racineDecomptes: await window.CaisseScan.racineClassement(),
       };
     }, pile.faites[0].no);
 
@@ -718,6 +725,28 @@ function verifierCopie() {
     };
     parcourir(scanDir, '');
 
+    // Le bac à courrier : le décompte « à faire » de la pile doit s'être posé dans son dossier.
+    const bac = (() => {
+      const racine = jointe.racineDecomptes;
+      const dossier = path.join(racine, 'À faire', 'Camp');
+      let fichiers = [];
+      try { fichiers = fs.readdirSync(dossier); } catch (e) { fichiers = []; }
+      return { dossier, fichiers };
+    })();
+
+    // Un chemin qui sortirait des données de l'application doit être refusé net : la page dit où
+    // ranger, mais elle ne décide pas où l'on écrit sur le disque. Les deux écritures de la
+    // remontée, parce que « ..\\.. » n'est un chemin que sous Windows et « ../.. » que partout.
+    const evasion = await win.evaluate(async () => {
+      const essais = ['../../evasion', '..\\..\\evasion', '/tmp/evasion', 'C:\\evasion', 'Décomptes/../../evasion'];
+      const out = {};
+      for (const e of essais) {
+        try { await window.CaisseScan.poser(e, 'x.pdf', new Uint8Array([37, 80, 68, 70])); out[e] = 'accepté'; }
+        catch (err) { out[e] = 'refusé'; }
+      }
+      return out;
+    });
+
     // le chemin est affiché en toutes lettres : c'est ce qu'on vient chercher sur cet écran
     const affiche = await win.evaluate(() => ({
       chemin: (document.getElementById('receptionDepot') || {}).textContent || '',
@@ -735,7 +764,7 @@ function verifierCopie() {
       window.CaisseApp.showPanel('panelSaisie');
     });
 
-    return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, affiche, ranges };
+    return { pilePages: pile.pages, regle, vu, boite, jointe, rejoint, bac, evasion, affiche, ranges };
   })();
   console.log('boîte de réception :', JSON.stringify(reception));
   ok = ok && reception.pilePages === 3
@@ -748,6 +777,8 @@ function verifierCopie() {
     && reception.jointe.justificatifs.includes('piece-signee.pdf')
     && reception.jointe.contamines.length === 0
     && reception.jointe.reste === 2
+    && reception.bac.fichiers.length === 1 && /^900 /.test(reception.bac.fichiers[0]) && /\.pdf$/.test(reception.bac.fichiers[0])
+    && Object.values(reception.evasion).every((v) => v === 'refusé')
     && reception.rejoint.ok && reception.rejoint.noms.filter((n) => n === 'piece-signee.pdf').length === 1
     && reception.rejoint.noms.length === 1
     && reception.ranges.some((f) => f.startsWith('traité/'))

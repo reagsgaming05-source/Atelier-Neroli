@@ -148,12 +148,22 @@
     } catch (e) {
       return { ok: false, raison: `registre non enregistré (${(e && e.message) || e})` };
     }
+    // Le bac à courrier : en plus d'être attaché au journal, un décompte est posé dans un dossier
+    // qu'on ouvre dans l'explorateur pour voir ce qu'il reste à faire. Un échec ici ne remet pas
+    // en cause le justificatif, qui est déjà en place : on le dit, et on n'annule rien.
+    let range = null;
+    const ou = L.rangement(piece);
+    if (ou && S && S.poser) {
+      try { range = { dossier: ou.dossier, nom: ou.nom, chemin: await S.poser(ou.dossier, ou.nom, doc.octets) }; }
+      catch (e) { range = { dossier: ou.dossier, echec: (e && e.message) || String(e) }; }
+    }
+
     // la saisie affiche le même registre : elle doit voir le justificatif arriver
     const Sa = window.CaisseSaisie;
     if (Sa && Sa.state && Sa.state.reg && Sa.state.reg.annee === annee) {
       try { await Sa.openYear(annee); } catch (e) { /* l'affichage suivra */ }
     }
-    return { ok: true, nom: saved.name };
+    return { ok: true, nom: saved.name, range };
   }
 
   /* ---------------- Ce que le processus principal nous confie ---------------- */
@@ -306,7 +316,10 @@
     if (!r.ok) { majBandeau(`Non joint : ${r.raison}`, 'err'); return; }
     try { await S.retirer(id); } catch (e) { /* le justificatif est en place, c'est l'essentiel */ }
     etat.apercus.delete(id);
-    majBandeau(`Pièce n° ${d.piece ? d.piece.no : ''} : le scan signé est joint à la ligne du journal.`);
+    const ou = r.range && !r.range.echec
+      ? ` Posé aussi dans <b>${escapeHtml(r.range.dossier.replace(/\//g, '\\'))}</b>.`
+      : (r.range && r.range.echec ? ` <span style="color:var(--err)">Non posé dans ${escapeHtml(r.range.dossier)} : ${escapeHtml(r.range.echec)}</span>` : '');
+    majBandeau(`Pièce n° ${d.piece ? d.piece.no : ''} : le scan signé est joint à la ligne du journal.${ou}`, r.range && r.range.echec ? 'warn' : 'ok');
     await rafraichir();
   }
 
@@ -415,6 +428,7 @@
     });
   }
   if ($('btnReceptionDossier')) $('btnReceptionDossier').addEventListener('click', () => S.ouvrirDossier());
+  if ($('btnOuvrirDecomptes')) $('btnOuvrirDecomptes').addEventListener('click', () => S.ouvrirClassement());
   if ($('btnDepotOuvrir')) $('btnDepotOuvrir').addEventListener('click', () => S.ouvrirDepot());
   if ($('btnDepotCopier')) {
     $('btnDepotCopier').addEventListener('click', async () => {

@@ -114,6 +114,9 @@
       montant,
       sens: p.sens === 'debit' || p.sens === 'credit' ? p.sens : null,
       justificatifs: Array.isArray(p.justificatifs) ? p.justificatifs.filter((j) => j && j.name).map((j) => ({ name: String(j.name), size: Number(j.size) || 0, kind: j.kind || kindOf(j.name) })) : [],
+      // Décompte dont le décompte DGEO reste à établir. Coché sur la fiche, il ne change rien à
+      // la comptabilité : il dit seulement dans quel bac le scan signé ira se poser (voir pile.js).
+      decompteAFaire: !!p.decompteAFaire,
       source: p.source === 'scan' || p.source === 'dgeo' || p.source === 'excel' ? p.source : 'saisie',
       ref: p.ref ? String(p.ref) : '',
       // Pièce lue sur un scan : elle entre au journal tout de suite, mais reste marquée tant

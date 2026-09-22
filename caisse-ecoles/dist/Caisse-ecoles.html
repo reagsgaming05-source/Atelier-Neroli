@@ -800,6 +800,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
         <div class="field" style="flex:1;min-width:230px;max-width:380px"><label for="pType">Type d'écriture</label><select id="pType"></select></div>
         <div class="field" style="flex:1;min-width:190px;max-width:300px" id="pObjetField"><label for="pObjet">Objet</label><select id="pObjet"></select></div>
         <div class="field hidden" id="pKindField"><label>Décompte pour</label><div class="choice seg" id="pKind" style="margin:0"><label><input type="radio" name="pKind" value="Course d'école"> Course d'école</label><label><input type="radio" name="pKind" value="Camp"> Camp</label></div></div>
+        <div class="field hidden" id="pAFaireField"><label for="pAFaire">Reste à faire</label><label class="check legend" style="align-items:center;height:36px;white-space:nowrap"><input type="checkbox" id="pAFaire" style="margin-top:0"> <span title="Le scan signé sera posé dans Décomptes\À faire, pour le retrouver dans l'explorateur">Décompte à faire</span></label></div>
       </div>
       <div class="row">
         <div class="field"><label for="pClasse">Classe</label><input type="text" id="pClasse" placeholder="5P/3, 9S…" style="width:130px"></div>
@@ -1127,6 +1128,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       <button type="button" class="small" id="btnScanAjouter"><svg class="ico"><use href="#i-plus"/></svg> Ajouter un dossier…</button>
       <button type="button" class="small" id="btnScanRegarder"><svg class="ico"><use href="#i-refresh"/></svg> Regarder maintenant</button>
       <button type="button" class="small ghost" id="btnReceptionDossier"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier de réception</button>
+      <button type="button" class="small ghost" id="btnOuvrirDecomptes" title="Décomptes\À faire\Camp et Course d'école : ce qu'il reste à faire, dans l'explorateur"><svg class="ico"><use href="#i-list"/></svg> Ouvrir les décomptes</button>
     </div>
     <div class="toolbar" style="gap:18px">
       <label class="check legend" style="align-items:center"><input type="checkbox" id="optScanActif" checked style="margin-top:0"> Surveiller le dossier</label>
@@ -5908,6 +5910,9 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
       montant,
       sens: p.sens === 'debit' || p.sens === 'credit' ? p.sens : null,
       justificatifs: Array.isArray(p.justificatifs) ? p.justificatifs.filter((j) => j && j.name).map((j) => ({ name: String(j.name), size: Number(j.size) || 0, kind: j.kind || kindOf(j.name) })) : [],
+      // Décompte dont le décompte DGEO reste à établir. Coché sur la fiche, il ne change rien à
+      // la comptabilité : il dit seulement dans quel bac le scan signé ira se poser (voir pile.js).
+      decompteAFaire: !!p.decompteAFaire,
       source: p.source === 'scan' || p.source === 'dgeo' || p.source === 'excel' ? p.source : 'saisie',
       ref: p.ref ? String(p.ref) : '',
       // Pièce lue sur un scan : elle entre au journal tout de suite, mais reste marquée tant
@@ -22931,7 +22936,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     'ficheTitle', 'pNo', 'pDate', 'pType', 'pObjet', 'pClasse', 'pPeriode', 'pDetail', 'pPersonne', 'pLibelle', 'pLibelleEdit', 'pCompte', 'pCompteSugg',
     'pMontant', 'pSensDebit', 'pSensCredit', 'pSensHint', 'pFiles', 'pFilesList', 'ficheErrors', 'btnPieceSave', 'btnPieceNew', 'btnPiecePreview', 'fichePreview', 'ficheFrame', 'btnPreviewClose', 'dgeoPending', 'btnOpenDgeo',
     'journalYear', 'journalBody', 'journalTotals', 'journalPending', 'journalSearch', 'journalOnlyDoubt', 'journalCount', 'journalNumbers', 'yearBar', 'anneeNotices', 'btnRegExcel', 'btnRegPdf', 'regPdfFrom', 'btnRegExport', 'regImportFile', 'btnRegImport', 'btnRegExcelIn', 'regExcelFile', 'regNotices', 'regClassList', 'regPersonList', 'regAccountList',
-    'pObjetField', 'pKindField', 'pKind', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
+    'pObjetField', 'pKindField', 'pKind', 'pAFaireField', 'pAFaire', 'recapYear', 'recapFilter', 'btnRecapAll', 'btnRecapNone', 'recapSummary', 'recapBody', 'btnRecapPdf', 'recapHint', 'optPdfAuto', 'optPdfAutoJust']) {
     els[id] = $(id);
   }
   if (!els.regYear) return; // page sans le panneau de saisie
@@ -23203,6 +23208,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   function fillForm(p) {
     // pièce qui a déjà un compte (modification, décompte pré-rempli) : il ne sera pas re-proposé
     state.autoAccount = !p.compte;
+    if (els.pAFaire) els.pAFaire.checked = !!p.decompteAFaire;
     els.pNo.value = p.no == null ? '' : p.no;
     els.pDate.value = p.date || '';
     els.pType.value = R.TYPES.includes(p.type) ? p.type : R.TYPES[0];
@@ -23234,6 +23240,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   function refreshKind() {
     const isDecompte = els.pType.value === 'DECOMPTE';
     els.pKindField.classList.toggle('hidden', !isDecompte);
+    if (els.pAFaireField) els.pAFaireField.classList.toggle('hidden', !isDecompte);
     els.pObjetField.classList.toggle('hidden', isDecompte);
     if (!isDecompte) return;
     // « Mini-camp » se montre sous le bouton « Camp » mais reste « Mini-camp » dans la pièce :
@@ -23277,6 +23284,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       scanKey: base ? base.scanKey : '',
       aVerifier: false,
       doutes: [],
+      // ne vaut que pour un décompte : la case est cachée pour les autres types
+      decompteAFaire: els.pType.value === 'DECOMPTE' && !!(els.pAFaire && els.pAFaire.checked),
     }));
     p.libelle = els.pLibelleEdit.checked ? els.pLibelle.value.trim() : R.composeLibelle(p);
     return p;
@@ -24845,7 +24854,55 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
    */
   const NOM_SIGNEE = 'piece-signee.pdf';
 
-  return { decouper, classer, resume, cle, NOM_SIGNEE };
+  /* ---------------- Où ranger un décompte scanné ---------------- */
+
+  const RACINE_DECOMPTES = 'Décomptes';
+  const A_FAIRE = 'À faire';
+
+  /** Camp ou course d'école, tels que la fiche les propose. « Mini-camp » est un camp. */
+  function genreDeDecompte(objet) {
+    const o = String(objet == null ? '' : objet).trim();
+    return /camp/i.test(o) ? 'Camp' : "Course d'école";
+  }
+
+  /** Nom de fichier lisible dans l'explorateur, et acceptable par Windows. */
+  function nomLisible(piece) {
+    const no = piece && piece.no != null && piece.no !== '' ? String(piece.no).padStart(3, '0') : 'sans-no';
+    // « DECOMPTE - Camp 9S du 12-16.05.2026 Leysin - L. Duvernay » : le type est déjà dit par le
+    // dossier, on garde ce qui distingue un décompte d'un autre.
+    const libelle = String((piece && piece.libelle) || '').replace(/^[A-ZÀ-Ý' ]+ - /, '').trim();
+    const propre = `${no} ${libelle}`
+      .replace(/[<>:"/\\|?*]/g, '-')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u001f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^[. ]+|[. ]+$/g, '');
+    return `${(propre || no).slice(0, 90)}.pdf`;
+  }
+
+  /**
+   * Le dossier où poser le scan signé d'une pièce, en plus de l'attacher à sa ligne du journal.
+   *
+   * Ce classement-là n'est pas comptable : c'est un bac à courrier. Il sert à ouvrir l'explorateur
+   * et voir d'un coup d'œil ce qu'il reste à faire, sans passer par l'application. Seuls les
+   * décomptes y ont leur place ; le reste est déjà rangé par le journal.
+   *
+   *   Décomptes/À faire/Camp/            décompte marqué « à faire » sur un camp
+   *   Décomptes/À faire/Course d'école/  idem, course d'école
+   *   Décomptes/                         décompte non marqué : gardé, rien à en faire
+   *
+   * Rend { dossier, nom } ou null si la pièce n'est pas un décompte.
+   */
+  function rangement(piece) {
+    if (!piece || String(piece.type || '').toUpperCase() !== 'DECOMPTE') return null;
+    const dossier = piece.decompteAFaire
+      ? `${RACINE_DECOMPTES}/${A_FAIRE}/${genreDeDecompte(piece.objet)}`
+      : RACINE_DECOMPTES;
+    return { dossier, nom: nomLisible(piece) };
+  }
+
+  return { decouper, classer, resume, cle, NOM_SIGNEE, rangement, genreDeDecompte, nomLisible, RACINE_DECOMPTES, A_FAIRE };
 });
 
 </script>
@@ -25000,12 +25057,22 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     } catch (e) {
       return { ok: false, raison: `registre non enregistré (${(e && e.message) || e})` };
     }
+    // Le bac à courrier : en plus d'être attaché au journal, un décompte est posé dans un dossier
+    // qu'on ouvre dans l'explorateur pour voir ce qu'il reste à faire. Un échec ici ne remet pas
+    // en cause le justificatif, qui est déjà en place : on le dit, et on n'annule rien.
+    let range = null;
+    const ou = L.rangement(piece);
+    if (ou && S && S.poser) {
+      try { range = { dossier: ou.dossier, nom: ou.nom, chemin: await S.poser(ou.dossier, ou.nom, doc.octets) }; }
+      catch (e) { range = { dossier: ou.dossier, echec: (e && e.message) || String(e) }; }
+    }
+
     // la saisie affiche le même registre : elle doit voir le justificatif arriver
     const Sa = window.CaisseSaisie;
     if (Sa && Sa.state && Sa.state.reg && Sa.state.reg.annee === annee) {
       try { await Sa.openYear(annee); } catch (e) { /* l'affichage suivra */ }
     }
-    return { ok: true, nom: saved.name };
+    return { ok: true, nom: saved.name, range };
   }
 
   /* ---------------- Ce que le processus principal nous confie ---------------- */
@@ -25158,7 +25225,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     if (!r.ok) { majBandeau(`Non joint : ${r.raison}`, 'err'); return; }
     try { await S.retirer(id); } catch (e) { /* le justificatif est en place, c'est l'essentiel */ }
     etat.apercus.delete(id);
-    majBandeau(`Pièce n° ${d.piece ? d.piece.no : ''} : le scan signé est joint à la ligne du journal.`);
+    const ou = r.range && !r.range.echec
+      ? ` Posé aussi dans <b>${escapeHtml(r.range.dossier.replace(/\//g, '\\'))}</b>.`
+      : (r.range && r.range.echec ? ` <span style="color:var(--err)">Non posé dans ${escapeHtml(r.range.dossier)} : ${escapeHtml(r.range.echec)}</span>` : '');
+    majBandeau(`Pièce n° ${d.piece ? d.piece.no : ''} : le scan signé est joint à la ligne du journal.${ou}`, r.range && r.range.echec ? 'warn' : 'ok');
     await rafraichir();
   }
 
@@ -25267,6 +25337,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     });
   }
   if ($('btnReceptionDossier')) $('btnReceptionDossier').addEventListener('click', () => S.ouvrirDossier());
+  if ($('btnOuvrirDecomptes')) $('btnOuvrirDecomptes').addEventListener('click', () => S.ouvrirClassement());
   if ($('btnDepotOuvrir')) $('btnDepotOuvrir').addEventListener('click', () => S.ouvrirDepot());
   if ($('btnDepotCopier')) {
     $('btnDepotCopier').addEventListener('click', async () => {

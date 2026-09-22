@@ -67,6 +67,10 @@ contextBridge.exposeInMainWorld('CaisseScan', {
   lire: (id) => ipcRenderer.invoke('reception:lire', id).then((b) => (b ? new Uint8Array(b) : null)),
   retirer: (id) => ipcRenderer.invoke('reception:retirer', id),
   ouvrirDossier: () => ipcRenderer.invoke('reception:ouvrir-dossier'),
+  // bac à courrier des décomptes : Décomptes\À faire\Camp, etc.
+  poser: (sousDossier, nom, octets) => ipcRenderer.invoke('classement:poser', sousDossier, nom, octets),
+  ouvrirClassement: (sousDossier) => ipcRenderer.invoke('classement:ouvrir', sousDossier),
+  racineClassement: () => ipcRenderer.invoke('classement:racine'),
 });
 
 // Pont Décompte DGEO → Caisse écoles : décomptes terminés (Excel généré dans l'autre onglet),
