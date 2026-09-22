@@ -142,6 +142,14 @@ function creerVeille(opts) {
   const vus = new Map();
   // Dossiers signalés injoignables : on ne réécrit pas la même ligne au journal à chaque tour.
   const muets = new Set();
+  /**
+   * Ce que nous tenons en main en ce moment. La reprise considère comme « à nous » tout ce qui
+   * porte notre marque d'exécution — ce qui est vrai d'un travail interrompu, mais aussi d'un
+   * travail EN COURS si un second tour se met à tourner pendant le premier. Un fichier repris
+   * sous les mains du tour qui le lit disparaît de là où il l'attend, et se retrouve traité deux
+   * fois. Ce registre l'interdit, quelle que soit la façon dont les tours se chevauchent.
+   */
+  const enMain = new Set();
   let enCours = false;
   let minuteur = null;
   const compteur = { tours: 0, traites: 0, revoir: 0, erreurs: 0 };
@@ -193,6 +201,15 @@ function creerVeille(opts) {
 
   /** Lit le fichier réservé et le confie à la page, puis le range. */
   async function lireEtClasser(racine, chemin, nomOrigine) {
+    enMain.add(chemin);
+    try {
+      await lireEtClasserVraiment(racine, chemin, nomOrigine);
+    } finally {
+      enMain.delete(chemin);
+    }
+  }
+
+  async function lireEtClasserVraiment(racine, chemin, nomOrigine) {
     let octets = null;
     try {
       octets = await fsp.readFile(chemin);
@@ -230,6 +247,7 @@ function creerVeille(opts) {
         const r = reservationDe(n);
         // À nous, et à nous seuls : ce que CETTE exécution a réservé. Un tour ne se superpose
         // jamais à lui-même, donc un tel fichier ne peut être qu'un travail interrompu.
+        if (enMain.has(chemin)) continue; // ce tour-ci l'a déjà pris et le lit
         const mien = p === poste && r.tag && r.tag === instance;
         if (!mien) {
           let depuis = r.depuis;
@@ -244,6 +262,7 @@ function creerVeille(opts) {
             ? `reprise d'un scan laissé par une autre exécution de ce poste : ${r.nom}`
             : `reprise d'un scan laissé par ${p} : ${r.nom}`);
         }
+        else noter(`reprise de notre propre travail interrompu : ${r.nom}`);
         repris.push({ chemin, nom: r.nom });
       }
     }
@@ -274,10 +293,16 @@ function creerVeille(opts) {
     const cible = path.join(dir, `${maintenant()}-${instance}-${nom}`);
     try {
       await fsp.rename(path.join(racine, nom), cible);
-      return cible;
     } catch (e) {
       return null; // pris par un autre poste, ou disparu entre-temps
     }
+    // On regarde que la réservation a bien atterri : un renommage qui rend la main sans avoir
+    // rien posé nous ferait croire que le scan est à nous, et le tour suivant le reprendrait.
+    if (!(await existe(cible))) {
+      noter(`réservation sans effet : ${nom} (le fichier n'est pas arrivé dans ${path.basename(dir)})`);
+      return null;
+    }
+    return cible;
   }
 
   /** Un tour de veille sur un dossier. */
