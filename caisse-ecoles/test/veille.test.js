@@ -217,6 +217,36 @@ test('l\'application ouverte deux fois sur le même PC : la seconde ne vole pas 
   } finally { d.jeter(); }
 });
 
+test('un fichier listé puis rangé entre-temps n\'est ni relu, ni mis « à revoir » pour rien', async () => {
+  // Le contenu d'un dossier est ce qu'il était à l'instant où on l'a lu. Entre ce moment et
+  // celui où on atteint un fichier, il a pu être rangé — par le tour précédent, par un autre
+  // poste, par quelqu'un qui fait le ménage. Le relire le compterait deux fois ; le « mettre à
+  // revoir » fabriquerait une entrée fantôme et un renommage voué à l'échec.
+  const d = dossierTemporaire('liste-perimee');
+  try {
+    const octets = await pdfExemple(['pièce']);
+    const mien = path.join(d.chemin, '.encours', 'POSTE-A');
+    fs.mkdirSync(mien, { recursive: true });
+    const ctx = veille(d, {
+      poste: 'POSTE-A',
+      traiter: async (doc) => {
+        // pendant qu'on lit le premier, le second s'en va
+        if (/premier/.test(doc.nom)) fs.rmSync(path.join(mien, `1700000000000-${ctx.v.instance}-second.pdf`), { force: true });
+        ctx.lus.push(doc);
+        return { ok: true };
+      },
+    });
+    fs.writeFileSync(path.join(mien, `1700000000000-${ctx.v.instance}-premier.pdf`), octets);
+    fs.writeFileSync(path.join(mien, `1700000000000-${ctx.v.instance}-second.pdf`), octets);
+
+    await tours(ctx, 2);
+    assert.deepEqual(ctx.lus.map((x) => x.nom), ['premier.pdf'], 'le fichier disparu a quand même été lu');
+    assert.deepEqual(d.tout().filter((f) => f.startsWith('à revoir/')), [], 'une entrée fantôme a été fabriquée');
+    assert.equal(d.tout().filter((f) => f.startsWith('traité/')).length, 1);
+    assert.match(ctx.lignes.join('\n'), /déjà rangé/, 'le journal devrait dire qu\'il n\'y avait rien à faire');
+  } finally { d.jeter(); }
+});
+
 /* ---------------- Noms, accents, doublons ---------------- */
 
 test('accents, n° et caractères interdits ne retiennent aucun scan', async () => {

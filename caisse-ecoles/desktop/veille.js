@@ -214,6 +214,10 @@ function creerVeille(opts) {
     try {
       octets = await fsp.readFile(chemin);
     } catch (e) {
+      // Un fichier qui n'est plus là n'a pas à être « mis à revoir » : il a déjà été rangé, par
+      // ce tour-ci ou par un autre. Le classer produirait une entrée fantôme et un renommage
+      // voué à l'échec. On le note et on passe.
+      if (!(await existe(chemin))) { noter(`déjà rangé, rien à faire : ${nomOrigine}`); return; }
       await classer(racine, chemin, nomOrigine, { ok: false, raison: `fichier illisible (${(e && e.code) || ''} ${(e && e.message) || e})`.trim() });
       return;
     }
@@ -248,6 +252,10 @@ function creerVeille(opts) {
         // À nous, et à nous seuls : ce que CETTE exécution a réservé. Un tour ne se superpose
         // jamais à lui-même, donc un tel fichier ne peut être qu'un travail interrompu.
         if (enMain.has(chemin)) continue; // ce tour-ci l'a déjà pris et le lit
+        // Le contenu d'un dossier est ce qu'il était à l'instant où on l'a lu. Un fichier rangé
+        // entre-temps — par le tour précédent, par un autre poste — peut encore figurer dans la
+        // liste. Le reprendre, c'est le lire une seconde fois et le compter deux fois.
+        if (!(await existe(chemin))) continue;
         const mien = p === poste && r.tag && r.tag === instance;
         if (!mien) {
           let depuis = r.depuis;
@@ -365,7 +373,7 @@ function creerVeille(opts) {
 
       const chemin2 = await reserver(racine, nom);
       vus.delete(chemin);
-      if (!chemin2) continue; // un autre poste a été plus rapide
+      if (!chemin2) continue; // un autre poste a été plus rapide, ou le fichier n'est plus là
       sortie.reserves.push({ chemin: chemin2, nom });
       try {
         await lireEtClasser(racine, chemin2, nom);
