@@ -38,6 +38,7 @@
       "shell-preload.js",
       "native-ocr.js",
       "dgeo-proxy.js",
+      "veille.js",
       "dgeo-theme.css",
       "app/**",
       "!app/README.md"
