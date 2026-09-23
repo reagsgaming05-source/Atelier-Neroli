@@ -58,6 +58,47 @@ Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le r
 mémorisés (compte caisse, vocabulaire appris, dernier solde) vont dans le sous-dossier `data/`
 à côté de l'exécutable.
 
+### Plusieurs postes, une seule caisse
+
+**Le programme reste sur chaque PC ; seules les données vont sur le serveur.** Lancer
+`ComptaBlonay.exe` depuis un partage réseau échoue souvent, et c'est normal : 350 Mo relus par le
+réseau à chaque démarrage, et surtout un programme non signé qui en lance d'autres
+(`DecompteDGEO.exe`, `tesseract.exe`) et ouvre des ports locaux, depuis un partage — le portrait
+exact de ce que la sécurité d'un réseau d'école bloque d'office.
+
+*L'année → Où sont les données → Mettre les données sur le serveur…* : dans la fenêtre, tapez
+l'adresse `\\SERVEUR\Partage` dans la barre du haut (pas une lettre de lecteur — elle change d'un
+PC à l'autre, et le copieur ne la connaît pas), créez un dossier et choisissez-le. Le premier poste
+propose d'y **emporter** ses registres ; les suivants trouvent la caisse et s'y rattachent sans
+rien copier — un dossier qui a déjà sa caisse n'est jamais écrasé. L'application redémarre sur le
+serveur.
+
+Le réglage est un fichier `donnees.txt` à côté de l'exécutable : une ligne, l'adresse du dossier
+(le Bloc-notes suffit ; les guillemets de *Copier en tant que chemin d'accès* sont acceptés).
+L'effacer ramène aux données du PC, qui n'ont pas bougé. Pour un déploiement par l'informatique,
+la variable d'environnement `COMPTA_DONNEES` fait la même chose et passe avant le fichier.
+
+| Ce qui va sur le serveur | Ce qui reste sur chaque PC |
+|---|---|
+| registres, justificatifs, carnet des données, réglages de la caisse (`caisse\`) | le profil de la fenêtre (caches, stockage local) : Chromium y verrouille ses fichiers, et deux PC sur le même profil se bloqueraient au démarrage |
+| le dépôt du copieur (`Scans\`) | le journal du poste (`data\caisse.log`) |
+| le bac des décomptes (`Décomptes\`) | les dossiers de Décompte DGEO |
+
+**Deux collègues en même temps.** Chaque poste retient le texte exact du registre qu'il a lu. À
+l'enregistrement, si le fichier a changé entre-temps, rien n'est écrasé : les deux versions sont
+**fusionnées** — ce que ce poste a fait, plus ce que l'autre a fait —, et l'écran le dit. Une pièce
+touchée d'un seul côté prend la version de ce côté ; touchée des deux côtés, la plus récente
+l'emporte et on vous le signale ; modifiée d'un côté et supprimée de l'autre, elle est gardée (une
+suppression se refait d'un clic, une saisie perdue ne se retrouve pas). Deux pièces qui ont pris
+« le numéro suivant » au même moment sont gardées toutes les deux, et le numéro en double est
+signalé. Une restauration de sauvegarde, elle, remplace — c'est ce qu'on lui demande.
+
+**Serveur éteint.** Au démarrage, l'application vérifie qu'elle peut écrire dans le dossier des
+données. Sinon elle le dit et attend : *Réessayer*, *Quitter*, ou *Revenir aux données de ce PC*.
+Elle ne s'ouvre jamais en douce sur les données du poste : on y saisirait dans une caisse à part,
+qui ne rejoindrait jamais celle du serveur. Un enregistrement qui échoue en cours de route (réseau
+coupé) s'affiche en rouge, et la fiche n'annonce plus « pièce enregistrée ».
+
 **Noms de personnes** : le dépôt étant public, la version portable ne contient aucun nom. Posez
 le fichier `vocabulaire-noms.js` (remis séparément, jamais publié) à côté de `ComptaBlonay.exe` :
 il est lu au démarrage (menu *Aide → À propos* indique s'il a été trouvé). Sans lui, les noms
@@ -485,11 +526,14 @@ montant, ni libellé : une feuille qui traîne ou qui part chez un tiers ne dit 
 
     <dossier des données>\Scans
 
-Dans la version portable, les données vivent à côté de l'exécutable : si le dossier
-`ComptaBlonay` est posé sur le serveur, cette adresse EST une adresse du serveur, et le copieur
-peut la viser telle quelle — rien à partager, rien à régler dans l'application. L'écran
-*Boîte de réception* l'affiche en toutes lettres, avec un bouton pour la copier. D'autres
-dossiers peuvent s'ajouter à côté, si le copieur dépose déjà ailleurs.
+Ce dossier suit les **données** de la caisse. Quand elles sont sur le serveur (voir
+*Plusieurs postes, une seule caisse* plus haut), l'adresse est une adresse du serveur, et le
+copieur la vise telle quelle. L'écran *Boîte de réception* l'affiche en toutes lettres, avec un
+bouton pour la copier. D'autres dossiers peuvent s'ajouter à côté, si le copieur dépose déjà
+ailleurs.
+
+Ne posez pas le **programme** sur le serveur pour y arriver : c'est ce que ce document conseillait
+d'abord, et cela échoue — voir la section citée.
 
 Sur le copieur (bizhub ou autre), c'est une destination « SMB » du carnet d'adresses : hôte,
 chemin du partage, un compte et un mot de passe qui ont le droit d'y écrire. Tant que ce n'est

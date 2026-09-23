@@ -215,7 +215,26 @@
 
   async function saveReg() {
     state.reg.updatedAt = new Date().toISOString();
-    await state.storage.save(state.reg);
+    let res;
+    try {
+      res = await state.storage.save(state.reg);
+    } catch (e) {
+      // Le dire, puis laisser tomber l'action : sinon la fiche annonçait « Pièce enregistrée »
+      // alors que rien n'était écrit. Avec les données sur le serveur, un réseau coupé n'est plus
+      // un cas d'école.
+      notice('err', `<b>Registre non enregistré</b> : ${escapeHtml((e && e.message) || e)}. Ce qui est à l'écran est gardé ; réessayez dans un instant.`, { keep: true });
+      throw e;
+    }
+    const f = res && res.fusion;
+    if (f) {
+      // Un autre poste avait écrit dans cette année entre-temps : son travail est repris, pas écrasé.
+      const parts = [`Un autre poste avait modifié le registre ${state.reg.annee} entre-temps : ${plur(f.reprises, 'changement')} de sa part ${f.reprises > 1 ? 'ont été repris' : 'a été repris'}, rien n'est perdu.`];
+      if (f.doublons.length) parts.push(`<b>Deux pièces portent le même numéro</b> (${f.doublons.map((n) => `n° ${n}`).join(', ')}) : chaque poste a pris « le suivant ». Renumérotez l'une des deux.`);
+      const vraies = f.conflits.filter((c) => c.quoi === 'pièce' && c.no != null);
+      if (vraies.length) parts.push(`Modifiée des deux côtés : ${vraies.map((c) => `n° ${c.no}`).join(', ')} — la version la plus récente a été gardée, vérifiez-la.`);
+      notice(f.doublons.length || vraies.length ? 'warn' : 'ok', parts.join(' '), { keep: !!(f.doublons.length || vraies.length) });
+      try { renderJournal(); } catch (e) { /* l'appelant rafraîchit aussi */ }
+    }
     notifyRegister();
   }
   /** Le registre a changé (ouvert, enregistré) : l'espace des pièces scannées, qui s'appuie dessus, se met à jour. */
@@ -937,7 +956,7 @@
     const reg = R.parse(await f.text());
     if (!reg) { notice('err', 'Ce fichier n\'est pas une sauvegarde de registre.'); return; }
     if (!confirm(`Remplacer le registre ${reg.annee} (${reg.pieces.length} pièce(s)) par cette sauvegarde ? Les justificatifs déjà enregistrés sont conservés.`)) return;
-    await state.storage.save(reg);
+    await state.storage.save(reg, { remplacer: true });
     if (!state.years.includes(reg.annee)) state.years.push(reg.annee);
     await openYear(reg.annee);
     notice('ok', `Registre ${reg.annee} restauré.`);
@@ -1099,6 +1118,56 @@
     els.pMontant.value = Number(b.dataset.amount).toFixed(2);
     refreshLibelle();
   });
+
+  /* ---------------- Où sont les données : ce PC, ou le serveur ---------------- */
+  // Seulement dans l'application fenêtrée : le fichier HTML seul garde tout dans le navigateur.
+  const DN = window.CaisseEmplacement || null;
+  const carteEmpl = $('carteEmplacement');
+  function noticeEmpl(kind, html) {
+    const box = $('emplacementNotices');
+    if (!box) { notice(kind, html); return; }
+    const div = document.createElement('div');
+    div.className = `notice ${kind}`;
+    div.innerHTML = html;
+    box.prepend(div);
+  }
+  async function majEmplacement() {
+    if (!DN || !carteEmpl) return;
+    let e;
+    try { e = await DN.etat(); } catch (err) { return; }
+    carteEmpl.classList.remove('hidden');
+    $('emplacementChemin').textContent = e.chemin;
+    $('emplacementGenre').textContent = e.partage ? 'partagées' : 'sur ce PC';
+    $('btnEmplacementChoisirTexte').textContent = e.partage ? 'Changer de dossier…' : 'Mettre les données sur le serveur…';
+    $('btnEmplacementChoisir').disabled = !e.modifiable;
+    $('btnEmplacementLocal').classList.toggle('hidden', !(e.partage && e.modifiable));
+    const reseau = /^\\\\[^\\]/.test(e.chemin);
+    let note;
+    if (e.partage && !e.modifiable) note = 'Emplacement fixé par l\'informatique (variable COMPTA_DONNEES) : il ne se change pas d\'ici.';
+    else if (e.partage && !reseau) note = `Réglé par <code>${escapeHtml(e.reglage)}</code>. Attention : une lettre de lecteur (Z:) n'est pas forcément la même sur chaque poste, et le copieur ne la connaît pas. Préférez l'adresse <code>\\\\SERVEUR\\partage</code>.`;
+    else if (e.partage) note = `Réglé par <code>${escapeHtml(e.reglage)}</code> — effacer ce fichier revient aussi aux données de ce PC. Le copieur dépose dans <code>${escapeHtml(e.chemin)}\\Scans</code>.`;
+    else note = 'Les données de ce PC, dans le dossier « data » à côté du programme. Pour les partager : « Mettre les données sur le serveur… », puis tapez l\'adresse <code>\\\\SERVEUR\\partage</code> dans la barre du haut de la fenêtre qui s\'ouvre.';
+    $('emplacementNote').innerHTML = note;
+  }
+  if (DN && carteEmpl) {
+    $('btnEmplacementChoisir').addEventListener('click', async () => {
+      let r;
+      try { r = await DN.choisir(); } catch (err) { noticeEmpl('err', escapeHtml((err && err.message) || err)); return; }
+      if (r.erreur) { noticeEmpl('err', escapeHtml(r.erreur)); return; }
+      if (!r.change) return;
+      const quoi = r.dejaUneCaisse
+        ? 'Ce dossier contient déjà une caisse — celle des collègues : l\'application redémarre dessus. Les données de ce PC restent où elles sont.'
+        : (r.copie && r.copie.copie ? 'Données emportées sur le serveur. L\'application redémarre dessus…' : 'L\'application redémarre sur ce dossier…');
+      noticeEmpl('ok', quoi);
+    });
+    $('btnEmplacementLocal').addEventListener('click', async () => {
+      if (!confirm('Revenir aux données de ce PC ? Les données du serveur restent où elles sont, mais ce poste ne les verra plus.')) return;
+      const r = await DN.local();
+      if (r && r.change) noticeEmpl('ok', 'L\'application redémarre sur les données de ce PC…');
+    });
+    $('btnEmplacementOuvrir').addEventListener('click', () => { DN.ouvrir().catch(() => {}); });
+    majEmplacement();
+  }
 
   window.CaisseSaisie = { state, init, majListes, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal };
   init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });

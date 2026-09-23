@@ -56,3 +56,21 @@ test('le point d\'entrée déclaré est celui qui existe', () => {
   assert.ok(fs.existsSync(path.join(desktop, pkg.main)), `main : ${pkg.main} introuvable`);
   assert.ok(couvert(pkg.main, pkg.build.files), `le point d'entrée ${pkg.main} n'est pas empaqueté`);
 });
+
+test('aucun pont du programme ne recouvre un module de la page', () => {
+  // preload.js publie ses ponts dans `window` avec contextBridge : la propriété devient alors
+  // non modifiable, et un module de la page qui porte le même nom ne peut plus s'installer. Rien ne
+  // le signale — le module manque, simplement. C'est arrivé : le pont « où sont les données » avait
+  // pris le nom du carnet des listes (CaisseDonnees), et tout l'espace Données s'est éteint.
+  const ponts = Array.from(fs.readFileSync(path.join(desktop, 'preload.js'), 'utf8').matchAll(/exposeInMainWorld\(\s*['"](\w+)['"]/g)).map((m) => m[1]);
+  assert.ok(ponts.length >= 3, 'ponts introuvables dans preload.js');
+  const src = path.join(__dirname, '..', 'src');
+  const collisions = [];
+  for (const f of fs.readdirSync(src).filter((n) => n.endsWith('.js'))) {
+    const code = fs.readFileSync(path.join(src, f), 'utf8');
+    for (const nom of ponts) {
+      if (new RegExp(`(?:window|root)\\.${nom}\\s*=[^=]`).test(code)) collisions.push(`${nom} (src/${f})`);
+    }
+  }
+  assert.deepEqual(collisions, [], `ces ponts portent le nom d'un module de la page : ${collisions.join(', ')}`);
+});

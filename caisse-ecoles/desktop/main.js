@@ -20,6 +20,7 @@ const os = require('os');
 const nativeOcr = require('./native-ocr.js');
 const dgeoProxy = require('./dgeo-proxy.js');
 const { creerVeille } = require('./veille.js');
+const emplacement = require('./emplacement.js');
 
 const APP_TITLE = 'Compta Blonay';
 const PORTABLE_DIR = path.dirname(process.execPath);
@@ -52,6 +53,17 @@ function setupUserData() {
 }
 setupUserData();
 
+// Les données de la caisse — registres, justificatifs, scans, décomptes — peuvent vivre ailleurs
+// que le profil du poste : sur le serveur, désigné par « donnees.txt » à côté du programme (voir
+// emplacement.js). Le profil, lui, reste toujours sur le poste : Chromium y verrouille ses
+// fichiers, et le verrou d'instance unique y est rangé.
+// En développement, le « programme » est celui d'Electron, dans node_modules : on lit alors
+// donnees.txt dans le profil.
+const DOSSIER_REGLAGE = () => (app.isPackaged ? PORTABLE_DIR : app.getPath('userData'));
+let donneesPartagees = emplacement.lireEmplacement(DOSSIER_REGLAGE(), process.env);
+/** Racine des données de la caisse. */
+const DONNEES = () => (donneesPartagees ? donneesPartagees.chemin : app.getPath('userData'));
+
 // Journal du processus principal (data/caisse.log) : démarrage, erreurs, lecteur natif.
 // Comme decompte.log de Décompte DGEO, pour comprendre un problème sur un poste.
 function logLine(msg) {
@@ -76,7 +88,7 @@ if (!app.requestSingleInstanceLock()) {
 
 /** Fichier des noms de personnes (données personnelles, jamais dans le dépôt) posé à côté de l'exe. */
 function namesFile() {
-  const candidates = [path.join(PORTABLE_DIR, 'vocabulaire-noms.js'), path.join(app.getPath('userData'), 'vocabulaire-noms.js')];
+  const candidates = [path.join(PORTABLE_DIR, 'vocabulaire-noms.js'), path.join(DONNEES(), 'vocabulaire-noms.js'), path.join(app.getPath('userData'), 'vocabulaire-noms.js')];
   if (!app.isPackaged) candidates.push(path.join(__dirname, '..', 'src', 'vocabulaire-noms.js'));
   return candidates.find((p) => fs.existsSync(p)) || null;
 }
@@ -407,7 +419,7 @@ const RECEPTION = () => path.join(REG_ROOT(), 'reception');
  * copieur, et les vieux appareils y sont regardants. Il est à la racine des données plutôt que
  * sous caisse/ pour que l'adresse à donner soit la plus courte possible.
  */
-const DEPOT = () => path.join(app.getPath('userData'), 'Scans');
+const DEPOT = () => path.join(DONNEES(), 'Scans');
 /** Une adresse que le copieur peut viser : \\serveur\partage\… */
 const estReseau = (p) => /^\\\\[^\\]/.test(String(p || ''));
 let veille = null;
@@ -548,7 +560,7 @@ ipcMain.handle('reception:ouvrir-dossier', () => shell.openPath(RECEPTION()));
  * ici on écrit, et on refuse tout ce qui sortirait des données de l'application — un chemin
  * venu de la page ne décide pas où l'on écrit sur le disque.
  */
-const DECOMPTES = () => path.join(app.getPath('userData'), 'Décomptes');
+const DECOMPTES = () => path.join(DONNEES(), 'Décomptes');
 /**
  * Le dossier désigné par la page, ramené à un chemin sous les données de l'application.
  *
@@ -560,7 +572,7 @@ const DECOMPTES = () => path.join(app.getPath('userData'), 'Décomptes');
  */
 const SEGMENT_INTERDIT = /[<>:"\\|?*]|[\u0000-\u001f]/;
 function sousDossierSur(relatif) {
-  const racine = app.getPath('userData');
+  const racine = DONNEES();
   const brut = String(relatif || '').trim();
   if (!brut) return racine;
   const segments = brut.split('/');
@@ -778,7 +790,7 @@ function buildMenu() {
     {
       label: 'Fichier',
       submenu: [
-        { label: 'Ouvrir le dossier des données (registres, justificatifs, journal)', click: () => shell.openPath(app.getPath('userData')) },
+        { label: 'Ouvrir le dossier des données (registres, justificatifs, journal)', click: () => shell.openPath(DONNEES()) },
         { type: 'separator' },
         { label: 'Quitter', accelerator: 'Alt+F4', role: 'quit' },
       ],
@@ -823,7 +835,7 @@ function buildMenu() {
                 'pièces scannées, journal, fichier Excel, PDF des pièces) et Décompte DGEO (courses d\'école & camps).\n\n' +
                 'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (lecture des PDF, ' +
                 'lectures croisées par OCR local, génération des fichiers Excel et décomptes se font dans cette fenêtre).\n\n' +
-                `Dossier des données : ${app.getPath('userData')}\n` +
+                `Dossier des données : ${DONNEES()}${donneesPartagees ? ' (partagé)' : ''}\n` +
                 `Noms de personnes : ${names ? names : 'aucun fichier vocabulaire-noms.js (les noms s\'apprennent depuis un classeur)'}\n` +
                 `Troisième lecteur (Tesseract natif) : ${(() => { const t = nativeOcr.detect(PORTABLE_DIR); return t ? `${t.version}${t.legacy ? ' + moteur historique' : ''}` : 'non trouvé (dossier tesseract/ absent)'; })()}\n\n` +
                 `Décompte DGEO : ${dgeoCommand() ? (dgeo.status === 'ready' ? `en service (${dgeo.url})` : dgeo.status === 'starting' ? 'démarrage…' : 'inclus, arrêté') : 'non inclus'}\n` +
@@ -843,7 +855,7 @@ app.on('second-instance', () => {
 
 /* ---------------- Registre des pièces : fichiers de l'application ---------------- */
 // data/caisse/<année>/registre.json et data/caisse/<année>/pieces/<id>/<justificatif>
-const REG_ROOT = () => path.join(app.getPath('userData'), 'caisse');
+const REG_ROOT = () => path.join(DONNEES(), 'caisse');
 const yearOk = (y) => /^\d{4}$/.test(String(y));
 const idOk = (id) => /^[A-Za-z0-9_-]{1,40}$/.test(String(id));
 function safeName(name) {
@@ -855,6 +867,69 @@ function safeName(name) {
 }
 function regDir(y) { return path.join(REG_ROOT(), String(y)); }
 ipcMain.handle('files:dir', () => REG_ROOT());
+
+/* ---------------- Où vivent les données (voir emplacement.js) ---------------- */
+function relancer() {
+  // après la réponse à la page, pour qu'elle ait le temps d'afficher ce qu'on lui dit
+  setTimeout(() => { app.relaunch(); app.exit(0); }, 600);
+}
+ipcMain.handle('donnees:etat', () => ({
+  partage: !!donneesPartagees,
+  chemin: DONNEES(),
+  source: donneesPartagees ? donneesPartagees.source : null,
+  poste: app.getPath('userData'),
+  reglage: path.join(DOSSIER_REGLAGE(), emplacement.FICHIER),
+  // posé par l'informatique (variable d'environnement) : ce n'est pas à l'écran de le changer
+  modifiable: !donneesPartagees || donneesPartagees.source === emplacement.FICHIER,
+}));
+ipcMain.handle('donnees:choisir', async () => {
+  if (donneesPartagees && donneesPartagees.source !== emplacement.FICHIER) return { change: false, erreur: 'L\'emplacement est fixé par l\'informatique (COMPTA_DONNEES).' };
+  const r = await dialog.showOpenDialog(mainWindow, {
+    title: 'Dossier des données partagées — tapez l\'adresse \\\\SERVEUR\\partage en haut',
+    properties: ['openDirectory', 'createDirectory'],
+    buttonLabel: 'Mettre les données ici',
+  });
+  if (r.canceled || !r.filePaths.length) return { change: false };
+  const cible = r.filePaths[0];
+  const courant = DONNEES();
+  if (path.resolve(cible) === path.resolve(courant)) return { change: false, erreur: 'Ce sont déjà les données utilisées.' };
+  const v = await emplacement.verifierDossier(cible);
+  if (!v.ok) return { change: false, erreur: `Ce dossier n'est pas utilisable : ${v.raison}` };
+  const dejaUneCaisse = fs.existsSync(path.join(cible, 'caisse'));
+  let copie = null;
+  if (!dejaUneCaisse && fs.existsSync(path.join(courant, 'caisse'))) {
+    const q = await dialog.showMessageBox(mainWindow, {
+      type: 'question',
+      title: APP_TITLE,
+      message: 'Emporter les registres de ce PC dans ce dossier ?',
+      detail: 'Le dossier choisi ne contient pas encore de caisse.\n\n'
+        + '« Emporter » y copie les registres, les justificatifs, les scans et les décomptes de ce PC : c\'est ce qu\'il faut la première fois. '
+        + 'Rien n\'est retiré de ce PC.\n\n« Partir de zéro » laisse le dossier vide.',
+      buttons: ['Emporter', 'Partir de zéro', 'Annuler'],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+    });
+    if (q.response === 2) return { change: false };
+    if (q.response === 0) {
+      try { copie = await emplacement.copierSiVide(courant, cible); }
+      catch (e) { return { change: false, erreur: `La copie a échoué, rien n'a été changé : ${(e && e.message) || e}` }; }
+    }
+  }
+  try { emplacement.ecrireEmplacement(DOSSIER_REGLAGE(), cible); }
+  catch (e) { return { change: false, erreur: `Impossible d'écrire ${emplacement.FICHIER} à côté du programme (${(e && e.code) || e}). Le programme est-il dans un dossier protégé ?` }; }
+  logLine(`données déplacées vers ${cible}${copie && copie.copie ? ` (copié : ${copie.dossiers.join(', ')})` : ''}${dejaUneCaisse ? ' (caisse existante reprise)' : ''}`);
+  relancer();
+  return { change: true, chemin: cible, dejaUneCaisse, copie };
+});
+ipcMain.handle('donnees:ouvrir', () => { try { fs.mkdirSync(DONNEES(), { recursive: true }); } catch (e) { /* signalé par l'explorateur */ } return shell.openPath(DONNEES()); });
+ipcMain.handle('donnees:local', () => {
+  if (!donneesPartagees || donneesPartagees.source !== emplacement.FICHIER) return { change: false };
+  emplacement.ecrireEmplacement(DOSSIER_REGLAGE(), null);
+  logLine(`retour aux données du poste : ${app.getPath('userData')}`);
+  relancer();
+  return { change: true };
+});
 ipcMain.handle('files:years', () => {
   try {
     return fs.readdirSync(REG_ROOT()).filter((d) => yearOk(d) && fs.existsSync(path.join(REG_ROOT(), d, 'registre.json'))).map(Number).sort();
@@ -865,13 +940,30 @@ ipcMain.handle('files:load', (ev, y) => {
   const f = path.join(regDir(y), 'registre.json');
   return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null;
 });
-ipcMain.handle('files:save', (ev, y, text) => {
+/*
+ * Enregistrement du registre, avec un contrôle pour les données partagées.
+ *
+ * `attendu` est le texte que la page croit trouver sur le disque (null : l'année ne devrait pas
+ * encore exister ; absent : ne rien vérifier — une restauration voulue). Si un autre poste a écrit
+ * entre-temps, on n'écrase pas : on rend ce qu'il a écrit, et la page fusionne (registre.js).
+ * Le contrôle se fait juste avant le renommage, pour que la fenêtre où deux postes pourraient
+ * encore se croiser ne dure que quelques millisecondes.
+ */
+ipcMain.handle('files:save', (ev, y, text, attendu) => {
   if (!yearOk(y)) throw new Error('année invalide');
   const dir = regDir(y);
   fs.mkdirSync(dir, { recursive: true });
   const f = path.join(dir, 'registre.json');
-  const tmp = f + '.tmp';
+  const tmp = `${f}.${os.hostname().replace(/[^A-Za-z0-9_-]/g, '_')}.${process.pid}.tmp`; // un fichier de travail par poste
   fs.writeFileSync(tmp, String(text));
+  if (attendu !== undefined) {
+    const actuel = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null;
+    if (actuel !== null && actuel !== attendu) {
+      try { fs.unlinkSync(tmp); } catch (e) { /* ignore */ }
+      logLine(`registre ${y} : modifié par un autre poste depuis sa lecture — fusion`);
+      return { conflit: true, disque: actuel };
+    }
+  }
   if (fs.existsSync(f)) fs.copyFileSync(f, f.replace(/\.json$/, '.bak.json'));
   fs.renameSync(tmp, f);
   return true;
@@ -927,9 +1019,49 @@ ipcMain.handle('ocr:info', () => {
 });
 ipcMain.handle('ocr:recognize', (ev, png, opts) => nativeOcr.recognize(png, opts, PORTABLE_DIR));
 
-app.whenReady().then(() => {
-  logLine(`${APP_TITLE} ${app.getVersion()} – Electron ${process.versions.electron} – ${process.platform} – exécutable : ${PORTABLE_DIR} – données : ${app.getPath('userData')}`);
+/**
+ * Les données partagées sont-elles joignables ? Sinon, on ne s'ouvre pas sur autre chose.
+ *
+ * Retomber en silence sur les données du poste serait pire que tout : on saisirait dans un
+ * registre à part, qui ne rejoindrait jamais celui du serveur — deux caisses pour une. La personne
+ * choisit donc : réessayer (le serveur démarrait, le réseau revenait), quitter, ou revenir pour de
+ * bon aux données de ce PC, en le sachant.
+ */
+async function assurerDonnees() {
+  if (!donneesPartagees) return true;
+  for (;;) {
+    const v = await emplacement.verifierDossier(donneesPartagees.chemin);
+    if (v.ok) { logLine(`données partagées joignables : ${donneesPartagees.chemin}`); return true; }
+    logLine(`données partagées injoignables : ${donneesPartagees.chemin} — ${v.raison}`);
+    const revenir = donneesPartagees.source === emplacement.FICHIER; // une variable d'environnement ne s'efface pas d'ici
+    const r = await dialog.showMessageBox({
+      type: 'warning',
+      title: APP_TITLE,
+      message: 'Le dossier des données est injoignable',
+      detail: `${donneesPartagees.chemin}\n\n${v.raison}\n\nLes registres de la caisse sont dans ce dossier. L'application ne s'ouvre pas sans lui : `
+        + 'travailler sur une copie à part ferait deux registres qui ne se rejoindraient plus.\n\n'
+        + 'Vérifiez que le serveur est allumé et que ce PC est connecté au réseau de l\'école.',
+      buttons: revenir ? ['Réessayer', 'Quitter', 'Revenir aux données de ce PC'] : ['Réessayer', 'Quitter'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    });
+    if (r.response === 0) continue;
+    if (r.response === 2 && revenir) {
+      emplacement.ecrireEmplacement(DOSSIER_REGLAGE(), null);
+      logLine(`retour aux données du poste : ${app.getPath('userData')} (les données du serveur restent où elles sont)`);
+      donneesPartagees = null;
+      return true;
+    }
+    app.quit();
+    return false;
+  }
+}
+
+app.whenReady().then(async () => {
+  logLine(`${APP_TITLE} ${app.getVersion()} – Electron ${process.versions.electron} – ${process.platform} – exécutable : ${PORTABLE_DIR} – profil : ${app.getPath('userData')} – données : ${DONNEES()}${donneesPartagees ? ` (${donneesPartagees.source})` : ''}`);
   if (raisonDonneesAilleurs) logLine(`données hors du dossier de l'application : ${raisonDonneesAilleurs}`);
+  if (!(await assurerDonnees())) return;
   setupDownloads();
   setupDgeoBridge();
   buildMenu();

@@ -454,7 +454,9 @@
     if (note && r) {
       note.innerHTML = r.depotReseau
         ? 'Cette adresse est sur le réseau : le copieur peut la viser telle quelle.'
-        : "Cette adresse est locale à ce PC. Pour que le copieur y accède, posez le dossier <b>ComptaBlonay</b> sur le serveur — ses données le suivent —, ou ajoutez plus bas le dossier réseau où il dépose déjà.";
+        // Ne plus conseiller de poser le programme sur le serveur : c'est ce qui échoue (lenteur,
+        // sécurité du réseau). Ce sont les DONNÉES qui y vont — voir « Où sont les données ».
+        : "Cette adresse est locale à ce PC : le copieur ne peut pas l'atteindre. Mettez les <b>données</b> sur le serveur (<i>L'année → Où sont les données</i>) — le programme, lui, reste sur ce PC —, ou ajoutez plus bas le dossier réseau où le copieur dépose déjà.";
     }
     const box = $('receptionDossiers');
     if (box) {

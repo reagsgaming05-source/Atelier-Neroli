@@ -773,15 +773,153 @@
   /* Stockage                                                               */
   /* ------------------------------------------------------------------ */
 
+  /* ------------------------------------------------------------------ */
+  /* Plusieurs postes sur le même registre                                  */
+  /* ------------------------------------------------------------------ */
+
+  /*
+   * Quand les données vivent sur le serveur, deux postes peuvent ouvrir la même année. Chacun
+   * enregistre tout le registre d'un bloc : sans précaution, le dernier qui enregistre efface ce
+   * que l'autre a fait entre-temps — une pièce saisie qui disparaît sans que personne le voie.
+   *
+   * On retient donc, pour chaque registre ouvert, le texte exact d'où il vient. À l'enregistrement,
+   * le processus principal vérifie que le fichier n'a pas changé ; s'il a changé, il le rend au
+   * lieu d'écrire, et on FUSIONNE : ce que ce poste a fait, plus ce que l'autre a fait.
+   */
+
+  const cleDe = (x, norm) => (x == null ? null : JSON.stringify(norm(x)));
+
+  /**
+   * Fusion à trois voies de deux versions d'un même registre.
+   *   base   : le registre tel que ce poste l'avait lu (null : il n'existait pas encore) ;
+   *   mien   : ce que ce poste veut enregistrer ;
+   *   disque : ce qu'un autre poste a enregistré entre-temps.
+   *
+   * Une pièce que seul un côté a touchée prend la version de ce côté — ajout, modification ou
+   * suppression. Touchée des deux côtés de la même façon : rien à trancher. Touchée des deux
+   * côtés différemment : c'est un conflit, et la version modifiée le plus récemment l'emporte ; une
+   * pièce modifiée d'un côté et supprimée de l'autre est gardée — une suppression perdue se refait
+   * d'un clic, une saisie perdue ne se retrouve pas.
+   *
+   * Rend { reg, reprises, conflits, doublons } : `reprises` compte ce qui vient de l'autre poste,
+   * `doublons` les numéros de pièce que les deux postes ont attribués chacun de leur côté.
+   */
+  function fusionner(base, mien, disque) {
+    const b = base || { pieces: [], comptages: [] };
+    const conflits = [];
+    let reprises = 0;
+
+    const fusionListe = (liste, norm, quoi) => {
+      const index = (arr) => new Map((arr || []).map((x) => [x.id, x]));
+      const B = index(b[liste]); const M = index(mien[liste]); const D = index(disque[liste]);
+      const ids = [];
+      for (const src of [mien[liste] || [], disque[liste] || []]) for (const x of src) if (!ids.includes(x.id)) ids.push(x.id);
+      const out = [];
+      for (const id of ids) {
+        const kb = cleDe(B.get(id), norm); const km = cleDe(M.get(id), norm); const kd = cleDe(D.get(id), norm);
+        const m = M.get(id); const d = D.get(id);
+        let pris;
+        if (km === kb) { pris = d; if (kd !== km) reprises += 1; }           // seul l'autre poste y a touché
+        else if (kd === kb || kd === km) pris = m;                            // seul ce poste, ou la même chose
+        else if (m && d) {                                                    // les deux, différemment
+          const plusRecent = String(d.updatedAt || d.createdAt || '') > String(m.updatedAt || m.createdAt || '');
+          pris = plusRecent ? d : m;
+          if (plusRecent) reprises += 1;
+          conflits.push({ quoi, id, no: (pris && pris.no) != null ? pris.no : null, garde: plusRecent ? 'autre poste' : 'ce poste' });
+        } else {                                                              // modifiée d'un côté, supprimée de l'autre
+          pris = m || d;
+          if (!m) reprises += 1;
+          conflits.push({ quoi, id, no: (pris && pris.no) != null ? pris.no : null, garde: 'gardée', supprimeeAilleurs: true });
+        }
+        if (pris) out.push(pris);
+      }
+      return out;
+    };
+
+    const reg = emptyRegister(mien.annee);
+    reg.version = mien.version || reg.version;
+    // Solde à nouveau, compte caisse, visas : même règle, sans identifiant à suivre.
+    for (const champ of ['caisse', 'opening', 'visas']) {
+      const kb = JSON.stringify(b[champ]); const km = JSON.stringify(mien[champ]); const kd = JSON.stringify(disque[champ]);
+      if (km === kb && disque[champ] !== undefined) {
+        reg[champ] = disque[champ];
+        if (kd !== km) reprises += 1;
+      } else {
+        reg[champ] = mien[champ];
+        if (kd !== kb && kd !== km) conflits.push({ quoi: champ, garde: 'ce poste' });
+      }
+    }
+    reg.pieces = fusionListe('pieces', normalizePiece, 'pièce');
+    reg.comptages = fusionListe('comptages', normalizeCount, 'comptage');
+    sortPieces(reg);
+    sortCounts(reg);
+
+    // Les deux postes ont pris « le numéro suivant » chacun de leur côté : deux pièces n° 13.
+    // Rien n'est perdu, mais il faut le dire — c'est le numéro qui relie la ligne au papier.
+    const ajoutees = (cote) => (cote.pieces || []).filter((p) => !(b.pieces || []).some((x) => x.id === p.id));
+    const nosMiens = new Set(ajoutees(mien).map((p) => p.no).filter((n) => n != null));
+    const doublons = Array.from(new Set(ajoutees(disque).map((p) => p.no).filter((n) => nosMiens.has(n)))).sort((x, y) => x - y);
+
+    reg.updatedAt = new Date().toISOString();
+    return { reg, reprises, conflits, doublons };
+  }
+
+  // Le texte d'où vient chaque registre ouvert. Clé : l'objet registre lui-même — la saisie et la
+  // boîte de réception en tiennent chacune un exemplaire, et chacun doit être comparé à SON point
+  // de départ, pas au dernier qu'on a lu pour la même année.
+  //
+  // Un registre qui n'a jamais été lu sur le disque est une année que ce poste crée : on s'attend
+  // à ne rien trouver. Si l'autre poste l'a créée entre-temps, on fusionne au lieu d'écraser.
+  const origines = new WeakMap();
+  const noterOrigine = (reg, texte) => { if (reg) origines.set(reg, texte == null ? null : String(texte)); };
+
   /** Adaptateur fichiers (application fenêtrée) : window.CaisseFiles fourni par le preload. */
   function fileStorage(F) {
+    const charger = async (year) => {
+      const t = await F.load(year);
+      const lu = readStored(t);
+      noterOrigine(lu.reg, t);
+      return lu;
+    };
     return {
       kind: 'fichiers',
       location: () => F.dir(),
       years: () => F.years(),
-      load: async (year) => { const t = await F.load(year); return readStored(t).reg; },
-      loadStored: async (year) => readStored(await F.load(year)),
-      save: (reg) => F.save(reg.annee, serialize(reg)),
+      load: async (year) => (await charger(year)).reg,
+      loadStored: charger,
+      /**
+       * Enregistre le registre. `opts.remplacer` : c'est un remplacement voulu (restauration d'une
+       * sauvegarde), on écrit sans fusionner. Rend { fusion } — null si personne d'autre n'avait
+       * écrit ; sinon ce qui a été repris de l'autre poste. Le registre passé est mis à jour sur
+       * place : l'écran montre aussitôt le travail de l'autre poste.
+       */
+      save: async (reg, opts) => {
+        opts = opts || {};
+        const annee = reg.annee;
+        // undefined : écrire sans rien vérifier (remplacement voulu) ; null : l'année ne doit pas exister
+        let attendu;
+        if (!opts.remplacer) attendu = origines.has(reg) ? origines.get(reg) : null;
+        let bilan = null;
+        for (let essai = 0; essai < 4; essai++) {
+          const texte = serialize(reg);
+          const r = await F.save(annee, texte, attendu);
+          if (!r || r === true || !r.conflit) {
+            noterOrigine(reg, texte);
+            return { fusion: bilan };
+          }
+          const disque = parse(r.disque);
+          if (!disque) throw new Error("le registre enregistré par l'autre poste est illisible : rien n'a été écrit par-dessus");
+          const f = fusionner(attendu == null ? null : parse(attendu), reg, disque);
+          for (const k of Object.keys(f.reg)) reg[k] = f.reg[k];
+          bilan = {
+            reprises: (bilan ? bilan.reprises : 0) + f.reprises,
+            conflits: (bilan ? bilan.conflits : []).concat(f.conflits),
+            doublons: Array.from(new Set((bilan ? bilan.doublons : []).concat(f.doublons))),
+          };
+          attendu = r.disque;
+        }
+        throw new Error("le registre est modifié sans arrêt sur un autre poste : rien n'a été écrit, réessayez dans un instant");
+      },
       attach: (year, pieceId, name, bytes) => F.attach(year, pieceId, name, bytes),
       read: (year, pieceId, name) => F.read(year, pieceId, name),
       remove: (year, pieceId, name) => F.remove(year, pieceId, name),
@@ -878,6 +1016,7 @@
     serialize,
     parse,
     readStored,
+    fusionner,
     storage,
     fileStorage,
     browserStorage,

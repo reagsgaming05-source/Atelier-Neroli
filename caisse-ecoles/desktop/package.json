@@ -39,6 +39,7 @@
       "native-ocr.js",
       "dgeo-proxy.js",
       "veille.js",
+      "emplacement.js",
       "dgeo-theme.css",
       "app/**",
       "!app/README.md"

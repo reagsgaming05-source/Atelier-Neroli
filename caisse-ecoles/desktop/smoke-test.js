@@ -1233,6 +1233,68 @@ function verifierCopie() {
     console.log('Décompte DGEO : non inclus');
     if (process.env.SMOKE_DGEO === '1') ok = false;
   }
+  // DEUX POSTES SUR LE MÊME REGISTRE. Avec les données sur le serveur, un collègue peut écrire
+  // dans l'année pendant qu'on y travaille. On le simule en écrivant nous-mêmes dans le fichier du
+  // registre, comme le ferait l'autre poste, puis on enregistre depuis l'application : sans la
+  // fusion, la pièce du « collègue » disparaissait sous la nôtre, sans un mot.
+  {
+    const RR = require('../src/registre.js');
+    const avantDeux = await win.evaluate(async () => {
+      const S = window.CaisseSaisie;
+      await S.saveReg(); // l'écran et le disque partent du même point
+      const e = await window.CaisseEmplacement.etat();
+      return { annee: S.state.reg.annee, dir: await window.CaisseFiles.dir(), etat: e, carte: !document.getElementById('carteEmplacement').classList.contains('hidden') };
+    });
+    // COMPTA_DONNEES posé : tout ce test tourne avec les données ailleurs que dans le profil, comme
+    // sur le serveur. Sinon, elles doivent être restées sur le poste.
+    const voulu = process.env.COMPTA_DONNEES ? path.resolve(process.env.COMPTA_DONNEES) : null;
+    console.log('où sont les données :', JSON.stringify({ partage: avantDeux.etat.partage, chemin: avantDeux.etat.chemin, registres: avantDeux.dir }));
+    if (!!avantDeux.etat.partage !== !!voulu) throw new Error(`données ${avantDeux.etat.partage ? 'partagées' : 'sur le poste'} alors que ${voulu ? 'COMPTA_DONNEES les envoie ailleurs' : 'rien ne le demande'}`);
+    if (voulu && path.resolve(avantDeux.etat.chemin) !== voulu) throw new Error(`données dans ${avantDeux.etat.chemin} au lieu de ${voulu}`);
+    if (voulu && !path.resolve(avantDeux.dir).startsWith(voulu + path.sep)) throw new Error(`les registres ne suivent pas les données : ${avantDeux.dir}`);
+    if (!avantDeux.carte) throw new Error('la carte « Où sont les données » n\'apparaît pas');
+    const fichierReg = path.join(avantDeux.dir, String(avantDeux.annee), 'registre.json');
+    const regDisque = RR.parse(fs.readFileSync(fichierReg, 'utf8'));
+    const collegue = RR.newPiece(regDisque);
+    Object.assign(collegue, { id: `pcollegue${Date.now().toString(36)}`, no: 777, date: `${avantDeux.annee}-04-01`, type: 'REMBOURSEMENT', detail: 'saisie du collègue', personne: 'S. Monod', compte: '51000.3185.00', montant: 7.7, sens: 'credit' });
+    RR.upsertPiece(regDisque, collegue);
+    fs.writeFileSync(fichierReg, RR.serialize(regDisque));
+
+    const apres = await win.evaluate(async () => {
+      const S = window.CaisseSaisie; const R = window.CaisseRegistre;
+      const p = R.newPiece(S.state.reg);
+      Object.assign(p, { no: 778, date: `${S.state.reg.annee}-04-02`, type: 'REMBOURSEMENT', detail: 'saisie de ce poste', personne: 'A. Berger', compte: '51000.3185.00', montant: 8.8, sens: 'credit' });
+      R.upsertPiece(S.state.reg, p);
+      await S.saveReg();
+      const annonce = Array.from(document.querySelectorAll('.notice')).map((n) => n.textContent).find((t) => /autre poste/.test(t)) || '';
+      return { enMemoire: S.state.reg.pieces.map((x) => x.no).filter((n) => n === 777 || n === 778), annonce };
+    });
+    const surDisque = RR.parse(fs.readFileSync(fichierReg, 'utf8')).pieces.map((x) => x.no).filter((n) => n === 777 || n === 778);
+    console.log('deux postes sur le même registre :', JSON.stringify({ surDisque, enMemoire: apres.enMemoire, annonce: apres.annonce.slice(0, 90) }));
+    if (!surDisque.includes(777)) throw new Error('la pièce du collègue a été écrasée par l\'enregistrement de ce poste');
+    if (!surDisque.includes(778)) throw new Error('la pièce de ce poste n\'a pas été enregistrée');
+    if (!apres.enMemoire.includes(777)) throw new Error('l\'écran ne montre pas la pièce du collègue après la fusion');
+    if (!apres.annonce) throw new Error('la fusion s\'est faite sans le dire');
+
+    // Un enregistrement qui échoue doit se voir : la fiche ne doit plus annoncer « enregistrée ».
+    const echec = await win.evaluate(async () => {
+      const S = window.CaisseSaisie;
+      const vrai = S.state.storage.save;
+      S.state.storage.save = async () => { throw new Error('serveur injoignable (essai)'); };
+      let leve = false;
+      try { await S.saveReg(); } catch (e) { leve = true; } finally { S.state.storage.save = vrai; }
+      const dit = Array.from(document.querySelectorAll('.notice.err')).some((n) => /Registre non enregistré/.test(n.textContent) && /injoignable/.test(n.textContent));
+      // on retire les deux pièces de l'essai
+      for (const no of [777, 778]) { const x = S.state.reg.pieces.find((q) => q.no === no); if (x) window.CaisseRegistre.removePiece(S.state.reg, x.id); }
+      await S.saveReg();
+      S.renderJournal();
+      return { leve, dit };
+    });
+    console.log('enregistrement impossible :', JSON.stringify(echec));
+    if (!echec.leve) throw new Error('un échec d\'enregistrement passe pour une réussite');
+    if (!echec.dit) throw new Error('un échec d\'enregistrement ne s\'affiche pas');
+  }
+
   // On retire les pièces que CET essai a créées, et rien d'autre : le prochain repart du même
   // registre que celui-ci. Sans ça, le test n'est juste qu'une fois par poste.
   const menage = await win.evaluate(async (avant) => {

@@ -529,6 +529,19 @@
     </div>
     <div id="anneeNotices"></div>
   </section>
+
+  <section class="card hidden" id="carteEmplacement">
+    <h2><span class="left"><svg class="ico"><use href="#i-users"/></svg> Où sont les données <span class="badge-soft" id="emplacementGenre"></span></span></h2>
+    <p class="legend">Pour que plusieurs postes partagent la même caisse, <b>le programme reste sur chaque PC et seules les données vont sur le serveur</b> : registres, justificatifs, scans du copieur et décomptes. Lancer le programme lui-même depuis le serveur est lent et souvent bloqué par la sécurité du réseau. Deux postes peuvent travailler en même temps : ce que l'un enregistre est repris par l'autre, rien ne s'écrase.</p>
+    <code id="emplacementChemin" class="depot-chemin"></code>
+    <div class="toolbar" style="margin-top:10px">
+      <button type="button" id="btnEmplacementChoisir"><svg class="ico"><use href="#i-folder"/></svg> <span id="btnEmplacementChoisirTexte">Mettre les données sur le serveur…</span></button>
+      <button type="button" class="ghost hidden" id="btnEmplacementLocal"><svg class="ico"><use href="#i-arrow"/></svg> Revenir aux données de ce PC</button>
+      <button type="button" class="small ghost" id="btnEmplacementOuvrir"><svg class="ico"><use href="#i-external"/></svg> Ouvrir</button>
+    </div>
+    <div class="legend" id="emplacementNote" style="margin-top:8px"></div>
+    <div id="emplacementNotices"></div>
+  </section>
 </div>
 
 <div id="panelDonnees" class="panel hidden">

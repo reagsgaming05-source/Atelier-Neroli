@@ -40,7 +40,9 @@ contextBridge.exposeInMainWorld('CaisseFiles', {
   dir: () => ipcRenderer.invoke('files:dir'),
   years: () => ipcRenderer.invoke('files:years'),
   load: (year) => ipcRenderer.invoke('files:load', year),
-  save: (year, text) => ipcRenderer.invoke('files:save', year, text),
+  // `attendu` : le texte que la page croit trouver sur le disque ; si un autre poste a écrit
+  // entre-temps, on reçoit { conflit, disque } au lieu d'un écrasement (voir registre.js)
+  save: (year, text, attendu) => ipcRenderer.invoke('files:save', year, text, attendu),
   attach: (year, id, name, bytes) => ipcRenderer.invoke('files:attach', year, id, name, bytes),
   read: (year, id, name) => ipcRenderer.invoke('files:read', year, id, name).then((b) => (b ? new Uint8Array(b) : null)),
   remove: (year, id, name) => ipcRenderer.invoke('files:remove', year, id, name),
@@ -48,6 +50,15 @@ contextBridge.exposeInMainWorld('CaisseFiles', {
   // carnet des données : les listes tenues à la main (espace « Données »)
   loadCarnet: () => ipcRenderer.invoke('files:load-carnet'),
   saveCarnet: (text) => ipcRenderer.invoke('files:save-carnet', text),
+});
+
+// Où vivent les données de la caisse : sur ce PC, ou sur le serveur (voir emplacement.js).
+// (« CaisseDonnees » est déjà le carnet des listes, src/donnees.js : ne pas le recouvrir)
+contextBridge.exposeInMainWorld('CaisseEmplacement', {
+  etat: () => ipcRenderer.invoke('donnees:etat'),
+  choisir: () => ipcRenderer.invoke('donnees:choisir'),
+  local: () => ipcRenderer.invoke('donnees:local'),
+  ouvrir: () => ipcRenderer.invoke('donnees:ouvrir'),
 });
 
 // Veille du dossier scanné : le copieur y dépose ses PDF, l'application les y prend (voir
