@@ -33,6 +33,7 @@ const PORTABLE_DIR = path.dirname(process.execPath);
 app.commandLine.appendSwitch('lang', 'fr-CH');
 
 // Dossier de données à côté de l'exécutable (version portable) ; sinon, dossier utilisateur.
+let raisonDonneesAilleurs = '';
 function setupUserData() {
   if (!app.isPackaged) return;
   const dir = path.join(PORTABLE_DIR, 'data');
@@ -41,7 +42,12 @@ function setupUserData() {
     fs.accessSync(dir, fs.constants.W_OK);
     app.setPath('userData', dir);
   } catch (e) {
-    // dossier non inscriptible (ex. Program Files) : emplacement par défaut de Windows
+    // Dossier non inscriptible : Program Files, ou un partage réseau où l'on n'a que la lecture.
+    // On repart sur l'emplacement par défaut de Windows, et on retient POURQUOI : sans cette
+    // raison, une application posée sur le serveur qui ne retrouve plus ses registres — ou qui
+    // ne s'ouvre pas du tout, le verrou d'instance unique étant alors partagé avec une autre
+    // copie — reste une énigme.
+    raisonDonneesAilleurs = `${path.join(PORTABLE_DIR, 'data')} n'est pas inscriptible (${(e && e.code) || e})`;
   }
 }
 setupUserData();
@@ -56,8 +62,17 @@ function logLine(msg) {
 process.on('uncaughtException', (e) => { logLine(`ERREUR ${e && e.stack ? e.stack : e}`); });
 process.on('unhandledRejection', (e) => { logLine(`ERREUR (promesse) ${e && e.stack ? e.stack : e}`); });
 
-// Une seule instance de l'application
-if (!app.requestSingleInstanceLock()) app.quit();
+// Une seule instance de l'application. Un deuxième lancement ne s'ouvre pas : il réveille la
+// fenêtre déjà ouverte (voir « second-instance » plus bas). Mais le verrou porte sur le DOSSIER DE
+// DONNÉES, pas sur l'exécutable : deux copies dont les données atterrissent au même endroit — ce
+// qui arrive dès qu'un `data/` n'est pas inscriptible — se le disputent, et la seconde se ferme
+// sans un mot. On l'écrit au journal avant de partir : c'est la seule trace d'une application qui
+// « ne se lance pas ».
+if (!app.requestSingleInstanceLock()) {
+  logLine(`démarrage abandonné : une autre instance tient déjà les données ${app.getPath('userData')}`
+    + (raisonDonneesAilleurs ? ` — ${raisonDonneesAilleurs}` : ''));
+  app.quit();
+}
 
 /** Fichier des noms de personnes (données personnelles, jamais dans le dépôt) posé à côté de l'exe. */
 function namesFile() {
@@ -913,7 +928,8 @@ ipcMain.handle('ocr:info', () => {
 ipcMain.handle('ocr:recognize', (ev, png, opts) => nativeOcr.recognize(png, opts, PORTABLE_DIR));
 
 app.whenReady().then(() => {
-  logLine(`${APP_TITLE} ${app.getVersion()} – Electron ${process.versions.electron} – ${process.platform} – données : ${app.getPath('userData')}`);
+  logLine(`${APP_TITLE} ${app.getVersion()} – Electron ${process.versions.electron} – ${process.platform} – exécutable : ${PORTABLE_DIR} – données : ${app.getPath('userData')}`);
+  if (raisonDonneesAilleurs) logLine(`données hors du dossier de l'application : ${raisonDonneesAilleurs}`);
   setupDownloads();
   setupDgeoBridge();
   buildMenu();
