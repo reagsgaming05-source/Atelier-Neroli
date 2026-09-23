@@ -188,20 +188,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Ce que la release doit porter à la fin : CE zip-ci, envoyé pendant CETTE étape.
+          debut=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          taille=$(stat -c %s ComptaBlonay-windows.zip)
           for try in 1 2 3 4 5; do
             # « timeout » : gh peut rester bloqué sans rien téléverser, ce qui mangeait tout le temps du job
             if timeout 300 gh release upload compta-blonay-windows-latest ComptaBlonay-windows.zip --clobber --repo "$GITHUB_REPOSITORY"; then
-              echo "zip publié (tentative $try)"
-              # L'étiquette « …-latest » doit désigner le commit d'où vient ce zip : l'action ne la
-              # déplace pas, elle restait sur le tout premier commit publié alors que le texte de la
-              # page annonce un commit récent.
-              gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/compta-blonay-windows-latest" \
-                -f sha="$GITHUB_SHA" -F force=true >/dev/null \
-                || echo "étiquette non déplacée (sans conséquence pour le téléchargement)"
-              exit 0
+              # « Envoyé » ne suffit pas. Vu le 23.09 : gh a répondu « réussi », le texte de la page
+              # annonçait le nouveau commit, et le zip servi était toujours celui d'avant. On relit donc
+              # ce que la release porte vraiment : la bonne taille, et un fichier plus récent que cette étape.
+              for lecture in 1 2 3 4 5 6; do
+                sleep 10
+                lu=$(gh release view compta-blonay-windows-latest --repo "$GITHUB_REPOSITORY" --json assets \
+                  --jq '.assets[] | select(.name=="ComptaBlonay-windows.zip") | "\(.size) \(.createdAt)"' || true)
+                read -r tailleLue dateLue <<< "$lu"
+                echo "sur la release : ${tailleLue:-?} octets du ${dateLue:-?} (attendu : $taille octets, envoyé après $debut)"
+                if [ "$tailleLue" = "$taille" ] && [[ ! "$dateLue" < "$debut" ]]; then
+                  echo "zip publié et vérifié (tentative $try)"
+                  # L'étiquette « …-latest » doit désigner le commit d'où vient ce zip : l'action ne la
+                  # déplace pas, elle restait sur le tout premier commit publié alors que le texte de la
+                  # page annonce un commit récent.
+                  gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/compta-blonay-windows-latest" \
+                    -f sha="$GITHUB_SHA" -F force=true >/dev/null \
+                    || echo "étiquette non déplacée (sans conséquence pour le téléchargement)"
+                  exit 0
+                fi
+              done
+              echo "la release porte encore un autre zip que celui-ci : nouvel envoi"
             fi
             echo "tentative $try échouée ; nouvelle tentative dans $((15 * try)) s"
             sleep $((15 * try))
           done
-          echo "::error::le zip n'a pas pu être publié sur la pré-release"
+          echo "::error::le zip n'a pas pu être publié et vérifié sur la pré-release"
           exit 1
