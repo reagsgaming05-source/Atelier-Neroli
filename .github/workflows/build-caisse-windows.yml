@@ -188,36 +188,47 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Ce que la release doit porter à la fin : CE zip-ci, envoyé pendant CETTE étape.
-          debut=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          taille=$(stat -c %s ComptaBlonay-windows.zip)
+          TAG=compta-blonay-windows-latest
+          ZIP=ComptaBlonay-windows.zip
+          LIEN="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ZIP"
+          empreinte=$(sha256sum "$ZIP" | cut -d' ' -f1)
+          # Ce qui compte, c'est ce que la personne télécharge : on vérifie le fichier AU BOUT DU
+          # LIEN, octet pour octet. Ni la réponse de gh ni la liste de fichiers de la release ne
+          # suffisent — vu le 23.09 : gh annonçait « envoyé », et la liste a gardé pendant des
+          # dizaines de minutes un fichier déjà effacé.
+          servi() { rm -f servi.zip; curl -sSL --fail --retry 2 -o servi.zip "$LIEN" 2>/dev/null && sha256sum servi.zip | cut -d' ' -f1; }
+          recreer() {
+            # Le fichier fantôme : listé par la release, mais « introuvable » (HTTP 404) dès qu'on veut
+            # le remplacer — gh refuse alors tout nouvel envoi. On repart d'une release neuve sur la
+            # même étiquette : le lien de téléchargement, qui ne dépend que d'elle, ne change pas.
+            titre=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json name --jq .name)
+            texte=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
+            gh release delete "$TAG" --yes --repo "$GITHUB_REPOSITORY"
+            sleep 5
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease --title "$titre" --notes "$texte"
+          }
           for try in 1 2 3 4 5; do
             # « timeout » : gh peut rester bloqué sans rien téléverser, ce qui mangeait tout le temps du job
-            if timeout 300 gh release upload compta-blonay-windows-latest ComptaBlonay-windows.zip --clobber --repo "$GITHUB_REPOSITORY"; then
-              # « Envoyé » ne suffit pas. Vu le 23.09 : gh a répondu « réussi », le texte de la page
-              # annonçait le nouveau commit, et le zip servi était toujours celui d'avant. On relit donc
-              # ce que la release porte vraiment : la bonne taille, et un fichier plus récent que cette étape.
+            if timeout 300 gh release upload "$TAG" "$ZIP" --clobber --repo "$GITHUB_REPOSITORY"; then
               for lecture in 1 2 3 4 5 6; do
                 sleep 10
-                lu=$(gh release view compta-blonay-windows-latest --repo "$GITHUB_REPOSITORY" --json assets \
-                  --jq '.assets[] | select(.name=="ComptaBlonay-windows.zip") | "\(.size) \(.createdAt)"' || true)
-                read -r tailleLue dateLue <<< "$lu"
-                echo "sur la release : ${tailleLue:-?} octets du ${dateLue:-?} (attendu : $taille octets, envoyé après $debut)"
-                if [ "$tailleLue" = "$taille" ] && [[ ! "$dateLue" < "$debut" ]]; then
+                lue=$(servi || true)
+                echo "au bout du lien : ${lue:-rien} (attendu : $empreinte)"
+                if [ "$lue" = "$empreinte" ]; then
                   echo "zip publié et vérifié (tentative $try)"
                   # L'étiquette « …-latest » doit désigner le commit d'où vient ce zip : l'action ne la
                   # déplace pas, elle restait sur le tout premier commit publié alors que le texte de la
-                  # page annonce un commit récent.
-                  gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/compta-blonay-windows-latest" \
+                  # page annonce un commit récent. Seulement une fois le fichier vérifié.
+                  gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" \
                     -f sha="$GITHUB_SHA" -F force=true >/dev/null \
                     || echo "étiquette non déplacée (sans conséquence pour le téléchargement)"
                   exit 0
                 fi
               done
-              echo "la release porte encore un autre zip que celui-ci : nouvel envoi"
             fi
-            echo "tentative $try échouée ; nouvelle tentative dans $((15 * try)) s"
+            echo "tentative $try : le lien ne sert pas ce zip — release recréée avant un nouvel envoi"
+            recreer || echo "recréation impossible pour l'instant"
             sleep $((15 * try))
           done
-          echo "::error::le zip n'a pas pu être publié et vérifié sur la pré-release"
+          echo "::error::le zip n'a pas pu être publié : le lien de téléchargement ne sert pas le zip de ce commit"
           exit 1
