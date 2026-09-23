@@ -99,6 +99,38 @@ Elle ne s'ouvre jamais en douce sur les données du poste : on y saisirait dans 
 qui ne rejoindrait jamais celle du serveur. Un enregistrement qui échoue en cours de route (réseau
 coupé) s'affiche en rouge, et la fiche n'annonce plus « pièce enregistrée ».
 
+**Installer sur chaque PC, mettre à jour une seule fois.** Le serveur distribue aussi le
+programme, sans Internet : on y pose une copie de référence, et chaque PC fait tourner la sienne,
+rafraîchie au lancement.
+
+    \\SERVEUR\Partage\ComptaBlonay\           le programme : la seule copie à remplacer
+    \\SERVEUR\Partage\ComptaBlonay-donnees\   la caisse de tout le monde
+
+1. Sur le PC qui tient la caisse aujourd'hui, avec cette version : *Changer de dossier…* vers
+   `ComptaBlonay-donnees` et *Emporter* (voir plus haut). Dans cet ordre : un PC installé depuis
+   le serveur part d'une copie neuve, sans les registres de l'ancienne.
+2. Le dossier `ComptaBlonay` du zip sur le serveur, avec à côté de l'exécutable un `donnees.txt`
+   qui désigne `ComptaBlonay-donnees` — tous les postes le reçoivent.
+3. Sur chaque PC, une fois : double-clic sur **Installer sur ce PC** dans le dossier du serveur.
+   Le programme est copié dans `%LOCALAPPDATA%\ComptaBlonay` (le profil de la personne, sans
+   droits d'administrateur), et un raccourci **Compta Blonay** posé sur le bureau.
+
+Ce raccourci lance `Compta Blonay.cmd` (recopié hors du dossier du programme, qu'une mise à jour
+réécrit). Il compare le `version.txt` du serveur à celui du PC — un par construction : commit,
+numéro, date — et ne recopie que s'ils diffèrent ; sinon le démarrage est immédiat. La copie
+(`robocopy /MIR`) rend le PC identique au serveur, fichiers retirés compris, sauf le profil
+`data\` du poste ; `version.txt` n'est noté qu'à la fin, si bien qu'une copie interrompue est
+reprise au lancement suivant au lieu de passer pour faite. `donnees.txt` et `vocabulaire-noms.js`
+viennent du serveur quand il en a, et le PC garde les siens sinon.
+
+Mettre à jour, c'est copier le contenu du nouveau zip par-dessus le dossier du serveur ; chaque
+PC suit à son prochain lancement. Ce qui ne copie pas : un PC où l'application est ouverte (des
+fichiers verrouillés, deux versions mélangées — il suivra la fois d'après), un serveur éteint (le
+PC démarre sa version), un second double-clic pendant une copie (il attend la fin : le lanceur
+tient un verrou que Windows relâche même si la fenêtre est fermée). Le lanceur se met lui-même à
+jour avec le programme. *Aide → À propos* dit quelle construction tourne sur le poste. Tout cela
+est éprouvé sous Windows par la construction, installation depuis une adresse `\\…` comprise.
+
 **Noms de personnes** : le dépôt étant public, la version portable ne contient aucun nom. Posez
 le fichier `vocabulaire-noms.js` (remis séparément, jamais publié) à côté de `ComptaBlonay.exe` :
 il est lu au démarrage (menu *Aide → À propos* indique s'il a été trouvé). Sans lui, les noms
@@ -532,8 +564,9 @@ copieur la vise telle quelle. L'écran *Boîte de réception* l'affiche en toute
 bouton pour la copier. D'autres dossiers peuvent s'ajouter à côté, si le copieur dépose déjà
 ailleurs.
 
-Ne posez pas le **programme** sur le serveur pour y arriver : c'est ce que ce document conseillait
-d'abord, et cela échoue — voir la section citée.
+Ne **lancez** pas le programme depuis le serveur pour y arriver : c'est ce que ce document
+conseillait d'abord, et cela échoue — voir la section citée (le serveur peut en garder la copie de
+référence, que chaque PC recopie chez lui).
 
 Sur le copieur (bizhub ou autre), c'est une destination « SMB » du carnet d'adresses : hôte,
 chemin du partage, un compte et un mot de passe qui ont le droit d'y écrire. Tant que ce n'est

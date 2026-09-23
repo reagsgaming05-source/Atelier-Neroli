@@ -34,46 +34,80 @@ par OCR local et Tesseract natif — dossier tesseract/ —, génération du fic
 ne quitte votre poste. Les réglages mémorisés (compte caisse, vocabulaire appris, dernier
 solde) sont enregistrés dans le sous-dossier « data » à côté de l'exécutable.
 
-PLUSIEURS POSTES, UNE SEULE CAISSE (données sur le serveur)
-------------------------------------------------------------
+PLUSIEURS POSTES : UNE SEULE CAISSE, UNE SEULE MISE À JOUR
+-----------------------------------------------------------
 Ne lancez PAS ComptaBlonay.exe depuis le serveur : c'est lent (350 Mo relus par le réseau à
 chaque démarrage) et la sécurité du réseau le bloque souvent — un programme non signé qui en
 lance d'autres depuis un partage, c'est ce qu'elle arrête d'office.
 
-Faites l'inverse : le programme sur chaque PC, les DONNÉES sur le serveur.
+Le serveur sert à deux choses : GARDER les données (une seule caisse pour tous) et DISTRIBUER
+le programme (une seule copie à mettre à jour). Chaque PC fait tourner sa propre copie, qu'il
+rafraîchit tout seul depuis le serveur. Rien ne passe par Internet.
 
-  1. Sur chaque PC, décompressez le zip sur le disque du PC (Bureau, Documents…).
-  2. Dans l'application : « L'année » → « Où sont les données » → « Mettre les données sur le
-     serveur… ». Dans la fenêtre, tapez l'adresse du partage dans la barre du HAUT
-     (\\SERVEUR\Partage), pas une lettre de lecteur : une lettre (Z:) change d'un PC à
-     l'autre et le copieur ne la connaît pas. Créez-y un dossier, par exemple
-     ComptaBlonay-donnees, et choisissez-le.
-  3. Le premier PC propose d'y « Emporter » ses registres : acceptez. Les PC suivants trouvent
-     la caisse déjà là et s'y rattachent, sans rien copier.
-  4. L'application redémarre sur le serveur. Le copieur dépose alors dans
-     \\SERVEUR\Partage\ComptaBlonay-donnees\Scans — l'adresse est affichée dans la Boîte de
-     réception.
+    \\SERVEUR\Partage\ComptaBlonay\           le programme (vous le remplacez pour mettre à jour)
+    \\SERVEUR\Partage\ComptaBlonay-donnees\   les registres, les justificatifs, les scans
 
-Le réglage est un simple fichier texte, donnees.txt, à côté de ComptaBlonay.exe : une ligne
-avec l'adresse du dossier. On peut aussi l'écrire à la main dans le Bloc-notes. L'effacer
-ramène aux données du PC (qui n'ont pas bougé).
+Mise en place, une fois, dans cet ordre :
 
-Deux collègues peuvent travailler en même temps : ce que l'un enregistre est repris par
-l'autre, rien ne s'écrase. Si les deux prennent « le numéro suivant » au même moment, les deux
-pièces sont gardées et l'application signale le numéro en double à corriger.
+  1. Les registres d'abord (si ce n'est pas déjà fait). Sur le PC qui tient la caisse
+     aujourd'hui, copiez le contenu de ce zip PAR-DESSUS le dossier ComptaBlonay que vous
+     utilisez (son dossier data, où sont les registres, n'est pas touché). Lancez-le, puis
+     « L'année » → « Où sont les données » → « Changer de dossier… » : tapez
+     \\SERVEUR\Partage dans la barre du haut, créez le dossier ComptaBlonay-donnees,
+     choisissez-le et acceptez « Emporter ». Les registres, justificatifs et scans partent
+     sur le serveur ; rien n'est retiré du PC.
+  2. Copiez le dossier ComptaBlonay de ce zip (le zip, pas le dossier du PC) sur le serveur :
+     \\SERVEUR\Partage\ComptaBlonay\
+  3. Dans ce dossier du serveur, créez avec le Bloc-notes un fichier donnees.txt contenant
+     une seule ligne, l'adresse du dossier des données :
+         \\SERVEUR\Partage\ComptaBlonay-donnees
+     Tous les postes le recevront : ils partageront la même caisse.
+  4. Sur CHAQUE PC, celui de l'étape 1 compris : ouvrez \\SERVEUR\Partage\ComptaBlonay\ et
+     double-cliquez sur « Installer sur ce PC ». Il copie le programme sur le PC (dans le
+     profil de la personne, sans droits d'administrateur) et pose sur le bureau un raccourci
+     « Compta Blonay ». C'est ce raccourci qu'on utilise ensuite, toujours. Chaque personne
+     qui ouvre sa propre session Windows sur le PC fait cette étape pour elle.
+     L'ancien dossier ComptaBlonay du PC de l'étape 1 peut être rangé une fois vérifié que
+     la caisse s'ouvre bien par le raccourci.
 
-Si le serveur ne répond pas au démarrage, l'application le dit et attend : Réessayer, Quitter,
-ou Revenir aux données de ce PC. Elle ne s'ouvre jamais en douce sur une copie à part — cela
-ferait deux caisses qui ne se rejoindraient plus.
+Mettre à jour, à chaque nouvelle version :
+
+  Téléchargez le nouveau zip, et copiez le contenu de son dossier ComptaBlonay PAR-DESSUS
+  celui du serveur, en remplaçant les fichiers. C'est tout : chaque PC se met à jour à son
+  prochain lancement par le raccourci (quelques secondes, puis plus rien tant que la version
+  ne change pas). Votre donnees.txt et votre vocabulaire-noms.js restent en place — ils ne
+  sont pas dans le zip.
+
+  Un PC où l'application est ouverte ne se met pas à jour tout de suite : ses fichiers sont
+  verrouillés, et une copie par-dessus mélangerait deux versions. Il le fera au lancement
+  suivant. Serveur éteint : le PC démarre simplement avec la version qu'il a déjà.
+
+  Au lancement, une petite fenêtre noire dit ce qui se passe (« Recherche d'une nouvelle
+  version… », puis « Mise à jour… » quand il y en a une) : ne la fermez pas pendant une mise
+  à jour. Fermée quand même, la copie reprend au lancement suivant.
+
+  Le menu Aide → À propos indique la construction qui tourne sur le poste.
+
+  Le donnees.txt du serveur fait foi : il est recopié sur chaque PC à chaque lancement. Pour
+  envoyer tout le monde vers un autre dossier de données, c'est lui qu'on change.
+
+Le copieur dépose dans \\SERVEUR\Partage\ComptaBlonay-donnees\Scans — l'adresse est
+affichée dans la Boîte de réception. Deux collègues peuvent travailler en même temps : ce que
+l'un enregistre est repris par l'autre, rien ne s'écrase. Si les deux prennent « le numéro
+suivant » au même moment, les deux pièces sont gardées et le doublon est signalé.
+
+Si le dossier des données ne répond pas au démarrage, l'application le dit et attend :
+Réessayer, Quitter, ou Revenir aux données de ce PC. Elle ne s'ouvre jamais en douce sur une
+copie à part — cela ferait deux caisses qui ne se rejoindraient plus.
 
 Restent sur chaque PC : le journal (data\caisse.log), les réglages de la fenêtre, et les
 dossiers de Décompte DGEO.
 
 Noms de personnes : cette version ne contient aucun nom (le dépôt est public). Pour que
 l'application corrige les noms des enseignant-e-s, posez le fichier vocabulaire-noms.js
-(remis séparément) à côté de ComptaBlonay.exe, ou une seule fois dans le dossier des
-données partagées pour que tous les postes le lisent ; il est lu au démarrage. Sinon les noms
-s'apprennent en chargeant un classeur existant.
+(remis séparément) à côté de ComptaBlonay.exe — ou une seule fois dans le dossier du
+programme sur le serveur, pour que tous les postes le reçoivent ; il est lu au démarrage.
+Sinon les noms s'apprennent en chargeant un classeur existant.
 
 Premier lancement : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (l'exécutable n'est pas signé). Cliquez sur « Informations complémentaires » puis

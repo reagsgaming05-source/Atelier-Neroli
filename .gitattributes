@@ -1,0 +1,4 @@
+# Les scripts Windows exigent des fins de ligne CRLF : avec des LF seuls, cmd.exe perd ses
+# « goto » et ses étiquettes. Le lanceur de Compta Blonay en dépend.
+*.cmd text eol=crlf
+*.bat text eol=crlf

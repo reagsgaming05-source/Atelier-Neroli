@@ -64,6 +64,15 @@ let donneesPartagees = emplacement.lireEmplacement(DOSSIER_REGLAGE(), process.en
 /** Racine des données de la caisse. */
 const DONNEES = () => (donneesPartagees ? donneesPartagees.chemin : app.getPath('userData'));
 
+/**
+ * La construction d'où vient ce programme (version.txt, écrit par la construction Windows :
+ * commit, n° de construction, date). C'est ce que le lanceur compare au serveur pour savoir s'il
+ * doit recopier ; et c'est la réponse à « quelle version tourne sur ce poste ? ».
+ */
+function versionConstruite() {
+  try { return fs.readFileSync(path.join(PORTABLE_DIR, 'version.txt'), 'utf8').trim().split(/\s+/).slice(0, 3).join(' '); } catch (e) { return ''; }
+}
+
 // Journal du processus principal (data/caisse.log) : démarrage, erreurs, lecteur natif.
 // Comme decompte.log de Décompte DGEO, pour comprendre un problème sur un poste.
 function logLine(msg) {
@@ -835,6 +844,8 @@ function buildMenu() {
                 'pièces scannées, journal, fichier Excel, PDF des pièces) et Décompte DGEO (courses d\'école & camps).\n\n' +
                 'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (lecture des PDF, ' +
                 'lectures croisées par OCR local, génération des fichiers Excel et décomptes se font dans cette fenêtre).\n\n' +
+                `Construction : ${versionConstruite() || 'inconnue (pas de version.txt)'}\n` +
+                `Programme : ${PORTABLE_DIR}\n` +
                 `Dossier des données : ${DONNEES()}${donneesPartagees ? ' (partagé)' : ''}\n` +
                 `Noms de personnes : ${names ? names : 'aucun fichier vocabulaire-noms.js (les noms s\'apprennent depuis un classeur)'}\n` +
                 `Troisième lecteur (Tesseract natif) : ${(() => { const t = nativeOcr.detect(PORTABLE_DIR); return t ? `${t.version}${t.legacy ? ' + moteur historique' : ''}` : 'non trouvé (dossier tesseract/ absent)'; })()}\n\n` +
@@ -1059,7 +1070,7 @@ async function assurerDonnees() {
 }
 
 app.whenReady().then(async () => {
-  logLine(`${APP_TITLE} ${app.getVersion()} – Electron ${process.versions.electron} – ${process.platform} – exécutable : ${PORTABLE_DIR} – profil : ${app.getPath('userData')} – données : ${DONNEES()}${donneesPartagees ? ` (${donneesPartagees.source})` : ''}`);
+  logLine(`${APP_TITLE} ${app.getVersion()} – Electron ${process.versions.electron} – ${process.platform} – construction : ${versionConstruite() || '?'} – exécutable : ${PORTABLE_DIR} – profil : ${app.getPath('userData')} – données : ${DONNEES()}${donneesPartagees ? ` (${donneesPartagees.source})` : ''}`);
   if (raisonDonneesAilleurs) logLine(`données hors du dossier de l'application : ${raisonDonneesAilleurs}`);
   if (!(await assurerDonnees())) return;
   setupDownloads();

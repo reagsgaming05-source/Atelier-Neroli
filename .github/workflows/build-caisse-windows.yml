@@ -129,7 +129,159 @@ jobs:
           Copy-Item decompte dist\ComptaBlonay\decompte -Recurse
           Copy-Item ..\README.md dist\ComptaBlonay\LISEZMOI.md
           Copy-Item build\LISEZMOI-portable.txt dist\ComptaBlonay\LISEZMOI-portable.txt
+          # Installer sur plusieurs PC et les mettre à jour depuis le serveur (voir le LISEZMOI)
+          Copy-Item "build\Installer sur ce PC.cmd" dist\ComptaBlonay\
+          Copy-Item "build\Compta Blonay.cmd" dist\ComptaBlonay\
+          # Ce que le lanceur compare pour savoir s'il doit recopier : une construction = une version.
+          # Le commit seul ne suffit pas : relancer la construction du même commit (nouvelle version
+          # de Décompte DGEO) donne un autre zip.
+          "$env:GITHUB_SHA $env:GITHUB_RUN_ID $((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))" | Set-Content dist\ComptaBlonay\version.txt
+          Get-Content dist\ComptaBlonay\version.txt
           Get-ChildItem dist\ComptaBlonay | Select-Object Name, Length
+
+      - name: Installer sur un PC et mettre à jour depuis le serveur (lanceur)
+        working-directory: caisse-ecoles/desktop
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          # Le lanceur recopie le programme du serveur sur le poste. Ses erreurs ne se voient qu'une
+          # fois chez les collègues — un poste qui ne démarre plus, ou deux versions mélangées. On
+          # l'éprouve donc ici, sous Windows, avant toute publication. Un « programme » miniature
+          # suffit : le lanceur ne regarde que des fichiers, il ne démarre rien (COMPTA_SANS_LANCER).
+          $ErrorActionPreference = 'Stop'
+          $t = Join-Path $env:RUNNER_TEMP 'lanceur'
+          $srv = Join-Path $t 'serveur\ComptaBlonay'
+          $poste = Join-Path $t 'poste'
+          New-Item -ItemType Directory -Force $srv, $poste, "$srv\resources", "$srv\decompte\_internal\pkg\data" | Out-Null
+          Copy-Item "build\Installer sur ce PC.cmd", "build\Compta Blonay.cmd" $srv
+          Set-Content "$srv\ComptaBlonay.exe" 'v1'
+          Set-Content "$srv\version.txt" 'v1'
+          Set-Content "$srv\resources\app.txt" 'v1'
+          Set-Content "$srv\ancien.txt" 'disparait en v2'
+          # un sous-dossier « data » PROFOND fait partie du programme : il doit suivre
+          Set-Content "$srv\decompte\_internal\pkg\data\modele.txt" 'v1'
+          $env:LOCALAPPDATA = $poste
+          $env:COMPTA_SANS_LANCER = '1'
+          $env:COMPTA_SANS_RACCOURCI = '1'
+          $ici = Join-Path $poste 'ComptaBlonay'
+          $lanceur = Join-Path $poste 'ComptaBlonay-lanceur.cmd'
+          function Lire($f) { (Get-Content $f -Raw).Trim() }
+          function Verifier($ok, $quoi) { if (-not $ok) { throw "LANCEUR : $quoi" }; Write-Host "ok - $quoi" }
+          function Lancer() { cmd /c "`"$lanceur`""; if ($LASTEXITCODE -ne 0) { throw "le lanceur a échoué (code $LASTEXITCODE)" } }
+
+          # 1. l'installation, depuis le dossier du serveur
+          cmd /c "`"$srv\Installer sur ce PC.cmd`""
+          Verifier ($LASTEXITCODE -eq 0) 'installation sans erreur'
+          Verifier (Test-Path "$ici\ComptaBlonay.exe") 'programme copié sur le poste'
+          Verifier ((Lire "$ici\version.txt") -eq 'v1') 'version notée'
+          Verifier ((Lire "$poste\ComptaBlonay-serveur.txt") -eq $srv) 'adresse du serveur retenue'
+          Verifier (Test-Path $lanceur) 'lanceur posé hors du dossier du programme'
+          Verifier (Test-Path "$ici\decompte\_internal\pkg\data\modele.txt") 'un sous-dossier « data » profond est bien copié'
+          # le profil du poste (data\ à côté du programme) : jamais touché
+          New-Item -ItemType Directory "$ici\data" | Out-Null
+          Set-Content "$ici\data\caisse.log" 'journal du poste'
+
+          # 2. rien de neuf sur le serveur : rien n'est recopié (une retouche locale survit)
+          Set-Content "$ici\resources\app.txt" 'retouche locale'
+          Lancer
+          Verifier ((Lire "$ici\resources\app.txt") -eq 'retouche locale') 'même version : aucune copie, démarrage immédiat'
+
+          # 3. une nouvelle version posée sur le serveur
+          Set-Content "$srv\version.txt" 'v2'
+          Set-Content "$srv\resources\app.txt" 'v2'
+          Remove-Item "$srv\ancien.txt"
+          Set-Content "$srv\donnees.txt" '\\SERVEUR\Partage\ComptaBlonay-donnees'
+          Lancer
+          Verifier ((Lire "$ici\version.txt") -eq 'v2') 'nouvelle version notée'
+          Verifier ((Lire "$ici\resources\app.txt") -eq 'v2') 'fichiers mis à jour'
+          Verifier (-not (Test-Path "$ici\ancien.txt")) 'un fichier retiré du serveur disparaît du poste'
+          Verifier ((Lire "$ici\data\caisse.log") -eq 'journal du poste') 'profil du poste intact'
+          Verifier ((Lire "$ici\donnees.txt") -eq '\\SERVEUR\Partage\ComptaBlonay-donnees') 'emplacement des données distribué à tous'
+
+          # 4. donnees.txt retiré du serveur : le poste garde le sien — l'effacer le renverrait sur une caisse à part
+          Remove-Item "$srv\donnees.txt"
+          Set-Content "$srv\version.txt" 'v3'
+          Lancer
+          Verifier (Test-Path "$ici\donnees.txt") 'donnees.txt du poste gardé'
+
+          # 5. serveur injoignable : on démarre la version du poste, sans erreur
+          Set-Content "$poste\ComptaBlonay-serveur.txt" 'Z:\nulle-part\ComptaBlonay'
+          Lancer
+          Verifier $true 'serveur injoignable : la version du poste démarre'
+          Set-Content "$poste\ComptaBlonay-serveur.txt" $srv
+
+          # 6. l'application déjà ouverte sur ce PC : pas de copie par-dessus des fichiers verrouillés
+          Set-Content "$srv\version.txt" 'v4'
+          Set-Content "$srv\resources\app.txt" 'v4'
+          Copy-Item "$env:WINDIR\System32\PING.EXE" "$t\ComptaBlonay.exe"
+          $p = Start-Process "$t\ComptaBlonay.exe" -ArgumentList '-n','120','127.0.0.1' -PassThru -WindowStyle Hidden
+          try {
+            Start-Sleep 1
+            Lancer
+            Verifier ((Lire "$ici\resources\app.txt") -eq 'v2') 'déjà ouverte : rien de copié par-dessus'
+          } finally { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+          Start-Sleep 1
+          Lancer
+          Verifier ((Lire "$ici\resources\app.txt") -eq 'v4') 'refermée : la mise à jour passe au lancement suivant'
+
+          # 7. deux lancements coup sur coup (double-clic impatient pendant une copie) : le second
+          # attend que le premier ait fini. Le verrou est tenu ici par un autre cmd, exactement
+          # comme le lanceur le tient — c'est le partage de fichier de cmd lui-même qu'on éprouve.
+          Set-Content "$srv\version.txt" 'v5'
+          Set-Content "$srv\resources\app.txt" 'v5'
+          $verrou = Join-Path $poste 'ComptaBlonay-maj.verrou'
+          $tenant = Start-Process cmd -ArgumentList "/c 9>`"$verrou`" ping -n 7 127.0.0.1 >nul" -PassThru -WindowStyle Hidden
+          Start-Sleep 1
+          $t0 = Get-Date
+          Lancer
+          $attendu = ((Get-Date) - $t0).TotalSeconds
+          $tenant.WaitForExit()
+          Verifier ($attendu -ge 3) "copie en cours ailleurs : le lanceur a attendu ($([int]$attendu) s)"
+          Verifier ((Lire "$ici\resources\app.txt") -eq 'v5') 'puis il a fait la mise à jour'
+          $t0 = Get-Date
+          Lancer
+          Verifier (((Get-Date) - $t0).TotalSeconds -lt 3) 'le verrou relâché ne fait plus attendre personne'
+
+          # 8. le lanceur se tient lui-même à jour : le corriger ne demande pas de repasser sur chaque PC
+          Add-Content "$srv\Compta Blonay.cmd" 'rem lanceur corrigé'
+          Set-Content "$srv\version.txt" 'v6'
+          Lancer
+          Verifier ((Get-FileHash $lanceur).Hash -eq (Get-FileHash "$srv\Compta Blonay.cmd").Hash) 'le lanceur du poste a suivi celui du serveur'
+          Lancer
+          Verifier $true 'le lanceur remplacé tourne encore'
+
+          # 9. le programme absent du poste et du serveur : un message, pas un plantage
+          Remove-Item $ici -Recurse -Force
+          Set-Content "$poste\ComptaBlonay-serveur.txt" 'Z:\nulle-part\ComptaBlonay'
+          cmd /c "`"$lanceur`""
+          Verifier ($LASTEXITCODE -eq 1) 'rien d''installé : le lanceur le dit et s''arrête'
+
+          # 10. comme chez les collègues : « Installer sur ce PC » double-cliqué à une adresse réseau
+          # \\SERVEUR\... — cmd refuse alors ce dossier courant et se replace dans C:\Windows —,
+          # avec le raccourci sur le bureau. Le partage administratif de la machine tient lieu de serveur.
+          $unc = '\\localhost\' + $srv.Substring(0, 1) + '$' + $srv.Substring(2)
+          if (Test-Path "$unc\ComptaBlonay.exe") {
+            $poste2 = Join-Path $t 'poste2'
+            New-Item -ItemType Directory -Force $poste2 | Out-Null
+            $env:LOCALAPPDATA = $poste2
+            Remove-Item Env:COMPTA_SANS_RACCOURCI
+            Push-Location $unc
+            try { cmd /c "`"$unc\Installer sur ce PC.cmd`""; $code = $LASTEXITCODE } finally { Pop-Location }
+            Verifier ($code -eq 0) 'installation depuis une adresse réseau sans erreur'
+            Verifier ((Lire "$poste2\ComptaBlonay-serveur.txt") -eq $unc) 'adresse réseau retenue telle quelle'
+            Verifier ((Lire "$poste2\ComptaBlonay\version.txt") -eq 'v6') 'programme copié depuis le réseau'
+            $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Compta Blonay.lnk'
+            Verifier (Test-Path $lnk) 'raccourci posé sur le bureau'
+            $cible = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk).TargetPath
+            Verifier ($cible -eq (Join-Path $poste2 'ComptaBlonay-lanceur.cmd')) "le raccourci vise le lanceur ($cible)"
+            Set-Content "$srv\version.txt" 'v7'
+            Set-Content "$srv\resources\app.txt" 'v7'
+            Push-Location $env:WINDIR
+            try { cmd /c "`"$poste2\ComptaBlonay-lanceur.cmd`""; $code = $LASTEXITCODE } finally { Pop-Location }
+            Verifier ($code -eq 0 -and (Lire "$poste2\ComptaBlonay\resources\app.txt") -eq 'v7') 'mise à jour à travers le réseau'
+          } else {
+            Write-Host "::warning::partage administratif \\localhost indisponible : l'installation depuis une adresse réseau n'a pas été éprouvée"
+          }
 
       - name: Test de fumée de l'exécutable (fenêtre à onglets, saisie d'une pièce, OCR embarqué, Tesseract natif, Décompte DGEO et pont décompte → pièce)
         working-directory: caisse-ecoles/desktop
