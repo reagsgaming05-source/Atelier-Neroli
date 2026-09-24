@@ -315,7 +315,7 @@ async function startDgeo() {
         // passerelle devant Décompte DGEO : le dossier PDF est nettoyé (pièce comptable retirée) avant l'analyse
         dgeo.target = url;
         try {
-          dgeo.proxy = await dgeoProxy.startProxy({ target: url, clean: cleanDossierViaPage, onCleaned: (info) => notifyCaisse('dgeo:cleaned', info), onAnalysed: recordDossier, log: logLine });
+          dgeo.proxy = await dgeoProxy.startProxy({ target: url, clean: cleanDossierViaPage, onCleaned: (info) => notifyCaisse('dgeo:cleaned', info), onAnalysed: recordDossier, onSaved: (info) => recordDossier(info, true), log: logLine });
           dgeo.url = dgeo.proxy.url;
         } catch (e) { logLine(`passerelle Décompte DGEO indisponible (${e.message}) : accès direct`); dgeo.url = url; }
         dgeo.status = 'ready';
@@ -374,6 +374,8 @@ ipcMain.on('dgeo:embed', (ev, rect) => {
     if (dgeo.status === 'ready') { if (!dgeoView.webContents.getURL().startsWith(dgeo.url)) dgeoView.webContents.loadURL(dgeo.url); }
     else if (dgeo.status !== 'starting') launchDgeo().catch((e) => logLine(`Décompte DGEO : ${(e && e.message) || e}`)); // non démarré, arrêté ou en échec : nouvel essai
   }
+  // espace ouvert : l'état de la page est (re)donné aux raccourcis ; espace quitté : plus de suivi
+  if (!!dgeoEmbed !== !!dgeoSuivi) { dgeoPageEtat = ''; suivreDgeo(); }
 });
 ipcMain.on('shell:tab', (ev, name) => { showTab(name === 'dgeo' ? 'dgeo' : 'caisse'); });
 // raccourcis de la barre latérale vers les sections de la page Décompte DGEO (ids de sa page)
@@ -381,6 +383,23 @@ ipcMain.on('dgeo:scroll', (ev, sectionId) => {
   if (!dgeoView || dgeo.status !== 'ready' || !/^[a-z-]{1,40}$/.test(String(sectionId))) return;
   dgeoView.webContents.executeJavaScript(`(function(){var el=document.getElementById(${JSON.stringify(String(sectionId))});if(el&&!el.hidden){el.scrollIntoView({behavior:'smooth',block:'start'});}else{window.scrollTo({top:0,behavior:'smooth'});}})()`, true).catch(() => {});
 });
+// État de la page Décompte DGEO pour ces raccourcis : un dossier est-il ouvert (sinon ses
+// sections sont masquées et le raccourci ne menait nulle part), et quelle section est à l'écran
+// (l'entrée active ne suivait pas le défilement). Demandé à la page tant que l'espace est affiché.
+let dgeoSuivi = null;
+let dgeoPageEtat = '';
+function suivreDgeo() {
+  if (dgeoSuivi) { clearInterval(dgeoSuivi); dgeoSuivi = null; }
+  if (!dgeoEmbed || !dgeoView) return;
+  const lire = `(function(){var ids=['sec-upload','sec-dossier','sec-pieces','sec-rows'];var d=document.getElementById('sec-dossier');var ouvert=!!d&&!d.hidden;var cur='sec-upload';for(var i=0;i<ids.length;i++){var e=document.getElementById(ids[i]);if(e&&!e.hidden&&e.getBoundingClientRect().top<=120)cur=ids[i];}if(ouvert&&window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4)cur='sec-rows';return {ouvert:ouvert,section:cur};})()`;
+  dgeoSuivi = setInterval(() => {
+    if (!dgeoView || dgeo.status !== 'ready' || !dgeo.url || !dgeoView.webContents.getURL().startsWith(dgeo.url)) return;
+    dgeoView.webContents.executeJavaScript(lire, true).then((s) => {
+      const k = JSON.stringify(s);
+      if (k !== dgeoPageEtat) { dgeoPageEtat = k; notifyCaisse('dgeo:page', s); }
+    }).catch(() => {});
+  }, 500);
+}
 ipcMain.handle('shell:state', () => shellState());
 
 /* ---------------- Réglages (data/caisse/reglages.json) ---------------- */
@@ -647,7 +666,7 @@ ipcMain.on('dgeo:clean-result', (ev, r) => {
   const resolve = pendingClean.get(r.id);
   if (!resolve) return;
   pendingClean.delete(r.id);
-  resolve({ bytes: r.bytes ? Buffer.from(r.bytes) : null, removed: Array.isArray(r.removed) ? r.removed : [], total: Number(r.total) || 0, reason: String(r.reason || '') });
+  resolve({ bytes: r.bytes ? Buffer.from(r.bytes) : null, removed: Array.isArray(r.removed) ? r.removed : [], total: Number(r.total) || 0, reason: String(r.reason || ''), supposee: !!r.supposee });
 });
 
 /* ---------------- Dossiers analysés par Décompte DGEO (formulaire affiché dans l'application) ---------------- */
@@ -658,13 +677,18 @@ function loadDossiers() {
   try { const a = JSON.parse(fs.readFileSync(DOSSIERS_FILE(), 'utf8')); return Array.isArray(a) ? a : []; } catch (e) { return []; }
 }
 const withBase = (d) => Object.assign({}, d, { base: dgeo.url || '' });
-function recordDossier(info) {
+// suivi = décompte enregistré ou repris par la page (et non analysé) : le volet suit ses chiffres,
+// l'heure d'analyse reste celle d'origine, et caisse.log n'en garde pas une ligne à chaque frappe
+function recordDossier(info, suivi) {
   if (!info || !info.id) return;
-  const list = loadDossiers().filter((d) => d.id !== info.id);
-  list.unshift(info);
+  const list = loadDossiers();
+  const old = list.find((d) => d.id === info.id);
+  if (suivi && old && old.analysedAt) info = Object.assign({}, info, { analysedAt: old.analysedAt });
+  const rest = list.filter((d) => d.id !== info.id);
+  rest.unshift(info);
   fs.mkdirSync(REG_ROOT(), { recursive: true });
-  fs.writeFileSync(DOSSIERS_FILE(), JSON.stringify(list.slice(0, 30), null, 1));
-  logLine(`dossier analysé par Décompte DGEO : ${info.filename} – ${info.activite || '?'} ${info.classe || ''} – ${info.pages.length} page(s), formulaire : ${info.pages.filter((p) => p.kind === 'form').map((p) => p.number).join(', ') || 'non reconnu'}`);
+  fs.writeFileSync(DOSSIERS_FILE(), JSON.stringify(rest.slice(0, 30), null, 1));
+  if (!suivi) logLine(`dossier analysé par Décompte DGEO : ${info.filename} – ${info.activite || '?'} ${info.classe || ''} – ${info.pages.length} page(s), formulaire : ${info.pages.filter((p) => p.kind === 'form').map((p) => p.number).join(', ') || 'non reconnu'}`);
   notifyCaisse('dgeo:analysed', withBase(info));
 }
 ipcMain.handle('dgeo:dossiers', () => loadDossiers().map(withBase));
@@ -706,7 +730,8 @@ function recordDecompte(d) {
   if (i >= 0) {
     const old = list[i];
     s.excel = old.excel; s.saisi = old.saisi; s.pieceId = old.pieceId;
-    if (old.saisi && old.total !== s.total) logLine(`Décompte ${s.numero || s.id} refait (total ${old.total} → ${s.total}) alors que sa pièce comptable existe déjà : à vérifier.`);
+    // la page Caisse écoles le signale (totalPrecedent) : une ligne dans caisse.log ne se voyait pas
+    if (old.saisi && old.total !== s.total) { s.totalPrecedent = old.total; logLine(`Décompte ${s.numero || s.id} refait (total ${old.total} → ${s.total}) alors que sa pièce comptable existe déjà : à vérifier.`); }
     list[i] = s;
   } else list.push(s);
   saveDecomptes(list);

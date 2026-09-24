@@ -1159,11 +1159,12 @@ function verifierCopie() {
         const fd = new FormData(); fd.append('file', new File([bytes], 'dossier-test.pdf', { type: 'application/pdf' })); fd.append('type_activite', 'course');
         const r = await fetch('/api/analyse', { method: 'POST', body: fd });
         const j = await r.json().catch(() => ({}));
-        return { status: r.status, pages: Array.isArray(j.pages) ? j.pages.length : null, detail: j.detail || null };
+        return { status: r.status, pages: Array.isArray(j.pages) ? j.pages.length : null, detail: j.detail || null, retirees: j.pages_retirees || null };
       }, dossierB64);
       const cleanTxt = await win.evaluate(() => document.getElementById('dgeoCleanInfo').textContent);
       console.log('dossier nettoyé :', JSON.stringify(analysed), '–', cleanTxt);
-      ok = ok && analysed.status === 200 && analysed.pages === 1 && /page 1 sur 2 ignorée/.test(cleanTxt);
+      // la page de Décompte DGEO apprend aussi la page retirée (elle l'annonce au-dessus des effectifs)
+      ok = ok && analysed.status === 200 && analysed.pages === 1 && /page 1 sur 2 ignorée/.test(cleanTxt) && !!analysed.retirees && analysed.retirees.pages[0] === 1;
       // le formulaire du dossier (ici sa première page) s'affiche à côté de Décompte DGEO, avec les champs lus
       let formPane = null;
       try {

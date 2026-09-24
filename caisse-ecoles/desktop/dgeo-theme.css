@@ -16,7 +16,7 @@ section h2 { font-weight: 650; letter-spacing: -0.01em; }
 section h2 .step { border-radius: 8px; width: 26px; height: 26px; font-weight: 650; font-size: 12.5px; }
 .hint { font-size: 12.5px; }
 label.f { color: #334155; font-weight: 500; }
-label.f input, label.f select, label.f textarea, .fares input, .fares select, .rows td input, .piece .head input.num-input {
+label.f input, label.f select, label.f textarea, .fares input, .fares select, .rows td input, .rows td select, .piece .head select, .piece .head input.num-input {
   border-radius: 8px; padding: 7px 10px; border-color: #cbd5e1; font-variant-numeric: tabular-nums; font-weight: 400;
 }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(36, 87, 214, 0.22); }
@@ -25,13 +25,16 @@ button:hover { background: #f8fafc; border-color: #a9b6c8; }
 button.primary { font-weight: 600; box-shadow: 0 1px 2px rgba(36, 87, 214, 0.3), 0 6px 14px -8px rgba(36, 87, 214, 0.8); }
 button.primary:hover { background: #1d47b3; border-color: #1d47b3; }
 button.small { border-radius: 7px; }
-.drop { border-radius: 12px; background: #f8fafc; border: 1.5px dashed #cbd5e1; }
-.drop.over { background: #e9efff; border-color: var(--accent); }
+button.lien, button.lien:hover { box-shadow: none; background: none; }
+.drop { border-radius: 12px; background: #f8fafc; border: 1.5px dashed #cbd5e1; box-shadow: none; }
+.drop.over, .drop:focus-visible { background: #e9efff; border-color: var(--accent); }
+.reprendre, .bandeau, .effectifs .groupe { border-radius: 10px; }
 .pill { border-radius: 999px; font-weight: 600; }
 .calc { border-radius: 10px; }
 .warnings div { border-radius: 8px; }
 .error { border-radius: 8px; }
 .piece { border-radius: 12px; }
+.etat-piece { border-radius: 12px 12px 0 0; }
 .thumb { border-radius: 8px; }
 .rows table { border: 1px solid var(--line); border-radius: 10px; border-collapse: separate; border-spacing: 0; overflow: hidden; }
 .rows th { text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.02em; color: var(--muted); background: #f8fafc; padding: 9px 10px; }

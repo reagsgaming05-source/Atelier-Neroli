@@ -100,6 +100,9 @@ a { color: var(--accent); }
 .apptab.active .ico { color: var(--accent); }
 .apptab.active .lbl small { color: #4d6fc9; }
 .apptab.active::before { content: ""; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+/* raccourci de Décompte DGEO vers une section pas encore affichée (infobulle : « disponible après l'analyse ») */
+.apptab[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+.apptab[aria-disabled="true"]:hover { background: none; color: inherit; }
 .sidebar .foot { margin-top: auto; padding: 14px 8px 0; display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: var(--muted); }
 .sidebar .foot .pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-weight: 500; font-size: 12px; align-self: flex-start; }
 .sidebar .foot .pill .ico { width: 14px; height: 14px; }
@@ -615,6 +618,10 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .dgeo-form-fields dt { color: var(--muted); }
 .dgeo-form-fields dd { margin: 0; font-weight: 500; }
 .dgeo-form-fields table { width: 100%; border-collapse: collapse; font-size: 12px; }
+/* six colonnes dans 430 px : les en-têtes passent à la ligne ; si cela ne suffit pas (longs
+   descriptifs), le tableau défile au lieu de couper « COÛT TOTAL » et les montants */
+.dgeo-form-fields .defile { overflow-x: auto; }
+.dgeo-form-fields .defile th.num { white-space: normal; }
 .dgeo-form-fields th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
 .dgeo-form-fields td { padding: 5px 6px; border-bottom: 1px solid #eef2f7; vertical-align: top; }
 .dgeo-form-fields td.num, .dgeo-form-fields th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }

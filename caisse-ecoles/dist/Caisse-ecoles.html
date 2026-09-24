@@ -109,6 +109,9 @@ a { color: var(--accent); }
 .apptab.active .ico { color: var(--accent); }
 .apptab.active .lbl small { color: #4d6fc9; }
 .apptab.active::before { content: ""; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+/* raccourci de Décompte DGEO vers une section pas encore affichée (infobulle : « disponible après l'analyse ») */
+.apptab[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+.apptab[aria-disabled="true"]:hover { background: none; color: inherit; }
 .sidebar .foot { margin-top: auto; padding: 14px 8px 0; display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: var(--muted); }
 .sidebar .foot .pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-weight: 500; font-size: 12px; align-self: flex-start; }
 .sidebar .foot .pill .ico { width: 14px; height: 14px; }
@@ -624,6 +627,10 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .dgeo-form-fields dt { color: var(--muted); }
 .dgeo-form-fields dd { margin: 0; font-weight: 500; }
 .dgeo-form-fields table { width: 100%; border-collapse: collapse; font-size: 12px; }
+/* six colonnes dans 430 px : les en-têtes passent à la ligne ; si cela ne suffit pas (longs
+   descriptifs), le tableau défile au lieu de couper « COÛT TOTAL » et les montants */
+.dgeo-form-fields .defile { overflow-x: auto; }
+.dgeo-form-fields .defile th.num { white-space: normal; }
 .dgeo-form-fields th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
 .dgeo-form-fields td { padding: 5px 6px; border-bottom: 1px solid #eef2f7; vertical-align: top; }
 .dgeo-form-fields td.num, .dgeo-form-fields th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -774,7 +781,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <div class="section">Décompte DGEO</div>
     <button type="button" class="apptab active" data-dgeo="sec-upload" title="Dossier PDF scanné"><svg class="ico"><use href="#i-upload"/></svg><span class="lbl">Dossier PDF<small>Déposer et analyser</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier et effectifs"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span></button>
-    <button type="button" class="apptab" data-dgeo="sec-pieces" title="Pièces justificatives"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Pièces justificatives<small>Tickets retenus</small></span></button>
+    <button type="button" class="apptab" data-dgeo="sec-pieces" title="Justificatifs (tickets et factures)"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Justificatifs<small>Tickets et factures</small></span></button>
     <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
     <div class="section">Décomptes</div>
     <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span></button>
@@ -20002,7 +20009,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   /**
    * Retire les pages de pièce comptable du dossier. opts.skipFirst : si aucune page n'a de texte
    * lisible, retirer la première page (le dossier scanné commence toujours par la pièce comptable).
-   * Renvoie { bytes, removed: [n° de page, base 1], total, reason } ; bytes inchangé si rien n'est retiré.
+   * Renvoie { bytes, removed: [n° de page, base 1], total, reason, supposee } ; bytes inchangé si
+   * rien n'est retiré. supposee : la page a été retirée sans avoir été reconnue (scan sans texte) —
+   * la page de Décompte DGEO le dit, puisque ce peut être le formulaire de couverture.
    */
   async function clean(bytes, opts) {
     opts = opts || {};
@@ -20011,9 +20020,11 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const total = pages.length;
     let removed = pages.filter((p) => p.form).map((p) => p.index);
     let reason = removed.length ? (removed.length > 1 ? 'pièces comptables reconnues' : 'pièce comptable reconnue') : '';
+    let supposee = false;
     if (!removed.length && total > 1 && opts.skipFirst && !pages.some((p) => p.hasText)) {
       removed = [0];
       reason = 'première page retirée (dossier scanné sans texte lisible)';
+      supposee = true;
     }
     if (!removed.length) return { bytes, removed: [], total, reason: 'aucune pièce comptable reconnue' };
     if (removed.length >= total) return { bytes, removed: [], total, reason: 'toutes les pages sont des pièces comptables : dossier transmis tel quel' };
@@ -20023,7 +20034,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const copied = await out.copyPages(src, keep);
     copied.forEach((p) => out.addPage(p));
     const outBytes = await out.save();
-    return { bytes: outBytes, removed: removed.map((i) => i + 1), total, reason };
+    return { bytes: outBytes, removed: removed.map((i) => i + 1), total, reason, supposee };
   }
 
   return { inspect, clean };
@@ -22752,7 +22763,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const b = ev.target.closest('.apptab');
       if (!b) return;
       if (b.dataset.panel) { showPanel(b.dataset.panel); return; } // espace de l'outil (récapitulatif)
-      if (!b.dataset.dgeo) return;
+      if (!b.dataset.dgeo || b.getAttribute('aria-disabled') === 'true') return; // section pas encore affichée
       dgeoSection = b.dataset.dgeo;
       showPanel('panelDgeo'); // la page de Décompte DGEO, puis sa section
       if (window.CaisseDgeo && window.CaisseDgeo.scrollTo) window.CaisseDgeo.scrollTo(b.dataset.dgeo);
@@ -22789,6 +22800,36 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     };
     window.CaisseDgeo.onState(applyState);
     window.CaisseDgeo.state().then(applyState).catch(() => {});
+    // Raccourcis vers les sections de la page : grisés tant qu'aucun dossier n'y est ouvert (un
+    // clic mettait l'entrée en surbrillance sans rien montrer), et l'entrée active suit le
+    // défilement de la page (état envoyé par le processus principal, voir main.js suivreDgeo).
+    const raccourcis = toolEls.dgeoNav ? [...toolEls.dgeoNav.querySelectorAll('.apptab[data-dgeo]')] : [];
+    const titres = new Map(raccourcis.map((b) => [b, b.title]));
+    const appliquerPage = (s) => {
+      for (const b of raccourcis) {
+        const off = b.dataset.dgeo !== 'sec-upload' && !s.ouvert;
+        if (off) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
+        b.title = off ? `${titres.get(b)} — disponible après l'analyse d'un dossier` : titres.get(b);
+      }
+      if (s.section) dgeoSection = s.section;
+      const surDgeo = !document.getElementById('panelDgeo').classList.contains('hidden');
+      for (const b of raccourcis) b.classList.toggle('active', surDgeo && b.dataset.dgeo === dgeoSection);
+    };
+    appliquerPage({ ouvert: false, section: null });
+    if (window.CaisseDgeo.onPage) window.CaisseDgeo.onPage(appliquerPage);
+    // Décompte refait (fichier Excel recréé) alors que sa pièce comptable existe déjà, avec un
+    // autre total : cela n'était écrit que dans caisse.log, que personne ne lit.
+    const totauxSignales = new Set();
+    window.CaisseDgeo.onNew((d) => {
+      if (!d || !d.saisi || d.totalPrecedent == null || d.totalPrecedent === d.total) return;
+      const cle = `${d.id}:${d.totalPrecedent}:${d.total}`;
+      if (totauxSignales.has(cle)) return; // l'enregistrement du fichier le renvoie une seconde fois
+      totauxSignales.add(cle);
+      const s = window.CaisseSaisie && window.CaisseSaisie.state;
+      const piece = s && s.reg && d.pieceId ? s.reg.pieces.find((p) => p.id === d.pieceId) : null;
+      const fr = (n) => (n == null ? '–' : `CHF ${Number(n).toFixed(2)}`);
+      alert(`Décompte ${d.numero || d.filename || ''} refait : la part de l'État passe de ${fr(d.totalPrecedent)} à ${fr(d.total)}.\n\nSa pièce comptable${piece ? ` n° ${piece.no}` : ''} a été créée d'après l'ancien décompte : vérifiez son montant dans « Saisie des pièces ».`);
+    });
     // dossier PDF déposé dans Décompte DGEO : la passerelle le confie à cette page, qui retire les
     // pages « PIÈCE COMPTABLE » (src/dossier.js) avant l'analyse
     if (window.CaisseDgeo.onClean && window.CaisseDossier) {
@@ -22836,24 +22877,33 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       formSelect.classList.toggle('hidden', dossiers.list.length < 2);
       const pages = formPagesOf(d);
       const hasForm = (d.pages || []).some((p) => p.kind === 'form');
-      formPages.innerHTML = pages.length
+      // le volet se redessine à chaque enregistrement du décompte : les images ne sont refaites
+      // que pour un autre dossier (sinon le volet sautait pendant qu'on le lit)
+      const clePages = `${d.base || ''}|${pages.map((p) => p.url).join('|')}|${hasForm}`;
+      if (formPages.dataset.cle !== clePages) formPages.innerHTML = pages.length
         ? pages.map((p) => `<img src="${esc((d.base || '') + String(p.url || '').replace(/^\//, ''))}" alt="Page ${p.number}" data-page="${p.number}" title="Cliquer pour agrandir">`).join('') +
           `<div class="legend">${hasForm ? `Page${pages.length > 1 ? 's' : ''} ${pages.map((p) => p.number).join(', ')} du dossier (formulaire reconnu par Décompte DGEO)` : 'Première page du dossier (formulaire non reconnu par Décompte DGEO : vérifiez).'}</div>`
         : '<div class="empty">Aucune page dans ce dossier.</div>';
+      formPages.dataset.cle = clePages;
       const e = d.effectifs || {};
       const typeTxt = d.type_activite_texte || (d.type_activite === 'camp' ? 'Camp' : "Course d'école");
       const dates = d.date_debut ? (d.date_fin && d.date_fin !== d.date_debut ? `${d.date_debut} – ${d.date_fin}` : d.date_debut) : '–';
       const rows = (d.form_expenses || []).map((x) => `<tr><td>${esc(x.categorie)}</td><td>${esc(x.descriptif)}</td><td>${esc(x.pieces)}</td><td class="num">${chf(x.paye_enseignant)}</td><td class="num">${chf(x.paye_commune)}</td><td class="num">${chf(x.cout_total)}</td></tr>`).join('');
+      // Le volet suit le décompte à chaque enregistrement de la page (dgeo-proxy.js) : il montrait
+      // « Pièces retenues 5 » pour 3 comptées et une part de l'État figée au moment de l'analyse.
+      const heure = d.majAt ? new Date(d.majAt).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }) : '';
+      const comptes = d.piecesLues != null ? `${d.pieces || 0} sur ${d.piecesLues} lu${d.piecesLues > 1 ? 's' : ''}` : String(d.pieces || 0);
+      const remarques = (d.warnings || []).map((w) => String(w).replace(/^\[calcul\]\s*/, ''));
       formFields.innerHTML =
-        '<h4>Lu sur le formulaire</h4>' +
+        '<h4>Repris dans le décompte</h4>' +
         `<dl><dt>Type</dt><dd>${esc(typeTxt)}</dd><dt>Activité</dt><dd>${esc(d.activite || '–')}</dd><dt>Classe(s)</dt><dd>${esc(d.classe || '–')}</dd><dt>Dates</dt><dd>${esc(dates)}</dd>` +
         `<dt>Responsable</dt><dd>${esc(d.enseignant || '–')}${d.telephone ? ` · ${esc(d.telephone)}` : ''}</dd><dt>Budget</dt><dd>${d.budget != null ? `CHF ${chf(d.budget)}` : '–'}</dd>` +
         `<dt>Effectifs</dt><dd>${e.eleves || 0} élèves · ${e.enseignants_dgeo || 0} ens. DGEO · ${e.enseignants_js || 0} ens. J+S · ${e.moniteurs_js || 0} moniteurs J+S · ${e.autres || 0} autres</dd>` +
         `${d.noms_enseignants && d.noms_enseignants.length ? `<dt>Enseignant-e-s</dt><dd>${esc(d.noms_enseignants.join(', '))}</dd>` : ''}${d.noms_accompagnants && d.noms_accompagnants.length ? `<dt>Accompagnants</dt><dd>${esc(d.noms_accompagnants.join(', '))}</dd>` : ''}</dl>` +
-        (rows ? `<h4>Dépenses du formulaire</h4><table><thead><tr><th>Catégorie</th><th>Descriptif</th><th>N° pièce</th><th class="num">Payé ens.</th><th class="num">Payé commune</th><th class="num">Coût total</th></tr></thead><tbody>${rows}` +
-          `<tr class="total"><td colspan="5">Total des dépenses</td><td class="num">${chf(d.form_total)}</td></tr></tbody></table>` : '<h4>Dépenses du formulaire</h4><div class="legend">Aucune ligne de dépense lue.</div>') +
-        `<h4>Décompte</h4><dl><dt>Pièces retenues</dt><dd>${d.pieces || 0}</dd><dt>Part État</dt><dd>${d.total != null ? `CHF ${chf(d.total)}` : '–'}</dd></dl>` +
-        (d.warnings && d.warnings.length ? `<h4>Remarques de Décompte DGEO</h4><ul class="warn" style="margin:0;padding-left:18px">${d.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '');
+        (rows ? `<h4>Dépenses du formulaire</h4><div class="defile"><table><thead><tr><th>Catégorie</th><th>Descriptif</th><th>N° pièce</th><th class="num">Payé ens.</th><th class="num">Payé commune</th><th class="num">Coût total</th></tr></thead><tbody>${rows}` +
+          `<tr class="total"><td colspan="5">Total des dépenses</td><td class="num">${chf(d.form_total)}</td></tr></tbody></table></div>` : '<h4>Dépenses du formulaire</h4><div class="legend">Aucune ligne de dépense lue.</div>') +
+        `<h4>Décompte</h4><dl><dt>Justificatifs comptés</dt><dd>${esc(comptes)}</dd><dt>Part de l'État</dt><dd>${d.total != null ? `CHF ${chf(d.total)}` : '–'}${heure ? ` <span class="legend">(page de gauche, ${esc(heure)})</span>` : ''}</dd></dl>` +
+        (remarques.length ? `<h4>Remarques de Décompte DGEO</h4><ul class="warn" style="margin:0;padding-left:18px">${remarques.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '');
       updateDgeoEmbed();
     }
     if (formPane) {
