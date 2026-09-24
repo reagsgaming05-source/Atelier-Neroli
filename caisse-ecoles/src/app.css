@@ -452,6 +452,8 @@ table.checks button { margin-left: 6px; }
   background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: 10px; font-size: 13px; color: var(--ink); }
 .fiche-mode > span { flex: 1 1 320px; }
 .fiche-mode b { color: var(--warn); }
+.fiche-mode.dgeo { background: var(--accent-soft); border-color: var(--accent-soft-2); }
+.fiche-mode.dgeo b { color: var(--accent); }
 #pFilesList li.retire { background: none; border-style: dashed; color: var(--muted); }
 #pCompteSugg { padding-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 #pCompte::placeholder { font-family: var(--font); }
@@ -461,6 +463,8 @@ table.checks button { margin-left: 6px; }
 #ficheCard .champ-erreur { border-color: var(--err); box-shadow: 0 0 0 3px var(--err-soft); }
 #ficheCard .sens.champ-erreur { border-radius: 10px; }
 #pFilesList { margin-top: 6px; }
+.joindre { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px; margin: 0 -6px; border: 1.5px dashed transparent; border-radius: 10px; }
+.joindre.over { border-color: var(--accent); background: var(--accent-soft); }
 #pFilesList ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
 #pFilesList li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); font-size: 13px; }
 #pFilesList li .legend { flex: 1; }
@@ -470,6 +474,14 @@ table.checks button { margin-left: 6px; }
 .sens label:has(input:disabled) { opacity: 0.75; cursor: default; }
 .sens label.legend { border: 0; background: none; padding: 0 0 0 6px; font-weight: 400; }
 .sens label.legend:has(input:checked) { color: var(--muted); }
+/* Le bouton Enregistrer reste sous la main : sur un portable (1366 × 768), il était sous le bas
+   de l'écran, la fiche est longue. */
+#ficheActions { position: sticky; bottom: 0; z-index: 5; margin: 14px -8px 0; padding: 10px 8px;
+  background: var(--card); border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; }
+/* Décompte repris de Décompte DGEO : lequel des montants du formulaire, dit juste sous le montant */
+.montant-aide { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: var(--accent-soft); font-size: 12.5px; color: var(--ink-2); }
+.montant-aide .choix { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.montant-aide + .row { margin-top: 12px; }
 #fichePreview { margin-top: 12px; }
 #ficheFrame { width: 100%; height: 560px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 

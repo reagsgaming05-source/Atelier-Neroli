@@ -706,3 +706,126 @@ test('l\'imprimante d\'une ligne du journal imprime, sans boîte « Enregistrer 
   assert.ok(f.ouvertes[0].focusee, 'demandée à la main, la fiche vient devant');
 });
 
+/* ------------------------------------------------------------------ */
+/* Justificatifs, suppression, vocabulaire, décompte, mise en page        */
+/* ------------------------------------------------------------------ */
+
+/** Un fichier comme le donne le navigateur (glissé ou choisi). */
+const fichier = (name, octets) => ({ name, arrayBuffer: async () => new Uint8Array(octets || [1, 2, 3]).buffer });
+/** Un clic sur un bouton d'un message : il remonte jusqu'au document. */
+function cliquerMessage(f, donnees) {
+  const b = new El(f.doc, 'button');
+  Object.assign(b.dataset, donnees);
+  const m = new El(f.doc, 'div'); m.className = 'notice';
+  m.appendChild(b); f.el('regNotices').appendChild(m);
+  const ev = new Event('click', { cancelable: true });
+  Object.defineProperty(ev, 'target', { value: b });
+  f.doc.dispatchEvent(ev);
+}
+
+test('joindre un justificatif : un bouton en français, le glisser-déposer, et le compte des fichiers', async () => {
+  const f = await ficheSimulee();
+  let choisir = 0;
+  f.el('pFiles').addEventListener('click', () => { choisir++; });
+  f.el('btnJoindre').click();
+  assert.equal(choisir, 1, 'le bouton ouvre le choix de fichiers');
+  assert.match(f.el('pFilesCompte').textContent, /Aucun pour l'instant/);
+  assert.equal(f.el('pFilesList').innerHTML, '', 'plus de phrase qui répète l\'étiquette');
+  const depot = new Event('drop', { cancelable: true });
+  depot.dataTransfer = { types: ['Files'], files: [fichier('ticket-migros.pdf')] };
+  f.el('ficheCard').dispatchEvent(depot);
+  await pause(20);
+  assert.ok(depot.defaultPrevented, 'le navigateur ne doit pas ouvrir le fichier à la place de la page');
+  assert.equal(f.S.state.pending.length, 1);
+  assert.equal(f.el('pFilesCompte').textContent, '1 justificatif joint');
+  assert.match(f.el('pFilesList').innerHTML, /ticket-migros\.pdf/);
+});
+
+test('une pièce supprimée se rattrape, justificatifs compris', async () => {
+  const f = await ficheSimulee();
+  remplirRemboursement(f, '10');
+  await f.enregistrer();
+  remplirRemboursement(f, '20');
+  f.S.state.pending.push({ name: 'ticket.pdf', kind: 'pdf', bytes: new Uint8Array([7, 8, 9]) });
+  await f.enregistrer();
+  remplirRemboursement(f, '30');
+  await f.enregistrer();
+  const p2 = f.S.state.reg.pieces.find((p) => p.no === 2);
+  f.cliquerDans('journalBody', { del: p2.id });
+  await pause(40);
+  assert.equal(f.S.state.reg.pieces.length, 2);
+  const message = f.el('regNotices').children[0].innerHTML;
+  assert.match(message, /Pièce n° 2 supprimée/, 'supprimer ne disait rien');
+  assert.match(message, /data-annuler-suppression/);
+  assert.match(message, /Donner le n° 2 à la fiche/, 'le n° libéré au milieu de la suite est offert');
+  assert.match(f.el('journalNumbers').innerHTML, /ou une pièce supprimée \?/);
+  cliquerMessage(f, { annulerSuppression: p2.id });
+  await pause(40);
+  const revenue = f.S.state.reg.pieces.find((p) => p.id === p2.id);
+  assert.ok(revenue, 'la pièce revient');
+  assert.equal(revenue.no, 2);
+  assert.equal(revenue.montant, 20);
+  assert.ok(f.disque.fichiers.has(`${f.annee}/${p2.id}/ticket.pdf`), 'son justificatif aussi');
+  assert.equal(R.parse(f.disque.registres.get(String(f.annee))).pieces.length, 3, 'et c\'est enregistré');
+});
+
+test('« Donner le n° à la fiche » propose le numéro libéré', async () => {
+  const f = await ficheSimulee();
+  for (const m of ['10', '20', '30']) { remplirRemboursement(f, m); await f.enregistrer(); }
+  const p2 = f.S.state.reg.pieces.find((p) => p.no === 2);
+  f.cliquerDans('journalBody', { del: p2.id });
+  await pause(40);
+  assert.equal(f.el('pNo').value, '4');
+  cliquerMessage(f, { donnerNo: '2' });
+  assert.equal(f.el('pNo').value, '2');
+  assert.equal(f.S.ficheModifiee(), false, 'c\'est l\'application qui propose, rien n\'est encore saisi');
+});
+
+test('le sens se dit d\'après le type, et l\'étiquette Personne dit qui reçoit ou remet l\'argent', async () => {
+  const f = await ficheSimulee();
+  assert.match(f.el('pSensHint').textContent, /^Sens déduit du type d'écriture : REMBOURSEMENT = sortie de caisse/);
+  assert.equal(f.el('pPersonneLabel').textContent, "Personne qui reçoit l'argent (initiale et nom)");
+  const type = f.champ('pType');
+  taper(type, 'RECETTE');
+  touche(type, 'Tab');
+  assert.equal(f.el('pPersonneLabel').textContent, "Personne qui remet l'argent (initiale et nom)");
+  taper(type, 'DECOMPTE');
+  touche(type, 'Tab');
+  assert.equal(f.el('pPersonneLabel').textContent, 'Personne (initiale et nom)', 'un décompte va dans les deux sens');
+  // la liste des types explique ceux qui prêtent à confusion
+  type.click();
+  const pop = type.parentNode.children.find((c) => c.classList.contains('combo-pop'));
+  assert.match(pop.innerHTML, /RETRAIT<\/b><span class="u">entrée en caisse : argent retiré à la banque/);
+});
+
+test('un décompte repris dit quel montant choisir, juste sous le montant', async () => {
+  const f = await ficheSimulee();
+  const d = { id: 'd1', numero: 'D-7', type_activite: 'course', classe: '5P/3', activite: 'Lausanne', enseignant: 'L. Duvernay',
+    date_debut: `12.06.${f.annee}`, form_total: 658.1, total: 55.9, form_expenses: [{ paye_enseignant: 54.6 }] };
+  f.S.useDecompte(d);
+  const aide = f.el('pMontantAide');
+  assert.ok(!aide.classList.contains('hidden'));
+  assert.match(aide.innerHTML, /Quel montant \?<\/b> Celui qui sort réellement de la caisse/);
+  assert.match(aide.innerHTML, /La part État est ce que la DGEO rendra à la commune/);
+  assert.match(f.el('ficheMode').innerHTML, /Fiche pré-remplie depuis le décompte/);
+  assert.equal(f.el('ficheErrors').innerHTML, '', 'l\'avis n\'est plus sous la fiche, loin du montant');
+  f.cliquerDans('pMontantAide', { amount: '658.1' });
+  assert.equal(f.el('pMontant').value, '658.10');
+  f.S.state.photo = null; // on abandonne sans question
+  f.el('btnPieceNew').click();
+  assert.ok(aide.classList.contains('hidden'), 'l\'aide ne vaut que pour le décompte');
+});
+
+test('la fiche : exemples marqués « ex. », facultatifs dits, l\'essentiel d\'abord', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
+  const fiche = html.slice(html.indexOf('id="ficheCard"'), html.indexOf('id="journalCard"'));
+  const ph = (id) => (new RegExp(`id="${id}"[^>]*placeholder="([^"]*)"`).exec(fiche) || new RegExp(`placeholder="([^"]*)"[^>]*id="${id}"`).exec(fiche) || [])[1];
+  for (const id of ['pPersonne', 'pClasse', 'pPeriode', 'pDetail', 'pMontant']) assert.match(ph(id) || '', /^ex\. /, `${id} : un exemple sans « ex. » passe pour une valeur`);
+  for (const id of ['pClasse', 'pPeriode', 'pDetail']) assert.match(fiche, new RegExp(`for="${id}"[^<]*(<[^>]*>[^<]*)*?\\(facultatif\\)`), `${id} devrait être dit facultatif`);
+  assert.ok(fiche.indexOf('id="pPersonne"') < fiche.indexOf('id="pClasse"'), 'Personne et Montant passent avant les champs facultatifs');
+  assert.ok(!/type="file" id="pFiles"(?![^>]*class="hidden")/.test(fiche), 'le bouton de fichier du navigateur (en anglais) est caché');
+  const journal = html.slice(html.indexOf('id="journalCard"'));
+  assert.ok(journal.indexOf('for="regPdfFrom"') < journal.indexOf('id="regPdfFrom"') && journal.indexOf('id="regPdfFrom"') < journal.indexOf('id="btnRegPdf"'),
+    'on choisit les pièces à imprimer avant de cliquer');
+});
+

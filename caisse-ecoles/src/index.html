@@ -100,7 +100,7 @@
 
   <div class="layout2">
     <section class="card" id="ficheCard">
-      <h2><span class="left"><svg class="ico"><use href="#i-pen"/></svg> Pièce comptable <span class="legend" id="ficheTitle"></span></span> <button type="button" class="small ghost hidden" id="btnOpenDgeo" title="Afficher l'onglet Décompte DGEO de cette application"><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</button></h2>
+      <h2><span class="left"><svg class="ico"><use href="#i-pen"/></svg> Pièce comptable <span class="legend" id="ficheTitle"></span></span> <button type="button" class="small ghost hidden" id="btnOpenDgeo" title="Ouvrir Décompte DGEO, l'outil des décomptes de courses et de camps"><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</button></h2>
       <div id="ficheMode" class="fiche-mode hidden"></div>
       <div id="dgeoPending" class="dgeo-pending hidden"></div>
       <div class="row">
@@ -112,13 +112,14 @@
         <div class="field hidden" id="pAFaireField"><label for="pAFaire">Reste à faire</label><label class="check legend" style="align-items:center;height:36px;white-space:nowrap"><input type="checkbox" id="pAFaire" style="margin-top:0"> <span title="Le scan signé sera posé dans Décomptes\À faire, pour le retrouver dans l'explorateur">Décompte à faire</span></label></div>
       </div>
       <div class="row">
-        <div class="field"><label for="pClasse">Classe</label><input type="text" id="pClasse" placeholder="5P/3, 9S…" style="width:130px"></div>
-        <div class="field"><label for="pPeriode">Dates de l'activité</label><input type="text" id="pPeriode" placeholder="12.06.2026 ou 12-16.05.2026" style="width:200px"></div>
-        <div class="field" style="flex:1"><label for="pDetail">Détail (lieu, contenu…)</label><input type="text" id="pDetail" placeholder="ex. Lausanne, musée Bolo ; bonbons vaccination…"></div>
-      </div>
-      <div class="row">
-        <div class="field" style="flex:1"><label for="pPersonne">Personne (initiale et nom)</label><input type="text" id="pPersonne" placeholder="A. Berger"></div>
+        <div class="field" style="flex:1"><label for="pPersonne" id="pPersonneLabel">Personne (initiale et nom)</label><input type="text" id="pPersonne" placeholder="ex. A. Berger"></div>
         <div class="field"><label for="pMontant">Montant (CHF)</label><input type="text" inputmode="decimal" id="pMontant" placeholder="ex. 143.95" style="width:140px"></div>
+      </div>
+      <div id="pMontantAide" class="montant-aide hidden"></div>
+      <div class="row">
+        <div class="field"><label for="pClasse">Classe <span class="legend">(facultatif)</span></label><input type="text" id="pClasse" placeholder="ex. 5P/3" style="width:130px"></div>
+        <div class="field"><label for="pPeriode">Dates de l'activité <span class="legend">(facultatif)</span></label><input type="text" id="pPeriode" placeholder="ex. 12-16.05.2026" style="width:200px"></div>
+        <div class="field" style="flex:1"><label for="pDetail">Détail : lieu, contenu… <span class="legend">(facultatif)</span></label><input type="text" id="pDetail" placeholder="ex. Lausanne, musée Bolo ; bonbons vaccination…"></div>
       </div>
       <div class="row">
         <div class="field" style="width:280px"><label for="pCompte">Compte <span class="legend">(où va la dépense, d'où vient l'argent)</span></label><input type="text" id="pCompte" placeholder="choisir dans la liste" style="font-family:var(--mono);font-size:13px"></div>
@@ -136,20 +137,24 @@
           <div class="sens">
             <label><input type="radio" name="pSens" id="pSensDebit" value="debit"> Entrée en caisse (Débit)</label>
             <label><input type="radio" name="pSens" id="pSensCredit" value="credit"> Sortie de caisse (Crédit)</label>
-            <label class="legend"><input type="checkbox" id="pSensForce"> forcer</label>
+            <label class="legend" title="À cocher seulement si cette pièce va exceptionnellement dans l'autre sens que son type d'écriture."><input type="checkbox" id="pSensForce"> changer le sens (cas exceptionnel)</label>
           </div>
           <div class="legend" id="pSensHint"></div>
         </div>
       </div>
       <div class="row">
         <div class="field" style="flex:1">
-          <label for="pFiles"><svg class="ico sm"><use href="#i-clip"/></svg> Justificatifs joints (tickets, factures, photos : PDF, JPG, PNG)</label>
-          <input type="file" id="pFiles" accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png" multiple>
+          <label for="btnJoindre"><svg class="ico sm"><use href="#i-clip"/></svg> Justificatifs joints <span class="legend">(tickets, factures, photos : PDF, JPG, PNG)</span></label>
+          <div class="joindre" id="pFilesZone">
+            <input type="file" id="pFiles" class="hidden" accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png" multiple>
+            <button type="button" class="small" id="btnJoindre"><svg class="ico"><use href="#i-clip"/></svg> Joindre un ticket, une facture ou une photo…</button>
+            <span class="legend" id="pFilesCompte"></span>
+          </div>
           <div id="pFilesList"></div>
         </div>
       </div>
       <div id="ficheErrors"></div>
-      <div class="toolbar">
+      <div class="toolbar" id="ficheActions">
         <button type="button" class="primary" id="btnPieceSave" title="Ctrl+Entrée depuis n'importe quel champ de la fiche"><svg class="ico"><use href="#i-save"/></svg> <span id="btnPieceSaveTexte">Enregistrer la pièce → journal</span> <span class="kbd">Ctrl+↵</span></button>
         <button type="button" id="btnPiecePreview"><svg class="ico"><use href="#i-eye"/></svg> Aperçu de la fiche</button>
         <span class="spacer"></span>
@@ -187,8 +192,10 @@
       </div>
       <div class="toolbar">
         <button type="button" class="primary" id="btnRegExcel"><svg class="ico"><use href="#i-grid"/></svg> Fichier Excel de l'année</button>
-        <button type="button" id="btnRegPdf"><svg class="ico"><use href="#i-printer"/></svg> PDF des pièces</button>
+        <span class="spacer"></span>
+        <label for="regPdfFrom" class="legend">Pièces à imprimer :</label>
         <select id="regPdfFrom" style="height:36px"></select>
+        <button type="button" id="btnRegPdf"><svg class="ico"><use href="#i-printer"/></svg> PDF des pièces</button>
       </div>
       <div id="regNotices"></div>
     </section>
