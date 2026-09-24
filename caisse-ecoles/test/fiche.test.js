@@ -202,6 +202,56 @@ test('un texte qui ne désigne rien revient à la valeur en place', () => {
   assert.deepEqual(changes, []);
 });
 
+/** La liste déroulante d'un champ : ouverte ou non, et combien de choix elle montre. */
+function liste(champ) {
+  const pop = champ.parentNode.children.find((c) => c.classList.contains('combo-pop'));
+  const choix = (pop.innerHTML.match(/role="option"/g) || []).length;
+  const actif = /class="combo-item actif[^"]*"[^>]*>\s*<b>([^<]*)<\/b>/.exec(pop.innerHTML);
+  return { ouverte: !pop.classList.contains('hidden'), choix, actif: actif ? actif[1] : null };
+}
+
+test('un clic dans une liste fermée l\'ouvre en entier, texte prêt à être remplacé', () => {
+  const { champ } = listeFermee(R.TYPES, 'REMBOURSEMENT');
+  assert.equal(liste(champ).ouverte, false);
+  champ.focus();
+  champ.click();
+  assert.equal(liste(champ).ouverte, true, 'il fallait viser la petite flèche');
+  assert.equal(liste(champ).choix, R.TYPES.length, 'tous les types, pas seulement celui affiché');
+  assert.equal(liste(champ).actif, 'REMBOURSEMENT', 'la valeur en place est mise en évidence');
+  assert.ok(champ.selectionne, 'la frappe doit remplacer le texte et filtrer');
+  champ.click();
+  assert.equal(liste(champ).ouverte, false, 'un second clic la referme, comme une liste Windows');
+});
+
+test('↓ ouvre la liste entière sur la valeur en place, puis la parcourt', () => {
+  const { sel, champ } = listeFermee(R.TYPES, 'REMBOURSEMENT');
+  touche(champ, 'ArrowDown');
+  assert.equal(liste(champ).choix, R.TYPES.length, '↓ ne montrait que REMBOURSEMENT');
+  assert.equal(liste(champ).actif, 'REMBOURSEMENT');
+  touche(champ, 'ArrowDown');
+  assert.equal(liste(champ).actif, R.TYPES[1]);
+  touche(champ, 'Enter');
+  assert.equal(sel.value, R.TYPES[1]);
+  // après avoir tapé, ↓ parcourt ce qui correspond à la frappe
+  taper(champ, 'rec');
+  touche(champ, 'ArrowDown');
+  assert.equal(liste(champ).choix, 1);
+});
+
+test('un champ libre vide s\'ouvre au clic ; rempli, on y clique pour corriger', () => {
+  const doc = documentSimule();
+  const input = doc.createElement('input');
+  doc.body.appendChild(input);
+  Combo.attach(input, () => [{ value: '51000.3662.00' }, { value: '9206.101' }], {});
+  input.click();
+  assert.equal(liste(input).ouverte, true);
+  assert.equal(liste(input).choix, 2);
+  touche(input, 'Escape');
+  input.value = '9206.101';
+  input.click();
+  assert.equal(liste(input).ouverte, false);
+});
+
 test('ce que désigne un texte tapé', () => {
   const liste = [{ value: '', label: 'toutes les pièces' }, { value: '7', label: 'depuis le n° 7' }, { value: '17', label: 'depuis le n° 17' }];
   assert.equal(Combo.designe(liste, '7').value, '7', 'un numéro tapé désigne sa pièce, pas toutes celles qui contiennent 7');

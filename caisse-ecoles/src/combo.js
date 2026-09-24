@@ -79,6 +79,10 @@
     wrap.appendChild(pop);
 
     let actif = -1; let vus = []; let enPose = false;
+    // Vrai dès que la personne tape : la liste se filtre alors sur son texte. Tant qu'elle n'a
+    // rien tapé, le texte du champ est la valeur en place, et ouvrir la liste doit montrer TOUS
+    // les choix — filtrer sur « REMBOURSEMENT » ne montrait que REMBOURSEMENT.
+    let tape = false;
     // Ce qu'on affiche et ce qu'on vaut ne sont pas toujours la même chose : « depuis le n° 7 »
     // vaut « 7 », « toutes les pièces » vaut la chaîne vide. Le champ montre le libellé, la
     // valeur est gardée à côté. Pour un champ libre (un compte, un nom) les deux se confondent.
@@ -88,6 +92,7 @@
     /** Poser la valeur depuis le code, sans rien déclencher : le champ suit ce qu'on lui donne. */
     function refleter(v) {
       valeur = v;
+      tape = false;
       const it = tous().find((x) => String(x.value) === String(v));
       input.value = it ? texteDe(it) : String(v == null ? '' : v);
       dernier = input.value;
@@ -136,11 +141,13 @@
       actif = -1;
     }
     const estOuvert = () => ouverts.has(api);
-    function rafraichir() { if (estOuvert()) dessiner(input.value); }
+    const filtre = () => (tape ? input.value : '');
+    function rafraichir() { if (estOuvert()) dessiner(filtre()); }
 
     function poser(it) {
       input.value = texteDe(it);
       valeur = it.value;
+      tape = false;
       dernier = input.value;
       fermer();
       // Ces événements préviennent le reste de l'application (libellé, comptes proposés). Sans ce
@@ -175,26 +182,43 @@
       ev.preventDefault(); // garder le curseur dans le champ
       if (estOuvert()) fermer(); else { ouvrir(''); input.focus(); }
     });
+    // Sous Windows, on clique n'importe où dans une liste déroulante pour l'ouvrir : viser la
+    // petite flèche n'est pas un geste qu'on devine. Une liste fermée s'ouvre donc au clic dans
+    // le champ, texte sélectionné pour que la frappe filtre ; un second clic la referme. Un champ
+    // libre (compte, nom) s'ouvre au clic quand il est vide : plein, on y clique pour corriger.
+    input.addEventListener('click', () => {
+      if (opts.strict) {
+        if (estOuvert()) { fermer(); return; }
+        ouvrir('');
+        input.select();
+      } else if (!estOuvert() && !input.value) ouvrir('');
+    });
+    input.addEventListener('focus', () => { if (opts.strict) input.select(); });
     input.addEventListener('input', () => {
       if (enPose) return;
+      tape = true;
       if (!opts.strict) valeur = input.value; // champ libre : ce qu'on tape est la valeur
       if (estOuvert() || input.value) { actif = -1; ouvrir(input.value); }
     });
     input.addEventListener('keydown', (ev) => {
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
         ev.preventDefault();
-        if (!estOuvert()) { ouvrir(input.value); }
+        if (!estOuvert()) {
+          ouvrir(filtre());
+          // premier appui : la liste s'ouvre sur la valeur en place, sans encore la quitter
+          if (!tape && actif >= 0) return;
+        }
         if (!vus.length) return;
         actif = ev.key === 'ArrowDown'
           ? (actif + 1) % vus.length
           : (actif <= 0 ? vus.length - 1 : actif - 1);
-        dessiner(input.value); montrerActif();
+        dessiner(filtre()); montrerActif();
       } else if (ev.key === 'Enter' && estOuvert()) {
         if (actif >= 0) { ev.preventDefault(); choisir(actif); }
         else if (opts.strict) { ev.preventDefault(); reglerStrict(); fermer(); }
       } else if (ev.key === 'Escape' && estOuvert()) {
         ev.preventDefault(); ev.stopPropagation();
-        if (opts.strict) input.value = dernier;
+        if (opts.strict) { input.value = dernier; tape = false; }
         fermer();
       } else if (ev.key === 'Tab') { reglerStrict(); fermer(); }
     });
@@ -243,6 +267,13 @@
     select.tabIndex = -1;
     select.dataset.comboPour = '1';
     select.parentNode.insertBefore(input, select);
+    // L'étiquette visait le <select> caché : un clic dessus ne menait nulle part. Elle vise
+    // maintenant le champ visible (qui s'ouvre alors comme au clic).
+    if (select.id) {
+      input.id = `${select.id}Liste`;
+      const etiquettes = doc.querySelectorAll ? doc.querySelectorAll(`label[for="${select.id}"]`) : [];
+      for (const l of Array.from(etiquettes)) l.htmlFor = input.id;
+    }
 
     const combo = attach(input, items, Object.assign({}, opts, {
       strict: true,
