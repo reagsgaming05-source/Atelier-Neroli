@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from . import __version__
 from .analyse import analyse_pdf
 from .excel import build_workbook, output_filename
-from .models import Dossier
+from .models import RUBRIQUES_CAMP, RUBRIQUES_COURSE, Dossier
 from .ocr import TESSERACT_CMD, app_dir, tesseract_available
 from .rules import compute_rows, compute_total
 
@@ -46,6 +46,10 @@ def public(dossier: Dossier) -> dict:
     data["effectifs_calc"] = {
         "titres": dossier.effectifs.titres, "non_titres": dossier.effectifs.non_titres, "total": dossier.effectifs.total,
     }
+    # Les rubriques de chaque type partent d'ici, avec le dossier : la page en avait une copie
+    # écrite à la main, sans « Nourriture » pour la course, et affichait « Transport » là où
+    # l'Excel écrivait « Nourriture ».
+    data["rubriques"] = {"course": list(RUBRIQUES_COURSE), "camp": list(RUBRIQUES_CAMP)}
     return data
 
 
@@ -53,6 +57,7 @@ def _from_client(payload: dict) -> Dossier:
     payload = dict(payload)
     payload["pages"] = []  # les mots ne sont pas renvoyés par le client
     payload.pop("effectifs_calc", None)
+    payload.pop("rubriques", None)
     return Dossier.model_validate(payload)
 
 

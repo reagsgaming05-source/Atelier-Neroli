@@ -15,7 +15,12 @@
   };
   const fmt = (x) => (x === null || x === undefined || Number.isNaN(Number(x))) ? "" : Number(x).toFixed(2);
   const num = (v) => { const s = String(v ?? "").replace(/'/g, "").replace(",", ".").trim(); if (s === "") return null; const n = Number(s); return Number.isFinite(n) ? n : null; };
-  const RUBRIQUES = { course: ["Transport", "Activité", "Autre"], camp: ["Nourriture", "Hébergement", "Transport", "Activité", "Autre", "Cuisinière"] };
+  // Rubriques de chaque type : envoyées par le serveur avec le dossier (models.py), jamais
+  // recopiées ici. Une copie à la main avait oublié « Nourriture » pour la course.
+  const rubriquesDu = (type) => (dossier && dossier.rubriques && dossier.rubriques[type]) || [];
+  // Une valeur hors de la liste s'affiche telle quelle : sinon la liste montrait sa première
+  // option (« Transport ») alors que la pièce et l'Excel gardaient autre chose.
+  const optionsRubrique = (rubs, valeur) => (valeur && !rubs.includes(valeur) ? rubs.concat([valeur]) : rubs);
   const KINDS = { billet: "Billet / ticket", facture: "Facture", recepisse: "Récépissé (exclu)", recu_carte: "Reçu de carte (exclu)", taux_change: "Taux de change (exclu)", autre: "Autre" };
   const CATS = { plein: "Plein tarif (adulte)", demi: "Demi-tarif (adulte)", enfant: "Élève / enfant", invite: "Invité (gratuit)", autre: "Autre" };
   const NON_REMB = ["recepisse", "recu_carte", "taux_change"];
@@ -84,7 +89,7 @@
         // Les rubriques absentes du nouveau modèle repassent à « Autre », comme le serveur le
         // fait : sinon la fiche montrait la première rubrique de la liste alors que la pièce en
         // gardait une autre, et le classeur partait sur « Autre ».
-        const dispo = RUBRIQUES[dossier.type_activite] || RUBRIQUES.course;
+        const dispo = rubriquesDu(dossier.type_activite);
         for (const p of dossier.pieces) if (!dispo.includes(p.rubrique)) p.rubrique = "Autre";
         for (const r of dossier.rows) if (!dispo.includes(r.rubrique)) r.rubrique = "Autre";
         renderPieces(); renderRows();
@@ -144,7 +149,7 @@
 
   function renderPieces() {
     const c = $("#pieces"); c.innerHTML = "";
-    const rubs = RUBRIQUES[dossier.type_activite] || RUBRIQUES.course;
+    const rubs = rubriquesDu(dossier.type_activite);
     const included = dossier.pieces.filter(p => p.include).length;
     $("#pieces-count").textContent = `— ${dossier.pieces.length} pièce(s) détectée(s), ${included} retenue(s)`;
     for (const p of dossier.pieces) c.append(renderPiece(p, rubs));
@@ -188,7 +193,7 @@
       f("Devise", "currency", { select: [["CHF", "CHF"], ["EUR", "EUR"]], rerender: true, after: () => { for (const fl of p.fares) fl.currency = p.currency; renderDossier(); } }),
       f("Total de la pièce", "total", { type: "number" }),
       ...(p.currency === "EUR" ? [f("Montant CHF imprimé (si présent)", "total_chf", { type: "number" }), f("Taux sur la pièce", "rate", { type: "number" })] : []),
-      f("Rubrique Excel", "rubrique", { select: rubs.map(r => [r, r]) }),
+      f("Rubrique Excel", "rubrique", { select: optionsRubrique(rubs, p.rubrique).map(r => [r, r]) }),
       f("Mode de calcul", "mode", { select: [["direct", "Saisie directe (tarifs adultes)"], ["prorata", "Règle de trois (montant global)"]] }),
     ]);
     // tarifs
@@ -228,10 +233,10 @@
 
   function renderRows() {
     const tb = $("#rows-table tbody"); tb.innerHTML = "";
-    const rubs = RUBRIQUES[dossier.type_activite] || RUBRIQUES.course;
+    const rubs = rubriquesDu(dossier.type_activite);
     for (const r of dossier.rows) {
       const tr = el("tr", {}, [
-        el("td", {}, el("select", { onchange: (e) => { r.rubrique = e.target.value; rowsManual = true; renderRows(); } }, rubs.map(x => el("option", { value: x, selected: r.rubrique === x ? "" : null }, x)))),
+        el("td", {}, el("select", { onchange: (e) => { r.rubrique = e.target.value; rowsManual = true; renderRows(); } }, optionsRubrique(rubs, r.rubrique).map(x => el("option", { value: x, selected: r.rubrique === x ? "" : null }, x)))),
         el("td", {}, el("input", { value: r.libelle, onchange: (e) => { r.libelle = e.target.value; rowsManual = true; } })),
         // mode de la ligne : règle de trois sur le coût total (H) ou part État saisie directement (I)
         el("td", {}, el("select", { title: "Règle de trois : coût total (H) / total participants × titrés, formule du modèle. Saisie directe : tarifs adultes connus, part État en I.", onchange: (e) => {
@@ -271,7 +276,7 @@
       const r = await fetch("/api/recompute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(dossier) });
       if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
       const d = await r.json();
-      dossier.rows = d.rows; dossier.warnings = d.warnings; dossier.total = d.total; dossier.taux_eur_chf = d.taux_eur_chf;
+      dossier.rows = d.rows; dossier.warnings = d.warnings; dossier.total = d.total; dossier.taux_eur_chf = d.taux_eur_chf; dossier.rubriques = d.rubriques;
       renderWarnings(); renderRows();
     } catch (err) { alert("Recalcul impossible : " + err.message); }
   }
