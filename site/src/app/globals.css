@@ -68,6 +68,15 @@
   @apply mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-10;
 }
 
+/* Un enfant de grille ou de flex vaut « min-content » par défaut : il refuse de
+   descendre sous la largeur de son contenu. Sur téléphone, le grand titre de
+   l'accueil imposait ainsi 628 px à sa colonne et sortait de l'écran, sans même
+   provoquer de défilement — la section le rognait. Autoriser le rétrécissement
+   suffit, et ne change rien là où le contenu tient déjà. */
+.container-x > * {
+  min-width: 0;
+}
+
 @utility eyebrow {
   @apply text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-brand-600;
 }
