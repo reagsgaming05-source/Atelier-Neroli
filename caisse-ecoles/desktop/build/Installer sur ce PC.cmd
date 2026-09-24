@@ -59,15 +59,16 @@ if not "!SERVEUR:~0,2!"=="\\" (
 )
 
 rem Compta Blonay ouvert sur ce PC : ses fichiers sont verrouillés, la copie ne
-rem pourrait pas se faire. On attend qu'il soit fermé.
+rem pourrait pas se faire. On attend qu'il soit fermé. (Hors de tout bloc : un
+rem « exit /b » écrit dans un bloc qui suit « && » perd son code de sortie.)
 :attendre_fermeture
-tasklist /FI "IMAGENAME eq ComptaBlonay.exe" 2>nul | find /I "ComptaBlonay.exe" >nul && (
-  echo Compta Blonay est ouvert sur ce PC. Fermez-le, puis appuyez sur une touche
-  echo pour continuer l'installation.
-  if defined COMPTA_SANS_LANCER exit /b 2
-  pause >nul
-  goto attendre_fermeture
-)
+tasklist /FI "IMAGENAME eq ComptaBlonay.exe" 2>nul | find /I "ComptaBlonay.exe" >nul || goto ferme
+echo Compta Blonay est ouvert sur ce PC. Fermez-le, puis appuyez sur une touche
+echo pour continuer l'installation.
+if defined COMPTA_SANS_LANCER exit /b 2
+pause >nul
+goto attendre_fermeture
+:ferme
 
 rem Les données de la caisse : c'est donnees.txt, dans le dossier du programme sur le
 rem serveur, qui les désigne pour tous les PC. Sans lui, ce PC aurait sa propre caisse,
