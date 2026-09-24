@@ -528,3 +528,54 @@ test('« Prendre le n° » pose le numéro libre proposé', async () => {
   assert.equal(f.S.state.reg.pieces.length, 2);
 });
 
+/* ------------------------------------------------------------------ */
+/* Choix du compte                                                      */
+/* ------------------------------------------------------------------ */
+
+const VOCAB = require('../src/vocabulaire.js');
+const pieceDe = (over) => { const reg = R.emptyRegister(2026, {}); return { reg, p: Object.assign(R.newPiece(reg), over) }; };
+
+test('un compte n\'est rempli d\'office que s\'il s\'impose pour ce genre de pièce', () => {
+  const imp = (over) => { const { p, reg } = pieceDe(over); const x = R.compteImpose(p, VOCAB, reg); return x && x.compte; };
+  // un remboursement sans objet : 51000.3170.05 ne sert qu'une fois sur six, on ne le devine pas
+  assert.equal(imp({ type: 'REMBOURSEMENT', objet: 'Autre' }), null);
+  // un décompte de course d'école : presque toujours le même compte
+  assert.equal(imp({ type: 'DECOMPTE', objet: "Course d'école", classe: '5P/3' }), '51000.3662.00');
+  // l'objet départage : une collation va toujours au même compte
+  assert.equal(imp({ type: 'REMBOURSEMENT', objet: 'Collation' }), '51000.3662.50');
+});
+
+test('les comptes d\'un même type se distinguent par leurs objets et par un exemple réel', () => {
+  const { p, reg } = pieceDe({ type: 'REMBOURSEMENT', objet: 'Autre' });
+  const avant = [Object.assign(R.newPiece(reg), { date: '2025-11-03', type: 'REMBOURSEMENT', objet: 'Collation', detail: 'du chœur', compte: '51000.3662.50' })];
+  const l = R.accountChoices(p, VOCAB, reg, { pieces: avant });
+  const de = (c) => l.find((x) => x.compte === c);
+  assert.ok(de('50000.3652.00').objets.includes('Repas'));
+  assert.deepEqual(de('51000.3170.05').objets, [], 'employé pour ce type, jamais avec un objet précis');
+  assert.equal(de('52000.3662.40').objets, null, 'jamais employé pour un remboursement');
+  assert.equal(de('51000.3662.50').exemple, 'Collation du chœur', 'un exemple tiré de l\'année d\'avant');
+  // l'année en cours passe devant : c'est l'exemple le plus récent
+  R.upsertPiece(reg, Object.assign(R.newPiece(reg), { no: 1, date: '2026-02-10', type: 'REMBOURSEMENT', objet: 'Repas', detail: 'fête des jubilaires', compte: '51000.3662.50' }));
+  assert.equal(R.accountChoices(p, VOCAB, reg, { pieces: avant }).find((x) => x.compte === '51000.3662.50').exemple, 'Repas fête des jubilaires');
+});
+
+test('la fiche ne remplit plus un compte au hasard, et sa liste distingue les comptes', async () => {
+  const f = await ficheSimulee();
+  assert.equal(f.el('pType').value, 'REMBOURSEMENT');
+  assert.equal(f.el('pCompte').value, '', 'un compte pris une fois sur six ne doit pas être rempli d\'office');
+  assert.match(f.el('pCompteSugg').innerHTML, /Plusieurs comptes servent pour ce type/);
+  assert.match(f.el('pCompteSugg').innerHTML, /Choisir l'objet/);
+  // la liste : les descriptions ne se répètent plus toutes
+  f.el('pCompte').click();
+  const pop = f.el('pCompte').parentNode.children.find((c) => c.classList.contains('combo-pop'));
+  const descriptions = Array.from(pop.innerHTML.matchAll(/<span class="u">([^<]*)<\/span>/g)).map((m) => m[1]).slice(0, 9);
+  assert.ok(new Set(descriptions).size >= 6, `descriptions trop semblables : ${descriptions.join(' | ')}`);
+  assert.ok(!descriptions.every((d) => /REMBOURSEMENT/.test(d)));
+  // choisir l'objet Collation propose le compte qui s'impose
+  const objet = f.champ('pObjet');
+  taper(objet, 'Collation');
+  touche(objet, 'Tab');
+  assert.equal(f.el('pCompte').value, '51000.3662.50');
+  assert.match(f.el('pCompteSugg').innerHTML, /proposé : employé 6 fois sur 6/);
+});
+

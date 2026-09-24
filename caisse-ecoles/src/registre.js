@@ -383,8 +383,9 @@
    *   niveau 2 : pour ce type
    *   niveau 3 : compte connu, jamais employé pour ce type
    */
-  function accountChoices(p, vocab, reg) {
+  function accountChoices(p, vocab, reg, opts) {
     vocab = vocab || {};
+    opts = opts || {};
     const sugg = accountSuggestions(p, vocab, reg);
     const rang = new Map();
     sugg.forEach((s, i) => rang.set(s.compte, { n: s.n, niveau: s.niveau, ordre: i }));
@@ -414,6 +415,39 @@
       return best;
     };
 
+    // Pour le type de la pièce en cours : avec quels objets chaque compte a servi. Presque tous
+    // les comptes d'un remboursement s'étiquetaient « REMBOURSEMENT » : la liste ne distinguait
+    // rien. Les objets (Repas, Matériel, Collation…) les distinguent, eux.
+    const cleType = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+    const typeCourant = cleType(p && p.type);
+    const objetsDuType = new Map(); // compte -> Map(objet -> n) ; « Autre » compté sous ''
+    const noterObjet = (compte, type, objet, n) => {
+      if (!compte || !typeCourant || cleType(type) !== typeCourant) return;
+      const m = objetsDuType.get(compte) || new Map();
+      const o = objet && objet !== 'Autre' ? objet : '';
+      m.set(o, (m.get(o) || 0) + (n || 1));
+      objetsDuType.set(compte, m);
+    };
+    for (const h of vocab.objetAccounts || []) if (h && h.compte) noterObjet(h.compte, h.type, h.objet, h.n);
+    for (const x of (reg && reg.pieces) || []) if (x.compte) noterObjet(x.compte, x.type, x.objet, 1);
+    const objetsDe = (c) => {
+      const m = objetsDuType.get(c);
+      if (!m) return null;
+      return Array.from(m).filter(([o]) => o).sort((a, b) => b[1] - a[1]).map(([o]) => o);
+    };
+
+    // Un exemple réel : la description de la dernière pièce passée sur ce compte, cette année ou
+    // l'année d'avant (opts.pieces). « ex. Collation du chœur » dit plus qu'un numéro.
+    const exemples = new Map();
+    const passees = ((reg && reg.pieces) || []).concat(opts.pieces || [])
+      .filter((x) => x && x.compte)
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    for (const x of passees) {
+      if (exemples.has(x.compte)) continue;
+      const d = composeDescription(x);
+      if (d) exemples.set(x.compte, d);
+    }
+
     // côté habituel : une entrée en caisse ou une sortie
     const cotes = new Map();
     for (const a of vocab.accountSides || []) {
@@ -442,8 +476,25 @@
         ordre: r ? r.ordre : 0,
         usage: usageDe(compte),
         sens: coteDe(compte),
+        // null : jamais employé pour ce type ; [] : employé pour ce type, sans objet précis
+        objets: objetsDe(compte),
+        exemple: exemples.get(compte) || '',
       };
     }).sort((a, b) => a.niveau - b.niveau || a.ordre - b.ordre || b.n - a.n || a.compte.localeCompare(b.compte));
+  }
+
+  /**
+   * Le compte à remplir d'office pour une pièce, ou null. Il n'est proposé que s'il s'impose :
+   * employé au moins deux fois sur trois pour ce type et cet objet (et ce degré). Un compte pris
+   * une fois sur six (51000.3170.05 pour un remboursement), rempli d'office, était gardé tel
+   * quel par qui ne connaît pas les comptes — qu'il convienne ou non.
+   * Rend { compte, n, total, niveau } ou null.
+   */
+  function compteImpose(p, vocab, reg) {
+    const sugg = accountSuggestions(p, vocab, reg);
+    if (!sugg.length || sugg[0].niveau > 1) return null;
+    const total = sugg.reduce((t, x) => t + x.n, 0);
+    return sugg[0].n * 3 >= total * 2 ? { compte: sugg[0].compte, n: sugg[0].n, total, niveau: sugg[0].niveau } : null;
   }
 
   /**
@@ -1041,6 +1092,7 @@
     parseAmountInput,
     searchRows, numberChecks, explainGap,
     accountChoices,
+    compteImpose,
     periodMovements,
     piecesFromEntries, mergeEntries,
     serialize,

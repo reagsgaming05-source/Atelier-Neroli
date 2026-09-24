@@ -100,15 +100,15 @@
   function brancherCombos() {
     if (!C) return;
     const NIVEAU = ['pour ce type, cet objet et ce degré', 'pour ce type et cet objet', 'pour ce type'];
-    const comptes = () => R.accountChoices(formPiece(), vocab(), state.reg).filter((c) => garde('comptes')(c.compte)).map((c) => ({
+    const comptes = () => choixDeComptes(formPiece()).filter((c) => garde('comptes')(c.compte)).map((c) => ({
       value: c.compte,
-      hint: c.usage,
+      hint: decrireCompte(c, els.pType.value),
       note: c.n ? `${c.n}×` : '',
       fort: c.niveau <= 1,
       // le survol dit pourquoi ce compte est proposé si haut
       titre: c.niveau < 3 ? `${c.n} écriture(s) ${NIVEAU[c.niveau]}` : 'compte connu du classeur',
     }));
-    C.attach(els.pCompte, comptes, { vide: 'Aucun compte connu ne correspond. Le numéro tapé sera gardé tel quel.', onPick: () => { state.autoAccount = false; refreshSuggestions(); } });
+    C.attach(els.pCompte, comptes, { classe: 'combo-comptes', vide: 'Aucun compte connu ne correspond. Le numéro tapé sera gardé tel quel.', onPick: () => { state.autoAccount = false; refreshSuggestions(); } });
     C.attach(els.pClasse, () => connus('classe').map((x) => ({ value: x })), { vide: 'Aucune classe connue ne correspond.' });
     C.attach(els.pPersonne, () => connus('personne').map((x) => ({ value: x })), { vide: 'Aucun nom connu ne correspond.' });
     // le compte caisse est un compte comme un autre : même liste, sans le tri par pertinence
@@ -132,6 +132,25 @@
     C.fromSelect(els.regYear, { vide: 'Aucune année ne correspond.' });
     // « toutes les pièces » ou « depuis le n° X » : une entrée par pièce, donc une liste qui défile
     C.fromSelect(els.regPdfFrom, { vide: 'Aucun numéro ne correspond.' });
+  }
+
+  /** Les comptes proposables pour la pièce, avec des exemples tirés aussi de l'année d'avant. */
+  const choixDeComptes = (p) => R.accountChoices(p, vocab(), state.reg, { pieces: state.piecesAvant || [] });
+  /**
+   * Ce qui distingue un compte d'un autre, en clair : ce qu'on en a noté dans l'espace Données,
+   * sinon les objets pour lesquels il a servi avec ce type (« Repas, Matériel »), sinon son usage
+   * habituel ; et un exemple réel. Presque tous les comptes d'un remboursement s'affichaient
+   * « REMBOURSEMENT » : on gardait le compte proposé faute de pouvoir choisir.
+   */
+  function decrireCompte(c, type) {
+    let quoi = K ? K.noteDe(K.actuel(), 'comptes', c.compte) : '';
+    if (!quoi && c.objets) {
+      quoi = c.objets.length ? c.objets.slice(0, 3).join(', ') : 'objet jamais précisé';
+      // un compte surtout employé pour un autre type le dit : 51000.3662.00 n'est pas « Repas »
+      if (c.usage && type && c.usage.split(' · ')[0] !== type) quoi += ` (surtout ${c.usage})`;
+    }
+    if (!quoi) quoi = c.usage;
+    return [quoi, c.exemple ? `ex. ${c.exemple}` : ''].filter(Boolean).join(' — ');
   }
 
   /** À quoi sert un compte, sans pièce en cours pour peser la pertinence. */
@@ -471,17 +490,47 @@
 
   function refreshSuggestions() {
     const p = formPiece();
-    const sugg = R.accountSuggestions(p, vocab(), state.reg).slice(0, 4);
-    // Les quatre boutons ont laissé la place à la liste déroulante du champ, qui porte TOUS les
-    // comptes et dit à quoi chacun sert. Il reste une ligne qui rappelle le plus employé.
-    els.pCompteSugg.innerHTML = sugg.length
-      ? `Le plus employé pour ce type : <b>${escapeHtml(sugg[0].compte)}</b> <span class="legend">(${sugg[0].n} écriture${sugg[0].n > 1 ? 's' : ''})</span>` +
-        (sugg.length > 1 ? ` <span class="legend">· ${sugg.length - 1} autre${sugg.length > 2 ? 's' : ''} possible${sugg.length > 2 ? 's' : ''}, dans la liste du champ</span>` : '')
-      : '<span class="legend">Aucun compte habituel pour ce type : ouvrez la liste du champ pour voir tous les comptes connus.</span>';
+    // Le compte n'est rempli d'office que s'il s'impose (deux fois sur trois au moins pour ce
+    // genre de pièce) ; sinon la personne choisit, avec de quoi distinguer les comptes. Et
     // seulement tant que le compte n'a pas été touché à la main : sinon vider le champ le
-    // remplissait aussitôt, et le texte tapé venait s'ajouter à la suite de la proposition
-    if (state.autoAccount && !els.pCompte.value && sugg.length && sugg[0].niveau <= 1) els.pCompte.value = sugg[0].compte;
+    // remplissait aussitôt, et le texte tapé venait s'ajouter à la suite de la proposition.
+    const impose = R.compteImpose(p, vocab(), state.reg);
+    if (state.autoAccount && !els.pCompte.value && impose) els.pCompte.value = impose.compte;
+    const choix = choixDeComptes(Object.assign({}, p, { compte: els.pCompte.value.trim() }));
+    const actuel = els.pCompte.value.trim();
+    const c = choix.find((x) => x.compte === actuel);
+    const employes = choix.filter((x) => x.niveau <= 2 && x.n > 0);
+    // l'objet départage souvent les comptes d'un même type : on le dit quand il n'est pas choisi
+    const objets = [];
+    for (const x of employes) for (const o of x.objets || []) if (!objets.includes(o)) objets.push(o);
+    const conseilObjet = p.objet === 'Autre' && p.type !== 'DECOMPTE' && objets.length
+      ? ` Choisir l'objet (${escapeHtml(objets.slice(0, 3).join(', '))}…) aide à trouver le bon.` : '';
+    let html;
+    if (actuel && c) {
+      html = `<b>${escapeHtml(actuel)}</b> : ${escapeHtml(decrireCompte(c, p.type) || 'compte connu')}` +
+        (impose && impose.compte === actuel ? ` <span class="legend">· proposé : employé ${impose.n} fois sur ${impose.total} pour ce genre de pièce</span>` : '');
+    } else if (actuel) {
+      html = `<b>${escapeHtml(actuel)}</b> <span class="legend">: compte jamais employé jusqu'ici</span>`;
+    } else if (employes.length > 1) {
+      html = `<span class="legend">Plusieurs comptes servent pour ce type : choisissez dans la liste du champ Compte, les plus employés sont en tête.${conseilObjet}</span>`;
+    } else if (employes.length === 1) {
+      html = `<span class="legend">Pour ce type, le compte employé jusqu'ici est <b>${escapeHtml(employes[0].compte)}</b> : choisissez-le dans la liste s'il convient.</span>`;
+    } else html = '<span class="legend">Aucun compte habituel pour ce type : ouvrez la liste du champ Compte pour voir tous les comptes connus.</span>';
+    els.pCompteSugg.innerHTML = html;
   }
+
+  // Les exemples de la liste des comptes viennent aussi de l'année d'avant : une année qui
+  // commence n'a pas encore de pièces à montrer.
+  let exemplesDe = null;
+  document.addEventListener('caisse:registre', async () => {
+    const an = state.reg && state.reg.annee;
+    if (!an || exemplesDe === an) return;
+    exemplesDe = an;
+    state.piecesAvant = [];
+    const avant = state.years.filter((y) => y < an).sort().pop();
+    if (!avant) return;
+    try { const r = await state.storage.load(avant); state.piecesAvant = (r && r.pieces) || []; } catch (e) { /* sans exemples */ }
+  });
 
   els.pType.addEventListener('change', () => { setSens(null, true); refreshKind(); els.pCompte.value = ''; state.autoAccount = true; refreshSuggestions(); refreshLibelle(); });
   // objet ou classe modifiés : le compte habituel change souvent (degré, activité) -> re-proposé
