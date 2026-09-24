@@ -1,7 +1,7 @@
 import "./env";
 import { randomUUID } from "node:crypto";
 import { eq, notInArray } from "drizzle-orm";
-import { db } from "../src/lib/db";
+import { db, SANS_DISQUE } from "../src/lib/db";
 import { invoices, orgMembers, plans, subscriptions, usageEvents, users, USAGE_TOOLS } from "../src/lib/db/schema";
 import { hashPassword } from "../src/lib/password";
 import { planCatalog } from "../src/content/plans";
@@ -25,6 +25,12 @@ export async function runSeed() {
   // 2. Compte administrateur
   const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@blonaypdf.ch").toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD ?? "BlonayPDF-Admin-2026!";
+  if (!process.env.ADMIN_PASSWORD && SANS_DISQUE) {
+    throw new Error(
+      "ADMIN_PASSWORD n'est pas défini. Le mot de passe administrateur par défaut est écrit dans le dépôt, " +
+        "qui est public : le poser tel quel en ligne ouvrirait l'administration à qui a lu le code.",
+    );
+  }
   const admin = await db.query.users.findFirst({ where: eq(users.email, adminEmail) });
   if (!admin) {
     await db.insert(users).values({
@@ -38,8 +44,14 @@ export async function runSeed() {
     console.log(`✔ Compte administrateur créé : ${adminEmail}`);
   }
 
-  // 3. Membre de démonstration avec un abonnement et un historique de factures
-  const demo = await db.query.users.findFirst({ where: eq(users.email, DEMO_MEMBER.email) });
+  // 3. Membre de démonstration avec un abonnement et un historique de factures.
+  //
+  // Sur une vraie mise en ligne, ces comptes n'ont rien à faire là : un compte
+  // au mot de passe public et des factures inventées, dans le dos de la
+  // personne qui déploie. On ne les crée donc qu'en développement, ou quand on
+  // les demande expressément — pour une démonstration commerciale, par exemple.
+  const avecDemo = process.env.SEED_DEMO === "1" || !SANS_DISQUE;
+  const demo = avecDemo ? await db.query.users.findFirst({ where: eq(users.email, DEMO_MEMBER.email) }) : true;
   if (!demo) {
     const pro = await db.query.plans.findFirst({ where: eq(plans.slug, "administration") });
     if (!pro) throw new Error("Formule 'administration' introuvable.");
@@ -159,6 +171,8 @@ export async function runSeed() {
       }
     }
     console.log(`✔ Membre de démonstration créé : ${DEMO_MEMBER.email} (+ 2 collaborateurs, historique d'usage)`);
+  } else if (!avecDemo) {
+    console.log("· Données de démonstration écartées (production). SEED_DEMO=1 pour les créer quand même.");
   }
 }
 

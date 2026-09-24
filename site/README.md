@@ -125,6 +125,57 @@ Le type se déduit de l'IBAN : la banque rejette le mélange, et le code le refu
 - [pdf-lib](https://pdf-lib.js.org) et [pdf.js](https://mozilla.github.io/pdf.js/) (build « legacy », worker copié dans `public/`) pour la démo dans le navigateur
 - Authentification maison par sessions (cookie httpOnly, mots de passe hachés avec bcrypt)
 
+## Mettre en ligne sur Vercel
+
+Le site a besoin de deux choses : un hébergeur et une base de données. Vercel
+donne le premier, Turso la seconde, tous deux gratuits à ce volume. Comptez un
+quart d'heure.
+
+**1. La base de données.** Un hébergement sans serveur n'a pas de disque : une
+base SQLite dans un fichier y serait perdue d'une requête à l'autre, avec les
+offres et les factures. L'application refuse de démarrer dans ce cas plutôt que
+de perdre des données en silence. Créez une base sur <https://turso.tech>
+(« Create Database », région Frankfurt ou Amsterdam — la plus proche de la
+Suisse), puis relevez deux valeurs : l'URL `libsql://…` et un jeton
+d'authentification.
+
+**2. Le projet Vercel.** Sur <https://vercel.com/new>, importez le dépôt
+`Atelier-Neroli`. Une seule chose est à ne pas rater :
+
+> **Root Directory : `site`**
+
+Sans cela, Vercel lit le `vercel.json` à la racine du dépôt — celui de
+l'application PDF, qui construit un tout autre site. Le reste (framework
+Next.js, commandes de construction) se détecte tout seul.
+
+**3. Les variables d'environnement**, dans les réglages du projet, pour tous
+les environnements :
+
+| Variable | Valeur | Obligatoire |
+| --- | --- | --- |
+| `DATABASE_URL` | `libsql://votre-base.turso.io` | oui |
+| `DATABASE_AUTH_TOKEN` | le jeton Turso | oui |
+| `ADMIN_PASSWORD` | un mot de passe que vous choisissez | oui |
+| `ADMIN_EMAIL` | votre adresse | non (défaut : `admin@blonaypdf.ch`) |
+| `SITE_URL` | l'adresse publique, une fois connue | non |
+| `SEED_DEMO` | `1` pour créer aussi les comptes de démonstration | non |
+
+`ADMIN_PASSWORD` est exigé : le mot de passe par défaut est écrit dans ce
+dépôt, qui est public. Sans lui, la construction échoue — c'est voulu.
+
+**4. Déployez.** La construction applique les migrations et crée le compte
+administrateur sur la base Turso. Les comptes de démonstration ne sont pas
+créés en ligne, sauf si vous posez `SEED_DEMO=1`.
+
+Si quelque chose manque, la construction s'arrête avec un message qui dit quoi
+faire, en français : c'est préférable à un site en ligne qui perd les commandes.
+
+**Ensuite.** Vérifiez la région d'exécution dans les réglages du projet
+(Frankfurt, `fra1`, est la plus proche de la Suisse) et branchez votre nom de
+domaine. Les pages `/offre/…`, `/compte/…` et `/admin/…` sont déjà marquées
+« ne pas indexer » et « ne pas mettre en cache » par `vercel.json` : un devis
+nominatif n'a rien à faire dans un moteur de recherche.
+
 ## À vérifier avant de vendre
 
 Rien de ce qui suit n'empêche le site de fonctionner, et tout doit être réglé avant la première offre envoyée à une vraie commune.
@@ -137,5 +188,5 @@ Rien de ce qui suit n'empêche le site de fonctionner, et tout doit être régl�
 6. **L'envoi des courriels.** Aujourd'hui, l'offre chiffrée ne part pas toute seule : l'administration copie le lien depuis `/admin/offres` et l'envoie à la main. C'est utilisable tel quel, et c'est la première chose à automatiser.
 7. **Le paiement par carte** : remplacer `chargeCard` dans `src/lib/payments.ts` par un prestataire (Stripe, Datatrans, Payrexx…) en conservant la signature. Les renouvellements devront alors passer par une tâche planifiée ou les webhooks du prestataire. Le chemin sur facture, lui, ne dépend d'aucun prestataire.
 8. **Licence** : la clé affichée dans l'espace client est dérivée de l'identifiant du compte (`src/app/compte/page.tsx`) ; la faire vérifier par l'application de bureau.
-9. **Hébergement** : définir `SITE_URL`, `DATABASE_URL` et un compte admin dédié dans les variables d'environnement. SQLite dans un fichier convient à quelques centaines de clients ; au-delà, passer à Turso ou Postgres.
+9. **Hébergement** : voir « Mettre en ligne sur Vercel » ci-dessus. La base Turso gratuite suffit largement à quelques centaines de clients.
 10. **Juridique** : faire relire les CGV et la politique de confidentialité.
