@@ -1924,7 +1924,7 @@
     $('rvSide').innerHTML =
       `<div class="f"><label>N° de pièce</label><input type="text" data-rv-field="no" value="${escapeHtml(e.no == null ? '' : e.no)}"></div>` +
       `<div class="f"><label>Date</label><input type="text" data-rv-field="date" value="${escapeHtml(P.isoToDisplay(e.date))}" placeholder="jj.mm.aaaa"></div>` +
-      `<div class="f"><label>Compte de contrepartie</label><input type="text" data-rv-field="compte" value="${escapeHtml(e.compte)}"></div>` +
+      `<div class="f"><label>Compte (où va la dépense, d'où vient l'argent)</label><input type="text" data-rv-field="compte" value="${escapeHtml(e.compte)}"></div>` +
       `<div class="f"><label>Libellé</label><input type="text" data-rv-field="libelle" value="${escapeHtml(e.libelle)}"></div>` +
       `<div class="f amount"><div><label>Débit (entrée)</label><input type="number" step="0.01" data-rv-field="debit" value="${fmtInput(e.debit)}"></div>` +
       `<div><label>Crédit (sortie)</label><input type="number" step="0.01" data-rv-field="credit" value="${fmtInput(e.credit)}"></div></div>` +

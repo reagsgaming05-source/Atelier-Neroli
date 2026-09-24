@@ -1,118 +1,158 @@
-COMPTA BLONAY — version portable Windows
-========================================
+COMPTA BLONAY — mode d'emploi de la version Windows
+===================================================
 
-Compta Blonay réunit en une seule application deux outils : « Caisse écoles » (pièces
-comptables et journal de caisse) et « Décompte DGEO » (courses d'école & camps).
+Compta Blonay réunit deux outils dans une seule fenêtre :
+  - Caisse écoles : les pièces comptables, le journal de caisse, le comptage de la caisse,
+    le fichier Excel de l'année ;
+  - Décompte DGEO : les décomptes des courses d'école et des camps.
+Rien ne passe par Internet : tout reste sur votre PC, ou sur le serveur de l'école.
 
-1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau, Documents…).
-2. Double-cliquez sur ComptaBlonay.exe : c'est le seul programme à ouvrir. Le logo en haut de
-   la barre latérale est un menu : « Caisse écoles » (Saisie des pièces, Pièces scannées,
-   Compter la caisse) ou « Décompte DGEO » (le logiciel de décompte complet, démarré avec
-   l'application dans le dossier decompte\ ; il n'y a rien d'autre à lancer, et l'espace
-   « Récapitulatif » y liste les décomptes de l'année : n°, montants, total, en PDF).
-3. Caisse écoles – Saisie des pièces : remplissez la fiche (n°, date, type, objet, classe,
-   personne, compte proposé, montant, justificatifs), « Enregistrer la pièce → journal ».
-   À la fin de l'année : « Générer le fichier Excel de l'année » et « PDF des pièces ».
-   Les registres sont conservés dans data\caisse\<année>\ à côté de l'exécutable.
-   Année commencée à l'ancienne (classeur Excel tenu à la main) : « Reprendre un classeur
-   Excel… » sous le journal verse ses écritures dans le registre (rien n'est compté deux fois,
-   la numérotation continue), puis les nouvelles pièces se saisissent dans la fiche.
-   Caisse écoles – Pièces scannées : glissez les PDF des pièces, vérifiez les lignes orange,
-   « Ajouter au registre de l'année » (les pièces scannées et les pièces saisies vont dans le
-   même registre) ; « Générer le fichier Excel » produit le classeur complet de l'année.
-   Caisse écoles – Compter la caisse : tapez le nombre de billets et de pièces de chaque valeur ;
-   l'application affiche le total, le dernier solde compté et le nouveau solde avec leurs dates,
-   et l'écart avec le solde du journal à cette date. « Enregistrer le comptage » le garde dans
-   l'historique de l'année.
-4. Décompte DGEO : déposez le dossier PDF de la course d'école ou du camp, validez, « Générer le
-   fichier Excel ». Le décompte terminé est alors proposé dans l'onglet Caisse écoles (badge
-   « 1 décompte à saisir », puis « Créer la pièce » au-dessus de la fiche) : la pièce DECOMPTE
-   arrive pré-remplie, vous vérifiez le montant, le sens et le compte, et vous enregistrez.
+  1. Sur un seul PC ............................. 3 étapes
+  2. Le tour de l'application
+  3. Plusieurs PC, une seule caisse sur le serveur
+  4. En cas de problème
 
-Aucune installation : tout est inclus dans le dossier (lecture des PDF, lectures croisées
-par OCR local et Tesseract natif — dossier tesseract/ —, génération du fichier Excel). Aucun navigateur n'est utilisé. Aucune donnée
-ne quitte votre poste. Les réglages mémorisés (compte caisse, vocabulaire appris, dernier
-solde) sont enregistrés dans le sous-dossier « data » à côté de l'exécutable.
 
-PLUSIEURS POSTES : UNE SEULE CAISSE, UNE SEULE MISE À JOUR
------------------------------------------------------------
-Ne lancez PAS ComptaBlonay.exe depuis le serveur : c'est lent (350 Mo relus par le réseau à
-chaque démarrage) et la sécurité du réseau le bloque souvent — un programme non signé qui en
-lance d'autres depuis un partage, c'est ce qu'elle arrête d'office.
+1. SUR UN SEUL PC
+-----------------
+  1. Décompressez le zip où vous voulez (Documents, Bureau, clé USB…).
+  2. Dans le dossier ComptaBlonay, double-cliquez sur « ComptaBlonay » (ComptaBlonay.exe).
+     C'est le seul fichier à ouvrir.
+     La première fois, Windows peut afficher « Windows a protégé votre ordinateur » : le
+     programme n'est pas signé. Cliquez sur « Informations complémentaires », puis sur
+     « Exécuter quand même ». Si l'antivirus bloque le fichier, ajoutez le dossier en exception.
+  3. C'est tout. Les registres sont gardés dans le sous-dossier « data », à côté de
+     ComptaBlonay.exe : ne déplacez jamais l'un sans l'autre.
 
-Le serveur sert à deux choses : GARDER les données (une seule caisse pour tous) et DISTRIBUER
-le programme (une seule copie à mettre à jour). Chaque PC fait tourner sa propre copie, qu'il
-rafraîchit tout seul depuis le serveur. Rien ne passe par Internet.
+  Le sous-dossier « Installation sur plusieurs PC » ne sert qu'avec un serveur (partie 3).
 
-    \\SERVEUR\Partage\ComptaBlonay\           le programme (vous le remplacez pour mettre à jour)
-    \\SERVEUR\Partage\ComptaBlonay-donnees\   les registres, les justificatifs, les scans
 
-Mise en place, une fois, dans cet ordre :
+2. LE TOUR DE L'APPLICATION
+---------------------------
+  Le logo, en haut de la barre latérale, passe de Caisse écoles à Décompte DGEO. Chaque espace
+  a aussi son raccourci clavier, listé dans le menu Espaces.
 
-  1. Les registres d'abord (si ce n'est pas déjà fait). Sur le PC qui tient la caisse
-     aujourd'hui, copiez le contenu de ce zip PAR-DESSUS le dossier ComptaBlonay que vous
-     utilisez (son dossier data, où sont les registres, n'est pas touché). Lancez-le, puis
-     « L'année » → « Où sont les données » → « Changer de dossier… » : tapez
-     \\SERVEUR\Partage dans la barre du haut, créez le dossier ComptaBlonay-donnees,
-     choisissez-le et acceptez « Emporter ». Les registres, justificatifs et scans partent
-     sur le serveur ; rien n'est retiré du PC.
-  2. Fermez Compta Blonay. Copiez le dossier ComptaBlonay de ce zip (le zip, pas le dossier
-     du PC) sur le serveur, À CÔTÉ du dossier des données :
-         \\SERVEUR\Partage\ComptaBlonay\
-         \\SERVEUR\Partage\ComptaBlonay-donnees\    (créé à l'étape 1)
-  3. Sur CHAQUE PC, celui de l'étape 1 compris : ouvrez
-         \\SERVEUR\Partage\ComptaBlonay\Installation sur plusieurs PC\
-     et double-cliquez sur « Installer sur ce PC ». Il copie le programme sur le PC (dans le
-     profil de la personne, sans droits d'administrateur), trouve le dossier des données et
-     le note pour tous les PC, puis pose sur le bureau un raccourci « Compta Blonay ». C'est ce
-     raccourci qu'on utilise ensuite, toujours. Chaque personne qui ouvre sa propre session
-     Windows sur le PC fait cette étape pour elle.
-     L'ancien dossier ComptaBlonay du PC de l'étape 1 peut être rangé une fois vérifié que
-     la caisse s'ouvre bien par le raccourci.
+  Caisse écoles
+    Saisie des pièces    Remplissez la fiche, puis « Enregistrer la pièce → journal ». La fiche
+                         à imprimer s'ouvre : imprimez-la et faites-la signer.
+    Pièces scannées      Les fiches PIÈCE COMPTABLE remplies à la main : déposez le PDF scanné,
+                         regardez les lignes orange d'abord, cochez « Vérifié ».
+    Boîte de réception   Les fiches imprimées ici et revenues signées, avec leur code QR.
+    Compter la caisse    Le nombre de billets et de pièces ; l'écart avec le journal s'affiche.
+                         « Enregistrer le comptage » le garde dans l'historique de l'année.
+    L'année              Une fois par an : nouvelle année, solde à nouveau, sauvegardes, où
+                         sont les données. Une année commencée dans un classeur Excel tenu à
+                         la main s'y reprend : « Reprendre un classeur Excel… ».
+    Données              Les listes que l'application propose : comptes, classes, noms,
+                         objets. Une nouvelle classe, une nouvelle collègue : c'est ici.
 
-  Si le dossier des données n'est pas à côté du programme, l'installateur le dit. Il faut
-  alors poser dans \\SERVEUR\Partage\ComptaBlonay\ un fichier donnees.txt (Bloc-notes) qui
-  contient une seule ligne : l'adresse du dossier des données.
+  Décompte DGEO
+    Déposez le PDF du dossier (course d'école ou camp), vérifiez, puis « Créer le fichier
+    Excel du décompte ». Un décompte commencé reste gardé sur le PC et se reprend plus tard.
+    Le décompte terminé est proposé dans Saisie des pièces : « Créer la pièce » remplit la fiche
+    DECOMPTE ; vérifiez le montant et enregistrez. « Récapitulatif » : les décomptes de l'année,
+    en PDF.
 
-Mettre à jour, à chaque nouvelle version :
+  Quel papier va où ?
+    Ticket, facture, photo              → Saisie des pièces : joint à la fiche de sa pièce
+    Fiche remplie à la main (sans QR)   → Pièces scannées : lue et ajoutée au journal
+    Fiche imprimée ici, revenue signée  → Boîte de réception : jointe à sa pièce
 
-  Téléchargez le nouveau zip, et copiez le contenu de son dossier ComptaBlonay PAR-DESSUS
-  celui du serveur, en remplaçant les fichiers. C'est tout : chaque PC se met à jour à son
-  prochain lancement par le raccourci (quelques secondes, puis plus rien tant que la version
-  ne change pas). Votre donnees.txt et votre vocabulaire-noms.js restent en place — ils ne
-  sont pas dans le zip.
+  Du copieur au journal : imprimez la fiche, faites-la signer, posez chaque fiche au-dessus de
+  ses tickets et scannez toute la pile au copieur. Dans la Boîte de réception, « Joindre les
+  N pièces reconnues » range chaque scan avec sa pièce.
 
-  Un PC où l'application est ouverte ne se met pas à jour tout de suite : ses fichiers sont
-  verrouillés, et une copie par-dessus mélangerait deux versions. Il le fera au lancement
-  suivant. Serveur éteint : le PC démarre simplement avec la version qu'il a déjà.
+  Fin d'année, sous le journal : « Fichier Excel de l'année » et « PDF des pièces ».
 
-  Au lancement, une petite fenêtre noire dit ce qui se passe (« Recherche d'une nouvelle
-  version… », puis « Mise à jour… » quand il y en a une) : ne la fermez pas pendant une mise
-  à jour. Fermée quand même, la copie reprend au lancement suivant.
+  Noms de personnes : cette version n'en contient aucun (le dépôt est public). Pour que
+  l'application reconnaisse les noms des enseignant-e-s, posez le fichier vocabulaire-noms.js
+  (remis séparément) à côté de ComptaBlonay.exe. Avec un serveur, posez-le une seule fois dans
+  le dossier du programme sur le serveur : tous les PC le reçoivent.
 
-  Le menu Aide → À propos indique la construction qui tourne sur le poste.
 
-  Le donnees.txt du serveur fait foi : il est recopié sur chaque PC à chaque lancement. Pour
-  envoyer tout le monde vers un autre dossier de données, c'est lui qu'on change.
+3. PLUSIEURS PC, UNE SEULE CAISSE SUR LE SERVEUR
+------------------------------------------------
+  Le programme tourne sur chaque PC. Le serveur garde les données (une seule caisse pour
+  tout le monde) et distribue le programme (une seule copie à mettre à jour).
 
-Le copieur dépose dans \\SERVEUR\Partage\ComptaBlonay-donnees\Scans — l'adresse est
-affichée dans la Boîte de réception. Deux collègues peuvent travailler en même temps : ce que
-l'un enregistre est repris par l'autre, rien ne s'écrase. Si les deux prennent « le numéro
-suivant » au même moment, les deux pièces sont gardées et le doublon est signalé.
+  Il vous faut d'abord l'adresse du partage, celle qui commence par \\ . Dans l'Explorateur,
+  sous « Ce PC », un lecteur réseau affiché « commun (\\ecole-srv) (S:) » a l'adresse
+  \\ecole-srv\commun. Sinon, demandez-la au responsable informatique. Ci-dessous,
+  \\SERVEUR\Partage est un exemple : remplacez-le par votre adresse. N'utilisez pas la lettre
+  du lecteur (S:) : elle change d'un PC à l'autre, et le copieur ne la connaît pas.
 
-Si le dossier des données ne répond pas au démarrage, l'application le dit et attend :
-Réessayer, Quitter, ou Revenir aux données de ce PC. Elle ne s'ouvre jamais en douce sur une
-copie à part — cela ferait deux caisses qui ne se rejoindraient plus.
+  Une seule fois, dans cet ordre :
 
-Restent sur chaque PC : le journal (data\caisse.log), les réglages de la fenêtre, et les
-dossiers de Décompte DGEO.
+  [ ] 1. Les registres sur le serveur. Sur le PC qui tient la caisse aujourd'hui, ouvrez
+         cette version de Compta Blonay, puis L'année → « Mettre les données sur le
+         serveur… ». Dans la fenêtre, tapez \\SERVEUR\Partage dans la barre d'adresse du haut,
+         créez un dossier ComptaBlonay-donnees, choisissez-le, puis « Emporter ». Les
+         registres, justificatifs et scans y sont copiés ; rien n'est retiré du PC.
 
-Noms de personnes : cette version ne contient aucun nom (le dépôt est public). Pour que
-l'application corrige les noms des enseignant-e-s, posez le fichier vocabulaire-noms.js
-(remis séparément) à côté de ComptaBlonay.exe — ou une seule fois dans le dossier du
-programme sur le serveur, pour que tous les postes le reçoivent ; il est lu au démarrage.
-Sinon les noms s'apprennent en chargeant un classeur existant.
+  [ ] 2. Le programme sur le serveur. Fermez Compta Blonay. Copiez le dossier ComptaBlonay
+         du zip sur le serveur, À CÔTÉ du dossier des données :
+             \\SERVEUR\Partage\ComptaBlonay\
+             \\SERVEUR\Partage\ComptaBlonay-donnees\
 
-Premier lancement : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
-(l'exécutable n'est pas signé). Cliquez sur « Informations complémentaires » puis
-« Exécuter quand même ». Si l'antivirus bloque le fichier, ajoutez le dossier en exception.
+  [ ] 3. Chaque PC, celui de l'étape 1 compris. Ouvrez
+             \\SERVEUR\Partage\ComptaBlonay\Installation sur plusieurs PC\
+         et double-cliquez sur « Installer sur ce PC ». Une fenêtre noire copie le programme
+         sur le PC (quelques minutes la première fois), trouve toute seule le dossier des
+         données, puis affiche « Installation terminée ». Un raccourci « Compta Blonay » est
+         posé sur le bureau : c'est lui qu'on ouvre désormais, toujours.
+         Chaque personne qui a sa propre session Windows sur ce PC refait cette étape.
+         Sur le PC de l'étape 1, l'ancien dossier ComptaBlonay peut être rangé une fois
+         vérifié que la caisse s'ouvre bien par le raccourci.
+
+  Mettre à jour, à chaque nouvelle version : copiez le contenu du dossier ComptaBlonay du
+  nouveau zip PAR-DESSUS \\SERVEUR\Partage\ComptaBlonay\, en remplaçant les fichiers. Chaque
+  PC se met à jour tout seul à son prochain lancement par le raccourci. Le menu Aide
+  → « À propos » dit quelle version tourne sur le PC.
+
+  Deux collègues peuvent travailler en même temps : ce que l'une enregistre est repris par
+  l'autre, rien ne s'écrase. Le numéro de pièce est revérifié juste avant l'enregistrement :
+  s'il vient d'être pris sur un autre PC, la fiche prend le suivant et le dit.
+
+  Le copieur dépose ses scans dans \\SERVEUR\Partage\ComptaBlonay-donnees\Scans : l'adresse
+  exacte est affichée dans la Boîte de réception.
+
+  donnees.txt : si le dossier des données n'est pas à côté du programme sur le serveur,
+  « Installer sur ce PC » ne le trouve pas et vous prévient. Posez alors dans
+  \\SERVEUR\Partage\ComptaBlonay\ un fichier donnees.txt (Bloc-notes) qui contient une seule
+  ligne : l'adresse du dossier des données, par exemple \\SERVEUR\Partage\ComptaBlonay-donnees.
+  Puis relancez « Installer sur ce PC ». Ce fichier vaut pour tous les PC : pour les envoyer
+  tous vers un autre dossier de données, c'est lui qu'on change.
+
+
+4. EN CAS DE PROBLÈME
+---------------------
+  « Windows a protégé votre ordinateur »
+      → « Informations complémentaires », puis « Exécuter quand même ».
+
+  « Installer sur ce PC » dit « Ce dossier est sur ce PC, pas sur le serveur »
+      → Vous n'avez qu'un PC : fermez la fenêtre et ouvrez ComptaBlonay.exe (partie 1).
+
+  « Installer sur ce PC » dit « Ce PC aurait sa PROPRE caisse »
+      → Le dossier des données n'a pas été trouvé : répondez N, puis voyez « donnees.txt »
+        à la fin de la partie 3.
+
+  « Compta Blonay est ouvert sur ce PC »
+      → Fermez Compta Blonay, puis continuez.
+
+  Au lancement, la fenêtre noire dit « Le serveur ne répond pas »
+      → Le PC démarre avec la version qu'il a déjà. Si les données sont sur le serveur,
+        l'application vous le dit à son tour et attend que le serveur réponde.
+
+  La fenêtre noire affiche « Mise à jour… » ou « Copie du programme sur ce PC… »
+      → Attendez, sans la fermer. Fermée quand même, la copie reprend au lancement suivant.
+
+  Un PC où Compta Blonay est ouvert ne se met pas à jour tout de suite : il le fera à son
+  lancement suivant.
+
+  L'application affiche « Le dossier des données est injoignable »
+      → Le serveur est éteint ou le réseau coupé. Elle ne s'ouvre jamais en douce sur une
+        copie à part : cela ferait deux caisses qui ne se rejoindraient plus. Rallumez le
+        serveur ou rebranchez le réseau, puis « Réessayer ».
+
+  Restent sur chaque PC, pas sur le serveur : le journal technique (data\caisse.log), les
+  réglages de la fenêtre et les décomptes DGEO commencés.

@@ -1224,7 +1224,7 @@
         }
       }
     } else {
-      doubt('compte', 'Compte de contrepartie non reconnu');
+      doubt('compte', 'Compte non reconnu : vérifiez-le sur la pièce');
     }
 
     // Contrôle croisé du sens pour les types sans logique fixe (DECOMPTE…) : habitudes du
