@@ -661,6 +661,23 @@ function verifierCopie() {
     await pause(350);
     const remis = (await ouvrir('pCompte')).some((t) => t.includes(cible));
 
+    // 5. décrire ce compte (intégré) par « Modifier » : la description s'affiche dans la fiche
+    const mod = document.querySelector(`[data-carte="comptes"] [data-modifier][data-valeur="${cible}"]`);
+    if (mod) mod.click();
+    await pause(100);
+    if (document.getElementById('d-edit')) {
+      document.getElementById('d-edit').value = 'Camps (essai)';
+      document.querySelector('[data-edit-ok]').click();
+    }
+    await pause(350);
+    const decrit = (await ouvrir('pCompte')).some((t) => t.includes(cible) && t.includes('Camps (essai)'));
+
+    // 6. « Annuler » défait ce dernier changement
+    const annuler = document.querySelector('[data-carte="comptes"] [data-annuler]');
+    if (annuler) annuler.click();
+    await pause(350);
+    const annule = !!annuler && !K.noteDe(K.actuel(), 'comptes', cible);
+
     // on laisse le PC comme on l'a trouvé
     K.poser(K.parse(avant));
     try { await window.CaisseFiles.saveCarnet(avant); } catch (e) { /* ignore */ }
@@ -669,7 +686,7 @@ function verifierCopie() {
     A.showPanel('panelSaisie');
     await pause(150);
     const nettoye = !(await ouvrir('pClasse')).some((t) => t.includes('12VG/2'));
-    return { cartes, ajoutee, classeProposee, cible, avantRetrait, apresRetrait, garde, remis, nettoye };
+    return { cartes, ajoutee, classeProposee, cible, avantRetrait, apresRetrait, garde, remis, decrit, annule, nettoye };
   });
   // Boîte de réception : la chaîne entière du copieur. On imprime trois fiches marquées, on en
   // fait une pile (c'est ce que produit le copieur quand on lui passe le tas signé), on la dépose
@@ -1020,7 +1037,7 @@ function verifierCopie() {
   console.log('espace données :', JSON.stringify(donnees));
   ok = ok && donnees.cartes.length === 5 && donnees.ajoutee && donnees.classeProposee
     && donnees.cible && donnees.avantRetrait && !donnees.apresRetrait && donnees.garde
-    && donnees.remis && donnees.nettoye;
+    && donnees.remis && donnees.decrit && donnees.annule && donnees.nettoye;
 
   // nouvelle année par le petit formulaire en ligne (window.prompt n'existe pas dans Electron)
   const ny = await win.evaluate(async () => {
