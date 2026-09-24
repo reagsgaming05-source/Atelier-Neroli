@@ -574,13 +574,12 @@
       const texte = note
         ? `Description de <b>${escapeHtml(valeur)}</b> enregistrée : « ${escapeHtml(C.noteDe(res.carnet, genre, valeur))} ». Elle s'affiche à côté du numéro, ici et dans le champ Compte de la fiche.`
         : `Description de <b>${escapeHtml(valeur)}</b> effacée : c'est de nouveau l'usage habituel du compte qui s'affiche.`;
-      appliquer(res.carnet, genre, 'ok', texte, { marquer: valeur, defaire: `Changement annulé : la description de ${escapeHtml(valeur)} est revenue comme avant.`, marquerAvant: valeur });
-      return;
+      return appliquer(res.carnet, genre, 'ok', texte, { marquer: valeur, defaire: `Changement annulé : la description de ${escapeHtml(valeur)} est revenue comme avant.`, marquerAvant: valeur });
     }
     const sens = champ.value || null;
     if (sens === C.sensDeType(avant, valeur)) { rendreListe(l); return; }
     const res = C.preciser(avant, genre, valeur, { sens });
-    appliquer(res.carnet, genre, 'ok', `<b>${escapeHtml(valeur)}</b> : ${sens ? `${SENS_MOT[sens]}, sur chaque pièce de ce type` : 'le sens se choisira sur chaque pièce'}.`,
+    return appliquer(res.carnet, genre, 'ok', `<b>${escapeHtml(valeur)}</b> : ${sens ? `${SENS_MOT[sens]}, sur chaque pièce de ce type` : 'le sens se choisira sur chaque pièce'}.`,
       { marquer: valeur, defaire: `Changement annulé : le sens de ${escapeHtml(valeur)} est revenu comme avant.`, marquerAvant: valeur });
   }
 
@@ -589,6 +588,17 @@
     const l = listeDe(edition.genre);
     edition = null;
     if (l) rendreListe(l);
+  }
+
+  /**
+   * Au clavier, Entrée ou Échap referment la ligne en cours de modification : la main revient à
+   * son bouton « Modifier ». Sans cela, le champ disparu l'emportait avec lui, et la touche Tab
+   * suivante repartait du haut de la page.
+   */
+  function rendreLaMain(ligne) {
+    if (!ligne) return;
+    const b = Array.from(hote.querySelectorAll('[data-modifier]')).find((x) => x.dataset.modifier === ligne.genre && x.dataset.valeur === ligne.valeur);
+    if (b) b.focus();
   }
 
   /* ---------------- Le sens d'un type que le mot fixe déjà ---------------- */
@@ -670,8 +680,9 @@
   });
   hote.addEventListener('keydown', (ev) => {
     if (ev.target.closest('#d-edit')) {
-      if (ev.key === 'Enter') { ev.preventDefault(); enregistrerEdition(); }
-      else if (ev.key === 'Escape') { ev.preventDefault(); abandonnerEdition(); }
+      const ligne = edition;
+      if (ev.key === 'Enter') { ev.preventDefault(); Promise.resolve(enregistrerEdition()).then(() => rendreLaMain(ligne)); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); abandonnerEdition(); rendreLaMain(ligne); }
       return;
     }
     if (ev.key !== 'Enter') return;

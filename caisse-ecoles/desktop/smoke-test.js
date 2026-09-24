@@ -1337,6 +1337,165 @@ function verifierCopie() {
     if (!echec.dit) throw new Error('un échec d\'enregistrement ne s\'affiche pas');
   }
 
+  // Contrôle final, après la fusion des équipes : l'application telle qu'on la voit sur un
+  // portable (1366 × 768, fenêtre agrandie). Rien ne défile en largeur : ni la Saisie des pièces
+  // (un libellé long au journal poussait toute la page, barre latérale comprise), ni le tableau
+  // de vérification des pièces scannées, qui doit tenir à côté de l'image de la pièce. Le bouton
+  // Enregistrer reste au-dessus des messages. Et le clavier seul va au bout : Tab dans la fiche,
+  // Entrée et Échap dans les listes, Ctrl+Entrée pour enregistrer.
+  {
+    const tailleAvant = await app.evaluate(({ BrowserWindow }) => {
+      const w = BrowserWindow.getAllWindows().find((x) => /shell\.html/.test(x.webContents.getURL()));
+      const avant = w.getContentSize();
+      if (w.isMaximized()) w.unmaximize();
+      w.setContentSize(1366, 671); // 768 - barre des tâches - barre de titre ; la barre du haut (46 px) prend sa part
+      return avant;
+    });
+    await win.waitForTimeout(600);
+    let largeur = await win.evaluate(() => window.innerWidth);
+    const emulee = largeur !== 1366; // écran virtuel plus petit que la fenêtre voulue : on impose la taille à la page
+    if (emulee) { await win.setViewportSize({ width: 1366, height: 625 }); largeur = await win.evaluate(() => window.innerWidth); }
+
+    const saisie = await win.evaluate(async () => {
+      const R = window.CaisseRegistre; const S = window.CaisseSaisie; const reg = S.state.reg;
+      window.CaisseApp.showPanel('panelSaisie');
+      const p = R.newPiece(reg);
+      Object.assign(p, { no: 4242, date: `${reg.annee}-06-12`, type: 'REMBOURSEMENT', personne: 'Ch. Dupraz', compte: '51000.3662.00', montant: 64.2, sens: 'credit',
+        detail: "sortie de fin d'année au musée d'histoire naturelle puis pique-nique au bord du lac avec les deux classes, transport en car et goûter compris" });
+      p.libelle = R.composeLibelle(p); R.upsertPiece(reg, p);
+      await S.saveReg(); S.renderJournal();
+      window.scrollTo(0, 0);
+      await new Promise((r) => setTimeout(r, 300));
+      const d = document.documentElement;
+      const wrap = document.querySelector('#journalCard .table-wrap');
+      const r = { page: d.scrollWidth - d.clientWidth, journal: wrap.scrollWidth - wrap.clientWidth };
+      // un message en bas : la barre du bouton Enregistrer se pose au-dessus
+      const m = window.CaisseAvis.afficher('ok', 'Pièce n° 4242 enregistrée : essai du contrôle final.');
+      await new Promise((res) => setTimeout(res, 400));
+      const barre = document.getElementById('ficheActions').getBoundingClientRect();
+      const zone = document.getElementById('zoneAvis').getBoundingClientRect();
+      r.barreVisible = barre.top >= 0 && barre.bottom <= window.innerHeight;
+      r.barreAuDessus = barre.bottom <= zone.top + 1;
+      window.CaisseAvis.fermer(m);
+      R.removePiece(reg, p.id); await S.saveReg(); S.renderJournal();
+      return r;
+    });
+
+    // Pièces scannées : trois fiches remplies à la main, dans un PDF lu comme celui du copieur
+    const ouiAuxBoites = () => app.evaluate(({ dialog }) => { global.boiteAvant = dialog.showMessageBox; dialog.showMessageBox = async () => ({ response: 0 }); });
+    const boitesRendues = () => app.evaluate(({ dialog }) => { dialog.showMessageBox = global.boiteAvant; });
+    const ocrAvant = await win.evaluate(() => document.getElementById('optOcr').checked);
+    await win.evaluate(async (an) => {
+      window.CaisseApp.showPanel('panelScan');
+      const ocr = document.getElementById('optOcr'); ocr.checked = false; ocr.dispatchEvent(new Event('change', { bubbles: true }));
+      const { PDFDocument, StandardFonts } = window.PDFLib;
+      const doc = await PDFDocument.create();
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const fiche = (no, doit, somme, avoir, libelle, date) => {
+        const w = (str, x, y) => ({ str, x, y });
+        const mots = [w('PIECE', 79, 82), w('COMPTABLE', 114, 82), w(no, 349, 79), w('DOIT', 79, 114), w('SOMME', 338, 112), w('AVOIR', 410, 112), w('Libellé', 342, 220), w('Total', 78, 390)];
+        doit.split(' ').forEach((t, i) => mots.push(w(t, 155 + i * 31, 142)));
+        somme.split(' ').forEach((t, i) => mots.push(w(t, 332 + i * 24, 142)));
+        avoir.split(' ').forEach((t, i) => mots.push(w(t, 454 + i * 28, 142)));
+        somme.split(' ').forEach((t, i) => mots.push(w(t, 332 + i * 24, 388)));
+        libelle.forEach((l, li) => l.split(' ').forEach((t, i) => mots.push(w(t, 78 + i * 40, 261 + li * 14))));
+        date.split(' ').forEach((t, i) => mots.push(w(t, 56 + i * 14, 425)));
+        const page = doc.addPage([595, 842]);
+        for (const m of mots) page.drawText(m.str, { x: m.x, y: 842 - m.y, size: 10, font });
+      };
+      fiche('4301', '51000.3185.00', 'CHF 12.00', '9100.104', ['REMBOURSEMENT piles', 'T. Morel'], `02.03.${an}`);
+      fiche('4302', '9100.104', 'CHF 300.00', '51000.4392.20', ['PARTICIPATION DES PARENTS', 'L. Duvernay'], `04.03.${an}`);
+      fiche('4303', '52000.3662.00', 'CHF 1200.00', '9100.104', ['AVANCE camp de Leysin', 'A. Berger'], `16.03.${an}`);
+      await window.CaisseApp.addPdfFiles([new File([await doc.save()], 'Pce 4301 à 4303.pdf', { type: 'application/pdf' })]);
+    }, avantTout.annee);
+    await win.waitForFunction(() => window.CaisseApp.state.entries.filter((e) => !e.manual).length >= 3, null, { timeout: 60000 });
+    await win.evaluate(() => { const c = document.querySelector('#entriesBody tr.entry td.page'); if (c) c.click(); });
+    await win.waitForTimeout(1200);
+    const scans = await win.evaluate(() => {
+      const t = document.getElementById('entriesTable'); const wrap = t.closest('.table-wrap'); const w = wrap.getBoundingClientRect();
+      const verifie = Array.from(t.querySelectorAll('thead th')).find((th) => /vérifié/i.test(th.textContent)).getBoundingClientRect();
+      const apercu = document.getElementById('preview').getBoundingClientRect();
+      const image = document.querySelector('#previewFrame canvas');
+      // resserré, mais lisible : dates, comptes et montants se lisent en entier (le libellé, champ libre, peut se couper)
+      const coupes = Array.from(t.querySelectorAll('tbody input')).filter((i) => ['no', 'date', 'compte', 'debit', 'credit'].includes(i.dataset.field) && i.value && i.scrollWidth > i.clientWidth + 1).map((i) => `${i.dataset.field} ${i.value}`);
+      return { tableau: wrap.scrollWidth - wrap.clientWidth, coupes, verifieDansLaVue: verifie.right <= w.right + 1, apercu: Math.round(apercu.width), aCote: apercu.left >= w.right,
+        image: image ? image.getBoundingClientRect().width : 0, page: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+    });
+    await ouiAuxBoites();
+    await win.click('#btnClearFiles');
+    await win.waitForFunction(() => !window.CaisseApp.state.docs.length, null, { timeout: 10000 }).catch(() => {});
+    await boitesRendues();
+    await win.evaluate((v) => { const ocr = document.getElementById('optOcr'); ocr.checked = v; ocr.dispatchEvent(new Event('change', { bubbles: true })); window.CaisseApp.showPanel('panelSaisie'); }, ocrAvant);
+
+    // Le clavier seul : de N° à « Enregistrer » par Tab, sans passer par un champ caché ni
+    // sortir de la fiche ; Échap ferme une liste sans rien changer, Entrée y choisit.
+    const clavier = {};
+    await win.evaluate(() => { const b = document.getElementById('optPdfAuto'); window.pdfAutoAvant = b.checked; b.checked = false; b.dispatchEvent(new Event('change', { bubbles: true })); });
+    await win.click('#btnPieceNew');
+    await win.focus('#pNo');
+    const parcours = [];
+    for (let i = 0; i < 30; i++) {
+      await win.keyboard.press('Tab');
+      const a = await win.evaluate(() => { const e = document.activeElement; return { id: e.id || (e.closest('[id]') || {}).id || e.tagName, visible: e.offsetParent !== null, fiche: !!e.closest('#ficheCard') }; });
+      parcours.push(a);
+      if (a.id === 'btnPieceSave') break;
+    }
+    clavier.jusquA = parcours.length && parcours[parcours.length - 1].id === 'btnPieceSave';
+    clavier.tabs = parcours.length;
+    clavier.horsFicheOuCache = parcours.filter((a) => !a.visible || !a.fiche).map((a) => a.id);
+    await win.focus('#pTypeListe');
+    const typeAvant = await win.evaluate(() => document.getElementById('pType').value);
+    await win.keyboard.press('ArrowDown');
+    await win.keyboard.press('Escape');
+    clavier.echapListe = await win.evaluate((v) => document.getElementById('pType').value === v && document.activeElement.id === 'pTypeListe', typeAvant);
+    await win.keyboard.press('ArrowDown');
+    await win.keyboard.press('ArrowDown');
+    await win.keyboard.press('Enter');
+    clavier.entreeListe = await win.evaluate((v) => document.getElementById('pType').value !== v, typeAvant);
+    await win.evaluate(() => { const t = document.getElementById('pType'); t.value = 'FRAIS'; t.dispatchEvent(new Event('change', { bubbles: true })); });
+    // une pièce entière au clavier, enregistrée par Ctrl+Entrée
+    const n0 = await win.evaluate(() => window.CaisseSaisie.state.reg.pieces.length);
+    await win.fill('#pNo', '4250');
+    await win.focus('#pPersonne'); await win.keyboard.type('S. Monod');
+    await win.focus('#pMontant'); await win.keyboard.type('7.80');
+    await win.focus('#pCompte'); await win.keyboard.type('51000.3185.00'); await win.keyboard.press('Escape');
+    await win.focus('#pDetail'); await win.keyboard.type('colle et ciseaux');
+    await win.keyboard.press('Control+Enter');
+    await win.waitForTimeout(1200);
+    clavier.ctrlEntree = await win.evaluate((n) => ({ nouvelles: window.CaisseSaisie.state.reg.pieces.length - n, erreurs: document.getElementById('ficheErrors').innerText.slice(0, 160), focus: document.activeElement.id }), n0);
+    await win.evaluate(async () => {
+      const S = window.CaisseSaisie; const p = S.state.reg.pieces.find((x) => x.no === 4250);
+      if (p) { window.CaisseRegistre.removePiece(S.state.reg, p.id); await S.saveReg(); S.renderJournal(); }
+      const b = document.getElementById('optPdfAuto'); b.checked = window.pdfAutoAvant; b.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    // Listes : Échap abandonne la modification d'une ligne, et la main revient à son bouton
+    await win.evaluate(() => window.CaisseApp.showPanel('panelDonnees'));
+    await win.waitForTimeout(300);
+    const modif = await win.evaluate(() => {
+      const carte = Array.from(document.querySelectorAll('#donneesCartes details')).find((d) => d.querySelector('[data-modifier]'));
+      if (!carte) return null;
+      carte.open = true;
+      const b = carte.querySelector('[data-modifier]');
+      b.click();
+      return { genre: b.dataset.modifier, valeur: b.dataset.valeur, champ: document.activeElement && document.activeElement.id };
+    });
+    if (modif) {
+      await win.keyboard.press('Escape');
+      await win.waitForTimeout(200);
+      clavier.listesEchap = await win.evaluate((m) => { const a = document.activeElement; return !document.getElementById('d-edit') && !!a && a.dataset.modifier === m.genre && a.dataset.valeur === m.valeur; }, modif);
+    } else clavier.listesEchap = 'pas de ligne à modifier';
+    await win.evaluate(() => window.CaisseApp.showPanel('panelSaisie'));
+
+    await app.evaluate(({ BrowserWindow }, t) => { const w = BrowserWindow.getAllWindows().find((x) => /shell\.html/.test(x.webContents.getURL())); w.setContentSize(t[0], t[1]); }, tailleAvant);
+    console.log('contrôle final (1366 px) :', JSON.stringify({ largeur, emulee, saisie, scans, clavier: Object.assign({}, clavier, { parcours: undefined }) }));
+    const controle = largeur === 1366 && saisie.page <= 0 && saisie.journal <= 0 && saisie.barreVisible && saisie.barreAuDessus
+      && scans.tableau <= 0 && scans.verifieDansLaVue && scans.aCote && scans.apercu >= 280 && scans.image >= 250 && scans.page <= 0 && !scans.coupes.length
+      && clavier.jusquA && clavier.horsFicheOuCache.length === 0 && clavier.echapListe && clavier.entreeListe
+      && clavier.ctrlEntree.nouvelles === 1 && clavier.listesEchap === true;
+    if (!controle) console.log('CONTRÔLE FINAL EN ÉCHEC');
+    ok = ok && controle;
+  }
+
   // On retire les pièces que CET essai a créées, et rien d'autre : le prochain repart du même
   // registre que celui-ci. Sans ça, le test n'est juste qu'une fois par poste.
   const menage = await win.evaluate(async (avant) => {
