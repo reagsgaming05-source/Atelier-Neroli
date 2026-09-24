@@ -1092,13 +1092,37 @@ function verifierCopie() {
     const s = window.CaisseSaisie.state; const c = s.reg.comptages[s.reg.comptages.length - 1];
     const stored = window.CaisseFiles ? JSON.parse(await window.CaisseFiles.load(s.reg.annee)) : null;
     const kpis = Array.from(document.querySelectorAll('#cKpis .t .v')).map((e) => e.textContent);
-    return { total: c.total, billets: c.billets, pieces: c.pieces, kpis, rows: document.querySelectorAll('#countBody tr[data-id]').length, storedCounts: stored ? stored.comptages.length : null, book: window.CaisseRegistre.balanceAt(s.reg, c.date) };
+    return { total: c.total, billets: c.billets, pieces: c.pieces, kpis, rows: document.querySelectorAll('#countBody tr[data-id]').length, storedCounts: stored ? stored.comptages.length : null, book: window.CaisseRegistre.balanceAt(s.reg, c.date),
+      surligne: !!document.querySelector(`#countBody tr.selected[data-id="${c.id}"]`) };
   });
   console.log('comptage :', totalTxt, JSON.stringify(count));
-  // après l'enregistrement, le comptage reste affiché : la tuile « Solde compté » (2e) montre son total
-  ok = ok && totalTxt === '341.55' && count.total === 341.55 && count.billets === 340 && count.pieces === 1.55 && count.rows >= 1 && count.kpis.length === 5 && count.kpis[1] === '341.55'
-    && (count.storedCounts === null || count.storedCounts === count.rows);
-  await win.evaluate(async () => { const s = window.CaisseSaisie.state; window.CaisseRegistre.removeCount(s.reg, s.reg.comptages[s.reg.comptages.length - 1].id); await s.storage.save(s.reg); window.CaisseComptage.render(); window.CaisseApp.showPanel('panelSaisie'); });
+  // Après l'enregistrement, le formulaire repart d'un comptage neuf : le comptage enregistré devient
+  // le « dernier solde compté » (1re tuile) et reste surligné dans l'historique.
+  ok = ok && totalTxt === '341.55' && count.total === 341.55 && count.billets === 340 && count.pieces === 1.55 && count.rows >= 1 && count.kpis.length === 5 && count.kpis[0] === '341.55'
+    && count.surligne && (count.storedCounts === null || count.storedCounts === count.rows);
+  // Un second comptage s'ajoute au lieu de remplacer le premier ; un enregistrement impossible le
+  // dit dans le comptage même, et ne l'inscrit pas à l'historique.
+  const second = await win.evaluate(async () => {
+    const s = window.CaisseSaisie.state; const n0 = s.reg.comptages.length;
+    const compter = async () => {
+      const inp = document.querySelector('#cRows input[data-denom="10"]'); inp.value = '4'; inp.dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('btnCountSave').click();
+      for (let i = 0; i < 50 && document.getElementById('cTotal').textContent !== '0.00' && !document.querySelector('#countErrors .notice'); i++) await new Promise((r) => setTimeout(r, 100));
+    };
+    await compter();
+    const garde = s.reg.comptages.length === n0 + 1;
+    const vrai = s.storage.save;
+    s.storage.save = async () => { throw new Error('serveur injoignable (essai)'); };
+    try { await compter(); } finally { s.storage.save = vrai; }
+    const dit = /pas enregistré/.test(document.getElementById('countErrors').textContent) && /injoignable/.test(document.getElementById('countErrors').textContent);
+    const resteAffiche = document.getElementById('cTotal').textContent === '40.00';
+    // les messages de cet essai s'en vont : le bloc « enregistrement impossible » plus bas doit trouver les siens
+    for (const n of document.querySelectorAll('.notice.err')) if (/injoignable \(essai\)/.test(n.textContent)) n.remove();
+    return { garde, dit, pasInscrit: s.reg.comptages.length === n0 + 1, resteAffiche };
+  });
+  console.log('deux comptages, puis un échec :', JSON.stringify(second));
+  ok = ok && second.garde && second.dit && second.pasInscrit && second.resteAffiche;
+  await win.evaluate(async () => { const s = window.CaisseSaisie.state; for (let i = 0; i < 2; i++) window.CaisseRegistre.removeCount(s.reg, s.reg.comptages[s.reg.comptages.length - 1].id); await s.storage.save(s.reg); window.CaisseComptage.newCount(); window.CaisseComptage.render(); window.CaisseApp.showPanel('panelSaisie'); });
   // nettoyage : la pièce de test est retirée du registre
   await win.evaluate(async () => { const s = window.CaisseSaisie.state; window.CaisseRegistre.removePiece(s.reg, s.reg.pieces[s.reg.pieces.length - 1].id); await s.storage.save(s.reg); window.CaisseSaisie.renderJournal(); });
 

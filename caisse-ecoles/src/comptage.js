@@ -11,24 +11,35 @@
   const R = window.CaisseRegistre;
   const S = window.CaisseSaisie;
   const F = window.CaissePdf; // relevé de caisse en PDF
+  const AN = window.CaisseAnnee; // date proposée, écart à montrer (annee.js)
   const $ = (id) => document.getElementById(id);
   const els = {};
-  for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cPistes', 'cTitle', 'btnReleve', 'countErrors', 'btnCountSave', 'btnCountLoadPrev', 'btnCountNew', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
+  for (const id of ['cDate', 'cNote', 'cRows', 'cTotBillets', 'cTotPieces', 'cTotal', 'cKpis', 'cPistes', 'cTitle', 'btnReleve', 'countErrors', 'btnCountSave', 'btnCountSaveTexte', 'btnCountLoadPrev', 'btnCountNew', 'btnCountNewTexte', 'countBody', 'countYear', 'countNotices']) els[id] = $(id);
   if (!els.cRows || !S) return;
 
-  const state = { editingId: null, shownYear: null, prevYear: { annee: null, last: null } };
+  // editingId : comptage rouvert avec le crayon pour le corriger (sa date d'origine : dateOuverte) ;
+  // dernierEnregistre : le comptage qu'on vient d'enregistrer, surligné dans l'historique.
+  const state = { editingId: null, dateOuverte: null, dernierEnregistre: null, shownYear: null, prevYear: { annee: null, last: null } };
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = Math.abs(v).toFixed(2).split('.'); return `${v < 0 ? '− ' : ''}${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
   const signed = (n) => (Math.abs(n) < 0.005 ? '0.00' : `${n > 0 ? '+ ' : '− '}${fmtCHF(Math.abs(n))}`);
   const fmtDate = (iso) => P.isoToDisplay(iso);
   const denomLabel = (d) => (d >= 1 ? `${d} CHF` : `${Math.round(d * 100)} ct.`);
   const ico = (id) => `<svg class="ico"><use href="#i-${id}"/></svg>`;
-  function notice(kind, html) {
+  /**
+   * Message sous les boutons du comptage. opts.keep : il reste (il porte un résultat ou un bouton) ;
+   * opts.cle : il remplace le précédent de même clé — deux « Comptage enregistré » empilés ne
+   * disaient plus lequel était à l'écran.
+   */
+  function notice(kind, html, opts) {
+    opts = opts || {};
+    if (opts.cle) for (const vieux of els.countNotices.querySelectorAll(`[data-cle="${opts.cle}"]`)) vieux.remove();
     const div = document.createElement('div');
     div.className = `notice ${kind}`;
+    if (opts.cle) div.dataset.cle = opts.cle;
     div.innerHTML = html;
     els.countNotices.prepend(div);
-    setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
+    if (!opts.keep) setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
   }
 
   /* ---------------- grille des coupures ---------------- */
@@ -61,7 +72,7 @@
     els.cTotBillets.textContent = fmtCHF(t.billets);
     els.cTotPieces.textContent = fmtCHF(t.pieces);
     els.cTotal.textContent = fmtCHF(t.total);
-    renderKpis(t.total);
+    renderKpis(t.total, counts);
     return t;
   }
 
@@ -69,10 +80,11 @@
   function refCount() {
     return state.editingId && S.state.reg ? S.state.reg.comptages.find((c) => c.id === state.editingId) || null : null;
   }
-  function previous(date) {
+  /** Dernier comptage avant `date`, sans compter `ref` (par défaut : le comptage en cours de correction). */
+  function previous(date, ref) {
     const reg = S.state.reg;
     if (!reg) return null;
-    const p = R.previousCount(reg, date, refCount());
+    const p = R.previousCount(reg, date, ref === undefined ? refCount() : ref);
     if (p) return p;
     // aucun comptage plus tôt dans l'année : dernier comptage de l'année précédente
     return state.prevYear.annee === reg.annee ? state.prevYear.last : null;
@@ -92,23 +104,31 @@
     } catch (e) { /* sans année précédente */ }
     if (state.prevYear === cible) refreshTotals();
   }
-  function renderKpis(total) {
+  function renderKpis(total, counts) {
     const reg = S.state.reg;
     if (!reg) return;
     const date = els.cDate.value || R.today();
     const prev = previous(date);
     const book = R.balanceAt(reg, date);
-    const diffPrev = prev ? P.round2(total - prev.total) : null;
-    const ecart = P.round2(total - book);
-    const same = Math.abs(ecart) < 0.005;
+    // Rien de compté : ni écart ni variation. L'écran s'ouvrait sur une alarme rouge « il manque
+    // de l'argent » valant tout le solde du journal, avant même le premier billet.
+    const e = AN.etatEcart(counts || readCounts(), total, book);
+    const vide = e.etat === 'vide';
+    const diffPrev = prev && !vide ? P.round2(total - prev.total) : null;
     const tile = (cls, label, value, detail) => `<div class="t ${cls}"><div class="l">${label}</div><div class="v">${value}</div><div class="d">${detail}</div></div>`;
+    const DIT = {
+      vide: 'comptez d\'abord les billets et les pièces',
+      juste: 'la caisse correspond au journal',
+      plus: 'il y a plus d\'argent en caisse que dans le journal : une entrée non enregistrée ?',
+      moins: 'il manque de l\'argent par rapport au journal : une sortie non enregistrée ?',
+    };
     els.cKpis.innerHTML =
       tile('', 'Dernier solde compté', prev ? fmtCHF(prev.total) : '–', prev ? `le ${fmtDate(prev.date)}${prev.note ? ` · ${escapeHtml(prev.note)}` : ''}` : 'aucun comptage précédent') +
-      tile('end', state.editingId ? 'Solde compté (modification)' : 'Nouveau solde compté', fmtCHF(total), `le ${fmtDate(date)}`) +
-      tile(diffPrev == null ? '' : diffPrev >= 0 ? 'ok' : 'warn', 'Variation depuis le dernier comptage', diffPrev == null ? '–' : signed(diffPrev), prev ? `entre le ${fmtDate(prev.date)} et le ${fmtDate(date)}` : '') +
+      tile('end', state.editingId ? 'Solde compté (correction)' : 'Nouveau solde compté', fmtCHF(total), `le ${fmtDate(date)}`) +
+      tile(diffPrev == null ? '' : diffPrev >= 0 ? 'ok' : 'warn', 'Variation depuis le dernier comptage', diffPrev == null ? '–' : signed(diffPrev), prev && !vide ? `entre le ${fmtDate(prev.date)} et le ${fmtDate(date)}` : '') +
       tile('', `Solde du journal au ${fmtDate(date)}`, fmtCHF(book), 'solde à nouveau + écritures jusqu\'à cette date') +
-      tile(same ? 'ok' : 'err', 'Écart caisse / journal', same ? '0.00 ✓' : signed(ecart), same ? 'la caisse correspond au journal' : ecart > 0 ? 'il y a plus d\'argent en caisse que dans le journal : une entrée non enregistrée ?' : 'il manque de l\'argent par rapport au journal : une sortie non enregistrée ?');
-    renderPistes(reg, ecart, date, same);
+      tile(vide ? '' : e.etat === 'juste' ? 'ok' : 'err', 'Écart caisse / journal', vide ? '–' : e.etat === 'juste' ? '0.00 ✓' : signed(e.ecart), DIT[e.etat]);
+    renderPistes(reg, vide ? 0 : e.ecart, date, vide || e.etat === 'juste');
   }
 
   /**
@@ -164,33 +184,45 @@
       const book = R.balanceAt(reg, c.date);
       const ecart = P.round2(c.total - book);
       const same = Math.abs(ecart) < 0.005;
-      return `<tr data-id="${c.id}"${state.editingId === c.id ? ' class="selected"' : ''}>` +
+      const surligne = state.editingId === c.id || (!state.editingId && state.dernierEnregistre === c.id);
+      return `<tr data-id="${c.id}"${surligne ? ' class="selected"' : ''}>` +
         `<td>${escapeHtml(fmtDate(c.date))}</td><td class="num">${fmtCHF(c.billets)}</td><td class="num">${fmtCHF(c.pieces)}</td><td class="num solde">${fmtCHF(c.total)}</td>` +
         `<td class="num">${fmtCHF(book)}</td><td class="num"><span class="chip ${same ? 'ok' : 'warn'}">${same ? '0.00 ✓' : signed(ecart)}</span></td>` +
         `<td class="libelle" title="${escapeHtml(c.note)}">${escapeHtml(c.note)}</td>` +
-        `<td class="acts"><button type="button" class="small ghost" data-edit="${c.id}" title="Reprendre ce comptage pour le corriger">${ico('pen')}</button><button type="button" class="small ghost danger" data-del="${c.id}" title="Supprimer ce comptage">${ico('trash')}</button></td></tr>`;
+        `<td class="acts"><button type="button" class="small ghost" data-releve="${c.id}" title="Relevé de caisse de ce comptage (PDF)">${ico('printer')}</button>` +
+        `<button type="button" class="small ghost" data-edit="${c.id}" title="Corriger ce comptage">${ico('pen')}</button>` +
+        `<button type="button" class="small ghost danger" data-del="${c.id}" title="Supprimer ce comptage">${ico('trash')}</button></td></tr>`;
     }).join('') || '<tr><td colspan="8" class="legend">Aucun comptage enregistré cette année. Comptez les billets et les pièces ci-dessus, puis « Enregistrer le comptage ».</td></tr>';
   }
 
   /* ---------------- formulaire ---------------- */
+  /** Nouveau comptage, ou correction d'un comptage rouvert : le bouton dit lequel des deux on enregistre. */
+  function libelles() {
+    const corr = state.editingId ? `du comptage du ${fmtDate(state.dateOuverte)}` : '';
+    if (els.btnCountSaveTexte) els.btnCountSaveTexte.textContent = corr ? `Enregistrer les corrections ${corr}` : 'Enregistrer le comptage';
+    if (els.btnCountNewTexte) els.btnCountNewTexte.textContent = corr ? 'Abandonner la correction' : 'Nouveau comptage';
+    els.cTitle.textContent = corr ? `(correction ${corr})` : '';
+  }
   function newCount() {
     state.editingId = null;
+    state.dateOuverte = null;
     if (S.state.reg) state.shownYear = S.state.reg.annee;
-    // la date proposée reste dans l'année du registre ouvert
-    els.cDate.value = S.state.reg && String(R.today()).slice(0, 4) !== String(S.state.reg.annee) ? `${S.state.reg.annee}-01-01` : R.today();
+    // dans l'année du registre ouvert : aujourd'hui, ou le 31 décembre d'une année passée
+    els.cDate.value = S.state.reg ? AN.dateProposee(S.state.reg.annee) : R.today();
     els.cNote.value = '';
     fillCounts({});
-    els.cTitle.textContent = '';
+    libelles();
     els.countErrors.innerHTML = '';
     refreshTotals();
     renderHistory();
   }
   function editCount(c) {
     state.editingId = c.id;
+    state.dateOuverte = c.date;
     els.cDate.value = c.date;
     els.cNote.value = c.note || '';
     fillCounts(c.counts);
-    els.cTitle.textContent = `(modification du comptage du ${fmtDate(c.date)})`;
+    libelles();
     els.countErrors.innerHTML = '';
     refreshTotals();
     renderHistory();
@@ -205,9 +237,9 @@
    * l'année : c'est ce que porte le formulaire rempli à la main (« Situation de la caisse au
    * 20.12.2024 »), la clôture de l'année d'avant.
    */
-  function releveData(comptage) {
+  function releveData(comptage, ref) {
     const reg = S.state.reg;
-    const prev = previous(comptage.date);
+    const prev = previous(comptage.date, ref);
     const reference = prev
       ? { date: prev.date, total: prev.total }
       : { date: reg.opening.date, total: reg.opening.amount };
@@ -220,9 +252,9 @@
     };
   }
 
-  async function openReleve(comptage, win) {
+  async function openReleve(comptage, win, ref) {
     const reg = S.state.reg;
-    const res = await F.buildReleveCaissePdf(comptage, reg, releveData(comptage));
+    const res = await F.buildReleveCaissePdf(comptage, reg, releveData(comptage, ref));
     const url = URL.createObjectURL(new Blob([res.bytes], { type: 'application/pdf' }));
     // la fenêtre est ouverte avant la construction (un navigateur bloque window.open après un await)
     const w = win && !win.closed ? win : window.open(url, '_blank');
@@ -248,9 +280,24 @@
       notice('err', `Le relevé n'a pas pu être produit : ${escapeHtml(e && e.message ? e.message : e)}`);
     }
   });
+  /** Relevé d'un comptage déjà enregistré (historique, message d'enregistrement). */
+  async function releveEnregistre(id) {
+    const reg = S.state.reg;
+    const c = reg && reg.comptages.find((x) => x.id === id);
+    if (!c) { notice('warn', 'Ce comptage n\'est plus dans l\'historique.'); return; }
+    const w = window.open('', '_blank'); // ouverte dans le clic, remplie après
+    try {
+      await openReleve(c, w, c); // le comptage lui-même n'est pas « le comptage précédent »
+    } catch (e) {
+      if (w && !w.closed) w.close();
+      notice('err', `Le relevé n'a pas pu être produit : ${escapeHtml(e && e.message ? e.message : e)}`);
+    }
+  }
   if (els.countNotices) els.countNotices.addEventListener('click', (ev) => {
     const b = ev.target.closest('button[data-open-pdf]');
     if (b) window.open(b.dataset.openPdf, '_blank');
+    const r = ev.target.closest('button[data-releve-id]');
+    if (r) releveEnregistre(r.dataset.releveId);
   });
 
   async function saveCount() {
@@ -267,19 +314,39 @@
       return;
     }
     els.countErrors.innerHTML = '';
-    const ref = refCount();
-    const c = R.upsertCount(reg, { id: state.editingId || undefined, date, counts, note: els.cNote.value.trim(), createdAt: ref ? ref.createdAt : undefined });
-    await S.saveReg();
+    // Correction dont la date a changé : un nouveau comptage fait sur l'ancien, ou vraiment une
+    // date à corriger ? On le demande, en proposant d'abord ce qui ne perd rien.
+    let corriger = !!state.editingId;
+    if (AN.modeEnregistrement(corriger, state.dateOuverte, date) === 'demander') {
+      if (confirm(`Enregistrer un NOUVEAU comptage au ${fmtDate(date)} ?\n\nLe comptage du ${fmtDate(state.dateOuverte)} reste tel quel dans l'historique.`)) corriger = false;
+      else if (!confirm(`Corriger alors le comptage du ${fmtDate(state.dateOuverte)} en le datant du ${fmtDate(date)} ?\n\nIl sera remplacé par ce qui est à l'écran.`)) return;
+    }
+    const ref = corriger ? refCount() : null;
+    const c = R.upsertCount(reg, { id: ref ? ref.id : undefined, date, counts, note: els.cNote.value.trim(), createdAt: ref ? ref.createdAt : undefined });
+    try {
+      await S.saveReg();
+    } catch (e) {
+      // Pas écrit : l'historique ne doit pas le montrer comme s'il l'était. Les quantités restent
+      // à l'écran pour réessayer. (Le message du registre s'affiche aussi, voir saisie.js.)
+      R.removeCount(reg, c.id);
+      if (ref) R.upsertCount(reg, ref);
+      els.countErrors.innerHTML = `<div class="notice err"><b>Le comptage n'est pas enregistré</b> : ${escapeHtml((e && e.message) || e)}. ` +
+        'Les quantités restent à l\'écran : réessayez « Enregistrer » dans un instant, avant de fermer l\'application.</div>';
+      refreshTotals();
+      renderHistory();
+      return;
+    }
     const book = R.balanceAt(reg, date);
     const ecart = P.round2(c.total - book);
-    notice(Math.abs(ecart) < 0.005 ? 'ok' : 'warn', `Comptage du ${fmtDate(date)} enregistré : <b>${fmtCHF(c.total)}</b> en caisse (${fmtCHF(c.billets)} en billets, ${fmtCHF(c.pieces)} en pièces). ` +
+    // Le formulaire repart d'un comptage neuf : resté « en modification » sur celui-ci, le
+    // prochain comptage (même des jours plus tard) le REMPLAÇAIT au lieu de s'ajouter. Le
+    // résultat reste lisible ici et dans l'historique, où la ligne est surlignée, avec son relevé.
+    state.dernierEnregistre = c.id;
+    newCount();
+    notice(Math.abs(ecart) < 0.005 ? 'ok' : 'warn', `<b>Comptage du ${fmtDate(date)} ${ref ? 'corrigé' : 'enregistré'}</b> : <b>${fmtCHF(c.total)}</b> en caisse (${fmtCHF(c.billets)} en billets, ${fmtCHF(c.pieces)} en pièces). ` +
       (Math.abs(ecart) < 0.005 ? 'La caisse correspond au journal.' : `Écart avec le journal à cette date : <b>${signed(ecart)}</b>.`) +
-      ' Le comptage reste affiché ; « Nouveau comptage » pour en commencer un autre.');
-    // le comptage enregistré reste à l'écran (soldes et écart le concernent), au lieu d'un formulaire remis à zéro
-    state.editingId = c.id;
-    els.cTitle.textContent = `(comptage du ${fmtDate(c.date)} enregistré)`;
-    refreshTotals();
-    renderHistory();
+      ` <button type="button" data-releve-id="${c.id}">Relevé de caisse de ce comptage</button>` +
+      '<br>Le formulaire est prêt pour le prochain comptage ; celui-ci est surligné dans l\'historique.', { keep: true, cle: 'enregistrement' });
   }
 
   els.cRows.addEventListener('input', refreshTotals);
@@ -288,7 +355,7 @@
   els.btnCountNew.addEventListener('click', newCount);
   els.btnCountLoadPrev.addEventListener('click', () => {
     const prev = previous(els.cDate.value || R.today());
-    if (!prev) { notice('warn', 'Aucun comptage précédent à reprendre.'); return; }
+    if (!prev) { notice('warn', 'Aucun comptage précédent : il n\'y a pas de quantités à reprendre.'); return; }
     fillCounts(prev.counts);
     refreshTotals();
   });
@@ -296,6 +363,7 @@
     const b = ev.target.closest('button');
     if (!b) return;
     const reg = S.state.reg;
+    if (b.dataset.releve) { await releveEnregistre(b.dataset.releve); return; }
     if (b.dataset.edit) {
       const c = reg.comptages.find((x) => x.id === b.dataset.edit);
       if (c) editCount(c);
@@ -315,8 +383,8 @@
     // changement d'année du registre : on repart d'un comptage vierge (la date et les quantités
     // de l'année précédente donneraient des soldes faux)
     if (state.shownYear !== S.state.reg.annee) { state.shownYear = S.state.reg.annee; newCount(); return; }
-    if (state.editingId && !S.state.reg.comptages.some((c) => c.id === state.editingId)) state.editingId = null;
-    if (!els.cDate.value) els.cDate.value = R.today();
+    if (state.editingId && !S.state.reg.comptages.some((c) => c.id === state.editingId)) { state.editingId = null; state.dateOuverte = null; libelles(); }
+    if (!els.cDate.value) els.cDate.value = AN.dateProposee(S.state.reg.annee);
     if (state.editingId) state.shownYear = S.state.reg.annee;
     refreshTotals();
     renderHistory();

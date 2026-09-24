@@ -86,31 +86,80 @@ function ecrireEmplacement(dossierReglage, chemin) {
   return f;
 }
 
+/** Les années qui ont un registre dans ce dossier de données, dans l'ordre. */
+function anneesDe(dossier) {
+  const racine = path.join(dossier, 'caisse');
+  try {
+    return fs.readdirSync(racine).filter((d) => /^\d{4}$/.test(d) && fs.existsSync(path.join(racine, d, 'registre.json'))).map(Number).sort();
+  } catch (e) { return []; }
+}
+
 /**
- * Emporte les données de ce poste dans le nouveau dossier — mais seulement s'il n'en contient pas
- * encore. Un dossier qui a déjà sa caisse est celle des collègues : y copier par-dessus
+ * Ce dossier contient-il une caisse EN USAGE : une pièce, un comptage ou un justificatif ?
+ * Un dossier « caisse » où il n'y a rien vient d'un « Partir de zéro » (l'application y a écrit
+ * un registre vide) : il ne doit pas fermer pour toujours la porte à « Emporter ». Un registre
+ * illisible compte comme en usage : dans le doute, on n'écrase rien.
+ */
+function caisseEnUsage(dossier) {
+  const racine = path.join(dossier, 'caisse');
+  for (const annee of fs.existsSync(racine) ? fs.readdirSync(racine).filter((d) => /^\d{4}$/.test(d)) : []) {
+    const f = path.join(racine, annee, 'registre.json');
+    if (fs.existsSync(f)) {
+      let reg;
+      try { reg = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return true; }
+      if (!reg || typeof reg !== 'object') return true;
+      if ((Array.isArray(reg.pieces) && reg.pieces.length) || (Array.isArray(reg.comptages) && reg.comptages.length)) return true;
+    }
+    // un justificatif sans pièce qui le porte : on ne sait pas d'où il vient, on n'y touche pas
+    const pieces = path.join(racine, annee, 'pieces');
+    try {
+      if (fs.readdirSync(pieces).some((p) => { try { return fs.readdirSync(path.join(pieces, p)).length > 0; } catch (e) { return true; } })) return true;
+    } catch (e) { /* pas de justificatifs */ }
+  }
+  return false;
+}
+
+/**
+ * Emporte les données de ce poste dans le nouveau dossier — mais seulement s'il n'a pas encore de
+ * caisse en usage. Une caisse qui a des pièces est celle des collègues : y copier par-dessus
  * mélangerait deux registres. Les données de ce poste, elles, restent où elles sont.
+ *
+ * Une caisse vide sur place (après « Partir de zéro ») est remplacée par celle de ce poste : sans
+ * écraser, ses registres sans pièce restaient et cachaient les vrais.
  *
  * Les scans « en cours de lecture » (Scans\.encours) ne suivent pas : un autre poste les
  * reprendrait pour une lecture interrompue, et le même scan entrerait deux fois.
  */
 async function copierSiVide(de, vers) {
   if (path.resolve(de) === path.resolve(vers)) return { copie: false, raison: 'même dossier' };
-  if (fs.existsSync(path.join(vers, 'caisse'))) return { copie: false, raison: 'le dossier contient déjà une caisse' };
+  if (caisseEnUsage(vers)) return { copie: false, raison: 'le dossier contient déjà une caisse' };
   if (!fs.existsSync(path.join(de, 'caisse'))) return { copie: false, raison: 'rien à emporter' };
+  const caisseVideSurPlace = fs.existsSync(path.join(vers, 'caisse'));
   const dossiers = [];
   for (const d of DOSSIERS) {
     const src = path.join(de, d);
     if (!fs.existsSync(src)) continue;
     await fsp.cp(src, path.join(vers, d), {
       recursive: true,
-      force: false,
+      force: d === 'caisse' && caisseVideSurPlace,
       errorOnExist: false,
       filter: (s) => !s.split(/[\\/]/).includes('.encours'),
     });
     dossiers.push(d);
   }
-  return { copie: true, dossiers };
+  return { copie: true, dossiers, annees: anneesDe(de) };
 }
 
-module.exports = { FICHIER, DOSSIERS, lireEmplacement, verifierDossier, ecrireEmplacement, copierSiVide };
+/** Ce qui a été emporté, en une phrase : « les registres 2025 et 2026 (avec leurs justificatifs), les scans du copieur ». */
+function resumeCopie(copie) {
+  if (!copie || !copie.copie) return '';
+  const et = (l) => (l.length > 1 ? `${l.slice(0, -1).join(', ')} et ${l[l.length - 1]}` : l[0] || '');
+  const a = copie.annees || [];
+  const parts = [];
+  if (copie.dossiers.includes('caisse')) parts.push(`${a.length > 1 ? 'les registres' : 'le registre'}${a.length ? ` ${et(a.map(String))}` : ''} (avec ${a.length > 1 ? 'leurs' : 'ses'} justificatifs)`);
+  if (copie.dossiers.includes('Scans')) parts.push('les scans du copieur');
+  if (copie.dossiers.includes('Décomptes')) parts.push('les décomptes');
+  return et(parts);
+}
+
+module.exports = { FICHIER, DOSSIERS, lireEmplacement, verifierDossier, ecrireEmplacement, copierSiVide, caisseEnUsage, anneesDe, resumeCopie };

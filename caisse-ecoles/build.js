@@ -95,6 +95,7 @@ inline('<!--INLINE_PARSER-->', scriptTag(read(src('parser.js'))));
 inline('<!--INLINE_OCR-->', scriptTag(read(src('ocr.js'))));
 inline('<!--INLINE_EXCEL-->', scriptTag(read(src('excel.js'))));
 inline('<!--INLINE_REGISTRE-->', scriptTag(read(src('registre.js'))));
+inline('<!--INLINE_ANNEE-->', scriptTag(read(src('annee.js'))));
 inline('<!--INLINE_QR-->', `<!-- qrcode-generator ${pkgQr} (MIT) et jsQR ${pkgJsqr} (Apache-2.0) -->\n` + scriptTag(qrgen) + '\n' + scriptTag(jsqr));
 inline('<!--INLINE_MARQUE-->', scriptTag(read(src('marque.js'))));
 inline('<!--INLINE_PDFPIECE-->', scriptTag(read(src('pdfpiece.js'))));

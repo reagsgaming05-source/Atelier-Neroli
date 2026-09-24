@@ -314,6 +314,19 @@ table.entries.journal td.acts button { margin-left: 3px; }
 .yearbar .y { font-family: var(--font-display, inherit); font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
 .yearbar .i b { color: var(--ink); font-weight: 600; }
 .yearbar button { margin-left: auto; }
+/* Année passée : le bandeau se teinte, pour ne pas saisir janvier dans l'année d'avant. */
+.yearbar.passee { background: var(--warn-soft); border-color: var(--warn-line); }
+.yearbar .tag.passee { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--warn); color: #fff; }
+/* Avis sur l'année, sous le bandeau et dans L'année : nouvelle année, solde à nouveau, « Pour commencer ». */
+#anneeAvis > .notice, #anneeAvisAnnee > .notice { margin: 0 0 14px; }
+.avis-annee .avis-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
+.avis-annee .avis-actions button { margin-left: 0; }
+.avis-annee .avis-actions button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.avis-debut { border-color: var(--accent-soft-2); }
+.avis-debut .debut-choix { display: grid; gap: 14px; margin-top: 14px; }
+.avis-debut .debut-un { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.avis-debut .debut-solde { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.avis-debut .debut-solde label { font-weight: 600; font-size: 13px; color: var(--ink-2); }
 
 /* ------------------------------------------------- liste déroulante d'un champ texte
    Le champ reste libre : la liste est là pour ne pas avoir à connaître les numéros de compte
@@ -441,6 +454,17 @@ table.checks button { margin-left: 6px; }
 .regbar { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
 .regbar .field { min-width: 0; }
 .regbar .sep { width: 1px; height: 36px; background: var(--line); align-self: flex-end; }
+/* L'année ouverte en trois blocs titrés : l'année, son solde à nouveau, le relevé de caisse. */
+h3.regbloc { font-size: 13.5px; font-weight: 650; color: var(--ink); margin: 22px 0 10px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+h3.regbloc .legend { font-weight: 400; }
+.regsolde > .notice { margin-top: 10px; }
+.regsolde > .legend { margin-top: 8px; }
+.regsolde .solde-ok { color: var(--ok); }
+.regsolde .solde-ok b { color: inherit; }
+.regpied { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; }
+.regsauve { margin-top: 10px; line-height: 1.6; }
+.regsauve b { color: var(--ink-2); }
+.regsauve button { margin-left: 6px; }
 #regInfo { margin-top: 10px; }
 #ficheCard h2 { justify-content: space-between; }
 #ficheCard h2 .left { display: flex; align-items: center; gap: 10px; }
@@ -550,7 +574,8 @@ table.denoms tfoot td { border-bottom: 0; padding-top: 8px; font-weight: 600; co
 table.denoms tfoot tr:first-child td { border-top: 2px solid var(--line); padding-top: 12px; }
 table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-top: 6px; }
 .totals.kpi-col { grid-template-columns: 1fr 1fr; }
-.totals .t .d { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+/* l'explication d'un écart se lit, elle ne se devine pas : taille normale, couleur foncée */
+.totals .t .d { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.4; }
 .totals .t.end .d { color: rgba(255, 255, 255, 0.85); }
 .totals .t.err { border-color: var(--err-line); background: var(--err-soft); }
 .totals .t.ok { border-color: var(--ok-line); background: var(--ok-soft); }

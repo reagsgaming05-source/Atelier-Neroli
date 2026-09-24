@@ -164,9 +164,11 @@
   function newPiece(reg) {
     // La date proposée reste dans l'année du registre ouvert : sur un registre d'une année passée,
     // la date du jour était refusée à l'enregistrement et devait être retapée à chaque pièce.
+    // Une année passée se rouvre en janvier pour les pièces de décembre : le 31.12 en est plus
+    // près que le 01.01 (même règle que CaisseAnnee.dateProposee, pour le comptage).
     const t = today();
     const annee = reg && reg.annee;
-    const date = annee && String(t).slice(0, 4) !== String(annee) ? `${annee}-01-01` : t;
+    const date = annee && String(t).slice(0, 4) !== String(annee) ? `${annee}-${Number(annee) < Number(t.slice(0, 4)) ? '12-31' : '01-01'}` : t;
     return normalizePiece({ id: newId(), no: nextNo(reg), date, type: 'REMBOURSEMENT', objet: 'Autre', sens: 'credit' });
   }
 

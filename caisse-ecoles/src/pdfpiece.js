@@ -377,12 +377,17 @@
     y -= 18;
     for (const d of R_PIECES) ligne(d);
 
+    // Un écart ajoute une ligne au rapprochement : les lignes se resserrent un peu pour que la
+    // remarque garde sa place au-dessus des visas, qui, eux, ne bougent pas.
+    const ecart = Number(opts.ecart) || 0;
+    const aEcart = Math.abs(ecart) >= 0.005;
+
     // Total en caisse
     y -= 12;
     txt(bold, 'Total en caisse', left, y + 5, 12);
     box(colC, y, wC, hCell);
     center(bold, somme(comptage.total), colC, wC, y + 5, 12);
-    y -= 40;
+    y -= aEcart ? 30 : 40;
 
     // Rapprochement : Date | Somme
     page.drawLine({ start: { x: colB, y: y + 17 }, end: { x: right, y: y + 17 }, thickness: 0.8, color: BLACK });
@@ -397,13 +402,17 @@
       box(colB, y, wB, hCell);
       if (date) center(normal, P.isoToDisplay(date), colB, wB, y + 5);
       box(colC, y, wC, hCell);
-      if (montant != null) center(f, somme(montant), colC, wC, y + 5);
-      y -= hCell + 7;
+      if (montant != null) center(f, typeof montant === 'string' ? montant : somme(montant), colC, wC, y + 5);
+      y -= hCell + (aEcart ? 3 : 7);
     };
     rang('Solde en caisse au :', comptage.date, comptage.total, true);
     rang('Encaissement de la période :', null, opts.encaissements == null ? null : opts.encaissements);
     rang('Décaissement de la période :', null, opts.decaissements == null ? null : opts.decaissements);
     rang(ref && ref.libelle ? ref.libelle : 'Situation de la caisse au :', ref && ref.date, ref ? ref.total : null);
+    // L'écart est un montant comme les autres : encadré, en noir, à la taille du formulaire. Écrit
+    // en petit gris sous le rapprochement, on signait le relevé sans le voir — et il pouvait même
+    // disparaître faute de place au-dessus des visas.
+    if (aEcart) rang('Écart avec le journal :', comptage.date, `${ecart > 0 ? '+ ' : '- '}${somme(Math.abs(ecart))}`, true);
 
     // Le bas du formulaire est ancré, pas coulé : les visas et la mention des annexes gardent
     // leur place quelle que soit la longueur de ce qui précède. Laissé au fil du texte, « Annexes »
@@ -418,21 +427,17 @@
     });
     txt(normal, 'Annexes : pièces justificatives', left, yAnnexes);
 
-    // Entre le rapprochement et les visas : l'écart et la remarque, dans la place disponible.
-    // Un relevé qu'on signe ne doit pas taire un écart — on l'écrit en toutes lettres plutôt que
-    // de laisser le formulaire sembler tomber juste.
+    // Entre le rapprochement et les visas : ce que veut dire l'écart, puis la remarque, dans la
+    // place disponible. Un relevé qu'on signe ne doit pas taire un écart : il est dans la case
+    // ci-dessus, et dit ici en toutes lettres.
     const notes = [];
-    const ecart = Number(opts.ecart) || 0;
-    if (Math.abs(ecart) >= 0.005) {
-      notes.push(`Écart avec le journal au ${P.isoToDisplay(comptage.date)} : ${ecart > 0 ? '+ ' : '- '}${somme(Math.abs(ecart))} ` +
-        `(${ecart > 0 ? "plus d'argent en caisse que dans le journal" : "il manque de l'argent par rapport au journal"}).`);
-    }
+    if (aEcart) notes.push(ecart > 0 ? "L'écart : il y a plus d'argent en caisse que dans le journal." : "L'écart : il manque de l'argent par rapport au journal.");
     if (comptage.note) notes.push(`Remarque : ${comptage.note}`);
     if (notes.length) {
       const lignes = notes.reduce((acc, n) => acc.concat(wrap(normal, 9.5, n, right - left)), []);
       const dispo = Math.max(0, Math.floor((y - (yVisa1 + 24)) / 13));
       let yy = y - 4;
-      for (const l of lignes.slice(0, dispo)) { txt(normal, l, left, yy, 9.5, GREY); yy -= 13; }
+      for (const l of lignes.slice(0, dispo)) { txt(normal, l, left, yy, 9.5); yy -= 13; }
     }
 
     const bytes = await doc.save();
