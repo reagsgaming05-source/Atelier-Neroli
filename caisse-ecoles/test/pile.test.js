@@ -165,7 +165,7 @@ test('le résumé compte ce qu\'il y a à faire', () => {
     L.decouper([null, m(2026, ids[0]), null, m(2026, ids[1]), m(2026, ids[0]), m(2026, 'pinconnue')]),
     connues(r),
   );
-  assert.deepEqual(L.resume(docs), { total: 5, trouvees: 2, inconnues: 1, doublons: 1, sansMarque: 1, pages: 6 });
+  assert.deepEqual(L.resume(docs), { total: 5, trouvees: 2, inconnues: 1, doublons: 1, illisibles: 0, sansMarque: 1, pages: 6, ordreDouteux: true });
 });
 
 test('le justificatif porte un nom stable : rescanner remplace, n\'accumule pas', () => {

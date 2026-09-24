@@ -429,15 +429,34 @@
   <header class="page-head">
     <div>
       <h1>Boîte de réception</h1>
-      <p>Les fiches imprimées portent un petit code QR. Vous les faites signer, vous empilez, et vous scannez toute la pile en un passage vers le dossier surveillé : l'application découpe à chaque code et rend chaque document à sa pièce. Rien n'entre au journal sans votre accord.</p>
+      <p>Les fiches imprimées par l'application portent un petit code QR. Faites-les signer, posez chaque fiche au-dessus de ses tickets, et scannez toute la pile au copieur : chaque document arrive ici, reconnu par son code. Cliquez « Joindre à la pièce » : le scan signé rejoint les justificatifs de sa pièce. Le journal, lui, ne change pas.</p>
     </div>
   </header>
 
-  <section class="card" id="receptionReglages">
-    <h2><svg class="ico"><use href="#i-folder"/></svg> Où le copieur dépose ses scans</h2>
-    <p class="legend">Réglez le copieur en « numériser vers un dossier » (SMB) et donnez-lui l'adresse ci-dessous. L'application y prend les PDF entiers, les range ensuite dans <code>traité\AAAA-MM</code>, ou dans <code>à revoir</code> si la lecture a échoué — <b>le fichier d'origine n'est jamais détruit</b>. Plusieurs postes peuvent surveiller le même dossier : un scan donné n'est pris que par un seul.</p>
+  <nav class="aiguillage" aria-label="Quel papier va dans quel espace">
+    <span class="aig-t">Quel papier va où ?</span>
+    <button type="button" class="aig" data-aller="panelScan"><b>Fiche remplie à la main</b><small>sans code QR · Pièces scannées : lue et ajoutée au journal</small></button>
+    <button type="button" class="aig ici" data-aller="panelReception" aria-current="page"><b>Fiche imprimée ici, revenue signée</b><small>avec code QR · jointe ici à sa pièce</small></button>
+    <button type="button" class="aig" data-aller="panelSaisie"><b>Ticket, facture, photo</b><small>Saisie des pièces : joint à la fiche de sa pièce</small></button>
+  </nav>
+
+  <section class="card">
+    <h2><span class="left"><svg class="ico"><use href="#i-scan"/></svg> Documents scannés <span class="legend" id="receptionCompte"></span></span> <button type="button" class="small ghost" id="btnScanRegarder" title="Ne pas attendre le prochain passage : regarder le dossier du copieur tout de suite"><svg class="ico"><use href="#i-refresh"/></svg> Regarder le dossier maintenant</button></h2>
+    <div id="receptionEtat" class="notice ok hidden"></div>
+    <div id="receptionRevoir"></div>
+    <div id="receptionGroupe" class="toolbar top hidden" style="margin-top:12px"></div>
+    <div id="receptionListe"></div>
+    <div id="receptionApercu" class="hidden">
+      <div class="toolbar top"><span class="legend">Aperçu du document</span><span class="spacer"></span><button type="button" class="small" id="btnReceptionFermer"><svg class="ico"><use href="#i-x"/></svg> Fermer</button></div>
+      <iframe id="receptionFrame"></iframe>
+    </div>
+  </section>
+
+  <details class="card fold" id="receptionReglages">
+    <summary><svg class="ico"><use href="#i-folder"/></svg> Où le copieur dépose ses scans <span class="legend" id="receptionResume"></span></summary>
+    <p class="legend">Réglage à faire une fois : mettez le copieur en « numériser vers un dossier » et donnez-lui l'adresse ci-dessous. L'application y prend les PDF entiers, puis les range dans <code>traité\AAAA-MM</code>, ou dans <code>à revoir</code> si la lecture a échoué — <b>le fichier d'origine n'est jamais détruit</b>. Plusieurs postes peuvent surveiller le même dossier : un scan donné n'est pris que par un seul.</p>
     <div class="depot">
-      <div class="depot-t"><svg class="ico sm"><use href="#i-folder"/></svg> Dossier de l'application <span class="badge-soft">surveillé d'office</span></div>
+      <div class="depot-t"><svg class="ico sm"><use href="#i-folder"/></svg> Dossier de l'application <span class="badge-soft">toujours surveillé</span></div>
       <code id="receptionDepot" class="depot-chemin"></code>
       <div class="toolbar" style="margin-top:8px">
         <button type="button" class="small" id="btnDepotCopier"><svg class="ico"><use href="#i-file"/></svg> Copier l'adresse</button>
@@ -449,31 +468,18 @@
     <div id="receptionDossiers" class="dliste" style="max-height:180px"></div>
     <div class="toolbar">
       <button type="button" class="small" id="btnScanAjouter"><svg class="ico"><use href="#i-plus"/></svg> Ajouter un dossier…</button>
-      <button type="button" class="small" id="btnScanRegarder"><svg class="ico"><use href="#i-refresh"/></svg> Regarder maintenant</button>
-      <button type="button" class="small ghost" id="btnReceptionDossier"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier de réception</button>
-      <button type="button" class="small ghost" id="btnOuvrirDecomptes" title="Décomptes\À faire\Camp et Course d'école : ce qu'il reste à faire, dans l'explorateur"><svg class="ico"><use href="#i-list"/></svg> Ouvrir les décomptes</button>
     </div>
     <div class="toolbar" style="gap:18px">
       <label class="check legend" style="align-items:center"><input type="checkbox" id="optScanActif" checked style="margin-top:0"> Surveiller le dossier</label>
-      <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optScanAuto"> <span>Ranger automatiquement les pièces reconnues, sans me demander. <i>Décoché au départ : un classement qui se trompe une fois sur dix coûte plus cher que pas de classement du tout.</i></span></label>
+      <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optScanAuto"> <span>Joindre tout seuls les documents reconnus sans doute possible, sans me demander. <i>Décoché au départ : vous regardez chaque document avant qu'il soit joint.</i></span></label>
     </div>
     <div class="legend" id="receptionInfo" style="margin-top:10px"></div>
-  </section>
+  </details>
 
   <section class="card" id="carteDecomptes">
-    <h2><span class="left"><svg class="ico"><use href="#i-list"/></svg> Décomptes à faire <span class="legend" id="decomptesCompte"></span></span> <button type="button" class="small ghost" id="btnOuvrirDecomptes2"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button></h2>
+    <h2><span class="left"><svg class="ico"><use href="#i-list"/></svg> Décomptes à faire <span class="legend" id="decomptesCompte"></span></span> <button type="button" class="small ghost" id="btnOuvrirDecomptes2" title="Décomptes\À faire\Camp et Course d'école : ce qu'il reste à faire, dans l'explorateur"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button></h2>
     <p class="legend">Les décomptes du registre ouvert marqués « décompte à faire » sur leur fiche. C'est le même contenu que le dossier <code>Décomptes\À faire</code> — en plus de ceux dont le scan signé n'est pas encore revenu.</p>
     <div id="decomptesListe"></div>
-  </section>
-
-  <section class="card">
-    <h2><span class="left"><svg class="ico"><use href="#i-scan"/></svg> Documents scannés <span class="legend" id="receptionCompte"></span></span></h2>
-    <div id="receptionEtat" class="notice ok hidden"></div>
-    <div id="receptionListe"></div>
-    <div id="receptionApercu" class="hidden">
-      <div class="toolbar top"><span class="legend">Aperçu du document</span><span class="spacer"></span><button type="button" class="small" id="btnReceptionFermer"><svg class="ico"><use href="#i-x"/></svg> Fermer</button></div>
-      <iframe id="receptionFrame"></iframe>
-    </div>
   </section>
 </div>
 

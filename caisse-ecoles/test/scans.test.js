@@ -6,8 +6,12 @@
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
 const R = require('../src/registre.js');
 const L = require('../src/lot.js');
+const Pile = require('../src/pile.js');
+const V = require('../desktop/veille.js');
+const { pdfExemple, ecrireTronque, dossierTemporaire, horlogeFactice, pause } = require('./aide-copieur.js');
 
 const reg2026 = () => R.emptyRegister(2026, { openingAmount: 1000, openingDate: '2026-01-01' });
 const octets = (texte) => new TextEncoder().encode(`%PDF-1.4 ${texte} %%EOF`);
@@ -253,4 +257,71 @@ test('un n° déjà au journal avec un autre montant est un conflit', () => {
   const autre = lire(octets('B'), fiches(1, [31]));
   L.verser(reg, autre);
   assert.deepEqual(L.bilanDuLot(reg, autre).conflits, [1]);
+});
+
+/* ---------------- La pile de la boîte de réception ---------------- */
+
+const m = (annee, id) => ({ annee, id });
+
+test('une fiche au code illisible ouvre son document au lieu d\'être collée à la pièce d\'avant', () => {
+  // fiche 7, son ticket, fiche 8 au code couvert par une agrafe, fiche 9
+  const docs = Pile.decouper([m(2026, 'p7'), null, null, m(2026, 'p9')], { fiches: [true, false, true, true] });
+  assert.deepEqual(docs.map((d) => d.pages), [[0, 1], [2], [3]], 'la fiche 8 est devenue une page de la pièce 7');
+  const classes = Pile.classer(docs, (a, id) => ({ id, no: Number(id.slice(1)) }));
+  assert.deepEqual(classes.map((d) => d.etat), ['trouvee', 'code-illisible', 'trouvee']);
+  const r = Pile.resume(classes);
+  assert.equal(r.illisibles, 1);
+  assert.equal(Pile.phrase(r), '2 pièces reconnues, 1 à regarder');
+});
+
+test('une pile posée à l\'envers est signalée', () => {
+  // ticket B, fiche B, ticket A, fiche A : chaque ticket part avec la fiche d'avant
+  const docs = Pile.classer(Pile.decouper([null, m(2026, 'b'), null, m(2026, 'a')]), (a, id) => ({ id, no: 1 }));
+  assert.equal(Pile.resume(docs).ordreDouteux, true);
+  // la même pile dans le bon ordre ne l'est pas
+  const bon = Pile.classer(Pile.decouper([m(2026, 'a'), null, m(2026, 'b'), null]), (a, id) => ({ id, no: 1 }));
+  assert.equal(Pile.resume(bon).ordreDouteux, false);
+});
+
+test('les pages d\'un document sont dites, pour qu\'une page de trop se voie', () => {
+  assert.equal(Pile.pagesDe(1, true), '1 page');
+  assert.equal(Pile.pagesDe(2, true), '2 pages : la fiche et 1 page jointe');
+  assert.equal(Pile.pagesDe(3, true), '3 pages : la fiche et 2 pages jointes');
+  assert.equal(Pile.pagesDe(3, false), '3 pages');
+  assert.equal(Pile.phrase({ trouvees: 1, doublons: 1, inconnues: 1, sansMarque: 1, illisibles: 0 }), '1 pièce reconnue, 1 en double, 2 à regarder');
+});
+
+/* ---------------- Les scans en échec ---------------- */
+
+test('un scan mis « à revoir » est nommé avec sa raison, et la veille dit quand elle a regardé', async () => {
+  const d = dossierTemporaire('revoir-raison');
+  try {
+    const h = horlogeFactice();
+    const v = V.creerVeille({
+      dossiers: () => [{ chemin: d.chemin }], poste: 'POSTE-A', maintenant: h.maintenant, stabiliteMs: 0,
+      traiter: async () => ({ ok: false, raison: 'aucune page lisible dans ce PDF' }),
+    });
+    fs.writeFileSync(d.fichier('illisible.pdf'), await pdfExemple(['page blanche']));
+    for (let i = 0; i < 3; i++) { h.avancer(10000); await v.tour(); await pause(5); }
+    const e = v.etat();
+    assert.equal(e.revoir, 1);
+    assert.equal(e.aRevoir.length, 1, 'l\'écran n\'avait qu\'un compteur, sans nom ni raison');
+    assert.equal(e.aRevoir[0].nom, 'illisible.pdf');
+    assert.equal(e.aRevoir[0].raison, 'aucune page lisible dans ce PDF');
+    assert.equal(e.aRevoir[0].dossier, d.chemin);
+    assert.equal(e.dernierTour, h.maintenant());
+  } finally { d.jeter(); }
+});
+
+test('un PDF tronqué est nommé « à revoir » avec la raison du copieur interrompu', async () => {
+  const d = dossierTemporaire('revoir-tronque');
+  try {
+    const h = horlogeFactice();
+    const v = V.creerVeille({ dossiers: () => [{ chemin: d.chemin }], poste: 'POSTE-A', maintenant: h.maintenant, stabiliteMs: 0, patienceMs: 1000 });
+    ecrireTronque(d.fichier('coupe.pdf'), await pdfExemple(['pièce 1']), 0.3);
+    for (let i = 0; i < 4; i++) { h.avancer(10000); await v.tour(); await pause(5); }
+    const e = v.etat();
+    assert.equal(e.aRevoir.length, 1);
+    assert.match(e.aRevoir[0].raison, /incomplet|tronqué/);
+  } finally { d.jeter(); }
 });
