@@ -603,7 +603,7 @@
       await window.CaisseSaisie.saveReg();
     } catch (e) {
       piece.decompteAFaire = true;
-      majBandeau(`Registre non enregistré : ${(e && e.message) || e}`, 'err');
+      majBandeau(`Journal non enregistré : ${(e && e.message) || e}`, 'err');
       return;
     }
     let dit = '';

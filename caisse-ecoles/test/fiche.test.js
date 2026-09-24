@@ -651,7 +651,7 @@ test('revenir à la fenêtre relit le registre : le journal et le n° proposé s
   await pause(40);
   assert.equal(posteA.S.state.reg.pieces.length, 1);
   assert.equal(posteA.el('pNo').value, '2');
-  assert.match(posteA.el('regNotices').children[0].innerHTML, /1 pièce saisie sur un autre poste a été ajoutée au journal \(n° 1\)/);
+  assert.match(posteA.el('zoneAvis').children[0].innerHTML, /1 pièce saisie sur un autre poste a été ajoutée au journal \(n° 1\)/);
   assert.equal(posteA.S.ficheModifiee(), false, 'un n° changé par l\'application n\'est pas une saisie');
 });
 
@@ -732,7 +732,7 @@ function cliquerMessage(f, donnees) {
   const b = new El(f.doc, 'button');
   Object.assign(b.dataset, donnees);
   const m = new El(f.doc, 'div'); m.className = 'notice';
-  m.appendChild(b); f.el('regNotices').appendChild(m);
+  m.appendChild(b); f.el('zoneAvis').appendChild(m);
   const ev = new Event('click', { cancelable: true });
   Object.defineProperty(ev, 'target', { value: b });
   f.doc.dispatchEvent(ev);
@@ -769,7 +769,7 @@ test('une pièce supprimée se rattrape, justificatifs compris', async () => {
   f.cliquerDans('journalBody', { del: p2.id });
   await pause(40);
   assert.equal(f.S.state.reg.pieces.length, 2);
-  const message = f.el('regNotices').children[0].innerHTML;
+  const message = f.el('zoneAvis').children[0].innerHTML;
   assert.match(message, /Pièce n° 2 supprimée/, 'supprimer ne disait rien');
   assert.match(message, /data-annuler-suppression/);
   assert.match(message, /Donner le n° 2 à la fiche/, 'le n° libéré au milieu de la suite est offert');

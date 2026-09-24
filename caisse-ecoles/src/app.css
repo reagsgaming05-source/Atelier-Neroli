@@ -91,10 +91,15 @@ a { color: var(--accent); }
   border: 1px solid transparent; background: transparent; color: var(--ink-2);
   border-radius: 10px; padding: 9px 10px; cursor: pointer; font: inherit; font-weight: 500; position: relative;
   transition: background 0.12s, color 0.12s;
+  /* un bouton : sans ceci, le style générique centrait le contenu, fixait 36 px de haut et posait
+     une ombre — icônes et noms commençaient chacun ailleurs, en escalier */
+  justify-content: flex-start; height: auto; min-width: 0; box-shadow: none; white-space: normal;
 }
 .apptab .ico { color: var(--muted); }
-.apptab .lbl { display: flex; flex-direction: column; line-height: 1.2; }
+.apptab .lbl { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .apptab .lbl small { font-size: 11.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+/* le mot sous l'icône, quand la barre n'a plus la place des noms (voir plus bas) */
+.apptab .court, .switcher .brand .court { display: none; }
 .apptab:hover { background: var(--surface-2); color: var(--ink); }
 .apptab.active { background: var(--accent-soft); color: var(--accent); }
 .apptab.active .ico { color: var(--accent); }
@@ -107,30 +112,49 @@ a { color: var(--accent); }
 .sidebar .foot .pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-weight: 500; font-size: 12px; align-self: flex-start; }
 .sidebar .foot .pill .ico { width: 14px; height: 14px; }
 
-.content { min-width: 0; padding: 26px 30px 60px; }
+.content { min-width: 0; padding: 26px 30px calc(60px + var(--avis-h, 0px)); } /* la page défile jusque sous les messages (src/avis.js) */
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; }
 .page-head h1 { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 4px; line-height: 1.2; }
 .page-head p { margin: 0; color: var(--muted); font-size: 13px; max-width: 760px; }
 .page-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* l'endroit visé depuis la barre du haut ou le menu Aide (« Où sont mes données ? ») : repéré un instant */
+.reperee { animation: reperee 1.8s ease-out 1; }
+@keyframes reperee { 0%, 40% { box-shadow: 0 0 0 4px var(--accent-ring); border-color: var(--accent); } 100% { box-shadow: var(--shadow-sm); } }
 
-/* barre latérale réduite à un rail d'icônes sur les écrans moyens (le journal et le tableau de
-   vérification ont besoin de la largeur) */
+/* La barre latérale garde toujours les noms des espaces. À la taille d'ouverture courante (1366,
+   1440 px, ou 1920 px mis à l'échelle à 125 %), elle n'était plus qu'un rail d'icônes muettes :
+   il fallait survoler chacune pour savoir où elle menait.
+   Écrans moyens : les noms seuls, sans sous-titre (le journal et le tableau de vérification
+   gardent leur largeur). */
 @media (max-width: 1500px) {
-  :root { --sidebar-w: 72px; }
-  .sidebar { padding: 14px 10px; align-items: center; }
-  .brand { padding: 2px 0 16px; }
-  .brand > div:last-child, .nav .section, .apptab .lbl, .sidebar .foot { display: none; }
-  .apptab { justify-content: center; padding: 11px 0; width: 48px; }
+  :root { --sidebar-w: 212px; }
+  .sidebar { padding: 16px 10px 14px; }
+  .apptab .lbl small, .sidebar .foot { display: none; }
+  .apptab { padding: 8px 10px; }
   .apptab.active::before { left: -10px; }
+  /* « Décompte DGEO » en entier : la flèche cède sa place, « Changer d'outil » dit déjà que c'est un menu */
+  .switcher .brand { gap: 9px; }
+  .switcher .brand .mark { width: 32px; height: 32px; }
+  .switcher .brand .name { font-size: 14px; }
+  .switcher .brand .chev { display: none; }
+}
+/* Petits écrans : un rail, avec un mot sous chaque icône. */
+@media (max-width: 1199px) {
+  :root { --sidebar-w: 84px; }
+  .sidebar { padding: 14px 6px; align-items: center; }
+  .nav .section, .apptab .lbl { display: none; }
+  .apptab { flex-direction: column; justify-content: center; gap: 3px; padding: 7px 2px 6px; width: 72px; }
+  .apptab .court { display: block; font-size: 11px; line-height: 1.15; text-align: center; }
+  .apptab.active::before { left: -6px; }
 }
 @media (max-width: 980px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 14px; }
   .nav { flex-direction: row; flex-wrap: wrap; }
-  .apptab { width: auto; }
+  .apptab { width: auto; padding: 6px 12px; } /* des entrées séparées, pas des icônes collées */
   .apptab.active::before { display: none; }
   .sidebar .foot { display: none; }
-  .content { padding: 18px 16px 40px; }
+  .content { padding: 18px 16px calc(40px + var(--avis-h, 0px)); }
 }
 
 /* ---------------------------------------------------------------- cartes */
@@ -247,6 +271,21 @@ button.primary:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; tr
 .notice b { color: inherit; }
 .notice ul { margin: 4px 0 0; padding-left: 18px; }
 .notice button { margin-left: 6px; height: 26px; padding: 0 9px; font-size: 12px; background: #fff; color: var(--ink); border-color: rgba(15, 23, 42, 0.15); }
+/* La zone des messages (src/avis.js) : en bas de la fenêtre, au-dessus de tout, quel que soit
+   l'espace ouvert et l'endroit où l'on a fait défiler la page. */
+.zone-avis { position: fixed; z-index: 70; left: calc(var(--sidebar-w) + 20px); right: 20px; bottom: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+.zone-avis:empty { display: none; }
+.zone-avis .notice { pointer-events: auto; width: min(760px, 100%); margin: 0; padding: 12px 46px 12px 16px; font-size: 13.5px; background: #fff; color: var(--ink); border-color: var(--line-2); box-shadow: var(--shadow-lg); }
+.zone-avis .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: var(--ok-line); }
+.zone-avis .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-line); }
+.zone-avis .notice.err { background: var(--err-soft); color: var(--err); border-color: var(--err-line); }
+.zone-avis .notice code { word-break: break-all; }
+.zone-avis .avis-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.zone-avis .avis-actions button { margin: 0; height: 32px; padding: 0 14px; font-size: 13px; }
+.zone-avis .avis-actions button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.zone-avis .avis-fermer { position: absolute; top: 7px; right: 7px; margin: 0; width: 30px; height: 30px; padding: 0; border: 0; background: transparent; box-shadow: none; color: inherit; font-size: 20px; line-height: 1; opacity: 0.7; }
+.zone-avis .avis-fermer:hover { opacity: 1; background: rgba(15, 23, 42, 0.07); }
+@media (max-width: 980px) { .zone-avis { left: 16px; right: 16px; } }
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-weight: 600; font-size: 12px; }
 .chip.warn { background: var(--warn-soft); color: var(--warn); }
 .chip.ok { background: var(--ok-soft); color: var(--ok); }
@@ -593,7 +632,6 @@ details.technique > .legend { margin-top: 6px; }
 
 /* ---------------------------------------------------------------- divers */
 .panel.hidden { display: none; }
-footer.note { color: var(--muted-2); font-size: 12px; text-align: center; margin-top: 30px; }
 kbd { font: inherit; font-size: 11.5px; padding: 1px 6px; border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 6px; background: #fff; color: var(--ink-2); }
 .empty { padding: 26px 12px; text-align: center; color: var(--muted); }
 @media print { .sidebar { display: none; } .app { grid-template-columns: 1fr; } .card { box-shadow: none; } }
@@ -629,9 +667,17 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 
 /* ---------------------------------------------------------------- espace Décompte DGEO (page posée par l'application fenêtrée) */
 .navbadge { margin-left: auto; background: #f59e0b; color: #1f2937; border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 600; flex: none; }
-@media (max-width: 1500px) { .navbadge { position: absolute; top: 4px; right: 4px; margin: 0; padding: 0 5px; font-size: 10px; } }
+/* décomptes dont la pièce reste à créer : le violet de Décompte DGEO, pour ne pas se confondre
+   avec l'orange des scans à valider */
+.navbadge.decompte { background: #7c3aed; color: #fff; }
+@media (max-width: 1199px) { .navbadge { position: absolute; top: 2px; right: 6px; margin: 0; padding: 0 5px; font-size: 10px; } }
 .content.embed { padding: 0; }
-.dgeo-host { height: 100vh; }
+/* La page Décompte DGEO est posée par-dessus celle-ci : les messages prennent leur place dessous,
+   et la page du décompte rétrécit d'autant (au lieu de les recouvrir). */
+.content.embed { display: flex; flex-direction: column; height: 100vh; }
+.content.embed > .panel:not(.hidden) { flex: 1; min-height: 0; }
+.content.embed .zone-avis { position: static; padding: 10px 16px; border-top: 1px solid var(--line); background: var(--bg); }
+.dgeo-host { height: 100%; }
 
 /* ---------------------------------------------------------------- sélecteur d'outil (Caisse écoles / Décompte DGEO) */
 .switcher { position: relative; margin-bottom: 4px; }
@@ -641,7 +687,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .switcher .brand .chev { color: var(--muted-2); width: 16px; height: 16px; }
 .switcher .brand[aria-expanded="true"] { background: var(--surface-2); border-color: var(--line); }
 .mark.dgeo { background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%); box-shadow: 0 6px 14px -6px rgba(109, 40, 217, 0.7); }
-.tool-menu { position: absolute; left: 6px; right: 6px; top: 100%; z-index: 20; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; min-width: 250px; }
+.tool-menu { position: absolute; left: 6px; right: 6px; top: 100%; z-index: 20; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; min-width: 272px; }
 .tool-menu .section { padding: 8px 10px 6px; }
 .tool-menu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; box-shadow: none; height: auto; padding: 8px 10px; border-radius: 8px; }
 .tool-menu button:hover { background: var(--surface-2); }
@@ -651,21 +697,37 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .tool-menu button .txt small { font-size: 11.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
 .tool-menu button .tick { color: var(--accent); width: 16px; height: 16px; visibility: hidden; }
 .tool-menu button.active .tick { visibility: visible; }
-@media (max-width: 1500px) {
-  .switcher .brand { padding: 6px; width: 48px; justify-content: center; }
+.tool-menu .menu-attente { color: #6d28d9; font-weight: 600; }
+/* rail : le logo, et sous lui le nom court de l'outil ouvert suivi d'une flèche, pour qu'on voie
+   que c'est un menu (sans nom ni flèche, on aurait dit l'icône de l'application) */
+@media (max-width: 1199px) {
+  .switcher .brand { padding: 6px 2px 5px; width: 72px; flex-direction: column; gap: 3px; justify-content: center; }
   .switcher .brand .txt, .switcher .brand .chev { display: none; }
-  .tool-menu { left: 52px; right: auto; top: 0; width: 280px; }
+  .switcher .brand .court { display: block; font-size: 11px; line-height: 1.15; color: var(--ink-2); font-weight: 600; }
+  .switcher .brand .court::after { content: " ▾"; color: var(--muted-2); }
+  .tool-menu { left: 76px; right: auto; top: 0; width: 280px; }
 }
 
 /* note sous la navigation Décompte DGEO (nettoyage du dossier) */
 .navnote { padding: 14px 10px 0; font-size: 12px; }
 .navnote .check input { margin-top: 2px; }
-@media (max-width: 1500px) { .navnote { display: none; } }
+.navnote-tete { display: none; }
+#btnDgeoReglages { display: none; }
+/* Sous 1500 px, la note ne tient plus dans la barre : elle s'ouvre par le bouton « Réglages »,
+   posée à côté de la barre (la page Décompte DGEO s'efface le temps qu'elle est ouverte, voir app.js). */
+@media (max-width: 1500px) {
+  #btnDgeoReglages { display: flex; }
+  .navnote { display: none; }
+  .navnote.ouverte { display: block; position: fixed; z-index: 40; left: calc(var(--sidebar-w) + 8px); width: 340px; padding: 14px 16px 16px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); }
+  .navnote.ouverte .navnote-tete { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+}
 
 /* ---------------------------------------------------------------- formulaire du dossier à côté de Décompte DGEO */
-.dgeo-split { display: flex; height: 100vh; }
+.dgeo-split { display: flex; height: 100%; }
 .dgeo-split .dgeo-host { flex: 1; min-width: 0; }
-.dgeo-form { width: 460px; flex: none; border-left: 1px solid var(--line); background: #fff; display: flex; flex-direction: column; height: 100vh; overflow: auto; }
+.dgeo-form { width: 460px; flex: none; border-left: 1px solid var(--line); background: #fff; display: flex; flex-direction: column; height: 100%; overflow: auto; }
+/* le volet masqué laisse ce bouton à sa place : sans lui, il ne revenait plus */
+.dgeo-form-rouvrir { flex: none; width: 38px; height: auto; padding: 14px 0; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: #fff; box-shadow: none; writing-mode: vertical-rl; justify-content: flex-start; gap: 8px; color: var(--accent); font-weight: 600; }
 .dgeo-form-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 2; }
 .dgeo-form-head .ttl { flex: 1; min-width: 0; }
 .dgeo-form-head .ttl b { display: flex; align-items: center; gap: 6px; }

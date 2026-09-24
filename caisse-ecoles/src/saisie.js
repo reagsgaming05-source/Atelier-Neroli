@@ -33,20 +33,24 @@
   /** Accord au pluriel des compteurs affichés en permanence : « 1 pièce », « 5 pièces ». */
   const plur = (n, mot, pluriel) => `${n} ${n > 1 ? (pluriel || mot + 's') : mot}`;
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = v.toFixed(2).split('.'); return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
-  /** Les messages s'affichent sur la page regardée : sinon un message de restauration partait
-   *  sur la page de saisie pendant qu'on est dans « L'année ». */
+  /** Les messages s'affichent dans la zone des messages, toujours à l'écran (src/avis.js) : ils
+   *  partaient sous le journal, à des milliers de pixels sous l'écran, ou dans un espace caché. */
   function noticeBox() {
-    const annee = document.getElementById('panelAnnee');
-    if (els.anneeNotices && annee && !annee.classList.contains('hidden')) return els.anneeNotices;
-    return els.regNotices;
+    return document.getElementById('zoneAvis') || els.regNotices;
   }
+  /**
+   * Afficher un message : kind 'ok' | 'warn' | 'err', html déjà échappé. opts.keep : il reste
+   * jusqu'à ce qu'on le ferme (une erreur aussi) ; opts.id : il remplace le message de même id ;
+   * opts.actions : [{ texte, faire, principal }], des boutons. Voir src/avis.js.
+   */
   function notice(kind, html, opts) {
+    if (window.CaisseAvis && window.CaisseAvis.afficher) return window.CaisseAvis.afficher(kind, html, opts);
     const div = document.createElement('div');
     div.className = `notice ${kind}`;
     div.innerHTML = html;
     noticeBox().prepend(div);
-    // opts.keep : message qui contient un bouton à cliquer (fiche PDF bloquée) — il reste affiché
-    if (!(opts && opts.keep)) setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
+    if (!(opts && opts.keep) && kind !== 'err') setTimeout(() => div.remove(), 12000);
+    return div;
   }
   async function saveBlob(blob, name) {
     if (A.saveBlob) return A.saveBlob(blob, name);
@@ -142,9 +146,9 @@
     };
     C.fromSelect(els.pType, {
       items: () => TYPES().map((t) => ({ value: t, hint: [SENS[sensDe(t)] || 'selon la pièce', DEFINITION[t]].filter(Boolean).join(' : ') })),
-      vide: "Aucun type ne correspond. Les types s'ajoutent dans l'espace « Données ».",
+      vide: "Aucun type ne correspond. Les types s'ajoutent dans l'espace « Listes ».",
     });
-    C.fromSelect(els.pObjet, { vide: "Aucun objet ne correspond. Les objets s'ajoutent dans l'espace « Données »." });
+    C.fromSelect(els.pObjet, { vide: "Aucun objet ne correspond. Les objets s'ajoutent dans l'espace « Listes »." });
     C.fromSelect(els.regYear, { vide: 'Aucune année ne correspond.' });
     // « toutes les pièces » ou « depuis le n° X » : une entrée par pièce, donc une liste qui défile
     C.fromSelect(els.regPdfFrom, { vide: 'Aucun numéro ne correspond.' });
@@ -283,9 +287,13 @@
       // Le dire, puis laisser tomber l'action : sinon la fiche annonçait « Pièce enregistrée »
       // alors que rien n'était écrit. Avec les données sur le serveur, un réseau coupé n'est plus
       // un cas d'école.
-      notice('err', `<b>Registre non enregistré</b> : ${escapeHtml((e && e.message) || e)}. Ce qui est à l'écran est gardé ; réessayez dans un instant.`, { keep: true });
+      // « Ce qui est à l'écran est gardé » se lisait « c'est sauvegardé » : ce n'est encore qu'à
+      // l'écran, et fermer l'application le perd.
+      notice('err', `<b>Journal non enregistré</b> : ${escapeHtml((e && e.message) || e)}. Ce que vous venez de faire n'est encore qu'à l'écran : ne fermez pas Compta Blonay, vérifiez le réseau, puis cliquez à nouveau sur le bouton d'enregistrement.`, { keep: true, id: 'journal-non-enregistre' });
       throw e;
     } finally { state.ecritures -= 1; }
+    // enregistré : l'erreur d'un essai précédent n'a plus lieu d'être
+    if (window.CaisseAvis && window.CaisseAvis.retirer) window.CaisseAvis.retirer('journal-non-enregistre');
     const f = res && res.fusion;
     if (f) {
       // Un autre poste avait écrit dans cette année entre-temps : son travail est repris, pas écrasé.
@@ -1663,7 +1671,7 @@
       ecrireJson(cleSauvegarde(reg.annee), { quand: new Date().toISOString(), pieces: reg.pieces.length, justificatifs: fichiers.length, nom: saved || nom });
       notice('ok', `<b>Sauvegarde ${reg.annee} ${saved ? 'enregistrée' : 'téléchargée'}</b> : ${escapeHtml(saved || nom)}${saved ? '' : ' (dossier des téléchargements)'} — ` +
         `${plur(reg.pieces.length, 'pièce')}, ${plur((reg.comptages || []).length, 'comptage')}, ${plur(fichiers.length, 'justificatif')} (${taille(texte.length)}). ` +
-        'Les autres années et les listes de l\'espace « Données » n\'y sont pas.', { keep: true });
+        'Les autres années et les listes de l\'espace « Listes » n\'y sont pas.', { keep: true });
       if (introuvables.length) notice('warn', `${plur(introuvables.length, 'justificatif introuvable', 'justificatifs introuvables')} sur ce poste, donc absent${introuvables.length > 1 ? 's' : ''} de la sauvegarde : ${escapeHtml(introuvables.slice(0, 8).join(' ; '))}${introuvables.length > 8 ? '…' : ''}.`, { keep: true });
       renderSauvegardes();
     } catch (e) {
@@ -1831,8 +1839,8 @@
     return added;
   }
 
-  /* ---------------- Pont avec l'onglet Décompte DGEO ---------------- */
-  // Chaque décompte terminé dans l'autre onglet (fichier Excel généré) est proposé ici comme
+  /* ---------------- Pont avec Décompte DGEO ---------------- */
+  // Chaque décompte terminé dans Décompte DGEO (fichier Excel généré) est proposé ici comme
   // pièce DECOMPTE pré-remplie : classe, période, enseignant-e, montants du formulaire.
   const dgeoLabel = (d) => `${d.numero ? `n° ${d.numero}` : (d.filename || d.id)} – ${d.type_activite === 'camp' ? 'Camp' : "Course d'école"}${d.classe ? ` ${d.classe}` : ''}${d.activite ? ` ${d.activite}` : ''}${d.enseignant ? ` – ${d.personneAffichee || d.enseignant}` : ''}`;
   function initDgeo() {
@@ -1842,10 +1850,22 @@
     window.CaisseDgeo.onNew((d) => {
       refreshDgeo().then(() => {
         if (!d || d.saisi) return;
-        notice('ok', `Décompte terminé dans Décompte DGEO : <b>${escapeHtml(dgeoLabel(d))}</b>${d.excel ? ' (fichier Excel enregistré)' : ''}. Il est proposé au-dessus de la fiche : « Créer la pièce ».`);
+        // Le message se voit depuis Décompte DGEO même (sous sa page) et mène à la suite : sans lui,
+        // qui ne connaissait pas ce pont retapait le décompte à la main, ou l'oubliait.
+        notice('ok', `<b>Décompte ${escapeHtml(dgeoLabel(d))} terminé</b>${d.excel ? ` — fichier Excel enregistré : <code>${escapeHtml(d.excel)}</code>` : ''}.<br>`
+          + 'Étape suivante : créer sa pièce DECOMPTE dans la caisse. Elle attend aussi dans Saisie des pièces, au-dessus de la fiche (« Créer la pièce »).',
+        { id: `dgeo:${d.id}`, actions: [{ texte: 'Créer la pièce maintenant', principal: true, faire: () => creerPieceDecompte(d.id) }] });
+        dgeoAnnonces.add(d.id);
       });
     });
     refreshDgeo();
+  }
+  const dgeoAnnonces = new Set(); // décomptes dont le message « terminé » est à l'écran
+  /** « Créer la pièce maintenant » : la Saisie des pièces, et la fiche pré-remplie depuis ce décompte. */
+  function creerPieceDecompte(id) {
+    if (A.showPanel) A.showPanel('panelSaisie');
+    const d = state.dgeo.list.find((x) => x.id === id);
+    if (d && !d.saisi) useDecompte(d);
   }
   async function refreshDgeo() {
     if (!window.CaisseDgeo) return;
@@ -1854,6 +1874,9 @@
   }
   function renderDgeo() {
     const pending = state.dgeo.list.filter((d) => !d.saisi);
+    // le message « Décompte terminé — Créer la pièce maintenant » s'en va quand sa pièce est créée
+    // (ou le décompte ignoré), par où que ce soit passé
+    if (window.CaisseAvis && window.CaisseAvis.retirer) for (const id of dgeoAnnonces) if (!pending.some((d) => d.id === id)) { window.CaisseAvis.retirer(`dgeo:${id}`); dgeoAnnonces.delete(id); }
     if (!pending.length) { els.dgeoPending.classList.add('hidden'); els.dgeoPending.innerHTML = ''; return; }
     els.dgeoPending.innerHTML = `<div class="legend">Décompte${pending.length > 1 ? 's' : ''} terminé${pending.length > 1 ? 's' : ''} dans Décompte DGEO, à passer en pièce comptable :</div>` +
       pending.slice().reverse().map((d) => `<div class="item"><span class="what"><b>${escapeHtml(dgeoLabel(d))}</b>` +
@@ -1870,7 +1893,9 @@
       const d = state.dgeo.list.find((x) => x.id === b.dataset.dgeoUse);
       if (d) useDecompte(d);
     } else if (b.dataset.dgeoExcel) {
-      if (!(await window.CaisseDgeo.openExcel(b.dataset.dgeoExcel))) notice('warn', 'Le fichier Excel de ce décompte est introuvable (déplacé ou renommé).');
+      // true, ou { message } : la liste est partagée, le fichier a pu être enregistré sur un autre poste
+      const r = await window.CaisseDgeo.openExcel(b.dataset.dgeoExcel);
+      if (r !== true) notice('warn', escapeHtml(r && r.message ? r.message : 'Le fichier Excel de ce décompte est introuvable (déplacé ou renommé ?).'));
     } else if (b.dataset.dgeoForget) {
       await window.CaisseDgeo.forget(b.dataset.dgeoForget);
       if (state.dgeo.current && state.dgeo.current.id === b.dataset.dgeoForget) state.dgeo.current = null;
@@ -1948,7 +1973,8 @@
     $('btnEmplacementLocal').classList.toggle('hidden', !(e.partage && e.modifiable));
     const reseau = /^\\\\[^\\]/.test(e.chemin);
     let note;
-    if (e.partage && !e.modifiable) note = 'Emplacement fixé par l\'informatique (variable COMPTA_DONNEES) : il ne se change pas d\'ici.';
+    if (e.note) note = escapeHtml(e.note); // pourquoi l'emplacement ne se change pas d'ici (réglé par le serveur, caisse de ce PC pour cette fois)
+    else if (e.partage && !e.modifiable) note = 'Emplacement fixé par l\'informatique (variable COMPTA_DONNEES) : il ne se change pas d\'ici.';
     else if (e.partage && !reseau) note = `Réglé par <code>${escapeHtml(e.reglage)}</code>. Attention : une lettre de lecteur (Z:) n'est pas forcément la même sur chaque poste, et le copieur ne la connaît pas. Préférez l'adresse <code>\\\\SERVEUR\\partage</code>.`;
     else if (e.partage) note = `Réglé par <code>${escapeHtml(e.reglage)}</code> — effacer ce fichier revient aussi aux données de ce PC. Le copieur dépose dans <code>${escapeHtml(e.chemin)}\\Scans</code>.`;
     else note = 'Les données de ce PC, dans le dossier « data » à côté du programme. Pour les partager : « Mettre les données sur le serveur… », puis tapez l\'adresse <code>\\\\SERVEUR\\partage</code> dans la barre du haut de la fenêtre qui s\'ouvre.';

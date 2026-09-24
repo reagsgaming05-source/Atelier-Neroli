@@ -94,3 +94,14 @@ test('le LISEZMOI tient dans une fenêtre du Bloc-notes : pas de ligne de plus d
   const longues = LISEZMOI.split(/\r?\n/).map((l, i) => [i + 1, l]).filter(([, l]) => l.length > 96);
   assert.deepEqual(longues, []);
 });
+
+test("Aide → Mode d'emploi ouvre le fichier sous le nom qu'il porte dans le zip", () => {
+  const flux = fs.readFileSync(path.join(RACINE, '..', '.github', 'workflows', 'build-caisse-windows.yml'), 'utf8');
+  const copie = /Copy-Item build\\LISEZMOI-portable\.txt dist\\ComptaBlonay\\(\S+)/.exec(flux);
+  assert.ok(copie, 'la construction copie le LISEZMOI dans le zip');
+  const main = fs.readFileSync(path.join(RACINE, 'desktop', 'main.js'), 'utf8');
+  // les fichiers que le menu essaie d'ouvrir : la liste passée à .find(), pas le message d'erreur
+  const f = /function ouvrirModeEmploi\(\) \{[\s\S]*?const f = \[([^\]]*)\]\.find/.exec(main);
+  assert.ok(f, 'ouvrirModeEmploi dans main.js');
+  assert.ok(f[1].includes(`path.join(PORTABLE_DIR, '${copie[1]}')`), `main.js doit ouvrir ${copie[1]}`);
+});

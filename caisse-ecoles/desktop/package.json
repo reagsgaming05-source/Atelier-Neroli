@@ -41,6 +41,8 @@
       "veille.js",
       "emplacement.js",
       "lanceur.js",
+      "dialogues.js",
+      "boites-preload.js",
       "dgeo-theme.css",
       "app/**",
       "!app/README.md"

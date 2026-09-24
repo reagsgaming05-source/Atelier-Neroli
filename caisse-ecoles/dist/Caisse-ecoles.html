@@ -100,10 +100,15 @@ a { color: var(--accent); }
   border: 1px solid transparent; background: transparent; color: var(--ink-2);
   border-radius: 10px; padding: 9px 10px; cursor: pointer; font: inherit; font-weight: 500; position: relative;
   transition: background 0.12s, color 0.12s;
+  /* un bouton : sans ceci, le style générique centrait le contenu, fixait 36 px de haut et posait
+     une ombre — icônes et noms commençaient chacun ailleurs, en escalier */
+  justify-content: flex-start; height: auto; min-width: 0; box-shadow: none; white-space: normal;
 }
 .apptab .ico { color: var(--muted); }
-.apptab .lbl { display: flex; flex-direction: column; line-height: 1.2; }
+.apptab .lbl { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .apptab .lbl small { font-size: 11.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+/* le mot sous l'icône, quand la barre n'a plus la place des noms (voir plus bas) */
+.apptab .court, .switcher .brand .court { display: none; }
 .apptab:hover { background: var(--surface-2); color: var(--ink); }
 .apptab.active { background: var(--accent-soft); color: var(--accent); }
 .apptab.active .ico { color: var(--accent); }
@@ -116,30 +121,49 @@ a { color: var(--accent); }
 .sidebar .foot .pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-weight: 500; font-size: 12px; align-self: flex-start; }
 .sidebar .foot .pill .ico { width: 14px; height: 14px; }
 
-.content { min-width: 0; padding: 26px 30px 60px; }
+.content { min-width: 0; padding: 26px 30px calc(60px + var(--avis-h, 0px)); } /* la page défile jusque sous les messages (src/avis.js) */
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; }
 .page-head h1 { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 4px; line-height: 1.2; }
 .page-head p { margin: 0; color: var(--muted); font-size: 13px; max-width: 760px; }
 .page-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* l'endroit visé depuis la barre du haut ou le menu Aide (« Où sont mes données ? ») : repéré un instant */
+.reperee { animation: reperee 1.8s ease-out 1; }
+@keyframes reperee { 0%, 40% { box-shadow: 0 0 0 4px var(--accent-ring); border-color: var(--accent); } 100% { box-shadow: var(--shadow-sm); } }
 
-/* barre latérale réduite à un rail d'icônes sur les écrans moyens (le journal et le tableau de
-   vérification ont besoin de la largeur) */
+/* La barre latérale garde toujours les noms des espaces. À la taille d'ouverture courante (1366,
+   1440 px, ou 1920 px mis à l'échelle à 125 %), elle n'était plus qu'un rail d'icônes muettes :
+   il fallait survoler chacune pour savoir où elle menait.
+   Écrans moyens : les noms seuls, sans sous-titre (le journal et le tableau de vérification
+   gardent leur largeur). */
 @media (max-width: 1500px) {
-  :root { --sidebar-w: 72px; }
-  .sidebar { padding: 14px 10px; align-items: center; }
-  .brand { padding: 2px 0 16px; }
-  .brand > div:last-child, .nav .section, .apptab .lbl, .sidebar .foot { display: none; }
-  .apptab { justify-content: center; padding: 11px 0; width: 48px; }
+  :root { --sidebar-w: 212px; }
+  .sidebar { padding: 16px 10px 14px; }
+  .apptab .lbl small, .sidebar .foot { display: none; }
+  .apptab { padding: 8px 10px; }
   .apptab.active::before { left: -10px; }
+  /* « Décompte DGEO » en entier : la flèche cède sa place, « Changer d'outil » dit déjà que c'est un menu */
+  .switcher .brand { gap: 9px; }
+  .switcher .brand .mark { width: 32px; height: 32px; }
+  .switcher .brand .name { font-size: 14px; }
+  .switcher .brand .chev { display: none; }
+}
+/* Petits écrans : un rail, avec un mot sous chaque icône. */
+@media (max-width: 1199px) {
+  :root { --sidebar-w: 84px; }
+  .sidebar { padding: 14px 6px; align-items: center; }
+  .nav .section, .apptab .lbl { display: none; }
+  .apptab { flex-direction: column; justify-content: center; gap: 3px; padding: 7px 2px 6px; width: 72px; }
+  .apptab .court { display: block; font-size: 11px; line-height: 1.15; text-align: center; }
+  .apptab.active::before { left: -6px; }
 }
 @media (max-width: 980px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 14px; }
   .nav { flex-direction: row; flex-wrap: wrap; }
-  .apptab { width: auto; }
+  .apptab { width: auto; padding: 6px 12px; } /* des entrées séparées, pas des icônes collées */
   .apptab.active::before { display: none; }
   .sidebar .foot { display: none; }
-  .content { padding: 18px 16px 40px; }
+  .content { padding: 18px 16px calc(40px + var(--avis-h, 0px)); }
 }
 
 /* ---------------------------------------------------------------- cartes */
@@ -256,6 +280,21 @@ button.primary:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; tr
 .notice b { color: inherit; }
 .notice ul { margin: 4px 0 0; padding-left: 18px; }
 .notice button { margin-left: 6px; height: 26px; padding: 0 9px; font-size: 12px; background: #fff; color: var(--ink); border-color: rgba(15, 23, 42, 0.15); }
+/* La zone des messages (src/avis.js) : en bas de la fenêtre, au-dessus de tout, quel que soit
+   l'espace ouvert et l'endroit où l'on a fait défiler la page. */
+.zone-avis { position: fixed; z-index: 70; left: calc(var(--sidebar-w) + 20px); right: 20px; bottom: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+.zone-avis:empty { display: none; }
+.zone-avis .notice { pointer-events: auto; width: min(760px, 100%); margin: 0; padding: 12px 46px 12px 16px; font-size: 13.5px; background: #fff; color: var(--ink); border-color: var(--line-2); box-shadow: var(--shadow-lg); }
+.zone-avis .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: var(--ok-line); }
+.zone-avis .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-line); }
+.zone-avis .notice.err { background: var(--err-soft); color: var(--err); border-color: var(--err-line); }
+.zone-avis .notice code { word-break: break-all; }
+.zone-avis .avis-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.zone-avis .avis-actions button { margin: 0; height: 32px; padding: 0 14px; font-size: 13px; }
+.zone-avis .avis-actions button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.zone-avis .avis-fermer { position: absolute; top: 7px; right: 7px; margin: 0; width: 30px; height: 30px; padding: 0; border: 0; background: transparent; box-shadow: none; color: inherit; font-size: 20px; line-height: 1; opacity: 0.7; }
+.zone-avis .avis-fermer:hover { opacity: 1; background: rgba(15, 23, 42, 0.07); }
+@media (max-width: 980px) { .zone-avis { left: 16px; right: 16px; } }
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-weight: 600; font-size: 12px; }
 .chip.warn { background: var(--warn-soft); color: var(--warn); }
 .chip.ok { background: var(--ok-soft); color: var(--ok); }
@@ -602,7 +641,6 @@ details.technique > .legend { margin-top: 6px; }
 
 /* ---------------------------------------------------------------- divers */
 .panel.hidden { display: none; }
-footer.note { color: var(--muted-2); font-size: 12px; text-align: center; margin-top: 30px; }
 kbd { font: inherit; font-size: 11.5px; padding: 1px 6px; border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 6px; background: #fff; color: var(--ink-2); }
 .empty { padding: 26px 12px; text-align: center; color: var(--muted); }
 @media print { .sidebar { display: none; } .app { grid-template-columns: 1fr; } .card { box-shadow: none; } }
@@ -638,9 +676,17 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 
 /* ---------------------------------------------------------------- espace Décompte DGEO (page posée par l'application fenêtrée) */
 .navbadge { margin-left: auto; background: #f59e0b; color: #1f2937; border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 600; flex: none; }
-@media (max-width: 1500px) { .navbadge { position: absolute; top: 4px; right: 4px; margin: 0; padding: 0 5px; font-size: 10px; } }
+/* décomptes dont la pièce reste à créer : le violet de Décompte DGEO, pour ne pas se confondre
+   avec l'orange des scans à valider */
+.navbadge.decompte { background: #7c3aed; color: #fff; }
+@media (max-width: 1199px) { .navbadge { position: absolute; top: 2px; right: 6px; margin: 0; padding: 0 5px; font-size: 10px; } }
 .content.embed { padding: 0; }
-.dgeo-host { height: 100vh; }
+/* La page Décompte DGEO est posée par-dessus celle-ci : les messages prennent leur place dessous,
+   et la page du décompte rétrécit d'autant (au lieu de les recouvrir). */
+.content.embed { display: flex; flex-direction: column; height: 100vh; }
+.content.embed > .panel:not(.hidden) { flex: 1; min-height: 0; }
+.content.embed .zone-avis { position: static; padding: 10px 16px; border-top: 1px solid var(--line); background: var(--bg); }
+.dgeo-host { height: 100%; }
 
 /* ---------------------------------------------------------------- sélecteur d'outil (Caisse écoles / Décompte DGEO) */
 .switcher { position: relative; margin-bottom: 4px; }
@@ -650,7 +696,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .switcher .brand .chev { color: var(--muted-2); width: 16px; height: 16px; }
 .switcher .brand[aria-expanded="true"] { background: var(--surface-2); border-color: var(--line); }
 .mark.dgeo { background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%); box-shadow: 0 6px 14px -6px rgba(109, 40, 217, 0.7); }
-.tool-menu { position: absolute; left: 6px; right: 6px; top: 100%; z-index: 20; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; min-width: 250px; }
+.tool-menu { position: absolute; left: 6px; right: 6px; top: 100%; z-index: 20; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; min-width: 272px; }
 .tool-menu .section { padding: 8px 10px 6px; }
 .tool-menu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; box-shadow: none; height: auto; padding: 8px 10px; border-radius: 8px; }
 .tool-menu button:hover { background: var(--surface-2); }
@@ -660,21 +706,37 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .tool-menu button .txt small { font-size: 11.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
 .tool-menu button .tick { color: var(--accent); width: 16px; height: 16px; visibility: hidden; }
 .tool-menu button.active .tick { visibility: visible; }
-@media (max-width: 1500px) {
-  .switcher .brand { padding: 6px; width: 48px; justify-content: center; }
+.tool-menu .menu-attente { color: #6d28d9; font-weight: 600; }
+/* rail : le logo, et sous lui le nom court de l'outil ouvert suivi d'une flèche, pour qu'on voie
+   que c'est un menu (sans nom ni flèche, on aurait dit l'icône de l'application) */
+@media (max-width: 1199px) {
+  .switcher .brand { padding: 6px 2px 5px; width: 72px; flex-direction: column; gap: 3px; justify-content: center; }
   .switcher .brand .txt, .switcher .brand .chev { display: none; }
-  .tool-menu { left: 52px; right: auto; top: 0; width: 280px; }
+  .switcher .brand .court { display: block; font-size: 11px; line-height: 1.15; color: var(--ink-2); font-weight: 600; }
+  .switcher .brand .court::after { content: " ▾"; color: var(--muted-2); }
+  .tool-menu { left: 76px; right: auto; top: 0; width: 280px; }
 }
 
 /* note sous la navigation Décompte DGEO (nettoyage du dossier) */
 .navnote { padding: 14px 10px 0; font-size: 12px; }
 .navnote .check input { margin-top: 2px; }
-@media (max-width: 1500px) { .navnote { display: none; } }
+.navnote-tete { display: none; }
+#btnDgeoReglages { display: none; }
+/* Sous 1500 px, la note ne tient plus dans la barre : elle s'ouvre par le bouton « Réglages »,
+   posée à côté de la barre (la page Décompte DGEO s'efface le temps qu'elle est ouverte, voir app.js). */
+@media (max-width: 1500px) {
+  #btnDgeoReglages { display: flex; }
+  .navnote { display: none; }
+  .navnote.ouverte { display: block; position: fixed; z-index: 40; left: calc(var(--sidebar-w) + 8px); width: 340px; padding: 14px 16px 16px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); }
+  .navnote.ouverte .navnote-tete { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+}
 
 /* ---------------------------------------------------------------- formulaire du dossier à côté de Décompte DGEO */
-.dgeo-split { display: flex; height: 100vh; }
+.dgeo-split { display: flex; height: 100%; }
 .dgeo-split .dgeo-host { flex: 1; min-width: 0; }
-.dgeo-form { width: 460px; flex: none; border-left: 1px solid var(--line); background: #fff; display: flex; flex-direction: column; height: 100vh; overflow: auto; }
+.dgeo-form { width: 460px; flex: none; border-left: 1px solid var(--line); background: #fff; display: flex; flex-direction: column; height: 100%; overflow: auto; }
+/* le volet masqué laisse ce bouton à sa place : sans lui, il ne revenait plus */
+.dgeo-form-rouvrir { flex: none; width: 38px; height: auto; padding: 14px 0; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: #fff; box-shadow: none; writing-mode: vertical-rl; justify-content: flex-start; gap: 8px; color: var(--accent); font-weight: 600; }
 .dgeo-form-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 2; }
 .dgeo-form-head .ttl { flex: 1; min-width: 0; }
 .dgeo-form-head .ttl b { display: flex; align-items: center; gap: 6px; }
@@ -817,6 +879,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
   <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
@@ -848,42 +911,49 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   <div class="switcher" id="toolSwitcher">
     <button type="button" class="brand" id="btnTool" aria-haspopup="menu" aria-expanded="false" title="Changer d'outil : Caisse écoles ou Décompte DGEO">
       <div class="mark" id="toolMark"><svg class="ico"><use href="#i-wallet"/></svg></div>
-      <div class="txt"><div class="name" id="toolName">Caisse écoles</div><div class="suite">Compta Blonay</div></div>
+      <div class="txt"><div class="name" id="toolName">Caisse écoles</div><div class="suite">Changer d'outil</div></div>
       <svg class="ico chev"><use href="#i-chevron"/></svg>
+      <span class="court" id="toolCourt">Caisse</span>
     </button>
     <div class="tool-menu hidden" id="toolMenu" role="menu">
       <div class="section">Outils de Compta Blonay</div>
-      <button type="button" role="menuitem" data-tool="caisse" class="active"><span class="mark"><svg class="ico"><use href="#i-wallet"/></svg></span><span class="txt"><b>Caisse écoles</b><small>Pièces, journal, Excel, comptage</small></span><svg class="ico tick"><use href="#i-check"/></svg></button>
+      <button type="button" role="menuitem" data-tool="caisse" class="active"><span class="mark"><svg class="ico"><use href="#i-wallet"/></svg></span><span class="txt"><b>Caisse écoles</b><small>Pièces, journal, Excel, comptage</small><small class="menu-attente hidden" id="toolMenuDecomptes"></small></span><svg class="ico tick"><use href="#i-check"/></svg></button>
       <button type="button" role="menuitem" data-tool="dgeo"><span class="mark dgeo"><svg class="ico"><use href="#i-layers"/></svg></span><span class="txt"><b>Décompte DGEO</b><small id="dgeoNavState">Courses d'école &amp; camps</small></span><svg class="ico tick"><use href="#i-check"/></svg></button>
     </div>
   </div>
+  <!-- Chaque entrée porte son nom en entier (grand écran), son nom seul (écran moyen) ou un mot
+       sous l'icône (petit écran) : jamais une icône muette. L'infobulle reprend le libellé. -->
   <nav class="nav" id="appTabs">
     <div class="section">Espaces</div>
-    <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
-    <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées — fiches remplies à la main"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Fiches remplies à la main</small></span></button>
-    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception — fiches signées, décomptes à faire"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Fiches signées, décomptes à faire</small></span><span class="navbadge hidden" id="navBadgeReception" data-badge-reception title="Documents scannés en attente de validation"></span></button>
-    <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
-    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes, serveur</small></span></button>
-    <button type="button" class="apptab" data-panel="panelDonnees" title="Les listes de l'application"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Données<small>Comptes, classes, noms</small></span></button>
+    <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces – fiche, journal, Excel, PDF"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="court">Saisie</span><span class="navbadge decompte hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, dont la pièce reste à créer"></span></button>
+    <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées – fiches remplies à la main"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Fiches remplies à la main</small></span><span class="court">Scans</span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception – fiches signées, décomptes à faire"><svg class="ico"><use href="#i-inbox"/></svg><span class="lbl">Boîte de réception<small>Fiches signées, décomptes à faire</small></span><span class="court">Réception</span><span class="navbadge hidden" id="navBadgeReception" data-badge-reception title="Scans du copieur à valider"></span></button>
+    <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse – billets, monnaie, soldes"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, monnaie, soldes</small></span><span class="court">Caisse</span></button>
+    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année – solde à nouveau, sauvegardes, où sont les données"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes</small></span><span class="court">Année</span></button>
+    <button type="button" class="apptab" data-panel="panelDonnees" title="Listes – comptes, classes, noms"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Listes<small>Comptes, classes, noms</small></span><span class="court">Listes</span></button>
   </nav>
   <nav class="nav hidden" id="dgeoNav">
     <div class="section">Décompte DGEO</div>
-    <button type="button" class="apptab active" data-dgeo="sec-upload" title="Dossier PDF scanné"><svg class="ico"><use href="#i-upload"/></svg><span class="lbl">Dossier PDF<small>Déposer et analyser</small></span></button>
-    <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier et effectifs"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span></button>
-    <button type="button" class="apptab" data-dgeo="sec-pieces" title="Justificatifs (tickets et factures)"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Justificatifs<small>Tickets et factures</small></span></button>
-    <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
+    <button type="button" class="apptab active" data-dgeo="sec-upload" title="Dossier PDF – déposer et analyser"><svg class="ico"><use href="#i-upload"/></svg><span class="lbl">Dossier PDF<small>Déposer et analyser</small></span><span class="court">PDF</span></button>
+    <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier &amp; effectifs – titrés, accompagnants"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span><span class="court">Effectifs</span></button>
+    <button type="button" class="apptab" data-dgeo="sec-pieces" title="Justificatifs – tickets et factures"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Justificatifs<small>Tickets et factures</small></span><span class="court">Tickets</span></button>
+    <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte – part État, Excel"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span><span class="court">Lignes</span></button>
     <div class="section">Décomptes</div>
-    <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span></button>
-    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception — fiches signées, décomptes à faire"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Fiches signées, décomptes à faire</small></span><span class="navbadge hidden" id="navBadgeReceptionDgeo" data-badge-reception title="Documents scannés en attente de validation"></span></button>
-    <div class="navnote">
+    <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes – n°, montants, total (PDF)"><svg class="ico"><use href="#i-file"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span><span class="court">Récap.</span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception – fiches signées, décomptes à faire"><svg class="ico"><use href="#i-inbox"/></svg><span class="lbl">Boîte de réception<small>Fiches signées, décomptes à faire</small></span><span class="court">Réception</span><span class="navbadge hidden" id="navBadgeReceptionDgeo" data-badge-reception title="Scans du copieur à valider"></span></button>
+    <!-- Les réglages de Décompte DGEO : dans la barre sur grand écran, derrière ce bouton ailleurs
+         (ils étaient simplement cachés sous 1500 px, et un formulaire masqué ne revenait plus). -->
+    <button type="button" class="apptab" id="btnDgeoReglages" aria-haspopup="dialog" aria-expanded="false" title="Réglages du décompte – pièce comptable, formulaire du dossier"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Réglages<small>Pièce comptable, formulaire</small></span><span class="court">Réglages</span></button>
+    <div class="navnote" id="dgeoReglages" role="dialog" aria-label="Réglages du décompte">
+      <div class="navnote-tete"><b>Réglages du décompte</b><button type="button" class="small ghost" id="btnDgeoReglagesFermer" title="Fermer les réglages"><svg class="ico"><use href="#i-x"/></svg></button></div>
       <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
       <label class="check legend" style="align-items:flex-start;margin-top:10px"><input type="checkbox" id="optDgeoForm" checked> <span>Afficher le formulaire de décompte de Blonay (page de couverture) à côté de Décompte DGEO, avec ce qui y a été lu.</span></label>
     </div>
   </nav>
   <div class="foot">
-    <span class="pill"><svg class="ico"><use href="#i-shield"/></svg> 100 % local, aucune donnée envoyée</span>
-    <span>Les registres et les justificatifs restent dans les fichiers de l'application. Le classeur Excel produit garde le format habituel.</span>
+    <span class="pill"><svg class="ico"><use href="#i-shield"/></svg> Rien n'est envoyé sur Internet</span>
+    <span id="piedDonnees">Les journaux et les justificatifs restent dans les fichiers de l'application.</span>
   </div>
 </aside>
 
@@ -902,7 +972,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 
   <div class="layout2">
     <section class="card" id="ficheCard">
-      <h2><span class="left"><svg class="ico"><use href="#i-pen"/></svg> Pièce comptable <span class="legend" id="ficheTitle"></span></span> <button type="button" class="small ghost hidden" id="btnOpenDgeo" title="Ouvrir Décompte DGEO, l'outil des décomptes de courses et de camps"><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</button></h2>
+      <h2><span class="left"><svg class="ico"><use href="#i-pen"/></svg> Pièce comptable <span class="legend" id="ficheTitle"></span></span> <button type="button" class="small ghost hidden" id="btnOpenDgeo" title="Ouvrir Décompte DGEO (courses d'école et camps)"><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</button></h2>
       <div id="ficheMode" class="fiche-mode hidden"></div>
       <div id="dgeoPending" class="dgeo-pending hidden"></div>
       <div class="row">
@@ -1297,7 +1367,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   <header class="page-head">
     <div>
       <h1>L'année</h1>
-      <p>Ce qu'on règle une fois par année : l'année ouverte et son solde à nouveau, les noms du relevé de caisse. Et ce qui protège la caisse : reprendre un classeur commencé à la main, les sauvegardes, et l'endroit où sont les données (ce PC ou le serveur). Les listes proposées par l'application (comptes, classes, noms) sont dans l'espace <b>Données</b>.</p>
+      <p>Ce qu'on règle une fois par année : l'année ouverte et son solde à nouveau, le compte caisse, les noms du relevé de caisse. Et ce qui protège la caisse : reprendre un classeur commencé à la main, les sauvegardes, et l'endroit où sont les données (ce PC ou le serveur). Les listes proposées par l'application (comptes, classes, noms) sont dans l'espace <b>Listes</b>.</p>
     </div>
   </header>
 
@@ -1359,8 +1429,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 
   <section class="card">
     <h2><svg class="ico"><use href="#i-shield"/></svg> Sauvegardes</h2>
-    <p class="legend">Une sauvegarde est un fichier qui contient tout le registre de l'année ouverte : les pièces <b>avec leurs justificatifs</b> (tickets, factures, scans signés), les comptages et le solde à nouveau. Gardez-en une hors du PC (clé USB, serveur). <b>Les autres années et les listes de l'espace « Données » n'y sont pas</b> : faites une sauvegarde par année.</p>
-    <p class="legend">Restaurer une sauvegarde remplace le registre de l'année de la sauvegarde. L'application dit d'abord ce qui serait perdu, et garde une copie de sécurité du registre remplacé : la restauration peut être annulée.</p>
+    <p class="legend">Une sauvegarde est un fichier qui contient tout le journal de l'année ouverte : les pièces <b>avec leurs justificatifs</b> (tickets, factures, scans signés), les comptages et le solde à nouveau. Gardez-en une hors du PC (clé USB, serveur). <b>Les autres années et les listes de l'espace « Listes » n'y sont pas</b> : faites une sauvegarde par année.</p>
+    <p class="legend">Restaurer une sauvegarde remplace le journal de l'année de la sauvegarde. L'application dit d'abord ce qui serait perdu, et garde une copie de sécurité du journal remplacé : la restauration peut être annulée.</p>
     <div class="toolbar">
       <button type="button" id="btnRegExport"><svg class="ico"><use href="#i-download"/></svg> Faire une sauvegarde</button>
       <button type="button" id="btnRegImport"><svg class="ico"><use href="#i-upload"/></svg> Restaurer une sauvegarde…</button>
@@ -1387,8 +1457,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 <div id="panelDonnees" class="panel hidden">
   <header class="page-head">
     <div>
-      <h1>Données</h1>
-      <p>Les listes proposées quand vous remplissez une fiche : classes, personnes, comptes, objets, types d'écriture. Ouvrez une liste pour y ajouter ce qui manque ou retirer ce qui ne sert plus : c'est gardé et repris à chaque ouverture. Une pièce déjà enregistrée ne change jamais : l'application cesse seulement de proposer (et de reconnaître sur les pièces scannées) ce que vous retirez.</p>
+      <h1>Listes</h1>
+      <p>Les listes proposées quand vous remplissez une fiche : classes, personnes, comptes, objets, types d'écriture. Ouvrez une liste pour y ajouter ce qui manque ou retirer ce qui ne sert plus : c'est gardé avec les données de la caisse (sur ce PC, ou sur le serveur si elles y sont) et repris à chaque ouverture. Une pièce déjà enregistrée ne change jamais : l'application cesse seulement de proposer (et de reconnaître sur les pièces scannées) ce que vous retirez.</p>
     </div>
   </header>
 
@@ -1403,7 +1473,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       <input type="file" id="donneesFile" accept="application/json,.json" class="hidden">
     </div>
     <div id="donneesMsg" aria-live="polite"></div>
-    <div class="legend" style="margin-top:10px"><svg class="ico sm"><use href="#i-shield"/></svg> Ces listes sont gardées avec les registres de la caisse, jamais envoyées sur Internet ; les noms de personnes en font partie. Elles ne sont pas dans la sauvegarde de l'année (espace L'année) : pour les mettre à l'abri, enregistrez-en une copie.</div>
+    <div class="legend" style="margin-top:10px"><svg class="ico sm"><use href="#i-shield"/></svg> Ces listes ne partent jamais sur Internet : elles restent avec les données de la caisse. Les noms de personnes en font partie. Elles ne sont pas dans la sauvegarde de l'année (espace L'année) : pour les mettre à l'abri, enregistrez-en une copie.</div>
   </section>
 
   <div id="donneesCartes"></div>
@@ -1417,11 +1487,12 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
         <div class="ttl"><b><svg class="ico sm"><use href="#i-file"/></svg> Formulaire du dossier</b><div class="legend" id="dgeoFormFile"></div></div>
         <select id="dgeoFormSelect" title="Dossiers analysés (le plus récent en premier)"></select>
         <button type="button" class="small ghost" id="btnDgeoFormZoom" title="Agrandir le formulaire"><svg class="ico"><use href="#i-search"/></svg></button>
-        <button type="button" class="small ghost" id="btnDgeoFormHide" title="Masquer le formulaire (réglage dans la barre latérale)"><svg class="ico"><use href="#i-x"/></svg></button>
+        <button type="button" class="small ghost" id="btnDgeoFormHide" title="Masquer le formulaire (le bouton « Formulaire », à droite, le rouvre)"><svg class="ico"><use href="#i-x"/></svg></button>
       </div>
       <div class="dgeo-form-pages" id="dgeoFormPages"></div>
       <div class="dgeo-form-fields" id="dgeoFormFields"></div>
     </aside>
+    <button type="button" class="dgeo-form-rouvrir hidden" id="btnDgeoFormShow" title="Afficher le formulaire du dossier à côté de Décompte DGEO"><svg class="ico sm"><use href="#i-file"/></svg> Formulaire du dossier</button>
   </div>
   <section class="card" id="dgeoAbout" style="max-width:760px;margin:26px auto">
     <h2><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</h2>
@@ -1465,7 +1536,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   </section>
 </div>
 
-<footer class="note">Format du classeur : Date | No | Compte | Libellé | Débit | Crédit | Solde (solde cumulé par formule).</footer>
+<!-- Les messages de l'application (src/avis.js) : toujours à l'écran, où que l'on soit. -->
+<div id="zoneAvis" class="zone-avis" aria-live="polite"></div>
 </main>
 </div>
 
@@ -21727,6 +21799,163 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 </script>
 <script>
 /*
+ * Les messages de l'application : une seule zone, toujours à l'écran.
+ *
+ * Les messages de la fiche et du journal s'ajoutaient sous le journal — à des milliers de pixels
+ * sous l'écran avec une année réelle — et s'effaçaient au bout de 7 secondes : on ne savait pas
+ * si la pièce était enregistrée, et une erreur d'écriture passait pour un clic sans effet. Depuis
+ * « Compter la caisse », l'erreur partait même dans un espace caché.
+ *
+ * La zone est fixée en bas de la fenêtre, au-dessus de tout, quel que soit l'espace ouvert et
+ * l'endroit où l'on a fait défiler la page. Dans Décompte DGEO, dont la page est posée par-dessus
+ * celle-ci, elle prend sa place sous la page du décompte (voir app.css, `.content.embed`).
+ *
+ * Combien de temps : une réussite reste 12 s, un avertissement 25 s ; une erreur, ou un message
+ * qui propose une action, reste jusqu'à ce qu'on le ferme. Un message survolé ne s'efface pas.
+ * Chaque message a sa croix. Le même message (ou le même sujet, `opts.id`) ne s'empile pas.
+ *
+ * notice(genre, html, opts) de saisie.js reste la façon d'afficher un message : elle passe par
+ * ici. Ailleurs : window.CaisseAvis.afficher(genre, html, opts), mêmes arguments.
+ *   genre : 'ok' | 'warn' | 'err' ; html : texte déjà échappé ;
+ *   opts.keep (ou garder) : rester jusqu'à ce qu'on le ferme ; opts.id : remplace le message de même id ;
+ *   opts.actions : [{ texte, faire, principal }] — des boutons ; le message se ferme au clic.
+ * CaisseAvis.retirer(id) retire le message de cet id.
+ * En Node (tests) : les règles seules, duree() et aRetirer().
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.CaisseAvis = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const DUREES = { ok: 12000, info: 12000, warn: 25000 };
+  const MAX = 4;
+
+  /** Durée d'affichage en millisecondes, ou null : le message reste jusqu'à ce qu'on le ferme. */
+  function duree(genre, opts) {
+    const o = opts || {};
+    if (o.keep || o.garder || (Array.isArray(o.actions) && o.actions.length)) return null;
+    if (genre === 'err') return null;
+    return DUREES[genre] || DUREES.ok;
+  }
+
+  /**
+   * Trop de messages à la fois : lesquels retirer. Les plus anciens de ceux qui s'effaceraient
+   * d'eux-mêmes d'abord ; un message qui attend qu'on le ferme (une erreur) ne part que s'il n'y
+   * a plus que ceux-là. `liste` : du plus ancien au plus récent, [{ persistant }] ; renvoie les
+   * indices à retirer.
+   */
+  function aRetirer(liste, max) {
+    const surplus = liste.length - (max || MAX);
+    if (surplus <= 0) return [];
+    const idx = liste.map((x, i) => i);
+    return idx.filter((i) => !liste[i].persistant).concat(idx.filter((i) => liste[i].persistant)).slice(0, surplus);
+  }
+
+  if (typeof document === 'undefined') return { duree, aRetirer, MAX };
+
+  /* ---------------- à l'écran ---------------- */
+  let zone = null;
+  function laZone() {
+    if (zone && zone.isConnected) return zone;
+    zone = document.getElementById('zoneAvis');
+    if (!zone) {
+      zone = document.createElement('div');
+      zone.id = 'zoneAvis';
+      zone.className = 'zone-avis';
+      (document.querySelector('main') || document.body).appendChild(zone);
+    }
+    zone.setAttribute('aria-live', 'polite');
+    // Les boutons « Ouvrir la fiche PDF » (fenêtre bloquée) : ouverts ici, où qu'ait été écrit le message.
+    zone.addEventListener('click', (ev) => {
+      const b = ev.target.closest('button[data-open-pdf]');
+      if (b) window.open(b.dataset.openPdf, '_blank');
+    });
+    // La page peut défiler jusque sous les messages : ils ne cachent rien pour de bon.
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => {
+        const main = document.querySelector('main.content');
+        if (main) main.style.setProperty('--avis-h', `${zone.offsetHeight}px`);
+      }).observe(zone);
+    }
+    return zone;
+  }
+
+  function fermer(div) {
+    if (div && div.parentNode) div.parentNode.removeChild(div);
+  }
+
+  /** S'efface après `ms`, sauf pendant qu'on le survole ou qu'on y est au clavier. */
+  function programmer(div, ms) {
+    let reste = ms;
+    let debut = Date.now();
+    let t = setTimeout(() => fermer(div), reste);
+    const pause = () => { clearTimeout(t); reste -= Date.now() - debut; };
+    const reprise = () => { debut = Date.now(); clearTimeout(t); t = setTimeout(() => fermer(div), Math.max(4000, reste)); };
+    div.addEventListener('mouseenter', pause);
+    div.addEventListener('mouseleave', reprise);
+    div.addEventListener('focusin', pause);
+    div.addEventListener('focusout', reprise);
+  }
+
+  function afficher(genre, html, opts) {
+    const o = opts || {};
+    const z = laZone();
+    const cle = o.id ? `id:${o.id}` : `${genre}:${html}`;
+    for (const ancien of Array.from(z.children)) if (ancien.dataset.cle === cle) fermer(ancien);
+
+    const div = document.createElement('div');
+    div.className = `notice ${genre}`;
+    div.dataset.cle = cle;
+    if (genre === 'err') div.setAttribute('role', 'alert');
+    const texte = document.createElement('div');
+    texte.className = 'avis-texte';
+    texte.innerHTML = html;
+    div.appendChild(texte);
+    if (Array.isArray(o.actions) && o.actions.length) {
+      const barre = document.createElement('div');
+      barre.className = 'avis-actions';
+      for (const a of o.actions) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        if (a.principal) b.className = 'primary';
+        b.textContent = a.texte;
+        b.addEventListener('click', () => { fermer(div); try { a.faire(); } catch (e) { console.error(e); } });
+        barre.appendChild(b);
+      }
+      div.appendChild(barre);
+    }
+    const croix = document.createElement('button');
+    croix.type = 'button';
+    croix.className = 'avis-fermer';
+    croix.title = 'Fermer ce message';
+    croix.setAttribute('aria-label', 'Fermer ce message');
+    croix.textContent = '×';
+    croix.addEventListener('click', () => fermer(div));
+    div.appendChild(croix);
+
+    const ms = duree(genre, o);
+    div.dataset.persistant = ms == null ? '1' : '';
+    z.appendChild(div); // le plus récent en bas, au plus près du bord où l'œil le cherche
+    if (ms != null) programmer(div, ms);
+    const tous = Array.from(z.children);
+    for (const i of aRetirer(tous.map((d) => ({ persistant: !!d.dataset.persistant })))) fermer(tous[i]);
+    return div;
+  }
+
+  /** Retire le message de cet id (une erreur d'enregistrement, une fois l'enregistrement réussi). */
+  function retirer(id) {
+    const z = document.getElementById('zoneAvis');
+    if (!z) return;
+    for (const d of Array.from(z.children)) if (d.dataset.cle === `id:${id}`) fermer(d);
+  }
+
+  return { duree, aRetirer, MAX, afficher, fermer, retirer };
+});
+
+</script>
+<script>
+/*
  * Interface de l'application (navigateur). Dépend de :
  *   window.pdfjsLib (pdf.js), window.ExcelJS, window.CaisseParser, window.CaisseExcel,
  *   window.CaisseOCR (facultatif : seconde lecture par OCR local)
@@ -21911,7 +22140,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const aj = K.GENRES.reduce((n, g) => n + r[g].ajoutes, 0);
       const re = K.GENRES.reduce((n, g) => n + r[g].retires, 0);
       if (aj || re) {
-        html += ` <span style="color:#2563eb">Espace <b>Données</b> : ${aj} ajout(s), ${re} retrait(s).</span>`;
+        html += ` <span style="color:#2563eb">Espace <b>Listes</b> : ${aj} ajout(s), ${re} retrait(s).</span>`;
       }
     }
     // Logique comptable des libellés (voir TYPE_LOGIC dans parser.js)
@@ -24127,6 +24356,19 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     if (PANNEAUX_PARTAGES.includes(id)) return currentTool;
     return DGEO_PANELS.includes(id) ? 'dgeo' : 'caisse';
   };
+  // Les noms tels que la barre latérale les montre : ils font le titre de la fenêtre.
+  const NOMS_OUTILS = { caisse: 'Caisse écoles', dgeo: 'Décompte DGEO' };
+  const NOMS_ESPACES = { panelSaisie: 'Saisie des pièces', panelScan: 'Pièces scannées', panelReception: 'Boîte de réception', panelCaisse: 'Compter la caisse', panelAnnee: "L'année", panelDonnees: 'Listes', panelDgeo: 'Décompte DGEO', panelRecap: 'Récapitulatif des décomptes' };
+  /**
+   * Dire où l'on est : le titre de la page (et, dans l'application fenêtrée, celui de la fenêtre,
+   * que montrent la barre des tâches et Alt+Tab), et l'outil marqué dans la barre du haut.
+   */
+  function annoncerEspace(id) {
+    const outil = toolOf(id);
+    const espace = NOMS_ESPACES[id] || '';
+    document.title = espace && espace !== NOMS_OUTILS[outil] ? `${espace} – ${NOMS_OUTILS[outil]}` : NOMS_OUTILS[outil];
+    if (window.CaisseFenetre && window.CaisseFenetre.espace) window.CaisseFenetre.espace({ outil, outilNom: NOMS_OUTILS[outil], espace });
+  }
   function showPanel(id) {
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
     if (toolEls.dgeoNav) {
@@ -24139,11 +24381,13 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const tool = toolOf(id);
     if (tool === 'caisse') lastCaissePanel = id; else lastDgeoPanel = id;
     syncTool(tool);
+    if (tool !== 'dgeo') ouvrirReglagesDgeo(false);
+    annoncerEspace(id);
     updateDgeoEmbed();
   }
   // Sélecteur d'outil en tête de la barre latérale : Caisse écoles (ses espaces) ou Décompte DGEO
   // (sa page, avec des raccourcis vers ses sections). L'outil ouvert est mémorisé.
-  const toolEls = { btn: document.getElementById('btnTool'), menu: document.getElementById('toolMenu'), mark: document.getElementById('toolMark'), name: document.getElementById('toolName'), caisseNav: appTabs, dgeoNav: document.getElementById('dgeoNav') };
+  const toolEls = { btn: document.getElementById('btnTool'), menu: document.getElementById('toolMenu'), mark: document.getElementById('toolMark'), name: document.getElementById('toolName'), court: document.getElementById('toolCourt'), caisseNav: appTabs, dgeoNav: document.getElementById('dgeoNav') };
   let currentTool = 'caisse';
   let lastCaissePanel = 'panelSaisie';
   let lastDgeoPanel = 'panelDgeo';
@@ -24153,6 +24397,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const dgeo = tool === 'dgeo';
     if (toolEls.mark) { toolEls.mark.classList.toggle('dgeo', dgeo); toolEls.mark.innerHTML = `<svg class="ico"><use href="#i-${dgeo ? 'layers' : 'wallet'}"/></svg>`; }
     if (toolEls.name) toolEls.name.textContent = dgeo ? 'Décompte DGEO' : 'Caisse écoles';
+    if (toolEls.court) toolEls.court.textContent = dgeo ? 'DGEO' : 'Caisse';
     if (toolEls.caisseNav) toolEls.caisseNav.classList.toggle('hidden', dgeo);
     if (toolEls.dgeoNav) toolEls.dgeoNav.classList.toggle('hidden', !dgeo);
     if (toolEls.menu) for (const b of toolEls.menu.querySelectorAll('button[data-tool]')) b.classList.toggle('active', b.dataset.tool === tool);
@@ -24163,12 +24408,33 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     if (tool === 'dgeo') showPanel(lastDgeoPanel && document.getElementById(lastDgeoPanel) ? lastDgeoPanel : 'panelDgeo');
     else showPanel(lastCaissePanel && document.getElementById(lastCaissePanel) ? lastCaissePanel : 'panelSaisie');
   }
-  function closeToolMenu() { if (toolEls.menu) { toolEls.menu.classList.add('hidden'); toolEls.btn.setAttribute('aria-expanded', 'false'); } }
+  function closeToolMenu() { if (toolEls.menu) { toolEls.menu.classList.add('hidden'); toolEls.btn.setAttribute('aria-expanded', 'false'); couvrirDgeo('menu', false); } }
   if (toolEls.btn && toolEls.menu) {
-    toolEls.btn.addEventListener('click', (ev) => { ev.stopPropagation(); const open = toolEls.menu.classList.toggle('hidden'); toolEls.btn.setAttribute('aria-expanded', open ? 'false' : 'true'); });
+    toolEls.btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const ferme = toolEls.menu.classList.toggle('hidden');
+      toolEls.btn.setAttribute('aria-expanded', ferme ? 'false' : 'true');
+      couvrirDgeo('menu', !ferme);
+    });
     toolEls.menu.addEventListener('click', (ev) => { const b = ev.target.closest('button[data-tool]'); if (b) setTool(b.dataset.tool); });
-    document.addEventListener('click', (ev) => { if (!toolEls.menu.contains(ev.target) && ev.target !== toolEls.btn) closeToolMenu(); });
+    document.addEventListener('click', (ev) => { if (!toolEls.menu.contains(ev.target) && !toolEls.btn.contains(ev.target)) closeToolMenu(); });
     document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeToolMenu(); });
+  }
+  // Les outils choisis dans la barre du haut de la fenêtre, et les endroits que visent la barre du
+  // haut et le menu Aide (« Où sont mes données ? » : la carte de L'année).
+  if (window.CaisseFenetre) {
+    window.CaisseFenetre.onOutil((outil) => setTool(outil === 'dgeo' ? 'dgeo' : 'caisse'));
+    window.CaisseFenetre.onAller((c) => {
+      if (!c || !document.getElementById(c.panel)) return;
+      closeToolMenu();
+      showPanel(c.panel);
+      const el = c.cible && document.getElementById(c.cible);
+      if (!el) return;
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.classList.remove('reperee'); void el.offsetWidth; el.classList.add('reperee');
+      }, 60);
+    });
   }
   if (toolEls.dgeoNav) {
     toolEls.dgeoNav.addEventListener('click', (ev) => {
@@ -24182,6 +24448,36 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     });
   }
 
+  /*
+   * Réglages de Décompte DGEO (retirer la pièce comptable, afficher le formulaire du dossier).
+   * Sur grand écran, ils sont dans la barre ; en dessous de 1500 px, ils ne tenaient plus et
+   * étaient simplement cachés : un formulaire masqué ne revenait plus. Ils s'ouvrent désormais par
+   * le bouton « Réglages », posés à côté de la barre.
+   */
+  const reglagesDgeo = { btn: document.getElementById('btnDgeoReglages'), note: document.getElementById('dgeoReglages'), fermer: document.getElementById('btnDgeoReglagesFermer') };
+  function ouvrirReglagesDgeo(ouvrir) {
+    const { btn, note } = reglagesDgeo;
+    if (!btn || !note) return;
+    const etait = note.classList.contains('ouverte');
+    if (ouvrir === etait) return;
+    note.classList.toggle('ouverte', ouvrir);
+    btn.setAttribute('aria-expanded', ouvrir ? 'true' : 'false');
+    btn.classList.toggle('active', ouvrir);
+    if (ouvrir) {
+      const r = btn.getBoundingClientRect();
+      note.style.top = `${Math.max(8, Math.min(r.top, window.innerHeight - note.offsetHeight - 12))}px`;
+    }
+    couvrirDgeo('reglages', ouvrir);
+  }
+  if (reglagesDgeo.btn && reglagesDgeo.note) {
+    reglagesDgeo.btn.addEventListener('click', (ev) => { ev.stopPropagation(); ouvrirReglagesDgeo(!reglagesDgeo.note.classList.contains('ouverte')); });
+    if (reglagesDgeo.fermer) reglagesDgeo.fermer.addEventListener('click', () => ouvrirReglagesDgeo(false));
+    document.addEventListener('click', (ev) => { if (!reglagesDgeo.note.contains(ev.target) && !reglagesDgeo.btn.contains(ev.target)) ouvrirReglagesDgeo(false); });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') ouvrirReglagesDgeo(false); });
+    // de retour sur un grand écran, la note reprend sa place dans la barre
+    window.addEventListener('resize', () => { if (window.innerWidth > 1500) ouvrirReglagesDgeo(false); });
+  }
+
   // Décompte DGEO : dans l'application fenêtrée, sa page est posée par le processus principal dans
   // la zone de l'espace « Décompte DGEO » (fichier HTML seul : une explication à la place).
   const dgeoHost = document.getElementById('dgeoHost');
@@ -24189,13 +24485,22 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   const canEmbed = !!(window.CaisseDgeo && window.CaisseDgeo.embed && dgeoHost);
   if (dgeoAbout && canEmbed) dgeoAbout.classList.add('hidden');
   if (dgeoHost && !canEmbed) dgeoHost.classList.add('hidden');
+  // La page Décompte DGEO est posée PAR-DESSUS celle-ci : un menu ou des réglages ouverts à côté de
+  // la barre latérale passaient dessous, invisibles (le menu de l'outil, en mode rail, ne pouvait
+  // plus ramener à la caisse). Tant qu'ils sont ouverts, la page du décompte s'efface.
+  const couvertures = new Set();
+  function couvrirDgeo(raison, oui) {
+    const avant = couvertures.size;
+    if (oui) couvertures.add(raison); else couvertures.delete(raison);
+    if (!avant !== !couvertures.size) updateDgeoEmbed();
+  }
   function updateDgeoEmbed() {
     if (!canEmbed) return;
     const panel = document.getElementById('panelDgeo');
     const active = !!panel && !panel.classList.contains('hidden');
     const content = document.querySelector('main.content');
     if (content) content.classList.toggle('embed', active);
-    if (!active) { window.CaisseDgeo.embed(null); return; }
+    if (!active || couvertures.size) { window.CaisseDgeo.embed(null); return; }
     const r = dgeoHost.getBoundingClientRect();
     window.CaisseDgeo.embed({ x: r.left, y: r.top, width: r.width, height: r.height });
   }
@@ -24207,8 +24512,19 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const applyState = (s) => {
       const el = document.getElementById('dgeoNavState');
       if (el) el.textContent = s.hasDgeo ? (DGEO_STATE[s.dgeo] || DGEO_STATE.ready) : DGEO_STATE.missing;
+      // Décomptes dont la pièce attend dans la caisse : le nombre sur « Saisie des pièces », et la
+      // phrase entière là où un chiffre seul ne dirait rien (infobulle, menu de l'outil).
+      const n = Number(s.decomptes) || 0;
+      const phrase = n ? `${n} décompte${n > 1 ? 's' : ''} à saisir` : '';
       const b = document.getElementById('navBadgeSaisie');
-      if (b) { b.textContent = s.decomptes ? String(s.decomptes) : ''; b.classList.toggle('hidden', !s.decomptes); }
+      if (b) {
+        b.textContent = n ? String(n) : '';
+        b.classList.toggle('hidden', !n);
+        b.title = n ? `${phrase} : terminé${n > 1 ? 's' : ''} dans Décompte DGEO, la pièce reste à créer (« Créer la pièce », au-dessus de la fiche)` : '';
+        b.setAttribute('aria-label', phrase);
+      }
+      const m = document.getElementById('toolMenuDecomptes');
+      if (m) { m.textContent = phrase; m.classList.toggle('hidden', !n); }
     };
     window.CaisseDgeo.onState(applyState);
     window.CaisseDgeo.state().then(applyState).catch(() => {});
@@ -24242,6 +24558,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const fr = (n) => (n == null ? '–' : `CHF ${Number(n).toFixed(2)}`);
       alert(`Décompte ${d.numero || d.filename || ''} refait : la part de l'État passe de ${fr(d.totalPrecedent)} à ${fr(d.total)}.\n\nSa pièce comptable${piece ? ` n° ${piece.no}` : ''} a été créée d'après l'ancien décompte : vérifiez son montant dans « Saisie des pièces ».`);
     });
+    // Un décompte vient d'être terminé : le retour à Caisse écoles mène à la Saisie, où sa pièce
+    // attend, et non au dernier espace ouvert (Compter la caisse, par exemple).
+    if (window.CaisseDgeo.onNew) window.CaisseDgeo.onNew((d) => { if (d && !d.saisi) lastCaissePanel = 'panelSaisie'; });
     // dossier PDF déposé dans Décompte DGEO : la passerelle le confie à cette page, qui retire les
     // pages « PIÈCE COMPTABLE » (src/dossier.js) avant l'analyse
     if (window.CaisseDgeo.onClean && window.CaisseDossier) {
@@ -24271,6 +24590,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const formFile = document.getElementById('dgeoFormFile');
     const formSelect = document.getElementById('dgeoFormSelect');
     const formOpt = document.getElementById('optDgeoForm');
+    const formShow = document.getElementById('btnDgeoFormShow');
     const dossiers = { list: [], current: null };
     let formOn = true;
     try { formOn = localStorage.getItem('caisse.dgeoForm') !== '0'; } catch (e) { /* ignore */ }
@@ -24282,6 +24602,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const d = dossiers.list.find((x) => x.id === dossiers.current) || dossiers.list[0] || null;
       const show = formOn && !!d;
       formPane.classList.toggle('hidden', !show);
+      if (formShow) formShow.classList.toggle('hidden', formOn || !d); // masqué : le bouton qui le rouvre
       if (!show) { updateDgeoEmbed(); return; }
       dossiers.current = d.id;
       formFile.textContent = `${d.filename || d.id}${d.analysedAt ? ` · analysé le ${new Date(d.analysedAt).toLocaleDateString('fr-CH')}` : ''}`;
@@ -24325,6 +24646,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const setFormOn = (on) => { formOn = on; if (formOpt) formOpt.checked = on; try { localStorage.setItem('caisse.dgeoForm', on ? '1' : '0'); } catch (e) { /* ignore */ } renderForm(); };
       if (formOpt) { formOpt.checked = formOn; formOpt.addEventListener('change', () => setFormOn(formOpt.checked)); }
       document.getElementById('btnDgeoFormHide').addEventListener('click', () => setFormOn(false));
+      if (formShow) formShow.addEventListener('click', () => setFormOn(true));
       const zoomImg = (src) => {
         const ov = document.createElement('div'); ov.className = 'zoom-overlay';
         ov.innerHTML = `<div class="zoom-inner"><img src="${esc(src)}" alt="Formulaire"></div><div class="zoom-hint">Cliquer ou Échap pour fermer</div>`;
@@ -24355,6 +24677,19 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       }
       if (saved && saved !== 'panelSaisie' && document.getElementById(saved)) showPanel(saved);
     } catch (e) { /* ignore */ }
+    const ouvert = Array.from(document.querySelectorAll('main .panel')).find((p) => !p.classList.contains('hidden'));
+    annoncerEspace(ouvert ? ouvert.id : 'panelSaisie');
+  }
+  // Pied de la barre latérale : où sont les données. Il affichait « 100 % local, aucune donnée
+  // envoyée » même quand tout était sur le serveur ; ce qui reste vrai, c'est « rien sur Internet ».
+  {
+    const pied = document.getElementById('piedDonnees');
+    if (pied && window.CaisseEmplacement) {
+      window.CaisseEmplacement.etat().then((e) => {
+        pied.textContent = e.separee ? 'Caisse de ce PC seulement : le serveur ne répondait pas au démarrage.'
+          : e.partage ? `Données partagées sur le serveur : ${e.chemin}` : 'Données sur ce PC.';
+      }).catch(() => {});
+    } else if (pied) pied.textContent = 'Données gardées dans ce navigateur, sur ce PC.';
   }
   // base des écritures des pièces scannées : celle choisie la dernière fois, sinon le registre de l'année
   { let base = 'registre'; try { base = localStorage.getItem('caisse.scan.base') || 'registre'; } catch (e) { /* ignore */ } applyMode(base); }
@@ -24770,20 +25105,24 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   /** Accord au pluriel des compteurs affichés en permanence : « 1 pièce », « 5 pièces ». */
   const plur = (n, mot, pluriel) => `${n} ${n > 1 ? (pluriel || mot + 's') : mot}`;
   const fmtCHF = (n) => { const v = Number(n) || 0; const [i, d] = v.toFixed(2).split('.'); return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, "'")}.${d}`; };
-  /** Les messages s'affichent sur la page regardée : sinon un message de restauration partait
-   *  sur la page de saisie pendant qu'on est dans « L'année ». */
+  /** Les messages s'affichent dans la zone des messages, toujours à l'écran (src/avis.js) : ils
+   *  partaient sous le journal, à des milliers de pixels sous l'écran, ou dans un espace caché. */
   function noticeBox() {
-    const annee = document.getElementById('panelAnnee');
-    if (els.anneeNotices && annee && !annee.classList.contains('hidden')) return els.anneeNotices;
-    return els.regNotices;
+    return document.getElementById('zoneAvis') || els.regNotices;
   }
+  /**
+   * Afficher un message : kind 'ok' | 'warn' | 'err', html déjà échappé. opts.keep : il reste
+   * jusqu'à ce qu'on le ferme (une erreur aussi) ; opts.id : il remplace le message de même id ;
+   * opts.actions : [{ texte, faire, principal }], des boutons. Voir src/avis.js.
+   */
   function notice(kind, html, opts) {
+    if (window.CaisseAvis && window.CaisseAvis.afficher) return window.CaisseAvis.afficher(kind, html, opts);
     const div = document.createElement('div');
     div.className = `notice ${kind}`;
     div.innerHTML = html;
     noticeBox().prepend(div);
-    // opts.keep : message qui contient un bouton à cliquer (fiche PDF bloquée) — il reste affiché
-    if (!(opts && opts.keep)) setTimeout(() => div.remove(), kind === 'err' ? 12000 : 7000);
+    if (!(opts && opts.keep) && kind !== 'err') setTimeout(() => div.remove(), 12000);
+    return div;
   }
   async function saveBlob(blob, name) {
     if (A.saveBlob) return A.saveBlob(blob, name);
@@ -24879,9 +25218,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     };
     C.fromSelect(els.pType, {
       items: () => TYPES().map((t) => ({ value: t, hint: [SENS[sensDe(t)] || 'selon la pièce', DEFINITION[t]].filter(Boolean).join(' : ') })),
-      vide: "Aucun type ne correspond. Les types s'ajoutent dans l'espace « Données ».",
+      vide: "Aucun type ne correspond. Les types s'ajoutent dans l'espace « Listes ».",
     });
-    C.fromSelect(els.pObjet, { vide: "Aucun objet ne correspond. Les objets s'ajoutent dans l'espace « Données »." });
+    C.fromSelect(els.pObjet, { vide: "Aucun objet ne correspond. Les objets s'ajoutent dans l'espace « Listes »." });
     C.fromSelect(els.regYear, { vide: 'Aucune année ne correspond.' });
     // « toutes les pièces » ou « depuis le n° X » : une entrée par pièce, donc une liste qui défile
     C.fromSelect(els.regPdfFrom, { vide: 'Aucun numéro ne correspond.' });
@@ -25020,9 +25359,13 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       // Le dire, puis laisser tomber l'action : sinon la fiche annonçait « Pièce enregistrée »
       // alors que rien n'était écrit. Avec les données sur le serveur, un réseau coupé n'est plus
       // un cas d'école.
-      notice('err', `<b>Registre non enregistré</b> : ${escapeHtml((e && e.message) || e)}. Ce qui est à l'écran est gardé ; réessayez dans un instant.`, { keep: true });
+      // « Ce qui est à l'écran est gardé » se lisait « c'est sauvegardé » : ce n'est encore qu'à
+      // l'écran, et fermer l'application le perd.
+      notice('err', `<b>Journal non enregistré</b> : ${escapeHtml((e && e.message) || e)}. Ce que vous venez de faire n'est encore qu'à l'écran : ne fermez pas Compta Blonay, vérifiez le réseau, puis cliquez à nouveau sur le bouton d'enregistrement.`, { keep: true, id: 'journal-non-enregistre' });
       throw e;
     } finally { state.ecritures -= 1; }
+    // enregistré : l'erreur d'un essai précédent n'a plus lieu d'être
+    if (window.CaisseAvis && window.CaisseAvis.retirer) window.CaisseAvis.retirer('journal-non-enregistre');
     const f = res && res.fusion;
     if (f) {
       // Un autre poste avait écrit dans cette année entre-temps : son travail est repris, pas écrasé.
@@ -26400,7 +26743,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       ecrireJson(cleSauvegarde(reg.annee), { quand: new Date().toISOString(), pieces: reg.pieces.length, justificatifs: fichiers.length, nom: saved || nom });
       notice('ok', `<b>Sauvegarde ${reg.annee} ${saved ? 'enregistrée' : 'téléchargée'}</b> : ${escapeHtml(saved || nom)}${saved ? '' : ' (dossier des téléchargements)'} — ` +
         `${plur(reg.pieces.length, 'pièce')}, ${plur((reg.comptages || []).length, 'comptage')}, ${plur(fichiers.length, 'justificatif')} (${taille(texte.length)}). ` +
-        'Les autres années et les listes de l\'espace « Données » n\'y sont pas.', { keep: true });
+        'Les autres années et les listes de l\'espace « Listes » n\'y sont pas.', { keep: true });
       if (introuvables.length) notice('warn', `${plur(introuvables.length, 'justificatif introuvable', 'justificatifs introuvables')} sur ce poste, donc absent${introuvables.length > 1 ? 's' : ''} de la sauvegarde : ${escapeHtml(introuvables.slice(0, 8).join(' ; '))}${introuvables.length > 8 ? '…' : ''}.`, { keep: true });
       renderSauvegardes();
     } catch (e) {
@@ -26568,8 +26911,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     return added;
   }
 
-  /* ---------------- Pont avec l'onglet Décompte DGEO ---------------- */
-  // Chaque décompte terminé dans l'autre onglet (fichier Excel généré) est proposé ici comme
+  /* ---------------- Pont avec Décompte DGEO ---------------- */
+  // Chaque décompte terminé dans Décompte DGEO (fichier Excel généré) est proposé ici comme
   // pièce DECOMPTE pré-remplie : classe, période, enseignant-e, montants du formulaire.
   const dgeoLabel = (d) => `${d.numero ? `n° ${d.numero}` : (d.filename || d.id)} – ${d.type_activite === 'camp' ? 'Camp' : "Course d'école"}${d.classe ? ` ${d.classe}` : ''}${d.activite ? ` ${d.activite}` : ''}${d.enseignant ? ` – ${d.personneAffichee || d.enseignant}` : ''}`;
   function initDgeo() {
@@ -26579,10 +26922,22 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     window.CaisseDgeo.onNew((d) => {
       refreshDgeo().then(() => {
         if (!d || d.saisi) return;
-        notice('ok', `Décompte terminé dans Décompte DGEO : <b>${escapeHtml(dgeoLabel(d))}</b>${d.excel ? ' (fichier Excel enregistré)' : ''}. Il est proposé au-dessus de la fiche : « Créer la pièce ».`);
+        // Le message se voit depuis Décompte DGEO même (sous sa page) et mène à la suite : sans lui,
+        // qui ne connaissait pas ce pont retapait le décompte à la main, ou l'oubliait.
+        notice('ok', `<b>Décompte ${escapeHtml(dgeoLabel(d))} terminé</b>${d.excel ? ` — fichier Excel enregistré : <code>${escapeHtml(d.excel)}</code>` : ''}.<br>`
+          + 'Étape suivante : créer sa pièce DECOMPTE dans la caisse. Elle attend aussi dans Saisie des pièces, au-dessus de la fiche (« Créer la pièce »).',
+        { id: `dgeo:${d.id}`, actions: [{ texte: 'Créer la pièce maintenant', principal: true, faire: () => creerPieceDecompte(d.id) }] });
+        dgeoAnnonces.add(d.id);
       });
     });
     refreshDgeo();
+  }
+  const dgeoAnnonces = new Set(); // décomptes dont le message « terminé » est à l'écran
+  /** « Créer la pièce maintenant » : la Saisie des pièces, et la fiche pré-remplie depuis ce décompte. */
+  function creerPieceDecompte(id) {
+    if (A.showPanel) A.showPanel('panelSaisie');
+    const d = state.dgeo.list.find((x) => x.id === id);
+    if (d && !d.saisi) useDecompte(d);
   }
   async function refreshDgeo() {
     if (!window.CaisseDgeo) return;
@@ -26591,6 +26946,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   }
   function renderDgeo() {
     const pending = state.dgeo.list.filter((d) => !d.saisi);
+    // le message « Décompte terminé — Créer la pièce maintenant » s'en va quand sa pièce est créée
+    // (ou le décompte ignoré), par où que ce soit passé
+    if (window.CaisseAvis && window.CaisseAvis.retirer) for (const id of dgeoAnnonces) if (!pending.some((d) => d.id === id)) { window.CaisseAvis.retirer(`dgeo:${id}`); dgeoAnnonces.delete(id); }
     if (!pending.length) { els.dgeoPending.classList.add('hidden'); els.dgeoPending.innerHTML = ''; return; }
     els.dgeoPending.innerHTML = `<div class="legend">Décompte${pending.length > 1 ? 's' : ''} terminé${pending.length > 1 ? 's' : ''} dans Décompte DGEO, à passer en pièce comptable :</div>` +
       pending.slice().reverse().map((d) => `<div class="item"><span class="what"><b>${escapeHtml(dgeoLabel(d))}</b>` +
@@ -26607,7 +26965,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const d = state.dgeo.list.find((x) => x.id === b.dataset.dgeoUse);
       if (d) useDecompte(d);
     } else if (b.dataset.dgeoExcel) {
-      if (!(await window.CaisseDgeo.openExcel(b.dataset.dgeoExcel))) notice('warn', 'Le fichier Excel de ce décompte est introuvable (déplacé ou renommé).');
+      // true, ou { message } : la liste est partagée, le fichier a pu être enregistré sur un autre poste
+      const r = await window.CaisseDgeo.openExcel(b.dataset.dgeoExcel);
+      if (r !== true) notice('warn', escapeHtml(r && r.message ? r.message : 'Le fichier Excel de ce décompte est introuvable (déplacé ou renommé ?).'));
     } else if (b.dataset.dgeoForget) {
       await window.CaisseDgeo.forget(b.dataset.dgeoForget);
       if (state.dgeo.current && state.dgeo.current.id === b.dataset.dgeoForget) state.dgeo.current = null;
@@ -26685,7 +27045,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     $('btnEmplacementLocal').classList.toggle('hidden', !(e.partage && e.modifiable));
     const reseau = /^\\\\[^\\]/.test(e.chemin);
     let note;
-    if (e.partage && !e.modifiable) note = 'Emplacement fixé par l\'informatique (variable COMPTA_DONNEES) : il ne se change pas d\'ici.';
+    if (e.note) note = escapeHtml(e.note); // pourquoi l'emplacement ne se change pas d'ici (réglé par le serveur, caisse de ce PC pour cette fois)
+    else if (e.partage && !e.modifiable) note = 'Emplacement fixé par l\'informatique (variable COMPTA_DONNEES) : il ne se change pas d\'ici.';
     else if (e.partage && !reseau) note = `Réglé par <code>${escapeHtml(e.reglage)}</code>. Attention : une lettre de lecteur (Z:) n'est pas forcément la même sur chaque poste, et le copieur ne la connaît pas. Préférez l'adresse <code>\\\\SERVEUR\\partage</code>.`;
     else if (e.partage) note = `Réglé par <code>${escapeHtml(e.reglage)}</code> — effacer ce fichier revient aussi aux données de ce PC. Le copieur dépose dans <code>${escapeHtml(e.chemin)}\\Scans</code>.`;
     else note = 'Les données de ce PC, dans le dossier « data » à côté du programme. Pour les partager : « Mettre les données sur le serveur… », puis tapez l\'adresse <code>\\\\SERVEUR\\partage</code> dans la barre du haut de la fenêtre qui s\'ouvre.';
@@ -27098,7 +27459,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const c = reg.comptages.find((x) => x.id === b.dataset.del);
       if (!c || !confirm(`Supprimer le comptage du ${fmtDate(c.date)} (${fmtCHF(c.total)}) ?`)) return;
       R.removeCount(reg, c.id);
-      await S.saveReg();
+      // pas écrit (réseau coupé) : le comptage reste dans l'historique, comme sur le disque ; saveReg dit pourquoi
+      try { await S.saveReg(); } catch (e) { R.upsertCount(reg, c); refreshTotals(); renderHistory(); return; }
       if (state.editingId === c.id) newCount(); else { refreshTotals(); renderHistory(); }
     }
   });
@@ -28666,7 +29028,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       await window.CaisseSaisie.saveReg();
     } catch (e) {
       piece.decompteAFaire = true;
-      majBandeau(`Registre non enregistré : ${(e && e.message) || e}`, 'err');
+      majBandeau(`Journal non enregistré : ${(e && e.message) || e}`, 'err');
       return;
     }
     let dit = '';

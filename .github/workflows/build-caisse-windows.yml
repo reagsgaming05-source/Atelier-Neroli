@@ -342,6 +342,40 @@ jobs:
             Remove-Item dist\ComptaBlonay\data -Recurse -Force -ErrorAction SilentlyContinue
           }
 
+      - name: Un poste installé avant le sous-dossier « Installation sur plusieurs PC » reçoit le nouveau lanceur
+        working-directory: caisse-ecoles/desktop
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          # Le lanceur posé par la version d'avant cherche sa propre mise à jour à côté du programme,
+          # sous le nom « Compta Blonay.cmd » : elle n'y est plus, il ne se mettrait plus jamais à
+          # jour. C'est l'application qui le remplace (lanceur.js), une quinzaine de secondes après
+          # son démarrage. Éprouvé ici avec le vrai programme, dans un %LOCALAPPDATA% d'essai.
+          $ErrorActionPreference = 'Stop'
+          $local = Join-Path $env:RUNNER_TEMP 'poste-installe-avant'
+          $ici = Join-Path $local 'ComptaBlonay'
+          robocopy dist\ComptaBlonay $ici /E /NFL /NDL /NJH /NJS /NP | Out-Null
+          if ($LASTEXITCODE -ge 8) { throw "copie du programme impossible (robocopy $LASTEXITCODE)" }
+          $global:LASTEXITCODE = 0
+          $vieux = Join-Path $local 'ComptaBlonay-lanceur.cmd'
+          Set-Content $vieux "@echo off`r`nrem le lanceur de la version d'avant"
+          $neuf = Join-Path $ici 'Installation sur plusieurs PC\lanceur.cmd'
+          $env:LOCALAPPDATA = $local
+          $p = Start-Process (Join-Path $ici 'ComptaBlonay.exe') -PassThru
+          try {
+            $ok = $false
+            for ($i = 0; $i -lt 60 -and -not $ok; $i++) {
+              Start-Sleep -Seconds 2
+              # pendant le remplacement, le fichier peut être un instant introuvable
+              $ok = try { (Get-FileHash $vieux).Hash -eq (Get-FileHash $neuf).Hash } catch { $false }
+            }
+            if (-not $ok) { throw "le lanceur de la version d'avant n'a pas été remplacé" }
+            Write-Host "ok - le lanceur de la version d'avant est remplacé par celui du programme"
+          } finally {
+            Get-Content (Join-Path $ici 'data\caisse.log') -ErrorAction SilentlyContinue | Select-String 'lanceur'
+            Get-Process ComptaBlonay, DecompteDGEO, tesseract -ErrorAction SilentlyContinue | Stop-Process -Force
+          }
+
       - name: Archive zip
         working-directory: caisse-ecoles/desktop
         shell: pwsh

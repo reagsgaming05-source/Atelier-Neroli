@@ -371,7 +371,8 @@
       const c = reg.comptages.find((x) => x.id === b.dataset.del);
       if (!c || !confirm(`Supprimer le comptage du ${fmtDate(c.date)} (${fmtCHF(c.total)}) ?`)) return;
       R.removeCount(reg, c.id);
-      await S.saveReg();
+      // pas écrit (réseau coupé) : le comptage reste dans l'historique, comme sur le disque ; saveReg dit pourquoi
+      try { await S.saveReg(); } catch (e) { R.upsertCount(reg, c); refreshTotals(); renderHistory(); return; }
       if (state.editingId === c.id) newCount(); else { refreshTotals(); renderHistory(); }
     }
   });

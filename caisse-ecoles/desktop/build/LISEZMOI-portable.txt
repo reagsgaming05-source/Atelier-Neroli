@@ -6,6 +6,7 @@ Compta Blonay réunit deux outils dans une seule fenêtre :
     le fichier Excel de l'année ;
   - Décompte DGEO : les décomptes des courses d'école et des camps.
 Rien ne passe par Internet : tout reste sur votre PC, ou sur le serveur de l'école.
+Ce texte se rouvre à tout moment dans Compta Blonay : menu Aide → « Mode d'emploi » (touche F1).
 
   1. Sur un seul PC ............................. 3 étapes
   2. Le tour de l'application
@@ -29,8 +30,8 @@ Rien ne passe par Internet : tout reste sur votre PC, ou sur le serveur de l'éc
 
 2. LE TOUR DE L'APPLICATION
 ---------------------------
-  Le logo, en haut de la barre latérale, passe de Caisse écoles à Décompte DGEO. Chaque espace
-  a aussi son raccourci clavier, listé dans le menu Espaces.
+  En haut à gauche, « Caisse écoles » et « Décompte DGEO » passent d'un outil à l'autre. Dans
+  la barre latérale, chaque espace a aussi son raccourci clavier, listé dans le menu Espaces.
 
   Caisse écoles
     Saisie des pièces    Remplissez la fiche, puis « Enregistrer la pièce → journal ». La fiche
@@ -43,7 +44,7 @@ Rien ne passe par Internet : tout reste sur votre PC, ou sur le serveur de l'éc
     L'année              Une fois par an : nouvelle année, solde à nouveau, sauvegardes, où
                          sont les données. Une année commencée dans un classeur Excel tenu à
                          la main s'y reprend : « Reprendre un classeur Excel… ».
-    Données              Les listes que l'application propose : comptes, classes, noms,
+    Listes               Les listes que l'application propose : comptes, classes, noms,
                          objets. Une nouvelle classe, une nouvelle collègue : c'est ici.
 
   Décompte DGEO
@@ -149,10 +150,12 @@ Rien ne passe par Internet : tout reste sur votre PC, ou sur le serveur de l'éc
   Un PC où Compta Blonay est ouvert ne se met pas à jour tout de suite : il le fera à son
   lancement suivant.
 
-  L'application affiche « Le dossier des données est injoignable »
-      → Le serveur est éteint ou le réseau coupé. Elle ne s'ouvre jamais en douce sur une
-        copie à part : cela ferait deux caisses qui ne se rejoindraient plus. Rallumez le
-        serveur ou rebranchez le réseau, puis « Réessayer ».
+  L'application affiche « Le dossier des données ne répond pas »
+      → Le serveur est éteint ou le réseau coupé. Rallumez le serveur ou rebranchez le
+        réseau, puis « Réessayer ». Elle ne s'ouvre jamais en douce sur une copie à part :
+        cela ferait deux caisses qui ne se rejoindraient plus. En cas d'urgence seulement,
+        « Travailler sur ce PC pour cette fois… » ouvre la caisse de ce PC, séparée de celle
+        du serveur : ce qui y est saisi n'ira pas sur le serveur.
 
-  Restent sur chaque PC, pas sur le serveur : le journal technique (data\caisse.log), les
-  réglages de la fenêtre et les décomptes DGEO commencés.
+  Restent sur chaque PC, pas sur le serveur : le fichier de suivi technique (data\caisse.log,
+  menu Aide), les réglages de la fenêtre et les décomptes DGEO commencés.
