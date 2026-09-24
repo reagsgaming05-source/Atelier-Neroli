@@ -238,11 +238,9 @@
       ? " : le scan n'a aucun texte lisible, et Compta Blonay a supposé que la première page était la pièce comptable de la caisse."
       : ` : c'est la pièce comptable de la caisse (« PIÈCE COMPTABLE » lu sur la page).`;
     const sansFormulaire = !(dossier.pages || []).some((p) => p.kind === "form");
-    b.append(
-      el("div", {}, [el("b", {}, quoi), pourquoi]),
-      sansFormulaire ? el("div", {}, "Le formulaire n'a pas été trouvé dans ce qui reste : si c'était lui, réanalysez avec toutes les pages.") : null,
-      el("button", { type: "button", class: "small", onclick: reanalyserTout }, "Réanalyser avec toutes les pages"),
-    );
+    b.append(el("div", {}, [el("b", {}, quoi), pourquoi]));
+    if (sansFormulaire) b.append(el("div", {}, "Le formulaire n'a pas été trouvé dans ce qui reste : si c'était lui, réanalysez avec toutes les pages."));
+    b.append(el("button", { type: "button", class: "small", onclick: reanalyserTout }, "Réanalyser avec toutes les pages"));
   }
   function reanalyserTout() {
     garderPages = true;

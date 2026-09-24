@@ -95,7 +95,7 @@ button.lien { border: none; background: none; box-shadow: none; padding: 0; colo
 .rows th.c-calc { width: 190px; }
 .rows td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .rows td input { font: inherit; padding: 5px 7px; border: 1px solid var(--line); border-radius: 4px; width: 100%; }
-.rows td select { max-width: 100%; }
+.rows td select, .piece .head select { font: inherit; max-width: 100%; padding: 5px 7px; border: 1px solid var(--line); border-radius: 4px; background: #fff; color: var(--ink); }
 .rows td.num, .rows th.num { text-align: right; width: 140px; }
 .rows td input.num { text-align: right; }
 /* une ligne du décompte = ses champs, puis son libellé en pleine largeur et le calcul en clair */
