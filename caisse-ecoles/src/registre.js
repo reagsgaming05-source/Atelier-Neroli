@@ -953,6 +953,25 @@
   const origines = new WeakMap();
   const noterOrigine = (reg, texte) => { if (reg) origines.set(reg, texte == null ? null : String(texte)); };
 
+  /**
+   * Relire un registre ouvert : le texte du disque a changé depuis la dernière lecture (un autre
+   * poste a écrit) ; son travail est repris dans `reg`, sur place, par la même fusion qu'à
+   * l'enregistrement. Sans cette relecture, un poste resté ouvert depuis le matin proposait le
+   * même « numéro suivant » qu'une collègue avait déjà pris, et ne voyait pas ses pièces.
+   * Rend null si rien n'a changé, sinon { ajoutees, reprises, conflits, doublons }.
+   */
+  function reprendreDuDisque(reg, texte) {
+    const attendu = origines.has(reg) ? origines.get(reg) : null;
+    if (texte == null || String(texte) === attendu) return null;
+    const disque = parse(texte);
+    if (!disque) return null; // illisible : l'enregistrement le dira, sans rien écraser
+    const avant = new Set(reg.pieces.map((p) => p.id));
+    const f = fusionner(attendu == null ? null : parse(attendu), reg, disque);
+    for (const k of Object.keys(f.reg)) reg[k] = f.reg[k];
+    noterOrigine(reg, texte);
+    return { ajoutees: reg.pieces.filter((p) => !avant.has(p.id)), reprises: f.reprises, conflits: f.conflits, doublons: f.doublons };
+  }
+
   /** Adaptateur fichiers (application fenêtrée) : window.CaisseFiles fourni par le preload. */
   function fileStorage(F) {
     const charger = async (year) => {
@@ -1000,6 +1019,8 @@
         }
         throw new Error("le registre est modifié sans arrêt sur un autre poste : rien n'a été écrit, réessayez dans un instant");
       },
+      /** Reprend ce qu'un autre poste a enregistré depuis la dernière lecture (voir reprendreDuDisque). */
+      relire: async (reg) => reprendreDuDisque(reg, await F.load(reg.annee)),
       attach: (year, pieceId, name, bytes) => F.attach(year, pieceId, name, bytes),
       read: (year, pieceId, name) => F.read(year, pieceId, name),
       remove: (year, pieceId, name) => F.remove(year, pieceId, name),
@@ -1036,9 +1057,12 @@
         for (let i = 0; i < localStorage.length; i++) { const m = /^caisse\.registre\.(\d{4})$/.exec(localStorage.key(i)); if (m) out.push(Number(m[1])); }
         return out.sort();
       },
-      load: async (year) => readStored(localStorage.getItem(KEY(year))).reg,
-      loadStored: async (year) => readStored(localStorage.getItem(KEY(year))),
-      save: async (reg) => { localStorage.setItem(KEY(reg.annee), serialize(reg)); },
+      // Deux onglets de la page partagent la même mémoire : on retient d'où vient chaque registre
+      // pour que « relire » reprenne ce que l'autre onglet a écrit.
+      load: async (year) => { const t = localStorage.getItem(KEY(year)); const lu = readStored(t); noterOrigine(lu.reg, t); return lu.reg; },
+      loadStored: async (year) => { const t = localStorage.getItem(KEY(year)); const lu = readStored(t); noterOrigine(lu.reg, t); return lu; },
+      save: async (reg) => { const t = serialize(reg); localStorage.setItem(KEY(reg.annee), t); noterOrigine(reg, t); },
+      relire: async (reg) => reprendreDuDisque(reg, localStorage.getItem(KEY(reg.annee))),
       attach: async (year, pieceId, name, bytes) => { await tx('readwrite', (s) => s.put(bytes, k(year, pieceId, name))); return { name, size: bytes.length }; },
       read: async (year, pieceId, name) => { const v = await tx('readonly', (s) => s.get(k(year, pieceId, name))); return v ? new Uint8Array(v) : null; },
       remove: async (year, pieceId, name) => { await tx('readwrite', (s) => s.delete(k(year, pieceId, name))); },

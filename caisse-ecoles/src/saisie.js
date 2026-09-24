@@ -237,6 +237,7 @@
   async function saveReg() {
     state.reg.updatedAt = new Date().toISOString();
     let res;
+    state.ecritures = (state.ecritures || 0) + 1; // pas de relecture pendant une écriture
     try {
       res = await state.storage.save(state.reg);
     } catch (e) {
@@ -245,7 +246,7 @@
       // un cas d'école.
       notice('err', `<b>Registre non enregistré</b> : ${escapeHtml((e && e.message) || e)}. Ce qui est à l'écran est gardé ; réessayez dans un instant.`, { keep: true });
       throw e;
-    }
+    } finally { state.ecritures -= 1; }
     const f = res && res.fusion;
     if (f) {
       // Un autre poste avait écrit dans cette année entre-temps : son travail est repris, pas écrasé.
@@ -257,7 +258,37 @@
       try { renderJournal(); } catch (e) { /* l'appelant rafraîchit aussi */ }
     }
     notifyRegister();
+    return f || null;
   }
+
+  /**
+   * Relit le registre sur le disque. Avec les données sur le serveur, un autre poste a pu saisir
+   * des pièces depuis la dernière lecture : on les montre, et le n° proposé par la fiche suit
+   * (ajusterNumero). Rend ce qui a été repris, ou null si rien n'a changé.
+   */
+  let relecture = null;
+  function relireRegistre() {
+    if (!state.reg || !state.storage || !state.storage.relire || state.ecritures) return Promise.resolve(null);
+    if (relecture) return relecture;
+    relecture = (async () => {
+      let r = null;
+      try { r = await state.storage.relire(state.reg); } catch (e) { r = null; }
+      if (!r) return null;
+      renderJournal();
+      notifyRegister();
+      const n = r.ajoutees.length;
+      if (n) {
+        const nos = r.ajoutees.map((p) => (p.no == null ? '?' : p.no)).slice(0, 10).join(', ');
+        notice('ok', `${n > 1 ? `${n} pièces saisies` : '1 pièce saisie'} sur un autre poste ${n > 1 ? 'ont été ajoutées' : 'a été ajoutée'} au journal (n° ${nos}).`);
+      }
+      return r;
+    })().finally(() => { relecture = null; });
+    return relecture;
+  }
+  // Revenir à la fenêtre relit le registre : un poste resté ouvert depuis le matin proposait le
+  // même « numéro suivant » qu'une collègue venait de prendre.
+  window.addEventListener('focus', () => { relireRegistre(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) relireRegistre(); });
   /** Le registre a changé (ouvert, enregistré) : l'espace des pièces scannées, qui s'appuie dessus, se met à jour. */
   function notifyRegister() {
     try { document.dispatchEvent(new CustomEvent('caisse:registre', { detail: { annee: state.reg ? state.reg.annee : null } })); } catch (e) { /* ignore */ }
@@ -322,6 +353,7 @@
     state.pending = [];
     state.retires = new Set();
     state.dgeo.current = null;
+    state.noPropose = p.no;
     fillForm(p);
     els.ficheTitle.textContent = `n° ${p.no}`;
     montrerErreurs([]);
@@ -362,6 +394,25 @@
     return confirm(`${quoi}\n\nAbandonner ce qui a été tapé ?\n\nOK : abandonner.   Annuler : revenir à la fiche.`);
   }
   const pieceEnCours = () => (state.editingId ? state.reg.pieces.find((x) => x.id === state.editingId) : null);
+
+  /**
+   * Le n° proposé par la fiche suit le journal : un lot versé depuis les pièces scannées, une
+   * pièce saisie sur un autre poste ou une suppression changent « le suivant », et la fiche vierge
+   * proposait encore l'ancien — refusé ensuite comme « existe déjà ». Seul un n° proposé par
+   * l'application bouge ; un n° tapé par la personne reste le sien (l'erreur proposera le libre).
+   */
+  function ajusterNumero() {
+    if (state.editingId || !state.reg || state.noPropose == null) return;
+    if (els.pNo.value.trim() !== String(state.noPropose)) return; // tapé à la main
+    const libre = R.nextNo(state.reg);
+    if (libre === state.noPropose) return;
+    const pris = state.reg.pieces.some((x) => x.no === state.noPropose && x.id !== state.draftId);
+    if (!pris && state.noPropose < libre) return; // un trou dans la suite : le n° reste bon
+    els.pNo.value = String(libre);
+    if (state.photo) state.photo[0] = String(libre); // ce n'est pas la personne qui l'a changé
+    els.ficheTitle.textContent = els.ficheTitle.textContent.replace(/^n° \d+/, `n° ${libre}`);
+    state.noPropose = libre;
+  }
 
   /**
    * Modifier une pièce du journal doit se voir : un « (modification) » gris à côté du n° ne
@@ -621,6 +672,15 @@
   if (ficheCard) for (const t of ['input', 'change']) ficheCard.addEventListener(t, () => { if (enErreur.size) montrerErreurs(erreursFiche()); });
 
   els.btnPieceSave.addEventListener('click', async () => {
+    // Un autre poste a pu prendre ce numéro depuis que la fiche l'a proposé : on relit le registre
+    // avant d'écrire, et on le dit AVANT d'enregistrer — le n° est le lien avec le papier, et la
+    // fiche PDF à signer s'imprimait déjà avec le numéro en double.
+    const noAvant = els.pNo.value.trim();
+    await relireRegistre();
+    if (!state.editingId && els.pNo.value.trim() !== noAvant) {
+      montrerErreurs([{ champ: 'pNo', message: `Le n° ${noAvant} vient d'être pris sur un autre poste : cette pièce prend le n° ${els.pNo.value.trim()}. Vérifiez, puis enregistrez de nouveau.` }]);
+      return;
+    }
     const p = formPiece();
     const errs = erreursFiche();
     if (errs.length) {
@@ -646,7 +706,7 @@
     renderFiles(p); // les indices « pending:<i> » du bouton « retirer » ont changé
     const wasEdit = !!state.editingId;
     R.upsertPiece(state.reg, p);
-    await saveReg();
+    const fusion = await saveReg();
     // les justificatifs retirés pendant la modification ne quittent le disque que maintenant
     for (const nom of state.retires) {
       if (p.justificatifs.some((j) => j.name === nom)) continue; // remplacé par un fichier du même nom
@@ -674,7 +734,8 @@
     state.draftId = null;
     newPiece();
     els.pDate.focus();
-    if (ficheAuto.open) {
+    // deux postes ont quand même pris le même n° : pas de fiche papier avant que ce soit réglé
+    if (ficheAuto.open && !(fusion && fusion.doublons.length)) {
       const w = window.open('', '_blank'); // ouverte tout de suite (clic de l'utilisateur), remplie ensuite
       openPiecePdf(p, w).catch((e) => { if (w && !w.closed) w.close(); notice('err', `Fiche PDF impossible : ${escapeHtml(e.message || e)}`); });
     }
@@ -902,6 +963,7 @@
     }
     if (window.CaisseComptage && window.CaisseComptage.state) window.CaisseComptage.render();
     renderRecap();
+    ajusterNumero();
   }
 
   /* ---------------- Récapitulatif des décomptes ---------------- */
@@ -1042,8 +1104,7 @@
       R.removePiece(state.reg, p.id);
       await saveReg();
       if (state.editingId === p.id) newPiece();
-      else if (!state.editingId && Number(els.pNo.value) > R.nextNo(state.reg)) els.pNo.value = R.nextNo(state.reg); // fiche vierge : le n° suivant redescend
-      renderJournal();
+      renderJournal(); // fiche vierge : le n° suivant redescend (ajusterNumero)
     } else if (b.dataset.pdf) {
       const p = state.reg.pieces.find((x) => x.id === b.dataset.pdf);
       if (!p) return;
@@ -1151,7 +1212,7 @@
     const r = R.mergeEntries(reg, data.entries, { source: 'excel', opening: data.opening, otherYears: includeOther });
     await saveReg();
     renderJournal();
-    newPiece();
+    if (!ficheModifiee()) newPiece(); // une fiche en cours garde sa saisie ; son n° suit (ajusterNumero)
     if (A && A.learnEntries) A.learnEntries(data.entries);
     const parts = [`<b>${r.added.length}</b> écriture(s) reprise(s) de <b>${escapeHtml(fileName || 'ce classeur')}</b> dans le registre ${reg.annee}`];
     if (r.skipped.length) parts.push(`${r.skipped.length} déjà présente(s) (même n° et même montant), non comptée(s) deux fois`);
@@ -1213,7 +1274,7 @@
     }
     await saveReg();
     renderJournal();
-    newPiece();
+    if (!ficheModifiee()) newPiece(); // une fiche en cours garde sa saisie ; son n° suit (ajusterNumero)
     notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
       `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}` +
       `${sansMontant ? `, ${sansMontant} ligne(s) sans montant ignorée(s)` : ''}` +
@@ -1274,6 +1335,7 @@
     if (P.correctPerson && piece.personne) { const c = P.correctPerson(piece.personne, P.buildIndex(vocab())); if (c) piece.personne = c; }
     piece.libelle = R.composeLibelle(piece);
     state.editingId = null; state.pending = []; state.retires = new Set(); state.draftId = piece.id; state.dgeo.current = d;
+    state.noPropose = piece.no;
     fillForm(piece);
     afficherMode();
     els.ficheTitle.textContent = `n° ${piece.no} – depuis Décompte DGEO ${d.numero ? `n° ${d.numero}` : ''}`.trim();

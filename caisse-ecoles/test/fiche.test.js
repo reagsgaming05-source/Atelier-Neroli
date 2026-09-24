@@ -300,6 +300,7 @@ const pause = (ms) => new Promise((r) => setTimeout(r, ms || 15));
 async function ficheSimulee(opts) {
   opts = opts || {};
   const doc = documentSimule();
+  doc.getElementById('panelAnnee').classList.add('hidden'); // on est dans l'espace Saisie
   const disque = opts.disque || disqueSimule();
   const memoire = new Map();
   const fenetre = new EventTarget();
@@ -577,5 +578,88 @@ test('la fiche ne remplit plus un compte au hasard, et sa liste distingue les co
   touche(objet, 'Tab');
   assert.equal(f.el('pCompte').value, '51000.3662.50');
   assert.match(f.el('pCompteSugg').innerHTML, /proposé : employé 6 fois sur 6/);
+});
+
+/* ------------------------------------------------------------------ */
+/* Plusieurs postes sur le même registre, lots scannés                    */
+/* ------------------------------------------------------------------ */
+
+test('relire le registre reprend les pièces d\'un autre poste, sans conflit ensuite', async () => {
+  const disque = disqueSimule();
+  const A = R.fileStorage(disque); const B = R.fileStorage(disque);
+  const regA0 = R.emptyRegister(2026, {});
+  await A.save(regA0);
+  const regA = (await A.loadStored(2026)).reg;
+  const regB = (await B.loadStored(2026)).reg;
+  assert.equal(await A.relire(regA), null, 'rien de neuf : rien à reprendre');
+  R.upsertPiece(regB, Object.assign(R.newPiece(regB), { no: 1, type: 'RECETTE', personne: 'T. Morel', montant: 20, sens: 'debit', compte: '9206.101' }));
+  await B.save(regB);
+  const r = await A.relire(regA);
+  assert.deepEqual(r.ajoutees.map((p) => p.no), [1]);
+  assert.equal(R.nextNo(regA), 2, 'le poste A proposait encore le n° 1');
+  // A enregistre ensuite sans fusion : il part de ce qu'il vient de relire
+  R.upsertPiece(regA, Object.assign(R.newPiece(regA), { no: 2, personne: 'A. Berger', montant: 5, sens: 'credit', compte: '51000.3662.50' }));
+  const res = await A.save(regA);
+  assert.equal(res.fusion, null);
+  assert.deepEqual(R.parse(disque.registres.get('2026')).pieces.map((p) => p.no), [1, 2]);
+});
+
+test('deux postes : le n° pris ailleurs entre-temps est changé et dit AVANT d\'enregistrer', async () => {
+  const disque = disqueSimule();
+  const posteA = await ficheSimulee({ disque });
+  const posteB = await ficheSimulee({ disque });
+  assert.equal(posteA.el('pNo').value, '1');
+  assert.equal(posteB.el('pNo').value, '1');
+  remplirRemboursement(posteB);
+  await posteB.enregistrer();
+  remplirRemboursement(posteA, '12');
+  posteA.ouvertes.length = 0;
+  await posteA.enregistrer();
+  assert.equal(posteA.S.state.reg.pieces.filter((p) => p.personne === 'A. Berger' && p.montant === 12).length, 0, 'rien ne doit être écrit avec un n° en double');
+  assert.equal(posteA.el('pNo').value, '2');
+  assert.match(posteA.el('ficheErrors').innerHTML, /Le n° 1 vient d&#39;être pris sur un autre poste : cette pièce prend le n° 2/);
+  assert.equal(posteA.ouvertes.length, 0, 'aucune fiche PDF ne doit s\'imprimer avec l\'ancien n°');
+  assert.equal(posteA.el('pMontant').value, '12.00', 'la saisie est gardée');
+  await posteA.enregistrer();
+  const nos = R.parse(disque.registres.get(String(posteA.annee))).pieces.map((p) => p.no).sort();
+  assert.deepEqual(nos, [1, 2], 'deux pièces, deux numéros');
+});
+
+test('revenir à la fenêtre relit le registre : le journal et le n° proposé suivent', async () => {
+  const disque = disqueSimule();
+  const posteA = await ficheSimulee({ disque });
+  const posteB = await ficheSimulee({ disque });
+  remplirRemboursement(posteB);
+  await posteB.enregistrer();
+  posteA.fenetre.dispatchEvent(new Event('focus'));
+  await pause(40);
+  assert.equal(posteA.S.state.reg.pieces.length, 1);
+  assert.equal(posteA.el('pNo').value, '2');
+  assert.match(posteA.el('regNotices').children[0].innerHTML, /1 pièce saisie sur un autre poste a été ajoutée au journal \(n° 1\)/);
+  assert.equal(posteA.S.ficheModifiee(), false, 'un n° changé par l\'application n\'est pas une saisie');
+});
+
+test('après un lot scanné, la fiche propose le n° libre et garde ce qui y est tapé', async () => {
+  const f = await ficheSimulee();
+  assert.equal(f.el('pNo').value, '1');
+  const lot = [1, 2, 3].map((no) => ({ scanKey: `d:${no}:0`, no, date: `${f.annee}-03-0${no}`, compte: '51000.3662.50', libelle: 'REMBOURSEMENT - Collation - A. Berger', credit: 10 + no }));
+  // comme le fait l'espace des pièces scannées (app.js) : verser, enregistrer, redessiner
+  R.syncScanBatch(f.S.state.reg, lot);
+  await f.S.saveReg();
+  f.S.renderJournal();
+  assert.equal(f.el('pNo').value, '4', 'la fiche proposait encore le n° 1, déjà pris');
+  // une fiche en cours n'est pas vidée par un versement, et son n° suit aussi
+  f.remplir({ pDetail: 'musée Bolo', pMontant: '143.95' });
+  await f.S.addFromScan([{ no: 4, date: `${f.annee}-03-09`, compte: '51000.3662.50', libelle: 'REMBOURSEMENT - Collation - T. Morel', credit: 8 }]);
+  assert.equal(f.el('pDetail').value, 'musée Bolo');
+  assert.equal(f.el('pNo').value, '5');
+});
+
+test('un n° tapé à la main n\'est pas changé en douce', async () => {
+  const f = await ficheSimulee();
+  f.remplir({ pNo: '40' });
+  R.upsertPiece(f.S.state.reg, Object.assign(R.newPiece(f.S.state.reg), { no: 1 }));
+  f.S.renderJournal();
+  assert.equal(f.el('pNo').value, '40');
 });
 
