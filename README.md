@@ -96,8 +96,8 @@ prorata du nombre de personnes.
 | Situation | Traitement |
 |---|---|
 | Récépissé (bulletin de versement QR), reçu de carte, pièce « taux de change » | **Jamais** retenus comme pièce (seul le ticket / la facture fait foi). Ils servent uniquement à retrouver un montant CHF ou un taux. |
-| Billet avec tarifs par personne (ex. Mobilis « 3 Prix entier CHF 2.80 », MOB « 2 enseignants demi-tarif ») | **Saisie directe** (colonne I, écrite comme formule du détail) : pour chaque billet on retient au plus *N titrés* tarifs adultes, **d'abord les plein tarifs, puis les demi-tarifs** — un enfant a forcément un demi-tarif, donc le plein tarif d'un billet est celui d'un adulte ; s'il reste un-e titré-e à couvrir, on prend ensuite un demi-tarif. Le coût total des billets est écrit en colonne H à titre d'information. Libellé : `pces 1-4 (6*2.80 + 6*4.20 + 2*2.10)`. |
-| Facture / montant global (bus, hôtel, auberge de jeunesse, musée ou activité au prix de groupe…) : le prix adulte n'est pas connu | **Règle de trois** (colonne H + formule du modèle) : coût total × titrés ÷ total participants. Libellé : `pce 2` ou `pces 2-3 (300.00 + 150.00)`. |
+| Billet avec tarifs par personne (ex. Mobilis « 3 Prix entier CHF 2.80 », MOB « 2 enseignants demi-tarif ») | **Saisie directe** (colonne I, écrite comme formule du détail) : pour chaque billet on retient au plus *N titrés* tarifs adultes, **d'abord les plein tarifs, puis les demi-tarifs** — un enfant a forcément un demi-tarif, donc le plein tarif d'un billet est celui d'un adulte ; s'il reste un-e titré-e à couvrir, on prend ensuite un demi-tarif. Le coût total des billets est écrit en colonne H à titre d'information. Libellé : `6*2.80 + 6*4.20 + 2*2.10 (Pces 1-4)`. |
+| Facture / montant global (bus, hôtel, auberge de jeunesse, musée ou activité au prix de groupe…) : le prix adulte n'est pas connu | **Règle de trois** (colonne H + formule du modèle) : montant ÷ total des personnes pendant l'activité × enseignant-e-s titré-e-s. Libellé : `(Pce 2)` ou `300.00 + 150.00 (Pces 2-3)`. |
 | Accompagnants invités à 0.00 (ex. « INVITE MEDIATION ») ou aucun tarif adulte sur la pièce | Rien à charge de l'État : pièce exclue avec motif (modifiable). Retenue quand même, elle passe par la règle de trois sur son total (jamais une ligne vide). |
 | Pièce en EUR | Montant CHF imprimé sur la pièce s'il existe, sinon taux d'une pièce « taux de change » / reçu de carte du dossier, sinon taux saisi dans l'interface. Le libellé montre la conversion (`45.00 EUR*0.9500 = 42.75 CHF`). |
 | Deux pièces de même montant | **Les deux sont comptées**, avec un avertissement sur la pièce et sur le dossier. Ce n'est pas forcément un doublon : quatre nuits dans une auberge font quatre fois la même somme. Écarter la seconde d'office faisait disparaître les trois quarts d'un hébergement sans rien dire, et une pièce écartée ne se réclame pas toute seule. S'il s'agit bien de la même dépense (lettre d'accompagnement qui répète une facture), décochez-en une. |
@@ -114,7 +114,7 @@ Le logiciel corrige aussi les quantités mal lues sur un billet grâce au nombre
 - L'écriture manuscrite (effectifs, n° de pièces écrits à la main) n'est pas lue de façon
   fiable : **les effectifs se saisissent à la main**, toujours, quoi que le formulaire ait donné.
   Tout le calcul en dépend — sans accompagnant titré, la part de l'État vaut zéro.
-- Le libellé de chaque ligne doit porter les numéros des pièces (`pce 1`, `pces 1-3`) : c'est ce
+- Le libellé de chaque ligne doit porter les numéros des pièces (`(Pce 1)`, `(Pces 1-3)`) : c'est ce
   qui permet de retrouver la pièce papier depuis le décompte.
 - Un scan de mauvaise qualité peut donner un texte incomplet ; le total lu et les tarifs
   sont modifiables, et une pièce manquante peut être ajoutée à la main.

@@ -122,22 +122,31 @@ def _fmt(x: float) -> str:
 
 
 def _piece_label(numeros: list[str]) -> str:
+    """Numéros des pièces tels qu'on les écrit sur un décompte : « Pce 1 », « Pces 1-3 »."""
     if not numeros:
         return ""
     if len(numeros) == 1:
-        return f"pce {numeros[0]}"
+        return f"Pce {numeros[0]}"
     ints = []
     for n in numeros:
         try:
             ints.append(int(n))
         except ValueError:
-            return "pces " + ", ".join(numeros)
+            return "Pces " + ", ".join(numeros)
     ints.sort()
     if ints == list(range(ints[0], ints[-1] + 1)) and len(ints) > 2:
-        return f"pces {ints[0]}-{ints[-1]}"
+        return f"Pces {ints[0]}-{ints[-1]}"
     if len(ints) == 2 and ints[1] == ints[0] + 1:
-        return f"pces {ints[0]}-{ints[1]}"
-    return "pces " + ", ".join(str(i) for i in ints)
+        return f"Pces {ints[0]}-{ints[1]}"
+    return "Pces " + ", ".join(str(i) for i in ints)
+
+
+def _libelle(detail: str, numeros: list[str]) -> str:
+    """Libellé d'une ligne : le détail du calcul, puis les numéros entre parenthèses, « (Pce 1) »
+    ou « (Pces 1-3) », comme sur les décomptes établis à la main — c'est par eux qu'on retrouve la
+    pièce papier."""
+    label = _piece_label(numeros)
+    return f"{detail} ({label})" if detail else f"({label})"
 
 
 def _eur_rate_for(piece: Piece, dossier: Dossier) -> Optional[float]:
@@ -218,7 +227,7 @@ def compute_rows(dossier: Dossier) -> None:
                 else:
                     warnings.append(f"[calcul] Pièce {p.numero} : aucun tarif adulte retenu et total illisible : non comptée.")
                     # retirée du groupe : sinon son numéro figurait dans le libellé de la ligne
-                    # (« pces 1-2 ») alors qu'elle ne compte pour rien
+                    # (« Pces 1-2 ») alors qu'elle ne compte pour rien
                     g["numeros"].pop()
                     g["ids"].pop()
                     continue
@@ -254,7 +263,6 @@ def compute_rows(dossier: Dossier) -> None:
     for (rub, mode), g in sorted(groups.items(), key=lambda kv: (order.index(kv[0][0]) if kv[0][0] in order else 99, 0 if kv[0][1] == "direct" else 1)):
         if not g["ids"]:
             continue
-        label = _piece_label(g["numeros"])
         if mode == "direct":
             terms = []
             total = 0.0
@@ -268,7 +276,7 @@ def compute_rows(dossier: Dossier) -> None:
                 total += chf
             if not terms:
                 continue
-            libelle = f"{label} ({' + '.join(terms)})"
+            libelle = _libelle(" + ".join(terms), g["numeros"])
             cout_total = round(sum(g["totals"]), 2) if g["totals"] else None
             rows.append(DecompteRow(rubrique=rub, libelle=libelle, mode="direct", cout_total=cout_total, cout_direct=round(total, 2), pieces=g["ids"], formule=" + ".join(terms)))
         else:
@@ -281,10 +289,10 @@ def compute_rows(dossier: Dossier) -> None:
                 # les montants en francs sont listés à part : les repérer par leur valeur ferait
                 # disparaître un montant CHF égal par hasard à la contre-valeur d'une pièce en EUR
                 parts += [_fmt(a) for a in g["chf_parts"]]
-                detail = f" ({' + '.join(parts)})"
+                detail = " + ".join(parts)
             elif len(g["amounts"]) > 1:
-                detail = f" ({' + '.join(_fmt(a) for a in g['amounts'])})"
-            rows.append(DecompteRow(rubrique=rub, libelle=f"{label}{detail}", mode="prorata", cout_total=total, pieces=g["ids"]))
+                detail = " + ".join(_fmt(a) for a in g["amounts"])
+            rows.append(DecompteRow(rubrique=rub, libelle=_libelle(detail, g["numeros"]), mode="prorata", cout_total=total, pieces=g["ids"]))
     dossier.rows = rows
     dossier.warnings = warnings
     dossier.total = compute_total(dossier)

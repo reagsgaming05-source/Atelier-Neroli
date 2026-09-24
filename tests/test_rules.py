@@ -34,7 +34,7 @@ def test_ans100325_like_dossier():
     assert len(d.rows) == 1
     row = d.rows[0]
     assert row.rubrique == "Transport" and row.mode == "direct"
-    assert row.libelle == "pces 1-4 (6*2.80 + 6*4.20 + 2*2.10)"
+    assert row.libelle == "6*2.80 + 6*4.20 + 2*2.10 (Pces 1-4)"
     assert row.cout_direct == 46.20
     assert d.total == 46.20
 
@@ -43,8 +43,8 @@ def test_del311025_like_dossier():
     d = dossier([piece(1, fares=[fare("demi", 1, 5.5), fare("enfant", 19, 5.5)], total=110.0),
                  piece(2, kind="facture", total=300.0, rubrique="Activité")], titres=2, eleves=19, autres=0)
     assert [(r.rubrique, r.mode, r.libelle, r.cout_total, r.cout_direct) for r in d.rows] == [
-        ("Transport", "direct", "pce 1 (1*5.50)", 110.0, 5.5),  # coût total du billet en H (information), part État directe en I
-        ("Activité", "prorata", "pce 2", 300.0, None),
+        ("Transport", "direct", "1*5.50 (Pce 1)", 110.0, 5.5),  # coût total du billet en H (information), part État directe en I
+        ("Activité", "prorata", "(Pce 2)", 300.0, None),
     ]
     assert d.rows[0].formule == "1*5.50"
     assert d.total == 34.05  # 5.50 + 300/21*2 = 34.07 → arrondi à 0.05
@@ -76,7 +76,7 @@ def test_same_amount_twice_is_flagged_but_counted():
 
 def test_prorata_grouping_and_libelle_with_several_pieces():
     d = dossier([piece(2, kind="facture", total=300.0, rubrique="Activité"), piece(3, kind="facture", total=150.0, rubrique="Activité")], titres=2, eleves=19, autres=0)
-    assert d.rows[0].libelle == "pces 2-3 (300.00 + 150.00)"
+    assert d.rows[0].libelle == "300.00 + 150.00 (Pces 2-3)"
     assert d.rows[0].cout_total == 450.0
 
 
@@ -86,7 +86,7 @@ def test_eur_piece_uses_printed_chf_or_rate():
     assert d.rows[0].cout_total == 95.0 and "100.00 EUR = 95.00 CHF" in d.rows[0].libelle
     rated = piece(1, fares=[fare("plein", 2, 10.0, "EUR")], total=20.0, currency="EUR")
     d = dossier([rated], titres=2, eleves=18, autres=0, taux_eur_chf=0.95)
-    assert d.rows[0].cout_direct == 19.0 and d.rows[0].libelle == "pce 1 (2*10.00 EUR*0.9500)"
+    assert d.rows[0].cout_direct == 19.0 and d.rows[0].libelle == "2*10.00 EUR*0.9500 (Pce 1)"
     missing = piece(1, kind="facture", total=20.0, currency="EUR", rubrique="Activité")
     d = dossier([missing], titres=2, eleves=18, autres=0)
     assert d.rows == [] and any("taux" in w for w in d.warnings)
@@ -133,7 +133,7 @@ def test_direct_rows_keep_ticket_totals_and_formula_detail():
     row = d.rows[0]
     # deux billets (aller, retour) : 2 titrés retenus sur chacun ; coût total des deux billets en H
     assert row.mode == "direct" and row.cout_direct == 79.8 and row.cout_total == 287.8
-    assert row.formule == "4*19.95" and row.libelle == "pces 1-2 (4*19.95)"
+    assert row.formule == "4*19.95" and row.libelle == "4*19.95 (Pces 1-2)"
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +159,7 @@ def test_montant_chf_egal_a_la_contre_valeur_dune_piece_eur_reste_dans_le_detail
                  piece(2, kind="facture", total=100.0, currency="CHF", rubrique="Activité")], titres=2, eleves=19, autres=0)
     row = next(r for r in d.rows if r.rubrique == "Activité")
     assert row.cout_total == 200.0
-    assert row.libelle == "pces 1-2 (100.00 EUR*1.0000 = 100.00 CHF + 100.00)"
+    assert row.libelle == "100.00 EUR*1.0000 = 100.00 CHF + 100.00 (Pces 1-2)"
 
 
 def test_piece_sans_tarif_adulte_ni_total_nest_pas_annoncee_dans_la_ligne():
@@ -171,5 +171,5 @@ def test_piece_sans_tarif_adulte_ni_total_nest_pas_annoncee_dans_la_ligne():
     compute_rows(d)
     row = next(r for r in d.rows if r.rubrique == "Transport")
     assert row.pieces == [1]
-    assert row.libelle == "pce 1 (2*2.80)"
+    assert row.libelle == "2*2.80 (Pce 1)"
     assert any("Pièce 2" in w and "non comptée" in w for w in d.warnings)

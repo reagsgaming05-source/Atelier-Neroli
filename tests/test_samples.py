@@ -36,7 +36,7 @@ def test_ans100325(tmp_path):
     d.effectifs.enseignants_dgeo, d.effectifs.autres = 6, 2  # effectifs manuscrits : saisis à la main
     compute_rows(d)
     assert len(d.rows) == 1
-    assert d.rows[0].libelle == "pces 1-4 (6*2.80 + 6*4.20 + 2*2.10)"
+    assert d.rows[0].libelle == "6*2.80 + 6*4.20 + 2*2.10 (Pces 1-4)"
     assert d.total == 46.20
     theatre = [p for p in d.pieces if p.total == 1155.0]
     assert theatre and not any(p.include for p in theatre)
