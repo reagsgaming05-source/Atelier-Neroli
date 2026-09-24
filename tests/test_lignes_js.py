@@ -17,7 +17,10 @@ EFF = {"eleves": 20, "enseignants_dgeo": 2, "enseignants_js": 0, "moniteurs_js":
 
 def node(script: str):
     prog = f"const L = require({json.dumps(str(LIGNES))});\nconst out = (() => {{ {script} }})();\nprocess.stdout.write(JSON.stringify(out));"
-    r = subprocess.run([NODE, "-e", prog], capture_output=True, text=True, timeout=30)
+    # Le programme passe par l'entrée standard et revient par la sortie, en UTF-8 dans les deux
+    # sens : sans encodage explicite, Python lisait la réponse de Node avec celui de Windows
+    # (cp1252), et « Activité » revenait « ActivitÃ© ».
+    r = subprocess.run([NODE, "-"], input=prog, capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout)
 
