@@ -1,0 +1,5 @@
+# Cette vitrine est une copie figée, publiée pour être montrée, pas pour être
+# trouvée : les prix, l'IBAN et les témoignages sont encore provisoires.
+# À retirer quand le vrai site sera en ligne.
+User-agent: *
+Disallow: /

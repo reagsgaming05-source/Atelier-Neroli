@@ -125,6 +125,25 @@ Le type se déduit de l'IBAN : la banque rejette le mélange, et le code le refu
 - [pdf-lib](https://pdf-lib.js.org) et [pdf.js](https://mozilla.github.io/pdf.js/) (build « legacy », worker copié dans `public/`) pour la démo dans le navigateur
 - Authentification maison par sessions (cookie httpOnly, mots de passe hachés avec bcrypt)
 
+## Montrer le site sans hébergeur (vitrine figée)
+
+`npm run vitrine` fige le site public en douze pages autonomes dans `site/vitrine/` :
+CSS intégré, polices en base64, liens internes réécrits en fichiers voisins.
+Aucun serveur, aucun script, aucune requête sortante — le dossier s'ouvre par un
+double-clic, se met sur une clé USB ou se publie tel quel.
+
+Le dépôt le publie sur **GitHub Pages** à chaque modification de `site/vitrine/`
+(`.github/workflows/pages.yml`), à une adresse que n'importe qui peut ouvrir sans
+compte. À activer une fois : *Settings → Pages → Source : « GitHub Actions »*.
+
+Un `robots.txt` y interdit l'indexation : les prix, l'IBAN et les témoignages sont
+encore provisoires, et cette copie n'a pas à sortir dans les moteurs de recherche.
+À retirer le jour où le vrai site est en ligne.
+
+C'est la vitrine, pas l'application : les formulaires s'affichent sans rien
+envoyer, et l'espace client, l'administration et les QR-factures ont besoin de la
+vraie application — voir ci-dessous.
+
 ## Mettre en ligne sur Vercel
 
 Le site a besoin de deux choses : un hébergeur et une base de données. Vercel

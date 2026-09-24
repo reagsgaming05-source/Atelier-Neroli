@@ -1,0 +1,56 @@
+name: Vitrine Blonay PDF (GitHub Pages)
+
+# Publie la copie figée du site de vente à une adresse publique, que n'importe
+# qui peut ouvrir sans compte : une commune à qui on envoie le lien, un collègue,
+# un téléphone. Ce sont des pages autonomes — ni serveur, ni base de données —
+# régénérées par « npm run vitrine » dans site/.
+#
+# À activer une seule fois : Settings → Pages → Source : « GitHub Actions ».
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+    paths:
+      - "site/vitrine/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un seul déploiement à la fois, et le dernier gagne.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Vérifier que la vitrine est complète
+        run: |
+          test -f site/vitrine/index.html || { echo "::error::site/vitrine/index.html manquant"; exit 1; }
+          pages=$(ls site/vitrine/*.html | wc -l)
+          echo "$pages pages à publier"
+          test "$pages" -ge 10 || { echo "::error::seulement $pages pages, la vitrine semble incomplète"; exit 1; }
+          # Une page qui redemanderait quelque chose au réseau ne tiendrait pas
+          # toute seule : c'est tout l'intérêt de la copie figée.
+          if grep -l 'src="/_next' site/vitrine/*.html; then
+            echo "::error::une page référence encore les fichiers de Next"; exit 1
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/vitrine
+
+      - id: deploiement
+        uses: actions/deploy-pages@v4
