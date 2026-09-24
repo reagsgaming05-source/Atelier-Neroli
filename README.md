@@ -393,6 +393,22 @@ version Windows n'est empaquetée que s'ils passent.
 Le lanceur Go en un seul fichier (`outils/application/lanceur/`, fenêtre WebView2, 4 Mo) reste
 disponible en solution de repli : `sh outils/application/lanceur/construire.sh`.
 
+## Le site de vente (`site/`)
+
+Le dossier `site/` contient une application distincte : le **site commercial et l'espace client**, pour vendre Blonay PDF aux communes, aux établissements scolaires et aux services de l'État. Next.js, base SQLite dans un fichier, rien d'externe.
+
+Il suit le chemin d'achat réel d'une collectivité — demande d'offre sans compte, devis nominatif à faire valider, acceptation avec bon de commande, **facture à 30 jours avec QR-facture suisse** — la carte bancaire restant possible pour qui peut décider seul.
+
+```bash
+cd site
+npm install
+npm run dev     # http://localhost:3000
+npm test        # la QR-facture : charge utile, IBAN, clés de contrôle
+npm run e2e     # le parcours d'achat entier, dans un navigateur
+```
+
+Voir `site/README.md`, en particulier la section **« À vérifier avant de vendre »** : l'IBAN, l'IDE et les prix livrés sont des valeurs provisoires.
+
 ## L'installer comme une vraie application
 
 Le dossier `docs/` contient la même application, accompagnée d'un manifeste, de
