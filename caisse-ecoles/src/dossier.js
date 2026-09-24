@@ -49,7 +49,9 @@
   /**
    * Retire les pages de pièce comptable du dossier. opts.skipFirst : si aucune page n'a de texte
    * lisible, retirer la première page (le dossier scanné commence toujours par la pièce comptable).
-   * Renvoie { bytes, removed: [n° de page, base 1], total, reason } ; bytes inchangé si rien n'est retiré.
+   * Renvoie { bytes, removed: [n° de page, base 1], total, reason, supposee } ; bytes inchangé si
+   * rien n'est retiré. supposee : la page a été retirée sans avoir été reconnue (scan sans texte) —
+   * la page de Décompte DGEO le dit, puisque ce peut être le formulaire de couverture.
    */
   async function clean(bytes, opts) {
     opts = opts || {};
@@ -58,9 +60,11 @@
     const total = pages.length;
     let removed = pages.filter((p) => p.form).map((p) => p.index);
     let reason = removed.length ? (removed.length > 1 ? 'pièces comptables reconnues' : 'pièce comptable reconnue') : '';
+    let supposee = false;
     if (!removed.length && total > 1 && opts.skipFirst && !pages.some((p) => p.hasText)) {
       removed = [0];
       reason = 'première page retirée (dossier scanné sans texte lisible)';
+      supposee = true;
     }
     if (!removed.length) return { bytes, removed: [], total, reason: 'aucune pièce comptable reconnue' };
     if (removed.length >= total) return { bytes, removed: [], total, reason: 'toutes les pages sont des pièces comptables : dossier transmis tel quel' };
@@ -70,7 +74,7 @@
     const copied = await out.copyPages(src, keep);
     copied.forEach((p) => out.addPage(p));
     const outBytes = await out.save();
-    return { bytes: outBytes, removed: removed.map((i) => i + 1), total, reason };
+    return { bytes: outBytes, removed: removed.map((i) => i + 1), total, reason, supposee };
   }
 
   return { inspect, clean };

@@ -2447,7 +2447,7 @@
       const b = ev.target.closest('.apptab');
       if (!b) return;
       if (b.dataset.panel) { showPanel(b.dataset.panel); return; } // espace de l'outil (récapitulatif)
-      if (!b.dataset.dgeo) return;
+      if (!b.dataset.dgeo || b.getAttribute('aria-disabled') === 'true') return; // section pas encore affichée
       dgeoSection = b.dataset.dgeo;
       showPanel('panelDgeo'); // la page de Décompte DGEO, puis sa section
       if (window.CaisseDgeo && window.CaisseDgeo.scrollTo) window.CaisseDgeo.scrollTo(b.dataset.dgeo);
@@ -2484,6 +2484,36 @@
     };
     window.CaisseDgeo.onState(applyState);
     window.CaisseDgeo.state().then(applyState).catch(() => {});
+    // Raccourcis vers les sections de la page : grisés tant qu'aucun dossier n'y est ouvert (un
+    // clic mettait l'entrée en surbrillance sans rien montrer), et l'entrée active suit le
+    // défilement de la page (état envoyé par le processus principal, voir main.js suivreDgeo).
+    const raccourcis = toolEls.dgeoNav ? [...toolEls.dgeoNav.querySelectorAll('.apptab[data-dgeo]')] : [];
+    const titres = new Map(raccourcis.map((b) => [b, b.title]));
+    const appliquerPage = (s) => {
+      for (const b of raccourcis) {
+        const off = b.dataset.dgeo !== 'sec-upload' && !s.ouvert;
+        if (off) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
+        b.title = off ? `${titres.get(b)} — disponible après l'analyse d'un dossier` : titres.get(b);
+      }
+      if (s.section) dgeoSection = s.section;
+      const surDgeo = !document.getElementById('panelDgeo').classList.contains('hidden');
+      for (const b of raccourcis) b.classList.toggle('active', surDgeo && b.dataset.dgeo === dgeoSection);
+    };
+    appliquerPage({ ouvert: false, section: null });
+    if (window.CaisseDgeo.onPage) window.CaisseDgeo.onPage(appliquerPage);
+    // Décompte refait (fichier Excel recréé) alors que sa pièce comptable existe déjà, avec un
+    // autre total : cela n'était écrit que dans caisse.log, que personne ne lit.
+    const totauxSignales = new Set();
+    window.CaisseDgeo.onNew((d) => {
+      if (!d || !d.saisi || d.totalPrecedent == null || d.totalPrecedent === d.total) return;
+      const cle = `${d.id}:${d.totalPrecedent}:${d.total}`;
+      if (totauxSignales.has(cle)) return; // l'enregistrement du fichier le renvoie une seconde fois
+      totauxSignales.add(cle);
+      const s = window.CaisseSaisie && window.CaisseSaisie.state;
+      const piece = s && s.reg && d.pieceId ? s.reg.pieces.find((p) => p.id === d.pieceId) : null;
+      const fr = (n) => (n == null ? '–' : `CHF ${Number(n).toFixed(2)}`);
+      alert(`Décompte ${d.numero || d.filename || ''} refait : la part de l'État passe de ${fr(d.totalPrecedent)} à ${fr(d.total)}.\n\nSa pièce comptable${piece ? ` n° ${piece.no}` : ''} a été créée d'après l'ancien décompte : vérifiez son montant dans « Saisie des pièces ».`);
+    });
     // dossier PDF déposé dans Décompte DGEO : la passerelle le confie à cette page, qui retire les
     // pages « PIÈCE COMPTABLE » (src/dossier.js) avant l'analyse
     if (window.CaisseDgeo.onClean && window.CaisseDossier) {
@@ -2531,24 +2561,33 @@
       formSelect.classList.toggle('hidden', dossiers.list.length < 2);
       const pages = formPagesOf(d);
       const hasForm = (d.pages || []).some((p) => p.kind === 'form');
-      formPages.innerHTML = pages.length
+      // le volet se redessine à chaque enregistrement du décompte : les images ne sont refaites
+      // que pour un autre dossier (sinon le volet sautait pendant qu'on le lit)
+      const clePages = `${d.base || ''}|${pages.map((p) => p.url).join('|')}|${hasForm}`;
+      if (formPages.dataset.cle !== clePages) formPages.innerHTML = pages.length
         ? pages.map((p) => `<img src="${esc((d.base || '') + String(p.url || '').replace(/^\//, ''))}" alt="Page ${p.number}" data-page="${p.number}" title="Cliquer pour agrandir">`).join('') +
           `<div class="legend">${hasForm ? `Page${pages.length > 1 ? 's' : ''} ${pages.map((p) => p.number).join(', ')} du dossier (formulaire reconnu par Décompte DGEO)` : 'Première page du dossier (formulaire non reconnu par Décompte DGEO : vérifiez).'}</div>`
         : '<div class="empty">Aucune page dans ce dossier.</div>';
+      formPages.dataset.cle = clePages;
       const e = d.effectifs || {};
       const typeTxt = d.type_activite_texte || (d.type_activite === 'camp' ? 'Camp' : "Course d'école");
       const dates = d.date_debut ? (d.date_fin && d.date_fin !== d.date_debut ? `${d.date_debut} – ${d.date_fin}` : d.date_debut) : '–';
       const rows = (d.form_expenses || []).map((x) => `<tr><td>${esc(x.categorie)}</td><td>${esc(x.descriptif)}</td><td>${esc(x.pieces)}</td><td class="num">${chf(x.paye_enseignant)}</td><td class="num">${chf(x.paye_commune)}</td><td class="num">${chf(x.cout_total)}</td></tr>`).join('');
+      // Le volet suit le décompte à chaque enregistrement de la page (dgeo-proxy.js) : il montrait
+      // « Pièces retenues 5 » pour 3 comptées et une part de l'État figée au moment de l'analyse.
+      const heure = d.majAt ? new Date(d.majAt).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }) : '';
+      const comptes = d.piecesLues != null ? `${d.pieces || 0} sur ${d.piecesLues} lu${d.piecesLues > 1 ? 's' : ''}` : String(d.pieces || 0);
+      const remarques = (d.warnings || []).map((w) => String(w).replace(/^\[calcul\]\s*/, ''));
       formFields.innerHTML =
-        '<h4>Lu sur le formulaire</h4>' +
+        '<h4>Repris dans le décompte</h4>' +
         `<dl><dt>Type</dt><dd>${esc(typeTxt)}</dd><dt>Activité</dt><dd>${esc(d.activite || '–')}</dd><dt>Classe(s)</dt><dd>${esc(d.classe || '–')}</dd><dt>Dates</dt><dd>${esc(dates)}</dd>` +
         `<dt>Responsable</dt><dd>${esc(d.enseignant || '–')}${d.telephone ? ` · ${esc(d.telephone)}` : ''}</dd><dt>Budget</dt><dd>${d.budget != null ? `CHF ${chf(d.budget)}` : '–'}</dd>` +
         `<dt>Effectifs</dt><dd>${e.eleves || 0} élèves · ${e.enseignants_dgeo || 0} ens. DGEO · ${e.enseignants_js || 0} ens. J+S · ${e.moniteurs_js || 0} moniteurs J+S · ${e.autres || 0} autres</dd>` +
         `${d.noms_enseignants && d.noms_enseignants.length ? `<dt>Enseignant-e-s</dt><dd>${esc(d.noms_enseignants.join(', '))}</dd>` : ''}${d.noms_accompagnants && d.noms_accompagnants.length ? `<dt>Accompagnants</dt><dd>${esc(d.noms_accompagnants.join(', '))}</dd>` : ''}</dl>` +
-        (rows ? `<h4>Dépenses du formulaire</h4><table><thead><tr><th>Catégorie</th><th>Descriptif</th><th>N° pièce</th><th class="num">Payé ens.</th><th class="num">Payé commune</th><th class="num">Coût total</th></tr></thead><tbody>${rows}` +
-          `<tr class="total"><td colspan="5">Total des dépenses</td><td class="num">${chf(d.form_total)}</td></tr></tbody></table>` : '<h4>Dépenses du formulaire</h4><div class="legend">Aucune ligne de dépense lue.</div>') +
-        `<h4>Décompte</h4><dl><dt>Pièces retenues</dt><dd>${d.pieces || 0}</dd><dt>Part État</dt><dd>${d.total != null ? `CHF ${chf(d.total)}` : '–'}</dd></dl>` +
-        (d.warnings && d.warnings.length ? `<h4>Remarques de Décompte DGEO</h4><ul class="warn" style="margin:0;padding-left:18px">${d.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '');
+        (rows ? `<h4>Dépenses du formulaire</h4><div class="defile"><table><thead><tr><th>Catégorie</th><th>Descriptif</th><th>N° pièce</th><th class="num">Payé ens.</th><th class="num">Payé commune</th><th class="num">Coût total</th></tr></thead><tbody>${rows}` +
+          `<tr class="total"><td colspan="5">Total des dépenses</td><td class="num">${chf(d.form_total)}</td></tr></tbody></table></div>` : '<h4>Dépenses du formulaire</h4><div class="legend">Aucune ligne de dépense lue.</div>') +
+        `<h4>Décompte</h4><dl><dt>Justificatifs comptés</dt><dd>${esc(comptes)}</dd><dt>Part de l'État</dt><dd>${d.total != null ? `CHF ${chf(d.total)}` : '–'}${heure ? ` <span class="legend">(page de gauche, ${esc(heure)})</span>` : ''}</dd></dl>` +
+        (remarques.length ? `<h4>Remarques de Décompte DGEO</h4><ul class="warn" style="margin:0;padding-left:18px">${remarques.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '');
       updateDgeoEmbed();
     }
     if (formPane) {
