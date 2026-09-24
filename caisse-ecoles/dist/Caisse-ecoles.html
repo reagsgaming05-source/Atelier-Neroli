@@ -355,6 +355,16 @@ table.entries.journal th.num { text-align: right; }
 table.entries.journal td.solde { font-weight: 600; }
 table.entries.journal tr.selected td { background: var(--accent-soft); }
 table.entries.journal td.libelle { max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Dans un tableau, max-width ne retient pas une cellule : le libellé le plus long donnait sa
+   largeur au journal, qui débordait de sa carte (à 1920 px, les boutons de la ligne sortaient de
+   la vue). max-width: 0 et width: 100 % : le libellé prend la place qui reste, coupé par « … »
+   (le texte entier est dans l'infobulle), jamais moins que min-width. */
+table.entries.journal td.libelle { max-width: 0; width: 100%; min-width: 160px; }
+@media (min-width: 1800px) {
+  /* fiche et journal côte à côte : le journal n'a plus que la moitié de la largeur */
+  table.entries.journal th, table.entries.journal td { padding-left: 6px; padding-right: 6px; }
+  table.entries.journal td.libelle { min-width: 140px; }
+}
 table.entries.journal td.compte { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
 table.entries.journal td.acts { white-space: nowrap; text-align: right; }
 table.entries.journal td.acts button { margin-left: 3px; }
@@ -502,7 +512,10 @@ table.checks button { margin-left: 6px; }
 .ocr-status.warn { background: var(--warn-soft); border-color: var(--warn-line); color: var(--warn); }
 
 /* ---------------------------------------------------------------- écran de saisie */
-.layout2 { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+/* minmax(0, …) : un « 1fr » seul prend la largeur minimale de son contenu, et le journal (une
+   ligne de libellé qui ne se coupe pas) poussait toute la page hors de l'écran à 1366 px — la
+   barre latérale défilait avec. Le tableau défile désormais dans sa carte, s'il le faut. */
+.layout2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (min-width: 1800px) { .layout2 { grid-template-columns: minmax(560px, 1fr) minmax(640px, 1.2fr); } }
 .regbar { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
 .regbar .field { min-width: 0; }
@@ -553,6 +566,10 @@ h3.regbloc .legend { font-weight: 400; }
    de l'écran, la fiche est longue. */
 #ficheActions { position: sticky; bottom: 0; z-index: 5; margin: 14px -8px 0; padding: 10px 8px;
   background: var(--card); border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; }
+/* Un message affiché (zone du bas, src/avis.js) recouvrait ce bouton : « Pièce enregistrée »
+   cachait « Enregistrer » pour la pièce suivante. La barre se pose alors au-dessus des messages
+   (hauteur de la zone + son écart au bord, 16 px, et 8 px d'air) ; sans message, en bas. */
+#ficheActions { bottom: calc(var(--avis-h, 0px) + min(var(--avis-h, 0px), 24px)); }
 /* Décompte repris de Décompte DGEO : lequel des montants du formulaire, dit juste sous le montant */
 .montant-aide { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: var(--accent-soft); font-size: 12.5px; color: var(--ink-2); }
 .montant-aide .choix { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -582,6 +599,26 @@ details.technique > summary { cursor: pointer; color: var(--muted); font-weight:
 details.technique > .legend { margin-top: 6px; }
 .steps { display: flex; flex-direction: column; gap: 0; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; margin-top: 12px; }
+/* Tableau de vérification (899 px) et aperçu (330 px) ne tenaient pas côte à côte sous 1700 px :
+   le tableau défilait en largeur, et « Vérifié » sortait de la vue. On resserre le tableau (marges
+   et champs à la mesure de leur contenu, sans les flèches des montants) et un peu l'aperçu : tout
+   le tableau se voit à 1366 px, à côté de l'image de la pièce (qu'un clic agrandit toujours).
+   Seul le libellé, champ libre, se lit alors en entier en cliquant dedans ou sous l'aperçu. */
+@media (max-width: 1700px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 280px; gap: 14px; }
+  #step3 { padding-left: 16px; padding-right: 16px; }
+  #entriesTable th { padding: 8px 5px; letter-spacing: 0; }
+  #entriesTable td { padding: 5px 3px; }
+  #entriesTable input[type="text"], #entriesTable input[type="number"] { padding: 0 6px; }
+  #entriesTable .combo > input { padding-right: 26px; }
+  #entriesTable input.no { width: 40px; }
+  #entriesTable input.date { width: 90px; padding: 0 5px; }
+  #entriesTable input.compte { width: 130px; }
+  #entriesTable input.num { width: 80px; padding: 0 5px; }
+  #entriesTable input.num::-webkit-inner-spin-button, #entriesTable input.num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  #entriesTable td.libelle { min-width: 120px; }
+  #entriesTable .status { width: 24px; }
+}
 @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
 .preview { position: sticky; top: 14px; align-self: start; }
 .preview .frame {
@@ -1116,12 +1153,12 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   <details class="card fold" id="step1">
     <summary><svg class="ico"><use href="#i-sliders"/></svg> Réglages de la lecture <span class="legend" id="step1Resume"></span></summary>
     <div class="choice seg">
-      <label><input type="radio" name="mode" value="registre" checked> Registre de l'année (Saisie des pièces)</label>
+      <label><input type="radio" name="mode" value="registre" checked> Journal de l'année (Saisie des pièces)</label>
       <label><input type="radio" name="mode" value="existing"> Classeur Excel existant</label>
       <label><input type="radio" name="mode" value="new"> Nouveau classeur (nouvelle année)</label>
     </div>
     <div id="registreBox">
-      <div class="info" id="registreInfo">Registre de l'année en cours de chargement…</div>
+      <div class="info" id="registreInfo">Journal de l'année en cours de chargement…</div>
     </div>
     <div id="newBox" class="hidden">
       <div class="row">
@@ -1139,8 +1176,11 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <div id="existingBox" class="hidden">
       <div class="row">
         <div class="field">
-          <label for="xlsxFile">Classeur Excel (.xlsx) de l'année en cours (année commencée à l'ancienne) – les nouvelles pièces sont ajoutées à la suite, et ses écritures peuvent être reprises dans le registre</label>
-          <input type="file" id="xlsxFile" accept=".xlsx">
+          <label for="xlsxFile">Classeur Excel (.xlsx) de l'année en cours (année commencée à l'ancienne) – les nouvelles pièces sont ajoutées à la suite, et ses écritures peuvent être reprises dans le journal</label>
+          <!-- Le champ « fichier » du navigateur dit « Choose File / No file chosen », en anglais
+               même dans l'application fenêtrée : caché, un bouton en français l'ouvre. -->
+          <input type="file" id="xlsxFile" accept=".xlsx" class="hidden">
+          <div><button type="button" class="small" id="btnPickXlsx"><svg class="ico"><use href="#i-upload"/></svg> Choisir le classeur Excel…</button></div>
         </div>
       </div>
       <div class="info" id="existingInfo">Aucun classeur chargé.</div>
@@ -1249,7 +1289,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <div class="toolbar">
       <button type="button" class="primary" id="btnExcel"><svg class="ico"><use href="#i-grid"/></svg> Fichier Excel de l'année</button>
       <button type="button" id="btnReport"><svg class="ico"><use href="#i-file"/></svg> Rapport de contrôle</button>
-      <button type="button" id="btnToRegister" class="hidden" title="Verse ces écritures dans le registre de l'année (Saisie des pièces), avec l'image de chaque pièce en justificatif. Inutile quand le registre est déjà la base : les pièces lues y entrent toutes seules."><svg class="ico"><use href="#i-book"/></svg> Verser au registre de l'année</button>
+      <button type="button" id="btnToRegister" class="hidden" title="Verse ces écritures dans le journal de l'année (Saisie des pièces), avec l'image de chaque pièce en justificatif. Inutile quand le journal est déjà la base : les pièces lues y entrent toutes seules."><svg class="ico"><use href="#i-book"/></svg> Verser au journal de l'année</button>
       <span class="legend" id="excelHint"></span>
     </div>
   </section>
@@ -1259,7 +1299,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   <header class="page-head">
     <div>
       <h1>Compter la caisse</h1>
-      <p>Comptez les billets et les pièces : l'application calcule le solde compté, le compare au dernier comptage et au solde du journal à cette date, et garde l'historique dans le registre de l'année.</p>
+      <p>Comptez les billets et la monnaie : l'application calcule le solde compté, le compare au dernier comptage et au solde du journal à cette date, et garde l'historique dans le journal de l'année.</p>
     </div>
   </header>
   <div class="layout-count">
@@ -1358,7 +1398,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 
   <section class="card" id="carteDecomptes">
     <h2><span class="left"><svg class="ico"><use href="#i-list"/></svg> Décomptes à faire <span class="legend" id="decomptesCompte"></span></span> <button type="button" class="small ghost" id="btnOuvrirDecomptes2" title="Décomptes\À faire\Camp et Course d'école : ce qu'il reste à faire, dans l'explorateur"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button></h2>
-    <p class="legend">Les décomptes du registre ouvert marqués « décompte à faire » sur leur fiche. C'est le même contenu que le dossier <code>Décomptes\À faire</code> — en plus de ceux dont le scan signé n'est pas encore revenu.</p>
+    <p class="legend">Les décomptes du journal ouvert marqués « décompte à faire » sur leur fiche. C'est le même contenu que le dossier <code>Décomptes\À faire</code> — en plus de ceux dont le scan signé n'est pas encore revenu.</p>
     <div id="decomptesListe"></div>
   </section>
 </div>
@@ -1381,7 +1421,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
       </div>
       <button type="button" class="small" id="btnNewYear" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle année</button>
       <span class="hidden" id="newYearBox" style="display:inline-flex;gap:6px;align-items:center;align-self:flex-end">
-        <input type="number" id="newYearInput" min="1990" max="2100" step="1" style="width:110px;height:36px" aria-label="Nouvelle année du registre">
+        <input type="number" id="newYearInput" min="1990" max="2100" step="1" style="width:110px;height:36px" aria-label="Nouvelle année du journal">
         <button type="button" class="small primary" id="btnNewYearOk" style="height:36px">Créer</button>
         <button type="button" class="small ghost" id="btnNewYearCancel" style="height:36px">Annuler</button>
       </span>
@@ -1420,7 +1460,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 
   <section class="card">
     <h2><svg class="ico"><use href="#i-upload"/></svg> Reprendre une année commencée à l'ancienne</h2>
-    <p class="legend">Si l'année a été tenue dans un classeur Excel (à la main, ou produit par les pièces scannées), ses écritures se versent ici dans le registre : rien n'est compté deux fois, la numérotation continue, les pièces reprises sont marquées <i>Excel</i> dans le journal.</p>
+    <p class="legend">Si l'année a été tenue dans un classeur Excel (à la main, ou produit par les pièces scannées), ses écritures se versent ici dans le journal : rien n'est compté deux fois, la numérotation continue, les pièces reprises sont marquées <i>Excel</i> dans le journal.</p>
     <div class="toolbar">
       <button type="button" id="btnRegExcelIn"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un classeur Excel…</button>
       <input type="file" id="regExcelFile" accept=".xlsx" class="hidden">
@@ -1442,7 +1482,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 
   <section class="card hidden" id="carteEmplacement">
     <h2><span class="left"><svg class="ico"><use href="#i-users"/></svg> Où sont les données <span class="badge-soft" id="emplacementGenre"></span></span></h2>
-    <p class="legend">Pour que plusieurs postes partagent la même caisse, <b>le programme reste sur chaque PC et seules les données vont sur le serveur</b> : registres, justificatifs, scans du copieur et décomptes. Lancer le programme lui-même depuis le serveur est lent et souvent bloqué par la sécurité du réseau. Deux postes peuvent travailler en même temps : ce que l'un enregistre est repris par l'autre, rien ne s'écrase.</p>
+    <p class="legend">Pour que plusieurs postes partagent la même caisse, <b>le programme reste sur chaque PC et seules les données vont sur le serveur</b> : journaux, justificatifs, scans du copieur et décomptes. Lancer le programme lui-même depuis le serveur est lent et souvent bloqué par la sécurité du réseau. Deux postes peuvent travailler en même temps : ce que l'un enregistre est repris par l'autre, rien ne s'écrase.</p>
     <code id="emplacementChemin" class="depot-chemin"></code>
     <div class="toolbar" style="margin-top:10px">
       <button type="button" id="btnEmplacementChoisir"><svg class="ico"><use href="#i-folder"/></svg> <span id="btnEmplacementChoisirTexte">Mettre les données sur le serveur…</span></button>
@@ -1510,8 +1550,8 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   </header>
 
   <section class="card" id="recapCard">
-    <h2><svg class="ico"><use href="#i-layers"/></svg> Décomptes du registre <span id="recapYear"></span></h2>
-    <div class="hint" style="margin-bottom:12px">Chaque décompte passé en pièce DECOMPTE dans Caisse écoles (année du registre ouvert) apparaît ici. Cochez ceux à reprendre, puis générez le document : n° de chaque décompte, montant et total, prêt à être remis avec les pièces.</div>
+    <h2><svg class="ico"><use href="#i-layers"/></svg> Décomptes du journal <span id="recapYear"></span></h2>
+    <div class="hint" style="margin-bottom:12px">Chaque décompte passé en pièce DECOMPTE dans Caisse écoles (année du journal ouvert) apparaît ici. Cochez ceux à reprendre, puis générez le document : n° de chaque décompte, montant et total, prêt à être remis avec les pièces.</div>
     <div class="toolbar top">
       <div class="choice seg" id="recapFilter" style="margin:0">
         <label><input type="radio" name="recapFilter" value="course" checked> Courses d'école</label>
@@ -6565,11 +6605,11 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     if (p.no == null || !Number.isInteger(p.no) || p.no <= 0) err('pNo', 'Numéro de pièce à indiquer (un nombre entier : 1, 2, 3…)', reg ? { libre: nextNo(reg) } : null);
     else if (reg && reg.pieces.some((x) => x.id !== p.id && x.no === p.no)) {
       const libre = nextNo({ pieces: reg.pieces.filter((x) => x.id !== p.id) });
-      err('pNo', `Le n° ${p.no} existe déjà dans le registre : le prochain numéro libre est le ${libre}`, { libre });
+      err('pNo', `Le n° ${p.no} existe déjà dans le journal : le prochain numéro libre est le ${libre}`, { libre });
     }
     if (!isRealDate(p.date)) err('pDate', 'Date à indiquer');
     else if (reg && String(p.date).slice(0, 4) !== String(reg.annee)) {
-      err('pDate', `La date n'est pas dans l'année ${reg.annee}, celle du registre ouvert. Pour une autre année : espace « L'année », « Changer d'année »`);
+      err('pDate', `La date n'est pas dans l'année ${reg.annee}, celle du journal ouvert. Pour une autre année : espace « L'année », « Changer d'année »`);
     }
     if (!p.type) err('pType', "Type d'écriture à choisir");
     if (!(p.montant > 0)) {
@@ -7061,7 +7101,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
             return { fusion: bilan };
           }
           const disque = parse(r.disque);
-          if (!disque) throw new Error("le registre enregistré par l'autre poste est illisible : rien n'a été écrit par-dessus");
+          if (!disque) throw new Error("le journal enregistré par l'autre poste est illisible : rien n'a été écrit par-dessus");
           const f = fusionner(attendu == null ? null : parse(attendu), reg, disque);
           for (const k of Object.keys(f.reg)) reg[k] = f.reg[k];
           bilan = {
@@ -7071,7 +7111,7 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
           };
           attendu = r.disque;
         }
-        throw new Error("le registre est modifié sans arrêt sur un autre poste : rien n'a été écrit, réessayez dans un instant");
+        throw new Error("le journal est modifié sans arrêt sur un autre poste : rien n'a été écrit, réessayez dans un instant");
       },
       /** Reprend ce qu'un autre poste a enregistré depuis la dernière lecture (voir reprendreDuDisque). */
       relire: async (reg) => reprendreDuDisque(reg, await F.load(reg.annee)),
@@ -7467,16 +7507,16 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     opts = opts || {};
     const L = [];
     const desc = (r) => `${pluriel(r.pieces, 'pièce')}, ${pluriel(r.comptages, 'comptage')}, solde final ${montant(r.soldeFinal)}`;
-    L.push(opts.intitule || `Restaurer la sauvegarde du registre ${b.annee} ?`);
+    L.push(opts.intitule || `Restaurer la sauvegarde du journal ${b.annee} ?`);
     L.push('');
-    if (b.actuel) L.push(`Registre ${b.annee} actuel : ${desc(b.actuel)}${b.actuel.modifie ? ` (modifié le ${jour(b.actuel.modifie)})` : ''}.`);
-    else L.push(`Le registre ${b.annee} n'existe pas encore sur ce poste : il sera créé.`);
+    if (b.actuel) L.push(`Journal ${b.annee} actuel : ${desc(b.actuel)}${b.actuel.modifie ? ` (modifié le ${jour(b.actuel.modifie)})` : ''}.`);
+    else L.push(`Le journal ${b.annee} n'existe pas encore sur ce poste : il sera créé.`);
     const date = opts.dateSauvegarde || b.sauvegarde.modifie;
     L.push(`Sauvegarde : ${desc(b.sauvegarde)}${date ? ` (du ${jour(date)})` : ''}` +
       `${opts.justificatifs ? `, ${pluriel(opts.justificatifs, 'justificatif')}` : ''}.`);
     if (b.actuel) {
       L.push('');
-      if (b.rienNeSePerd) L.push('Rien ne sera perdu : la sauvegarde contient tout ce que le registre actuel contient.');
+      if (b.rienNeSePerd) L.push('Rien ne sera perdu : la sauvegarde contient tout ce que le journal actuel contient.');
       if (b.perdues.length) L.push(`Seront PERDUES : ${b.perdues.length > 1 ? `les ${b.perdues.length} pièces` : 'la pièce'} ${numeros(b.perdues, 15)}, saisie${b.perdues.length > 1 ? 's' : ''} depuis la sauvegarde.`);
       if (b.changees.length) L.push(`Reprendront leur version de la sauvegarde (vos corrections depuis seront perdues) : ${numeros(b.changees, 15)}.`);
       if (b.comptagesPerdus.length) L.push(`${b.comptagesPerdus.length > 1 ? 'Comptages perdus' : 'Comptage perdu'} : ${b.comptagesPerdus.slice(0, 6).map((c) => `celui du ${jour(c.date)}`).join(', ')}.`);
@@ -7485,15 +7525,15 @@ H4sICDRv42QAA2ZyYS50cmFpbmVkZGF0YQDM/YWXJMeVB4wmV2YWM2Mz0zDPaEaaGTFLJskys72217te
     }
     if (opts.anneeOuverte && Number(opts.anneeOuverte) !== Number(b.annee)) {
       L.push('');
-      L.push(`Attention : c'est le registre ${b.annee} qui est remplacé, pas celui de l'année ouverte (${opts.anneeOuverte}).`);
+      L.push(`Attention : c'est le journal ${b.annee} qui est remplacé, pas celui de l'année ouverte (${opts.anneeOuverte}).`);
     }
-    if (opts.partage) L.push('Les données sont partagées : tous les postes verront ce registre.');
+    if (opts.partage) L.push('Les données sont partagées : tous les postes verront ce journal.');
     if (b.actuel && opts.copie) {
       L.push('');
-      L.push(`Avant de le remplacer, une copie de sécurité du registre ${b.annee} actuel est gardée : la restauration pourra être annulée.`);
+      L.push(`Avant de le remplacer, une copie de sécurité du journal ${b.annee} actuel est gardée : la restauration pourra être annulée.`);
     }
     L.push('');
-    L.push(`Remplacer le registre ${b.annee} par ${opts.intitule ? 'cette copie' : 'cette sauvegarde'} ?`);
+    L.push(`Remplacer le journal ${b.annee} par ${opts.intitule ? 'cette copie' : 'cette sauvegarde'} ?`);
     return L.join('\n');
   }
 
@@ -20703,7 +20743,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       y = top;
       text(bold, title, left, y, 15);
       y -= 18;
-      text(normal, opts.subtitle || `Caisse écoles – registre ${reg.annee} – établi le ${dateStr}`, left, y, 10, GREY);
+      text(normal, opts.subtitle || `Caisse écoles – journal ${reg.annee} – établi le ${dateStr}`, left, y, 10, GREY);
       y -= 22;
       // en-tête du tableau
       page.drawRectangle({ x: left, y: y - pad - 3, width: right - left, height: lineH + pad + 2, color: rgb(0.94, 0.95, 0.97) });
@@ -22311,7 +22351,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     if (state.mode === 'registre') { const reg = registre(); return reg ? window.CaisseRegistre.entriesOf(reg) : []; }
     return state.mode === 'existing' && state.existing ? state.existing.entries : [];
   }
-  const baseLabel = () => (state.mode === 'registre' ? 'le registre' : 'le classeur');
+  const baseLabel = () => (state.mode === 'registre' ? 'le journal' : 'le classeur');
   const numNo = (e) => (e.no == null || e.no === '' ? NaN : Number(e.no));
 
   /* ---------------- Réglages de la lecture : base des écritures ---------------- */
@@ -22346,7 +22386,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     if (!els.step1Resume) return;
     const base = state.mode === 'new' ? 'nouveau classeur'
       : state.mode === 'existing' ? 'classeur Excel existant'
-      : "registre de l'année";
+      : "journal de l'année";
     const ocr = els.optOcr && els.optOcr.checked ? 'relecture sur l\'image (OCR) activée' : 'relecture sur l\'image (OCR) désactivée';
     els.step1Resume.textContent = `— ${base}, compte caisse ${getCaisse()}, ${ocr}`;
   }
@@ -22354,10 +22394,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   function renderRegistreInfo() {
     if (!els.registreInfo) return;
     const reg = registre();
-    if (!reg) { els.registreInfo.textContent = "Registre de l'année indisponible : ouvrez d'abord « Saisie des pièces »."; return; }
+    if (!reg) { els.registreInfo.textContent = "Journal de l'année indisponible : ouvrez d'abord « Saisie des pièces »."; return; }
     const j = window.CaisseRegistre.journal(reg);
     const last = reg.pieces.length ? reg.pieces[reg.pieces.length - 1] : null;
-    els.registreInfo.innerHTML = `Registre <b>${reg.annee}</b> (Saisie des pièces) : <b>${reg.pieces.length}</b> pièce(s), solde à nouveau <b>${fmtCHF(j.start)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}` +
+    els.registreInfo.innerHTML = `Journal <b>${reg.annee}</b> (Saisie des pièces) : <b>${reg.pieces.length}</b> pièce(s), solde à nouveau <b>${fmtCHF(j.start)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}` +
       (last ? `, dernière pièce n° <b>${last.no == null ? '?' : last.no}</b>${last.date ? ` du ${escapeHtml(P.isoToDisplay(last.date))}` : ''}` : '') + `, solde actuel <b>${fmtCHF(j.end)}</b>. ` +
       `Les pièces lues ci-dessous entrent dans ce journal dès la lecture, marquées « à vérifier » : il n'y a qu'une seule liste. ` +
       `<button type="button" class="small" data-act="goSaisie">Ouvrir la saisie des pièces</button>`;
@@ -22378,6 +22418,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     refreshAll();
   });
 
+  const btnPickXlsx = $('btnPickXlsx');
+  if (btnPickXlsx) btnPickXlsx.addEventListener('click', () => els.xlsxFile.click());
   els.xlsxFile.addEventListener('change', async () => {
     const file = els.xlsxFile.files[0];
     if (!file) return;
@@ -22393,7 +22435,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         `solde à nouveau <b>${fmtCHF(data.opening.amount)}</b>` + (data.opening.date ? ` au ${P.isoToDisplay(data.opening.date)}` : '') +
         (last ? `, dernière pièce n° <b>${escapeHtml(last.no)}</b>` + (last.date ? ` du ${P.isoToDisplay(last.date)}` : '') : '') +
         `, solde actuel <b>${fmtCHF(totals.end)}</b>.` +
-        (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le registre de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le registre de l'année</button>` : '');
+        (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le journal de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le journal de l'année</button>` : '');
       state.existing.buffer = buf;
       const saisi = window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value);
       if (!saisi) els.openingAmount.value = fmtCHF(totals.end);
@@ -24923,7 +24965,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const trouvees = documents.filter((x) => x.etat === 'trouvee');
       const autres = documents.length - trouvees.length;
       if (!trouvees.length) {
-        notice(els.pdfNotices, 'warn', `Aucune fiche de « ${escapeHtml(d.name)} » ne correspond à une pièce des registres de ce poste : rien n'a été joint.`);
+        notice(els.pdfNotices, 'warn', `Aucune fiche de « ${escapeHtml(d.name)} » ne correspond à une pièce des journaux de ce poste : rien n'a été joint.`);
         return;
       }
       const liste = trouvees.map((x) => `n° ${x.piece.no}`).join(', ');
@@ -24955,7 +24997,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const entries = state.entries.filter((e) => !e.manual || e.libelle);
       if (!entries.length) return;
       const pending = entries.filter((e) => rowStatus(e) !== 'ok');
-      if (pending.length && !confirm(`${pending.length} ligne(s) sont encore à vérifier (orange). Les ajouter quand même au registre ?`)) return;
+      if (pending.length && !confirm(`${pending.length} ligne(s) sont encore à vérifier (orange). Les ajouter quand même au journal ?`)) return;
       // image de la pièce (page rendue en JPEG) jointe en justificatif
       const getImage = async (e) => {
         const ref = e.page ? pageRef(e.page) : null;
@@ -25295,7 +25337,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     // un registre enregistré mais illisible (fichier abîmé) ne doit jamais être remplacé par un registre vide
     const stored = state.storage.loadStored ? await state.storage.loadStored(year) : { reg: await state.storage.load(year) };
     if (stored.error) {
-      notice('err', `Le registre ${year} est enregistré mais illisible (fichier abîmé). Il n'a pas été remplacé : restaurez une sauvegarde (« Restaurer… ») ` +
+      notice('err', `Le journal ${year} est enregistré mais illisible (fichier abîmé). Il n'a pas été remplacé : restaurez une sauvegarde (« Restaurer… ») ` +
         'ou, dans l\'application fenêtrée, reprenez le fichier <code>registre.bak.json</code> du dossier des données.');
       els.regYear.value = String(state.reg ? state.reg.annee : year);
       return;
@@ -25369,7 +25411,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const f = res && res.fusion;
     if (f) {
       // Un autre poste avait écrit dans cette année entre-temps : son travail est repris, pas écrasé.
-      const parts = [`Un autre poste avait modifié le registre ${state.reg.annee} entre-temps : ${plur(f.reprises, 'changement')} de sa part ${f.reprises > 1 ? 'ont été repris' : 'a été repris'}, rien n'est perdu.`];
+      const parts = [`Un autre poste avait modifié le journal ${state.reg.annee} entre-temps : ${plur(f.reprises, 'changement')} de sa part ${f.reprises > 1 ? 'ont été repris' : 'a été repris'}, rien n'est perdu.`];
       if (f.doublons.length) parts.push(`<b>Deux pièces portent le même numéro</b> (${f.doublons.map((n) => `n° ${n}`).join(', ')}) : chaque poste a pris « le suivant ». Renumérotez l'une des deux.`);
       const vraies = f.conflits.filter((c) => c.quoi === 'pièce' && c.no != null);
       if (vraies.length) parts.push(`Modifiée des deux côtés : ${vraies.map((c) => `n° ${c.no}`).join(', ')} — la version la plus récente a été gardée, vérifiez-la.`);
@@ -25465,8 +25507,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     if (!v) { if (boite) boite.innerHTML = ''; if (boiteAnnee) boiteAnnee.innerHTML = ''; renderSoldeInfo(); return; }
     // janvier : l'année du jour n'a pas encore de registre
     if (v.propose && !lu(cleFerme('proposer', v.propose.annee), true)) {
-      const html = `<div class="notice warn avis-annee"><b>Nous sommes en ${v.propose.annee}.</b> Le registre ${v.propose.annee} n'existe pas encore : l'année ouverte est ${reg.annee}.` +
-        `<div class="avis-actions"><button type="button" class="primary small" data-annee-creer="${v.propose.annee}">Créer le registre ${v.propose.annee}</button>` +
+      const html = `<div class="notice warn avis-annee"><b>Nous sommes en ${v.propose.annee}.</b> Le journal ${v.propose.annee} n'existe pas encore : l'année ouverte est ${reg.annee}.` +
+        `<div class="avis-actions"><button type="button" class="primary small" data-annee-creer="${v.propose.annee}">Créer le journal ${v.propose.annee}</button>` +
         `<span class="legend">solde à nouveau : ${v.propose.depuis ? `<b>${fmtCHF(v.propose.solde)}</b>, le solde final ${v.propose.depuis}` : '0.00'}</span>` +
         `<button type="button" class="small ghost" data-annee-rester="${v.propose.annee}">Rester en ${reg.annee} (pièces de décembre)</button></div></div>`;
       avis.push(html); avisAnnee.push(html);
@@ -25474,7 +25516,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     // premier lancement, ou registre encore vierge sans année d'avant d'où partir
     if (AN.registreVierge(reg) && !v.avant && !lu(cleFerme('debut', reg.annee))) {
       avis.push(`<section class="card avis-debut"><h2><svg class="ico"><use href="#i-calendar"/></svg> Pour commencer l'année ${reg.annee}</h2>` +
-        `<p class="legend">Le registre ${reg.annee} est vide. Avant la première pièce, indiquez d'où part la caisse : sinon les soldes et la numérotation des pièces partent faux.</p>` +
+        `<p class="legend">Le journal ${reg.annee} est vide. Avant la première pièce, indiquez d'où part la caisse : sinon les soldes et la numérotation des pièces partent faux.</p>` +
         '<div class="debut-choix">' +
         `<div class="debut-un"><button type="button" data-debut="excel"><svg class="ico"><use href="#i-upload"/></svg> Reprendre le classeur Excel de ${reg.annee}…</button>` +
         '<span class="legend">L\'année est déjà tenue dans un classeur : ses écritures et son solde à nouveau sont repris, la numérotation continue.</span></div>' +
@@ -25666,18 +25708,18 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   async function creerAnnee(y) {
     const existed = state.years.includes(y);
     try { await openYear(y, { creer: true }); } catch (e) {
-      notice('err', `Le registre ${y} n'a pas pu être créé : ${escapeHtml((e && e.message) || e)}.`, { keep: true });
+      notice('err', `Le journal ${y} n'a pas pu être créé : ${escapeHtml((e && e.message) || e)}.`, { keep: true });
       return;
     }
-    if (existed) { notice('ok', `Registre ${y} ouvert (il existait déjà).`); return; }
+    if (existed) { notice('ok', `Journal ${y} ouvert (il existait déjà).`); return; }
     const c = (state.voisines || {}).avant;
     state.messageCreation = {
       annee: y,
-      html: c ? `Registre ${y} créé : son solde à nouveau est le solde final ${c.precedente}, <b>${fmtCHF(c.soldeFinal)}</b>. S'il change encore (pièce de décembre saisie en janvier), le solde à nouveau ${y} le suivra.`
-        : `Registre ${y} créé, sans année précédente dans l'application : indiquez son solde à nouveau ci-dessus.`,
+      html: c ? `Journal ${y} créé : son solde à nouveau est le solde final ${c.precedente}, <b>${fmtCHF(c.soldeFinal)}</b>. S'il change encore (pièce de décembre saisie en janvier), le solde à nouveau ${y} le suivra.`
+        : `Journal ${y} créé, sans année précédente dans l'application : indiquez son solde à nouveau ci-dessus.`,
     };
     renderSoldeInfo();
-    notice('ok', `Registre ${y} créé${c ? ` : solde à nouveau ${fmtCHF(c.soldeFinal)}, le solde final ${c.precedente}` : ''}.`);
+    notice('ok', `Journal ${y} créé${c ? ` : solde à nouveau ${fmtCHF(c.soldeFinal)}, le solde final ${c.precedente}` : ''}.`);
   }
   els.btnNewYear.addEventListener('click', () => {
     if (!yearBox || !yearInput) return;
@@ -26313,7 +26355,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     els.yearBar.classList.toggle('passee', passee);
     els.yearBar.innerHTML =
       `<span class="y">${reg.annee}</span>` +
-      (passee ? '<span class="tag passee" title="L\'année du registre ouvert est terminée : les dates proposées sont au 31 décembre">année passée</span>' : '') +
+      (passee ? '<span class="tag passee" title="L\'année du journal ouvert est terminée : les dates proposées sont au 31 décembre">année passée</span>' : '') +
       `<span class="i"><b>${reg.pieces.length}</b> ${reg.pieces.length > 1 ? 'pièces' : 'pièce'}</span>` +
       `<span class="i">solde à nouveau <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}</span>` +
       `<span class="i">solde actuel <b>${fmtCHF(j.end)}</b></span>` +
@@ -26392,7 +26434,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         `<td class="acts">${p && p.aVerifier ? `<button type="button" class="small ghost ok" data-verif="${r.id}" title="Cette lecture est juste : marquer la pièce comme vérifiée">${ico('check')}</button>` : ''}<button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="Imprimer la fiche de la pièce (elle s'ouvre dans la fenêtre d'impression, qui sait aussi l'enregistrer)">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
     }).join('') || `<tr><td colspan="9" class="legend">${filtre
       ? `Aucune pièce ne correspond${String(q).trim() ? ` à « ${escapeHtml(String(q).trim())} »` : ''}. <button type="button" class="small ghost" data-search-clear="1">Tout afficher</button>`
-      : 'Aucune pièce dans ce registre. Remplissez la fiche « Pièce comptable » : chaque pièce enregistrée apparaît ici avec le solde cumulé.'}</td></tr>`;
+      : 'Aucune pièce dans ce journal. Remplissez la fiche « Pièce comptable » : chaque pièce enregistrée apparaît ici avec le solde cumulé.'}</td></tr>`;
     els.journalTotals.innerHTML = `<div class="t"><div class="l">Solde à nouveau</div><div class="v">${fmtCHF(j.start)}</div></div>` +
       `<div class="t"><div class="l">Débits (entrées)</div><div class="v">+ ${fmtCHF(j.debits)}</div></div>` +
       `<div class="t"><div class="l">Crédits (sorties)</div><div class="v">− ${fmtCHF(j.credits)}</div></div>` +
@@ -26440,7 +26482,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       return `<tr data-id="${p.id}" class="${on ? '' : 'off'}"><td class="sel"><input type="checkbox" data-recap="${p.id}"${on ? ' checked' : ''} aria-label="Reprendre la pièce n° ${p.no}"></td>` +
         `<td>${p.no == null ? '' : p.no}</td><td>${escapeHtml(P.isoToDisplay(p.date))}</td><td class="libelle" title="${escapeHtml(F.recapDescription(p))}">${escapeHtml(F.recapDescription(p))}</td>` +
         `<td>${escapeHtml(p.personne)}</td><td>${p.ref ? `<span class="tag">${escapeHtml(p.ref)}</span>` : ''}</td><td class="legend">${p.sens === 'debit' ? 'entrée' : 'sortie'}</td><td class="num">${fmtCHF(p.montant)}</td></tr>`;
-    }).join('') || `<tr><td colspan="8" class="legend">Aucun décompte ${recap.filter === 'course' ? 'de course d\'école' : recap.filter === 'camp' ? 'de camp' : ''} dans le registre ${state.reg.annee}. Les pièces de type DECOMPTE apparaissent ici.</td></tr>`;
+    }).join('') || `<tr><td colspan="8" class="legend">Aucun décompte ${recap.filter === 'course' ? 'de course d\'école' : recap.filter === 'camp' ? 'de camp' : ''} dans le journal ${state.reg.annee}. Les pièces de type DECOMPTE apparaissent ici.</td></tr>`;
     const sel = pieces.filter((p) => recap.selected.has(p.id));
     const total = P.round2(sel.reduce((s, p) => s + (Number(p.montant) || 0), 0));
     els.recapSummary.innerHTML = pieces.length ? `<b>${sel.length}</b> sur ${pieces.length} décompte(s) coché(s) · total <b>${fmtCHF(total)}</b>` : '';
@@ -26678,7 +26720,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 
   els.btnRegExcel.addEventListener('click', async () => {
     const reg = state.reg;
-    if (!reg.pieces.length) { notice('warn', 'Aucune pièce dans le registre.'); return; }
+    if (!reg.pieces.length) { notice('warn', 'Aucune pièce dans le journal.'); return; }
     // Le fichier qu'on remet : on y regarde tout ce que l'espace des pièces scannées contrôlait
     // déjà (numéros manquants, lectures à vérifier, écart de caisse), et on dit ce qui manque.
     const aRegarder = AN.controlesAvantExcel(reg);
@@ -26716,9 +26758,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const lignes = [];
     lignes.push(s
       ? `Dernière sauvegarde de ${annee} faite sur ce poste : le ${quandLisible(s.quand)} (${plur(s.pieces || 0, 'pièce')}${s.justificatifs ? `, ${plur(s.justificatifs, 'justificatif')}` : ''}).` +
-        (state.reg.pieces.length !== s.pieces ? ` <b>Depuis : ${plur(state.reg.pieces.length, 'pièce')} dans le registre</b> — pensez à en refaire une.` : '')
+        (state.reg.pieces.length !== s.pieces ? ` <b>Depuis : ${plur(state.reg.pieces.length, 'pièce')} dans le journal</b> — pensez à en refaire une.` : '')
       : `<b>Aucune sauvegarde de ${annee} faite sur ce poste.</b>`);
-    if (c) lignes.push(`Copie de sécurité du registre ${annee} gardée avant la restauration du ${quandLisible(c.quand)} (${plur(c.pieces || 0, 'pièce')}) : <button type="button" class="small" data-annuler-restauration="${annee}">Remettre ce registre</button>`);
+    if (c) lignes.push(`Copie de sécurité du journal ${annee} gardée avant la restauration du ${quandLisible(c.quand)} (${plur(c.pieces || 0, 'pièce')}) : <button type="button" class="small" data-annuler-restauration="${annee}">Remettre ce journal</button>`);
     box.innerHTML = lignes.map((l) => `<div>${l}</div>`).join('');
   }
 
@@ -26765,7 +26807,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
    */
   async function restaurer(texte, source) {
     const paquet = AN.deballer(texte);
-    if (!paquet) { notice('err', 'Ce fichier n\'est pas une sauvegarde de registre : rien n\'a été changé.'); return false; }
+    if (!paquet) { notice('err', 'Ce fichier n\'est pas une sauvegarde de journal : rien n\'a été changé.'); return false; }
     const reg = paquet.reg;
     let actuel = null;
     try { actuel = (await state.storage.loadStored(reg.annee)).reg || null; } catch (e) { actuel = null; }
@@ -26786,7 +26828,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         const garde = await state.storage.attach(reg.annee, ID_COPIES, AN.nomCopieSecurite(reg.annee), octets);
         copie = { nom: garde.name, quand: new Date().toISOString(), pieces: actuel.pieces.length };
       } catch (e) {
-        notice('err', `<b>Rien n'a été remplacé</b> : la copie de sécurité du registre ${reg.annee} actuel n'a pas pu être faite (${escapeHtml((e && e.message) || e)}).`, { keep: true });
+        notice('err', `<b>Rien n'a été remplacé</b> : la copie de sécurité du journal ${reg.annee} actuel n'a pas pu être faite (${escapeHtml((e && e.message) || e)}).`, { keep: true });
         return false;
       }
     }
@@ -26794,7 +26836,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     try {
       await state.storage.save(reg, { remplacer: true });
     } catch (e) {
-      notice('err', `<b>Sauvegarde non restaurée</b> : ${escapeHtml((e && e.message) || e)}. Le registre ${reg.annee} n'a pas été remplacé.`, { keep: true });
+      notice('err', `<b>Sauvegarde non restaurée</b> : ${escapeHtml((e && e.message) || e)}. Le journal ${reg.annee} n'a pas été remplacé.`, { keep: true });
       return false;
     }
     if (copie) ecrireJson(cleCopie(reg.annee), copie);
@@ -26811,9 +26853,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     }
     if (!state.years.includes(reg.annee)) state.years.push(reg.annee);
     await openYear(reg.annee);
-    notice('ok', `<b>Registre ${reg.annee} restauré</b> : ${plur(reg.pieces.length, 'pièce')}, ${plur((reg.comptages || []).length, 'comptage')}` +
+    notice('ok', `<b>Journal ${reg.annee} restauré</b> : ${plur(reg.pieces.length, 'pièce')}, ${plur((reg.comptages || []).length, 'comptage')}` +
       `${remis ? `, ${plur(remis, 'justificatif remis', 'justificatifs remis')}` : ''}.` +
-      (copie ? ` Le registre remplacé (${plur(copie.pieces, 'pièce')}) est gardé en copie de sécurité : <button type="button" data-annuler-restauration="${reg.annee}">Annuler la restauration</button>` : ''), { keep: true });
+      (copie ? ` Le journal remplacé (${plur(copie.pieces, 'pièce')}) est gardé en copie de sécurité : <button type="button" data-annuler-restauration="${reg.annee}">Annuler la restauration</button>` : ''), { keep: true });
     if (rates) notice('warn', `${plur(rates, 'justificatif')} de la sauvegarde n'${rates > 1 ? 'ont' : 'a'} pas pu être remis.`, { keep: true });
     return true;
   }
@@ -26821,11 +26863,11 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   /** Remet le registre gardé en copie de sécurité avant la dernière restauration (même question d'abord). */
   async function annulerRestauration(annee) {
     const c = lireJson(cleCopie(annee));
-    if (!c) { notice('warn', `Aucune copie de sécurité du registre ${annee} n'est connue sur ce poste.`); return; }
+    if (!c) { notice('warn', `Aucune copie de sécurité du journal ${annee} n'est connue sur ce poste.`); return; }
     let octets = null;
     try { octets = await state.storage.read(annee, ID_COPIES, c.nom); } catch (e) { octets = null; }
     if (!octets) { notice('err', `La copie de sécurité « ${escapeHtml(c.nom)} » est introuvable : rien n'a été changé.`, { keep: true }); return; }
-    await restaurer(new TextDecoder().decode(octets), { faiteLe: c.quand, intitule: `Remettre le registre ${annee} gardé avant la restauration du ${quandLisible(c.quand)} ?` });
+    await restaurer(new TextDecoder().decode(octets), { faiteLe: c.quand, intitule: `Remettre le journal ${annee} gardé avant la restauration du ${quandLisible(c.quand)} ?` });
   }
 
   /* ---------------- Reprise d'un classeur Excel ---------------- */
@@ -26837,19 +26879,19 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     let data;
     try { data = await X.readWorkbook(buffer); } catch (e) { notice('err', `Impossible de lire ce classeur : ${escapeHtml(e.message || e)}`); return null; }
     const otherYears = R.piecesFromEntries(data.entries, 'excel').filter((p) => p.montant > 0 && p.date && String(p.date).slice(0, 4) !== String(reg.annee)).length;
-    const includeOther = otherYears > 0 && confirm(`${otherYears} écriture(s) du classeur ne sont pas de l'année ${reg.annee} du registre ouvert. Les reprendre quand même ?`);
+    const includeOther = otherYears > 0 && confirm(`${otherYears} écriture(s) du classeur ne sont pas de l'année ${reg.annee} du journal ouvert. Les reprendre quand même ?`);
     const r = R.mergeEntries(reg, data.entries, { source: 'excel', opening: data.opening, otherYears: includeOther });
     await saveReg();
     renderJournal();
     if (!ficheModifiee()) newPiece(); // une fiche en cours garde sa saisie ; son n° suit (ajusterNumero)
     if (A && A.learnEntries) A.learnEntries(data.entries);
-    const parts = [`<b>${r.added.length}</b> écriture(s) reprise(s) de <b>${escapeHtml(fileName || 'ce classeur')}</b> dans le registre ${reg.annee}`];
+    const parts = [`<b>${r.added.length}</b> écriture(s) reprise(s) de <b>${escapeHtml(fileName || 'ce classeur')}</b> dans le journal ${reg.annee}`];
     if (r.skipped.length) parts.push(`${r.skipped.length} déjà présente(s) (même n° et même montant), non comptée(s) deux fois`);
     if (r.conflicts.length) parts.push(`<b>${r.conflicts.length} n° déjà pris avec un autre montant</b>, non reprise(s) : ${r.conflicts.slice(0, 10).map((p) => `n° ${p.no}`).join(', ')}`);
     if (r.otherYears.length && !includeOther) parts.push(`${r.otherYears.length} d'une autre année ignorée(s)`);
     if (r.noAmount.length) parts.push(`${r.noAmount.length} ligne(s) sans montant ignorée(s)`);
     if (r.openingTaken) parts.push(`solde à nouveau repris du classeur : <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}`);
-    if (r.openingDiffers) parts.push(`le solde à nouveau du classeur (${fmtCHF(Number(data.opening.amount) || 0)}) diffère de celui du registre (${fmtCHF(reg.opening.amount)}), conservé : vérifiez-le`);
+    if (r.openingDiffers) parts.push(`le solde à nouveau du classeur (${fmtCHF(Number(data.opening.amount) || 0)}) diffère de celui du journal (${fmtCHF(reg.opening.amount)}), conservé : vérifiez-le`);
     notice(r.conflicts.length ? 'warn' : 'ok', parts.join(' · ') + '.');
     return r;
   }
@@ -26875,7 +26917,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const wrongYear = pieces.filter((p) => p.date && String(p.date).slice(0, 4) !== String(year));
     // refuser ne jette plus le lot entier : seules les pièces d'une autre année sont laissées de côté
     const skipYear = wrongYear.length > 0
-      && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?\n\nAnnuler : seules les pièces de ${year} sont ajoutées.`);
+      && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du journal ouvert. Les ajouter quand même ?\n\nAnnuler : seules les pièces de ${year} sont ajoutées.`);
     // Deux pièces sans numéro sont la même si tout le reste concorde (comme « Reprendre un
     // classeur »). La comparaison ne porte que sur le registre TEL QU'IL ÉTAIT avant ce lot :
     // deux pièces réellement distinctes du même lot (même jour, même montant, même libellé)
@@ -26904,7 +26946,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     await saveReg();
     renderJournal();
     if (!ficheModifiee()) newPiece(); // une fiche en cours garde sa saisie ; son n° suit (ajusterNumero)
-    notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
+    notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au journal ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
       `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}` +
       `${sansMontant ? `, ${sansMontant} ligne(s) sans montant ignorée(s)` : ''}` +
       `${autreAnnee ? `, ${autreAnnee} pièce(s) d'une autre année laissée(s) de côté` : ''}.`);
@@ -27058,7 +27100,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       // prendre une minute, pendant laquelle rien ne bougeait et le bouton restait cliquable.
       const bouton = $('btnEmplacementChoisir');
       bouton.disabled = true;
-      const attente = noticeEmpl('warn', '<b>Choisissez le dossier du serveur</b> dans la fenêtre qui s\'ouvre. Si vous emportez les registres de ce PC, '
+      const attente = noticeEmpl('warn', '<b>Choisissez le dossier du serveur</b> dans la fenêtre qui s\'ouvre. Si vous emportez les journaux de ce PC, '
         + 'la copie peut prendre une minute : <b>ne fermez pas Compta Blonay</b>, un message dira quand c\'est fini.');
       const fini = () => { if (attente) attente.remove(); bouton.disabled = false; };
       let r;
@@ -27081,7 +27123,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   }
 
   window.CaisseSaisie = { state, init, majListes, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal, ficheModifiee };
-  init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
+  init().catch((e) => { console.error(e); els.regInfo.textContent = `Journal indisponible : ${e && e.message ? e.message : e}`; });
 })();
 
 </script>
@@ -27132,8 +27174,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 
   /* ---------------- grille des coupures ---------------- */
   function buildRows() {
-    const row = (d, kind) => `<tr data-denom="${d}" class="${kind}"><td class="lbl">${kind === 'billet' ? 'Billet' : 'Pièce'} <b>${denomLabel(d)}</b></td>` +
-      `<td class="qty"><input type="number" min="0" step="1" inputmode="numeric" data-denom="${d}" placeholder="0" aria-label="Nombre de ${kind === 'billet' ? 'billets' : 'pièces'} de ${denomLabel(d)}"></td>` +
+    const row = (d, kind) => `<tr data-denom="${d}" class="${kind}"><td class="lbl">${kind === 'billet' ? 'Billet' : 'Monnaie'} <b>${denomLabel(d)}</b></td>` +
+      `<td class="qty"><input type="number" min="0" step="1" inputmode="numeric" data-denom="${d}" placeholder="0" aria-label="Nombre de ${kind === 'billet' ? 'billets' : 'pièces de monnaie'} de ${denomLabel(d)}"></td>` +
       `<td class="num line" data-line="${d}">0.00</td></tr>`;
     els.cRows.innerHTML = '<tr class="grp"><th colspan="3">Billets</th></tr>' + R.BILLETS.map((d) => row(d, 'billet')).join('') +
       '<tr class="grp"><th colspan="3">Monnaie</th></tr>' + R.PIECES.map((d) => row(d, 'piece')).join('');
@@ -27280,7 +27322,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         `<td class="acts"><button type="button" class="small ghost" data-releve="${c.id}" title="Relevé de caisse de ce comptage (PDF)">${ico('printer')}</button>` +
         `<button type="button" class="small ghost" data-edit="${c.id}" title="Corriger ce comptage">${ico('pen')}</button>` +
         `<button type="button" class="small ghost danger" data-del="${c.id}" title="Supprimer ce comptage">${ico('trash')}</button></td></tr>`;
-    }).join('') || '<tr><td colspan="8" class="legend">Aucun comptage enregistré cette année. Comptez les billets et les pièces ci-dessus, puis « Enregistrer le comptage ».</td></tr>';
+    }).join('') || '<tr><td colspan="8" class="legend">Aucun comptage enregistré cette année. Comptez les billets et la monnaie ci-dessus, puis « Enregistrer le comptage ».</td></tr>';
   }
 
   /* ---------------- formulaire ---------------- */
@@ -27354,11 +27396,11 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 
   if (els.btnReleve) els.btnReleve.addEventListener('click', async () => {
     const reg = S.state.reg;
-    if (!reg) { notice('err', 'Aucun registre ouvert.'); return; }
+    if (!reg) { notice('err', 'Aucun journal ouvert.'); return; }
     const date = els.cDate.value;
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { notice('err', 'Date du comptage manquante ou invalide : le relevé n\'a pas été produit.'); return; }
     const counts = readCounts();
-    if (!Object.keys(counts).length) { notice('err', 'Aucun billet ni aucune pièce compté(e) : il n\'y a rien à mettre sur le relevé.'); return; }
+    if (!Object.keys(counts).length) { notice('err', 'Rien n\'est compté, ni billets ni monnaie : il n\'y a rien à mettre sur le relevé.'); return; }
     const t = R.countTotal(counts);
     const w = window.open('', '_blank'); // ouverte dans le clic, remplie après
     try {
@@ -27390,13 +27432,13 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 
   async function saveCount() {
     const reg = S.state.reg;
-    if (!reg) { notice('err', "Aucun registre ouvert : le comptage n'a pas pu être enregistré."); return; }
+    if (!reg) { notice('err', "Aucun journal ouvert : le comptage n'a pas pu être enregistré."); return; }
     const date = els.cDate.value;
     const errs = [];
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) errs.push('Date manquante ou invalide');
-    else if (String(date).slice(0, 4) !== String(reg.annee)) errs.push(`La date n'est pas dans l'année ${reg.annee} du registre ouvert`);
+    else if (String(date).slice(0, 4) !== String(reg.annee)) errs.push(`La date n'est pas dans l'année ${reg.annee} du journal ouvert`);
     const counts = readCounts();
-    if (!Object.keys(counts).length) errs.push('Aucun billet ni aucune pièce compté(e)');
+    if (!Object.keys(counts).length) errs.push('Rien n\'est compté, ni billets ni monnaie');
     if (errs.length) {
       els.countErrors.innerHTML = `<div class="notice err"><b>Le comptage n'est pas enregistré :</b><ul>${errs.map((e) => `<li>${escapeHtml(e)}</li>`).join('')}</ul></div>`;
       return;
@@ -27431,7 +27473,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     // résultat reste lisible ici et dans l'historique, où la ligne est surlignée, avec son relevé.
     state.dernierEnregistre = c.id;
     newCount();
-    notice(Math.abs(ecart) < 0.005 ? 'ok' : 'warn', `<b>Comptage du ${fmtDate(date)} ${ref ? 'corrigé' : 'enregistré'}</b> : <b>${fmtCHF(c.total)}</b> en caisse (${fmtCHF(c.billets)} en billets, ${fmtCHF(c.pieces)} en pièces). ` +
+    notice(Math.abs(ecart) < 0.005 ? 'ok' : 'warn', `<b>Comptage du ${fmtDate(date)} ${ref ? 'corrigé' : 'enregistré'}</b> : <b>${fmtCHF(c.total)}</b> en caisse (${fmtCHF(c.billets)} en billets, ${fmtCHF(c.pieces)} en monnaie). ` +
       (Math.abs(ecart) < 0.005 ? 'La caisse correspond au journal.' : `Écart avec le journal à cette date : <b>${signed(ecart)}</b>.`) +
       ` <button type="button" data-releve-id="${c.id}">Relevé de caisse de ce comptage</button>` +
       '<br>Le formulaire est prêt pour le prochain comptage ; celui-ci est surligné dans l\'historique.', { keep: true, cle: 'enregistrement' });
@@ -27690,7 +27732,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 
   const SENS_MOT = { debit: 'entrée en caisse', credit: 'sortie de caisse' };
   const ORIGINE = {
-    ajout: { texte: 'ajouté par vous', titre: 'Ajouté ici, gardé avec les registres de la caisse' },
+    ajout: { texte: 'ajouté par vous', titre: 'Ajouté ici, gardé avec les journaux de la caisse' },
     base: { texte: "d'origine", titre: "Connu de l'application dès l'installation" },
     appris: { texte: 'vu dans vos pièces', titre: 'Lu dans un classeur repris, une pièce scannée ou une fiche enregistrée' },
   };
@@ -28062,13 +28104,12 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const texte = note
         ? `Description de <b>${escapeHtml(valeur)}</b> enregistrée : « ${escapeHtml(C.noteDe(res.carnet, genre, valeur))} ». Elle s'affiche à côté du numéro, ici et dans le champ Compte de la fiche.`
         : `Description de <b>${escapeHtml(valeur)}</b> effacée : c'est de nouveau l'usage habituel du compte qui s'affiche.`;
-      appliquer(res.carnet, genre, 'ok', texte, { marquer: valeur, defaire: `Changement annulé : la description de ${escapeHtml(valeur)} est revenue comme avant.`, marquerAvant: valeur });
-      return;
+      return appliquer(res.carnet, genre, 'ok', texte, { marquer: valeur, defaire: `Changement annulé : la description de ${escapeHtml(valeur)} est revenue comme avant.`, marquerAvant: valeur });
     }
     const sens = champ.value || null;
     if (sens === C.sensDeType(avant, valeur)) { rendreListe(l); return; }
     const res = C.preciser(avant, genre, valeur, { sens });
-    appliquer(res.carnet, genre, 'ok', `<b>${escapeHtml(valeur)}</b> : ${sens ? `${SENS_MOT[sens]}, sur chaque pièce de ce type` : 'le sens se choisira sur chaque pièce'}.`,
+    return appliquer(res.carnet, genre, 'ok', `<b>${escapeHtml(valeur)}</b> : ${sens ? `${SENS_MOT[sens]}, sur chaque pièce de ce type` : 'le sens se choisira sur chaque pièce'}.`,
       { marquer: valeur, defaire: `Changement annulé : le sens de ${escapeHtml(valeur)} est revenu comme avant.`, marquerAvant: valeur });
   }
 
@@ -28077,6 +28118,17 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const l = listeDe(edition.genre);
     edition = null;
     if (l) rendreListe(l);
+  }
+
+  /**
+   * Au clavier, Entrée ou Échap referment la ligne en cours de modification : la main revient à
+   * son bouton « Modifier ». Sans cela, le champ disparu l'emportait avec lui, et la touche Tab
+   * suivante repartait du haut de la page.
+   */
+  function rendreLaMain(ligne) {
+    if (!ligne) return;
+    const b = Array.from(hote.querySelectorAll('[data-modifier]')).find((x) => x.dataset.modifier === ligne.genre && x.dataset.valeur === ligne.valeur);
+    if (b) b.focus();
   }
 
   /* ---------------- Le sens d'un type que le mot fixe déjà ---------------- */
@@ -28158,8 +28210,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   });
   hote.addEventListener('keydown', (ev) => {
     if (ev.target.closest('#d-edit')) {
-      if (ev.key === 'Enter') { ev.preventDefault(); enregistrerEdition(); }
-      else if (ev.key === 'Escape') { ev.preventDefault(); abandonnerEdition(); }
+      const ligne = edition;
+      if (ev.key === 'Enter') { ev.preventDefault(); Promise.resolve(enregistrerEdition()).then(() => rendreLaMain(ligne)); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); abandonnerEdition(); rendreLaMain(ligne); }
       return;
     }
     if (ev.key !== 'Enter') return;
@@ -28207,7 +28260,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           ou.innerHTML = `<span style="color:var(--err)">Rien ne peut être gardé ici : ${escapeHtml(l)}.</span>`;
           ou.closest('details') && (ou.closest('details').open = true);
         } else if (depot.kind === 'fichiers') {
-          ou.innerHTML = `Avec les registres de la caisse, dans le fichier <b>${escapeHtml(depot.fichier)}</b> de ce dossier : <code>${escapeHtml(l)}</code>`;
+          ou.innerHTML = `Avec les journaux de la caisse, dans le fichier <b>${escapeHtml(depot.fichier)}</b> de ce dossier : <code>${escapeHtml(l)}</code>`;
         } else {
           ou.textContent = `Dans ${l}. Enregistrez-en une copie de temps en temps : effacer les données du navigateur les effacerait.`;
         }
@@ -28568,9 +28621,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const annee = doc.marque.annee;
     let reg = null;
     try { reg = await storage.load(annee); } catch (e) { reg = null; }
-    if (!reg) return { ok: false, raison: `le registre ${annee} est introuvable sur ce poste` };
+    if (!reg) return { ok: false, raison: `le journal ${annee} est introuvable sur ce poste` };
     const piece = (reg.pieces || []).find((p) => p.id === doc.marque.id);
-    if (!piece) return { ok: false, raison: `la pièce n'est plus dans le registre ${annee}` };
+    if (!piece) return { ok: false, raison: `la pièce n'est plus dans le journal ${annee}` };
 
     // Rescanner une pièce doit REMPLACER son scan signé, pas en empiler un second. Le stockage
     // par fichiers cherche un nom libre quand le nom est pris (« piece-signee (1).pdf ») : sans
@@ -28593,7 +28646,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     try {
       await storage.save(reg);
     } catch (e) {
-      return { ok: false, raison: `registre non enregistré (${(e && e.message) || e})` };
+      return { ok: false, raison: `journal non enregistré (${(e && e.message) || e})` };
     }
     // Le bac à courrier : en plus d'être attaché au journal, un décompte est posé dans un dossier
     // qu'on ouvre dans l'explorateur pour voir ce qu'il reste à faire. Un échec ici ne remet pas
@@ -28739,8 +28792,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         ? 'C\'est une fiche PIÈCE COMPTABLE, mais son code n\'a pas pu être lu (pli, agrafe, tache ?). Tapez le n° écrit sur la fiche pour la joindre à sa pièce.'
         : d.etat === 'inconnue'
           ? (d.registreAbsent
-            ? `Le code désigne une pièce de ${annee}, et le registre ${annee} n'est pas dans les données de ce poste. Tapez le n° d'une pièce de l'année ouverte pour l'y joindre, ou écartez ce document.`
-            : `Le code désigne une pièce du registre ${annee} qui n'y est plus (supprimée depuis l'impression ?). Tapez le n° de la pièce à laquelle joindre ce document, ou écartez-le.`)
+            ? `Le code désigne une pièce de ${annee}, et le journal ${annee} n'est pas dans les données de ce poste. Tapez le n° d'une pièce de l'année ouverte pour l'y joindre, ou écartez ce document.`
+            : `Le code désigne une pièce du journal ${annee} qui n'y est plus (supprimée depuis l'impression ?). Tapez le n° de la pièce à laquelle joindre ce document, ou écartez-le.`)
           : d.etat === 'doublon'
             ? 'Cette pièce est déjà venue plus haut dans la même pile : le chargeur a sans doute pris la feuille deux fois. Écartez ce doublon ; ne remplacez le scan joint que si celui-ci est le bon.'
             : '';
@@ -28921,10 +28974,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const no = Number(String(champ.value).trim());
     if (!Number.isInteger(no) || no <= 0) { majBandeau('Tapez le n° de la pièce à laquelle joindre ce document.', 'warn'); champ.focus(); return; }
     const piece = (reg.pieces || []).find((p) => p.no === no);
-    if (!piece) { majBandeau(`Aucune pièce n° ${no} dans le registre ${reg.annee}.`, 'err'); champ.focus(); return; }
+    if (!piece) { majBandeau(`Aucune pièce n° ${no} dans le journal ${reg.annee}.`, 'err'); champ.focus(); return; }
     const marque = { annee: reg.annee, id: piece.id };
     const deja = await scanDejaJoint(marque);
-    if (!window.confirm(`Joindre ce document (${plur(Number(d.pages) || 1, 'page')}) à la pièce n° ${no} du registre ${reg.annee} ?\n\n` +
+    if (!window.confirm(`Joindre ce document (${plur(Number(d.pages) || 1, 'page')}) à la pièce n° ${no} du journal ${reg.annee} ?\n\n` +
       `${piece.libelle || ''} — ${fmtCHF(piece.montant)}` +
       (deja ? `\n\nCette pièce a déjà un scan signé${deja.pages ? ` (${plur(deja.pages, 'page')})` : ''} : il sera remplacé par celui-ci.` : ''))) return;
     await joindreEtRetirer(d, marque, piece);

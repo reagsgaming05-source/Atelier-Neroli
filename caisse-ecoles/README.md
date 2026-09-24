@@ -513,7 +513,7 @@ dans le registre de l'année dès qu'on quitte le champ.
   Avant, l'application dit ce qui serait perdu (pièces saisies depuis, corrections, comptages, solde à
   nouveau changé), puis garde une copie de sécurité du registre remplacé, rangée avec les
   justificatifs de l'année (`pieces/copies-de-securite/`) : *Annuler la restauration*, dans le
-  message, ou *Remettre ce registre*, dans la carte, le remet. Les justificatifs de la sauvegarde
+  message, ou *Remettre ce journal*, dans la carte, le remet. Les justificatifs de la sauvegarde
   qui manquent sur le poste sont remis ; une sauvegarde plus ancienne, sans justificatifs, se
   restaure encore.
 - **Où sont les données** (application fenêtrée) : le dossier des données, sur ce PC ou sur le
@@ -541,12 +541,12 @@ lancé :
    « consultable » du copieur (avec reconnaissance de texte) est le plus rapide ; un PDF sans
    texte est lu sur l'image, plus lentement.
 4. **Réglages de la lecture** (volet replié sous la zone de dépôt, avec un résumé d'une ligne de
-   son état) : par défaut *Registre de l'année (Saisie des pièces)* : les pièces scannées viennent
+   son état) : par défaut *Journal de l'année (Saisie des pièces)* : les pièces scannées viennent
    à la suite, et le fichier Excel produit contient tout. *Classeur Excel existant* ajoute les
-   pièces à la suite d'un classeur en cours (et *Reprendre ces écritures dans le registre de
+   pièces à la suite d'un classeur en cours (et *Reprendre ces écritures dans le journal de
    l'année* les y verse) ; *Nouveau classeur (nouvelle année)* demande la date et le montant du
    solde à nouveau (le solde final du dernier fichier généré est proposé d'un clic). Sur ces deux
-   bases, *Verser au registre de l'année*, à l'étape 3, fait entrer le lot au registre. **Aucun
+   bases, *Verser au journal de l'année*, à l'étape 3, fait entrer le lot au registre. **Aucun
    classeur n'est nécessaire pour lire les pièces** : la base de référence est intégrée à
    l'application. Le compte caisse y est rappelé, mais il se règle dans *L'année*. La case
    *Relire chaque pièce sur l'image*, cochée par défaut, lance la seconde lecture (voir

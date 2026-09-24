@@ -194,13 +194,13 @@ test('restaurer une sauvegarde ancienne : les pièces saisies depuis sont nommé
   assert.equal(b.actuel.pieces, 6);
   assert.equal(b.sauvegarde.pieces, 4);
   const q = AN.questionRestauration(b, { anneeOuverte: 2027, partage: true, copie: true, dateSauvegarde: '2026-09-12', justificatifs: 3 });
-  assert.match(q, /Registre 2026 actuel : 6 pièces/);
+  assert.match(q, /Journal 2026 actuel : 6 pièces/);
   assert.match(q, /Sauvegarde : 4 pièces.*du 12\.09\.2026.*3 justificatifs/);
   assert.match(q, /PERDUES : les 2 pièces n° 5 et 6/);
   assert.match(q, /n° 3/);
   assert.match(q, /comptage.*20\.09\.2026/i);
-  assert.match(q, /registre 2026 qui est remplacé, pas celui de l'année ouverte \(2027\)/);
-  assert.match(q, /tous les postes verront ce registre/);
+  assert.match(q, /journal 2026 qui est remplacé, pas celui de l'année ouverte \(2027\)/);
+  assert.match(q, /tous les postes verront ce journal/);
   assert.match(q, /copie de sécurité/);
   assert.match(q, /\?$/, 'la question finit par une question, à laquelle OK et Annuler répondent');
 });
@@ -310,6 +310,6 @@ test('ce qui a été emporté se dit en une phrase lisible', async () => {
   const poste = tmp(); caissePoste(poste);
   const r = await E.copierSiVide(poste, path.join(tmp(), 'partage'));
   assert.deepEqual(r.annees, [2025, 2026]);
-  assert.equal(E.resumeCopie(r), 'les registres 2025 et 2026 (avec leurs justificatifs) et les scans du copieur');
+  assert.equal(E.resumeCopie(r), 'les journaux 2025 et 2026 (avec leurs justificatifs) et les scans du copieur');
   assert.equal(E.resumeCopie({ copie: false }), '');
 });

@@ -22,7 +22,7 @@ Ce texte se rouvre à tout moment dans Compta Blonay : menu Aide → « Mode d'e
      La première fois, Windows peut afficher « Windows a protégé votre ordinateur » : le
      programme n'est pas signé. Cliquez sur « Informations complémentaires », puis sur
      « Exécuter quand même ». Si l'antivirus bloque le fichier, ajoutez le dossier en exception.
-  3. C'est tout. Les registres sont gardés dans le sous-dossier « data », à côté de
+  3. C'est tout. Les journaux sont gardés dans le sous-dossier « data », à côté de
      ComptaBlonay.exe : ne déplacez jamais l'un sans l'autre.
 
   Le sous-dossier « Installation sur plusieurs PC » ne sert qu'avec un serveur (partie 3).
@@ -39,7 +39,7 @@ Ce texte se rouvre à tout moment dans Compta Blonay : menu Aide → « Mode d'e
     Pièces scannées      Les fiches PIÈCE COMPTABLE remplies à la main : déposez le PDF scanné,
                          regardez les lignes orange d'abord, cochez « Vérifié ».
     Boîte de réception   Les fiches imprimées ici et revenues signées, avec leur code QR.
-    Compter la caisse    Le nombre de billets et de pièces ; l'écart avec le journal s'affiche.
+    Compter la caisse    Les billets et la monnaie comptés ; l'écart avec le journal s'affiche.
                          « Enregistrer le comptage » le garde dans l'historique de l'année.
     L'année              Une fois par an : nouvelle année, solde à nouveau, sauvegardes, où
                          sont les données. Une année commencée dans un classeur Excel tenu à
@@ -84,11 +84,11 @@ Ce texte se rouvre à tout moment dans Compta Blonay : menu Aide → « Mode d'e
 
   Une seule fois, dans cet ordre :
 
-  [ ] 1. Les registres sur le serveur. Sur le PC qui tient la caisse aujourd'hui, ouvrez
+  [ ] 1. Les journaux sur le serveur. Sur le PC qui tient la caisse aujourd'hui, ouvrez
          cette version de Compta Blonay, puis L'année → « Mettre les données sur le
          serveur… ». Dans la fenêtre, tapez \\SERVEUR\Partage dans la barre d'adresse du haut,
          créez un dossier ComptaBlonay-donnees, choisissez-le, puis « Emporter ». Les
-         registres, justificatifs et scans y sont copiés ; rien n'est retiré du PC.
+         journaux, justificatifs et scans y sont copiés ; rien n'est retiré du PC.
 
   [ ] 2. Le programme sur le serveur. Fermez Compta Blonay. Copiez le dossier ComptaBlonay
          du zip sur le serveur, À CÔTÉ du dossier des données :

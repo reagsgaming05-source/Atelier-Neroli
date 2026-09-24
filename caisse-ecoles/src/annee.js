@@ -280,16 +280,16 @@
     opts = opts || {};
     const L = [];
     const desc = (r) => `${pluriel(r.pieces, 'pièce')}, ${pluriel(r.comptages, 'comptage')}, solde final ${montant(r.soldeFinal)}`;
-    L.push(opts.intitule || `Restaurer la sauvegarde du registre ${b.annee} ?`);
+    L.push(opts.intitule || `Restaurer la sauvegarde du journal ${b.annee} ?`);
     L.push('');
-    if (b.actuel) L.push(`Registre ${b.annee} actuel : ${desc(b.actuel)}${b.actuel.modifie ? ` (modifié le ${jour(b.actuel.modifie)})` : ''}.`);
-    else L.push(`Le registre ${b.annee} n'existe pas encore sur ce poste : il sera créé.`);
+    if (b.actuel) L.push(`Journal ${b.annee} actuel : ${desc(b.actuel)}${b.actuel.modifie ? ` (modifié le ${jour(b.actuel.modifie)})` : ''}.`);
+    else L.push(`Le journal ${b.annee} n'existe pas encore sur ce poste : il sera créé.`);
     const date = opts.dateSauvegarde || b.sauvegarde.modifie;
     L.push(`Sauvegarde : ${desc(b.sauvegarde)}${date ? ` (du ${jour(date)})` : ''}` +
       `${opts.justificatifs ? `, ${pluriel(opts.justificatifs, 'justificatif')}` : ''}.`);
     if (b.actuel) {
       L.push('');
-      if (b.rienNeSePerd) L.push('Rien ne sera perdu : la sauvegarde contient tout ce que le registre actuel contient.');
+      if (b.rienNeSePerd) L.push('Rien ne sera perdu : la sauvegarde contient tout ce que le journal actuel contient.');
       if (b.perdues.length) L.push(`Seront PERDUES : ${b.perdues.length > 1 ? `les ${b.perdues.length} pièces` : 'la pièce'} ${numeros(b.perdues, 15)}, saisie${b.perdues.length > 1 ? 's' : ''} depuis la sauvegarde.`);
       if (b.changees.length) L.push(`Reprendront leur version de la sauvegarde (vos corrections depuis seront perdues) : ${numeros(b.changees, 15)}.`);
       if (b.comptagesPerdus.length) L.push(`${b.comptagesPerdus.length > 1 ? 'Comptages perdus' : 'Comptage perdu'} : ${b.comptagesPerdus.slice(0, 6).map((c) => `celui du ${jour(c.date)}`).join(', ')}.`);
@@ -298,15 +298,15 @@
     }
     if (opts.anneeOuverte && Number(opts.anneeOuverte) !== Number(b.annee)) {
       L.push('');
-      L.push(`Attention : c'est le registre ${b.annee} qui est remplacé, pas celui de l'année ouverte (${opts.anneeOuverte}).`);
+      L.push(`Attention : c'est le journal ${b.annee} qui est remplacé, pas celui de l'année ouverte (${opts.anneeOuverte}).`);
     }
-    if (opts.partage) L.push('Les données sont partagées : tous les postes verront ce registre.');
+    if (opts.partage) L.push('Les données sont partagées : tous les postes verront ce journal.');
     if (b.actuel && opts.copie) {
       L.push('');
-      L.push(`Avant de le remplacer, une copie de sécurité du registre ${b.annee} actuel est gardée : la restauration pourra être annulée.`);
+      L.push(`Avant de le remplacer, une copie de sécurité du journal ${b.annee} actuel est gardée : la restauration pourra être annulée.`);
     }
     L.push('');
-    L.push(`Remplacer le registre ${b.annee} par ${opts.intitule ? 'cette copie' : 'cette sauvegarde'} ?`);
+    L.push(`Remplacer le journal ${b.annee} par ${opts.intitule ? 'cette copie' : 'cette sauvegarde'} ?`);
     return L.join('\n');
   }
 

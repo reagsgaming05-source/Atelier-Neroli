@@ -223,7 +223,7 @@
     // un registre enregistré mais illisible (fichier abîmé) ne doit jamais être remplacé par un registre vide
     const stored = state.storage.loadStored ? await state.storage.loadStored(year) : { reg: await state.storage.load(year) };
     if (stored.error) {
-      notice('err', `Le registre ${year} est enregistré mais illisible (fichier abîmé). Il n'a pas été remplacé : restaurez une sauvegarde (« Restaurer… ») ` +
+      notice('err', `Le journal ${year} est enregistré mais illisible (fichier abîmé). Il n'a pas été remplacé : restaurez une sauvegarde (« Restaurer… ») ` +
         'ou, dans l\'application fenêtrée, reprenez le fichier <code>registre.bak.json</code> du dossier des données.');
       els.regYear.value = String(state.reg ? state.reg.annee : year);
       return;
@@ -297,7 +297,7 @@
     const f = res && res.fusion;
     if (f) {
       // Un autre poste avait écrit dans cette année entre-temps : son travail est repris, pas écrasé.
-      const parts = [`Un autre poste avait modifié le registre ${state.reg.annee} entre-temps : ${plur(f.reprises, 'changement')} de sa part ${f.reprises > 1 ? 'ont été repris' : 'a été repris'}, rien n'est perdu.`];
+      const parts = [`Un autre poste avait modifié le journal ${state.reg.annee} entre-temps : ${plur(f.reprises, 'changement')} de sa part ${f.reprises > 1 ? 'ont été repris' : 'a été repris'}, rien n'est perdu.`];
       if (f.doublons.length) parts.push(`<b>Deux pièces portent le même numéro</b> (${f.doublons.map((n) => `n° ${n}`).join(', ')}) : chaque poste a pris « le suivant ». Renumérotez l'une des deux.`);
       const vraies = f.conflits.filter((c) => c.quoi === 'pièce' && c.no != null);
       if (vraies.length) parts.push(`Modifiée des deux côtés : ${vraies.map((c) => `n° ${c.no}`).join(', ')} — la version la plus récente a été gardée, vérifiez-la.`);
@@ -393,8 +393,8 @@
     if (!v) { if (boite) boite.innerHTML = ''; if (boiteAnnee) boiteAnnee.innerHTML = ''; renderSoldeInfo(); return; }
     // janvier : l'année du jour n'a pas encore de registre
     if (v.propose && !lu(cleFerme('proposer', v.propose.annee), true)) {
-      const html = `<div class="notice warn avis-annee"><b>Nous sommes en ${v.propose.annee}.</b> Le registre ${v.propose.annee} n'existe pas encore : l'année ouverte est ${reg.annee}.` +
-        `<div class="avis-actions"><button type="button" class="primary small" data-annee-creer="${v.propose.annee}">Créer le registre ${v.propose.annee}</button>` +
+      const html = `<div class="notice warn avis-annee"><b>Nous sommes en ${v.propose.annee}.</b> Le journal ${v.propose.annee} n'existe pas encore : l'année ouverte est ${reg.annee}.` +
+        `<div class="avis-actions"><button type="button" class="primary small" data-annee-creer="${v.propose.annee}">Créer le journal ${v.propose.annee}</button>` +
         `<span class="legend">solde à nouveau : ${v.propose.depuis ? `<b>${fmtCHF(v.propose.solde)}</b>, le solde final ${v.propose.depuis}` : '0.00'}</span>` +
         `<button type="button" class="small ghost" data-annee-rester="${v.propose.annee}">Rester en ${reg.annee} (pièces de décembre)</button></div></div>`;
       avis.push(html); avisAnnee.push(html);
@@ -402,7 +402,7 @@
     // premier lancement, ou registre encore vierge sans année d'avant d'où partir
     if (AN.registreVierge(reg) && !v.avant && !lu(cleFerme('debut', reg.annee))) {
       avis.push(`<section class="card avis-debut"><h2><svg class="ico"><use href="#i-calendar"/></svg> Pour commencer l'année ${reg.annee}</h2>` +
-        `<p class="legend">Le registre ${reg.annee} est vide. Avant la première pièce, indiquez d'où part la caisse : sinon les soldes et la numérotation des pièces partent faux.</p>` +
+        `<p class="legend">Le journal ${reg.annee} est vide. Avant la première pièce, indiquez d'où part la caisse : sinon les soldes et la numérotation des pièces partent faux.</p>` +
         '<div class="debut-choix">' +
         `<div class="debut-un"><button type="button" data-debut="excel"><svg class="ico"><use href="#i-upload"/></svg> Reprendre le classeur Excel de ${reg.annee}…</button>` +
         '<span class="legend">L\'année est déjà tenue dans un classeur : ses écritures et son solde à nouveau sont repris, la numérotation continue.</span></div>' +
@@ -594,18 +594,18 @@
   async function creerAnnee(y) {
     const existed = state.years.includes(y);
     try { await openYear(y, { creer: true }); } catch (e) {
-      notice('err', `Le registre ${y} n'a pas pu être créé : ${escapeHtml((e && e.message) || e)}.`, { keep: true });
+      notice('err', `Le journal ${y} n'a pas pu être créé : ${escapeHtml((e && e.message) || e)}.`, { keep: true });
       return;
     }
-    if (existed) { notice('ok', `Registre ${y} ouvert (il existait déjà).`); return; }
+    if (existed) { notice('ok', `Journal ${y} ouvert (il existait déjà).`); return; }
     const c = (state.voisines || {}).avant;
     state.messageCreation = {
       annee: y,
-      html: c ? `Registre ${y} créé : son solde à nouveau est le solde final ${c.precedente}, <b>${fmtCHF(c.soldeFinal)}</b>. S'il change encore (pièce de décembre saisie en janvier), le solde à nouveau ${y} le suivra.`
-        : `Registre ${y} créé, sans année précédente dans l'application : indiquez son solde à nouveau ci-dessus.`,
+      html: c ? `Journal ${y} créé : son solde à nouveau est le solde final ${c.precedente}, <b>${fmtCHF(c.soldeFinal)}</b>. S'il change encore (pièce de décembre saisie en janvier), le solde à nouveau ${y} le suivra.`
+        : `Journal ${y} créé, sans année précédente dans l'application : indiquez son solde à nouveau ci-dessus.`,
     };
     renderSoldeInfo();
-    notice('ok', `Registre ${y} créé${c ? ` : solde à nouveau ${fmtCHF(c.soldeFinal)}, le solde final ${c.precedente}` : ''}.`);
+    notice('ok', `Journal ${y} créé${c ? ` : solde à nouveau ${fmtCHF(c.soldeFinal)}, le solde final ${c.precedente}` : ''}.`);
   }
   els.btnNewYear.addEventListener('click', () => {
     if (!yearBox || !yearInput) return;
@@ -1241,7 +1241,7 @@
     els.yearBar.classList.toggle('passee', passee);
     els.yearBar.innerHTML =
       `<span class="y">${reg.annee}</span>` +
-      (passee ? '<span class="tag passee" title="L\'année du registre ouvert est terminée : les dates proposées sont au 31 décembre">année passée</span>' : '') +
+      (passee ? '<span class="tag passee" title="L\'année du journal ouvert est terminée : les dates proposées sont au 31 décembre">année passée</span>' : '') +
       `<span class="i"><b>${reg.pieces.length}</b> ${reg.pieces.length > 1 ? 'pièces' : 'pièce'}</span>` +
       `<span class="i">solde à nouveau <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}</span>` +
       `<span class="i">solde actuel <b>${fmtCHF(j.end)}</b></span>` +
@@ -1320,7 +1320,7 @@
         `<td class="acts">${p && p.aVerifier ? `<button type="button" class="small ghost ok" data-verif="${r.id}" title="Cette lecture est juste : marquer la pièce comme vérifiée">${ico('check')}</button>` : ''}<button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="Imprimer la fiche de la pièce (elle s'ouvre dans la fenêtre d'impression, qui sait aussi l'enregistrer)">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
     }).join('') || `<tr><td colspan="9" class="legend">${filtre
       ? `Aucune pièce ne correspond${String(q).trim() ? ` à « ${escapeHtml(String(q).trim())} »` : ''}. <button type="button" class="small ghost" data-search-clear="1">Tout afficher</button>`
-      : 'Aucune pièce dans ce registre. Remplissez la fiche « Pièce comptable » : chaque pièce enregistrée apparaît ici avec le solde cumulé.'}</td></tr>`;
+      : 'Aucune pièce dans ce journal. Remplissez la fiche « Pièce comptable » : chaque pièce enregistrée apparaît ici avec le solde cumulé.'}</td></tr>`;
     els.journalTotals.innerHTML = `<div class="t"><div class="l">Solde à nouveau</div><div class="v">${fmtCHF(j.start)}</div></div>` +
       `<div class="t"><div class="l">Débits (entrées)</div><div class="v">+ ${fmtCHF(j.debits)}</div></div>` +
       `<div class="t"><div class="l">Crédits (sorties)</div><div class="v">− ${fmtCHF(j.credits)}</div></div>` +
@@ -1368,7 +1368,7 @@
       return `<tr data-id="${p.id}" class="${on ? '' : 'off'}"><td class="sel"><input type="checkbox" data-recap="${p.id}"${on ? ' checked' : ''} aria-label="Reprendre la pièce n° ${p.no}"></td>` +
         `<td>${p.no == null ? '' : p.no}</td><td>${escapeHtml(P.isoToDisplay(p.date))}</td><td class="libelle" title="${escapeHtml(F.recapDescription(p))}">${escapeHtml(F.recapDescription(p))}</td>` +
         `<td>${escapeHtml(p.personne)}</td><td>${p.ref ? `<span class="tag">${escapeHtml(p.ref)}</span>` : ''}</td><td class="legend">${p.sens === 'debit' ? 'entrée' : 'sortie'}</td><td class="num">${fmtCHF(p.montant)}</td></tr>`;
-    }).join('') || `<tr><td colspan="8" class="legend">Aucun décompte ${recap.filter === 'course' ? 'de course d\'école' : recap.filter === 'camp' ? 'de camp' : ''} dans le registre ${state.reg.annee}. Les pièces de type DECOMPTE apparaissent ici.</td></tr>`;
+    }).join('') || `<tr><td colspan="8" class="legend">Aucun décompte ${recap.filter === 'course' ? 'de course d\'école' : recap.filter === 'camp' ? 'de camp' : ''} dans le journal ${state.reg.annee}. Les pièces de type DECOMPTE apparaissent ici.</td></tr>`;
     const sel = pieces.filter((p) => recap.selected.has(p.id));
     const total = P.round2(sel.reduce((s, p) => s + (Number(p.montant) || 0), 0));
     els.recapSummary.innerHTML = pieces.length ? `<b>${sel.length}</b> sur ${pieces.length} décompte(s) coché(s) · total <b>${fmtCHF(total)}</b>` : '';
@@ -1606,7 +1606,7 @@
 
   els.btnRegExcel.addEventListener('click', async () => {
     const reg = state.reg;
-    if (!reg.pieces.length) { notice('warn', 'Aucune pièce dans le registre.'); return; }
+    if (!reg.pieces.length) { notice('warn', 'Aucune pièce dans le journal.'); return; }
     // Le fichier qu'on remet : on y regarde tout ce que l'espace des pièces scannées contrôlait
     // déjà (numéros manquants, lectures à vérifier, écart de caisse), et on dit ce qui manque.
     const aRegarder = AN.controlesAvantExcel(reg);
@@ -1644,9 +1644,9 @@
     const lignes = [];
     lignes.push(s
       ? `Dernière sauvegarde de ${annee} faite sur ce poste : le ${quandLisible(s.quand)} (${plur(s.pieces || 0, 'pièce')}${s.justificatifs ? `, ${plur(s.justificatifs, 'justificatif')}` : ''}).` +
-        (state.reg.pieces.length !== s.pieces ? ` <b>Depuis : ${plur(state.reg.pieces.length, 'pièce')} dans le registre</b> — pensez à en refaire une.` : '')
+        (state.reg.pieces.length !== s.pieces ? ` <b>Depuis : ${plur(state.reg.pieces.length, 'pièce')} dans le journal</b> — pensez à en refaire une.` : '')
       : `<b>Aucune sauvegarde de ${annee} faite sur ce poste.</b>`);
-    if (c) lignes.push(`Copie de sécurité du registre ${annee} gardée avant la restauration du ${quandLisible(c.quand)} (${plur(c.pieces || 0, 'pièce')}) : <button type="button" class="small" data-annuler-restauration="${annee}">Remettre ce registre</button>`);
+    if (c) lignes.push(`Copie de sécurité du journal ${annee} gardée avant la restauration du ${quandLisible(c.quand)} (${plur(c.pieces || 0, 'pièce')}) : <button type="button" class="small" data-annuler-restauration="${annee}">Remettre ce journal</button>`);
     box.innerHTML = lignes.map((l) => `<div>${l}</div>`).join('');
   }
 
@@ -1693,7 +1693,7 @@
    */
   async function restaurer(texte, source) {
     const paquet = AN.deballer(texte);
-    if (!paquet) { notice('err', 'Ce fichier n\'est pas une sauvegarde de registre : rien n\'a été changé.'); return false; }
+    if (!paquet) { notice('err', 'Ce fichier n\'est pas une sauvegarde de journal : rien n\'a été changé.'); return false; }
     const reg = paquet.reg;
     let actuel = null;
     try { actuel = (await state.storage.loadStored(reg.annee)).reg || null; } catch (e) { actuel = null; }
@@ -1714,7 +1714,7 @@
         const garde = await state.storage.attach(reg.annee, ID_COPIES, AN.nomCopieSecurite(reg.annee), octets);
         copie = { nom: garde.name, quand: new Date().toISOString(), pieces: actuel.pieces.length };
       } catch (e) {
-        notice('err', `<b>Rien n'a été remplacé</b> : la copie de sécurité du registre ${reg.annee} actuel n'a pas pu être faite (${escapeHtml((e && e.message) || e)}).`, { keep: true });
+        notice('err', `<b>Rien n'a été remplacé</b> : la copie de sécurité du journal ${reg.annee} actuel n'a pas pu être faite (${escapeHtml((e && e.message) || e)}).`, { keep: true });
         return false;
       }
     }
@@ -1722,7 +1722,7 @@
     try {
       await state.storage.save(reg, { remplacer: true });
     } catch (e) {
-      notice('err', `<b>Sauvegarde non restaurée</b> : ${escapeHtml((e && e.message) || e)}. Le registre ${reg.annee} n'a pas été remplacé.`, { keep: true });
+      notice('err', `<b>Sauvegarde non restaurée</b> : ${escapeHtml((e && e.message) || e)}. Le journal ${reg.annee} n'a pas été remplacé.`, { keep: true });
       return false;
     }
     if (copie) ecrireJson(cleCopie(reg.annee), copie);
@@ -1739,9 +1739,9 @@
     }
     if (!state.years.includes(reg.annee)) state.years.push(reg.annee);
     await openYear(reg.annee);
-    notice('ok', `<b>Registre ${reg.annee} restauré</b> : ${plur(reg.pieces.length, 'pièce')}, ${plur((reg.comptages || []).length, 'comptage')}` +
+    notice('ok', `<b>Journal ${reg.annee} restauré</b> : ${plur(reg.pieces.length, 'pièce')}, ${plur((reg.comptages || []).length, 'comptage')}` +
       `${remis ? `, ${plur(remis, 'justificatif remis', 'justificatifs remis')}` : ''}.` +
-      (copie ? ` Le registre remplacé (${plur(copie.pieces, 'pièce')}) est gardé en copie de sécurité : <button type="button" data-annuler-restauration="${reg.annee}">Annuler la restauration</button>` : ''), { keep: true });
+      (copie ? ` Le journal remplacé (${plur(copie.pieces, 'pièce')}) est gardé en copie de sécurité : <button type="button" data-annuler-restauration="${reg.annee}">Annuler la restauration</button>` : ''), { keep: true });
     if (rates) notice('warn', `${plur(rates, 'justificatif')} de la sauvegarde n'${rates > 1 ? 'ont' : 'a'} pas pu être remis.`, { keep: true });
     return true;
   }
@@ -1749,11 +1749,11 @@
   /** Remet le registre gardé en copie de sécurité avant la dernière restauration (même question d'abord). */
   async function annulerRestauration(annee) {
     const c = lireJson(cleCopie(annee));
-    if (!c) { notice('warn', `Aucune copie de sécurité du registre ${annee} n'est connue sur ce poste.`); return; }
+    if (!c) { notice('warn', `Aucune copie de sécurité du journal ${annee} n'est connue sur ce poste.`); return; }
     let octets = null;
     try { octets = await state.storage.read(annee, ID_COPIES, c.nom); } catch (e) { octets = null; }
     if (!octets) { notice('err', `La copie de sécurité « ${escapeHtml(c.nom)} » est introuvable : rien n'a été changé.`, { keep: true }); return; }
-    await restaurer(new TextDecoder().decode(octets), { faiteLe: c.quand, intitule: `Remettre le registre ${annee} gardé avant la restauration du ${quandLisible(c.quand)} ?` });
+    await restaurer(new TextDecoder().decode(octets), { faiteLe: c.quand, intitule: `Remettre le journal ${annee} gardé avant la restauration du ${quandLisible(c.quand)} ?` });
   }
 
   /* ---------------- Reprise d'un classeur Excel ---------------- */
@@ -1765,19 +1765,19 @@
     let data;
     try { data = await X.readWorkbook(buffer); } catch (e) { notice('err', `Impossible de lire ce classeur : ${escapeHtml(e.message || e)}`); return null; }
     const otherYears = R.piecesFromEntries(data.entries, 'excel').filter((p) => p.montant > 0 && p.date && String(p.date).slice(0, 4) !== String(reg.annee)).length;
-    const includeOther = otherYears > 0 && confirm(`${otherYears} écriture(s) du classeur ne sont pas de l'année ${reg.annee} du registre ouvert. Les reprendre quand même ?`);
+    const includeOther = otherYears > 0 && confirm(`${otherYears} écriture(s) du classeur ne sont pas de l'année ${reg.annee} du journal ouvert. Les reprendre quand même ?`);
     const r = R.mergeEntries(reg, data.entries, { source: 'excel', opening: data.opening, otherYears: includeOther });
     await saveReg();
     renderJournal();
     if (!ficheModifiee()) newPiece(); // une fiche en cours garde sa saisie ; son n° suit (ajusterNumero)
     if (A && A.learnEntries) A.learnEntries(data.entries);
-    const parts = [`<b>${r.added.length}</b> écriture(s) reprise(s) de <b>${escapeHtml(fileName || 'ce classeur')}</b> dans le registre ${reg.annee}`];
+    const parts = [`<b>${r.added.length}</b> écriture(s) reprise(s) de <b>${escapeHtml(fileName || 'ce classeur')}</b> dans le journal ${reg.annee}`];
     if (r.skipped.length) parts.push(`${r.skipped.length} déjà présente(s) (même n° et même montant), non comptée(s) deux fois`);
     if (r.conflicts.length) parts.push(`<b>${r.conflicts.length} n° déjà pris avec un autre montant</b>, non reprise(s) : ${r.conflicts.slice(0, 10).map((p) => `n° ${p.no}`).join(', ')}`);
     if (r.otherYears.length && !includeOther) parts.push(`${r.otherYears.length} d'une autre année ignorée(s)`);
     if (r.noAmount.length) parts.push(`${r.noAmount.length} ligne(s) sans montant ignorée(s)`);
     if (r.openingTaken) parts.push(`solde à nouveau repris du classeur : <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}`);
-    if (r.openingDiffers) parts.push(`le solde à nouveau du classeur (${fmtCHF(Number(data.opening.amount) || 0)}) diffère de celui du registre (${fmtCHF(reg.opening.amount)}), conservé : vérifiez-le`);
+    if (r.openingDiffers) parts.push(`le solde à nouveau du classeur (${fmtCHF(Number(data.opening.amount) || 0)}) diffère de celui du journal (${fmtCHF(reg.opening.amount)}), conservé : vérifiez-le`);
     notice(r.conflicts.length ? 'warn' : 'ok', parts.join(' · ') + '.');
     return r;
   }
@@ -1803,7 +1803,7 @@
     const wrongYear = pieces.filter((p) => p.date && String(p.date).slice(0, 4) !== String(year));
     // refuser ne jette plus le lot entier : seules les pièces d'une autre année sont laissées de côté
     const skipYear = wrongYear.length > 0
-      && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du registre ouvert. Les ajouter quand même ?\n\nAnnuler : seules les pièces de ${year} sont ajoutées.`);
+      && !confirm(`${wrongYear.length} pièce(s) ne sont pas de l'année ${year} du journal ouvert. Les ajouter quand même ?\n\nAnnuler : seules les pièces de ${year} sont ajoutées.`);
     // Deux pièces sans numéro sont la même si tout le reste concorde (comme « Reprendre un
     // classeur »). La comparaison ne porte que sur le registre TEL QU'IL ÉTAIT avant ce lot :
     // deux pièces réellement distinctes du même lot (même jour, même montant, même libellé)
@@ -1832,7 +1832,7 @@
     await saveReg();
     renderJournal();
     if (!ficheModifiee()) newPiece(); // une fiche en cours garde sa saisie ; son n° suit (ajusterNumero)
-    notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au registre ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
+    notice(added && !conflicts.length ? 'ok' : 'warn', `${added} pièce(s) ajoutée(s) au journal ${year}${dup ? `, ${dup} déjà présente(s) (même n° et même montant), non comptée(s) deux fois` : ''}` +
       `${conflicts.length ? `, <b>${conflicts.length} n° déjà pris avec un autre montant</b>, non ajoutée(s) : n° ${conflicts.join(', ')}` : ''}` +
       `${sansMontant ? `, ${sansMontant} ligne(s) sans montant ignorée(s)` : ''}` +
       `${autreAnnee ? `, ${autreAnnee} pièce(s) d'une autre année laissée(s) de côté` : ''}.`);
@@ -1986,7 +1986,7 @@
       // prendre une minute, pendant laquelle rien ne bougeait et le bouton restait cliquable.
       const bouton = $('btnEmplacementChoisir');
       bouton.disabled = true;
-      const attente = noticeEmpl('warn', '<b>Choisissez le dossier du serveur</b> dans la fenêtre qui s\'ouvre. Si vous emportez les registres de ce PC, '
+      const attente = noticeEmpl('warn', '<b>Choisissez le dossier du serveur</b> dans la fenêtre qui s\'ouvre. Si vous emportez les journaux de ce PC, '
         + 'la copie peut prendre une minute : <b>ne fermez pas Compta Blonay</b>, un message dira quand c\'est fini.');
       const fini = () => { if (attente) attente.remove(); bouton.disabled = false; };
       let r;
@@ -2009,5 +2009,5 @@
   }
 
   window.CaisseSaisie = { state, init, majListes, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal, ficheModifiee };
-  init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
+  init().catch((e) => { console.error(e); els.regInfo.textContent = `Journal indisponible : ${e && e.message ? e.message : e}`; });
 })();

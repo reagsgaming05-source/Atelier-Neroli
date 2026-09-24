@@ -346,6 +346,16 @@ table.entries.journal th.num { text-align: right; }
 table.entries.journal td.solde { font-weight: 600; }
 table.entries.journal tr.selected td { background: var(--accent-soft); }
 table.entries.journal td.libelle { max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Dans un tableau, max-width ne retient pas une cellule : le libellé le plus long donnait sa
+   largeur au journal, qui débordait de sa carte (à 1920 px, les boutons de la ligne sortaient de
+   la vue). max-width: 0 et width: 100 % : le libellé prend la place qui reste, coupé par « … »
+   (le texte entier est dans l'infobulle), jamais moins que min-width. */
+table.entries.journal td.libelle { max-width: 0; width: 100%; min-width: 160px; }
+@media (min-width: 1800px) {
+  /* fiche et journal côte à côte : le journal n'a plus que la moitié de la largeur */
+  table.entries.journal th, table.entries.journal td { padding-left: 6px; padding-right: 6px; }
+  table.entries.journal td.libelle { min-width: 140px; }
+}
 table.entries.journal td.compte { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
 table.entries.journal td.acts { white-space: nowrap; text-align: right; }
 table.entries.journal td.acts button { margin-left: 3px; }
@@ -493,7 +503,10 @@ table.checks button { margin-left: 6px; }
 .ocr-status.warn { background: var(--warn-soft); border-color: var(--warn-line); color: var(--warn); }
 
 /* ---------------------------------------------------------------- écran de saisie */
-.layout2 { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+/* minmax(0, …) : un « 1fr » seul prend la largeur minimale de son contenu, et le journal (une
+   ligne de libellé qui ne se coupe pas) poussait toute la page hors de l'écran à 1366 px — la
+   barre latérale défilait avec. Le tableau défile désormais dans sa carte, s'il le faut. */
+.layout2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (min-width: 1800px) { .layout2 { grid-template-columns: minmax(560px, 1fr) minmax(640px, 1.2fr); } }
 .regbar { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
 .regbar .field { min-width: 0; }
@@ -544,6 +557,10 @@ h3.regbloc .legend { font-weight: 400; }
    de l'écran, la fiche est longue. */
 #ficheActions { position: sticky; bottom: 0; z-index: 5; margin: 14px -8px 0; padding: 10px 8px;
   background: var(--card); border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; }
+/* Un message affiché (zone du bas, src/avis.js) recouvrait ce bouton : « Pièce enregistrée »
+   cachait « Enregistrer » pour la pièce suivante. La barre se pose alors au-dessus des messages
+   (hauteur de la zone + son écart au bord, 16 px, et 8 px d'air) ; sans message, en bas. */
+#ficheActions { bottom: calc(var(--avis-h, 0px) + min(var(--avis-h, 0px), 24px)); }
 /* Décompte repris de Décompte DGEO : lequel des montants du formulaire, dit juste sous le montant */
 .montant-aide { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: var(--accent-soft); font-size: 12.5px; color: var(--ink-2); }
 .montant-aide .choix { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -573,6 +590,26 @@ details.technique > summary { cursor: pointer; color: var(--muted); font-weight:
 details.technique > .legend { margin-top: 6px; }
 .steps { display: flex; flex-direction: column; gap: 0; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; margin-top: 12px; }
+/* Tableau de vérification (899 px) et aperçu (330 px) ne tenaient pas côte à côte sous 1700 px :
+   le tableau défilait en largeur, et « Vérifié » sortait de la vue. On resserre le tableau (marges
+   et champs à la mesure de leur contenu, sans les flèches des montants) et un peu l'aperçu : tout
+   le tableau se voit à 1366 px, à côté de l'image de la pièce (qu'un clic agrandit toujours).
+   Seul le libellé, champ libre, se lit alors en entier en cliquant dedans ou sous l'aperçu. */
+@media (max-width: 1700px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 280px; gap: 14px; }
+  #step3 { padding-left: 16px; padding-right: 16px; }
+  #entriesTable th { padding: 8px 5px; letter-spacing: 0; }
+  #entriesTable td { padding: 5px 3px; }
+  #entriesTable input[type="text"], #entriesTable input[type="number"] { padding: 0 6px; }
+  #entriesTable .combo > input { padding-right: 26px; }
+  #entriesTable input.no { width: 40px; }
+  #entriesTable input.date { width: 90px; padding: 0 5px; }
+  #entriesTable input.compte { width: 130px; }
+  #entriesTable input.num { width: 80px; padding: 0 5px; }
+  #entriesTable input.num::-webkit-inner-spin-button, #entriesTable input.num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  #entriesTable td.libelle { min-width: 120px; }
+  #entriesTable .status { width: 24px; }
+}
 @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
 .preview { position: sticky; top: 14px; align-self: start; }
 .preview .frame {
