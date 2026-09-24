@@ -626,14 +626,34 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 /* ---------------------------------------------------------------- espace « Données »
    Les listes que l'application propose, tenues à la main : une ligne par valeur, d'où elle vient,
    à quoi elle sert, combien de pièces de l'année s'en servent, et de quoi la retirer.
-   Les listes sont longues (une centaine de comptes) : elles défilent dans leur carte. */
-.dfiltre { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; }
-.dfiltre > .ico { color: var(--muted); flex: none; }
-.dfiltre input[type="search"] { flex: 1 1 240px; min-width: 0; height: 34px; }
+   Les listes sont longues (une centaine de comptes) : elles défilent dans leur carte, et au bout
+   de la liste la molette rend la main à la page (pas d'overscroll-behavior: contain, qui donnait
+   l'impression d'une page « coincée »). Chaque liste est une carte repliée : la page tient sur
+   un écran et sert de sommaire. */
+.dcarte > summary .legend { margin-left: 4px; }
+.dquoi { margin: 0 0 12px; max-width: 900px; line-height: 1.5; }
+.daide { margin-top: 6px; }
+.dlib { font-size: 12px; font-weight: 500; color: var(--ink-2); }
+.dfixe { height: 36px; display: flex; align-items: center; padding: 0 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.dou { margin-top: 4px; font-size: 12px; }
+.dou > summary { cursor: pointer; color: var(--accent); width: max-content; }
+.dou > .legend { margin-top: 4px; }
+.dou code { font-family: var(--mono); font-size: 11.5px; word-break: break-all; }
+.dchoix { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.notice > button[data-annuler] { margin-left: 8px; vertical-align: baseline; }
 .dliste {
-  margin-top: 12px; max-height: 340px; overflow-y: auto; overscroll-behavior: contain;
+  margin-top: 12px; max-height: 340px; overflow-y: auto; position: relative;
   border: 1px solid var(--line); border-radius: 10px; background: #fff;
 }
+/* la ligne qu'on vient d'ajouter, de modifier ou de remettre : surlignée, puis qui s'apaise */
+.dligne.dmarque { animation: dmarque 4s ease-out forwards; }
+@keyframes dmarque { 0%, 60% { background: var(--accent-soft-2); } 100% { background: var(--accent-soft); } }
+.dligne.dedit { background: var(--accent-soft); flex-wrap: wrap; }
+.dligne.dedit input[type="text"] { flex: 1 1 260px; min-width: 0; height: 30px; }
+.dnote { color: var(--ink-2); font-size: 12.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dproposer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid #eef2f7; }
+/* le rappel du format du classeur n'a rien à faire parmi les listes */
+#panelDonnees:not(.hidden) ~ footer.note { display: none; }
 .dligne { display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; border-bottom: 1px solid #eef2f7; font-size: 13px; }
 .dliste .dligne:last-child { border-bottom: 0; }
 .dligne:hover { background: #f8fafc; }

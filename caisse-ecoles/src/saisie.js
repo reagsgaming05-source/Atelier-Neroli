@@ -58,6 +58,8 @@
   const K = window.CaisseCarnet || null;
   /** Vrai/faux : cette valeur a-t-elle encore sa place dans les listes ? */
   const garde = (genre) => (K ? K.garde(K.actuel(), genre) : () => true);
+  /** À quoi sert un compte : la description écrite dans l'espace « Données » d'abord, puis l'usage calculé. */
+  const decrit = (compte, usage) => { const n = K ? K.noteDe(K.actuel(), 'comptes', compte) : ''; return n && usage ? `${n} · ${usage}` : (n || usage); };
   /** Les listes fermées, carnet compris : un type ou un objet ajouté doit pouvoir être choisi. */
   const TYPES = () => (K ? K.fusionner(R.TYPES, K.actuel(), 'types') : R.TYPES);
   const OBJETS = () => (K ? K.fusionner(P.OBJET_LIST, K.actuel(), 'objets') : P.OBJET_LIST);
@@ -100,7 +102,7 @@
     const NIVEAU = ['pour ce type, cet objet et ce degré', 'pour ce type et cet objet', 'pour ce type'];
     const comptes = () => R.accountChoices(formPiece(), vocab(), state.reg).filter((c) => garde('comptes')(c.compte)).map((c) => ({
       value: c.compte,
-      hint: c.usage,
+      hint: decrit(c.compte, c.usage),
       note: c.n ? `${c.n}×` : '',
       fort: c.niveau <= 1,
       // le survol dit pourquoi ce compte est proposé si haut
@@ -110,7 +112,7 @@
     C.attach(els.pClasse, () => connus('classe').map((x) => ({ value: x })), { vide: 'Aucune classe connue ne correspond.' });
     C.attach(els.pPersonne, () => connus('personne').map((x) => ({ value: x })), { vide: 'Aucun nom connu ne correspond.' });
     // le compte caisse est un compte comme un autre : même liste, sans le tri par pertinence
-    const tousComptes = () => (vocab().accounts || []).slice().sort().map((x) => ({ value: x, hint: usageBrut(x) }));
+    const tousComptes = () => (vocab().accounts || []).slice().sort().map((x) => ({ value: x, hint: decrit(x, usageBrut(x)) }));
     // (vocab() porte déjà les ajouts du carnet et plus les retraits : rien à filtrer ici)
     C.attach(els.regCaisse, tousComptes, { vide: 'Aucun compte connu ne correspond.' });
     // les deux signataires du relevé sont des personnes : même liste que la fiche

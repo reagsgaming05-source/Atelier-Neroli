@@ -548,7 +548,7 @@
   <header class="page-head">
     <div>
       <h1>Données</h1>
-      <p>Les listes que l'application propose partout : comptes, classes, personnes, objets, types d'écriture. Ajoutez ce qui manque, retirez ce qui ne sert plus — c'est gardé sur ce PC et repris à chaque ouverture. Retirer ne change aucune pièce déjà enregistrée : seules les listes déroulantes cessent de la proposer.</p>
+      <p>Les listes proposées quand vous remplissez une fiche : classes, personnes, comptes, objets, types d'écriture. Ouvrez une liste pour y ajouter ce qui manque ou retirer ce qui ne sert plus : c'est gardé et repris à chaque ouverture. Une pièce déjà enregistrée ne change jamais : l'application cesse seulement de proposer (et de reconnaître sur les pièces scannées) ce que vous retirez.</p>
     </div>
   </header>
 
@@ -556,13 +556,14 @@
     <div class="row" style="align-items:center">
       <div class="field" style="flex:1;min-width:260px">
         <div class="legend" id="donneesResume"></div>
-        <div class="legend" id="donneesOu" style="margin-top:4px"></div>
+        <details class="dou"><summary>Où est-ce gardé ?</summary><div class="legend" id="donneesOu"></div></details>
       </div>
-      <button type="button" class="small" id="btnDonneesCopie" title="Un fichier JSON à garder, ou à reprendre sur un autre PC"><svg class="ico"><use href="#i-download"/></svg> Copie du carnet</button>
-      <button type="button" class="small" id="btnDonneesReprendre"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un carnet…</button>
+      <button type="button" class="small" id="btnDonneesCopie" title="Un fichier avec tous vos changements dans ces listes : à garder en lieu sûr, ou à reprendre sur un autre PC"><svg class="ico"><use href="#i-download"/></svg> Enregistrer une copie des listes…</button>
+      <button type="button" class="small" id="btnDonneesReprendre" title="Remplace les changements de ce PC par ceux d'une copie enregistrée"><svg class="ico"><use href="#i-upload"/></svg> Remplacer par une copie…</button>
       <input type="file" id="donneesFile" accept="application/json,.json" class="hidden">
     </div>
-    <div class="legend" style="margin-top:10px"><svg class="ico sm"><use href="#i-shield"/></svg> Ces listes ne sortent pas du PC : elles ne sont ni publiées, ni envoyées nulle part. Les noms de personnes en font partie.</div>
+    <div id="donneesMsg" aria-live="polite"></div>
+    <div class="legend" style="margin-top:10px"><svg class="ico sm"><use href="#i-shield"/></svg> Ces listes sont gardées avec les registres de la caisse, jamais envoyées sur Internet ; les noms de personnes en font partie. Elles ne sont pas dans la sauvegarde de l'année (espace L'année) : pour les mettre à l'abri, enregistrez-en une copie.</div>
   </section>
 
   <div id="donneesCartes"></div>
