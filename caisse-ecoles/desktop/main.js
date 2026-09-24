@@ -906,7 +906,8 @@ ipcMain.handle('donnees:choisir', async () => {
   if (path.resolve(cible) === path.resolve(courant)) return { change: false, erreur: 'Ce sont déjà les données utilisées.' };
   const v = await emplacement.verifierDossier(cible);
   if (!v.ok) return { change: false, erreur: `Ce dossier n'est pas utilisable : ${v.raison}` };
-  const dejaUneCaisse = fs.existsSync(path.join(cible, 'caisse'));
+  // une caisse sans aucune pièce (laissée par « Partir de zéro ») ne compte pas : on peut encore emporter
+  const dejaUneCaisse = emplacement.caisseEnUsage(cible);
   let copie = null;
   if (!dejaUneCaisse && fs.existsSync(path.join(courant, 'caisse'))) {
     const q = await dialog.showMessageBox(mainWindow, {
@@ -915,7 +916,8 @@ ipcMain.handle('donnees:choisir', async () => {
       message: 'Emporter les registres de ce PC dans ce dossier ?',
       detail: 'Le dossier choisi ne contient pas encore de caisse.\n\n'
         + '« Emporter » y copie les registres, les justificatifs, les scans et les décomptes de ce PC : c\'est ce qu\'il faut la première fois. '
-        + 'Rien n\'est retiré de ce PC.\n\n« Partir de zéro » laisse le dossier vide.',
+        + 'Rien n\'est retiré de ce PC.\n\n« Partir de zéro » laisse le dossier vide : les registres de ce PC n\'y seront pas. '
+        + 'Tant qu\'aucune pièce n\'y est saisie, vous pourrez encore les emporter (« Revenir aux données de ce PC », puis « Mettre les données sur le serveur… »).',
       buttons: ['Emporter', 'Partir de zéro', 'Annuler'],
       defaultId: 0,
       cancelId: 2,
@@ -930,6 +932,18 @@ ipcMain.handle('donnees:choisir', async () => {
   try { emplacement.ecrireEmplacement(DOSSIER_REGLAGE(), cible); }
   catch (e) { return { change: false, erreur: `Impossible d'écrire ${emplacement.FICHIER} à côté du programme (${(e && e.code) || e}). Le programme est-il dans un dossier protégé ?` }; }
   logLine(`données déplacées vers ${cible}${copie && copie.copie ? ` (copié : ${copie.dossiers.join(', ')})` : ''}${dejaUneCaisse ? ' (caisse existante reprise)' : ''}`);
+  // La copie a pu durer une minute : on dit ce qui est parti AVANT de redémarrer, au lieu d'un
+  // message de 0,6 s et d'une ligne dans le journal technique.
+  if (copie && copie.copie) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: APP_TITLE,
+      message: 'Données emportées sur le serveur',
+      detail: `Dans ${cible}, l'application a copié ${emplacement.resumeCopie(copie)}.\n\nRien n'a été retiré de ce PC. Compta Blonay va redémarrer sur ce dossier.`,
+      buttons: ['OK'],
+      noLink: true,
+    });
+  }
   relancer();
   return { change: true, chemin: cible, dejaUneCaisse, copie };
 });

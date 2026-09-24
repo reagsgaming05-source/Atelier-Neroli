@@ -1125,11 +1125,12 @@
   const carteEmpl = $('carteEmplacement');
   function noticeEmpl(kind, html) {
     const box = $('emplacementNotices');
-    if (!box) { notice(kind, html); return; }
+    if (!box) { notice(kind, html); return null; }
     const div = document.createElement('div');
     div.className = `notice ${kind}`;
     div.innerHTML = html;
     box.prepend(div);
+    return div;
   }
   async function majEmplacement() {
     if (!DN || !carteEmpl) return;
@@ -1151,14 +1152,22 @@
   }
   if (DN && carteEmpl) {
     $('btnEmplacementChoisir').addEventListener('click', async () => {
+      // Choisir le dossier, puis copier registres, justificatifs et scans sur le réseau : cela peut
+      // prendre une minute, pendant laquelle rien ne bougeait et le bouton restait cliquable.
+      const bouton = $('btnEmplacementChoisir');
+      bouton.disabled = true;
+      const attente = noticeEmpl('warn', '<b>Choisissez le dossier du serveur</b> dans la fenêtre qui s\'ouvre. Si vous emportez les registres de ce PC, '
+        + 'la copie peut prendre une minute : <b>ne fermez pas Compta Blonay</b>, un message dira quand c\'est fini.');
+      const fini = () => { if (attente) attente.remove(); bouton.disabled = false; };
       let r;
-      try { r = await DN.choisir(); } catch (err) { noticeEmpl('err', escapeHtml((err && err.message) || err)); return; }
-      if (r.erreur) { noticeEmpl('err', escapeHtml(r.erreur)); return; }
-      if (!r.change) return;
+      try { r = await DN.choisir(); } catch (err) { fini(); noticeEmpl('err', escapeHtml((err && err.message) || err)); return; }
+      if (r.erreur) { fini(); noticeEmpl('err', escapeHtml(r.erreur)); return; }
+      if (!r.change) { fini(); return; }
+      if (attente) attente.remove();
       const quoi = r.dejaUneCaisse
         ? 'Ce dossier contient déjà une caisse — celle des collègues : l\'application redémarre dessus. Les données de ce PC restent où elles sont.'
         : (r.copie && r.copie.copie ? 'Données emportées sur le serveur. L\'application redémarre dessus…' : 'L\'application redémarre sur ce dossier…');
-      noticeEmpl('ok', quoi);
+      noticeEmpl('ok', quoi); // le bouton reste désactivé : l'application redémarre
     });
     $('btnEmplacementLocal').addEventListener('click', async () => {
       if (!confirm('Revenir aux données de ce PC ? Les données du serveur restent où elles sont, mais ce poste ne les verra plus.')) return;

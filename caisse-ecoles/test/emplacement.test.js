@@ -116,10 +116,12 @@ test('un dossier qui a déjà sa caisse n\'est jamais écrasé', async () => {
   const poste = tmp(); caisseFactice(poste);
   const serveur = tmp();
   fs.mkdirSync(path.join(serveur, 'caisse', '2026'), { recursive: true });
-  fs.writeFileSync(path.join(serveur, 'caisse', '2026', 'registre.json'), '{"annee":2026,"des":"collègues"}');
+  // la caisse des collègues a des pièces (une caisse sans rien, elle, peut être remplacée : voir annee.test.js)
+  const leur = '{"annee":2026,"des":"collègues","pieces":[{"id":"p1","no":1,"montant":5}]}';
+  fs.writeFileSync(path.join(serveur, 'caisse', '2026', 'registre.json'), leur);
   const r = await E.copierSiVide(poste, serveur);
   assert.equal(r.copie, false);
-  assert.equal(fs.readFileSync(path.join(serveur, 'caisse', '2026', 'registre.json'), 'utf8'), '{"annee":2026,"des":"collègues"}');
+  assert.equal(fs.readFileSync(path.join(serveur, 'caisse', '2026', 'registre.json'), 'utf8'), leur);
 });
 
 test('rien à emporter : pas de copie, pas d\'erreur', async () => {
