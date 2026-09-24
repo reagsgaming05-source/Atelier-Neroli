@@ -338,17 +338,7 @@
       "11VP/1",
       "11VP/2",
       "11VP/3",
-      "11VP/4",
-      "ACC",
-      "DES",
-      "FAC",
-      "II",
-      "LAT",
-      "LIFT",
-      "OS",
-      "PRIX",
-      "SLAM",
-      "USB"
+      "11VP/4"
     ],
     "accounts": [
       "35302.3152",

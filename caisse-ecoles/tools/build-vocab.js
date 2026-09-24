@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const ExcelJS = require('exceljs');
 const P = require('../src/parser.js');
+const K = require('../src/carnet.js');
 const X = require('../src/excel.js')(ExcelJS);
 
 const root = path.join(__dirname, '..');
@@ -32,7 +33,9 @@ function compact(vocab) {
   };
   return {
     words: vocab.words.slice().sort((a, b) => a.localeCompare(b, 'fr')),
-    classTokens: vocab.classTokens.slice().sort((a, b) => a.localeCompare(b, 'fr', { numeric: true })),
+    // l'apprentissage range parmi les classes tout sigle en capitales (USB, PRIX, SLAM…) : la
+    // base intégrée, elle, ne garde que les vraies classes, celles qui portent un degré
+    classTokens: vocab.classTokens.filter((c) => K.vraisemblable('classes', c)).sort((a, b) => a.localeCompare(b, 'fr', { numeric: true })),
     accounts: vocab.accounts.slice().sort(),
     typeAccounts: agg(vocab.typeAccounts, 'type', 'compte'),
     typeSides: agg(vocab.typeSides, 'type', 'side'),

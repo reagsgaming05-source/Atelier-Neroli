@@ -45,6 +45,8 @@
   const MAX_LISTE = 2000; // garde-fou d'un fichier abîmé ou bricolé
   const CLE_LOCALE = 'caisse.donnees';
   const COMPTE_RE = /^\d{4,5}\.\d{3,4}(?:\.\d{2})?$/;
+  // Une classe porte un degré : un chiffre suivi de P, S, VG ou VP (« 5P/3 », « 9S », « 10VG/2 »).
+  const DEGRE_RE = /\d(?:VP|VG|P|S)/i;
 
   const sansAccent = (t) => String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '');
   /** Deux écritures d'une même valeur (« a. berger » et « A. Berger ») ne font qu'une entrée. */
@@ -143,6 +145,17 @@
     return { ok: true, valeur: v };
   }
 
+  /**
+   * Une valeur apprise a-t-elle sa place dans une liste ? Pour une classe, il lui faut un degré.
+   * L'apprentissage des libellés range parmi les classes tout sigle en capitales (« USB »,
+   * « PRIX », « SLAM ») — pour ne pas les « corriger » comme des mots —, et ils se retrouvaient
+   * proposés dans le champ Classe. Ce qu'on a ajouté soi-même, en revanche, est toujours gardé.
+   */
+  function vraisemblable(genre, valeur) {
+    if (genre !== 'classes') return true;
+    return DEGRE_RE.test(normaliser(genre, valeur));
+  }
+
   const ajoutsDe = (carnet, genre) => ((carnet && carnet.ajouts && carnet.ajouts[genre]) || []);
   /** Les valeurs retirées des listes, dans l'ordre où on les a retirées. */
   const retiresDe = (carnet, genre) => ((carnet && carnet.retires && carnet.retires[genre]) || []);
@@ -209,23 +222,25 @@
   /**
    * La liste telle qu'elle doit être proposée : la base, moins les retirées, plus les nôtres.
    * `opts.trier` : comparateur, ou rien pour garder l'ordre de la base (l'ordre des objets et des
-   * types dit quelque chose — « Autre » vient en dernier).
+   * types dit quelque chose — « Autre » vient en dernier). De la base, seul ce qui a la forme de
+   * son genre est gardé (voir vraisemblable) ; nos ajouts, eux, le sont toujours.
    */
   function fusionner(base, carnet, genre, opts) {
     opts = opts || {};
     const ok = garde(carnet, genre);
     const vus = new Set();
     const out = [];
-    const pousser = (x) => {
+    const pousser = (x, nous) => {
       const v = String(x == null ? '' : x);
       if (!v) return;
       const k = cle(genre, v);
       if (vus.has(k) || !ok(v)) return;
+      if (!nous && !vraisemblable(genre, v)) return;
       vus.add(k);
       out.push(v);
     };
-    for (const x of base || []) pousser(x);
-    for (const a of ajoutsDe(carnet, genre)) pousser(a.valeur);
+    for (const x of base || []) pousser(x, false);
+    for (const a of ajoutsDe(carnet, genre)) pousser(a.valeur, true);
     if (opts.trier) out.sort(opts.trier);
     return out;
   }
@@ -324,7 +339,7 @@
 
   return {
     GENRES, NOM, ARTICLE, CLE_LOCALE,
-    vide, parse, serialize, normaliser, verifier,
+    vide, parse, serialize, normaliser, verifier, vraisemblable,
     ajouter, retirer, remettre,
     ajoutsDe, retiresDe, garde, fusionner, appliquer, noteDe, sensDeType, resume,
     depot, actuel, poser,
