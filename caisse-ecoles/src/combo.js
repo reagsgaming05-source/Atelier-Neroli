@@ -104,6 +104,12 @@
       const q = sansAccent(filtre).trim();
       const liste = tous();
       vus = q ? liste.filter((it) => sansAccent(`${it.value} ${it.label || ''} ${it.hint || ''}`).includes(q)) : liste;
+      if (q) {
+        // ce qui s'écrit comme la frappe passe avant ce qui ne la contient que dans sa description :
+        // « décompte » tapé montre DECOMPTE avant AVANCE (« … réglé ensuite par un décompte »)
+        const rang = (it) => { const nom = sansAccent(`${it.value} ${it.label || ''}`); return nom.startsWith(q) ? 0 : (nom.includes(q) ? 1 : 2); };
+        vus = vus.map((it, i) => [rang(it), i, it]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((x) => x[2]);
+      }
       if (!vus.length) {
         pop.innerHTML = `<div class="combo-vide">${esc(opts.vide || 'Rien de connu qui corresponde.')}</div>`;
         actif = -1;

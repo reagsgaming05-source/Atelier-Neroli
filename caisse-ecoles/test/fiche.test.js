@@ -238,6 +238,21 @@ test('↓ ouvre la liste entière sur la valeur en place, puis la parcourt', () 
   assert.equal(liste(champ).choix, 1);
 });
 
+test('en tapant, le nom qui correspond passe avant ce qui ne correspond que par sa description', () => {
+  const doc = documentSimule();
+  const sel = doc.createElement('select');
+  doc.body.appendChild(sel);
+  sel.innerHTML = R.TYPES.map((v) => `<option value="${v}">${v}</option>`).join('');
+  sel.value = 'REMBOURSEMENT';
+  const hint = { AVANCE: 'sortie de caisse : argent remis avant une course, réglé ensuite par un décompte' };
+  Combo.fromSelect(sel, { items: () => R.TYPES.map((t) => ({ value: t, hint: hint[t] || '' })) });
+  const champ = sel.previousElementSibling.querySelector('input');
+  taper(champ, 'decompte');
+  touche(champ, 'ArrowDown');
+  touche(champ, 'Enter');
+  assert.equal(sel.value, 'DECOMPTE', 'AVANCE passait devant, parce que sa description dit « décompte »');
+});
+
 test('un champ libre vide s\'ouvre au clic ; rempli, on y clique pour corriger', () => {
   const doc = documentSimule();
   const input = doc.createElement('input');

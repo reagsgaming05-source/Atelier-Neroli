@@ -195,9 +195,12 @@
 
   /** Le carnet des données a changé : les listes de cet espace le relisent. */
   function majListes() {
+    // un compte proposé d'office par la nouvelle liste n'est pas une saisie de la personne
+    const intacte = !ficheModifiee();
     fillLists();
     if (C) C.syncAll();
     refreshSuggestions();
+    if (intacte) retenirPhoto();
   }
 
   async function openYear(year) {
@@ -358,7 +361,7 @@
   function newPiece() {
     const p = R.newPiece(state.reg);
     const force = $('pSensForce');
-    if (force) force.checked = false; // la case « forcer le sens » ne reste pas cochée d'une pièce à l'autre
+    if (force) force.checked = false; // la case « changer le sens » ne reste pas cochée d'une pièce à l'autre
     state.editingId = null;
     state.pending = [];
     state.retires = new Set();
@@ -473,7 +476,7 @@
     els.pLibelle.readOnly = !els.pLibelleEdit.checked;
     els.pLibelle.value = p.libelle || R.composeLibelle(p);
     // le sens enregistré est conservé tel quel ; s'il ne suit pas la logique du type (pièce remplie
-    // à l'envers, conservée ainsi), la case « forcer » est cochée pour qu'il reste modifiable
+    // à l'envers, conservée ainsi), la case « changer le sens » est cochée pour qu'il reste modifiable
     const force = $('pSensForce');
     if (force) force.checked = !!(p.sens && sensDe(p.type) && p.sens !== sensDe(p.type));
     setSens(p.sens || sensDe(p.type), !p.sens);
