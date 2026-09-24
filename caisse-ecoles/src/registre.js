@@ -148,6 +148,8 @@
   /** Nouvelle pièce vierge, pré-remplie (n° suivant, date du jour). */
   /**
    * Montant tapé à la main : « 4'825.55 », « 4 825,55 », « CHF 4825.55 » → 4825.55.
+   * « 400.– », « 400.- », « Fr. 400.- » → 400 : c'est ainsi qu'on écrit les francs ronds en Suisse,
+   * et c'est ce qu'on lit sur la quittance. Ils étaient refusés comme « Montant manquant ».
    * Renvoie null si le texte n'est pas un montant (au lieu de 0, qui passait pour une saisie).
    */
   function parseAmountInput(text) {
@@ -155,6 +157,8 @@
       .replace(/chf|frs?\.?/ig, '')
       .replace(/[\s\u00A0’'´`]/g, '')
       .replace(',', '.')
+      .replace(/(\d)\.?[-–—]+$/, '$1') // « 400.– », « 400.-- » : pas de centimes
+      .replace(/(\d)\.$/, '$1') // « 400. »
       .trim();
     if (t === '' || !/^-?\d+(\.\d+)?$/.test(t)) return null;
     const v = Number(t);
@@ -381,8 +385,9 @@
    *   niveau 2 : pour ce type
    *   niveau 3 : compte connu, jamais employé pour ce type
    */
-  function accountChoices(p, vocab, reg) {
+  function accountChoices(p, vocab, reg, opts) {
     vocab = vocab || {};
+    opts = opts || {};
     const sugg = accountSuggestions(p, vocab, reg);
     const rang = new Map();
     sugg.forEach((s, i) => rang.set(s.compte, { n: s.n, niveau: s.niveau, ordre: i }));
@@ -412,6 +417,39 @@
       return best;
     };
 
+    // Pour le type de la pièce en cours : avec quels objets chaque compte a servi. Presque tous
+    // les comptes d'un remboursement s'étiquetaient « REMBOURSEMENT » : la liste ne distinguait
+    // rien. Les objets (Repas, Matériel, Collation…) les distinguent, eux.
+    const cleType = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+    const typeCourant = cleType(p && p.type);
+    const objetsDuType = new Map(); // compte -> Map(objet -> n) ; « Autre » compté sous ''
+    const noterObjet = (compte, type, objet, n) => {
+      if (!compte || !typeCourant || cleType(type) !== typeCourant) return;
+      const m = objetsDuType.get(compte) || new Map();
+      const o = objet && objet !== 'Autre' ? objet : '';
+      m.set(o, (m.get(o) || 0) + (n || 1));
+      objetsDuType.set(compte, m);
+    };
+    for (const h of vocab.objetAccounts || []) if (h && h.compte) noterObjet(h.compte, h.type, h.objet, h.n);
+    for (const x of (reg && reg.pieces) || []) if (x.compte) noterObjet(x.compte, x.type, x.objet, 1);
+    const objetsDe = (c) => {
+      const m = objetsDuType.get(c);
+      if (!m) return null;
+      return Array.from(m).filter(([o]) => o).sort((a, b) => b[1] - a[1]).map(([o]) => o);
+    };
+
+    // Un exemple réel : la description de la dernière pièce passée sur ce compte, cette année ou
+    // l'année d'avant (opts.pieces). « ex. Collation du chœur » dit plus qu'un numéro.
+    const exemples = new Map();
+    const passees = ((reg && reg.pieces) || []).concat(opts.pieces || [])
+      .filter((x) => x && x.compte)
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    for (const x of passees) {
+      if (exemples.has(x.compte)) continue;
+      const d = composeDescription(x);
+      if (d) exemples.set(x.compte, d);
+    }
+
     // côté habituel : une entrée en caisse ou une sortie
     const cotes = new Map();
     for (const a of vocab.accountSides || []) {
@@ -440,25 +478,67 @@
         ordre: r ? r.ordre : 0,
         usage: usageDe(compte),
         sens: coteDe(compte),
+        // null : jamais employé pour ce type ; [] : employé pour ce type, sans objet précis
+        objets: objetsDe(compte),
+        exemple: exemples.get(compte) || '',
       };
     }).sort((a, b) => a.niveau - b.niveau || a.ordre - b.ordre || b.n - a.n || a.compte.localeCompare(b.compte));
   }
 
-  /** Erreurs bloquantes d'une pièce (liste vide = pièce valable). */
-  function validate(p, reg) {
+  /**
+   * Le compte à remplir d'office pour une pièce, ou null. Il n'est proposé que s'il s'impose :
+   * employé au moins deux fois sur trois pour ce type et cet objet (et ce degré). Un compte pris
+   * une fois sur six (51000.3170.05 pour un remboursement), rempli d'office, était gardé tel
+   * quel par qui ne connaît pas les comptes — qu'il convienne ou non.
+   * Rend { compte, n, total, niveau } ou null.
+   */
+  function compteImpose(p, vocab, reg) {
+    const sugg = accountSuggestions(p, vocab, reg);
+    if (!sugg.length || sugg[0].niveau > 1) return null;
+    const total = sugg.reduce((t, x) => t + x.n, 0);
+    return sugg[0].n * 3 >= total * 2 ? { compte: sugg[0].compte, n: sugg[0].n, total, niveau: sugg[0].niveau } : null;
+  }
+
+  /**
+   * Erreurs bloquantes d'une pièce, chacune avec le champ de la fiche qu'elle concerne (liste vide
+   * = pièce valable). Chaque message dit quoi faire, pas seulement ce qui manque : « le n° 1 existe
+   * déjà » laissait chercher le numéro libre, « Montant manquant » s'affichait sous « 400.– ».
+   *   opts.montantTape : le texte du champ Montant, pour distinguer un montant vide d'un illisible.
+   * Rend [{ champ, message, libre? }] — `libre` : le prochain numéro libre, à proposer.
+   */
+  function validateChamps(p, reg, opts) {
+    opts = opts || {};
     const errs = [];
-    if (p.no == null || !Number.isInteger(p.no) || p.no <= 0) errs.push('Numéro de pièce manquant ou invalide');
-    else if (reg && reg.pieces.some((x) => x.id !== p.id && x.no === p.no)) errs.push(`Le n° ${p.no} existe déjà dans le registre`);
-    if (!isRealDate(p.date)) errs.push('Date manquante ou invalide');
-    else if (reg && String(p.date).slice(0, 4) !== String(reg.annee)) errs.push(`La date n'est pas dans l'année ${reg.annee}`);
-    if (!p.type) errs.push("Type d'écriture manquant");
-    if (!(p.montant > 0)) errs.push('Montant manquant (doit être positif)');
-    if (!p.compte || !ACCOUNT_RE.test(p.compte)) errs.push('N° de compte manquant ou mal formé (ex. 51000.3662.00)');
-    else if (reg && p.compte === reg.caisse) errs.push('Le compte de contrepartie ne peut pas être le compte caisse');
-    if (!p.sens) errs.push("Sens de l'écriture à choisir (entrée ou sortie de caisse)");
-    if (!(p.libelle || composeLibelle(p)).trim()) errs.push('Libellé vide');
-    if (!p.personne) errs.push('Personne manquante (« A. Nom »)');
+    const err = (champ, message, extra) => errs.push(Object.assign({ champ, message }, extra || {}));
+    if (p.no == null || !Number.isInteger(p.no) || p.no <= 0) err('pNo', 'Numéro de pièce à indiquer (un nombre entier : 1, 2, 3…)', reg ? { libre: nextNo(reg) } : null);
+    else if (reg && reg.pieces.some((x) => x.id !== p.id && x.no === p.no)) {
+      const libre = nextNo({ pieces: reg.pieces.filter((x) => x.id !== p.id) });
+      err('pNo', `Le n° ${p.no} existe déjà dans le registre : le prochain numéro libre est le ${libre}`, { libre });
+    }
+    if (!isRealDate(p.date)) err('pDate', 'Date à indiquer');
+    else if (reg && String(p.date).slice(0, 4) !== String(reg.annee)) {
+      err('pDate', `La date n'est pas dans l'année ${reg.annee}, celle du registre ouvert. Pour une autre année : espace « L'année », « Changer d'année »`);
+    }
+    if (!p.type) err('pType', "Type d'écriture à choisir");
+    if (!(p.montant > 0)) {
+      const tape = String(opts.montantTape == null ? '' : opts.montantTape).trim();
+      const lu = tape ? parseAmountInput(tape) : null;
+      if (!tape) err('pMontant', 'Montant à indiquer');
+      else if (lu == null) err('pMontant', `« ${tape} » n'est pas un montant lisible : tapez par exemple 400 ou 29.70`);
+      else err('pMontant', "Le montant doit être plus grand que zéro, sans signe moins : l'entrée ou la sortie se choisit dans « Sens de l'écriture »");
+    }
+    if (!p.compte) err('pCompte', 'Compte à choisir : ouvrez la liste du champ Compte');
+    else if (!ACCOUNT_RE.test(p.compte)) err('pCompte', `« ${p.compte} » n'est pas un n° de compte (il s'écrit comme 51000.3662.00)`);
+    else if (reg && p.compte === reg.caisse) err('pCompte', 'Ce compte est le compte caisse lui-même : choisissez celui de la dépense ou de la recette');
+    if (!p.sens) err('sens', "Sens de l'écriture à choisir (entrée ou sortie de caisse)");
+    if (!(p.libelle || composeLibelle(p)).trim()) err('pLibelle', 'Libellé vide');
+    if (!p.personne) err('pPersonne', 'Personne à indiquer (initiale et nom, ex. A. Berger)');
     return errs;
+  }
+
+  /** Erreurs bloquantes d'une pièce, en texte (liste vide = pièce valable). */
+  function validate(p, reg, opts) {
+    return validateChamps(p, reg, opts).map((e) => e.message);
   }
 
   /** Ajoute ou remplace une pièce (par id), puis trie. */
@@ -875,6 +955,25 @@
   const origines = new WeakMap();
   const noterOrigine = (reg, texte) => { if (reg) origines.set(reg, texte == null ? null : String(texte)); };
 
+  /**
+   * Relire un registre ouvert : le texte du disque a changé depuis la dernière lecture (un autre
+   * poste a écrit) ; son travail est repris dans `reg`, sur place, par la même fusion qu'à
+   * l'enregistrement. Sans cette relecture, un poste resté ouvert depuis le matin proposait le
+   * même « numéro suivant » qu'une collègue avait déjà pris, et ne voyait pas ses pièces.
+   * Rend null si rien n'a changé, sinon { ajoutees, reprises, conflits, doublons }.
+   */
+  function reprendreDuDisque(reg, texte) {
+    const attendu = origines.has(reg) ? origines.get(reg) : null;
+    if (texte == null || String(texte) === attendu) return null;
+    const disque = parse(texte);
+    if (!disque) return null; // illisible : l'enregistrement le dira, sans rien écraser
+    const avant = new Set(reg.pieces.map((p) => p.id));
+    const f = fusionner(attendu == null ? null : parse(attendu), reg, disque);
+    for (const k of Object.keys(f.reg)) reg[k] = f.reg[k];
+    noterOrigine(reg, texte);
+    return { ajoutees: reg.pieces.filter((p) => !avant.has(p.id)), reprises: f.reprises, conflits: f.conflits, doublons: f.doublons };
+  }
+
   /** Adaptateur fichiers (application fenêtrée) : window.CaisseFiles fourni par le preload. */
   function fileStorage(F) {
     const charger = async (year) => {
@@ -922,6 +1021,8 @@
         }
         throw new Error("le registre est modifié sans arrêt sur un autre poste : rien n'a été écrit, réessayez dans un instant");
       },
+      /** Reprend ce qu'un autre poste a enregistré depuis la dernière lecture (voir reprendreDuDisque). */
+      relire: async (reg) => reprendreDuDisque(reg, await F.load(reg.annee)),
       attach: (year, pieceId, name, bytes) => F.attach(year, pieceId, name, bytes),
       read: (year, pieceId, name) => F.read(year, pieceId, name),
       remove: (year, pieceId, name) => F.remove(year, pieceId, name),
@@ -958,9 +1059,12 @@
         for (let i = 0; i < localStorage.length; i++) { const m = /^caisse\.registre\.(\d{4})$/.exec(localStorage.key(i)); if (m) out.push(Number(m[1])); }
         return out.sort();
       },
-      load: async (year) => readStored(localStorage.getItem(KEY(year))).reg,
-      loadStored: async (year) => readStored(localStorage.getItem(KEY(year))),
-      save: async (reg) => { localStorage.setItem(KEY(reg.annee), serialize(reg)); },
+      // Deux onglets de la page partagent la même mémoire : on retient d'où vient chaque registre
+      // pour que « relire » reprenne ce que l'autre onglet a écrit.
+      load: async (year) => { const t = localStorage.getItem(KEY(year)); const lu = readStored(t); noterOrigine(lu.reg, t); return lu.reg; },
+      loadStored: async (year) => { const t = localStorage.getItem(KEY(year)); const lu = readStored(t); noterOrigine(lu.reg, t); return lu; },
+      save: async (reg) => { const t = serialize(reg); localStorage.setItem(KEY(reg.annee), t); noterOrigine(reg, t); },
+      relire: async (reg) => reprendreDuDisque(reg, localStorage.getItem(KEY(reg.annee))),
       attach: async (year, pieceId, name, bytes) => { await tx('readwrite', (s) => s.put(bytes, k(year, pieceId, name))); return { name, size: bytes.length }; },
       read: async (year, pieceId, name) => { const v = await tx('readonly', (s) => s.get(k(year, pieceId, name))); return v ? new Uint8Array(v) : null; },
       remove: async (year, pieceId, name) => { await tx('readwrite', (s) => s.delete(k(year, pieceId, name))); },
@@ -993,6 +1097,7 @@
     sensFor,
     accountSuggestions,
     validate,
+    validateChamps,
     upsertPiece,
     removePiece,
     syncScanBatch,
@@ -1013,6 +1118,7 @@
     parseAmountInput,
     searchRows, numberChecks, explainGap,
     accountChoices,
+    compteImpose,
     periodMovements,
     piecesFromEntries, mergeEntries,
     serialize,

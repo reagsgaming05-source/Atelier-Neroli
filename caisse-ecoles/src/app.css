@@ -373,6 +373,8 @@ table.entries td .combo-pop { min-width: 260px; }
 #rvSide .combo > input { width: 100%; }
 
 .combo-vide { padding: 10px 12px; font-size: 12.5px; color: var(--muted); max-width: 320px; white-space: normal; }
+/* la liste des comptes dit à quoi sert chacun (objets, exemple réel) : il lui faut la place */
+.combo-comptes .combo-pop { max-width: 600px; }
 
 /* Raccourci clavier rappelé sur le bouton, et n° cliquable dans un message de contrôle. */
 .kbd { margin-left: 8px; padding: 1px 6px; border-radius: 5px; font-size: 11px; font-weight: 600;
@@ -468,10 +470,25 @@ h3.regbloc .legend { font-weight: 400; }
 #regInfo { margin-top: 10px; }
 #ficheCard h2 { justify-content: space-between; }
 #ficheCard h2 .left { display: flex; align-items: center; gap: 10px; }
+/* Une pièce du journal ouverte pour modification : la fiche entière le dit, pas seulement le n°. */
+#ficheCard.en-modification { border-color: var(--warn-line); box-shadow: 0 0 0 3px var(--warn-soft), var(--shadow-sm); }
+.fiche-mode { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 14px; padding: 10px 14px;
+  background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: 10px; font-size: 13px; color: var(--ink); }
+.fiche-mode > span { flex: 1 1 320px; }
+.fiche-mode b { color: var(--warn); }
+.fiche-mode.dgeo { background: var(--accent-soft); border-color: var(--accent-soft-2); }
+.fiche-mode.dgeo b { color: var(--accent); }
+#pFilesList li.retire { background: none; border-style: dashed; color: var(--muted); }
 #pCompteSugg { padding-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+#pCompte::placeholder { font-family: var(--font); }
 #pCompteSugg button.small { margin: 0; font-family: var(--mono); font-size: 12px; }
 #pSensHint { margin-top: 4px; }
+/* le champ que désigne une erreur de la fiche : on le voit sans relire la liste */
+#ficheCard .champ-erreur { border-color: var(--err); box-shadow: 0 0 0 3px var(--err-soft); }
+#ficheCard .sens.champ-erreur { border-radius: 10px; }
 #pFilesList { margin-top: 6px; }
+.joindre { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px; margin: 0 -6px; border: 1.5px dashed transparent; border-radius: 10px; }
+.joindre.over { border-color: var(--accent); background: var(--accent-soft); }
 #pFilesList ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
 #pFilesList li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); font-size: 13px; }
 #pFilesList li .legend { flex: 1; }
@@ -481,6 +498,14 @@ h3.regbloc .legend { font-weight: 400; }
 .sens label:has(input:disabled) { opacity: 0.75; cursor: default; }
 .sens label.legend { border: 0; background: none; padding: 0 0 0 6px; font-weight: 400; }
 .sens label.legend:has(input:checked) { color: var(--muted); }
+/* Le bouton Enregistrer reste sous la main : sur un portable (1366 × 768), il était sous le bas
+   de l'écran, la fiche est longue. */
+#ficheActions { position: sticky; bottom: 0; z-index: 5; margin: 14px -8px 0; padding: 10px 8px;
+  background: var(--card); border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; }
+/* Décompte repris de Décompte DGEO : lequel des montants du formulaire, dit juste sous le montant */
+.montant-aide { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: var(--accent-soft); font-size: 12.5px; color: var(--ink-2); }
+.montant-aide .choix { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.montant-aide + .row { margin-top: 12px; }
 #fichePreview { margin-top: 12px; }
 #ficheFrame { width: 100%; height: 560px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 

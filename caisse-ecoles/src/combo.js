@@ -36,6 +36,21 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /**
+   * L'entrée d'une liste que désigne un texte tapé : celle qui s'écrit exactement ainsi — sans
+   * tenir compte des majuscules ni des accents, comme le filtre —, sinon la seule qui le contient.
+   * « camp » désigne Camp et non Mini-camp, « 7 » désigne « depuis le n° 7 ». Rien sinon.
+   */
+  function designe(liste, texte) {
+    const q = sansAccent(texte).trim();
+    if (!q) return null;
+    const ecrit = (it) => (it.label == null || it.label === '' ? it.value : it.label);
+    const exact = liste.find((it) => sansAccent(ecrit(it)).trim() === q) || liste.find((it) => sansAccent(it.value).trim() === q);
+    if (exact) return exact;
+    const candidats = liste.filter((it) => sansAccent(`${it.value} ${it.label || ''}`).includes(q));
+    return candidats.length === 1 ? candidats[0] : null;
+  }
+
+  /**
    * Pose une liste déroulante sur un champ texte existant.
    * Renvoie { ouvrir, fermer, input } ou null si le champ en a déjà une.
    */
@@ -64,6 +79,10 @@
     wrap.appendChild(pop);
 
     let actif = -1; let vus = []; let enPose = false;
+    // Vrai dès que la personne tape : la liste se filtre alors sur son texte. Tant qu'elle n'a
+    // rien tapé, le texte du champ est la valeur en place, et ouvrir la liste doit montrer TOUS
+    // les choix — filtrer sur « REMBOURSEMENT » ne montrait que REMBOURSEMENT.
+    let tape = false;
     // Ce qu'on affiche et ce qu'on vaut ne sont pas toujours la même chose : « depuis le n° 7 »
     // vaut « 7 », « toutes les pièces » vaut la chaîne vide. Le champ montre le libellé, la
     // valeur est gardée à côté. Pour un champ libre (un compte, un nom) les deux se confondent.
@@ -73,6 +92,7 @@
     /** Poser la valeur depuis le code, sans rien déclencher : le champ suit ce qu'on lui donne. */
     function refleter(v) {
       valeur = v;
+      tape = false;
       const it = tous().find((x) => String(x.value) === String(v));
       input.value = it ? texteDe(it) : String(v == null ? '' : v);
       dernier = input.value;
@@ -84,6 +104,12 @@
       const q = sansAccent(filtre).trim();
       const liste = tous();
       vus = q ? liste.filter((it) => sansAccent(`${it.value} ${it.label || ''} ${it.hint || ''}`).includes(q)) : liste;
+      if (q) {
+        // ce qui s'écrit comme la frappe passe avant ce qui ne la contient que dans sa description :
+        // « décompte » tapé montre DECOMPTE avant AVANCE (« … réglé ensuite par un décompte »)
+        const rang = (it) => { const nom = sansAccent(`${it.value} ${it.label || ''}`); return nom.startsWith(q) ? 0 : (nom.includes(q) ? 1 : 2); };
+        vus = vus.map((it, i) => [rang(it), i, it]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((x) => x[2]);
+      }
       if (!vus.length) {
         pop.innerHTML = `<div class="combo-vide">${esc(opts.vide || 'Rien de connu qui corresponde.')}</div>`;
         actif = -1;
@@ -121,11 +147,13 @@
       actif = -1;
     }
     const estOuvert = () => ouverts.has(api);
-    function rafraichir() { if (estOuvert()) dessiner(input.value); }
+    const filtre = () => (tape ? input.value : '');
+    function rafraichir() { if (estOuvert()) dessiner(filtre()); }
 
     function poser(it) {
       input.value = texteDe(it);
       valeur = it.value;
+      tape = false;
       dernier = input.value;
       fermer();
       // Ces événements préviennent le reste de l'application (libellé, comptes proposés). Sans ce
@@ -140,43 +168,63 @@
     }
     function choisir(i) { if (vus[i]) poser(vus[i]); }
 
-    /** Mode strict : ce qui est tapé doit exister, sinon on revient à la dernière valeur connue. */
+    /**
+     * Mode strict : ce qui est tapé doit exister, sinon on revient à la dernière valeur connue.
+     *
+     * Un mot tapé en entier (« RECETTE », « Camp ») doit être POSÉ, pas seulement retenu : poser()
+     * prévient le <select> caché et le reste de la fiche. Sans cela le champ affichait RECETTE
+     * pendant que la pièce partait en REMBOURSEMENT — une entrée enregistrée en sortie.
+     */
     function reglerStrict() {
       if (!opts.strict) return;
-      const liste = tous();
-      const exact = liste.find((it) => texteDe(it) === input.value);
-      if (exact) { valeur = exact.value; dernier = input.value; return; }
-      // une seule correspondance en tapant : c'est celle-là qu'on voulait
-      const q = sansAccent(input.value).trim();
-      const candidats = q ? liste.filter((it) => sansAccent(`${it.value} ${it.label || ''}`).includes(q)) : [];
-      if (candidats.length === 1) { poser(candidats[0]); return; }
-      if (input.value !== dernier) input.value = dernier; // rien de connu : on remet ce qui valait
+      const it = designe(tous(), input.value);
+      if (!it) { if (input.value !== dernier) input.value = dernier; return; } // rien de connu : on remet ce qui valait
+      if (String(it.value) !== String(valeur)) { poser(it); return; }
+      input.value = texteDe(it); // « recette » tapé sur RECETTE : on remet l'écriture de la liste
+      dernier = input.value;
     }
 
     arrow.addEventListener('mousedown', (ev) => {
       ev.preventDefault(); // garder le curseur dans le champ
       if (estOuvert()) fermer(); else { ouvrir(''); input.focus(); }
     });
+    // Sous Windows, on clique n'importe où dans une liste déroulante pour l'ouvrir : viser la
+    // petite flèche n'est pas un geste qu'on devine. Une liste fermée s'ouvre donc au clic dans
+    // le champ, texte sélectionné pour que la frappe filtre ; un second clic la referme. Un champ
+    // libre (compte, nom) s'ouvre au clic quand il est vide : plein, on y clique pour corriger.
+    input.addEventListener('click', () => {
+      if (opts.strict) {
+        if (estOuvert()) { fermer(); return; }
+        ouvrir('');
+        input.select();
+      } else if (!estOuvert() && !input.value) ouvrir('');
+    });
+    input.addEventListener('focus', () => { if (opts.strict) input.select(); });
     input.addEventListener('input', () => {
       if (enPose) return;
+      tape = true;
       if (!opts.strict) valeur = input.value; // champ libre : ce qu'on tape est la valeur
       if (estOuvert() || input.value) { actif = -1; ouvrir(input.value); }
     });
     input.addEventListener('keydown', (ev) => {
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
         ev.preventDefault();
-        if (!estOuvert()) { ouvrir(input.value); }
+        if (!estOuvert()) {
+          ouvrir(filtre());
+          // premier appui : la liste s'ouvre sur la valeur en place, sans encore la quitter
+          if (!tape && actif >= 0) return;
+        }
         if (!vus.length) return;
         actif = ev.key === 'ArrowDown'
           ? (actif + 1) % vus.length
           : (actif <= 0 ? vus.length - 1 : actif - 1);
-        dessiner(input.value); montrerActif();
+        dessiner(filtre()); montrerActif();
       } else if (ev.key === 'Enter' && estOuvert()) {
         if (actif >= 0) { ev.preventDefault(); choisir(actif); }
         else if (opts.strict) { ev.preventDefault(); reglerStrict(); fermer(); }
       } else if (ev.key === 'Escape' && estOuvert()) {
         ev.preventDefault(); ev.stopPropagation();
-        if (opts.strict) input.value = dernier;
+        if (opts.strict) { input.value = dernier; tape = false; }
         fermer();
       } else if (ev.key === 'Tab') { reglerStrict(); fermer(); }
     });
@@ -225,6 +273,13 @@
     select.tabIndex = -1;
     select.dataset.comboPour = '1';
     select.parentNode.insertBefore(input, select);
+    // L'étiquette visait le <select> caché : un clic dessus ne menait nulle part. Elle vise
+    // maintenant le champ visible (qui s'ouvre alors comme au clic).
+    if (select.id) {
+      input.id = `${select.id}Liste`;
+      const etiquettes = doc.querySelectorAll ? doc.querySelectorAll(`label[for="${select.id}"]`) : [];
+      for (const l of Array.from(etiquettes)) l.htmlFor = input.id;
+    }
 
     const combo = attach(input, items, Object.assign({}, opts, {
       strict: true,
@@ -246,5 +301,5 @@
   /** Remet les champs d'affichage d'accord avec leurs <select>, après un remplissage par le code. */
   function syncAll() { for (const c of convertis) { try { c.sync(); } catch (e) { /* détaché */ } } }
 
-  return { attach, fromSelect, syncAll };
+  return { attach, fromSelect, syncAll, designe };
 });
