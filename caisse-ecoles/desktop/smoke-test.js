@@ -1283,7 +1283,7 @@ function verifierCopie() {
       S.state.storage.save = async () => { throw new Error('serveur injoignable (essai)'); };
       let leve = false;
       try { await S.saveReg(); } catch (e) { leve = true; } finally { S.state.storage.save = vrai; }
-      const dit = Array.from(document.querySelectorAll('.notice.err')).some((n) => /Registre non enregistré/.test(n.textContent) && /injoignable/.test(n.textContent));
+      const dit = Array.from(document.querySelectorAll('.notice.err')).some((n) => /Journal non enregistré/.test(n.textContent) && /injoignable/.test(n.textContent));
       // on retire les deux pièces de l'essai
       for (const no of [777, 778]) { const x = S.state.reg.pieces.find((q) => q.no === no); if (x) window.CaisseRegistre.removePiece(S.state.reg, x.id); }
       await S.saveReg();
@@ -1313,6 +1313,47 @@ function verifierCopie() {
   if (!menage.saute && menage.reste > menage.attendu) {
     console.log(`ATTENTION : ${menage.reste} pièce(s) au lieu de ${menage.attendu} — le prochain essai partirait faussé`);
     ok = false;
+  }
+
+  // La fenêtre et ses messages. confirm() et alert() sont des boîtes du programme, en français
+  // (« OK / Cancel » sinon) ; un message s'affiche à l'écran même au bas d'une page défilée ; une
+  // page qui refuse de partir (fiche en cours) retient la fermeture de la fenêtre, et la question
+  // est posée. Les boîtes sont interceptées : personne n'est là pour cliquer.
+  {
+    await app.evaluate(({ dialog }) => {
+      global.boitesVues = [];
+      global.vraieBoite = dialog.showMessageBox;
+      dialog.showMessageBox = async (a, b) => { const o = b || a; global.boitesVues.push({ buttons: o.buttons, defaultId: o.defaultId, cancelId: o.cancelId, message: o.message }); return { response: o.cancelId }; };
+    });
+    const reponses = await win.evaluate(() => { const supprimer = confirm('Supprimer la pièce n° 999 ?'); alert('Essai'); return { supprimer }; });
+    const boites = await app.evaluate(({ dialog }) => { dialog.showMessageBox = global.vraieBoite; return global.boitesVues; });
+    const vu = await win.evaluate(() => {
+      window.CaisseApp.showPanel('panelSaisie');
+      window.scrollTo(0, document.body.scrollHeight);
+      const d = window.CaisseAvis.afficher('ok', 'Essai de message');
+      const r = d.getBoundingClientRect();
+      const dedans = r.top >= 0 && r.bottom <= window.innerHeight && r.width > 200;
+      window.CaisseAvis.fermer(d);
+      window.scrollTo(0, 0);
+      return dedans;
+    });
+    await win.evaluate(() => { window.gardeEssai = (e) => { e.preventDefault(); e.returnValue = ''; }; window.addEventListener('beforeunload', window.gardeEssai); });
+    const fermeture = await app.evaluate(async ({ BrowserWindow, dialog }) => {
+      const w = BrowserWindow.getAllWindows().find((x) => /shell\.html/.test(x.webContents.getURL()));
+      const vraie = dialog.showMessageBoxSync;
+      let posee = null;
+      dialog.showMessageBoxSync = (a, b) => { const o = b || a; posee = o.message; return o.cancelId; }; // « Revenir à la fiche »
+      w.close();
+      await new Promise((r) => setTimeout(r, 1500));
+      dialog.showMessageBoxSync = vraie;
+      return { posee, ouverte: !w.isDestroyed() };
+    });
+    await win.evaluate(() => window.removeEventListener('beforeunload', window.gardeEssai));
+    console.log('fenêtre et messages :', JSON.stringify({ reponses, boites, messageALecran: vu, fermeture }));
+    if (reponses.supprimer !== false || !boites.length || boites[0].buttons.join(' / ') !== 'OK / Annuler' || boites[0].defaultId !== 1) throw new Error('confirm() n\'affiche pas « OK / Annuler » en français, avec « Annuler » par défaut pour une suppression');
+    if (!boites[1] || boites[1].buttons.join() !== 'OK') throw new Error('alert() n\'affiche pas sa boîte');
+    if (!vu) throw new Error('un message s\'affiche hors de l\'écran');
+    if (!fermeture.ouverte || !/fiche en cours/.test(fermeture.posee || '')) throw new Error('une fiche en cours ne retient pas la fermeture de la fenêtre');
   }
 
   await app.close();

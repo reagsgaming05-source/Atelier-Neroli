@@ -1,16 +1,17 @@
 /*
  * Compta Blonay – application fenêtrée (Electron) : une seule application pour les deux outils.
  *
- * La fenêtre a deux onglets. Le premier charge l'application autonome Caisse écoles
- * (app/Caisse-ecoles.html, produite par `npm run build:public` dans le dossier parent). Le second
- * affiche Décompte DGEO : sa version portable (dossier decompte/ à côté de l'exécutable) est
- * démarrée en mode --web dès l'ouverture, sur un port local libre, et arrêtée avec la fenêtre.
+ * La barre du haut de la fenêtre choisit l'outil. Caisse écoles est l'application autonome
+ * (app/Caisse-ecoles.html, produite par `npm run build:public` dans le dossier parent). Décompte
+ * DGEO est sa version portable (dossier decompte/ à côté de l'exécutable), démarrée en mode --web
+ * dès l'ouverture, sur un port local libre, arrêtée avec la fenêtre, et posée dans l'espace
+ * « Décompte DGEO » de la page Caisse écoles.
  * Les deux outils partagent le dossier de données `data/` à côté de l'exécutable et un pont :
  * chaque décompte terminé dans Décompte DGEO est proposé comme pièce DECOMPTE dans la caisse.
  * Rien n'est installé, rien n'est écrit dans le registre Windows, aucune connexion réseau
  * n'est ouverte vers l'extérieur.
  */
-const { app, BrowserWindow, WebContentsView, Menu, dialog, shell, session, ipcMain } = require('electron');
+const { app, BrowserWindow, WebContentsView, Menu, dialog, shell, session, ipcMain, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -21,6 +22,7 @@ const nativeOcr = require('./native-ocr.js');
 const dgeoProxy = require('./dgeo-proxy.js');
 const { creerVeille } = require('./veille.js');
 const emplacement = require('./emplacement.js');
+const D = require('./dialogues.js');
 
 const APP_TITLE = 'Compta Blonay';
 const PORTABLE_DIR = path.dirname(process.execPath);
@@ -61,6 +63,8 @@ setupUserData();
 // donnees.txt dans le profil.
 const DOSSIER_REGLAGE = () => (app.isPackaged ? PORTABLE_DIR : app.getPath('userData'));
 let donneesPartagees = emplacement.lireEmplacement(DOSSIER_REGLAGE(), process.env);
+/** Vrai si, le serveur ne répondant pas au démarrage, on travaille pour cette fois sur la caisse de ce PC. */
+let caisseSeparee = false;
 /** Racine des données de la caisse. */
 const DONNEES = () => (donneesPartagees ? donneesPartagees.chemin : app.getPath('userData'));
 
@@ -73,11 +77,13 @@ function versionConstruite() {
   try { return fs.readFileSync(path.join(PORTABLE_DIR, 'version.txt'), 'utf8').trim().split(/\s+/).slice(0, 3).join(' '); } catch (e) { return ''; }
 }
 
-// Journal du processus principal (data/caisse.log) : démarrage, erreurs, lecteur natif.
-// Comme decompte.log de Décompte DGEO, pour comprendre un problème sur un poste.
+// Fichier de suivi technique du processus principal (data/caisse.log) : démarrage, erreurs,
+// lecteur natif. Comme decompte.log de Décompte DGEO, pour comprendre un problème sur un poste.
+// (Pas un « journal » pour la personne : le journal, c'est celui de la caisse.)
+const FICHIER_SUIVI = () => path.join(app.getPath('userData'), 'caisse.log');
 function logLine(msg) {
   const line = `${new Date().toISOString()} ${msg}\n`;
-  try { fs.appendFileSync(path.join(app.getPath('userData'), 'caisse.log'), line); } catch (e) { /* ignore */ }
+  try { fs.appendFileSync(FICHIER_SUIVI(), line); } catch (e) { /* ignore */ }
   if (!app.isPackaged) process.stdout.write(line);
 }
 process.on('uncaughtException', (e) => { logLine(`ERREUR ${e && e.stack ? e.stack : e}`); });
@@ -107,7 +113,11 @@ let caisseView = null;
 let dgeoView = null;
 let activeTab = 'caisse';
 let dgeoEmbed = null; // zone (px CSS de la page Caisse écoles) où la page Décompte DGEO s'affiche, ou null
-const TAB_H = 46; // hauteur de la barre d'onglets (shell.html)
+const TAB_H = 46; // hauteur de la barre du haut (shell.html)
+/** La vue a-t-elle encore sa page ? Une fois fermée (voir fermerLesPages), `webContents` n'existe plus du tout. */
+const vivante = (v) => !!(v && v.webContents && !v.webContents.isDestroyed());
+/** L'espace ouvert dans la page, tel qu'elle l'annonce : { outil: 'caisse'|'dgeo', outilNom, espace }. */
+let espaceOuvert = { outil: 'caisse', outilNom: 'Caisse écoles', espace: '' };
 
 // La page Caisse écoles occupe toute la fenêtre sous la barre ; la page Décompte DGEO est posée
 // par-dessus, dans la zone que la barre latérale lui réserve (espace « Décompte DGEO »).
@@ -117,7 +127,7 @@ function layoutViews() {
   if (caisseView) { caisseView.setBounds({ x: 0, y: TAB_H, width: w, height: Math.max(0, h - TAB_H) }); caisseView.setVisible(true); }
   if (dgeoView) {
     if (dgeoEmbed) {
-      const z = caisseView ? caisseView.webContents.getZoomFactor() : 1;
+      const z = vivante(caisseView) ? caisseView.webContents.getZoomFactor() : 1; // pendant la fermeture, la page peut déjà être partie
       const r = (v) => Math.max(0, Math.round(v * z));
       dgeoView.setBounds({ x: r(dgeoEmbed.x), y: TAB_H + r(dgeoEmbed.y), width: Math.max(1, r(dgeoEmbed.width)), height: Math.max(1, r(dgeoEmbed.height)) });
       dgeoView.setVisible(true);
@@ -137,10 +147,32 @@ function caissePreferences() {
   };
 }
 
+/*
+ * Taille et position de la fenêtre, retenues d'une fois à l'autre dans le profil du poste
+ * (fenetre.json) : c'est un réglage de CE poste et de son écran, pas de la caisse partagée.
+ */
+const FICHIER_FENETRE = () => path.join(app.getPath('userData'), 'fenetre.json');
+function lirePlacement() {
+  let memo = null;
+  try { memo = JSON.parse(fs.readFileSync(FICHIER_FENETRE(), 'utf8')); } catch (e) { /* première ouverture */ }
+  let ecrans = [];
+  try { ecrans = screen.getAllDisplays().map((d) => d.workArea); } catch (e) { /* ignore */ }
+  return D.placementFenetre(memo, ecrans);
+}
+function retenirPlacement() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    const b = mainWindow.getNormalBounds();
+    fs.writeFileSync(FICHIER_FENETRE(), JSON.stringify({ x: b.x, y: b.y, width: b.width, height: b.height, agrandie: mainWindow.isMaximized() }));
+  } catch (e) { /* ignore */ }
+}
+
 function createWindow() {
+  const place = lirePlacement();
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 920,
+    width: place.width,
+    height: place.height,
+    ...(place.x != null ? { x: place.x, y: place.y } : {}),
     minWidth: 900,
     minHeight: 600,
     title: APP_TITLE,
@@ -149,23 +181,38 @@ function createWindow() {
     icon: path.join(__dirname, 'build', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'shell-preload.js'), contextIsolation: true, nodeIntegration: false },
   });
+  // La première fois, agrandie : à 1440 px, la fenêtre débordait d'un écran de portable et
+  // n'utilisait qu'une partie d'un grand écran. Agrandie au moment de s'afficher seulement
+  // (maximize() montrerait la fenêtre vide avant que la page soit prête).
+  const montrer = () => {
+    if (!mainWindow || mainWindow.isVisible()) return false;
+    if (place.agrandie) mainWindow.maximize();
+    mainWindow.show();
+    return true;
+  };
+  // le titre suit l'espace ouvert (voir « app:espace »), pas le titre de la barre du haut
   mainWindow.on('page-title-updated', (ev) => ev.preventDefault());
   mainWindow.loadFile(path.join(__dirname, 'shell.html'));
 
-  // Onglet 1 : Caisse écoles (application autonome)
+  // Caisse écoles (application autonome)
   caisseView = new WebContentsView({ webPreferences: caissePreferences() });
   mainWindow.contentView.addChildView(caisseView);
   caisseView.webContents.loadFile(path.join(__dirname, 'app', 'Caisse-ecoles.html'));
   // Le rapport de contrôle s'ouvre dans une fenêtre de l'application (imprimable avec Ctrl+P)
-  caisseView.webContents.setWindowOpenHandler(({ url }) => {
+  caisseView.webContents.setWindowOpenHandler(({ url, frameName }) => {
     if (url === 'about:blank' || url.startsWith('file:') || url.startsWith('blob:')) {
-      // rapport de contrôle, fiche PDF à imprimer (visionneuse PDF de Chromium, Ctrl+P), récapitulatifs
-      return { action: 'allow', overrideBrowserWindowOptions: { width: 1000, height: 860, title: `${APP_TITLE} – document`, autoHideMenuBar: true, webPreferences: { contextIsolation: true, nodeIntegration: false, plugins: true } } };
+      // rapport de contrôle, fiche PDF à imprimer (visionneuse PDF de Chromium, Ctrl+P), récapitulatifs.
+      // La fiche ouverte d'office à l'enregistrement, si la page la nomme « fichePdf » : une seule
+      // fenêtre, réutilisée, montrée sans prendre le clavier — sinon, pour trente pièces à la suite,
+      // le Ctrl+Entrée de la suivante partait dans la fenêtre du PDF.
+      const discrete = frameName === 'fichePdf';
+      return { action: 'allow', overrideBrowserWindowOptions: { width: 1000, height: 860, show: !discrete, title: `${APP_TITLE} – document`, autoHideMenuBar: true, webPreferences: { contextIsolation: true, nodeIntegration: false, plugins: true } } };
     }
     shell.openExternal(url);
     return { action: 'deny' };
   });
-  caisseView.webContents.once('did-finish-load', () => { if (mainWindow && !mainWindow.isVisible()) { mainWindow.show(); logLine('interface démarrée'); } });
+  caisseView.webContents.on('did-create-window', (w, details) => { if (details && details.frameName === 'fichePdf') w.showInactive(); });
+  caisseView.webContents.once('did-finish-load', () => { if (montrer()) logLine('interface démarrée'); });
 
   // La veille ne tourne que quand la page peut répondre. C'est elle qui lit les piles : tant que
   // son code n'est pas en place, un scan qui lui serait confié partirait dans le vide, et le
@@ -181,10 +228,18 @@ function createWindow() {
     if (veille) { veille.arreter(); logLine('veille en pause : la page se recharge'); }
   });
 
-  // Onglet 2 : Décompte DGEO (serveur local embarqué, démarré avec l'application)
-  dgeoView = new WebContentsView({ webPreferences: { contextIsolation: true, nodeIntegration: false } });
+  // Décompte DGEO (serveur local embarqué, démarré avec l'application). Son préchargement ne fait
+  // qu'une chose : des boîtes « OK / Annuler » en français (voir boites-preload.js).
+  dgeoView = new WebContentsView({ webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'boites-preload.js') } });
   mainWindow.contentView.addChildView(dgeoView);
   dgeoView.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  // Le bouton « Relancer » des pages d'attente (dgeoPlaceholder) : une adresse qui ne mène nulle
+  // part, interceptée ici. Le texte disait « Cliquez sur l'onglet », alors qu'il n'y a plus d'onglet.
+  dgeoView.webContents.on('will-navigate', (ev, url) => {
+    if (!String(url).startsWith(RELANCE_DGEO)) return;
+    ev.preventDefault();
+    launchDgeo().catch((e) => logLine(`Décompte DGEO : ${(e && e.message) || e}`));
+  });
   // même aspect que Caisse écoles : thème (police, couleurs, arrondis) injecté dans la page de Décompte DGEO
   dgeoView.webContents.on('did-finish-load', () => {
     if (!dgeoView || !dgeo.url || !dgeoView.webContents.getURL().startsWith(dgeo.url)) return;
@@ -197,10 +252,47 @@ function createWindow() {
   dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage du logiciel de décompte…', true));
   launchDgeo().catch((e) => logLine(`Décompte DGEO : ${(e && e.message) || e}`));
 
+  // Une fiche non enregistrée (ou un décompte en cours) ne part pas sans qu'on l'ait dit.
+  for (const [vue, nom] of [[caisseView, 'caisse'], [dgeoView, 'dgeo']]) {
+    vue.webContents.on('will-prevent-unload', (ev) => {
+      const r = dialog.showMessageBoxSync(mainWindow, D.boiteFermetureRefusee(nom));
+      if (D.quitterMalgre(r)) { ev.preventDefault(); return; } // preventDefault : on passe outre, la page se ferme
+      fermetureEnCours = false;
+      app.isQuitting = false; // « Quitter » du menu est annulé lui aussi : l'application continue
+    });
+  }
+  mainWindow.on('close', (ev) => {
+    retenirPlacement();
+    if (fermerLesPages()) ev.preventDefault();
+  });
   mainWindow.on('resize', layoutViews);
   mainWindow.on('closed', () => { mainWindow = null; caisseView = null; dgeoView = null; });
   layoutViews();
-  setTimeout(() => { if (mainWindow && !mainWindow.isVisible()) mainWindow.show(); }, 4000);
+  setTimeout(montrer, 4000);
+}
+
+/*
+ * Fermer la fenêtre, c'est d'abord demander à chaque page si elle peut partir : une fiche à moitié
+ * remplie (garde « beforeunload » de la page) ne doit pas disparaître en silence. Les vues posées
+ * dans la fenêtre ne reçoivent pas cet avertissement d'elles-mêmes : on les ferme une à une en le
+ * demandant (« will-prevent-unload » pose la question), et la fenêtre suit quand elles sont toutes
+ * parties. Renvoie vrai tant qu'il faut retenir la fermeture de la fenêtre.
+ */
+let fermetureEnCours = false;
+function fermerLesPages() {
+  const ouverte = vivante;
+  if (![caisseView, dgeoView].some(ouverte)) return false;
+  if (fermetureEnCours) return true;
+  fermetureEnCours = true;
+  // une vue après l'autre : deux questions à la fois se recouvriraient
+  const suivante = () => {
+    const v = [caisseView, dgeoView].find(ouverte);
+    if (!v) { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close(); return; }
+    if (!v.ecouteFermeture) { v.ecouteFermeture = true; v.webContents.once('destroyed', () => { if (fermetureEnCours) suivante(); }); }
+    v.webContents.close({ waitForBeforeUnload: true });
+  };
+  suivante();
+  return true;
 }
 
 let dgeoThemeCss = null;
@@ -214,20 +306,41 @@ function dgeoTheme() {
   return dgeoThemeCss;
 }
 
-function dgeoPlaceholder(title, message, spinner) {
-  const html = `<!doctype html><meta charset="utf-8"><title>${title}</title><body style="font-family:Inter,'Segoe UI',Arial,sans-serif;background:#f4f6fa;color:#0f172a;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center;max-width:560px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:34px 40px;box-shadow:0 1px 2px rgba(15,23,42,.05)">${spinner ? '<div style="width:34px;height:34px;margin:0 auto 16px;border:3px solid #e2e8f0;border-top-color:#2457d6;border-radius:50%;animation:s 1s linear infinite"></div><style>@keyframes s{to{transform:rotate(360deg)}}</style>' : ''}<h2 style="margin:0 0 8px;font-size:18px;letter-spacing:-.01em">${title}</h2><p style="color:#64748b;margin:0;line-height:1.5">${message}</p>${spinner ? '<p style="color:#94a3b8;font-size:12.5px;margin:12px 0 0">Cela prend quelques secondes au premier lancement…</p>' : ''}</div></body>`;
+// Adresse du bouton « Relancer » des pages d'attente : jamais chargée, interceptée par
+// « will-navigate » (voir createWindow). Un domaine en .invalid n'existe nulle part.
+const RELANCE_DGEO = 'http://relancer.compta-blonay.invalid/';
+const echapper = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/**
+ * Page affichée à la place de Décompte DGEO quand il démarre, s'est arrêté ou manque.
+ * `opts.relancer` : texte d'un bouton qui le relance ; `opts.technique` : le détail, sur une petite
+ * ligne à part, pour la personne qui s'occupe de l'informatique.
+ */
+function dgeoPlaceholder(title, message, spinner, opts) {
+  const o = opts || {};
+  const bouton = o.relancer ? `<p style="margin:18px 0 0"><a href="${RELANCE_DGEO}" style="display:inline-block;background:#2457d6;color:#fff;text-decoration:none;font-weight:600;padding:9px 18px;border-radius:8px">${echapper(o.relancer)}</a></p>` : '';
+  const technique = o.technique ? `<p style="color:#94a3b8;font-size:12px;margin:18px 0 0;line-height:1.45">Pour la personne qui s'occupe de l'informatique : ${echapper(o.technique)} (détails : menu Aide, fichier de suivi technique).</p>` : '';
+  const html = `<!doctype html><meta charset="utf-8"><title>${echapper(title)}</title><body style="font-family:Inter,'Segoe UI',Arial,sans-serif;background:#f4f6fa;color:#0f172a;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center;max-width:560px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:34px 40px;box-shadow:0 1px 2px rgba(15,23,42,.05)">${spinner ? '<div style="width:34px;height:34px;margin:0 auto 16px;border:3px solid #e2e8f0;border-top-color:#2457d6;border-radius:50%;animation:s 1s linear infinite"></div><style>@keyframes s{to{transform:rotate(360deg)}}</style>' : ''}<h2 style="margin:0 0 8px;font-size:18px;letter-spacing:-.01em">${echapper(title)}</h2><p style="color:#64748b;margin:0;line-height:1.5">${echapper(message)}</p>${spinner ? '<p style="color:#94a3b8;font-size:12.5px;margin:12px 0 0">Cela prend quelques secondes au premier lancement…</p>' : ''}${bouton}${technique}</div></body>`;
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
 
 /* ---------------- Décompte DGEO : serveur local embarqué ---------------- */
 // Le dossier decompte/ (version portable de Décompte DGEO) est posé à côté de l'exécutable ;
-// son serveur est lancé en mode --web sur un port libre et affiché dans le second onglet.
+// son serveur est lancé en mode --web sur un port libre et affiché dans l'espace « Décompte DGEO ».
 // En développement : DECOMPTE_CMD (ex. « python -m decompte ») avec DECOMPTE_CWD.
 const dgeo = { proc: null, url: null, target: null, proxy: null, status: 'off', starting: null, lastExcelId: null, lastExcelAt: 0 };
 
-/** État de la fenêtre pour la barre d'onglets (et le test de fumée). */
+/**
+ * État de la fenêtre pour la barre du haut (et le test de fumée). `active` : la page Décompte DGEO
+ * est-elle posée à l'écran ; `outil` : l'outil de l'espace ouvert (le Récapitulatif des décomptes
+ * appartient à Décompte DGEO sans afficher sa page) ; `donnees` : ce que la barre dit de
+ * l'emplacement des données.
+ */
 function shellState() {
-  return { active: activeTab, embedded: !!dgeoEmbed, dgeo: dgeo.status, hasDgeo: !!dgeoCommand(), decomptes: loadDecomptes().filter((d) => !d.saisi).length };
+  return {
+    active: activeTab, outil: espaceOuvert.outil, embedded: !!dgeoEmbed, dgeo: dgeo.status, hasDgeo: !!dgeoCommand(),
+    decomptes: loadDecomptes().filter((d) => !d.saisi).length,
+    donnees: D.etiquetteDonnees({ partage: !!donneesPartagees, chemin: DONNEES(), separee: caisseSeparee }),
+  };
 }
 function pushShellState() {
   const st = shellState();
@@ -235,7 +348,7 @@ function pushShellState() {
   notifyCaisse('shell:state', st);
 }
 function notifyCaisse(channel, payload) {
-  if (caisseView && !caisseView.webContents.isDestroyed()) caisseView.webContents.send(channel, payload);
+  if (vivante(caisseView)) caisseView.webContents.send(channel, payload);
 }
 
 function dgeoCommand() {
@@ -293,21 +406,21 @@ async function startDgeo() {
     // Arrêt du programme : la passerelle qui le précède est fermée avec lui, sinon un relancement
     // laisserait l'ancienne à l'écoute. Le garde « dgeo.proc !== child » laisse tranquille un
     // programme déjà relancé, et l'arrêt volontaire (stopDgeo) qui a déjà tout remis à zéro.
-    const stopped = (title, detail, msg) => {
+    const stopped = (title, detail, msg, opts) => {
       if (dgeo.proc !== child) return;
       logLine(msg);
       dgeo.proc = null;
       if (dgeo.proxy) { try { dgeo.proxy.close(); } catch (e) { /* ignore */ } dgeo.proxy = null; }
       dgeo.url = null; dgeo.target = null;
       dgeo.status = dgeo.status === 'ready' ? 'off' : 'failed';
-      if (dgeoView && !app.isQuitting) dgeoView.webContents.loadURL(dgeoPlaceholder(title, detail));
+      if (dgeoView && !app.isQuitting) dgeoView.webContents.loadURL(dgeoPlaceholder(title, detail, false, opts));
       pushShellState();
     };
     // « error » : le programme n'a pas pu être lancé (introuvable, droits refusés, DECOMPTE_CMD
     // erroné). « exit » n'est alors jamais émis : sans cet écouteur, Node arrête l'application et
     // l'attente ci-dessous tournerait 90 secondes dans le vide.
-    child.on('error', (e) => stopped('Décompte DGEO n\'a pas pu démarrer', `Le logiciel de décompte n'a pas pu être lancé (${e.message}). Détails dans data/caisse.log.`, `Décompte DGEO : lancement impossible (${e.message})`));
-    child.on('exit', (code) => stopped('Décompte DGEO arrêté', "Le logiciel de décompte s'est arrêté. Cliquez sur l'onglet pour le relancer (détails dans data/caisse.log).", `Décompte DGEO arrêté (code ${code})`));
+    child.on('error', (e) => stopped("Décompte DGEO n'a pas pu démarrer", "Le module Décompte DGEO n'a pas pu être lancé sur ce PC.", `Décompte DGEO : lancement impossible (${e.message})`, { relancer: 'Réessayer', technique: `lancement impossible (${e.message})` }));
+    child.on('exit', (code) => stopped("Décompte DGEO s'est arrêté", "Le module Décompte DGEO s'est arrêté. Un décompte en cours, s'il y en avait un, est à reprendre.", `Décompte DGEO arrêté (code ${code})`, { relancer: 'Relancer Décompte DGEO', technique: `arrêt du programme (code ${code})` }));
     const url = `http://127.0.0.1:${port}/`;
     for (let i = 0; i < 180; i++) {
       if (!dgeo.proc) break;
@@ -343,11 +456,11 @@ function stopDgeo() {
   dgeo.status = 'off';
 }
 
-/** Démarre Décompte DGEO (à l'ouverture de la fenêtre, ou pour le relancer) et affiche sa page dans l'onglet. */
+/** Démarre Décompte DGEO (à l'ouverture de la fenêtre, ou pour le relancer) et affiche sa page. */
 async function launchDgeo() {
   if (!dgeoCommand()) {
     dgeo.status = 'missing';
-    if (dgeoView) dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO non inclus', "Le dossier « decompte » (version portable de Décompte DGEO) n'est pas à côté de ComptaBlonay.exe. Téléchargez le zip complet depuis la page Releases."));
+    if (dgeoView) dgeoView.webContents.loadURL(dgeoPlaceholder("Décompte DGEO n'est pas inclus", 'Le module Décompte DGEO manque dans le dossier du programme. Demandez à la personne qui a installé Compta Blonay de reprendre le zip complet depuis la page de téléchargement.', false, { technique: `dossier « decompte » absent à côté de ${path.basename(process.execPath)}` }));
     pushShellState();
     return null;
   }
@@ -356,7 +469,7 @@ async function launchDgeo() {
   const url = await startDgeo();
   if (!dgeoView) return url;
   if (url) { if (!dgeoView.webContents.getURL().startsWith(url)) dgeoView.webContents.loadURL(url); }
-  else dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO ne répond pas', "Le serveur local n'a pas démarré. Cliquez sur l'onglet pour réessayer ; détails dans data/caisse.log."));
+  else dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO ne répond pas', "Le module Décompte DGEO n'a pas démarré.", false, { relancer: 'Réessayer', technique: 'le serveur local de Décompte DGEO ne répond pas' }));
   pushShellState();
   return url;
 }
@@ -375,13 +488,42 @@ ipcMain.on('dgeo:embed', (ev, rect) => {
     else if (dgeo.status !== 'starting') launchDgeo().catch((e) => logLine(`Décompte DGEO : ${(e && e.message) || e}`)); // non démarré, arrêté ou en échec : nouvel essai
   }
 });
+// bouton « Décompte DGEO » de la fiche : la page de Décompte DGEO elle-même
 ipcMain.on('shell:tab', (ev, name) => { showTab(name === 'dgeo' ? 'dgeo' : 'caisse'); });
+// barre du haut : l'outil, rouvert là où on l'avait laissé (c'est la page qui s'en souvient)
+ipcMain.on('shell:outil', (ev, outil) => { notifyCaisse('app:outil', outil === 'dgeo' ? 'dgeo' : 'caisse'); });
+// barre du haut : l'emplacement des données, expliqué dans « L'année → Où sont les données »
+ipcMain.on('shell:donnees', () => { notifyCaisse('app:aller', { panel: 'panelAnnee', cible: 'carteEmplacement' }); });
+// La page annonce l'espace ouvert : le titre de la fenêtre le dit (barre des tâches, Alt+Tab),
+// et la barre du haut marque l'outil.
+ipcMain.on('app:espace', (ev, info) => {
+  const i = info && typeof info === 'object' ? info : {};
+  espaceOuvert = { outil: i.outil === 'dgeo' ? 'dgeo' : 'caisse', outilNom: String(i.outilNom || ''), espace: String(i.espace || '') };
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle(D.titreFenetre({ outil: espaceOuvert.outilNom, espace: espaceOuvert.espace }));
+  pushShellState();
+});
+// le détail technique d'une erreur que la page a reçue en français (voir preload.js)
+ipcMain.on('journal:erreur', (ev, texte) => { logLine(`erreur montrée à la page — ${String(texte).slice(0, 2000)}`); });
 // raccourcis de la barre latérale vers les sections de la page Décompte DGEO (ids de sa page)
 ipcMain.on('dgeo:scroll', (ev, sectionId) => {
   if (!dgeoView || dgeo.status !== 'ready' || !/^[a-z-]{1,40}$/.test(String(sectionId))) return;
   dgeoView.webContents.executeJavaScript(`(function(){var el=document.getElementById(${JSON.stringify(String(sectionId))});if(el&&!el.hidden){el.scrollIntoView({behavior:'smooth',block:'start'});}else{window.scrollTo({top:0,behavior:'smooth'});}})()`, true).catch(() => {});
 });
 ipcMain.handle('shell:state', () => shellState());
+
+/*
+ * confirm() et alert() de la page, en français (voir boites-preload.js). La page attend la
+ * réponse : elle arrive quand la boîte se ferme, sans bloquer le programme entre-temps (la veille
+ * des scans et Décompte DGEO continuent).
+ */
+function repondreBoite(ev, options, valeur) {
+  const parent = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+  (parent ? dialog.showMessageBox(parent, options) : dialog.showMessageBox(options))
+    .then((r) => { ev.returnValue = valeur(r.response); })
+    .catch(() => { ev.returnValue = false; });
+}
+ipcMain.on('boite:confirmer', (ev, texte) => repondreBoite(ev, D.boiteConfirmation(texte), (r) => r === 0));
+ipcMain.on('boite:avertir', (ev, texte) => repondreBoite(ev, D.boiteAlerte(texte), () => true));
 
 /* ---------------- Réglages (data/caisse/reglages.json) ---------------- */
 const SETTINGS_FILE = () => path.join(REG_ROOT(), 'reglages.json');
@@ -440,7 +582,7 @@ let scanSeq = 0;
 /** Confie un scan à la page et attend sa réponse. Sans page, le fichier n'est pas pris. */
 function lireScanDansLaPage(nom, octets) {
   return new Promise((resolve) => {
-    if (!caisseView || caisseView.webContents.isDestroyed() || !caissePrete) { resolve({ ok: false, raison: "l'application n'est pas encore prête" }); return; }
+    if (!vivante(caisseView) || !caissePrete) { resolve({ ok: false, raison: "l'application n'est pas encore prête" }); return; }
     const id = ++scanSeq;
     scansEnCours.set(id, resolve);
     caisseView.webContents.send('scan:entrant', { id, nom, octets, auto: loadSettings().scanAuto === true });
@@ -635,7 +777,7 @@ const pendingClean = new Map();
 let cleanSeq = 0;
 function cleanDossierViaPage(bytes, filename) {
   return new Promise((resolve) => {
-    if (!caisseView || caisseView.webContents.isDestroyed()) { resolve(null); return; }
+    if (!vivante(caisseView)) { resolve(null); return; }
     const id = ++cleanSeq;
     pendingClean.set(id, resolve);
     caisseView.webContents.send('dgeo:clean', { id, bytes, filename, skipFirst: loadSettings().dgeoSkipFirst !== false });
@@ -705,7 +847,7 @@ function recordDecompte(d) {
   const i = list.findIndex((x) => x.id === s.id);
   if (i >= 0) {
     const old = list[i];
-    s.excel = old.excel; s.saisi = old.saisi; s.pieceId = old.pieceId;
+    s.excel = old.excel; s.excelPoste = old.excelPoste; s.saisi = old.saisi; s.pieceId = old.pieceId;
     if (old.saisi && old.total !== s.total) logLine(`Décompte ${s.numero || s.id} refait (total ${old.total} → ${s.total}) alors que sa pièce comptable existe déjà : à vérifier.`);
     list[i] = s;
   } else list.push(s);
@@ -719,7 +861,7 @@ function recordDecompte(d) {
 function setupDgeoBridge() {
   const bodies = new Map();
   const filter = { urls: ['http://127.0.0.1/*'] };
-  const isExcel = (details) => !!dgeoView && details.webContentsId === dgeoView.webContents.id && details.method === 'POST' && /\/api\/excel(\?|$)/.test(details.url);
+  const isExcel = (details) => vivante(dgeoView) && details.webContentsId === dgeoView.webContents.id && details.method === 'POST' && /\/api\/excel(\?|$)/.test(details.url);
   session.defaultSession.webRequest.onBeforeRequest(filter, (details, cb) => {
     if (isExcel(details) && Array.isArray(details.uploadData) && details.uploadData.length) {
       try { bodies.set(details.id, Buffer.concat(details.uploadData.map((u) => (u.bytes ? Buffer.from(u.bytes) : Buffer.alloc(0)))).toString('utf8')); } catch (e) { logLine(`pont DGEO : ${e.message}`); }
@@ -746,11 +888,12 @@ ipcMain.handle('dgeo:mark', (ev, id, info) => {
   return true;
 });
 ipcMain.handle('dgeo:forget', (ev, id) => { saveDecomptes(loadDecomptes().filter((x) => x.id !== String(id))); pushShellState(); return true; });
+// true si le fichier s'ouvre ; sinon { message } : la liste des décomptes est partagée, mais le
+// fichier a pu être enregistré sur un autre poste
 ipcMain.handle('dgeo:open-excel', (ev, id) => {
   const d = loadDecomptes().find((x) => x.id === String(id));
-  if (!d || !d.excel || !fs.existsSync(d.excel)) return false;
-  shell.openPath(d.excel);
-  return true;
+  if (d && d.excel && fs.existsSync(d.excel)) { shell.openPath(d.excel); return true; }
+  return { message: D.messageExcelIntrouvable({ chemin: d && d.excel, poste: d && d.excelPoste, ici: os.hostname() }) };
 });
 
 // Téléchargement (si la boîte « Enregistrer sous » du navigateur n'est pas disponible) :
@@ -765,13 +908,19 @@ function setupDownloads() {
     const filters = [];
     if (ext && KNOWN[ext.toLowerCase()]) filters.push({ name: KNOWN[ext.toLowerCase()], extensions: [ext.toLowerCase()] });
     filters.push({ name: 'Tous les fichiers', extensions: ['*'] });
+    // Le fichier Excel d'un décompte, quand les données sont partagées : dans le dossier
+    // « Décomptes » du serveur, pour que « Ouvrir l'Excel » marche aussi depuis le poste d'une
+    // collègue (dans les Documents d'un PC, il n'est visible que de ce PC).
+    const duDecompte = !!(vivante(dgeoView) && wc && wc.id === dgeoView.webContents.id);
+    let dossier = app.getPath('documents');
+    if (duDecompte && donneesPartagees) { try { fs.mkdirSync(DECOMPTES(), { recursive: true }); dossier = DECOMPTES(); } catch (e) { /* les Documents, à défaut */ } }
     item.setSaveDialogOptions({
       title: 'Enregistrer le fichier',
-      defaultPath: path.join(app.getPath('documents'), name),
+      defaultPath: path.join(dossier, name),
       filters,
     });
     // fichier Excel d'un décompte DGEO : son emplacement est retenu avec le décompte (pont)
-    if (dgeoView && wc && wc.id === dgeoView.webContents.id) {
+    if (duDecompte) {
       item.once('done', (e, state) => {
         if (state !== 'completed') return;
         const list = loadDecomptes();
@@ -780,7 +929,7 @@ function setupDownloads() {
         // emplacement sur le plus récent
         const fresh = dgeo.lastExcelId && Date.now() - (dgeo.lastExcelAt || 0) < 5 * 60 * 1000 ? list.find((x) => x.id === dgeo.lastExcelId) : null;
         const d = fresh || list.slice().reverse().find((x) => !x.saisi);
-        if (d) { d.excel = item.getSavePath(); saveDecomptes(list); notifyCaisse('dgeo:new', d); }
+        if (d) { d.excel = item.getSavePath(); d.excelPoste = os.hostname(); saveDecomptes(list); notifyCaisse('dgeo:new', d); }
       });
     }
   });
@@ -794,37 +943,69 @@ function zoomActive(delta) {
   layoutViews();
 }
 
+/**
+ * Le mode d'emploi livré avec le programme. Sur un PC installé depuis le serveur, le dossier du
+ * programme est caché dans le profil Windows : sans ce menu, personne ne le retrouve.
+ */
+function ouvrirModeEmploi() {
+  const f = [path.join(PORTABLE_DIR, 'LISEZMOI-portable.txt'), path.join(__dirname, 'build', 'LISEZMOI-portable.txt')].find((p) => fs.existsSync(p));
+  if (f) { shell.openPath(f); return; }
+  dialog.showMessageBox(mainWindow, { type: 'info', title: APP_TITLE, message: "Le mode d'emploi est introuvable", detail: `Il devrait se trouver à côté du programme : ${path.join(PORTABLE_DIR, 'LISEZMOI-portable.txt')}.`, buttons: ['OK'], noLink: true });
+}
+
+function aPropos() {
+  const names = namesFile();
+  const t = nativeOcr.detect(PORTABLE_DIR);
+  const { message, detail } = D.texteAPropos({
+    construction: versionConstruite(),
+    donnees: DONNEES(),
+    partage: !!donneesPartagees,
+    programme: PORTABLE_DIR,
+    suivi: FICHIER_SUIVI(),
+    noms: names,
+    tesseract: t ? `${t.version}${t.legacy ? ' + moteur historique' : ''}` : 'non trouvé (dossier tesseract/ absent)',
+    dgeo: dgeoCommand() ? (dgeo.status === 'ready' ? `en service (${dgeo.url})` : dgeo.status === 'starting' ? 'démarrage…' : 'inclus, arrêté') : 'non inclus',
+    electron: process.versions.electron,
+    chromium: process.versions.chrome,
+  });
+  dialog.showMessageBox(mainWindow, { type: 'info', title: `À propos de ${APP_TITLE}`, message, detail, buttons: ['OK'], noLink: true });
+}
+
 function buildMenu() {
   const template = [
     {
       label: 'Fichier',
       submenu: [
-        { label: 'Ouvrir le dossier des données (registres, justificatifs, journal)', click: () => shell.openPath(DONNEES()) },
+        // « journaux » : ceux de la caisse, un par année (le fichier de suivi technique est dans le menu Aide)
+        { label: 'Ouvrir le dossier des données (journaux, justificatifs, scans)', click: () => shell.openPath(DONNEES()) },
         { type: 'separator' },
         { label: 'Quitter', accelerator: 'Alt+F4', role: 'quit' },
       ],
     },
     {
       label: 'Affichage',
+      // « Recharger l'application » n'y est plus : c'était un outil de mise au point, qui effaçait
+      // une fiche en cours de saisie.
       submenu: [
         { label: 'Agrandir', accelerator: 'CmdOrCtrl+=', click: () => zoomActive(0.1) },
         { label: 'Réduire', accelerator: 'CmdOrCtrl+-', click: () => zoomActive(-0.1) },
         { label: 'Taille normale', accelerator: 'CmdOrCtrl+0', click: () => zoomActive(0) },
         { type: 'separator' },
         { label: 'Plein écran', role: 'togglefullscreen' },
-        { type: 'separator' },
-        { label: 'Recharger l\'application', accelerator: 'CmdOrCtrl+R', click: () => { const v = activeTab === 'dgeo' ? dgeoView : caisseView; if (v) v.webContents.reload(); } },
       ],
     },
     {
       label: 'Espaces',
       submenu: [
+        { label: 'Caisse écoles', enabled: false },
         { label: 'Saisie des pièces', accelerator: 'CmdOrCtrl+1', click: () => openPanel('panelSaisie') },
         { label: 'Pièces scannées', accelerator: 'CmdOrCtrl+2', click: () => openPanel('panelScan') },
         { label: 'Boîte de réception', accelerator: 'CmdOrCtrl+3', click: () => openPanel('panelReception') },
         { label: 'Compter la caisse', accelerator: 'CmdOrCtrl+4', click: () => openPanel('panelCaisse') },
         { label: "L'année", accelerator: 'CmdOrCtrl+5', click: () => openPanel('panelAnnee') },
-        { label: 'Données', accelerator: 'CmdOrCtrl+6', click: () => openPanel('panelDonnees') },
+        { label: 'Listes (comptes, classes, noms)', accelerator: 'CmdOrCtrl+6', click: () => openPanel('panelDonnees') },
+        { type: 'separator' },
+        { label: 'Décompte DGEO', enabled: false },
         { label: 'Décompte DGEO', accelerator: 'CmdOrCtrl+7', click: () => openPanel('panelDgeo') },
         { label: 'Récapitulatif des décomptes', accelerator: 'CmdOrCtrl+8', click: () => openPanel('panelRecap') },
       ],
@@ -832,28 +1013,12 @@ function buildMenu() {
     {
       label: 'Aide',
       submenu: [
-        {
-          label: `À propos de ${APP_TITLE}`,
-          click: () => {
-            const names = namesFile();
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: `À propos de ${APP_TITLE}`,
-              message: `${APP_TITLE} ${app.getVersion()}`,
-              detail: 'Compta Blonay réunit en une seule application, dans deux onglets, Caisse écoles (saisie des pièces, ' +
-                'pièces scannées, journal, fichier Excel, PDF des pièces) et Décompte DGEO (courses d\'école & camps).\n\n' +
-                'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (lecture des PDF, ' +
-                'lectures croisées par OCR local, génération des fichiers Excel et décomptes se font dans cette fenêtre).\n\n' +
-                `Construction : ${versionConstruite() || 'inconnue (pas de version.txt)'}\n` +
-                `Programme : ${PORTABLE_DIR}\n` +
-                `Dossier des données : ${DONNEES()}${donneesPartagees ? ' (partagé)' : ''}\n` +
-                `Noms de personnes : ${names ? names : 'aucun fichier vocabulaire-noms.js (les noms s\'apprennent depuis un classeur)'}\n` +
-                `Troisième lecteur (Tesseract natif) : ${(() => { const t = nativeOcr.detect(PORTABLE_DIR); return t ? `${t.version}${t.legacy ? ' + moteur historique' : ''}` : 'non trouvé (dossier tesseract/ absent)'; })()}\n\n` +
-                `Décompte DGEO : ${dgeoCommand() ? (dgeo.status === 'ready' ? `en service (${dgeo.url})` : dgeo.status === 'starting' ? 'démarrage…' : 'inclus, arrêté') : 'non inclus'}\n` +
-                `Electron ${process.versions.electron} – Chromium ${process.versions.chrome}`,
-            });
-          },
-        },
+        { label: "Mode d'emploi", accelerator: 'F1', click: ouvrirModeEmploi },
+        { label: 'Où sont mes données ?', click: () => notifyCaisse('app:aller', { panel: 'panelAnnee', cible: 'carteEmplacement' }) },
+        { type: 'separator' },
+        { label: "Pour l'informatique : fichier de suivi technique (caisse.log)", click: () => shell.openPath(FICHIER_SUIVI()) },
+        { type: 'separator' },
+        { label: `À propos de ${APP_TITLE}`, click: aPropos },
       ],
     },
   ];
@@ -862,6 +1027,8 @@ function buildMenu() {
 
 app.on('second-instance', () => {
   if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
+  // encore au démarrage (serveur qui tarde, question posée) : on montre où l'on en est
+  else if (attente && !attente.isDestroyed()) { attente.show(); attente.focus(); }
 });
 
 /* ---------------- Registre des pièces : fichiers de l'application ---------------- */
@@ -884,17 +1051,51 @@ function relancer() {
   // après la réponse à la page, pour qu'elle ait le temps d'afficher ce qu'on lui dit
   setTimeout(() => { app.relaunch(); app.exit(0); }, 600);
 }
-ipcMain.handle('donnees:etat', () => ({
-  partage: !!donneesPartagees,
-  chemin: DONNEES(),
-  source: donneesPartagees ? donneesPartagees.source : null,
-  poste: app.getPath('userData'),
-  reglage: path.join(DOSSIER_REGLAGE(), emplacement.FICHIER),
-  // posé par l'informatique (variable d'environnement) : ce n'est pas à l'écran de le changer
-  modifiable: !donneesPartagees || donneesPartagees.source === emplacement.FICHIER,
-}));
+/*
+ * Un poste installé depuis le serveur (« Installer sur ce PC ») reçoit à chaque lancement le
+ * donnees.txt du dossier du programme sur le serveur (voir build/Compta Blonay.cmd) : un
+ * emplacement choisi ici ne tiendrait que jusqu'au lancement suivant. « Ce poste ne les verra
+ * plus » était faux. Vrai seulement si le serveur a bien un donnees.txt (sinon le lanceur garde
+ * celui du poste) ; un serveur qui ne répond pas dans les 3 s ne bloque rien.
+ */
+async function emplacementFixeParLeServeur() {
+  if (!app.isPackaged || !D.installeDepuisServeur({ localAppData: process.env.LOCALAPPDATA, programme: PORTABLE_DIR, existe: fs.existsSync, sep: path.sep })) return false;
+  let serveur = '';
+  try { serveur = fs.readFileSync(path.join(process.env.LOCALAPPDATA, 'ComptaBlonay-serveur.txt'), 'utf8').trim(); } catch (e) { return false; }
+  if (!serveur) return false;
+  const essai = fs.promises.access(path.join(serveur, emplacement.FICHIER)).then(() => true, () => false);
+  return Promise.race([essai, new Promise((r) => setTimeout(() => r(false), 3000))]);
+}
+/** Pourquoi l'emplacement ne se change pas d'ici (texte montré dans « Où sont les données »), ou ''. */
+async function emplacementBloque() {
+  if (caisseSeparee) {
+    return "Pour cette fois, Compta Blonay travaille sur la caisse de ce PC : le dossier des données du serveur ne répondait pas au démarrage. "
+      + "Ce qui est saisi ici n'apparaîtra pas chez les collègues. Au prochain lancement, Compta Blonay cherchera de nouveau le serveur.";
+  }
+  if (await emplacementFixeParLeServeur()) {
+    return "Sur ce PC, l'emplacement des données est repris à chaque lancement du dossier du programme sur le serveur (fichier donnees.txt) : "
+      + "c'est ce fichier du serveur qu'il faut changer, et tous les postes suivront.";
+  }
+  return '';
+}
+ipcMain.handle('donnees:etat', async () => {
+  const note = await emplacementBloque();
+  return {
+    partage: !!donneesPartagees,
+    chemin: DONNEES(),
+    source: donneesPartagees ? donneesPartagees.source : null,
+    poste: app.getPath('userData'),
+    reglage: path.join(DOSSIER_REGLAGE(), emplacement.FICHIER),
+    // posé par l'informatique (variable d'environnement) ou par le serveur : ce n'est pas à l'écran de le changer
+    modifiable: !note && (!donneesPartagees || donneesPartagees.source === emplacement.FICHIER),
+    separee: caisseSeparee,
+    note,
+  };
+});
 ipcMain.handle('donnees:choisir', async () => {
   if (donneesPartagees && donneesPartagees.source !== emplacement.FICHIER) return { change: false, erreur: 'L\'emplacement est fixé par l\'informatique (COMPTA_DONNEES).' };
+  const bloque = await emplacementBloque();
+  if (bloque) return { change: false, erreur: bloque };
   const r = await dialog.showOpenDialog(mainWindow, {
     title: 'Dossier des données partagées — tapez l\'adresse \\\\SERVEUR\\partage en haut',
     properties: ['openDirectory', 'createDirectory'],
@@ -905,7 +1106,10 @@ ipcMain.handle('donnees:choisir', async () => {
   const courant = DONNEES();
   if (path.resolve(cible) === path.resolve(courant)) return { change: false, erreur: 'Ce sont déjà les données utilisées.' };
   const v = await emplacement.verifierDossier(cible);
-  if (!v.ok) return { change: false, erreur: `Ce dossier n'est pas utilisable : ${v.raison}` };
+  if (!v.ok) {
+    logLine(`dossier des données refusé : ${cible} — ${v.raison}`);
+    return { change: false, erreur: `Ce dossier n'est pas utilisable : ${D.expliquerErreur(v.raison, { reseau: estReseau(cible) }).texte}.` };
+  }
   const dejaUneCaisse = fs.existsSync(path.join(cible, 'caisse'));
   let copie = null;
   if (!dejaUneCaisse && fs.existsSync(path.join(courant, 'caisse'))) {
@@ -924,7 +1128,10 @@ ipcMain.handle('donnees:choisir', async () => {
     if (q.response === 2) return { change: false };
     if (q.response === 0) {
       try { copie = await emplacement.copierSiVide(courant, cible); }
-      catch (e) { return { change: false, erreur: `La copie a échoué, rien n'a été changé : ${(e && e.message) || e}` }; }
+      catch (e) {
+        logLine(`copie des données vers ${cible} : ${(e && e.message) || e}`);
+        return { change: false, erreur: `La copie a échoué, rien n'a été changé : ${D.expliquerErreur(e, { reseau: estReseau(cible) }).texte}.` };
+      }
     }
   }
   try { emplacement.ecrireEmplacement(DOSSIER_REGLAGE(), cible); }
@@ -934,8 +1141,9 @@ ipcMain.handle('donnees:choisir', async () => {
   return { change: true, chemin: cible, dejaUneCaisse, copie };
 });
 ipcMain.handle('donnees:ouvrir', () => { try { fs.mkdirSync(DONNEES(), { recursive: true }); } catch (e) { /* signalé par l'explorateur */ } return shell.openPath(DONNEES()); });
-ipcMain.handle('donnees:local', () => {
+ipcMain.handle('donnees:local', async () => {
   if (!donneesPartagees || donneesPartagees.source !== emplacement.FICHIER) return { change: false };
+  if (await emplacementBloque()) return { change: false };
   emplacement.ecrireEmplacement(DOSSIER_REGLAGE(), null);
   logLine(`retour aux données du poste : ${app.getPath('userData')}`);
   relancer();
@@ -1030,38 +1238,82 @@ ipcMain.handle('ocr:info', () => {
 });
 ipcMain.handle('ocr:recognize', (ev, png, opts) => nativeOcr.recognize(png, opts, PORTABLE_DIR));
 
+/*
+ * Une petite fenêtre pendant qu'on attend le serveur. Un serveur éteint fait attendre Windows
+ * jusqu'à 15 s (voir emplacement.js), avant et après chaque « Réessayer » : sans elle, rien ne
+ * s'affichait, on double-cliquait de nouveau, et la seconde ouverture se fermait sans un mot.
+ * Elle sert aussi de fenêtre aux questions du démarrage (sinon posées sur un bureau vide).
+ */
+let attente = null;
+function montrerAttente(titre, texte) {
+  if (!attente || attente.isDestroyed()) {
+    attente = new BrowserWindow({
+      width: 540, height: 230, resizable: false, maximizable: false, fullscreenable: false, show: false,
+      title: APP_TITLE, backgroundColor: '#f4f6fa', autoHideMenuBar: true,
+      icon: path.join(__dirname, 'build', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
+    });
+    attente.setMenuBarVisibility(false);
+    attente.once('ready-to-show', () => { if (attente && !attente.isDestroyed()) attente.show(); });
+  }
+  const html = `<!doctype html><meta charset="utf-8"><title>${APP_TITLE}</title><body style="font-family:'Segoe UI',Inter,Arial,sans-serif;background:#f4f6fa;color:#0f172a;margin:0;padding:26px 30px"><h2 style="margin:0 0 10px;font-size:17px">${echapper(titre)}</h2><p style="margin:0;color:#475569;line-height:1.5;white-space:pre-line">${echapper(texte)}</p></body>`;
+  attente.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+}
+function fermerAttente() { if (attente && !attente.isDestroyed()) attente.destroy(); attente = null; }
+
+/** La caisse gardée sur ce PC (son profil) : l'année la plus récente et son nombre de pièces, ou null. */
+function caisseLocale() {
+  const racine = path.join(app.getPath('userData'), 'caisse');
+  let annees = [];
+  try {
+    annees = fs.readdirSync(racine).filter(yearOk).map((a) => {
+      try {
+        const r = JSON.parse(fs.readFileSync(path.join(racine, a, 'registre.json'), 'utf8'));
+        return { annee: Number(a), pieces: Array.isArray(r.pieces) ? r.pieces.length : 0 };
+      } catch (e) { return null; }
+    }).filter(Boolean);
+  } catch (e) { /* aucune caisse sur ce PC */ }
+  return D.resumeCaisse(annees);
+}
+
 /**
  * Les données partagées sont-elles joignables ? Sinon, on ne s'ouvre pas sur autre chose.
  *
  * Retomber en silence sur les données du poste serait pire que tout : on saisirait dans un
  * registre à part, qui ne rejoindrait jamais celui du serveur — deux caisses pour une. La personne
- * choisit donc : réessayer (le serveur démarrait, le réseau revenait), quitter, ou revenir pour de
- * bon aux données de ce PC, en le sachant.
+ * choisit donc : réessayer (le serveur démarrait, le réseau revenait), quitter, ou travailler pour
+ * cette fois sur la caisse de ce PC, après avoir lu ce qu'elle contient et ce que deviendra ce
+ * qu'elle y saisit.
+ *
+ * « Pour cette fois » : donnees.txt n'est plus effacé. L'ancien « Revenir aux données de ce PC »
+ * l'effaçait, et sur un PC installé depuis le serveur le lanceur le remettait au démarrage
+ * suivant : les pièces saisies la veille « disparaissaient » dans une caisse que plus rien
+ * n'ouvrait. Désormais le poste revient de lui-même au serveur, et l'écran le dit tout le temps
+ * (barre du haut en orange).
  */
 async function assurerDonnees() {
   if (!donneesPartagees) return true;
+  const chemin = donneesPartagees.chemin;
   for (;;) {
-    const v = await emplacement.verifierDossier(donneesPartagees.chemin);
-    if (v.ok) { logLine(`données partagées joignables : ${donneesPartagees.chemin}`); return true; }
-    logLine(`données partagées injoignables : ${donneesPartagees.chemin} — ${v.raison}`);
-    const revenir = donneesPartagees.source === emplacement.FICHIER; // une variable d'environnement ne s'efface pas d'ici
-    const r = await dialog.showMessageBox({
-      type: 'warning',
-      title: APP_TITLE,
-      message: 'Le dossier des données est injoignable',
-      detail: `${donneesPartagees.chemin}\n\n${v.raison}\n\nLes registres de la caisse sont dans ce dossier. L'application ne s'ouvre pas sans lui : `
-        + 'travailler sur une copie à part ferait deux registres qui ne se rejoindraient plus.\n\n'
-        + 'Vérifiez que le serveur est allumé et que ce PC est connecté au réseau de l\'école.',
-      buttons: revenir ? ['Réessayer', 'Quitter', 'Revenir aux données de ce PC'] : ['Réessayer', 'Quitter'],
-      defaultId: 0,
-      cancelId: 1,
-      noLink: true,
-    });
-    if (r.response === 0) continue;
-    if (r.response === 2 && revenir) {
-      emplacement.ecrireEmplacement(DOSSIER_REGLAGE(), null);
-      logLine(`retour aux données du poste : ${app.getPath('userData')} (les données du serveur restent où elles sont)`);
+    // la petite fenêtre ne s'ouvre que si la réponse tarde : un serveur qui répond ne fait rien clignoter
+    const minuteur = setTimeout(() => montrerAttente('Connexion au dossier des données…', `${chemin}\n\nSi le serveur est éteint, Compta Blonay le dira dans 15 secondes au plus.`), 700);
+    const v = await emplacement.verifierDossier(chemin);
+    clearTimeout(minuteur);
+    if (v.ok) { logLine(`données partagées joignables : ${chemin}`); return true; }
+    logLine(`données partagées injoignables : ${chemin} — ${v.raison}`);
+    montrerAttente('Le dossier des données ne répond pas', `${chemin}\n\nRépondez à la question affichée.`);
+    const raison = D.expliquerErreur(v.raison, { reseau: estReseau(chemin) }).texte;
+    let choix;
+    for (;;) {
+      choix = (await dialog.showMessageBox(attente, D.boiteDossierInjoignable({ chemin, raison, separeePossible: true }))).response;
+      if (choix !== 2) break;
+      const c = await dialog.showMessageBox(attente, D.boiteCaisseSeparee(caisseLocale()));
+      if (c.response === 1) break; // sinon : retour à la première question
+    }
+    if (choix === 0) continue;
+    if (choix === 2) {
+      logLine(`serveur injoignable : pour cette fois, caisse de ce poste (${app.getPath('userData')}) ; donnees.txt reste en place`);
       donneesPartagees = null;
+      caisseSeparee = true;
       return true;
     }
     app.quit();
@@ -1077,11 +1329,15 @@ app.whenReady().then(async () => {
   setupDgeoBridge();
   buildMenu();
   createWindow();
+  // la petite fenêtre d'attente s'efface quand la vraie s'affiche
+  if (attente) { mainWindow.once('show', fermerAttente); if (mainWindow.isVisible()) fermerAttente(); }
   // la veille démarre quand la page Caisse écoles a fini de charger (voir createWindow) : après la
   // fenêtre, pour qu'un partage injoignable ne retienne pas l'ouverture, et jamais avant que la
   // page puisse répondre — sinon le premier scan du matin part « à revoir » sans avoir été lu
 });
 
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', () => { app.isQuitting = true; if (veille) veille.arreter(); stopDgeo(); });
-app.on('will-quit', stopDgeo);
+// La veille et Décompte DGEO ne s'arrêtent qu'une fois les fenêtres vraiment fermées : « Quitter »
+// peut encore être annulé par la question sur une fiche non enregistrée.
+app.on('before-quit', () => { app.isQuitting = true; });
+app.on('will-quit', () => { if (veille) veille.arreter(); stopDgeo(); });

@@ -40,6 +40,8 @@
       "dgeo-proxy.js",
       "veille.js",
       "emplacement.js",
+      "dialogues.js",
+      "boites-preload.js",
       "dgeo-theme.css",
       "app/**",
       "!app/README.md"
