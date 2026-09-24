@@ -106,30 +106,55 @@ rafraîchie au lancement.
     \\SERVEUR\Partage\ComptaBlonay\           le programme : la seule copie à remplacer
     \\SERVEUR\Partage\ComptaBlonay-donnees\   la caisse de tout le monde
 
-1. Sur le PC qui tient la caisse aujourd'hui, avec cette version : *Changer de dossier…* vers
-   `ComptaBlonay-donnees` et *Emporter* (voir plus haut). Dans cet ordre : un PC installé depuis
-   le serveur part d'une copie neuve, sans les registres de l'ancienne.
-2. Le dossier `ComptaBlonay` du zip sur le serveur, avec à côté de l'exécutable un `donnees.txt`
-   qui désigne `ComptaBlonay-donnees` — tous les postes le reçoivent.
-3. Sur chaque PC, une fois : double-clic sur **Installer sur ce PC** dans le dossier du serveur.
-   Le programme est copié dans `%LOCALAPPDATA%\ComptaBlonay` (le profil de la personne, sans
-   droits d'administrateur), et un raccourci **Compta Blonay** posé sur le bureau.
+1. Sur le PC qui tient la caisse aujourd'hui, avec cette version : *Mettre les données sur le
+   serveur…* vers `ComptaBlonay-donnees` et *Emporter* (voir plus haut). Dans cet ordre : un PC
+   installé depuis le serveur part d'une copie neuve, sans les registres de l'ancienne.
+2. Compta Blonay fermé, le dossier `ComptaBlonay` du zip sur le serveur, **à côté** de
+   `ComptaBlonay-donnees`.
+3. Sur chaque PC, une fois : double-clic sur **Installer sur ce PC**, dans le sous-dossier
+   *Installation sur plusieurs PC* du dossier du serveur. Le programme est copié dans
+   `%LOCALAPPDATA%\ComptaBlonay` (le profil de la personne, sans droits d'administrateur), et un
+   raccourci **Compta Blonay** posé sur le bureau.
 
-Ce raccourci lance `Compta Blonay.cmd` (recopié hors du dossier du programme, qu'une mise à jour
+L'installateur fait lui-même ce qui se ratait à la main :
+
+- **Le dossier des données.** S'il n'y a pas encore de `donnees.txt` dans le dossier du programme
+  sur le serveur et qu'un dossier `ComptaBlonay-donnees` (avec sa caisse) est à côté, il écrit ce
+  `donnees.txt`, une fois pour tous les postes. Une lettre de lecteur réseau (`S:\…`) y est notée
+  sous son adresse `\\…`, la même sur tous les PC. S'il ne trouve rien, il prévient que ce PC
+  aurait sa propre caisse, séparée de celle des collègues, et demande avant de continuer. Il
+  affiche à la fin d'où vient le programme et où sont les données.
+- **Pas depuis un dossier local.** Lancé depuis un dossier du PC (le zip décompressé sur le Bureau,
+  par exemple), il explique que pour un seul PC il suffit d'ouvrir `ComptaBlonay.exe`, et demande
+  avant de continuer.
+- **Compta Blonay ouvert sur ce PC.** Il demande de le fermer, puis continue : des fichiers
+  verrouillés ne se copient pas.
+- **La fin se voit.** « Installation terminée », le raccourci à utiliser désormais, puis
+  l'application démarre.
+
+Le raccourci lance `%LOCALAPPDATA%\ComptaBlonay-lanceur.cmd`, une copie de
+`Installation sur plusieurs PC\lanceur.cmd` rangée hors du dossier du programme (qu'une mise à jour
 réécrit). Il compare le `version.txt` du serveur à celui du PC — un par construction : commit,
-numéro, date — et ne recopie que s'ils diffèrent ; sinon le démarrage est immédiat. La copie
-(`robocopy /MIR`) rend le PC identique au serveur, fichiers retirés compris, sauf le profil
-`data\` du poste ; `version.txt` n'est noté qu'à la fin, si bien qu'une copie interrompue est
-reprise au lancement suivant au lieu de passer pour faite. `donnees.txt` et `vocabulaire-noms.js`
-viennent du serveur quand il en a, et le PC garde les siens sinon.
+numéro, date — et ne recopie que s'ils diffèrent ; sinon le démarrage est immédiat. La fenêtre
+noire dit ce qu'elle fait : « Recherche d'une nouvelle version sur le serveur… », « Copie du
+programme sur ce PC… » à la première installation, « Mise à jour… » ensuite, et « Le serveur ne
+répond pas » quand il est éteint. La copie (`robocopy /MIR`) rend le PC identique au serveur,
+fichiers retirés compris, sauf le profil `data\` du poste ; `version.txt` n'est noté qu'à la fin,
+si bien qu'une copie interrompue est reprise au lancement suivant au lieu de passer pour faite.
+`donnees.txt` et `vocabulaire-noms.js` viennent du serveur quand il en a, et le PC garde les siens
+sinon.
 
-Mettre à jour, c'est copier le contenu du nouveau zip par-dessus le dossier du serveur ; chaque
-PC suit à son prochain lancement. Ce qui ne copie pas : un PC où l'application est ouverte (des
-fichiers verrouillés, deux versions mélangées — il suivra la fois d'après), un serveur éteint (le
-PC démarre sa version), un second double-clic pendant une copie (il attend la fin : le lanceur
-tient un verrou que Windows relâche même si la fenêtre est fermée). Le lanceur se met lui-même à
-jour avec le programme. *Aide → À propos* dit quelle construction tourne sur le poste. Tout cela
-est éprouvé sous Windows par la construction, installation depuis une adresse `\\…` comprise.
+Mettre à jour, c'est copier le contenu du dossier `ComptaBlonay` du nouveau zip par-dessus celui
+du serveur ; chaque PC suit à son prochain lancement. Ce qui ne copie pas : un PC où l'application
+est ouverte (des fichiers verrouillés, deux versions mélangées — il suivra la fois d'après), un
+serveur éteint (le PC démarre sa version), un second double-clic pendant une copie (il attend la
+fin : le lanceur tient un verrou que Windows relâche même si la fenêtre est fermée). Le lanceur se
+met lui-même à jour avec le programme ; celui des postes installés avant le sous-dossier
+*Installation sur plusieurs PC* est remplacé par l'application à son démarrage suivant.
+*Aide → À propos* dit quelle construction tourne sur le poste. Tout cela est éprouvé sous Windows
+par la construction (treize scénarios : dossier local refusé, première installation, même
+version, nouvelle version, serveur éteint, application ouverte, deux lancements en même temps,
+lanceur mis à jour, installation depuis une adresse `\\…`, etc.).
 
 **Noms de personnes** : le dépôt étant public, la version portable ne contient aucun nom. Posez
 le fichier `vocabulaire-noms.js` (remis séparément, jamais publié) à côté de `ComptaBlonay.exe` :

@@ -40,6 +40,7 @@
       "dgeo-proxy.js",
       "veille.js",
       "emplacement.js",
+      "lanceur.js",
       "dgeo-theme.css",
       "app/**",
       "!app/README.md"
