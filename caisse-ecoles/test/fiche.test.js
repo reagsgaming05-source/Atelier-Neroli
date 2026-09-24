@@ -325,6 +325,7 @@ async function ficheSimulee(opts) {
     addEventListener: (t, f) => fenetre.addEventListener(t, f),
     removeEventListener: (t, f) => fenetre.removeEventListener(t, f),
     CaisseFiles: disque,
+    CaisseApp: opts.app, // aides de app.js (saveBlob…), absentes par défaut
     CaissePdf: { buildPdf: async () => ({ bytes: new Uint8Array([37, 80, 68, 70]), pages: 1, skipped: [] }), recapDescription: (p) => p.libelle || '' },
     CaisseExcel: {},
   };
@@ -661,5 +662,47 @@ test('un n° tapé à la main n\'est pas changé en douce', async () => {
   R.upsertPiece(f.S.state.reg, Object.assign(R.newPiece(f.S.state.reg), { no: 1 }));
   f.S.renderJournal();
   assert.equal(f.el('pNo').value, '40');
+});
+
+/* ------------------------------------------------------------------ */
+/* La fiche à imprimer                                                   */
+/* ------------------------------------------------------------------ */
+
+test('les fiches à imprimer se remplacent dans une seule fenêtre, qui ne reprend pas la main', async () => {
+  const f = await ficheSimulee();
+  remplirRemboursement(f, '10');
+  await f.enregistrer();
+  assert.equal(f.ouvertes.length, 1, 'la première fiche s\'ouvre pour être imprimée');
+  const w = f.ouvertes[0];
+  const premiere = w.url;
+  assert.match(premiere, /^blob:/);
+  remplirRemboursement(f, '20');
+  await f.enregistrer();
+  remplirRemboursement(f, '30');
+  await f.enregistrer();
+  assert.equal(f.S.state.reg.pieces.length, 3);
+  assert.equal(f.ouvertes.length, 1, 'une fenêtre de plus à chaque pièce : dix pièces, dix fenêtres');
+  assert.notEqual(w.url, premiere, 'la fiche de la dernière pièce remplace la précédente');
+  assert.ok(!w.focusee, 'la saisie en série au clavier ne doit pas partir dans la fenêtre PDF');
+  // fermée par la personne : la suivante en rouvre une
+  w.closed = true;
+  remplirRemboursement(f, '40');
+  await f.enregistrer();
+  assert.equal(f.ouvertes.length, 2);
+});
+
+test('l\'imprimante d\'une ligne du journal imprime, sans boîte « Enregistrer sous »', async () => {
+  let enregistrerSous = 0;
+  const f = await ficheSimulee({ app: { saveBlob: async () => { enregistrerSous++; return 'cancelled'; } } });
+  f.el('optPdfAuto').checked = false;
+  f.el('optPdfAuto').dispatchEvent(new Event('change'));
+  remplirRemboursement(f);
+  await f.enregistrer();
+  assert.equal(f.ouvertes.length, 0);
+  f.cliquerDans('journalBody', { pdf: f.S.state.reg.pieces[0].id });
+  await pause(30);
+  assert.equal(enregistrerSous, 0);
+  assert.equal(f.ouvertes.length, 1);
+  assert.ok(f.ouvertes[0].focusee, 'demandée à la main, la fiche vient devant');
 });
 

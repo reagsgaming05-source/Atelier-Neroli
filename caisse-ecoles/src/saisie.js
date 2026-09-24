@@ -729,16 +729,49 @@
       notice('warn', `Pièce n° ${p.no} enregistrée, mais ${failed.length} justificatif(s) n'ont pas pu l'être. La fiche reste ouverte : réessayez « Enregistrer ».`);
       return;
     }
+    // deux postes ont quand même pris le même n° : pas de fiche papier avant que ce soit réglé
+    const imprimer = ficheAuto.open && !(fusion && fusion.doublons.length);
+    const neuve = imprimer && !fenetreOuverte();
     notice('ok', `Pièce n° ${p.no} ${wasEdit ? 'modifiée' : 'enregistrée'} : ${escapeHtml(p.libelle)} – ${p.sens === 'debit' ? 'Débit' : 'Crédit'} ${fmtCHF(p.montant)}.` +
-      (ficheAuto.open ? ' La fiche PDF s\'ouvre dans une fenêtre : <b>Ctrl+P</b> pour l\'imprimer.' : ''));
+      (!imprimer ? ` <button type="button" class="small" data-imprimer-piece="${escapeHtml(p.id)}">Imprimer sa fiche</button>`
+        : neuve ? ' La fiche à imprimer s\'ouvre dans une fenêtre : <b>Ctrl+P</b> pour l\'imprimer.'
+          : ' Sa fiche à imprimer a remplacé la précédente dans la fenêtre d\'impression.'));
     state.draftId = null;
     newPiece();
     els.pDate.focus();
-    // deux postes ont quand même pris le même n° : pas de fiche papier avant que ce soit réglé
-    if (ficheAuto.open && !(fusion && fusion.doublons.length)) {
-      const w = window.open('', '_blank'); // ouverte tout de suite (clic de l'utilisateur), remplie ensuite
+    if (imprimer) {
+      const w = fenetreFiche(); // ouverte tout de suite (clic de l'utilisateur), remplie ensuite
       openPiecePdf(p, w).catch((e) => { if (w && !w.closed) w.close(); notice('err', `Fiche PDF impossible : ${escapeHtml(e.message || e)}`); });
     }
+  });
+
+  /*
+   * Une seule fenêtre pour la fiche à imprimer. Chaque enregistrement ouvrait une nouvelle fenêtre
+   * « document » qui prenait la main : dix pièces reprises d'affilée, dix fenêtres empilées sur la
+   * caisse, et le Ctrl+Entrée suivant partait dans la fenêtre PDF au lieu de la fiche.
+   * Maintenant, la première s'ouvre (et prend la main, pour Ctrl+P) ; tant qu'elle reste ouverte,
+   * les suivantes s'y remplacent SANS reprendre la main : on enchaîne les pièces au clavier.
+   */
+  const fenetreOuverte = () => !!(state.fenetreFiche && !state.fenetreFiche.closed);
+  function fenetreFiche() {
+    if (fenetreOuverte()) return state.fenetreFiche;
+    state.fenetreFiche = window.open('', 'caisseFicheAImprimer');
+    return state.fenetreFiche;
+  }
+  /** La fiche d'une pièce du journal, dans la fenêtre d'impression, mise devant. */
+  async function imprimerPiece(p) {
+    const w = fenetreFiche();
+    try {
+      await openPiecePdf(p, w);
+      if (w && w.focus) w.focus();
+    } catch (e) { notice('err', `Fiche PDF impossible : ${escapeHtml(e.message || e)}`); }
+  }
+  // le bouton « Imprimer sa fiche » d'un message, où que le message s'affiche
+  document.addEventListener('click', (ev) => {
+    const b = ev.target && ev.target.closest && ev.target.closest('button[data-imprimer-piece]');
+    if (!b || !state.reg) return;
+    const p = state.reg.pieces.find((x) => x.id === b.dataset.imprimerPiece);
+    if (p) imprimerPiece(p);
   });
 
   // Fiche PDF ouverte automatiquement après l'enregistrement (pour l'imprimer) : réglage mémorisé.
@@ -934,7 +967,7 @@
         `<td>${r.no == null ? '' : r.no}</td><td>${escapeHtml(P.isoToDisplay(r.date))}</td><td class="compte">${escapeHtml(r.compte)}</td><td class="libelle" title="${escapeHtml(r.libelle)}">${escapeHtml(r.libelle)}</td>` +
         `<td class="num">${r.debit != null ? fmtCHF(r.debit) : ''}</td><td class="num">${r.credit != null ? fmtCHF(r.credit) : ''}</td><td class="num solde">${fmtCHF(r.solde)}</td>` +
         `<td>${p && p.justificatifs.length ? `<button type="button" class="clip" data-apercu="${r.id}" title="Voir le document complet : la fiche et ses ${p.justificatifs.length} justificatif(s)">${ico('clip')} ${p.justificatifs.length}</button>` : ''}${p && p.aVerifier ? ` <span class="tag warn" title="Lue sur un scan, pas encore vérifiée${p.doutes && p.doutes.length ? ' :\n- ' + p.doutes.join('\n- ').replace(/"/g, '') : ''}">à vérifier</span>` : ''}${p && p.source === 'scan' ? ' <span class="tag" title="Lue sur un scan">scan</span>' : ''}${p && p.source === 'dgeo' ? ` <span class="tag" title="Créée depuis Décompte DGEO${p.ref ? ` (${escapeHtml(p.ref)})` : ''}">DGEO</span>` : ''}${p && p.source === 'excel' ? ' <span class="tag" title="Reprise d\'un classeur Excel">Excel</span>' : ''}</td>` +
-        `<td class="acts">${p && p.aVerifier ? `<button type="button" class="small ghost ok" data-verif="${r.id}" title="Cette lecture est juste : marquer la pièce comme vérifiée">${ico('check')}</button>` : ''}<button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="PDF de la pièce">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
+        `<td class="acts">${p && p.aVerifier ? `<button type="button" class="small ghost ok" data-verif="${r.id}" title="Cette lecture est juste : marquer la pièce comme vérifiée">${ico('check')}</button>` : ''}<button type="button" class="small ghost" data-edit="${r.id}" title="Modifier la pièce">${ico('pen')}</button><button type="button" class="small ghost" data-pdf="${r.id}" title="Imprimer la fiche de la pièce (elle s'ouvre dans la fenêtre d'impression, qui sait aussi l'enregistrer)">${ico('printer')}</button><button type="button" class="small ghost danger" data-del="${r.id}" title="Supprimer la pièce">${ico('trash')}</button></td></tr>`;
     }).join('') || `<tr><td colspan="9" class="legend">${filtre
       ? `Aucune pièce ne correspond${String(q).trim() ? ` à « ${escapeHtml(String(q).trim())} »` : ''}. <button type="button" class="small ghost" data-search-clear="1">Tout afficher</button>`
       : 'Aucune pièce dans ce registre. Remplissez la fiche à gauche : chaque pièce enregistrée apparaît ici avec le solde cumulé.'}</td></tr>`;
@@ -1106,9 +1139,12 @@
       if (state.editingId === p.id) newPiece();
       renderJournal(); // fiche vierge : le n° suivant redescend (ajusterNumero)
     } else if (b.dataset.pdf) {
+      // L'imprimante imprime : elle ouvrait la boîte « Enregistrer sous », et il fallait retrouver
+      // le fichier dans l'Explorateur pour l'imprimer. La fenêtre d'impression sait aussi
+      // enregistrer le PDF (bouton de la visionneuse).
       const p = state.reg.pieces.find((x) => x.id === b.dataset.pdf);
       if (!p) return;
-      await exportPdf([p], `Pièce ${p.no} caisse ${state.reg.annee}.pdf`);
+      await imprimerPiece(p);
     }
   });
 
