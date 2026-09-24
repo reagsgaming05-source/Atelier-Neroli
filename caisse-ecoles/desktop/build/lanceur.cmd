@@ -82,7 +82,9 @@ if not exist "!SERVEUR!\ComptaBlonay.exe" (
   echo.
   echo Le serveur ne répond pas : !SERVEUR!
   echo Compta Blonay démarre avec la version déjà installée sur ce PC.
-  ping -n 4 127.0.0.1 >nul
+  echo Si vos données sont sur le serveur, Compta Blonay vous le dira dans un instant.
+  rem le temps de lire : la fenêtre se ferme dès que le programme démarre
+  ping -n 6 127.0.0.1 >nul
   exit /b 0
 )
 

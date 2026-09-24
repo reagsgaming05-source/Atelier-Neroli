@@ -1273,7 +1273,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
         <tbody id="cRows"></tbody>
         <tfoot>
           <tr><td>Billets</td><td></td><td class="num" id="cTotBillets">0.00</td></tr>
-          <tr><td>Pièces</td><td></td><td class="num" id="cTotPieces">0.00</td></tr>
+          <tr><td>Monnaie</td><td></td><td class="num" id="cTotPieces">0.00</td></tr>
           <tr class="grand"><td>Total compté (CHF)</td><td></td><td class="num" id="cTotal">0.00</td></tr>
         </tfoot>
       </table>
@@ -1298,7 +1298,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <h2><svg class="ico"><use href="#i-list"/></svg> Historique des comptages <span id="countYear"></span></h2>
     <div class="table-wrap">
       <table class="entries journal" id="countTable">
-        <thead><tr><th>Date</th><th class="num">Billets</th><th class="num">Pièces</th><th class="num">Total compté</th><th class="num">Solde du journal</th><th class="num">Écart</th><th>Remarque</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th class="num">Billets</th><th class="num">Monnaie</th><th class="num">Total compté</th><th class="num">Solde du journal</th><th class="num">Écart</th><th>Remarque</th><th></th></tr></thead>
         <tbody id="countBody"></tbody>
       </table>
     </div>
@@ -27136,7 +27136,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       `<td class="qty"><input type="number" min="0" step="1" inputmode="numeric" data-denom="${d}" placeholder="0" aria-label="Nombre de ${kind === 'billet' ? 'billets' : 'pièces'} de ${denomLabel(d)}"></td>` +
       `<td class="num line" data-line="${d}">0.00</td></tr>`;
     els.cRows.innerHTML = '<tr class="grp"><th colspan="3">Billets</th></tr>' + R.BILLETS.map((d) => row(d, 'billet')).join('') +
-      '<tr class="grp"><th colspan="3">Pièces</th></tr>' + R.PIECES.map((d) => row(d, 'piece')).join('');
+      '<tr class="grp"><th colspan="3">Monnaie</th></tr>' + R.PIECES.map((d) => row(d, 'piece')).join('');
   }
   function readCounts() {
     const counts = {};
@@ -27205,7 +27205,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const diffPrev = prev && !vide ? P.round2(total - prev.total) : null;
     const tile = (cls, label, value, detail) => `<div class="t ${cls}"><div class="l">${label}</div><div class="v">${value}</div><div class="d">${detail}</div></div>`;
     const DIT = {
-      vide: 'comptez d\'abord les billets et les pièces',
+      vide: 'comptez d\'abord les billets et la monnaie',
       juste: 'la caisse correspond au journal',
       plus: 'il y a plus d\'argent en caisse que dans le journal : une entrée non enregistrée ?',
       moins: 'il manque de l\'argent par rapport au journal : une sortie non enregistrée ?',

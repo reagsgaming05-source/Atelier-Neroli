@@ -48,7 +48,7 @@
       `<td class="qty"><input type="number" min="0" step="1" inputmode="numeric" data-denom="${d}" placeholder="0" aria-label="Nombre de ${kind === 'billet' ? 'billets' : 'pièces'} de ${denomLabel(d)}"></td>` +
       `<td class="num line" data-line="${d}">0.00</td></tr>`;
     els.cRows.innerHTML = '<tr class="grp"><th colspan="3">Billets</th></tr>' + R.BILLETS.map((d) => row(d, 'billet')).join('') +
-      '<tr class="grp"><th colspan="3">Pièces</th></tr>' + R.PIECES.map((d) => row(d, 'piece')).join('');
+      '<tr class="grp"><th colspan="3">Monnaie</th></tr>' + R.PIECES.map((d) => row(d, 'piece')).join('');
   }
   function readCounts() {
     const counts = {};
@@ -117,7 +117,7 @@
     const diffPrev = prev && !vide ? P.round2(total - prev.total) : null;
     const tile = (cls, label, value, detail) => `<div class="t ${cls}"><div class="l">${label}</div><div class="v">${value}</div><div class="d">${detail}</div></div>`;
     const DIT = {
-      vide: 'comptez d\'abord les billets et les pièces',
+      vide: 'comptez d\'abord les billets et la monnaie',
       juste: 'la caisse correspond au journal',
       plus: 'il y a plus d\'argent en caisse que dans le journal : une entrée non enregistrée ?',
       moins: 'il manque de l\'argent par rapport au journal : une sortie non enregistrée ?',
