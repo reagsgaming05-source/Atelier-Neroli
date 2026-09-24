@@ -162,8 +162,11 @@ function lirePlacement() {
 function retenirPlacement() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   try {
-    const b = mainWindow.getNormalBounds();
-    fs.writeFileSync(FICHIER_FENETRE(), JSON.stringify({ x: b.x, y: b.y, width: b.width, height: b.height, agrandie: mainWindow.isMaximized() }));
+    // la taille « normale » seulement si la fenêtre est agrandie : sinon elle peut dater d'avant
+    // un agrandissement que le système n'a jamais fait
+    const agrandie = mainWindow.isMaximized();
+    const b = agrandie ? mainWindow.getNormalBounds() : mainWindow.getBounds();
+    fs.writeFileSync(FICHIER_FENETRE(), JSON.stringify({ x: b.x, y: b.y, width: b.width, height: b.height, agrandie }));
   } catch (e) { /* ignore */ }
 }
 
