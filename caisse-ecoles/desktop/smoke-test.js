@@ -1354,6 +1354,9 @@ function verifierCopie() {
     if (!boites[1] || boites[1].buttons.join() !== 'OK') throw new Error('alert() n\'affiche pas sa boîte');
     if (!vu) throw new Error('un message s\'affiche hors de l\'écran');
     if (!fermeture.ouverte || !/fiche en cours/.test(fermeture.posee || '')) throw new Error('une fiche en cours ne retient pas la fermeture de la fenêtre');
+    // Fermeture finale : si une fiche est restée entamée, personne n'est là pour répondre à la
+    // question — on répond « Fermer sans enregistrer », sans quoi l'essai attendrait pour toujours.
+    await app.evaluate(({ dialog }) => { dialog.showMessageBoxSync = () => 1; });
   }
 
   await app.close();

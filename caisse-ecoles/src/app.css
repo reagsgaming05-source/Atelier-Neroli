@@ -622,7 +622,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .switcher .brand .chev { color: var(--muted-2); width: 16px; height: 16px; }
 .switcher .brand[aria-expanded="true"] { background: var(--surface-2); border-color: var(--line); }
 .mark.dgeo { background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%); box-shadow: 0 6px 14px -6px rgba(109, 40, 217, 0.7); }
-.tool-menu { position: absolute; left: 6px; right: 6px; top: 100%; z-index: 20; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; min-width: 250px; }
+.tool-menu { position: absolute; left: 6px; right: 6px; top: 100%; z-index: 20; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; min-width: 272px; }
 .tool-menu .section { padding: 8px 10px 6px; }
 .tool-menu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; box-shadow: none; height: auto; padding: 8px 10px; border-radius: 8px; }
 .tool-menu button:hover { background: var(--surface-2); }
@@ -640,7 +640,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
   .switcher .brand .txt, .switcher .brand .chev { display: none; }
   .switcher .brand .court { display: block; font-size: 11px; line-height: 1.15; color: var(--ink-2); font-weight: 600; }
   .switcher .brand .court::after { content: " ▾"; color: var(--muted-2); }
-  .tool-menu { left: 52px; right: auto; top: 0; width: 280px; }
+  .tool-menu { left: 76px; right: auto; top: 0; width: 280px; }
 }
 
 /* note sous la navigation Décompte DGEO (nettoyage du dossier) */
