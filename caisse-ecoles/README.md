@@ -32,7 +32,7 @@ outils du dépôt. Le logo en tête de la barre latérale est un menu déroulant
 au complet dans la même page, avec ses propres raccourcis dans la barre latérale (dossier PDF,
 dossier & effectifs, pièces justificatives, lignes du décompte), démarré avec la fenêtre et arrêté
 avec elle. Un pont relie les deux : chaque
-décompte terminé dans l'onglet Décompte DGEO est proposé dans la caisse comme pièce DECOMPTE
+décompte terminé dans Décompte DGEO est proposé dans la caisse comme pièce DECOMPTE
 pré-remplie.
 
 Le journal de caisse Excel est produit dans le même format que le classeur existant :
@@ -50,8 +50,9 @@ compte de contrepartie.
 1. Téléchargez **`ComptaBlonay-windows.zip`** depuis la page *Releases* du dépôt (version
    « Compta Blonay — Windows portable »).
 2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
-3. Double-cliquez sur **`ComptaBlonay.exe`** : la fenêtre de l'application s'ouvre, avec les
-   onglets *Caisse écoles* et *Décompte DGEO*.
+3. Double-cliquez sur **`ComptaBlonay.exe`** : la fenêtre de l'application s'ouvre sur
+   *Caisse écoles* ; le logo en tête de la barre latérale passe à *Décompte DGEO*. Le
+   `LISEZMOI.txt` du zip est le mode d'emploi pour les collègues.
 
 Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le registre ni dans
 *Program Files*, aucun navigateur n'est sollicité, aucune donnée ne quitte le PC. Les réglages
@@ -198,15 +199,16 @@ couverture et les tickets. La barre latérale indique ce qui a été retiré.
 **Formulaire du dossier affiché à côté** : chaque dossier scanné contient le « Formulaire de décompte
 camp & course » de Blonay (page de couverture manuscrite). Après l'analyse, ce formulaire s'affiche
 dans un volet à droite de Décompte DGEO (image redressée, agrandissable) avec ce que Décompte DGEO y a
-lu : type, activité, classe, dates, responsable, budget, effectifs, dépenses par pièce (payé par
-l'enseignant-e, par la commune, coût total), part État, remarques. Les dossiers analysés sont
+lu : type, activité, classe, dates, responsable, budget, effectifs, dépenses par justificatif
+(payé par l'enseignant-e, par la commune, coût total), part de l'État tenue à jour pendant qu'on
+travaille (avec l'heure), justificatifs comptés sur lus, remarques. Les dossiers analysés sont
 retenus (`data/caisse/dossiers-dgeo.json`) et sélectionnables ; le volet se masque d'une case dans la
 barre latérale.
 
 **Pont entre les deux outils** : quand un décompte est terminé dans Décompte DGEO (bouton
-*Générer le fichier Excel*), la fenêtre retient le dossier (n°, course d'école ou camp, classe,
-dates, enseignant-e, montants) dans `data/caisse/decomptes-dgeo.json`. L'onglet *Caisse écoles*
-affiche alors un badge « 1 décompte à saisir » et, au-dessus de la fiche, le décompte avec
+*Créer le fichier Excel du décompte*), la fenêtre retient le dossier (n°, course d'école ou camp, classe,
+dates, enseignant-e, montants) dans `data/caisse/decomptes-dgeo.json`. *Saisie des pièces* affiche alors une
+pastille avec le nombre de décomptes à saisir et, au-dessus de la fiche, le décompte avec
 *Créer la pièce* : la fiche se pré-remplit (type DECOMPTE, objet, classe, période, détail,
 personne, compte habituel, libellé) ; le montant proposé est ce que l'enseignant-e a payé de sa
 poche d'après le formulaire (à défaut le total des dépenses, à défaut la part État), les autres
@@ -218,11 +220,11 @@ modifié dans Décompte DGEO : la fenêtre observe seulement sa requête locale 
 L'exécutable est construit automatiquement par GitHub Actions
 (`.github/workflows/build-caisse-windows.yml`) : tests, construction de l'application autonome,
 empaquetage Electron (`desktop/`), Tesseract et Décompte DGEO ajoutés au dossier, test de fumée
-de l'exécutable (fenêtre à onglets, saisie d'une pièce jusqu'au journal et aux fichiers, moteur
+de l'exécutable (fenêtre et barre latérale, saisie d'une pièce jusqu'au journal et aux fichiers, moteur
 de lecture, OCR embarqué, Tesseract natif, Décompte DGEO démarré avec l'application, pont
 décompte → pièce), puis publication du zip.
 
-## Saisie des pièces (onglet principal)
+## Saisie des pièces (espace principal)
 
 1. **Année** : le registre de l'année en cours s'ouvre (ou se crée avec, comme solde à nouveau,
    le solde final de l'année précédente). Chaque année est un registre séparé, conservé dans
@@ -286,8 +288,8 @@ décompte → pièce), puis publication du zip.
    registre est vide, numérotation qui continue, pièces marquées *Excel*), et la saisie reprend
    dans la fiche. Le bouton *Reprendre ces écritures dans le registre* de l'espace des pièces
    scannées fait la même chose depuis un classeur chargé là.
-7. Version portable : un décompte terminé dans l'onglet **Décompte DGEO** apparaît au-dessus de
-   la fiche ; *Créer la pièce* la pré-remplit (voir plus haut, *Pont entre les deux onglets*).
+7. Version portable : un décompte terminé dans **Décompte DGEO** apparaît au-dessus de
+   la fiche ; *Créer la pièce* la pré-remplit (voir plus haut, *Pont entre les deux outils*).
 8. **Récapitulatif des décomptes** : dans l'outil *Décompte DGEO* (sélecteur en tête de la barre
    latérale), espace *Récapitulatif*. Les pièces DECOMPTE de l'année du registre ouvert, filtrées
    (courses d'école, camps ou les deux), à cocher ; *Générer le récapitulatif (PDF)* produit un
@@ -369,7 +371,7 @@ lancé :
    numéros, doublons, lignes à vérifier, pièces jamais affichées, totaux). Inscrire le **solde réel
    compté en caisse** : l'application affiche l'écart avec le solde calculé, nomme les pièces qui
    l'expliquent exactement (sens inversé, pièce comptée deux fois) et propose la correction.
-   *Générer le fichier Excel* télécharge `Caisse écoles AAAA.xlsx` ; toute anomalie restante demande
+   *Fichier Excel de l'année* télécharge `Caisse écoles AAAA.xlsx` ; toute anomalie restante demande
    une confirmation explicite. *Rapport de contrôle* ouvre un récapitulatif imprimable à conserver
    avec les pièces.
 
@@ -738,8 +740,8 @@ Structure :
 - `src/index.html`, `src/app.css` – interface : barre latérale (Saisie des pièces / Pièces scannées / Boîte de réception / Compter la caisse / L'année / Données, réduite à un rail d'icônes sous 1500 px), cartes, indicateurs du journal, tableaux, icônes SVG en ligne ; police Inter (SIL OFL) embarquée, jetons de couleur dans `:root`
 - `src/registre.js` – registre des pièces par année : modèle, libellé composé, validation, journal, stockage (fichiers ou navigateur)
 - `src/pdfpiece.js` – fiche « PIÈCE COMPTABLE » en PDF (pdf-lib) avec justificatifs
-- `src/saisie.js` – onglet de saisie (fiche, journal, Excel, PDF, sauvegarde)
-- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre à onglets, Décompte DGEO démarré avec l'application, pont décompte → pièce, fichiers du registre, dossier `data/`, fichier des noms), `shell.html` (barre d'onglets Compta Blonay, badge des décomptes à saisir), `dgeo-theme.css` (thème injecté dans la page de Décompte DGEO pour le même aspect : police, couleurs, arrondis), `preload.js` (`CaisseFiles` — registres, justificatifs et carnet des données —, `CaisseScan` — veille du dossier scanné et boîte de réception —, `CaisseNative`, `CaisseDgeo`), `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
+- `src/saisie.js` – espace de saisie (fiche, journal, Excel, PDF, sauvegarde)
+- `desktop/` – application fenêtrée (Electron) : `main.js` (fenêtre, Décompte DGEO démarré avec l'application, pont décompte → pièce, fichiers du registre, dossier `data/`, fichier des noms), `shell.html` (cadre de la fenêtre qui accueille la caisse et Décompte DGEO), `dgeo-theme.css` (thème injecté dans la page de Décompte DGEO pour le même aspect : police, couleurs, arrondis), `preload.js` (`CaisseFiles` — registres, justificatifs et carnet des données —, `CaisseScan` — veille du dossier scanné et boîte de réception —, `CaisseNative`, `CaisseDgeo`), `native-ocr.js` (Tesseract natif), `smoke-test.js`, `build/` (icône, LISEZMOI portable)
 
 ## Limites
 
