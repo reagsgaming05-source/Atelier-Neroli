@@ -62,7 +62,7 @@
     <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
     <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, à valider</small></span><span class="navbadge hidden" id="navBadgeReception" data-badge-reception title="Documents scannés en attente de validation"></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
-    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes</small></span></button>
+    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes, serveur</small></span></button>
     <button type="button" class="apptab" data-panel="panelDonnees" title="Les listes de l'application"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Données<small>Comptes, classes, noms</small></span></button>
   </nav>
   <nav class="nav hidden" id="dgeoNav">
@@ -97,6 +97,7 @@
   </header>
 
   <div class="yearbar" id="yearBar"></div>
+  <div id="anneeAvis"></div>
 
   <div class="layout2">
     <section class="card" id="ficheCard">
@@ -466,12 +467,13 @@
   <header class="page-head">
     <div>
       <h1>L'année</h1>
-      <p>Ce qu'on règle une fois par année : l'année ouverte, le solde à nouveau, le compte caisse, les visas du relevé. Et le registre de cette année : reprendre un classeur commencé à la main, faire une sauvegarde, en restaurer une. Les listes proposées par l'application (comptes, classes, noms) sont dans l'espace <b>Données</b>.</p>
+      <p>Ce qu'on règle une fois par année : l'année ouverte et son solde à nouveau, les noms du relevé de caisse. Et ce qui protège la caisse : reprendre un classeur commencé à la main, les sauvegardes, et l'endroit où sont les données (ce PC ou le serveur). Les listes proposées par l'application (comptes, classes, noms) sont dans l'espace <b>Données</b>.</p>
     </div>
   </header>
 
   <section class="card">
     <h2><svg class="ico"><use href="#i-calendar"/></svg> Année ouverte</h2>
+    <div id="anneeAvisAnnee"></div>
     <div class="regbar">
       <div class="field">
         <label for="regYear">Année</label>
@@ -483,31 +485,37 @@
         <button type="button" class="small primary" id="btnNewYearOk" style="height:36px">Créer</button>
         <button type="button" class="small ghost" id="btnNewYearCancel" style="height:36px">Annuler</button>
       </span>
-      <div class="sep"></div>
+    </div>
+
+    <h3 class="regbloc">Solde à nouveau <span class="legend">l'argent en caisse au début de l'année : le journal part de ce montant</span></h3>
+    <div class="regbar">
       <div class="field">
-        <label for="regOpeningDate">Solde à nouveau le</label>
+        <label for="regOpeningDate">Date</label>
         <input type="date" id="regOpeningDate">
       </div>
       <div class="field">
-        <label for="regOpeningAmount">Solde à nouveau (CHF)</label>
+        <label for="regOpeningAmount">Montant (CHF)</label>
         <input type="text" inputmode="decimal" id="regOpeningAmount" placeholder="ex. 2062.20" style="width:150px">
       </div>
+    </div>
+    <div id="regOpeningInfo" class="regsolde"></div>
+
+    <h3 class="regbloc">Relevé de caisse <span class="legend">imprimé depuis « Compter la caisse », à faire viser</span></h3>
+    <div class="regbar">
       <div class="field">
         <label for="regCaisse">Compte caisse</label>
         <input type="text" id="regCaisse" style="width:130px">
       </div>
-      <div class="sep"></div>
-      <div class="field">
-        <label for="regVisaResp" title="Nom imprimé sur la ligne de visa du relevé de caisse">Relevé de caisse – visa du responsable</label>
-        <input type="text" id="regVisaResp" placeholder="ex. A. Berger" style="width:190px">
+      <div class="field" style="width:200px">
+        <label for="regVisaResp" title="Nom imprimé sur la ligne de visa du relevé de caisse">Visa du responsable</label>
+        <input type="text" id="regVisaResp" placeholder="ex. A. Berger">
       </div>
-      <div class="field">
+      <div class="field" style="width:200px">
         <label for="regVisaBours" title="Nom imprimé sur la ligne de visa du relevé de caisse">Visa du boursier</label>
-        <input type="text" id="regVisaBours" placeholder="ex. Ch. Dupraz" style="width:190px">
+        <input type="text" id="regVisaBours" placeholder="ex. Ch. Dupraz">
       </div>
-      <button type="button" class="small hidden" id="btnRegOpenDir" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button>
     </div>
-    <div class="legend" id="regInfo"></div>
+    <div class="regpied"><span class="legend" id="regInfo"></span><button type="button" class="small hidden" id="btnRegOpenDir"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier des données</button></div>
   </section>
 
   <section class="card">
@@ -521,12 +529,14 @@
 
   <section class="card">
     <h2><svg class="ico"><use href="#i-shield"/></svg> Sauvegardes</h2>
-    <p class="legend">Une sauvegarde est une copie du registre de l'année (un fichier JSON) : le journal, les pièces et les comptages. Gardez-en une hors du PC. La restauration remplace le registre de l'année ouverte par celui de la sauvegarde.</p>
+    <p class="legend">Une sauvegarde est un fichier qui contient tout le registre de l'année ouverte : les pièces <b>avec leurs justificatifs</b> (tickets, factures, scans signés), les comptages et le solde à nouveau. Gardez-en une hors du PC (clé USB, serveur). <b>Les autres années et les listes de l'espace « Données » n'y sont pas</b> : faites une sauvegarde par année.</p>
+    <p class="legend">Restaurer une sauvegarde remplace le registre de l'année de la sauvegarde. L'application dit d'abord ce qui serait perdu, et garde une copie de sécurité du registre remplacé : la restauration peut être annulée.</p>
     <div class="toolbar">
       <button type="button" id="btnRegExport"><svg class="ico"><use href="#i-download"/></svg> Faire une sauvegarde</button>
       <button type="button" id="btnRegImport"><svg class="ico"><use href="#i-upload"/></svg> Restaurer une sauvegarde…</button>
       <input type="file" id="regImportFile" accept="application/json,.json" class="hidden">
     </div>
+    <div class="legend regsauve" id="sauvegardeInfo"></div>
     <div id="anneeNotices"></div>
   </section>
 
@@ -537,7 +547,7 @@
     <div class="toolbar" style="margin-top:10px">
       <button type="button" id="btnEmplacementChoisir"><svg class="ico"><use href="#i-folder"/></svg> <span id="btnEmplacementChoisirTexte">Mettre les données sur le serveur…</span></button>
       <button type="button" class="ghost hidden" id="btnEmplacementLocal"><svg class="ico"><use href="#i-arrow"/></svg> Revenir aux données de ce PC</button>
-      <button type="button" class="small ghost" id="btnEmplacementOuvrir"><svg class="ico"><use href="#i-external"/></svg> Ouvrir</button>
+      <button type="button" class="small ghost" id="btnEmplacementOuvrir"><svg class="ico"><use href="#i-external"/></svg> Ouvrir le dossier des données</button>
     </div>
     <div class="legend" id="emplacementNote" style="margin-top:8px"></div>
     <div id="emplacementNotices"></div>

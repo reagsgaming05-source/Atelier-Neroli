@@ -12,6 +12,7 @@
   const X = window.CaisseExcel;
   const F = window.CaissePdf;
   const A = window.CaisseApp || {};
+  const AN = window.CaisseAnnee; // d'une année à l'autre, sauvegardes (partie pure, annee.js)
   const $ = (id) => document.getElementById(id);
   const els = {};
   for (const id of ['regYear', 'btnNewYear', 'regOpeningDate', 'regOpeningAmount', 'regCaisse', 'regVisaResp', 'regVisaBours', 'regInfo', 'btnRegOpenDir',
@@ -74,10 +75,13 @@
     fillLists();
     brancherCombos();
     state.years = await state.storage.years();
-    const thisYear = new Date().getFullYear();
-    let year = state.years.length ? Math.max.apply(null, state.years) : thisYear;
-    try { const saved = Number(localStorage.getItem('caisse.registre.annee')); if (saved && state.years.includes(saved)) year = saved; } catch (e) { /* ignore */ }
-    await openYear(year);
+    let memorisee = null;
+    try { memorisee = Number(localStorage.getItem('caisse.registre.annee')) || null; } catch (e) { /* ignore */ }
+    // En janvier, l'année du jour n'a pas encore de registre : on rouvre la dernière, mais on
+    // propose la nouvelle (bandeau en tête de la saisie) au lieu de rester muet.
+    const depart = AN.demarrage(state.years, R.today(), memorisee);
+    state.proposerAnnee = depart.proposer;
+    await openYear(depart.ouvrir);
     initDgeo();
   }
 
@@ -169,7 +173,13 @@
     refreshSuggestions();
   }
 
-  async function openYear(year) {
+  /**
+   * Ouvre (ou crée) le registre d'une année. `opts.creer` : la personne a demandé cette année
+   * (« Nouvelle année », proposition de janvier) — le registre est écrit tout de suite. Celui du
+   * tout premier lancement ne l'est pas : rien n'est encore décidé (solde de départ, classeur à
+   * reprendre), et c'est la carte « Pour commencer » qui le demande.
+   */
+  async function openYear(year, opts) {
     // un registre enregistré mais illisible (fichier abîmé) ne doit jamais être remplacé par un registre vide
     const stored = state.storage.loadStored ? await state.storage.loadStored(year) : { reg: await state.storage.load(year) };
     if (stored.error) {
@@ -180,15 +190,20 @@
     }
     let reg = stored.reg;
     if (!reg) {
-      const prev = state.years.filter((y) => y < year).sort().pop();
+      const prev = AN.anneePrecedente(state.years, year);
       const prevReg = prev ? await state.storage.load(prev) : null;
       const opening = prevReg ? R.journal(prevReg).end : 0;
       reg = R.emptyRegister(year, { caisse: (A.getCaisse && A.getCaisse()) || undefined, openingDate: `${year}-01-01`, openingAmount: opening });
-      await state.storage.save(reg);
+      if (opts && opts.creer) await state.storage.save(reg);
       if (!state.years.includes(year)) state.years.push(year);
       state.years.sort();
     }
+    // « Annuler », le message de création et la comparaison des soldes valent pour une année précise
+    if (!state.reg || state.reg.annee !== reg.annee) { state.changementSolde = null; state.messageCreation = null; state.voisines = null; }
     state.reg = reg;
+    // point de départ pour savoir si le solde final change à l'enregistrement (l'année suivante le suit)
+    state.finConnue = R.journal(reg).end;
+    state.ouvertureConnue = reg.opening.amount;
     try { localStorage.setItem('caisse.registre.annee', String(year)); } catch (e) { /* ignore */ }
     renderYears();
     els.regOpeningDate.value = reg.opening.date || '';
@@ -196,14 +211,21 @@
     els.regCaisse.value = reg.caisse;
     els.journalYear.textContent = String(reg.annee);
     const loc = await state.storage.location();
-    els.regInfo.innerHTML = state.storage.kind === 'fichiers'
-      ? `Enregistré dans les fichiers de l'application : <code>${escapeHtml(loc)}</code>`
-      : `Enregistré dans la ${escapeHtml(loc)}.`;
-    if (els.btnRegOpenDir) els.btnRegOpenDir.classList.toggle('hidden', state.storage.kind !== 'fichiers');
+    // Dans l'application fenêtrée, la carte « Où sont les données » montre déjà le dossier et
+    // l'ouvre : un second chemin presque identique, avec un second bouton « Ouvrir », embrouillait.
+    const carteDossier = !!(window.CaisseEmplacement && $('carteEmplacement'));
+    els.regInfo.innerHTML = carteDossier ? ''
+      : state.storage.kind === 'fichiers'
+        ? `Enregistré dans les fichiers de l'application : <code>${escapeHtml(loc)}</code>`
+        : `Enregistré dans la ${escapeHtml(loc)}.`;
+    if (els.btnRegOpenDir) els.btnRegOpenDir.classList.toggle('hidden', carteDossier || state.storage.kind !== 'fichiers');
+    if (els.regInfo.parentElement) els.regInfo.parentElement.classList.toggle('hidden', carteDossier);
     newPiece();
     renderJournal();
     if (window.CaisseComptage) window.CaisseComptage.render();
     notifyRegister();
+    renderSauvegardes();
+    await majAnnee();
   }
 
   function renderYears() {
@@ -215,6 +237,8 @@
 
   async function saveReg() {
     state.reg.updatedAt = new Date().toISOString();
+    const annee = state.reg.annee;
+    const finAvant = state.finConnue;
     let res;
     try {
       res = await state.storage.save(state.reg);
@@ -236,7 +260,241 @@
       try { renderJournal(); } catch (e) { /* l'appelant rafraîchit aussi */ }
     }
     notifyRegister();
+    // Solde final ou solde à nouveau changé : l'année suivante suit, et les comparaisons avec les
+    // années voisines (L'année, bandeau) sont relues.
+    if (state.reg && state.reg.annee === annee) {
+      const fin = R.journal(state.reg).end;
+      const ouverture = state.reg.opening.amount;
+      const change = finAvant == null || Math.abs(fin - finAvant) >= 0.005 || state.ouvertureConnue == null || Math.abs(ouverture - state.ouvertureConnue) >= 0.005;
+      state.finConnue = fin;
+      state.ouvertureConnue = ouverture;
+      if (change) {
+        await suivreAnneeSuivante(annee, finAvant, fin);
+        await majAnnee();
+      }
+    }
   }
+
+  /* ---------------- D'une année à l'autre : le solde à nouveau ---------------- */
+  /**
+   * Le solde final de l'année vient de changer (pièce de décembre saisie en janvier, correction) :
+   * l'année suivante, si elle en partait, le suit — sinon elle repartait d'un chiffre faux sans que
+   * rien ne le dise. Un solde à nouveau réglé à la main n'est pas touché : l'écart se voit.
+   * Un échec ici ne défait pas l'enregistrement qui vient de réussir : on le dit, simplement.
+   */
+  async function suivreAnneeSuivante(annee, finAvant, finApres) {
+    const suivante = AN.anneeSuivante(state.years, annee);
+    if (suivante == null || finAvant == null || Math.abs(finAvant - finApres) < 0.005) return;
+    try {
+      const regS = await state.storage.load(suivante);
+      const avant = regS ? regS.opening.amount : null;
+      if (regS && AN.suivreSoldeFinal(regS, finAvant, finApres) === 'suivi') {
+        await state.storage.save(regS);
+        notice('ok', `Solde à nouveau ${suivante} mis à jour : ${fmtCHF(avant)} → <b>${fmtCHF(finApres)}</b>, pour suivre le solde final ${annee}.`);
+      }
+    } catch (e) {
+      notice('warn', `Le solde final ${annee} est maintenant de ${fmtCHF(finApres)}, mais le solde à nouveau ${suivante} n'a pas pu suivre (${escapeHtml((e && e.message) || e)}). ` +
+        `Ouvrez l'année ${suivante} dans « L'année » pour le reprendre.`, { keep: true });
+    }
+  }
+
+  /**
+   * Ce qui relie l'année ouverte à ses voisines, relu à l'ouverture et après chaque
+   * enregistrement : le solde final de l'année d'avant (d'où part le solde à nouveau) et le solde
+   * à nouveau de l'année d'après (qui doit partir du solde final de celle-ci).
+   */
+  let majJeton = 0;
+  async function majAnnee() {
+    const reg = state.reg;
+    if (!reg || !AN) return;
+    const jeton = ++majJeton;
+    const lire = async (y) => { if (y == null) return null; try { return y === reg.annee ? reg : await state.storage.load(y); } catch (e) { return null; } };
+    const regP = await lire(AN.anneePrecedente(state.years, reg.annee));
+    const regS = await lire(AN.anneeSuivante(state.years, reg.annee));
+    // l'année proposée en janvier part du solde final de la dernière année existante
+    const propose = state.proposerAnnee && !state.years.includes(state.proposerAnnee) ? state.proposerAnnee : null;
+    const regAvantPropose = propose ? await lire(AN.anneePrecedente(state.years, propose)) : null;
+    if (jeton !== majJeton || state.reg !== reg) return; // une autre année a été ouverte entre-temps
+    state.voisines = {
+      annee: reg.annee,
+      avant: AN.comparerSoldes(reg, regP),
+      apres: regS ? AN.comparerSoldes(regS, reg) : null,
+      propose: propose ? { annee: propose, depuis: regAvantPropose ? regAvantPropose.annee : null, solde: regAvantPropose ? R.journal(regAvantPropose).end : 0 } : null,
+    };
+    renderYearBar(); // qui redessine aussi les avis
+  }
+
+  const cleGarde = (annee) => `caisse.soldeGarde.${annee}`;
+  const cleFerme = (quoi, annee) => `caisse.avis.${quoi}.${annee}`;
+  const lu = (cle, session) => { try { return (session ? sessionStorage : localStorage).getItem(cle); } catch (e) { return null; } };
+  const ecrit = (cle, v, session) => { try { (session ? sessionStorage : localStorage).setItem(cle, v); } catch (e) { /* ignore */ } };
+  /** « Garder » un solde à nouveau différent : vaut pour ces deux montants-là, pas pour les suivants. */
+  const soldeGarde = (c) => !!c && lu(cleGarde(c.annee)) === `${fmtCHF(c.soldeANouveau)}|${fmtCHF(c.soldeFinal)}`;
+
+  /**
+   * Les avis sur l'année, en tête de la saisie (et dans L'année) : proposer la nouvelle année en
+   * janvier ; « Pour commencer » sur un registre encore vierge ; un solde à nouveau qui ne suit
+   * plus le solde final de l'année d'avant. Et, dans L'année, la comparaison à côté du champ.
+   */
+  function renderAnnee() {
+    const reg = state.reg;
+    const boite = $('anneeAvis');
+    const boiteAnnee = $('anneeAvisAnnee');
+    const avis = [];
+    const avisAnnee = [];
+    // tant que les années voisines de CELLE-CI ne sont pas relues, on ne dit rien plutôt que faux
+    const v = state.voisines && reg && state.voisines.annee === reg.annee ? state.voisines : null;
+    if (!v) { if (boite) boite.innerHTML = ''; if (boiteAnnee) boiteAnnee.innerHTML = ''; renderSoldeInfo(); return; }
+    // janvier : l'année du jour n'a pas encore de registre
+    if (v.propose && !lu(cleFerme('proposer', v.propose.annee), true)) {
+      const html = `<div class="notice warn avis-annee"><b>Nous sommes en ${v.propose.annee}.</b> Le registre ${v.propose.annee} n'existe pas encore : l'année ouverte est ${reg.annee}.` +
+        `<div class="avis-actions"><button type="button" class="primary small" data-annee-creer="${v.propose.annee}">Créer le registre ${v.propose.annee}</button>` +
+        `<span class="legend">solde à nouveau : ${v.propose.depuis ? `<b>${fmtCHF(v.propose.solde)}</b>, le solde final ${v.propose.depuis}` : '0.00'}</span>` +
+        `<button type="button" class="small ghost" data-annee-rester="${v.propose.annee}">Rester en ${reg.annee} (pièces de décembre)</button></div></div>`;
+      avis.push(html); avisAnnee.push(html);
+    }
+    // premier lancement, ou registre encore vierge sans année d'avant d'où partir
+    if (AN.registreVierge(reg) && !v.avant && !lu(cleFerme('debut', reg.annee))) {
+      avis.push(`<section class="card avis-debut"><h2><svg class="ico"><use href="#i-calendar"/></svg> Pour commencer l'année ${reg.annee}</h2>` +
+        `<p class="legend">Le registre ${reg.annee} est vide. Avant la première pièce, indiquez d'où part la caisse : sinon les soldes et la numérotation des pièces partent faux.</p>` +
+        '<div class="debut-choix">' +
+        `<div class="debut-un"><button type="button" data-debut="excel"><svg class="ico"><use href="#i-upload"/></svg> Reprendre le classeur Excel de ${reg.annee}…</button>` +
+        '<span class="legend">L\'année est déjà tenue dans un classeur : ses écritures et son solde à nouveau sont repris, la numérotation continue.</span></div>' +
+        `<div class="debut-un"><span class="debut-solde"><label for="debutSolde">Argent en caisse au 1er janvier ${reg.annee} (CHF)</label>` +
+        '<input type="text" inputmode="decimal" id="debutSolde" placeholder="ex. 2062.20" style="width:150px"> ' +
+        '<button type="button" class="primary" data-debut="solde">Enregistrer ce solde</button></span>' +
+        '<span class="legend">C\'est le « solde à nouveau » : le journal part de ce montant.</span></div>' +
+        '<div class="debut-un"><button type="button" class="ghost" data-debut="zero">Commencer à zéro</button>' +
+        '<span class="legend">La caisse était vide au 1er janvier. (Le solde à nouveau se change aussi plus tard, dans « L\'année ».)</span></div>' +
+        '</div></section>');
+    }
+    // solde à nouveau qui ne suit plus le solde final de l'année d'avant
+    const c = v.avant;
+    if (c && !c.egal && !soldeGarde(c)) {
+      avis.push(`<div class="notice warn avis-annee">Le solde à nouveau ${c.annee} (<b>${fmtCHF(c.soldeANouveau)}</b>) ne correspond pas au solde final ${c.precedente} (<b>${fmtCHF(c.soldeFinal)}</b>) : ` +
+        `des pièces de ${c.precedente} ont peut-être été ajoutées ou corrigées après la création de ${c.annee}.` +
+        `<div class="avis-actions"><button type="button" class="small primary" data-solde-reprendre="${c.annee}">Reprendre ${fmtCHF(c.soldeFinal)}</button>` +
+        `<button type="button" class="small ghost" data-solde-garder="${c.annee}">Garder ${fmtCHF(c.soldeANouveau)}</button></div></div>`);
+    }
+    // le solde de départ en cours de frappe survit à un nouveau rendu (un enregistrement ailleurs)
+    const champ = $('debutSolde');
+    const tape = champ ? champ.value : '';
+    const focus = !!champ && document.activeElement === champ;
+    if (boite) boite.innerHTML = avis.join('');
+    if (boiteAnnee) boiteAnnee.innerHTML = avisAnnee.join('');
+    if ($('debutSolde') && tape) { $('debutSolde').value = tape; if (focus) $('debutSolde').focus(); }
+    renderSoldeInfo();
+    renderSauvegardes(); // « depuis la dernière sauvegarde : n pièces » suit le registre
+  }
+
+  /** À côté du champ « Solde à nouveau » : d'où il vient, s'il suit, et le dernier changement. */
+  function renderSoldeInfo() {
+    const box = $('regOpeningInfo');
+    const reg = state.reg;
+    if (!box || !reg) return;
+    const v = state.voisines && state.voisines.annee === reg.annee ? state.voisines : null;
+    if (!v) { box.innerHTML = ''; return; }
+    const lignes = [];
+    const ch = state.changementSolde;
+    if (ch && ch.annee === reg.annee) {
+      lignes.push(`<div class="notice ok">Solde à nouveau ${reg.annee} : ${fmtCHF(ch.avant)} → <b>${fmtCHF(ch.apres)}</b>, enregistré. Tout le journal est recalculé depuis ce montant.` +
+        ' <button type="button" data-solde-annuler="1">Annuler</button></div>');
+    }
+    if (state.messageCreation && state.messageCreation.annee === reg.annee) lignes.push(`<div class="notice ok">${state.messageCreation.html}</div>`);
+    const c = v.avant;
+    if (!c) {
+      lignes.push(Math.abs(reg.opening.amount) >= 0.005
+        ? `<div class="legend">Aucune année avant ${reg.annee} dans l'application : ce montant est celui qui a été tapé ici, ou repris d'un classeur Excel.</div>`
+        : `<div class="legend">Aucune année avant ${reg.annee} dans l'application : indiquez l'argent qu'il y avait en caisse au début de l'année, ou reprenez le classeur Excel de l'année (carte ci-dessous).</div>`);
+    } else if (c.egal) {
+      lignes.push(`<div class="legend solde-ok">✓ Égal au solde final ${c.precedente} : <b>${fmtCHF(c.soldeFinal)}</b> au 31.12.${c.precedente}.</div>`);
+    } else {
+      lignes.push(`<div class="notice warn">Solde final ${c.precedente} : <b>${fmtCHF(c.soldeFinal)}</b> au 31.12.${c.precedente}. Le solde à nouveau ${c.annee} (${fmtCHF(c.soldeANouveau)}) ne lui correspond pas${soldeGarde(c) ? ' (gardé tel quel)' : ''}.` +
+        ` <button type="button" data-solde-reprendre="${c.annee}">Reprendre ${fmtCHF(c.soldeFinal)}</button></div>`);
+    }
+    const s = v.apres;
+    if (s && s.egal) lignes.push(`<div class="legend solde-ok">✓ L'année ${s.annee} part de ce solde final (${fmtCHF(s.soldeFinal)}).</div>`);
+    else if (s) {
+      lignes.push(`<div class="notice warn">L'année ${s.annee} existe déjà et son solde à nouveau (${fmtCHF(s.soldeANouveau)}) ne correspond pas au solde final ${reg.annee} (<b>${fmtCHF(s.soldeFinal)}</b>).` +
+        ` <button type="button" data-solde-suivante="${s.annee}">Reprendre ${fmtCHF(s.soldeFinal)} dans ${s.annee}</button></div>`);
+    }
+    box.innerHTML = lignes.join('');
+  }
+
+  /** Met `montant` comme solde à nouveau de l'année ouverte, avec « Annuler » à côté du champ. */
+  async function changerSolde(montant) {
+    const avant = state.reg.opening.amount;
+    if (Math.abs(avant - montant) < 0.005) return true;
+    state.reg.opening.amount = P.round2(montant);
+    try { await saveReg(); } catch (e) {
+      state.reg.opening.amount = avant; // pas écrit : l'écran revient à ce qui est enregistré
+      renderJournal();
+      return false;
+    }
+    state.changementSolde = { annee: state.reg.annee, avant, apres: state.reg.opening.amount };
+    renderJournal(); // redessine aussi le bandeau et ce qui est dit à côté du champ
+    return true;
+  }
+
+  /** Solde à nouveau de l'année SUIVANTE repris du solde final de l'année ouverte. */
+  async function reprendreDansSuivante(suivante) {
+    try {
+      const regS = await state.storage.load(suivante);
+      if (!regS) return;
+      const avant = regS.opening.amount;
+      const fin = R.journal(state.reg).end;
+      regS.opening.amount = fin;
+      regS.updatedAt = new Date().toISOString();
+      await state.storage.save(regS);
+      notice('ok', `Solde à nouveau ${suivante} : ${fmtCHF(avant)} → <b>${fmtCHF(fin)}</b> (solde final ${state.reg.annee}).`);
+    } catch (e) {
+      notice('err', `Le solde à nouveau ${suivante} n'a pas été changé : ${escapeHtml((e && e.message) || e)}.`, { keep: true });
+    }
+    await majAnnee();
+  }
+
+  // Les boutons des avis vivent dans plusieurs zones (saisie, L'année, messages) : un seul écouteur.
+  document.addEventListener('click', async (ev) => {
+    const b = ev.target.closest('button[data-annee-creer], button[data-annee-rester], button[data-debut], button[data-solde-reprendre], button[data-solde-garder], button[data-solde-annuler], button[data-solde-suivante], button[data-annuler-restauration]');
+    if (!b || !state.reg) return;
+    const d = b.dataset;
+    if (d.anneeCreer) { await creerAnnee(Number(d.anneeCreer)); return; }
+    if (d.anneeRester) { ecrit(cleFerme('proposer', d.anneeRester), '1', true); renderAnnee(); return; }
+    if (d.soldeReprendre) {
+      const c = (state.voisines || {}).avant;
+      if (c && String(c.annee) === String(state.reg.annee)) await changerSolde(c.soldeFinal);
+      return;
+    }
+    if (d.soldeGarder) {
+      const c = (state.voisines || {}).avant;
+      if (c) ecrit(cleGarde(c.annee), `${fmtCHF(c.soldeANouveau)}|${fmtCHF(c.soldeFinal)}`);
+      renderAnnee();
+      return;
+    }
+    if (d.soldeAnnuler) {
+      const ch = state.changementSolde;
+      if (ch && ch.annee === state.reg.annee) { await changerSolde(ch.avant); state.changementSolde = null; renderSoldeInfo(); }
+      return;
+    }
+    if (d.soldeSuivante) { await reprendreDansSuivante(Number(d.soldeSuivante)); return; }
+    if (d.annulerRestauration) { await annulerRestauration(Number(d.annulerRestauration)); return; }
+    if (d.debut === 'excel') { if (els.regExcelFile) els.regExcelFile.click(); return; }
+    if (d.debut === 'solde') {
+      const champ = $('debutSolde');
+      const v = R.parseAmountInput(champ ? champ.value : '');
+      if (v == null) { notice('err', `« ${escapeHtml(champ ? champ.value : '')} » n'est pas un montant : tapez l'argent qu'il y avait en caisse, par exemple 2062.20.`); if (champ) champ.focus(); return; }
+      if (Math.abs(v) >= 0.005) {
+        if (await changerSolde(v)) notice('ok', `Solde à nouveau ${state.reg.annee} enregistré : <b>${fmtCHF(v)}</b> au ${escapeHtml(P.isoToDisplay(state.reg.opening.date))}. La première pièce peut être saisie.`);
+        return;
+      }
+      // 0 tapé : c'est « Commencer à zéro »
+    }
+    if (d.debut === 'zero' || d.debut === 'solde') {
+      ecrit(cleFerme('debut', state.reg.annee), '1');
+      try { await saveReg(); } catch (e) { return; } // l'année existe désormais : elle est écrite
+      renderAnnee();
+    }
+  });
   /** Le registre a changé (ouvert, enregistré) : l'espace des pièces scannées, qui s'appuie dessus, se met à jour. */
   function notifyRegister() {
     try { document.dispatchEvent(new CustomEvent('caisse:registre', { detail: { annee: state.reg ? state.reg.annee : null } })); } catch (e) { /* ignore */ }
@@ -251,9 +509,28 @@
     const y = Number(yearInput.value);
     if (!Number.isInteger(y) || y < 1990 || y > 2100) { notice('err', 'Année invalide : indiquez une année entre 1990 et 2100.'); return; }
     hideYearBox();
+    await creerAnnee(y);
+  }
+  /**
+   * Crée (ou rouvre) le registre d'une année demandée par la personne. D'où vient le solde à
+   * nouveau est écrit à côté du champ, et y reste : le message qui disait « vérifiez-le » sans
+   * donner de chiffre s'effaçait au bout de 7 s, sous une autre carte.
+   */
+  async function creerAnnee(y) {
     const existed = state.years.includes(y);
-    await openYear(y);
-    notice('ok', existed ? `Registre ${y} ouvert (il existait déjà).` : `Registre ${y} créé. Le solde à nouveau proposé est le solde final de l'année précédente : vérifiez-le.`);
+    try { await openYear(y, { creer: true }); } catch (e) {
+      notice('err', `Le registre ${y} n'a pas pu être créé : ${escapeHtml((e && e.message) || e)}.`, { keep: true });
+      return;
+    }
+    if (existed) { notice('ok', `Registre ${y} ouvert (il existait déjà).`); return; }
+    const c = (state.voisines || {}).avant;
+    state.messageCreation = {
+      annee: y,
+      html: c ? `Registre ${y} créé : son solde à nouveau est le solde final ${c.precedente}, <b>${fmtCHF(c.soldeFinal)}</b>. S'il change encore (pièce de décembre saisie en janvier), le solde à nouveau ${y} le suivra.`
+        : `Registre ${y} créé, sans année précédente dans l'application : indiquez son solde à nouveau ci-dessus.`,
+    };
+    renderSoldeInfo();
+    notice('ok', `Registre ${y} créé${c ? ` : solde à nouveau ${fmtCHF(c.soldeFinal)}, le solde final ${c.precedente}` : ''}.`);
   }
   els.btnNewYear.addEventListener('click', () => {
     if (!yearBox || !yearInput) return;
@@ -277,7 +554,8 @@
       els.regOpeningAmount.value = fmtCHF(state.reg.opening.amount);
       return;
     }
-    state.reg.opening.amount = v; await saveReg(); renderJournal();
+    // enregistré tout de suite (le journal en dépend), mais dit à côté du champ, avec « Annuler »
+    if (!(await changerSolde(v))) els.regOpeningAmount.value = fmtCHF(state.reg.opening.amount);
   });
   els.regCaisse.addEventListener('change', async () => { state.reg.caisse = els.regCaisse.value.trim() || P.DEFAULT_CAISSE; await saveReg(); renderYearBar(); });
   // Les deux signataires du relevé de caisse : ils vivent dans le registre (données locales de
@@ -623,13 +901,18 @@
     if (!els.yearBar || !state.reg) return;
     const reg = state.reg;
     const j = R.journal(reg);
+    // Une année passée se reconnaît d'un coup d'œil : en janvier, c'est l'ancienne qui se rouvre.
+    const passee = reg.annee < Number(R.today().slice(0, 4));
+    els.yearBar.classList.toggle('passee', passee);
     els.yearBar.innerHTML =
       `<span class="y">${reg.annee}</span>` +
+      (passee ? '<span class="tag passee" title="L\'année du registre ouvert est terminée : les dates proposées sont au 31 décembre">année passée</span>' : '') +
       `<span class="i"><b>${reg.pieces.length}</b> ${reg.pieces.length > 1 ? 'pièces' : 'pièce'}</span>` +
       `<span class="i">solde à nouveau <b>${fmtCHF(reg.opening.amount)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}</span>` +
       `<span class="i">solde actuel <b>${fmtCHF(j.end)}</b></span>` +
       `<span class="i">compte caisse <b>${escapeHtml(reg.caisse)}</b></span>` +
       `<button type="button" class="small ghost" data-annee="1">Changer d'année, solde à nouveau…</button>`;
+    renderAnnee(); // les avis sous le bandeau suivent le registre (« Pour commencer » disparaît à la première pièce)
   }
   if (els.yearBar) els.yearBar.addEventListener('click', (ev) => {
     if (ev.target.closest('button[data-annee]') && A.showPanel) A.showPanel('panelAnnee');
@@ -932,8 +1215,10 @@
   els.btnRegExcel.addEventListener('click', async () => {
     const reg = state.reg;
     if (!reg.pieces.length) { notice('warn', 'Aucune pièce dans le registre.'); return; }
-    const invalid = reg.pieces.filter((p) => R.validate(p, reg).length);
-    if (invalid.length && !confirm(`${invalid.length} pièce(s) incomplète(s) (n° ${invalid.map((p) => p.no).join(', ')}). Générer quand même ?`)) return;
+    // Le fichier qu'on remet : on y regarde tout ce que l'espace des pièces scannées contrôlait
+    // déjà (numéros manquants, lectures à vérifier, écart de caisse), et on dit ce qui manque.
+    const aRegarder = AN.controlesAvantExcel(reg);
+    if (aRegarder.length && !confirm(`Avant de produire le fichier Excel ${reg.annee}, à regarder :\n\n– ${aRegarder.join('\n– ')}\n\nProduire le fichier quand même ?`)) return;
     try {
       const { workbook, finalBalance } = X.buildWorkbook({ opening: { date: reg.opening.date, amount: reg.opening.amount }, entries: R.entriesOf(reg) });
       const buf = await workbook.xlsx.writeBuffer();
@@ -945,22 +1230,139 @@
     } catch (e) { notice('err', `Erreur lors de la génération : ${escapeHtml(e.message || e)}`); }
   });
 
+  /* ---------------- Sauvegardes ---------------- */
+  // Ce poste se souvient de sa dernière sauvegarde et de la copie gardée avant une restauration :
+  // la carte le dit, et la copie se remet d'un clic.
+  const cleSauvegarde = (annee) => `caisse.sauvegarde.${annee}`;
+  const cleCopie = (annee) => `caisse.copieSecurite.${annee}`;
+  const lireJson = (cle) => { try { return JSON.parse(localStorage.getItem(cle) || 'null'); } catch (e) { return null; } };
+  const ecrireJson = (cle, v) => { try { localStorage.setItem(cle, JSON.stringify(v)); } catch (e) { /* ignore */ } };
+  // Les copies de sécurité vont à côté des justificatifs de l'année, sous un nom de « pièce »
+  // réservé : c'est le seul endroit où la page sait écrire un fichier, dans les deux versions.
+  const ID_COPIES = 'copies-de-securite';
+  const taille = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1).replace('.', ',')} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
+  const quandLisible = (iso) => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : `${AN.jour(iso)} à ${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`; };
+
+  function renderSauvegardes() {
+    const box = $('sauvegardeInfo');
+    if (!box || !state.reg) return;
+    const annee = state.reg.annee;
+    const s = lireJson(cleSauvegarde(annee));
+    const c = lireJson(cleCopie(annee));
+    const lignes = [];
+    lignes.push(s
+      ? `Dernière sauvegarde de ${annee} faite sur ce poste : le ${quandLisible(s.quand)} (${plur(s.pieces || 0, 'pièce')}${s.justificatifs ? `, ${plur(s.justificatifs, 'justificatif')}` : ''}).` +
+        (state.reg.pieces.length !== s.pieces ? ` <b>Depuis : ${plur(state.reg.pieces.length, 'pièce')} dans le registre</b> — pensez à en refaire une.` : '')
+      : `<b>Aucune sauvegarde de ${annee} faite sur ce poste.</b>`);
+    if (c) lignes.push(`Copie de sécurité du registre ${annee} gardée avant la restauration du ${quandLisible(c.quand)} (${plur(c.pieces || 0, 'pièce')}) : <button type="button" class="small" data-annuler-restauration="${annee}">Remettre ce registre</button>`);
+    box.innerHTML = lignes.map((l) => `<div>${l}</div>`).join('');
+  }
+
+  // Faire une sauvegarde : le registre de l'année ET ses justificatifs, dans un seul fichier.
   els.btnRegExport.addEventListener('click', async () => {
-    await saveBlob(new Blob([R.serialize(state.reg)], { type: 'application/json' }), `Registre caisse ${state.reg.annee}.json`);
+    const reg = state.reg;
+    const bouton = els.btnRegExport;
+    bouton.disabled = true;
+    try {
+      const fichiers = []; const introuvables = [];
+      for (const p of reg.pieces) {
+        for (const j of p.justificatifs || []) {
+          let octets = null;
+          try { octets = await state.storage.read(reg.annee, p.id, j.name); } catch (e) { octets = null; }
+          if (octets) fichiers.push({ piece: p.id, nom: j.name, octets }); else introuvables.push(`n° ${p.no == null ? '?' : p.no} : ${j.name}`);
+        }
+      }
+      const texte = AN.empaqueter(reg, fichiers);
+      const nom = `Sauvegarde caisse ${reg.annee} du ${AN.jour(R.today())}.json`;
+      const saved = await saveBlob(new Blob([texte], { type: 'application/json' }), nom);
+      if (saved === 'cancelled') return;
+      ecrireJson(cleSauvegarde(reg.annee), { quand: new Date().toISOString(), pieces: reg.pieces.length, justificatifs: fichiers.length, nom: saved || nom });
+      notice('ok', `<b>Sauvegarde ${reg.annee} ${saved ? 'enregistrée' : 'téléchargée'}</b> : ${escapeHtml(saved || nom)}${saved ? '' : ' (dossier des téléchargements)'} — ` +
+        `${plur(reg.pieces.length, 'pièce')}, ${plur((reg.comptages || []).length, 'comptage')}, ${plur(fichiers.length, 'justificatif')} (${taille(texte.length)}). ` +
+        'Les autres années et les listes de l\'espace « Données » n\'y sont pas.', { keep: true });
+      if (introuvables.length) notice('warn', `${plur(introuvables.length, 'justificatif introuvable', 'justificatifs introuvables')} sur ce poste, donc absent${introuvables.length > 1 ? 's' : ''} de la sauvegarde : ${escapeHtml(introuvables.slice(0, 8).join(' ; '))}${introuvables.length > 8 ? '…' : ''}.`, { keep: true });
+      renderSauvegardes();
+    } catch (e) {
+      notice('err', `<b>Sauvegarde non faite</b> : ${escapeHtml((e && e.message) || e)}.`, { keep: true });
+    } finally { bouton.disabled = false; }
   });
   els.btnRegImport.addEventListener('click', () => els.regImportFile.click());
   els.regImportFile.addEventListener('change', async () => {
     const f = els.regImportFile.files && els.regImportFile.files[0];
     els.regImportFile.value = '';
     if (!f) return;
-    const reg = R.parse(await f.text());
-    if (!reg) { notice('err', 'Ce fichier n\'est pas une sauvegarde de registre.'); return; }
-    if (!confirm(`Remplacer le registre ${reg.annee} (${reg.pieces.length} pièce(s)) par cette sauvegarde ? Les justificatifs déjà enregistrés sont conservés.`)) return;
-    await state.storage.save(reg, { remplacer: true });
+    await restaurer(await f.text(), { date: f.lastModified ? new Date(f.lastModified).toISOString() : null });
+  });
+
+  /**
+   * Restaurer une sauvegarde : dire d'abord ce qui sera perdu (pièces saisies depuis, corrections,
+   * comptages), garder une copie de sécurité du registre remplacé, puis seulement remplacer. Le
+   * registre remplacé est celui de l'année DE LA SAUVEGARDE, qui n'est pas forcément l'année ouverte.
+   */
+  async function restaurer(texte, source) {
+    const paquet = AN.deballer(texte);
+    if (!paquet) { notice('err', 'Ce fichier n\'est pas une sauvegarde de registre : rien n\'a été changé.'); return false; }
+    const reg = paquet.reg;
+    let actuel = null;
+    try { actuel = (await state.storage.loadStored(reg.annee)).reg || null; } catch (e) { actuel = null; }
+    let partage = false;
+    try { partage = !!(DN && (await DN.etat()).partage); } catch (e) { partage = false; }
+    const bilan = AN.bilanRestauration(actuel, reg);
+    const question = AN.questionRestauration(bilan, {
+      anneeOuverte: state.reg ? state.reg.annee : null, partage, justificatifs: paquet.fichiers.length, copie: !!actuel,
+      dateSauvegarde: (source && source.faiteLe) || paquet.faiteLe || (source && source.date) || null,
+      intitule: source && source.intitule,
+    });
+    if (!confirm(question)) return false;
+    // 1. la copie de sécurité d'abord : sans elle, on ne remplace rien
+    let copie = null;
+    if (actuel) {
+      try {
+        const octets = new TextEncoder().encode(R.serialize(actuel));
+        const garde = await state.storage.attach(reg.annee, ID_COPIES, AN.nomCopieSecurite(reg.annee), octets);
+        copie = { nom: garde.name, quand: new Date().toISOString(), pieces: actuel.pieces.length };
+      } catch (e) {
+        notice('err', `<b>Rien n'a été remplacé</b> : la copie de sécurité du registre ${reg.annee} actuel n'a pas pu être faite (${escapeHtml((e && e.message) || e)}).`, { keep: true });
+        return false;
+      }
+    }
+    // 2. le remplacement
+    try {
+      await state.storage.save(reg, { remplacer: true });
+    } catch (e) {
+      notice('err', `<b>Sauvegarde non restaurée</b> : ${escapeHtml((e && e.message) || e)}. Le registre ${reg.annee} n'a pas été remplacé.`, { keep: true });
+      return false;
+    }
+    if (copie) ecrireJson(cleCopie(reg.annee), copie);
+    // 3. les justificatifs de la sauvegarde qui manquent sur ce poste (ceux présents sont gardés)
+    let remis = 0; let rates = 0;
+    for (const fj of paquet.fichiers) {
+      const p = reg.pieces.find((x) => x.id === fj.piece);
+      if (!p || !(p.justificatifs || []).some((j) => j.name === fj.nom)) continue;
+      try {
+        if (await state.storage.read(reg.annee, fj.piece, fj.nom)) continue;
+        await state.storage.attach(reg.annee, fj.piece, fj.nom, fj.octets);
+        remis++;
+      } catch (e) { rates++; }
+    }
     if (!state.years.includes(reg.annee)) state.years.push(reg.annee);
     await openYear(reg.annee);
-    notice('ok', `Registre ${reg.annee} restauré.`);
-  });
+    notice('ok', `<b>Registre ${reg.annee} restauré</b> : ${plur(reg.pieces.length, 'pièce')}, ${plur((reg.comptages || []).length, 'comptage')}` +
+      `${remis ? `, ${plur(remis, 'justificatif remis', 'justificatifs remis')}` : ''}.` +
+      (copie ? ` Le registre remplacé (${plur(copie.pieces, 'pièce')}) est gardé en copie de sécurité : <button type="button" data-annuler-restauration="${reg.annee}">Annuler la restauration</button>` : ''), { keep: true });
+    if (rates) notice('warn', `${plur(rates, 'justificatif')} de la sauvegarde n'${rates > 1 ? 'ont' : 'a'} pas pu être remis.`, { keep: true });
+    return true;
+  }
+
+  /** Remet le registre gardé en copie de sécurité avant la dernière restauration (même question d'abord). */
+  async function annulerRestauration(annee) {
+    const c = lireJson(cleCopie(annee));
+    if (!c) { notice('warn', `Aucune copie de sécurité du registre ${annee} n'est connue sur ce poste.`); return; }
+    let octets = null;
+    try { octets = await state.storage.read(annee, ID_COPIES, c.nom); } catch (e) { octets = null; }
+    if (!octets) { notice('err', `La copie de sécurité « ${escapeHtml(c.nom)} » est introuvable : rien n'a été changé.`, { keep: true }); return; }
+    await restaurer(new TextDecoder().decode(octets), { faiteLe: c.quand, intitule: `Remettre le registre ${annee} gardé avant la restauration du ${quandLisible(c.quand)} ?` });
+  }
 
   /* ---------------- Reprise d'un classeur Excel ---------------- */
   // Année commencée à l'ancienne (classeur tenu à la main ou produit depuis les pièces scannées) :
