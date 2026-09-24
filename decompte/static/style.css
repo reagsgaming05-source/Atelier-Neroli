@@ -3,6 +3,7 @@
   --accent: #1f6f8b; --accent-ink: #fff; --ok: #2e8b57; --warn: #b7791f; --bad: #b3261e; --soft: #eef4f7;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--ink); background: var(--bg); }
 header { background: var(--accent); color: var(--accent-ink); padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
 header h1 { font-size: 18px; margin: 0; font-weight: 600; }
@@ -13,12 +14,23 @@ section { background: var(--card); border: 1px solid var(--line); border-radius:
 section h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
 section h2 .step { background: var(--accent); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
 .hint { color: var(--muted); font-size: 12.5px; margin: 4px 0 10px; }
-.drop { border: 2px dashed var(--line); border-radius: 8px; padding: 26px; text-align: center; color: var(--muted); cursor: pointer; transition: .15s; }
-.drop.over { border-color: var(--accent); background: var(--soft); }
+.sous-titre { font-size: 13.5px; margin: 16px 0 6px; }
+.drop { display: block; width: 100%; margin-top: 12px; font: inherit; border: 2px dashed var(--line); border-radius: 8px; padding: 26px; text-align: center; color: var(--muted); background: #fff; cursor: pointer; transition: .15s; }
+.drop.over, .drop:focus-visible { border-color: var(--accent); background: var(--soft); outline: none; }
+.drop:disabled { cursor: progress; opacity: .6; }
 .drop strong { color: var(--ink); }
+.drop .legend { display: block; margin-top: 4px; }
+/* décomptes commencés, à reprendre */
+.reprendre { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; background: var(--soft); }
+.reprendre .titre { font-weight: 600; font-size: 12.5px; margin-bottom: 4px; }
+.reprendre .item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 0; border-top: 1px solid var(--line); }
+.reprendre .item:first-of-type { border-top: none; }
+.reprendre .item .quoi { flex: 1 1 260px; }
+.reprendre .item.ouvert .quoi { color: var(--muted); }
 .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 14px; }
 label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+label.f small { font-weight: 400; }
 label.f input, label.f select, label.f textarea { font: inherit; color: var(--ink); padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
 label.f input[type=number] { width: 100%; }
 input:focus, select:focus, textarea:focus { outline: 2px solid #9cc6d6; border-color: var(--accent); }
@@ -27,25 +39,45 @@ button.primary { background: var(--accent); color: #fff; border-color: var(--acc
 button.primary:disabled { opacity: .5; cursor: default; }
 button.small { padding: 4px 8px; font-size: 12px; }
 button.danger { color: var(--bad); }
+button.lien { border: none; background: none; box-shadow: none; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; }
 .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11.5px; background: var(--soft); color: var(--muted); }
 .pill.ok { background: #e6f4ea; color: var(--ok); }
 .pill.warn { background: #fbf1dc; color: var(--warn); }
 .pill.bad { background: #fbe7e5; color: var(--bad); }
-.effectifs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-.calc { background: var(--soft); border-radius: 6px; padding: 10px 14px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; }
+/* effectifs : qui l'État paie, qui il ne paie pas */
+.effectifs { display: flex; gap: 10px; flex-wrap: wrap; }
+.effectifs .groupe { flex: 1 1 200px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.effectifs .groupe.etat { border-color: var(--accent); background: var(--soft); }
+.effectifs .groupe .titre { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.effectifs .groupe .champs { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.calc { background: var(--soft); border-radius: 6px; padding: 10px 14px; font-size: 13px; margin-top: 10px; }
+.calc .chiffres { display: flex; gap: 24px; flex-wrap: wrap; }
 .calc b { font-size: 16px; }
+.calc .regle { margin-top: 6px; color: var(--muted); font-size: 12.5px; }
 .warnings { margin-top: 10px; }
 .warnings div { background: #fbf1dc; border-left: 3px solid var(--warn); padding: 6px 10px; margin: 4px 0; border-radius: 4px; font-size: 12.5px; }
+.bandeau { border-left: 3px solid var(--accent); background: var(--soft); padding: 8px 12px; border-radius: 4px; margin: 0 0 12px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.bandeau.doute { border-left-color: var(--warn); background: #fbf1dc; }
 .error { background: #fbe7e5; border-left: 3px solid var(--bad); padding: 8px 10px; border-radius: 4px; margin: 8px 0; }
 .pieces { display: flex; flex-direction: column; gap: 12px; }
-.piece { display: grid; grid-template-columns: 230px 1fr; gap: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fff; }
-.piece.excluded { background: #fafafa; }
-.piece.excluded .body { opacity: .75; }
+.piece { display: grid; grid-template-columns: 230px 1fr; gap: 12px 14px; border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fff; }
+.piece.ecartee { background: #fafafa; }
+.piece.ecartee .body { opacity: .75; }
+/* compté ou pas : en tête de fiche, avec ce que la pièce rapporte à l'État */
+.etat-piece { grid-column: 1 / -1; margin: -12px -12px 0; padding: 7px 12px; border-radius: 8px 8px 0 0; font-size: 13px; border-bottom: 1px solid var(--line); }
+.etat-piece.compte { background: #e6f4ea; color: #1d5b39; }
+.etat-piece.compte .calcul { font-variant-numeric: tabular-nums; }
+.etat-piece.ecarte { background: #eceff2; color: var(--muted); }
+.etat-piece.doute { background: #fbf1dc; color: #7a4f10; }
 .thumb { width: 230px; height: 170px; border: 1px solid var(--line); border-radius: 5px; background-color: #eee; background-repeat: no-repeat; cursor: zoom-in; }
 .thumb-cap { font-size: 11.5px; color: var(--muted); margin-top: 4px; display: flex; justify-content: space-between; }
-.piece .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
-.piece .head .num { font-weight: 700; font-size: 15px; }
+.piece .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.piece .head label.num { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 15px; }
 .piece .head input.num-input { width: 56px; padding: 4px 6px; font-weight: 700; }
+.piece .head input.num-input.manque { border-color: var(--warn); background: #fbf1dc; }
+.piece .head label.compter { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.aide-num { font-size: 12px; color: #7a4f10; margin-bottom: 6px; }
+.aide-num:empty { display: none; }
 .piece .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
 .fares { margin-top: 8px; }
 .fares table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
@@ -59,13 +91,26 @@ button.danger { color: var(--bad); }
 .notes .reason { color: var(--bad); }
 .rows table { border-collapse: collapse; width: 100%; }
 .rows th { text-align: left; background: var(--soft); padding: 8px; font-weight: 600; font-size: 12.5px; border-bottom: 1px solid var(--line); }
-.rows td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.rows th.c-rub { width: 150px; }
+.rows th.c-calc { width: 190px; }
+.rows td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .rows td input { font: inherit; padding: 5px 7px; border: 1px solid var(--line); border-radius: 4px; width: 100%; }
-.rows td.num, .rows th.num { text-align: right; width: 130px; }
+.rows td select { max-width: 100%; }
+.rows td.num, .rows th.num { text-align: right; width: 140px; }
 .rows td input.num { text-align: right; }
-.rows tfoot td { font-weight: 700; font-size: 15px; }
+/* une ligne du décompte = ses champs, puis son libellé en pleine largeur et le calcul en clair */
+.rows tr.ligne td { border-bottom: none; padding-bottom: 2px; }
+.rows tr.detail td { padding-top: 2px; }
+.rows tr.perimee td { background: #fffaf0; }
+.rows .lib { display: flex; align-items: center; gap: 8px; }
+.rows .lib .legend { white-space: nowrap; }
+.rows .explication { margin-top: 4px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.retouche { font-size: 11.5px; color: var(--muted); margin-top: 3px; text-align: left; }
+.retouche.perimee { color: #7a4f10; font-weight: 600; }
+.rows tfoot td { font-weight: 700; font-size: 15px; text-align: right; }
 .total { font-size: 20px; font-weight: 700; color: var(--accent); }
 .actions { display: flex; gap: 10px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.garde { margin-top: 8px; }
 .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; white-space: pre-wrap; background: #f8fafb; border: 1px solid var(--line); border-radius: 6px; padding: 8px; max-height: 260px; overflow: auto; }
 .viewer { position: fixed; inset: 0; background: rgba(20,30,40,.75); display: none; z-index: 20; }
 .viewer.open { display: flex; }
@@ -77,7 +122,7 @@ button.danger { color: var(--bad); }
 .viewer .img-wrap img { display: block; max-width: 100%; }
 .viewer .hl { position: absolute; border: 3px solid #e53935; background: rgba(229,57,53,.12); border-radius: 3px; pointer-events: none; }
 .viewer aside { padding: 10px; overflow: auto; border-left: 1px solid var(--line); }
-.progress { display: none; align-items: center; gap: 10px; color: var(--muted); }
+.progress { display: none; align-items: center; gap: 10px; color: var(--muted); margin-top: 10px; }
 .progress.on { display: flex; }
 .spinner { width: 18px; height: 18px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

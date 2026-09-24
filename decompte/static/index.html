@@ -11,65 +11,69 @@
 <header>
   <div>
     <h1>Décompte DGEO — courses d'école &amp; camps</h1>
-    <div class="sub">Part à charge de l'État de Vaud pour les accompagnants titrés · traitement 100 % local</div>
+    <div class="sub">Ce que l'État rembourse à la commune pour ses enseignant·e·s · tout reste sur ce PC</div>
   </div>
   <div class="status" id="status">…</div>
 </header>
 <main>
   <section id="sec-upload">
     <h2><span class="step">1</span> Dossier PDF scanné</h2>
-    <p class="hint">Déposez le décompte complet (formulaire + toutes les pièces). Le logiciel lit les tickets, ignore les récépissés et propose la part État. Vous validez ensuite les effectifs et chaque pièce.</p>
-    <div class="drop" id="drop">
-      <strong>Glissez le PDF ici</strong> ou cliquez pour choisir un fichier<br>
-      <span id="fname" class="legend"></span>
-      <input type="file" id="file" accept="application/pdf" hidden>
-    </div>
-    <div class="row" style="margin-top:12px">
+    <div class="reprendre" id="reprendre" hidden></div>
+    <p class="hint">Déposez le dossier complet (formulaire, puis tous les tickets et factures) : la lecture commence aussitôt. Vous vérifiez ensuite les effectifs et chaque justificatif.</p>
+    <div class="row">
       <label class="f">Type d'activité
         <select id="type-select">
-          <option value="">Détection automatique</option>
+          <option value="">Reconnu tout seul</option>
           <option value="course">Course d'école</option>
           <option value="camp">Camp</option>
         </select>
       </label>
-      <button class="primary" id="btn-analyse" disabled>Analyser le dossier</button>
-      <div class="progress" id="progress"><div class="spinner"></div><span>Lecture OCR des pages en cours… (quelques secondes par page)</span></div>
     </div>
+    <button type="button" class="drop" id="drop">
+      <strong>Glissez le PDF ici</strong> ou cliquez pour choisir le fichier
+      <span id="fname" class="legend"></span>
+    </button>
+    <input type="file" id="file" accept="application/pdf" hidden>
+    <div class="progress" id="progress"><div class="spinner"></div><span>Lecture des pages en cours… (quelques secondes par page)</span></div>
     <div id="upload-error"></div>
   </section>
 
   <section id="sec-dossier" hidden>
     <h2><span class="step">2</span> Dossier &amp; effectifs</h2>
+    <div class="bandeau info" id="bandeau-pages" hidden></div>
+    <div class="bandeau doute" id="bandeau-doublon" hidden></div>
     <div class="grid" id="dossier-fields"></div>
-    <h3 style="font-size:13.5px;margin:16px 0 6px">Effectifs <span class="legend">— c'est vous qui fixez qui est titré : enseignants DGEO + enseignants J&amp;S = <b>acc. titrés</b> (part État) ; moniteurs J+S + autres = acc. non titrés</span></h3>
+    <h3 class="sous-titre">Effectifs <span class="legend">— c'est vous qui les fixez, d'après le formulaire : tout le calcul en dépend</span></h3>
     <div class="effectifs" id="effectifs"></div>
-    <div class="calc" id="effectifs-calc" style="margin-top:10px"></div>
-    <div id="noms" class="hint" style="margin-top:8px"></div>
+    <div class="calc" id="effectifs-calc"></div>
+    <div id="noms" class="hint"></div>
     <div class="warnings" id="warnings"></div>
   </section>
 
   <section id="sec-pieces" hidden>
-    <h2><span class="step">3</span> Pièces justificatives <span class="legend" id="pieces-count"></span></h2>
-    <p class="hint">Vérifiez chaque pièce sur l'aperçu (cliquez pour agrandir). <b>Saisie directe</b> : tarifs adultes retenus sur le billet (jusqu'à N titrés, plein tarif puis demi-tarif). <b>Règle de trois</b> : montant global réparti selon les effectifs dans l'Excel. Les récépissés et reçus de carte sont exclus automatiquement.</p>
+    <h2><span class="step">3</span> Justificatifs <span class="legend" id="pieces-count"></span></h2>
+    <p class="hint">Vérifiez chaque ticket ou facture sur son aperçu (cliquez pour agrandir) et <b>reportez le n° écrit sur le ticket</b> : c'est lui qui figure dans la colonne « N° pièce » du formulaire et dans le libellé Excel, « (Pce 4) ». Les reçus de carte, récépissés et taux de change ne sont pas comptés : seul le ticket ou la facture fait foi.</p>
     <div class="pieces" id="pieces"></div>
-    <div class="actions"><button id="btn-add-piece">+ Ajouter une pièce manquante</button></div>
+    <div class="actions"><button type="button" id="btn-add-piece">+ Ajouter un justificatif oublié</button></div>
   </section>
 
   <section id="sec-rows" hidden>
     <h2><span class="step">4</span> Lignes du décompte DGEO</h2>
-    <p class="hint">Ces lignes seront écrites dans le modèle Excel (avec ses formules). Vous pouvez retoucher un libellé ou un montant ; « Recalculer » régénère tout depuis les pièces.</p>
+    <p class="hint">Ces lignes seront écrites dans le modèle Excel de la DGEO : une ligne par rubrique et par façon de calculer, le calcul en clair dessous. Vous pouvez retoucher une ligne : la retouche reste marquée, et tout le reste continue de suivre vos corrections.</p>
+    <div id="retouches-info"></div>
     <div class="rows"><table id="rows-table">
-      <thead><tr><th style="width:130px">Rubrique</th><th>Libellé (détail du calcul)</th><th style="width:170px">Calcul</th><th class="num">Coût total (H)</th><th class="num">Part État saisie (I)</th><th class="num">À charge de l'État (J)</th></tr></thead>
+      <thead><tr><th class="c-rub">Rubrique</th><th class="c-calc">Calcul</th><th class="num" title="Colonne H du modèle Excel">Montant payé</th><th class="num" title="Colonnes I et J du modèle Excel">Part de l'État</th></tr></thead>
       <tbody></tbody>
-      <tfoot><tr><td colspan="5" style="text-align:right">Total du remboursement demandé à la DGEO (arrondi à 0.05)</td><td class="num total" id="total">–</td></tr></tfoot>
+      <tfoot><tr><td colspan="3">Total demandé à la DGEO (arrondi à 0.05)</td><td class="num total" id="total">–</td></tr></tfoot>
     </table></div>
     <div class="actions">
-      <button id="btn-recompute">↻ Recalculer depuis les pièces</button>
-      <button class="primary" id="btn-excel">⬇ Générer le fichier Excel</button>
+      <button type="button" class="primary" id="btn-excel">⬇ Créer le fichier Excel du décompte</button>
+      <button type="button" id="btn-recompute" hidden>↺ Annuler toutes les retouches</button>
       <span class="legend" id="rows-state"></span>
     </div>
+    <div class="legend garde" id="save-state"></div>
   </section>
-  <footer class="note">Les PDF analysés sont conservés localement dans le dossier <span class="kbd">data/</span> à côté du programme.</footer>
+  <footer class="note">Les dossiers analysés et les décomptes commencés restent sur ce PC.</footer>
 </main>
 
 <div class="viewer" id="viewer">
@@ -77,16 +81,17 @@
     <div class="bar">
       <b id="viewer-title"></b>
       <span class="sp"></span>
-      <button class="small" id="viewer-prev">◀ Page préc.</button>
-      <button class="small" id="viewer-next">Page suiv. ▶</button>
-      <button class="small" id="viewer-close">Fermer ✕</button>
+      <button type="button" class="small" id="viewer-prev">◀ Page préc.</button>
+      <button type="button" class="small" id="viewer-next">Page suiv. ▶</button>
+      <button type="button" class="small" id="viewer-close">Fermer ✕</button>
     </div>
     <div class="content">
       <div class="img-wrap" id="viewer-wrap"><img id="viewer-img" alt="page"><div class="hl" id="viewer-hl" hidden></div></div>
-      <aside><div class="legend" style="margin-bottom:6px">Texte lu (OCR)</div><div class="mono" id="viewer-text" style="max-height:none"></div></aside>
+      <aside><div class="legend" style="margin-bottom:6px">Texte lu sur la page</div><div class="mono" id="viewer-text" style="max-height:none"></div></aside>
     </div>
   </div>
 </div>
+<script src="/static/lignes.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>
