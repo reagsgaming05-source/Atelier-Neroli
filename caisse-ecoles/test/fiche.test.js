@@ -372,7 +372,7 @@ test('le crayon d\'une autre ligne ne jette pas une modification en cours sans d
   f.cliquerDans('journalBody', { edit: b.id });
   assert.equal(f.questions.length, 1);
   assert.equal(f.S.state.editingId, a.id, 'Annuler : on reste sur la pièce en cours');
-  assert.equal(f.el('pMontant').value, '11');
+  assert.equal(f.el('pMontant').value, '11.00');
 });
 
 test('un justificatif enregistré retiré en modification ne quitte le disque qu\'à l\'enregistrement', async () => {
@@ -396,5 +396,85 @@ test('un justificatif enregistré retiré en modification ne quitte le disque qu
   await f.enregistrer();
   assert.ok(!f.disque.fichiers.has(cle));
   assert.equal(f.S.state.reg.pieces[0].justificatifs.length, 0);
+});
+
+/* ------------------------------------------------------------------ */
+/* Montant, erreurs de la fiche                                          */
+/* ------------------------------------------------------------------ */
+
+test('« 400.– », « 400.- » et « Fr. 400.- » se lisent 400, comme sur la quittance', () => {
+  for (const t of ['400.–', '400.-', '400.--', 'Fr. 400.-', '400.', "1'200.–", 'CHF 400.—']) {
+    assert.equal(R.parseAmountInput(t), t.startsWith('1') ? 1200 : 400, JSON.stringify(t));
+  }
+  // ce qui n'est pas un montant le reste
+  for (const t of ['400.x', '4OO', '-', '.–', 'quatre cents']) assert.equal(R.parseAmountInput(t), null, JSON.stringify(t));
+});
+
+test('un montant illisible n\'est pas annoncé « manquant » : le message dit quoi taper', () => {
+  const reg = R.emptyRegister(2026, {});
+  const p = R.newPiece(reg);
+  Object.assign(p, { date: '2026-03-02', type: 'FRAIS', personne: 'A. Berger', montant: 0, sens: 'credit', compte: '50000.3652.00' });
+  const msg = (tape) => R.validateChamps(p, reg, { montantTape: tape }).find((e) => e.champ === 'pMontant').message;
+  assert.match(msg('4OO.x'), /« 4OO\.x » n'est pas un montant lisible : tapez par exemple 400/);
+  assert.equal(msg(''), 'Montant à indiquer');
+  assert.match(msg('-50'), /plus grand que zéro/);
+});
+
+test('chaque erreur désigne son champ, et le n° déjà pris propose le numéro libre', () => {
+  const reg = R.emptyRegister(2026, {});
+  for (const no of [1, 2, 3]) R.upsertPiece(reg, Object.assign(R.newPiece(reg), { no }));
+  const p = Object.assign(R.newPiece(reg), { no: 1, date: '2025-12-30', personne: '' });
+  const errs = R.validateChamps(p, reg, {});
+  const de = (champ) => errs.find((e) => e.champ === champ);
+  assert.equal(de('pNo').libre, 4);
+  assert.match(de('pNo').message, /le prochain numéro libre est le 4/);
+  assert.match(de('pDate').message, /« L'année »/, 'dire où changer d\'année');
+  assert.ok(de('pPersonne'));
+  assert.ok(de('pCompte'));
+  // le texte seul, pour qui n'a pas besoin du champ, reste le même
+  assert.deepEqual(R.validate(p, reg), errs.map((e) => e.message));
+});
+
+test('la fiche enregistre « 400.– » et montre 400.00 en quittant le champ', async () => {
+  const f = await ficheSimulee();
+  f.remplir({ pPersonne: 'A. Berger', pCompte: '51000.3662.50', pMontant: '400.–' });
+  assert.equal(f.el('pMontant').value, '400.00', 'le montant compris doit se voir');
+  f.el('pMontant').value = 'Fr. 400.-'; // tapé puis enregistré sans quitter le champ
+  await f.enregistrer();
+  assert.equal(f.S.state.reg.pieces.length, 1, f.el('ficheErrors').innerHTML);
+  assert.equal(f.S.state.reg.pieces[0].montant, 400);
+});
+
+test('les erreurs se posent sur leurs champs et s\'en vont quand on les corrige', async () => {
+  const f = await ficheSimulee();
+  f.remplir({ pCompte: '51000.3662.50', pMontant: '4OO' });
+  await f.enregistrer();
+  assert.equal(f.S.state.reg.pieces.length, 0);
+  assert.ok(f.el('pMontant').classList.contains('champ-erreur'));
+  assert.ok(f.el('pPersonne').classList.contains('champ-erreur'));
+  assert.match(f.el('ficheErrors').innerHTML, /pas un montant lisible/);
+  assert.equal(f.doc.activeElement, f.el('pMontant'), 'le curseur va au premier champ en cause');
+  f.remplir({ pMontant: '40' });
+  f.el('ficheCard').dispatchEvent(new Event('input')); // la frappe remonte jusqu'à la fiche
+  assert.ok(!f.el('pMontant').classList.contains('champ-erreur'), 'corrigé, le champ ne doit plus être en rouge');
+  assert.doesNotMatch(f.el('ficheErrors').innerHTML, /montant/i);
+  assert.match(f.el('ficheErrors').innerHTML, /Personne/);
+  f.remplir({ pPersonne: 'A. Berger' });
+  f.el('ficheCard').dispatchEvent(new Event('input'));
+  assert.equal(f.el('ficheErrors').innerHTML, '', 'tout est corrigé : le cadre rouge disparaît');
+});
+
+test('« Prendre le n° » pose le numéro libre proposé', async () => {
+  const f = await ficheSimulee();
+  remplirRemboursement(f);
+  await f.enregistrer();
+  remplirRemboursement(f);
+  f.remplir({ pNo: '1' });
+  await f.enregistrer();
+  assert.match(f.el('ficheErrors').innerHTML, /data-prendre-no="2"/);
+  f.cliquerDans('ficheErrors', { prendreNo: '2' });
+  assert.equal(f.el('pNo').value, '2');
+  await f.enregistrer();
+  assert.equal(f.S.state.reg.pieces.length, 2);
 });
 

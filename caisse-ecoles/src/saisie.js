@@ -305,7 +305,7 @@
     state.dgeo.current = null;
     fillForm(p);
     els.ficheTitle.textContent = `n° ${p.no}`;
-    els.ficheErrors.innerHTML = '';
+    montrerErreurs([]);
     afficherMode();
     hidePreview();
   }
@@ -488,6 +488,12 @@
   for (const id of ['pObjet', 'pClasse']) els[id].addEventListener('input', () => { if (state.autoAccount) els.pCompte.value = ''; refreshSuggestions(); refreshLibelle(); });
   els.pDetail.addEventListener('input', () => { refreshSuggestions(); refreshLibelle(); });
   els.pCompte.addEventListener('input', () => { state.autoAccount = false; refreshSuggestions(); });
+  // Le montant compris est réécrit dès qu'on quitte le champ : « 400.– » devient « 400.00 », et
+  // la personne voit ce qui sera enregistré. Un texte illisible reste tel quel, pour être corrigé.
+  els.pMontant.addEventListener('change', () => {
+    const v = R.parseAmountInput(els.pMontant.value);
+    if (v != null && v > 0) els.pMontant.value = v.toFixed(2);
+  });
   for (const id of ['pPeriode', 'pPersonne']) els[id].addEventListener('input', refreshLibelle);
   els.pLibelleEdit.addEventListener('change', () => { els.pLibelle.readOnly = !els.pLibelleEdit.checked; if (!els.pLibelleEdit.checked) refreshLibelle(); });
   if ($('pSensForce')) $('pSensForce').addEventListener('change', () => setSens(els.pSensDebit.checked ? 'debit' : (els.pSensCredit.checked ? 'credit' : null), true));
@@ -539,14 +545,42 @@
     ev.preventDefault();
     if (!els.btnPieceSave.disabled) els.btnPieceSave.click();
   });
+  /**
+   * Les erreurs de la fiche, chacune sur son champ : encadré rouge, et la liste au-dessus du
+   * bouton. Elles se retirent d'elles-mêmes à mesure que les champs sont corrigés (voir plus bas) :
+   * le cadre gardait sinon « Montant manquant » sous un montant bien rempli.
+   */
+  const enErreur = new Set();
+  function champVisible(id) {
+    const el = id === 'sens' ? els.pSensDebit : $(id);
+    if (!el) return null;
+    if (el.tagName === 'SELECT' && el.previousElementSibling) return el.previousElementSibling.querySelector('input') || el;
+    if (id === 'sens') return (el.closest && el.closest('.sens')) || el;
+    return el;
+  }
+  function montrerErreurs(errs) {
+    for (const id of enErreur) { const c = champVisible(id); if (c) c.classList.remove('champ-erreur'); }
+    enErreur.clear();
+    for (const e of errs) { const c = champVisible(e.champ); if (c) { c.classList.add('champ-erreur'); enErreur.add(e.champ); } }
+    els.ficheErrors.innerHTML = errs.length
+      ? `<div class="notice err"><b>La pièce n'est pas encore enregistrée :</b><ul>${errs.map((e) => `<li>${escapeHtml(e.message)}` +
+        `${e.libre ? ` <button type="button" class="small" data-prendre-no="${e.libre}">Prendre le n° ${e.libre}</button>` : ''}</li>`).join('')}</ul></div>`
+      : '';
+  }
+  const erreursFiche = () => R.validateChamps(formPiece(), state.reg, { montantTape: els.pMontant.value });
+  // une erreur affichée se retire dès que son champ est corrigé
+  if (ficheCard) for (const t of ['input', 'change']) ficheCard.addEventListener(t, () => { if (enErreur.size) montrerErreurs(erreursFiche()); });
+
   els.btnPieceSave.addEventListener('click', async () => {
     const p = formPiece();
-    const errs = R.validate(p, state.reg);
+    const errs = erreursFiche();
     if (errs.length) {
-      els.ficheErrors.innerHTML = `<div class="notice err"><b>La pièce n'est pas enregistrée :</b><ul>${errs.map((e) => `<li>${escapeHtml(e)}</li>`).join('')}</ul></div>`;
+      montrerErreurs(errs);
+      const premier = champVisible(errs[0].champ);
+      if (premier && premier.focus) premier.focus();
       return;
     }
-    els.ficheErrors.innerHTML = '';
+    montrerErreurs([]);
     // justificatifs en attente -> fichiers
     const failed = [];
     for (const f of state.pending) {
@@ -940,7 +974,7 @@
       state.editingId = p.id; state.pending = []; state.retires = new Set(); state.dgeo.current = null;
       fillForm(p);
       els.ficheTitle.textContent = `n° ${p.no} (modification)`;
-      els.ficheErrors.innerHTML = '';
+      montrerErreurs([]);
       afficherMode();
       renderJournal();
       $('ficheCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1207,6 +1241,13 @@
     return piece;
   }
   els.ficheErrors.addEventListener('click', (ev) => {
+    const n = ev.target.closest('button[data-prendre-no]');
+    if (n) {
+      els.pNo.value = n.dataset.prendreNo;
+      els.pNo.dispatchEvent(new Event('input', { bubbles: true }));
+      els.pNo.focus();
+      return;
+    }
     const b = ev.target.closest('button[data-amount]');
     if (!b) return;
     els.pMontant.value = Number(b.dataset.amount).toFixed(2);

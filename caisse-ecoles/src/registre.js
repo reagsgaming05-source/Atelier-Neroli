@@ -148,6 +148,8 @@
   /** Nouvelle pièce vierge, pré-remplie (n° suivant, date du jour). */
   /**
    * Montant tapé à la main : « 4'825.55 », « 4 825,55 », « CHF 4825.55 » → 4825.55.
+   * « 400.– », « 400.- », « Fr. 400.- » → 400 : c'est ainsi qu'on écrit les francs ronds en Suisse,
+   * et c'est ce qu'on lit sur la quittance. Ils étaient refusés comme « Montant manquant ».
    * Renvoie null si le texte n'est pas un montant (au lieu de 0, qui passait pour une saisie).
    */
   function parseAmountInput(text) {
@@ -155,6 +157,8 @@
       .replace(/chf|frs?\.?/ig, '')
       .replace(/[\s\u00A0’'´`]/g, '')
       .replace(',', '.')
+      .replace(/(\d)\.?[-–—]+$/, '$1') // « 400.– », « 400.-- » : pas de centimes
+      .replace(/(\d)\.$/, '$1') // « 400. »
       .trim();
     if (t === '' || !/^-?\d+(\.\d+)?$/.test(t)) return null;
     const v = Number(t);
@@ -442,21 +446,46 @@
     }).sort((a, b) => a.niveau - b.niveau || a.ordre - b.ordre || b.n - a.n || a.compte.localeCompare(b.compte));
   }
 
-  /** Erreurs bloquantes d'une pièce (liste vide = pièce valable). */
-  function validate(p, reg) {
+  /**
+   * Erreurs bloquantes d'une pièce, chacune avec le champ de la fiche qu'elle concerne (liste vide
+   * = pièce valable). Chaque message dit quoi faire, pas seulement ce qui manque : « le n° 1 existe
+   * déjà » laissait chercher le numéro libre, « Montant manquant » s'affichait sous « 400.– ».
+   *   opts.montantTape : le texte du champ Montant, pour distinguer un montant vide d'un illisible.
+   * Rend [{ champ, message, libre? }] — `libre` : le prochain numéro libre, à proposer.
+   */
+  function validateChamps(p, reg, opts) {
+    opts = opts || {};
     const errs = [];
-    if (p.no == null || !Number.isInteger(p.no) || p.no <= 0) errs.push('Numéro de pièce manquant ou invalide');
-    else if (reg && reg.pieces.some((x) => x.id !== p.id && x.no === p.no)) errs.push(`Le n° ${p.no} existe déjà dans le registre`);
-    if (!isRealDate(p.date)) errs.push('Date manquante ou invalide');
-    else if (reg && String(p.date).slice(0, 4) !== String(reg.annee)) errs.push(`La date n'est pas dans l'année ${reg.annee}`);
-    if (!p.type) errs.push("Type d'écriture manquant");
-    if (!(p.montant > 0)) errs.push('Montant manquant (doit être positif)');
-    if (!p.compte || !ACCOUNT_RE.test(p.compte)) errs.push('N° de compte manquant ou mal formé (ex. 51000.3662.00)');
-    else if (reg && p.compte === reg.caisse) errs.push('Le compte de contrepartie ne peut pas être le compte caisse');
-    if (!p.sens) errs.push("Sens de l'écriture à choisir (entrée ou sortie de caisse)");
-    if (!(p.libelle || composeLibelle(p)).trim()) errs.push('Libellé vide');
-    if (!p.personne) errs.push('Personne manquante (« A. Nom »)');
+    const err = (champ, message, extra) => errs.push(Object.assign({ champ, message }, extra || {}));
+    if (p.no == null || !Number.isInteger(p.no) || p.no <= 0) err('pNo', 'Numéro de pièce à indiquer (un nombre entier : 1, 2, 3…)', reg ? { libre: nextNo(reg) } : null);
+    else if (reg && reg.pieces.some((x) => x.id !== p.id && x.no === p.no)) {
+      const libre = nextNo({ pieces: reg.pieces.filter((x) => x.id !== p.id) });
+      err('pNo', `Le n° ${p.no} existe déjà dans le registre : le prochain numéro libre est le ${libre}`, { libre });
+    }
+    if (!isRealDate(p.date)) err('pDate', 'Date à indiquer');
+    else if (reg && String(p.date).slice(0, 4) !== String(reg.annee)) {
+      err('pDate', `La date n'est pas dans l'année ${reg.annee}, celle du registre ouvert. Pour une autre année : espace « L'année », « Changer d'année »`);
+    }
+    if (!p.type) err('pType', "Type d'écriture à choisir");
+    if (!(p.montant > 0)) {
+      const tape = String(opts.montantTape == null ? '' : opts.montantTape).trim();
+      const lu = tape ? parseAmountInput(tape) : null;
+      if (!tape) err('pMontant', 'Montant à indiquer');
+      else if (lu == null) err('pMontant', `« ${tape} » n'est pas un montant lisible : tapez par exemple 400 ou 29.70`);
+      else err('pMontant', "Le montant doit être plus grand que zéro, sans signe moins : l'entrée ou la sortie se choisit dans « Sens de l'écriture »");
+    }
+    if (!p.compte) err('pCompte', 'Compte à choisir : ouvrez la liste du champ Compte');
+    else if (!ACCOUNT_RE.test(p.compte)) err('pCompte', `« ${p.compte} » n'est pas un n° de compte (il s'écrit comme 51000.3662.00)`);
+    else if (reg && p.compte === reg.caisse) err('pCompte', 'Ce compte est le compte caisse lui-même : choisissez celui de la dépense ou de la recette');
+    if (!p.sens) err('sens', "Sens de l'écriture à choisir (entrée ou sortie de caisse)");
+    if (!(p.libelle || composeLibelle(p)).trim()) err('pLibelle', 'Libellé vide');
+    if (!p.personne) err('pPersonne', 'Personne à indiquer (initiale et nom, ex. A. Berger)');
     return errs;
+  }
+
+  /** Erreurs bloquantes d'une pièce, en texte (liste vide = pièce valable). */
+  function validate(p, reg, opts) {
+    return validateChamps(p, reg, opts).map((e) => e.message);
   }
 
   /** Ajoute ou remplace une pièce (par id), puis trie. */
@@ -991,6 +1020,7 @@
     sensFor,
     accountSuggestions,
     validate,
+    validateChamps,
     upsertPiece,
     removePiece,
     syncScanBatch,
