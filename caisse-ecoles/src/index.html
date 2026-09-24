@@ -16,6 +16,7 @@
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
   <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
@@ -47,42 +48,49 @@
   <div class="switcher" id="toolSwitcher">
     <button type="button" class="brand" id="btnTool" aria-haspopup="menu" aria-expanded="false" title="Changer d'outil : Caisse écoles ou Décompte DGEO">
       <div class="mark" id="toolMark"><svg class="ico"><use href="#i-wallet"/></svg></div>
-      <div class="txt"><div class="name" id="toolName">Caisse écoles</div><div class="suite">Compta Blonay</div></div>
+      <div class="txt"><div class="name" id="toolName">Caisse écoles</div><div class="suite">Changer d'outil</div></div>
       <svg class="ico chev"><use href="#i-chevron"/></svg>
+      <span class="court" id="toolCourt">Caisse</span>
     </button>
     <div class="tool-menu hidden" id="toolMenu" role="menu">
       <div class="section">Outils de Compta Blonay</div>
-      <button type="button" role="menuitem" data-tool="caisse" class="active"><span class="mark"><svg class="ico"><use href="#i-wallet"/></svg></span><span class="txt"><b>Caisse écoles</b><small>Pièces, journal, Excel, comptage</small></span><svg class="ico tick"><use href="#i-check"/></svg></button>
+      <button type="button" role="menuitem" data-tool="caisse" class="active"><span class="mark"><svg class="ico"><use href="#i-wallet"/></svg></span><span class="txt"><b>Caisse écoles</b><small>Pièces, journal, Excel, comptage</small><small class="menu-attente hidden" id="toolMenuDecomptes"></small></span><svg class="ico tick"><use href="#i-check"/></svg></button>
       <button type="button" role="menuitem" data-tool="dgeo"><span class="mark dgeo"><svg class="ico"><use href="#i-layers"/></svg></span><span class="txt"><b>Décompte DGEO</b><small id="dgeoNavState">Courses d'école &amp; camps</small></span><svg class="ico tick"><use href="#i-check"/></svg></button>
     </div>
   </div>
+  <!-- Chaque entrée porte son nom en entier (grand écran), son nom seul (écran moyen) ou un mot
+       sous l'icône (petit écran) : jamais une icône muette. L'infobulle reprend le libellé. -->
   <nav class="nav" id="appTabs">
     <div class="section">Espaces</div>
-    <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
-    <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
-    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, à valider</small></span><span class="navbadge hidden" id="navBadgeReception" data-badge-reception title="Documents scannés en attente de validation"></span></button>
-    <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
-    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes</small></span></button>
-    <button type="button" class="apptab" data-panel="panelDonnees" title="Les listes de l'application"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Données<small>Comptes, classes, noms</small></span></button>
+    <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces – fiche, journal, Excel, PDF"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="court">Saisie</span><span class="navbadge decompte hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, dont la pièce reste à créer"></span></button>
+    <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées – lecture des PDF, contrôle"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span><span class="court">Scans</span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception – scans du copieur, décomptes à faire"><svg class="ico"><use href="#i-inbox"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, décomptes à faire</small></span><span class="court">Réception</span><span class="navbadge hidden" id="navBadgeReception" data-badge-reception title="Scans du copieur à valider"></span></button>
+    <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse – billets, monnaie, soldes"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, monnaie, soldes</small></span><span class="court">Caisse</span></button>
+    <button type="button" class="apptab" data-panel="panelAnnee" title="L'année – solde à nouveau, sauvegardes, où sont les données"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes</small></span><span class="court">Année</span></button>
+    <button type="button" class="apptab" data-panel="panelDonnees" title="Listes – comptes, classes, noms"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Listes<small>Comptes, classes, noms</small></span><span class="court">Listes</span></button>
   </nav>
   <nav class="nav hidden" id="dgeoNav">
     <div class="section">Décompte DGEO</div>
-    <button type="button" class="apptab active" data-dgeo="sec-upload" title="Dossier PDF scanné"><svg class="ico"><use href="#i-upload"/></svg><span class="lbl">Dossier PDF<small>Déposer et analyser</small></span></button>
-    <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier et effectifs"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span></button>
-    <button type="button" class="apptab" data-dgeo="sec-pieces" title="Pièces justificatives"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Pièces justificatives<small>Tickets retenus</small></span></button>
-    <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
+    <button type="button" class="apptab active" data-dgeo="sec-upload" title="Dossier PDF – déposer et analyser"><svg class="ico"><use href="#i-upload"/></svg><span class="lbl">Dossier PDF<small>Déposer et analyser</small></span><span class="court">PDF</span></button>
+    <button type="button" class="apptab" data-dgeo="sec-dossier" title="Dossier &amp; effectifs – titrés, accompagnants"><svg class="ico"><use href="#i-users"/></svg><span class="lbl">Dossier &amp; effectifs<small>Titrés, accompagnants</small></span><span class="court">Effectifs</span></button>
+    <button type="button" class="apptab" data-dgeo="sec-pieces" title="Pièces justificatives – tickets retenus"><svg class="ico"><use href="#i-clip"/></svg><span class="lbl">Pièces justificatives<small>Tickets retenus</small></span><span class="court">Tickets</span></button>
+    <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte – part État, Excel"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span><span class="court">Lignes</span></button>
     <div class="section">Décomptes</div>
-    <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span></button>
-    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Décomptes à faire, scans du copieur</small></span><span class="navbadge hidden" id="navBadgeReceptionDgeo" data-badge-reception title="Documents scannés en attente de validation"></span></button>
-    <div class="navnote">
+    <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes – n°, montants, total (PDF)"><svg class="ico"><use href="#i-file"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span><span class="court">Récap.</span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception – scans du copieur, décomptes à faire"><svg class="ico"><use href="#i-inbox"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, décomptes à faire</small></span><span class="court">Réception</span><span class="navbadge hidden" id="navBadgeReceptionDgeo" data-badge-reception title="Scans du copieur à valider"></span></button>
+    <!-- Les réglages de Décompte DGEO : dans la barre sur grand écran, derrière ce bouton ailleurs
+         (ils étaient simplement cachés sous 1500 px, et un formulaire masqué ne revenait plus). -->
+    <button type="button" class="apptab" id="btnDgeoReglages" aria-haspopup="dialog" aria-expanded="false" title="Réglages du décompte – pièce comptable, formulaire du dossier"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Réglages<small>Pièce comptable, formulaire</small></span><span class="court">Réglages</span></button>
+    <div class="navnote" id="dgeoReglages" role="dialog" aria-label="Réglages du décompte">
+      <div class="navnote-tete"><b>Réglages du décompte</b><button type="button" class="small ghost" id="btnDgeoReglagesFermer" title="Fermer les réglages"><svg class="ico"><use href="#i-x"/></svg></button></div>
       <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
       <label class="check legend" style="align-items:flex-start;margin-top:10px"><input type="checkbox" id="optDgeoForm" checked> <span>Afficher le formulaire de décompte de Blonay (page de couverture) à côté de Décompte DGEO, avec ce qui y a été lu.</span></label>
     </div>
   </nav>
   <div class="foot">
-    <span class="pill"><svg class="ico"><use href="#i-shield"/></svg> 100 % local, aucune donnée envoyée</span>
-    <span>Les registres et les justificatifs restent dans les fichiers de l'application. Le classeur Excel produit garde le format habituel.</span>
+    <span class="pill"><svg class="ico"><use href="#i-shield"/></svg> Rien n'est envoyé sur Internet</span>
+    <span id="piedDonnees">Les journaux et les justificatifs restent dans les fichiers de l'application.</span>
   </div>
 </aside>
 
@@ -100,7 +108,7 @@
 
   <div class="layout2">
     <section class="card" id="ficheCard">
-      <h2><span class="left"><svg class="ico"><use href="#i-pen"/></svg> Pièce comptable <span class="legend" id="ficheTitle"></span></span> <button type="button" class="small ghost hidden" id="btnOpenDgeo" title="Afficher l'onglet Décompte DGEO de cette application"><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</button></h2>
+      <h2><span class="left"><svg class="ico"><use href="#i-pen"/></svg> Pièce comptable <span class="legend" id="ficheTitle"></span></span> <button type="button" class="small ghost hidden" id="btnOpenDgeo" title="Ouvrir Décompte DGEO (courses d'école et camps)"><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</button></h2>
       <div id="dgeoPending" class="dgeo-pending hidden"></div>
       <div class="row">
         <div class="field"><label for="pNo">N°</label><input type="number" id="pNo" min="1" step="1" style="width:84px"></div>
@@ -199,7 +207,7 @@
   <header class="page-head">
     <div>
       <h1>Pièces scannées</h1>
-      <p>Les pièces déjà remplies à la main et scannées sont lues trois fois (couche texte, OCR local, Tesseract natif), puis contrôlées et versées dans le registre de l'année, celui de la saisie des pièces : les deux espaces travaillent sur les mêmes écritures, et le fichier Excel de l'année les contient toutes.</p>
+      <p>Déposez les PDF des fiches « PIÈCE COMPTABLE » remplies à la main : l'application les lit, vous vérifiez les lignes en orange, et les pièces entrent dans le journal de l'année — le même que celui de la Saisie des pièces.</p>
     </div>
   </header>
 
@@ -466,7 +474,7 @@
   <header class="page-head">
     <div>
       <h1>L'année</h1>
-      <p>Ce qu'on règle une fois par année : l'année ouverte, le solde à nouveau, le compte caisse, les visas du relevé. Et le registre de cette année : reprendre un classeur commencé à la main, faire une sauvegarde, en restaurer une. Les listes proposées par l'application (comptes, classes, noms) sont dans l'espace <b>Données</b>.</p>
+      <p>Ce qu'on règle une fois par année : l'année ouverte, le solde à nouveau, le compte caisse, les visas du relevé. Et le registre de cette année : reprendre un classeur commencé à la main, faire une sauvegarde, en restaurer une. Les listes proposées par l'application (comptes, classes, noms) sont dans l'espace <b>Listes</b>.</p>
     </div>
   </header>
 
@@ -521,7 +529,7 @@
 
   <section class="card">
     <h2><svg class="ico"><use href="#i-shield"/></svg> Sauvegardes</h2>
-    <p class="legend">Une sauvegarde est une copie du registre de l'année (un fichier JSON) : le journal, les pièces et les comptages. Gardez-en une hors du PC. La restauration remplace le registre de l'année ouverte par celui de la sauvegarde.</p>
+    <p class="legend">Une sauvegarde est une copie du journal de l'année, en un seul fichier : les pièces et les comptages. Gardez-en une hors du PC. La restauration remplace le journal de l'année ouverte par celui de la sauvegarde.</p>
     <div class="toolbar">
       <button type="button" id="btnRegExport"><svg class="ico"><use href="#i-download"/></svg> Faire une sauvegarde</button>
       <button type="button" id="btnRegImport"><svg class="ico"><use href="#i-upload"/></svg> Restaurer une sauvegarde…</button>
@@ -547,8 +555,8 @@
 <div id="panelDonnees" class="panel hidden">
   <header class="page-head">
     <div>
-      <h1>Données</h1>
-      <p>Les listes que l'application propose partout : comptes, classes, personnes, objets, types d'écriture. Ajoutez ce qui manque, retirez ce qui ne sert plus — c'est gardé sur ce PC et repris à chaque ouverture. Retirer ne change aucune pièce déjà enregistrée : seules les listes déroulantes cessent de la proposer.</p>
+      <h1>Listes</h1>
+      <p>Les listes que l'application propose partout : comptes, classes, personnes, objets, types d'écriture. Ajoutez ce qui manque, retirez ce qui ne sert plus — c'est gardé avec les données de la caisse (sur ce PC, ou sur le serveur si elles y sont) et repris à chaque ouverture. Retirer ne change aucune pièce déjà enregistrée : seules les listes déroulantes cessent de la proposer.</p>
     </div>
   </header>
 
@@ -562,7 +570,7 @@
       <button type="button" class="small" id="btnDonneesReprendre"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un carnet…</button>
       <input type="file" id="donneesFile" accept="application/json,.json" class="hidden">
     </div>
-    <div class="legend" style="margin-top:10px"><svg class="ico sm"><use href="#i-shield"/></svg> Ces listes ne sortent pas du PC : elles ne sont ni publiées, ni envoyées nulle part. Les noms de personnes en font partie.</div>
+    <div class="legend" style="margin-top:10px"><svg class="ico sm"><use href="#i-shield"/></svg> Ces listes ne partent jamais sur Internet : elles restent avec les données de la caisse. Les noms de personnes en font partie.</div>
   </section>
 
   <div id="donneesCartes"></div>
@@ -576,11 +584,12 @@
         <div class="ttl"><b><svg class="ico sm"><use href="#i-file"/></svg> Formulaire du dossier</b><div class="legend" id="dgeoFormFile"></div></div>
         <select id="dgeoFormSelect" title="Dossiers analysés (le plus récent en premier)"></select>
         <button type="button" class="small ghost" id="btnDgeoFormZoom" title="Agrandir le formulaire"><svg class="ico"><use href="#i-search"/></svg></button>
-        <button type="button" class="small ghost" id="btnDgeoFormHide" title="Masquer le formulaire (réglage dans la barre latérale)"><svg class="ico"><use href="#i-x"/></svg></button>
+        <button type="button" class="small ghost" id="btnDgeoFormHide" title="Masquer le formulaire (le bouton « Formulaire », à droite, le rouvre)"><svg class="ico"><use href="#i-x"/></svg></button>
       </div>
       <div class="dgeo-form-pages" id="dgeoFormPages"></div>
       <div class="dgeo-form-fields" id="dgeoFormFields"></div>
     </aside>
+    <button type="button" class="dgeo-form-rouvrir hidden" id="btnDgeoFormShow" title="Afficher le formulaire du dossier à côté de Décompte DGEO"><svg class="ico sm"><use href="#i-file"/></svg> Formulaire du dossier</button>
   </div>
   <section class="card" id="dgeoAbout" style="max-width:760px;margin:26px auto">
     <h2><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</h2>
@@ -624,7 +633,8 @@
   </section>
 </div>
 
-<footer class="note">Format du classeur : Date | No | Compte | Libellé | Débit | Crédit | Solde (solde cumulé par formule).</footer>
+<!-- Les messages de l'application (src/avis.js) : toujours à l'écran, où que l'on soit. -->
+<div id="zoneAvis" class="zone-avis" aria-live="polite"></div>
 </main>
 </div>
 
@@ -647,6 +657,7 @@
 <!--INLINE_DOSSIER-->
 <!--INLINE_CARNET-->
 <!--INLINE_COMBO-->
+<!--INLINE_AVIS-->
 <!--INLINE_APP-->
 <!--INLINE_SAISIE-->
 <!--INLINE_COMPTAGE-->

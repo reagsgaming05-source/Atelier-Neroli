@@ -101,6 +101,7 @@ inline('<!--INLINE_PDFPIECE-->', scriptTag(read(src('pdfpiece.js'))));
 inline('<!--INLINE_DOSSIER-->', scriptTag(read(src('dossier.js'))));
 inline('<!--INLINE_CARNET-->', scriptTag(read(src('carnet.js'))));
 inline('<!--INLINE_COMBO-->', scriptTag(read(src('combo.js'))));
+inline('<!--INLINE_AVIS-->', scriptTag(read(src('avis.js'))));
 inline('<!--INLINE_APP-->', scriptTag(read(src('app.js'))));
 inline('<!--INLINE_SAISIE-->', scriptTag(read(src('saisie.js'))));
 inline('<!--INLINE_COMPTAGE-->', scriptTag(read(src('comptage.js'))));

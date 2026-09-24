@@ -170,7 +170,7 @@
       const aj = K.GENRES.reduce((n, g) => n + r[g].ajoutes, 0);
       const re = K.GENRES.reduce((n, g) => n + r[g].retires, 0);
       if (aj || re) {
-        html += ` <span style="color:#2563eb">Espace <b>Données</b> : ${aj} ajout(s), ${re} retrait(s).</span>`;
+        html += ` <span style="color:#2563eb">Espace <b>Listes</b> : ${aj} ajout(s), ${re} retrait(s).</span>`;
       }
     }
     // Logique comptable des libellés (voir TYPE_LOGIC dans parser.js)
@@ -2083,6 +2083,19 @@
     if (PANNEAUX_PARTAGES.includes(id)) return currentTool;
     return DGEO_PANELS.includes(id) ? 'dgeo' : 'caisse';
   };
+  // Les noms tels que la barre latérale les montre : ils font le titre de la fenêtre.
+  const NOMS_OUTILS = { caisse: 'Caisse écoles', dgeo: 'Décompte DGEO' };
+  const NOMS_ESPACES = { panelSaisie: 'Saisie des pièces', panelScan: 'Pièces scannées', panelReception: 'Boîte de réception', panelCaisse: 'Compter la caisse', panelAnnee: "L'année", panelDonnees: 'Listes', panelDgeo: 'Décompte DGEO', panelRecap: 'Récapitulatif des décomptes' };
+  /**
+   * Dire où l'on est : le titre de la page (et, dans l'application fenêtrée, celui de la fenêtre,
+   * que montrent la barre des tâches et Alt+Tab), et l'outil marqué dans la barre du haut.
+   */
+  function annoncerEspace(id) {
+    const outil = toolOf(id);
+    const espace = NOMS_ESPACES[id] || '';
+    document.title = espace && espace !== NOMS_OUTILS[outil] ? `${espace} – ${NOMS_OUTILS[outil]}` : NOMS_OUTILS[outil];
+    if (window.CaisseFenetre && window.CaisseFenetre.espace) window.CaisseFenetre.espace({ outil, outilNom: NOMS_OUTILS[outil], espace });
+  }
   function showPanel(id) {
     for (const b of appTabs.querySelectorAll('.apptab')) b.classList.toggle('active', b.dataset.panel === id);
     if (toolEls.dgeoNav) {
@@ -2095,11 +2108,13 @@
     const tool = toolOf(id);
     if (tool === 'caisse') lastCaissePanel = id; else lastDgeoPanel = id;
     syncTool(tool);
+    if (tool !== 'dgeo') ouvrirReglagesDgeo(false);
+    annoncerEspace(id);
     updateDgeoEmbed();
   }
   // Sélecteur d'outil en tête de la barre latérale : Caisse écoles (ses espaces) ou Décompte DGEO
   // (sa page, avec des raccourcis vers ses sections). L'outil ouvert est mémorisé.
-  const toolEls = { btn: document.getElementById('btnTool'), menu: document.getElementById('toolMenu'), mark: document.getElementById('toolMark'), name: document.getElementById('toolName'), caisseNav: appTabs, dgeoNav: document.getElementById('dgeoNav') };
+  const toolEls = { btn: document.getElementById('btnTool'), menu: document.getElementById('toolMenu'), mark: document.getElementById('toolMark'), name: document.getElementById('toolName'), court: document.getElementById('toolCourt'), caisseNav: appTabs, dgeoNav: document.getElementById('dgeoNav') };
   let currentTool = 'caisse';
   let lastCaissePanel = 'panelSaisie';
   let lastDgeoPanel = 'panelDgeo';
@@ -2109,6 +2124,7 @@
     const dgeo = tool === 'dgeo';
     if (toolEls.mark) { toolEls.mark.classList.toggle('dgeo', dgeo); toolEls.mark.innerHTML = `<svg class="ico"><use href="#i-${dgeo ? 'layers' : 'wallet'}"/></svg>`; }
     if (toolEls.name) toolEls.name.textContent = dgeo ? 'Décompte DGEO' : 'Caisse écoles';
+    if (toolEls.court) toolEls.court.textContent = dgeo ? 'DGEO' : 'Caisse';
     if (toolEls.caisseNav) toolEls.caisseNav.classList.toggle('hidden', dgeo);
     if (toolEls.dgeoNav) toolEls.dgeoNav.classList.toggle('hidden', !dgeo);
     if (toolEls.menu) for (const b of toolEls.menu.querySelectorAll('button[data-tool]')) b.classList.toggle('active', b.dataset.tool === tool);
@@ -2119,12 +2135,33 @@
     if (tool === 'dgeo') showPanel(lastDgeoPanel && document.getElementById(lastDgeoPanel) ? lastDgeoPanel : 'panelDgeo');
     else showPanel(lastCaissePanel && document.getElementById(lastCaissePanel) ? lastCaissePanel : 'panelSaisie');
   }
-  function closeToolMenu() { if (toolEls.menu) { toolEls.menu.classList.add('hidden'); toolEls.btn.setAttribute('aria-expanded', 'false'); } }
+  function closeToolMenu() { if (toolEls.menu) { toolEls.menu.classList.add('hidden'); toolEls.btn.setAttribute('aria-expanded', 'false'); couvrirDgeo('menu', false); } }
   if (toolEls.btn && toolEls.menu) {
-    toolEls.btn.addEventListener('click', (ev) => { ev.stopPropagation(); const open = toolEls.menu.classList.toggle('hidden'); toolEls.btn.setAttribute('aria-expanded', open ? 'false' : 'true'); });
+    toolEls.btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const ferme = toolEls.menu.classList.toggle('hidden');
+      toolEls.btn.setAttribute('aria-expanded', ferme ? 'false' : 'true');
+      couvrirDgeo('menu', !ferme);
+    });
     toolEls.menu.addEventListener('click', (ev) => { const b = ev.target.closest('button[data-tool]'); if (b) setTool(b.dataset.tool); });
-    document.addEventListener('click', (ev) => { if (!toolEls.menu.contains(ev.target) && ev.target !== toolEls.btn) closeToolMenu(); });
+    document.addEventListener('click', (ev) => { if (!toolEls.menu.contains(ev.target) && !toolEls.btn.contains(ev.target)) closeToolMenu(); });
     document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeToolMenu(); });
+  }
+  // Les outils choisis dans la barre du haut de la fenêtre, et les endroits que visent la barre du
+  // haut et le menu Aide (« Où sont mes données ? » : la carte de L'année).
+  if (window.CaisseFenetre) {
+    window.CaisseFenetre.onOutil((outil) => setTool(outil === 'dgeo' ? 'dgeo' : 'caisse'));
+    window.CaisseFenetre.onAller((c) => {
+      if (!c || !document.getElementById(c.panel)) return;
+      closeToolMenu();
+      showPanel(c.panel);
+      const el = c.cible && document.getElementById(c.cible);
+      if (!el) return;
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.classList.remove('reperee'); void el.offsetWidth; el.classList.add('reperee');
+      }, 60);
+    });
   }
   if (toolEls.dgeoNav) {
     toolEls.dgeoNav.addEventListener('click', (ev) => {
@@ -2138,6 +2175,36 @@
     });
   }
 
+  /*
+   * Réglages de Décompte DGEO (retirer la pièce comptable, afficher le formulaire du dossier).
+   * Sur grand écran, ils sont dans la barre ; en dessous de 1500 px, ils ne tenaient plus et
+   * étaient simplement cachés : un formulaire masqué ne revenait plus. Ils s'ouvrent désormais par
+   * le bouton « Réglages », posés à côté de la barre.
+   */
+  const reglagesDgeo = { btn: document.getElementById('btnDgeoReglages'), note: document.getElementById('dgeoReglages'), fermer: document.getElementById('btnDgeoReglagesFermer') };
+  function ouvrirReglagesDgeo(ouvrir) {
+    const { btn, note } = reglagesDgeo;
+    if (!btn || !note) return;
+    const etait = note.classList.contains('ouverte');
+    if (ouvrir === etait) return;
+    note.classList.toggle('ouverte', ouvrir);
+    btn.setAttribute('aria-expanded', ouvrir ? 'true' : 'false');
+    btn.classList.toggle('active', ouvrir);
+    if (ouvrir) {
+      const r = btn.getBoundingClientRect();
+      note.style.top = `${Math.max(8, Math.min(r.top, window.innerHeight - note.offsetHeight - 12))}px`;
+    }
+    couvrirDgeo('reglages', ouvrir);
+  }
+  if (reglagesDgeo.btn && reglagesDgeo.note) {
+    reglagesDgeo.btn.addEventListener('click', (ev) => { ev.stopPropagation(); ouvrirReglagesDgeo(!reglagesDgeo.note.classList.contains('ouverte')); });
+    if (reglagesDgeo.fermer) reglagesDgeo.fermer.addEventListener('click', () => ouvrirReglagesDgeo(false));
+    document.addEventListener('click', (ev) => { if (!reglagesDgeo.note.contains(ev.target) && !reglagesDgeo.btn.contains(ev.target)) ouvrirReglagesDgeo(false); });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') ouvrirReglagesDgeo(false); });
+    // de retour sur un grand écran, la note reprend sa place dans la barre
+    window.addEventListener('resize', () => { if (window.innerWidth > 1500) ouvrirReglagesDgeo(false); });
+  }
+
   // Décompte DGEO : dans l'application fenêtrée, sa page est posée par le processus principal dans
   // la zone de l'espace « Décompte DGEO » (fichier HTML seul : une explication à la place).
   const dgeoHost = document.getElementById('dgeoHost');
@@ -2145,13 +2212,22 @@
   const canEmbed = !!(window.CaisseDgeo && window.CaisseDgeo.embed && dgeoHost);
   if (dgeoAbout && canEmbed) dgeoAbout.classList.add('hidden');
   if (dgeoHost && !canEmbed) dgeoHost.classList.add('hidden');
+  // La page Décompte DGEO est posée PAR-DESSUS celle-ci : un menu ou des réglages ouverts à côté de
+  // la barre latérale passaient dessous, invisibles (le menu de l'outil, en mode rail, ne pouvait
+  // plus ramener à la caisse). Tant qu'ils sont ouverts, la page du décompte s'efface.
+  const couvertures = new Set();
+  function couvrirDgeo(raison, oui) {
+    const avant = couvertures.size;
+    if (oui) couvertures.add(raison); else couvertures.delete(raison);
+    if (!avant !== !couvertures.size) updateDgeoEmbed();
+  }
   function updateDgeoEmbed() {
     if (!canEmbed) return;
     const panel = document.getElementById('panelDgeo');
     const active = !!panel && !panel.classList.contains('hidden');
     const content = document.querySelector('main.content');
     if (content) content.classList.toggle('embed', active);
-    if (!active) { window.CaisseDgeo.embed(null); return; }
+    if (!active || couvertures.size) { window.CaisseDgeo.embed(null); return; }
     const r = dgeoHost.getBoundingClientRect();
     window.CaisseDgeo.embed({ x: r.left, y: r.top, width: r.width, height: r.height });
   }
@@ -2163,11 +2239,25 @@
     const applyState = (s) => {
       const el = document.getElementById('dgeoNavState');
       if (el) el.textContent = s.hasDgeo ? (DGEO_STATE[s.dgeo] || DGEO_STATE.ready) : DGEO_STATE.missing;
+      // Décomptes dont la pièce attend dans la caisse : le nombre sur « Saisie des pièces », et la
+      // phrase entière là où un chiffre seul ne dirait rien (infobulle, menu de l'outil).
+      const n = Number(s.decomptes) || 0;
+      const phrase = n ? `${n} décompte${n > 1 ? 's' : ''} à saisir` : '';
       const b = document.getElementById('navBadgeSaisie');
-      if (b) { b.textContent = s.decomptes ? String(s.decomptes) : ''; b.classList.toggle('hidden', !s.decomptes); }
+      if (b) {
+        b.textContent = n ? String(n) : '';
+        b.classList.toggle('hidden', !n);
+        b.title = n ? `${phrase} : terminé${n > 1 ? 's' : ''} dans Décompte DGEO, la pièce reste à créer (« Créer la pièce », au-dessus de la fiche)` : '';
+        b.setAttribute('aria-label', phrase);
+      }
+      const m = document.getElementById('toolMenuDecomptes');
+      if (m) { m.textContent = phrase; m.classList.toggle('hidden', !n); }
     };
     window.CaisseDgeo.onState(applyState);
     window.CaisseDgeo.state().then(applyState).catch(() => {});
+    // Un décompte vient d'être terminé : le retour à Caisse écoles mène à la Saisie, où sa pièce
+    // attend, et non au dernier espace ouvert (Compter la caisse, par exemple).
+    if (window.CaisseDgeo.onNew) window.CaisseDgeo.onNew((d) => { if (d && !d.saisi) lastCaissePanel = 'panelSaisie'; });
     // dossier PDF déposé dans Décompte DGEO : la passerelle le confie à cette page, qui retire les
     // pages « PIÈCE COMPTABLE » (src/dossier.js) avant l'analyse
     if (window.CaisseDgeo.onClean && window.CaisseDossier) {
@@ -2197,6 +2287,7 @@
     const formFile = document.getElementById('dgeoFormFile');
     const formSelect = document.getElementById('dgeoFormSelect');
     const formOpt = document.getElementById('optDgeoForm');
+    const formShow = document.getElementById('btnDgeoFormShow');
     const dossiers = { list: [], current: null };
     let formOn = true;
     try { formOn = localStorage.getItem('caisse.dgeoForm') !== '0'; } catch (e) { /* ignore */ }
@@ -2208,6 +2299,7 @@
       const d = dossiers.list.find((x) => x.id === dossiers.current) || dossiers.list[0] || null;
       const show = formOn && !!d;
       formPane.classList.toggle('hidden', !show);
+      if (formShow) formShow.classList.toggle('hidden', formOn || !d); // masqué : le bouton qui le rouvre
       if (!show) { updateDgeoEmbed(); return; }
       dossiers.current = d.id;
       formFile.textContent = `${d.filename || d.id}${d.analysedAt ? ` · analysé le ${new Date(d.analysedAt).toLocaleDateString('fr-CH')}` : ''}`;
@@ -2242,6 +2334,7 @@
       const setFormOn = (on) => { formOn = on; if (formOpt) formOpt.checked = on; try { localStorage.setItem('caisse.dgeoForm', on ? '1' : '0'); } catch (e) { /* ignore */ } renderForm(); };
       if (formOpt) { formOpt.checked = formOn; formOpt.addEventListener('change', () => setFormOn(formOpt.checked)); }
       document.getElementById('btnDgeoFormHide').addEventListener('click', () => setFormOn(false));
+      if (formShow) formShow.addEventListener('click', () => setFormOn(true));
       const zoomImg = (src) => {
         const ov = document.createElement('div'); ov.className = 'zoom-overlay';
         ov.innerHTML = `<div class="zoom-inner"><img src="${esc(src)}" alt="Formulaire"></div><div class="zoom-hint">Cliquer ou Échap pour fermer</div>`;
@@ -2272,6 +2365,19 @@
       }
       if (saved && saved !== 'panelSaisie' && document.getElementById(saved)) showPanel(saved);
     } catch (e) { /* ignore */ }
+    const ouvert = Array.from(document.querySelectorAll('main .panel')).find((p) => !p.classList.contains('hidden'));
+    annoncerEspace(ouvert ? ouvert.id : 'panelSaisie');
+  }
+  // Pied de la barre latérale : où sont les données. Il affichait « 100 % local, aucune donnée
+  // envoyée » même quand tout était sur le serveur ; ce qui reste vrai, c'est « rien sur Internet ».
+  {
+    const pied = document.getElementById('piedDonnees');
+    if (pied && window.CaisseEmplacement) {
+      window.CaisseEmplacement.etat().then((e) => {
+        pied.textContent = e.separee ? 'Caisse de ce PC seulement : le serveur ne répondait pas au démarrage.'
+          : e.partage ? `Données partagées sur le serveur : ${e.chemin}` : 'Données sur ce PC.';
+      }).catch(() => {});
+    } else if (pied) pied.textContent = 'Données gardées dans ce navigateur, sur ce PC.';
   }
   // base des écritures des pièces scannées : celle choisie la dernière fois, sinon le registre de l'année
   { let base = 'registre'; try { base = localStorage.getItem('caisse.scan.base') || 'registre'; } catch (e) { /* ignore */ } applyMode(base); }
