@@ -329,7 +329,7 @@ jobs:
             Write-Host "::warning::partage administratif \\localhost indisponible : l'installation depuis une adresse réseau n'a pas été éprouvée"
           }
 
-      - name: Test de fumée de l'exécutable (fenêtre à onglets, saisie d'une pièce, OCR embarqué, Tesseract natif, Décompte DGEO et pont décompte → pièce)
+      - name: Test de fumée de l'exécutable (fenêtre, saisie d'une pièce, OCR embarqué, Tesseract natif, Décompte DGEO et pont décompte → pièce)
         working-directory: caisse-ecoles/desktop
         shell: pwsh
         env:
@@ -408,7 +408,7 @@ jobs:
             Compta Blonay, version portable Windows. Commencez par `LISEZMOI.txt`, dans le zip.
             Sur un seul PC : décompressez le zip, puis double-cliquez sur `ComptaBlonay.exe`. Rien à installer, aucun navigateur, aucune donnée ne quitte le PC.
             Plusieurs PC qui partagent une caisse sur un serveur : le programme va sur le serveur, et chaque PC s'installe une fois par « Installer sur ce PC », dans le sous-dossier « Installation sur plusieurs PC » ; ensuite, chaque PC se met à jour tout seul depuis le serveur. Le LISEZMOI donne les étapes.
-            Une seule application pour les deux outils : le menu du logo, en haut de la barre latérale, passe de Caisse écoles (saisie des pièces, pièces scannées, boîte de réception du copieur, comptage de la caisse, l'année, données) à Décompte DGEO (courses d'école et camps, avec le récapitulatif des décomptes). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
+            Une seule application pour les deux outils, choisis en haut à gauche : Caisse écoles (saisie des pièces, pièces scannées, boîte de réception du copieur, comptage de la caisse, l'année, listes) et Décompte DGEO (courses d'école et camps, avec le récapitulatif des décomptes). Un décompte terminé est proposé comme pièce DECOMPTE pré-remplie dans la caisse.
             Cette version ne contient aucun nom de personne : posez `vocabulaire-noms.js` (remis séparément) à côté de l'exécutable.
             Construit automatiquement depuis la branche `${{ github.ref_name }}`, commit ${{ github.sha }}.
 

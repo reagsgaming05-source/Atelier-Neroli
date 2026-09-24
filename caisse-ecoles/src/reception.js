@@ -12,8 +12,8 @@
  *
  * La validation est le comportement par défaut, et « ranger automatiquement » est décoché au
  * départ : un classement qui se trompe une fois sur dix coûte plus cher que pas de classement du
- * tout. Et ce qui attend une validation attend dans les données de l'application, pas dans le
- * dossier du serveur : fermer l'application ne perd rien.
+ * tout. Et ce qui attend une validation attend avec les données de la caisse (sur le serveur
+ * quand elles y sont) : fermer l'application ne perd rien.
  */
 (function () {
   'use strict';

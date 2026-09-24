@@ -148,8 +148,8 @@ function boiteFermetureRefusee(vue) {
     title: APP_TITLE,
     message: dgeo ? "Le décompte en cours n'est pas terminé" : "La fiche en cours n'est pas enregistrée",
     detail: dgeo
-      ? 'Si vous fermez maintenant, ce qui a été vérifié dans Décompte DGEO est perdu.\n\nPour le garder : « Revenir au décompte », puis « Générer le fichier Excel ».'
-      : 'Ce qui est tapé dans la fiche, et les justificatifs choisis, seront perdus si vous fermez maintenant.\n\nPour les garder : « Revenir à la fiche », puis « Enregistrer la pièce ».',
+      ? 'Si vous fermez maintenant, ce qui a été vérifié dans Décompte DGEO est perdu.\n\nPour le garder : « Revenir au décompte », puis « Créer le fichier Excel du décompte ».'
+      : 'Ce qui est tapé dans la fiche, et les justificatifs choisis, seront perdus si vous fermez maintenant.\n\nPour les garder : « Revenir à la fiche », puis enregistrez la pièce.',
     buttons: dgeo ? ['Revenir au décompte', 'Fermer sans terminer'] : ['Revenir à la fiche', 'Fermer sans enregistrer'],
     defaultId: 0,
     cancelId: 0,

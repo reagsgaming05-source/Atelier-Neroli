@@ -203,19 +203,17 @@ function createWindow() {
   mainWindow.contentView.addChildView(caisseView);
   caisseView.webContents.loadFile(path.join(__dirname, 'app', 'Caisse-ecoles.html'));
   // Le rapport de contrôle s'ouvre dans une fenêtre de l'application (imprimable avec Ctrl+P)
-  caisseView.webContents.setWindowOpenHandler(({ url, frameName }) => {
+  caisseView.webContents.setWindowOpenHandler(({ url }) => {
     if (url === 'about:blank' || url.startsWith('file:') || url.startsWith('blob:')) {
       // rapport de contrôle, fiche PDF à imprimer (visionneuse PDF de Chromium, Ctrl+P), récapitulatifs.
-      // La fiche ouverte d'office à l'enregistrement, si la page la nomme « fichePdf » : une seule
-      // fenêtre, réutilisée, montrée sans prendre le clavier — sinon, pour trente pièces à la suite,
-      // le Ctrl+Entrée de la suivante partait dans la fenêtre du PDF.
-      const discrete = frameName === 'fichePdf';
-      return { action: 'allow', overrideBrowserWindowOptions: { width: 1000, height: 860, show: !discrete, title: `${APP_TITLE} – document`, autoHideMenuBar: true, webPreferences: { contextIsolation: true, nodeIntegration: false, plugins: true } } };
+      // La fiche ouverte d'office à l'enregistrement : une seule fenêtre, que la page réutilise sans
+      // lui redonner la main (voir fenetreFiche dans saisie.js) — pour trente pièces à la suite, le
+      // Ctrl+Entrée de la suivante partait sinon dans la fenêtre du PDF.
+      return { action: 'allow', overrideBrowserWindowOptions: { width: 1000, height: 860, title: `${APP_TITLE} – document`, autoHideMenuBar: true, webPreferences: { contextIsolation: true, nodeIntegration: false, plugins: true } } };
     }
     shell.openExternal(url);
     return { action: 'deny' };
   });
-  caisseView.webContents.on('did-create-window', (w, details) => { if (details && details.frameName === 'fichePdf') w.showInactive(); });
   caisseView.webContents.once('did-finish-load', () => { if (montrer()) logLine('interface démarrée'); });
 
   // La veille ne tourne que quand la page peut répondre. C'est elle qui lit les piles : tant que
@@ -579,8 +577,8 @@ ipcMain.handle('settings:set', (ev, patchObj) => saveSettings(patchObj && typeof
  * page, qui a pdf.js, l'OCR et l'analyseur. Même mécanisme que le nettoyage des dossiers DGEO
  * ci-dessous : le processus principal ne lit aucun PDF lui-même.
  *
- * Le dossier de réception (les documents découpés, en attente de validation) vit dans les données
- * de l'application, pas sur le partage : ce qui attend une validation attend sur ce poste.
+ * Le dossier de réception (les documents découpés, en attente de validation) vit avec les données
+ * de la caisse : sur le serveur quand elles y sont, et tous les postes voient ce qui attend.
  */
 const RECEPTION = () => path.join(REG_ROOT(), 'reception');
 /**
@@ -1084,7 +1082,7 @@ function relancer() {
 }
 /*
  * Un poste installé depuis le serveur (« Installer sur ce PC ») reçoit à chaque lancement le
- * donnees.txt du dossier du programme sur le serveur (voir build/Compta Blonay.cmd) : un
+ * donnees.txt du dossier du programme sur le serveur (voir build/lanceur.cmd) : un
  * emplacement choisi ici ne tiendrait que jusqu'au lancement suivant. « Ce poste ne les verra
  * plus » était faux. Vrai seulement si le serveur a bien un donnees.txt (sinon le lanceur garde
  * celui du poste) ; un serveur qui ne répond pas dans les 3 s ne bloque rien.

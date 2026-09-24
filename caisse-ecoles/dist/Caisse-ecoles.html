@@ -946,7 +946,7 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
     <button type="button" class="apptab" id="btnDgeoReglages" aria-haspopup="dialog" aria-expanded="false" title="Réglages du décompte – pièce comptable, formulaire du dossier"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Réglages<small>Pièce comptable, formulaire</small></span><span class="court">Réglages</span></button>
     <div class="navnote" id="dgeoReglages" role="dialog" aria-label="Réglages du décompte">
       <div class="navnote-tete"><b>Réglages du décompte</b><button type="button" class="small ghost" id="btnDgeoReglagesFermer" title="Fermer les réglages"><svg class="ico"><use href="#i-x"/></svg></button></div>
-      <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
+      <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse, reconnue par son texte, est toujours retirée avant l'analyse. Case cochée : dans un dossier scanné sans texte lisible, la première page est retirée aussi (c'est d'habitude la pièce comptable).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
       <label class="check legend" style="align-items:flex-start;margin-top:10px"><input type="checkbox" id="optDgeoForm" checked> <span>Afficher le formulaire de décompte de Blonay (page de couverture) à côté de Décompte DGEO, avec ce qui y a été lu.</span></label>
     </div>
@@ -28437,8 +28437,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
  *
  * La validation est le comportement par défaut, et « ranger automatiquement » est décoché au
  * départ : un classement qui se trompe une fois sur dix coûte plus cher que pas de classement du
- * tout. Et ce qui attend une validation attend dans les données de l'application, pas dans le
- * dossier du serveur : fermer l'application ne perd rien.
+ * tout. Et ce qui attend une validation attend avec les données de la caisse (sur le serveur
+ * quand elles y sont) : fermer l'application ne perd rien.
  */
 (function () {
   'use strict';

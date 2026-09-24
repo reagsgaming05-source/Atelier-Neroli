@@ -1,5 +1,5 @@
 /*
- * Test de fumée de l'application fenêtrée : la fenêtre à onglets s'ouvre, Caisse écoles est
+ * Test de fumée de l'application fenêtrée : la fenêtre s'ouvre, Caisse écoles est
  * chargée, le moteur de lecture et l'OCR embarqué fonctionnent, le lecteur natif répond si
  * présent, une pièce saisie dans la fiche arrive dans le journal et dans les fichiers de
  * l'application, la fiche PDF se génère, l'onglet Décompte DGEO (démarré avec l'application)
