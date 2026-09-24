@@ -52,6 +52,9 @@ class El extends EventTarget {
     this.textContent = ''; this._html = ''; this.files = []; this.title = ''; this.tabIndex = 0; this.type = '';
     this.value = '';
   }
+  /** Comme dans le navigateur, la valeur d'un champ est toujours du texte. */
+  get value() { return this._val == null ? '' : this._val; }
+  set value(v) { this._val = v == null ? '' : String(v); }
   get className() { return Array.from(this.classList.s).join(' '); }
   set className(v) { this.classList.s = new Set(String(v).split(/\s+/).filter(Boolean)); }
   get innerHTML() { return this._html; }
@@ -205,5 +208,193 @@ test('ce que désigne un texte tapé', () => {
   assert.equal(Combo.designe(liste, 'toutes').value, '');
   assert.equal(Combo.designe(liste, 'depuis'), null, 'deux candidats : on ne choisit pas au hasard');
   assert.equal(Combo.designe(liste, '  '), null);
+});
+
+/* ------------------------------------------------------------------ */
+/* La fiche entière (saisie.js), sur un disque simulé                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Le dossier des données tel que le voit la page dans l'application fenêtrée (preload.js) :
+ * mêmes règles que main.js, y compris le refus d'écrire quand un autre poste a écrit entre-temps.
+ * Deux fiches branchées sur le même disque sont deux postes sur le même serveur.
+ */
+function disqueSimule() {
+  const registres = new Map();
+  const fichiers = new Map();
+  return {
+    registres, fichiers,
+    dir: () => 'C:\\Compta\\data',
+    years: async () => Array.from(registres.keys()).map(Number).sort(),
+    load: async (y) => (registres.has(String(y)) ? registres.get(String(y)) : null),
+    save: async (y, texte, attendu) => {
+      const actuel = registres.has(String(y)) ? registres.get(String(y)) : null;
+      if (attendu !== undefined && actuel !== null && actuel !== attendu) return { conflit: true, disque: actuel };
+      registres.set(String(y), String(texte));
+      return true;
+    },
+    attach: async (y, id, nom, octets) => { fichiers.set(`${y}/${id}/${nom}`, octets); return { name: nom, size: octets.length }; },
+    read: async (y, id, nom) => fichiers.get(`${y}/${id}/${nom}`) || null,
+    remove: async (y, id, nom) => { fichiers.delete(`${y}/${id}/${nom}`); return true; },
+    openDir: () => {},
+  };
+}
+
+const SRC = (f) => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
+const pause = (ms) => new Promise((r) => setTimeout(r, ms || 15));
+
+/**
+ * Charge la page de saisie dans le document simulé. `reponse` : ce que répond la personne aux
+ * questions (confirm). Rend de quoi remplir la fiche, cliquer, et lire ce qui a été enregistré.
+ */
+async function ficheSimulee(opts) {
+  opts = opts || {};
+  const doc = documentSimule();
+  const disque = opts.disque || disqueSimule();
+  const memoire = new Map();
+  const fenetre = new EventTarget();
+  const questions = [];
+  const ouvertes = [];
+  const sandbox = {
+    document: doc, console, Event, CustomEvent, Blob, URL,
+    // les messages s'effacent seuls au bout de quelques secondes : ils ne doivent pas retenir le test
+    setTimeout: (f, ms, ...a) => { const t = setTimeout(f, ms, ...a); if (t.unref) t.unref(); return t; },
+    clearTimeout,
+    localStorage: {
+      getItem: (k) => (memoire.has(k) ? memoire.get(k) : null), setItem: (k, v) => memoire.set(k, String(v)),
+      removeItem: (k) => memoire.delete(k), key: (i) => Array.from(memoire.keys())[i] || null, get length() { return memoire.size; },
+    },
+    confirm: (m) => { questions.push(m); return typeof opts.reponse === 'function' ? opts.reponse(m) : opts.reponse !== false; },
+    alert: (m) => { questions.push(m); },
+    open: (url) => {
+      const w = { closed: false, url, focus() { this.focusee = true; }, close() { this.closed = true; }, location: { replace(u) { w.url = u; } } };
+      ouvertes.push(w);
+      return w;
+    },
+    addEventListener: (t, f) => fenetre.addEventListener(t, f),
+    removeEventListener: (t, f) => fenetre.removeEventListener(t, f),
+    CaisseFiles: disque,
+    CaissePdf: { buildPdf: async () => ({ bytes: new Uint8Array([37, 80, 68, 70]), pages: 1, skipped: [] }), recapDescription: (p) => p.libelle || '' },
+    CaisseExcel: {},
+  };
+  sandbox.window = sandbox;
+  sandbox.self = sandbox;
+  vm.createContext(sandbox);
+  for (const f of ['parser.js', 'registre.js', 'vocabulaire.js', 'carnet.js', 'combo.js', 'saisie.js']) vm.runInContext(SRC(f), sandbox, { filename: f });
+  const S = sandbox.CaisseSaisie;
+  for (let i = 0; i < 200 && !(S.state.reg && S.state.photo); i++) await pause(5);
+  const el = (id) => doc.getElementById(id);
+  /** Le champ visible d'une liste fermée (type, objet). */
+  const champ = (id) => el(id).previousElementSibling.querySelector('input');
+  /** Un clic sur un bouton que la page a écrit en HTML dans `conteneur` (ligne du journal…). */
+  const cliquerDans = (conteneur, donnees) => {
+    const b = new El(doc, 'button');
+    Object.assign(b.dataset, donnees);
+    el(conteneur).appendChild(b);
+    const ev = new Event('click', { cancelable: true });
+    Object.defineProperty(ev, 'target', { value: b });
+    el(conteneur).dispatchEvent(ev);
+    b.remove();
+  };
+  const remplir = (valeurs) => {
+    for (const [id, v] of Object.entries(valeurs)) { el(id).value = v; el(id).dispatchEvent(new Event('input')); el(id).dispatchEvent(new Event('change')); }
+  };
+  const enregistrer = async () => { el('btnPieceSave').click(); await pause(40); };
+  const annee = S.state.reg.annee;
+  return { S, doc, el, champ, disque, fenetre, questions, ouvertes, cliquerDans, remplir, enregistrer, annee, sandbox };
+}
+
+/** Une pièce ordinaire et complète, prête à enregistrer. */
+function remplirRemboursement(f, montant) {
+  f.remplir({ pPersonne: 'A. Berger', pMontant: montant || '29.70', pCompte: '51000.3662.50' });
+}
+
+test('« Nouvelle pièce » demande avant de jeter une fiche remplie', async () => {
+  let reponse = false;
+  const f = await ficheSimulee({ reponse: () => reponse });
+  f.el('btnPieceNew').click();
+  assert.equal(f.questions.length, 0, 'une fiche vierge part sans question');
+  remplirRemboursement(f);
+  f.el('btnPieceNew').click();
+  assert.equal(f.questions.length, 1, 'aucune question avant d\'effacer la saisie');
+  assert.match(f.questions[0], /n'est pas enregistrée/);
+  assert.equal(f.el('pPersonne').value, 'A. Berger', 'Annuler doit laisser la fiche telle quelle');
+  reponse = true;
+  f.el('btnPieceNew').click();
+  assert.equal(f.el('pPersonne').value, '', 'OK abandonne la saisie');
+});
+
+test('la fiche dit si elle porte une saisie non enregistrée, et retient la fermeture', async () => {
+  const f = await ficheSimulee();
+  assert.equal(f.S.ficheModifiee(), false);
+  const calme = new Event('beforeunload', { cancelable: true });
+  f.fenetre.dispatchEvent(calme);
+  assert.equal(calme.defaultPrevented, false, 'une fiche vierge ne retient pas la fenêtre');
+  f.remplir({ pDetail: 'musée Bolo', pMontant: '143.95' });
+  assert.equal(f.S.ficheModifiee(), true);
+  const ev = new Event('beforeunload', { cancelable: true });
+  f.fenetre.dispatchEvent(ev);
+  assert.equal(ev.defaultPrevented, true, 'fermer ou recharger effacerait la saisie sans rien dire');
+  remplirRemboursement(f);
+  await f.enregistrer();
+  assert.equal(f.S.state.reg.pieces.length, 1);
+  assert.equal(f.S.ficheModifiee(), false, 'une fois enregistrée, plus rien à perdre');
+});
+
+test('modifier une pièce se voit, se dit sur le bouton, et s\'annule', async () => {
+  const f = await ficheSimulee();
+  remplirRemboursement(f);
+  await f.enregistrer();
+  const p = f.S.state.reg.pieces[0];
+  f.cliquerDans('journalBody', { edit: p.id });
+  assert.ok(f.el('ficheCard').classList.contains('en-modification'), 'la fiche doit montrer qu\'on modifie');
+  assert.equal(f.el('btnPieceSaveTexte').textContent, 'Enregistrer les modifications');
+  assert.ok(!f.el('ficheMode').classList.contains('hidden'));
+  assert.match(f.el('ficheMode').innerHTML, new RegExp(`pièce n° ${p.no}`));
+  assert.match(f.el('ficheMode').innerHTML, /Annuler la modification/);
+  f.remplir({ pMontant: '450' });
+  f.cliquerDans('ficheMode', { annulerModif: '1' });
+  assert.equal(f.S.state.editingId, null, 'la fiche revient à une pièce neuve');
+  assert.ok(!f.el('ficheCard').classList.contains('en-modification'));
+  assert.equal(f.el('btnPieceSaveTexte').textContent, 'Enregistrer la pièce → journal');
+  assert.equal(f.S.state.reg.pieces[0].montant, 29.7, 'renoncer ne touche pas à la pièce du journal');
+});
+
+test('le crayon d\'une autre ligne ne jette pas une modification en cours sans demander', async () => {
+  const f = await ficheSimulee({ reponse: false });
+  remplirRemboursement(f, '10');
+  await f.enregistrer();
+  remplirRemboursement(f, '20');
+  await f.enregistrer();
+  const [a, b] = f.S.state.reg.pieces;
+  f.cliquerDans('journalBody', { edit: a.id });
+  f.remplir({ pMontant: '11' });
+  f.cliquerDans('journalBody', { edit: b.id });
+  assert.equal(f.questions.length, 1);
+  assert.equal(f.S.state.editingId, a.id, 'Annuler : on reste sur la pièce en cours');
+  assert.equal(f.el('pMontant').value, '11');
+});
+
+test('un justificatif enregistré retiré en modification ne quitte le disque qu\'à l\'enregistrement', async () => {
+  const f = await ficheSimulee();
+  remplirRemboursement(f);
+  f.S.state.pending.push({ name: 'ticket.pdf', kind: 'pdf', bytes: new Uint8Array([1, 2, 3]) });
+  await f.enregistrer();
+  const p = f.S.state.reg.pieces[0];
+  const cle = `${f.annee}/${p.id}/ticket.pdf`;
+  assert.ok(f.disque.fichiers.has(cle));
+  f.cliquerDans('journalBody', { edit: p.id });
+  f.cliquerDans('pFilesList', { remove: 'saved:ticket.pdf' });
+  assert.ok(f.disque.fichiers.has(cle), 'retiré puis abandonné : le ticket était perdu');
+  assert.equal(f.S.ficheModifiee(), true);
+  f.cliquerDans('ficheMode', { annulerModif: '1' });
+  assert.ok(f.disque.fichiers.has(cle));
+  assert.equal(f.S.state.reg.pieces[0].justificatifs.length, 1);
+  // cette fois on enregistre : le fichier part avec
+  f.cliquerDans('journalBody', { edit: p.id });
+  f.cliquerDans('pFilesList', { remove: 'saved:ticket.pdf' });
+  await f.enregistrer();
+  assert.ok(!f.disque.fichiers.has(cle));
+  assert.equal(f.S.state.reg.pieces[0].justificatifs.length, 0);
 });
 

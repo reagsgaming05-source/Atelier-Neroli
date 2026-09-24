@@ -101,6 +101,7 @@
   <div class="layout2">
     <section class="card" id="ficheCard">
       <h2><span class="left"><svg class="ico"><use href="#i-pen"/></svg> Pièce comptable <span class="legend" id="ficheTitle"></span></span> <button type="button" class="small ghost hidden" id="btnOpenDgeo" title="Afficher l'onglet Décompte DGEO de cette application"><svg class="ico"><use href="#i-layers"/></svg> Décompte DGEO</button></h2>
+      <div id="ficheMode" class="fiche-mode hidden"></div>
       <div id="dgeoPending" class="dgeo-pending hidden"></div>
       <div class="row">
         <div class="field"><label for="pNo">N°</label><input type="number" id="pNo" min="1" step="1" style="width:84px"></div>
@@ -149,7 +150,7 @@
       </div>
       <div id="ficheErrors"></div>
       <div class="toolbar">
-        <button type="button" class="primary" id="btnPieceSave" title="Ctrl+Entrée depuis n'importe quel champ de la fiche"><svg class="ico"><use href="#i-save"/></svg> Enregistrer la pièce → journal <span class="kbd">Ctrl+↵</span></button>
+        <button type="button" class="primary" id="btnPieceSave" title="Ctrl+Entrée depuis n'importe quel champ de la fiche"><svg class="ico"><use href="#i-save"/></svg> <span id="btnPieceSaveTexte">Enregistrer la pièce → journal</span> <span class="kbd">Ctrl+↵</span></button>
         <button type="button" id="btnPiecePreview"><svg class="ico"><use href="#i-eye"/></svg> Aperçu de la fiche</button>
         <span class="spacer"></span>
         <button type="button" class="ghost" id="btnPieceNew"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle pièce</button>

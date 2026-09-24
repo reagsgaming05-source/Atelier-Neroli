@@ -23,7 +23,9 @@
   }
   if (!els.regYear) return; // page sans le panneau de saisie
 
-  const state = { storage: null, reg: null, editingId: null, pending: [], years: [], previewUrl: null, dgeo: { list: [], current: null } };
+  // photo : la fiche telle qu'elle a été remplie (voir photoFiche) ; retires : justificatifs déjà
+  // enregistrés que la personne a retirés, effacés seulement quand elle enregistre la pièce
+  const state = { storage: null, reg: null, editingId: null, pending: [], retires: new Set(), photo: null, years: [], previewUrl: null, dgeo: { list: [], current: null } };
 
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   /** Accord au pluriel des compteurs affichés en permanence : « 1 pièce », « 5 pièces ». */
@@ -299,11 +301,68 @@
     if (force) force.checked = false; // la case « forcer le sens » ne reste pas cochée d'une pièce à l'autre
     state.editingId = null;
     state.pending = [];
+    state.retires = new Set();
     state.dgeo.current = null;
     fillForm(p);
     els.ficheTitle.textContent = `n° ${p.no}`;
     els.ficheErrors.innerHTML = '';
+    afficherMode();
     hidePreview();
+  }
+
+  /**
+   * La fiche, champ par champ, telle qu'on la voit. Comparée à celle prise au remplissage (pièce
+   * neuve, pièce ouverte pour modification, décompte repris), elle dit si la personne y a
+   * touché : « Nouvelle pièce », le crayon d'une autre ligne ou la fermeture de la fenêtre
+   * effaçaient sans prévenir une fiche à moitié remplie.
+   */
+  function photoFiche() {
+    return [els.pNo.value.trim(), els.pDate.value, els.pType.value, els.pObjet.value, els.pClasse.value.trim(), els.pPeriode.value.trim(),
+      els.pDetail.value.trim(), els.pPersonne.value.trim(), els.pCompte.value.trim(), els.pMontant.value.trim(),
+      els.pSensDebit.checked, els.pSensCredit.checked, els.pLibelleEdit.checked ? els.pLibelle.value.trim() : '',
+      !!(els.pAFaire && els.pAFaire.checked)];
+  }
+  function retenirPhoto() { state.photo = photoFiche(); }
+  /**
+   * Vrai si la fiche porte une saisie qui n'est pas enregistrée : un champ changé, un justificatif
+   * choisi mais pas encore enregistré, ou un justificatif enregistré que l'on a retiré.
+   */
+  function ficheModifiee() {
+    if (!state.reg || !state.photo) return false;
+    return state.pending.length > 0 || state.retires.size > 0 || JSON.stringify(photoFiche()) !== JSON.stringify(state.photo);
+  }
+  /**
+   * Avant de remplacer la fiche : si elle porte une saisie non enregistrée, on demande. La
+   * question se lit avec les deux boutons de la boîte : OK abandonne, Annuler revient à la fiche.
+   */
+  function abandonnerFiche() {
+    if (!ficheModifiee()) return true;
+    const quoi = state.editingId
+      ? `Les changements de la pièce n° ${pieceEnCours() ? pieceEnCours().no : '?'} ne sont pas enregistrés.`
+      : `La fiche n° ${els.pNo.value.trim() || '?'} n'est pas enregistrée.`;
+    return confirm(`${quoi}\n\nAbandonner ce qui a été tapé ?\n\nOK : abandonner.   Annuler : revenir à la fiche.`);
+  }
+  const pieceEnCours = () => (state.editingId ? state.reg.pieces.find((x) => x.id === state.editingId) : null);
+
+  /**
+   * Modifier une pièce du journal doit se voir : un « (modification) » gris à côté du n° ne
+   * suffisait pas, le bouton disait toujours « Enregistrer la pièce → journal » (on craignait
+   * d'en créer une seconde) et rien ne permettait de renoncer.
+   */
+  function afficherMode() {
+    const p = pieceEnCours();
+    const card = $('ficheCard');
+    if (card) card.classList.toggle('en-modification', !!p);
+    const txt = $('btnPieceSaveTexte');
+    if (txt) txt.textContent = p ? 'Enregistrer les modifications' : 'Enregistrer la pièce → journal';
+    const bandeau = $('ficheMode');
+    if (!bandeau) return;
+    bandeau.classList.toggle('hidden', !p);
+    bandeau.innerHTML = p
+      ? `<span><b>Vous modifiez la pièce n° ${p.no == null ? '?' : p.no}${p.date ? ` du ${escapeHtml(P.isoToDisplay(p.date))}` : ''}</b>, déjà dans le journal. ` +
+        'Rien ne change tant que vous n\'avez pas enregistré.</span>' +
+        '<button type="button" class="small" data-annuler-modif="1"><svg class="ico"><use href="#i-x"/></svg> Annuler la modification</button>'
+      : '';
   }
 
   function fillForm(p) {
@@ -333,6 +392,7 @@
     refreshKind();
     renderFiles(p);
     refreshSuggestions();
+    retenirPhoto();
   }
 
   // Un DECOMPTE concerne une course d'école ou un camp : deux choix explicites à la place de la liste des objets.
@@ -378,7 +438,7 @@
       compte: els.pCompte.value.trim(),
       montant: R.parseAmountInput(els.pMontant.value) || 0,
       sens: els.pSensDebit.checked ? 'debit' : (els.pSensCredit.checked ? 'credit' : null),
-      justificatifs: base ? base.justificatifs : [],
+      justificatifs: base ? base.justificatifs.filter((j) => !state.retires.has(j.name)) : [],
       source: base ? base.source : (state.dgeo.current ? 'dgeo' : 'saisie'),
       ref: base ? base.ref : (state.dgeo.current ? (state.dgeo.current.numero || state.dgeo.current.filename || '') : ''),
       // ouvrir une pièce lue sur un scan et l'enregistrer, c'est l'avoir vérifiée
@@ -446,24 +506,25 @@
   els.pFilesList.addEventListener('click', async (ev) => {
     const o = ev.target.closest('button[data-ouvrir]');
     if (o) { await ouvrirJustificatif(o.dataset.ouvrir); return; }
+    const g = ev.target.closest('button[data-garder]');
+    if (g) { state.retires.delete(g.dataset.garder); renderFiles(formPiece()); return; }
     const b = ev.target.closest('button[data-remove]');
     if (!b) return;
     const raw = b.dataset.remove; const cut = raw.indexOf(':');
     const where = cut < 0 ? raw : raw.slice(0, cut); const key = cut < 0 ? '' : raw.slice(cut + 1); // le nom du fichier peut contenir « : »
     if (where === 'pending') state.pending.splice(Number(key), 1);
-    else if (state.editingId) {
-      const p = state.reg.pieces.find((x) => x.id === state.editingId);
-      if (p && confirm(`Retirer le justificatif « ${key} » ?`)) {
-        p.justificatifs = p.justificatifs.filter((j) => j.name !== key);
-        try { await state.storage.remove(state.reg.annee, p.id, key); } catch (e) { /* ignore */ }
-        await saveReg();
-      }
-    }
+    // Un justificatif déjà enregistré n'est effacé du disque qu'à l'enregistrement de la pièce :
+    // l'effacer aussitôt le perdait même si l'on renonçait ensuite à la modification.
+    else if (state.editingId) state.retires.add(key);
     renderFiles(formPiece());
   });
   function renderFiles(p) {
     const items = [];
     for (const j of p.justificatifs || []) items.push(`<li>${escapeHtml(j.name)}${j.signee ? ' <span class="tag">signé</span>' : ''} <span class="legend">(${j.kind}, ${Math.round(j.size / 1024)} Ko)</span> <button type="button" class="small ghost" data-ouvrir="saved:${escapeHtml(j.name)}">ouvrir</button> <button type="button" class="small" data-remove="saved:${escapeHtml(j.name)}">retirer</button></li>`);
+    const base = pieceEnCours();
+    for (const j of (base && base.justificatifs) || []) {
+      if (state.retires.has(j.name)) items.push(`<li class="retire"><s>${escapeHtml(j.name)}</s> <span class="legend">sera retiré quand vous enregistrerez la pièce</span> <button type="button" class="small ghost" data-garder="${escapeHtml(j.name)}">garder</button></li>`);
+    }
     state.pending.forEach((f, i) => items.push(`<li>${escapeHtml(f.name)} <span class="legend">(${f.kind}, ${Math.round(f.bytes.length / 1024)} Ko, à enregistrer)</span> <button type="button" class="small ghost" data-ouvrir="pending:${i}">ouvrir</button> <button type="button" class="small" data-remove="pending:${i}">retirer</button></li>`));
     els.pFilesList.innerHTML = items.length ? `<ul>${items.join('')}</ul>` : '<span class="legend">Aucun justificatif joint (tickets, factures, photos : PDF, JPG ou PNG).</span>';
   }
@@ -503,6 +564,12 @@
     const wasEdit = !!state.editingId;
     R.upsertPiece(state.reg, p);
     await saveReg();
+    // les justificatifs retirés pendant la modification ne quittent le disque que maintenant
+    for (const nom of state.retires) {
+      if (p.justificatifs.some((j) => j.name === nom)) continue; // remplacé par un fichier du même nom
+      try { await state.storage.remove(state.reg.annee, p.id, nom); } catch (e) { /* ignore */ }
+    }
+    state.retires = new Set();
     if (A.rememberVocabulary) A.rememberVocabulary({ persons: [p.personne], classTokens: p.classe ? [p.classe] : [] });
     if (state.dgeo.current && window.CaisseDgeo) {
       try { await window.CaisseDgeo.mark(state.dgeo.current.id, { saisi: true, pieceId: p.id }); } catch (e) { /* ignore */ }
@@ -514,6 +581,8 @@
       // pièce, avec le fichier encore en mémoire, pour réessayer sans avoir à le rechoisir
       state.editingId = p.id;
       els.ficheTitle.textContent = `n° ${p.no} (modification)`;
+      afficherMode();
+      retenirPhoto(); // la pièce est enregistrée : seuls les justificatifs en attente restent à faire
       notice('warn', `Pièce n° ${p.no} enregistrée, mais ${failed.length} justificatif(s) n'ont pas pu l'être. La fiche reste ouverte : réessayez « Enregistrer ».`);
       return;
     }
@@ -557,7 +626,29 @@
     const b = ev.target.closest('button[data-open-pdf]');
     if (b) window.open(b.dataset.openPdf, '_blank');
   });
-  els.btnPieceNew.addEventListener('click', () => { state.draftId = null; newPiece(); });
+  els.btnPieceNew.addEventListener('click', () => {
+    if (!abandonnerFiche()) return;
+    state.draftId = null;
+    newPiece();
+    renderJournal(); // la ligne qu'on modifiait n'est plus en surbrillance
+  });
+  const bandeauMode = $('ficheMode');
+  if (bandeauMode) bandeauMode.addEventListener('click', (ev) => {
+    if (!ev.target.closest('button[data-annuler-modif]')) return;
+    // renoncer est le geste même : pas de question en plus, la pièce du journal n'a pas bougé
+    state.draftId = null;
+    newPiece();
+    renderJournal();
+    els.pDate.focus();
+  });
+  // Fermer la fenêtre ou recharger la page effaçait une fiche à moitié remplie sans rien dire. La
+  // page refuse de partir tant que la fiche porte une saisie non enregistrée : le navigateur pose
+  // alors sa question, l'application fenêtrée la sienne (main.js, « will-prevent-unload »).
+  window.addEventListener('beforeunload', (ev) => {
+    if (!ficheModifiee()) return;
+    ev.preventDefault();
+    ev.returnValue = '';
+  });
 
   // aperçu de la fiche (PDF)
   els.btnPiecePreview.addEventListener('click', async () => {
@@ -845,10 +936,12 @@
     if (b.dataset.edit) {
       const p = state.reg.pieces.find((x) => x.id === b.dataset.edit);
       if (!p) return;
-      state.editingId = p.id; state.pending = []; state.dgeo.current = null;
+      if (state.editingId !== p.id && !abandonnerFiche()) return;
+      state.editingId = p.id; state.pending = []; state.retires = new Set(); state.dgeo.current = null;
       fillForm(p);
       els.ficheTitle.textContent = `n° ${p.no} (modification)`;
       els.ficheErrors.innerHTML = '';
+      afficherMode();
       renderJournal();
       $('ficheCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (b.dataset.del) {
@@ -1093,12 +1186,13 @@
   });
   /** Remplit la fiche depuis un décompte DGEO ; la personne vérifie le montant, le sens et le compte, puis enregistre. */
   function useDecompte(d) {
-    if (!state.reg) return null;
+    if (!state.reg || !abandonnerFiche()) return null;
     const { piece, amounts, amountSource } = R.pieceFromDecompte(d, state.reg);
     if (P.correctPerson && piece.personne) { const c = P.correctPerson(piece.personne, P.buildIndex(vocab())); if (c) piece.personne = c; }
     piece.libelle = R.composeLibelle(piece);
-    state.editingId = null; state.pending = []; state.draftId = piece.id; state.dgeo.current = d;
+    state.editingId = null; state.pending = []; state.retires = new Set(); state.draftId = piece.id; state.dgeo.current = d;
     fillForm(piece);
+    afficherMode();
     els.ficheTitle.textContent = `n° ${piece.no} – depuis Décompte DGEO ${d.numero ? `n° ${d.numero}` : ''}`.trim();
     const srcLabel = { enseignant: "payé par l'enseignant-e (formulaire)", formulaire: 'dépenses du formulaire', etat: 'part État calculée' };
     const opts = [['enseignant', "payé par l'enseignant-e"], ['formulaire', 'dépenses du formulaire'], ['etat', 'part État (remboursement DGEO)']]
@@ -1169,6 +1263,6 @@
     majEmplacement();
   }
 
-  window.CaisseSaisie = { state, init, majListes, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal };
+  window.CaisseSaisie = { state, init, majListes, openYear, addFromScan, importWorkbook, renderJournal, useDecompte, refreshDgeo, saveReg, openPiecePdf, ficheAuto, chercherDansJournal, ficheModifiee };
   init().catch((e) => { console.error(e); els.regInfo.textContent = `Registre indisponible : ${e && e.message ? e.message : e}`; });
 })();
