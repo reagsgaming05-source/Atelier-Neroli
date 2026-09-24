@@ -124,7 +124,7 @@ def test_piece_without_readable_adult_fare_falls_back_to_rule_of_three():
     # sans total lisible : non comptée, mais signalée
     forced.total = None
     compute_rows(d2)
-    assert d2.rows == [] and any("non comptée" in w for w in d2.warnings)
+    assert d2.rows == [] and any("non compté" in w for w in d2.warnings)
 
 
 def test_direct_rows_keep_ticket_totals_and_formula_detail():
@@ -151,7 +151,7 @@ def test_deux_pieces_eur_sans_total_ne_font_pas_echouer_le_calcul():
         p.include = True
     compute_rows(d)
     assert d.rows == []
-    assert any("Pièce 2" in w and "taux de change" in w for w in d.warnings)
+    assert any("n° 2" in w and "taux de change" in w for w in d.warnings)
 
 
 def test_montant_chf_egal_a_la_contre_valeur_dune_piece_eur_reste_dans_le_detail():
@@ -172,4 +172,4 @@ def test_piece_sans_tarif_adulte_ni_total_nest_pas_annoncee_dans_la_ligne():
     row = next(r for r in d.rows if r.rubrique == "Transport")
     assert row.pieces == [1]
     assert row.libelle == "2*2.80 (Pce 1)"
-    assert any("Pièce 2" in w and "non comptée" in w for w in d.warnings)
+    assert any("n° 2" in w and "non compté" in w for w in d.warnings)

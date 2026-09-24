@@ -26,6 +26,7 @@ from .models import (
     Dossier,
     FareLine,
     Piece,
+    ResultatPiece,
 )
 
 NON_REMBOURSABLES = {
@@ -51,9 +52,25 @@ def normalize_rubrique(rubrique: str, type_activite: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def numeroter(dossier: Dossier) -> None:
+    """Numéros proposés à l'analyse, dans l'ordre de lecture, mais seulement aux justificatifs.
+
+    Un reçu de carte, un récépissé ou une pièce « taux de change » accompagne un ticket et n'a pas
+    de numéro à lui sur le papier. Lui en donner un décalait tous les suivants (le kiosque devenait
+    4 au lieu de 3), jusque dans les libellés de l'Excel qui servent à retrouver le papier. La
+    personne corrige ensuite d'après les numéros écrits sur les tickets."""
+    rang = 0
+    for p in dossier.pieces:
+        if p.kind in NON_REMBOURSABLES:
+            p.numero = ""
+        else:
+            rang += 1
+            p.numero = str(rang)
+
+
 def propose(dossier: Dossier) -> None:
     """Fixe inclusion / mode / rubrique de chaque pièce selon les règles."""
-    seen_totals: dict[tuple[str, float], int] = {}
+    seen_totals: dict[tuple[str, float], str] = {}
     for p in dossier.pieces:
         p.rubrique = normalize_rubrique(p.rubrique, dossier.type_activite)
         if p.kind in NON_REMBOURSABLES:
@@ -96,15 +113,15 @@ def propose(dossier: Dossier) -> None:
             if key in seen_totals:
                 jumelle = seen_totals[key]
                 p.notes.append(
-                    f"Même montant que la pièce {jumelle} ({p.total:.2f}) : deux nuitées ou deux repas"
+                    f"Même montant que le justificatif n° {jumelle} ({p.total:.2f}) : deux nuitées ou deux repas"
                     " au même prix, ou bien la même dépense comptée deux fois — à vérifier."
                 )
                 dossier.warnings.append(
-                    f"Pièces {jumelle} et {p.id} : même montant ({p.total:.2f}). Les deux sont comptées ;"
-                    " décochez-en une s'il s'agit de la même dépense."
+                    f"Justificatifs n° {jumelle} et n° {p.numero} : même montant ({p.total:.2f}). Les deux sont"
+                    " comptés ; décochez-en un s'il s'agit de la même dépense."
                 )
             else:
-                seen_totals[key] = p.id
+                seen_totals[key] = p.numero
     if dossier.taux_eur_chf is None:
         for p in dossier.pieces:
             if p.rate:
@@ -192,40 +209,90 @@ def take_adult_fares(fares: list[FareLine], n_titres: int) -> list[tuple[int, fl
     return taken
 
 
+def _ens(n: int) -> str:
+    """« 2 enseignant·e·s titré·e·s », « 1 enseignant·e titré·e »."""
+    return f"{n} enseignant·e·s titré·e·s" if n > 1 else f"{n} enseignant·e titré·e"
+
+
+def _pluriel(n: int, mot: str) -> str:
+    return f"{n} {mot}s" if n > 1 else f"{n} {mot}"
+
+
+def _resultat_partage(chf: float, dossier: Dossier, avant: str = "") -> ResultatPiece:
+    """Montant global partagé (règle de trois) : montant ÷ total des personnes pendant l'activité ×
+    enseignant·e·s titré·e·s. L'Excel le calcule sur la ligne ; ici, pour ce seul justificatif."""
+    eff = dossier.effectifs
+    if eff.total == 0:
+        return ResultatPiece(montant=None, texte=f"{avant}{_fmt(chf)} à partager : remplissez les effectifs (section 2).")
+    part = chf / eff.total * eff.titres
+    return ResultatPiece(montant=part, texte=f"{avant}{_fmt(chf)} ÷ {_pluriel(eff.total, 'personne')} × {_ens(eff.titres)} = {_fmt(part)}")
+
+
+def _resultat_direct(taken: list[tuple[int, float, str]], rate: Optional[float], n: int, adultes_billet: int) -> ResultatPiece:
+    """Tarifs adultes retenus sur un billet, et ce qui n'est pas pour l'État."""
+    termes, montant = [], 0.0
+    for q, unit, cur in taken:
+        if cur == "EUR":
+            termes.append(f"{q} × {_fmt(unit)} EUR × {rate:.4f}")
+            montant += round(q * unit * rate, 2)
+        else:
+            termes.append(f"{q} × {_fmt(unit)}")
+            montant += round(q * unit, 2)
+    texte = f"{' + '.join(termes)} = {_fmt(montant)} · {_ens(n)}"
+    retenus = sum(q for q, _, _ in taken)
+    reste = adultes_billet - retenus
+    if reste > 1:
+        texte += f" ; {reste} autres tarifs adultes du billet ne sont pas pour l'État"
+    elif reste == 1:
+        texte += " ; 1 autre tarif adulte du billet n'est pas pour l'État"
+    elif retenus < n:
+        texte += f" ; seulement {_pluriel(retenus, 'tarif adulte')} sur le billet"
+    return ResultatPiece(montant=round(montant, 2), texte=texte)
+
+
 def compute_rows(dossier: Dossier) -> None:
     n = dossier.effectifs.titres
     warnings = [w for w in dossier.warnings if not w.startswith("[calcul]")]
     if n == 0:
-        warnings.append("[calcul] Aucun accompagnant titré : rien n'est à charge de l'État.")
+        warnings.append("[calcul] Aucun·e enseignant·e titré·e dans les effectifs : rien n'est à la charge de l'État.")
+    # Ce que chaque justificatif retenu apporte, en clair. Le « 3 tarifs adultes sur le billet, 2
+    # titrés retenus » était un avertissement, affiché en orange dans les effectifs, loin du billet
+    # et comme un doute : c'est la règle appliquée normalement, et elle se lit sur le billet.
+    resultats: dict[int, ResultatPiece] = {}
     groups: "OrderedDict[tuple[str, str], dict]" = OrderedDict()
     for p in dossier.pieces:
         if not p.include:
             continue
+        # Sans numéro (reçu de carte compté malgré tout, justificatif ajouté à la main), « ? » :
+        # le rang de lecture interne ne correspond à rien sur le papier, et pouvait même tomber sur
+        # le numéro d'un autre justificatif (« Pces 2, 3, 3 »).
+        num = p.numero or "?"
+        if not p.numero:
+            warnings.append("[calcul] Un justificatif compté est sans numéro : écrivez le n° inscrit sur le ticket (section 3).")
         rub = normalize_rubrique(p.rubrique, dossier.type_activite)
         key = (rub, p.mode)
         g = groups.setdefault(key, {"numeros": [], "ids": [], "parts": OrderedDict(), "amounts": [], "chf_parts": [], "eur_parts": [], "totals": []})
         rate = _eur_rate_for(p, dossier)
         if p.currency == "EUR" and rate is None:
-            warnings.append(f"[calcul] Pièce {p.numero} en EUR sans taux de change : non comptée. Indiquez le taux EUR→CHF.")
+            warnings.append(f"[calcul] Justificatif n° {num} en EUR sans taux de change : non compté. Indiquez le taux EUR → CHF (section 2).")
+            resultats[p.id] = ResultatPiece(texte="indiquez le taux EUR → CHF (section 2).")
             continue
-        g["numeros"].append(p.numero or str(p.id))
+        g["numeros"].append(num)
         g["ids"].append(p.id)
         mode = p.mode
         taken: list[tuple[int, float, str]] = []
+        adults_on_ticket = 0
         if mode == "direct":
             taken = take_adult_fares(p.fares, n)
             adults_on_ticket = sum(f.qty for f in p.adult_fares())
-            if adults_on_ticket > n and n > 0:
-                warnings.append(
-                    f"[calcul] Pièce {p.numero} : {adults_on_ticket} tarifs adultes sur le billet, {n} titrés retenus."
-                )
             if not taken and n > 0:
                 # prix adulte inconnu : la pièce passe par la règle de trois sur son total (colonne H + formule)
                 if p.total is not None:
-                    warnings.append(f"[calcul] Pièce {p.numero} : aucun tarif adulte lisible, règle de trois sur son total ({_fmt(p.total)}).")
+                    warnings.append(f"[calcul] Justificatif n° {num} : aucun tarif adulte lisible, son total ({_fmt(p.total)}) est partagé en règle de trois.")
                     mode = "prorata"
                 else:
-                    warnings.append(f"[calcul] Pièce {p.numero} : aucun tarif adulte retenu et total illisible : non comptée.")
+                    warnings.append(f"[calcul] Justificatif n° {num} : aucun tarif adulte retenu et total illisible : non compté.")
+                    resultats[p.id] = ResultatPiece(texte="aucun tarif adulte lu, et le total est illisible.")
                     # retirée du groupe : sinon son numéro figurait dans le libellé de la ligne
                     # (« Pces 1-2 ») alors qu'elle ne compte pour rien
                     g["numeros"].pop()
@@ -235,8 +302,9 @@ def compute_rows(dossier: Dossier) -> None:
             g["numeros"].pop(); g["ids"].pop()
             key = (rub, mode)
             g = groups.setdefault(key, {"numeros": [], "ids": [], "parts": OrderedDict(), "amounts": [], "chf_parts": [], "eur_parts": [], "totals": []})
-            g["numeros"].append(p.numero or str(p.id))
+            g["numeros"].append(num)
             g["ids"].append(p.id)
+        avant = "Aucun tarif adulte lisible, le total est partagé : " if mode != p.mode else ""
         if mode == "direct":
             for q, unit, cur in taken:
                 k = (unit, cur, rate if cur == "EUR" else None)
@@ -244,9 +312,11 @@ def compute_rows(dossier: Dossier) -> None:
             # coût total des billets (colonne H, à titre d'information : la part État est saisie directement)
             if p.total is not None:
                 g["totals"].append(round(p.total * rate, 2) if p.currency == "EUR" else round(p.total, 2))
+            resultats[p.id] = _resultat_direct(taken, rate, n, adults_on_ticket) if taken else ResultatPiece(montant=0.0, texte=f"{_ens(n)} : rien pour l'État.")
         else:
             if p.total is None:
-                warnings.append(f"[calcul] Pièce {p.numero} : total illisible, non comptée.")
+                warnings.append(f"[calcul] Justificatif n° {num} : total illisible, non compté.")
+                resultats[p.id] = ResultatPiece(texte="total illisible, à saisir ci-dessus.")
                 g["numeros"].pop()
                 g["ids"].pop()
                 continue
@@ -254,9 +324,11 @@ def compute_rows(dossier: Dossier) -> None:
                 chf = round(p.total * rate, 2)
                 g["eur_parts"].append((p.numero, p.total, rate, chf, p.total_chf is not None))
                 g["amounts"].append(chf)
+                resultats[p.id] = _resultat_partage(chf, dossier, f"{avant}{_fmt(p.total)} EUR = {_fmt(chf)} CHF ; ")
             else:
                 g["amounts"].append(round(p.total, 2))
                 g["chf_parts"].append(round(p.total, 2))
+                resultats[p.id] = _resultat_partage(round(p.total, 2), dossier, avant)
 
     rows: list[DecompteRow] = []
     order = rubriques_for(dossier.type_activite)
@@ -294,6 +366,7 @@ def compute_rows(dossier: Dossier) -> None:
                 detail = " + ".join(_fmt(a) for a in g["amounts"])
             rows.append(DecompteRow(rubrique=rub, libelle=_libelle(detail, g["numeros"]), mode="prorata", cout_total=total, pieces=g["ids"]))
     dossier.rows = rows
+    dossier.resultats = resultats
     dossier.warnings = warnings
     dossier.total = compute_total(dossier)
 

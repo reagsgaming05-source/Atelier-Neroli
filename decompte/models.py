@@ -175,6 +175,14 @@ class DecompteRow(BaseModel):
     pieces: list[int] = Field(default_factory=list)
 
 
+class ResultatPiece(BaseModel):
+    """Ce qu'un justificatif retenu apporte au décompte, écrit en clair sur sa fiche : la part de
+    l'État ne se lisait autrement que dans une ligne qui regroupe plusieurs justificatifs."""
+
+    montant: Optional[float] = None  # part de l'État pour ce justificatif (None : pas encore calculable, texte = ce qui manque)
+    texte: str = ""  # « 2 × 4.20 = 8.40 · 2 enseignant·e·s titré·e·s », « 396.00 ÷ 23 personnes × 2 … = 34.43 »
+
+
 class Dossier(BaseModel):
     id: str
     filename: str = ""
@@ -198,6 +206,7 @@ class Dossier(BaseModel):
     pages: list[PageData] = Field(default_factory=list)
     pieces: list[Piece] = Field(default_factory=list)
     rows: list[DecompteRow] = Field(default_factory=list)
+    resultats: dict[int, ResultatPiece] = Field(default_factory=dict)  # par id de pièce retenue
     total: float = 0.0
     warnings: list[str] = Field(default_factory=list)
     ocr_engine: str = ""

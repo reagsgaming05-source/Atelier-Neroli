@@ -11,7 +11,7 @@ from .forms import is_form_page, parse_form
 from .models import Dossier, PageData
 from .ocr import load_pages
 from .pieces import analyse_block
-from .rules import compute_rows, propose
+from .rules import compute_rows, numeroter, propose
 from .segment import normalize, segment_page
 
 log = logging.getLogger(__name__)
@@ -106,6 +106,7 @@ def analyse_pdf(
     )
     if not pieces:
         dossier.warnings.append("Aucune pièce justificative détectée.")
+    numeroter(dossier)
     propose(dossier)
     compute_rows(dossier)
     return dossier
