@@ -36,6 +36,21 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /**
+   * L'entrée d'une liste que désigne un texte tapé : celle qui s'écrit exactement ainsi — sans
+   * tenir compte des majuscules ni des accents, comme le filtre —, sinon la seule qui le contient.
+   * « camp » désigne Camp et non Mini-camp, « 7 » désigne « depuis le n° 7 ». Rien sinon.
+   */
+  function designe(liste, texte) {
+    const q = sansAccent(texte).trim();
+    if (!q) return null;
+    const ecrit = (it) => (it.label == null || it.label === '' ? it.value : it.label);
+    const exact = liste.find((it) => sansAccent(ecrit(it)).trim() === q) || liste.find((it) => sansAccent(it.value).trim() === q);
+    if (exact) return exact;
+    const candidats = liste.filter((it) => sansAccent(`${it.value} ${it.label || ''}`).includes(q));
+    return candidats.length === 1 ? candidats[0] : null;
+  }
+
+  /**
    * Pose une liste déroulante sur un champ texte existant.
    * Renvoie { ouvrir, fermer, input } ou null si le champ en a déjà une.
    */
@@ -140,17 +155,20 @@
     }
     function choisir(i) { if (vus[i]) poser(vus[i]); }
 
-    /** Mode strict : ce qui est tapé doit exister, sinon on revient à la dernière valeur connue. */
+    /**
+     * Mode strict : ce qui est tapé doit exister, sinon on revient à la dernière valeur connue.
+     *
+     * Un mot tapé en entier (« RECETTE », « Camp ») doit être POSÉ, pas seulement retenu : poser()
+     * prévient le <select> caché et le reste de la fiche. Sans cela le champ affichait RECETTE
+     * pendant que la pièce partait en REMBOURSEMENT — une entrée enregistrée en sortie.
+     */
     function reglerStrict() {
       if (!opts.strict) return;
-      const liste = tous();
-      const exact = liste.find((it) => texteDe(it) === input.value);
-      if (exact) { valeur = exact.value; dernier = input.value; return; }
-      // une seule correspondance en tapant : c'est celle-là qu'on voulait
-      const q = sansAccent(input.value).trim();
-      const candidats = q ? liste.filter((it) => sansAccent(`${it.value} ${it.label || ''}`).includes(q)) : [];
-      if (candidats.length === 1) { poser(candidats[0]); return; }
-      if (input.value !== dernier) input.value = dernier; // rien de connu : on remet ce qui valait
+      const it = designe(tous(), input.value);
+      if (!it) { if (input.value !== dernier) input.value = dernier; return; } // rien de connu : on remet ce qui valait
+      if (String(it.value) !== String(valeur)) { poser(it); return; }
+      input.value = texteDe(it); // « recette » tapé sur RECETTE : on remet l'écriture de la liste
+      dernier = input.value;
     }
 
     arrow.addEventListener('mousedown', (ev) => {
@@ -246,5 +264,5 @@
   /** Remet les champs d'affichage d'accord avec leurs <select>, après un remplissage par le code. */
   function syncAll() { for (const c of convertis) { try { c.sync(); } catch (e) { /* détaché */ } } }
 
-  return { attach, fromSelect, syncAll };
+  return { attach, fromSelect, syncAll, designe };
 });
