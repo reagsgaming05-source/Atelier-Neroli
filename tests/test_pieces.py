@@ -277,18 +277,21 @@ def test_guess_rubrique_nourriture_on_a_school_outing():
         assert normalize_rubrique(devinee, "course") == "Nourriture"
 
 
-def test_guess_rubrique_cuisiniere_has_its_own_row():
-    """Le modèle du camp a une ligne « Cuisinière » : elle doit servir.
+def test_guess_rubrique_cuisiniere_va_dans_nourriture():
+    """Règle confirmée : tout ce que coûte la cuisinière va dans « Nourriture », en règle de trois.
 
-    Rien ne l'y envoyait — aucun mot-clé ne menait à cette rubrique, et la facture d'une
-    cuisinière, qui parle forcément de repas, finissait dans « Nourriture ».
+    La facture d'une cuisinière avait été envoyée dans la ligne « Cuisinière » du modèle du camp ;
+    cette ligne reste disponible à la main, mais rien n'y va tout seul. Une facture de cuisinière
+    qui parle aussi du chalet ne doit pas pour autant finir dans « Hébergement ».
     """
     from decompte.rules import normalize_rubrique
 
     for texte in ("facture salaire cuisiniere camp de leysin repas midi et soir",
-                  "honoraires cuisinier semaine du 12 au 16 mai"):
+                  "honoraires cuisinier semaine du 12 au 16 mai",
+                  "cuisiniere chalet des alpes nuitees et repas du personnel"):
         devinee = guess_rubrique(normalize(texte), "facture")
-        assert devinee == "Cuisinière", texte
-        assert normalize_rubrique(devinee, "camp") == "Cuisinière"
+        assert devinee == "Nourriture", texte
+        assert normalize_rubrique(devinee, "camp") == "Nourriture"
+        assert normalize_rubrique(devinee, "course") == "Nourriture"
     # la cuisine d'un chalet est une pièce, pas une personne : cela reste de l'hébergement
     assert guess_rubrique(normalize("location chalet avec cuisine equipee dortoir"), "facture") == "Hébergement"

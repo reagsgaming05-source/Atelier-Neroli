@@ -164,14 +164,14 @@ def classify_kind(text_norm: str) -> tuple[str, dict[str, int]]:
 
 
 def guess_rubrique(text_norm: str, kind: str) -> str:
-    # « Cuisinière » : la personne qui cuisine, pas ce qu'elle achète. Le mot tranche à lui seul,
-    # avant le décompte des autres mots — sa facture parle forcément aussi de repas et de cuisine,
-    # et « Nourriture » l'aurait emporté au nombre de mots. Le modèle du camp a sa ligne, et une
-    # ligne du modèle doit servir. Sur une course d'école, où cette rubrique n'existe pas,
-    # normalize_rubrique la ramène à « Autre ».
+    # Frais de cuisinière : tout ce qu'elle coûte, son salaire compris, va dans « Nourriture », en
+    # règle de trois — c'est la règle de la personne qui établit les décomptes. La ligne
+    # « Cuisinière » du modèle du camp reste disponible à la main, mais rien n'y va tout seul.
+    # Le mot tranche avant le décompte des autres : une facture de cuisinière qui parle aussi du
+    # chalet ou des nuitées aurait fini dans « Hébergement ».
     # « cuisine » seul ne suffit pas : c'est la pièce, pas la personne.
     if "cuisinier" in text_norm:  # attrape aussi « cuisinière » une fois les accents retirés
-        return "Cuisinière"
+        return "Nourriture"
     best, best_score = "Autre", 0
     for rub, kws in RUBRIQUE_KEYWORDS.items():
         score = sum(1 for kw in kws if kw in text_norm)
