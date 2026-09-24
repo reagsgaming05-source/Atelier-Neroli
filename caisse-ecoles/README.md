@@ -286,7 +286,7 @@ décompte → pièce), puis publication du zip.
    (classeur Excel tenu à la main ou produit par les pièces scannées) : **Reprendre un classeur
    Excel…** sous le journal verse ses écritures dans le registre (solde à nouveau repris si le
    registre est vide, numérotation qui continue, pièces marquées *Excel*), et la saisie reprend
-   dans la fiche. Le bouton *Reprendre ces écritures dans le registre* de l'espace des pièces
+   dans la fiche. Le bouton *Reprendre ces écritures dans le journal de l'année* de l'espace des pièces
    scannées fait la même chose depuis un classeur chargé là.
 7. Version portable : un décompte terminé dans **Décompte DGEO** apparaît au-dessus de
    la fiche ; *Créer la pièce* la pré-remplit (voir plus haut, *Pont entre les deux outils*).
@@ -350,7 +350,7 @@ lancé :
    Les PDF doivent avoir été scannés avec reconnaissance de texte (PDF « consultable »), ce que
    fait le copieur.
 4. **Réglages de la lecture** (volet replié sous la zone de dépôt, avec un résumé d'une ligne de
-   son état) : par défaut *Registre de l'année* (celui de la saisie des
+   son état) : par défaut *Journal de l'année* (celui de la saisie des
    pièces : les pièces scannées viennent à la suite, et le fichier Excel produit contient tout).
    *Classeur Excel existant* ajoute les pièces à la suite d'un classeur en cours (et permet de
    reprendre ses écritures dans le registre) ; *Nouveau classeur* demande la date et le montant du

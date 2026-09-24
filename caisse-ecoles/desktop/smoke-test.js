@@ -1074,7 +1074,7 @@ function verifierCopie() {
     const a = window.CaisseApp.state;
     window.CaisseApp.showPanel('panelSaisie');
     return { added: r ? r.added.length : null, skipped: r ? r.skipped.length : null, openingDiffers: r ? r.openingDiffers : null, pieces: s.reg.pieces.length, before, source: p150 ? p150.source : null, type: p150 ? p150.type : null,
-      nextNo: R.nextNo(s.reg), excelTag: !!document.querySelector('#journalBody .tag'), mode: a.mode, info: info.slice(0, 90), regTag: /Registre \d{4} \(Saisie des pièces\)/.test(info) };
+      nextNo: R.nextNo(s.reg), excelTag: !!document.querySelector('#journalBody .tag'), mode: a.mode, info: info.slice(0, 90), regTag: /Journal \d{4} \(Saisie des pièces\)/.test(info) };
   });
   console.log('synchronisation scan ↔ saisie :', JSON.stringify(sync));
   ok = ok && sync.added === 1 && sync.skipped === 1 && sync.pieces === sync.before + 1 && sync.source === 'excel' && sync.type === 'PARTICIPATION DES PARENTS' && sync.nextNo === 151 && sync.excelTag && sync.mode === 'registre' && sync.regTag;

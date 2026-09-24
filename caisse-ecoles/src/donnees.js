@@ -202,7 +202,7 @@
 
   const SENS_MOT = { debit: 'entrée en caisse', credit: 'sortie de caisse' };
   const ORIGINE = {
-    ajout: { texte: 'ajouté par vous', titre: 'Ajouté ici, gardé avec les registres de la caisse' },
+    ajout: { texte: 'ajouté par vous', titre: 'Ajouté ici, gardé avec les journaux de la caisse' },
     base: { texte: "d'origine", titre: "Connu de l'application dès l'installation" },
     appris: { texte: 'vu dans vos pièces', titre: 'Lu dans un classeur repris, une pièce scannée ou une fiche enregistrée' },
   };
@@ -730,7 +730,7 @@
           ou.innerHTML = `<span style="color:var(--err)">Rien ne peut être gardé ici : ${escapeHtml(l)}.</span>`;
           ou.closest('details') && (ou.closest('details').open = true);
         } else if (depot.kind === 'fichiers') {
-          ou.innerHTML = `Avec les registres de la caisse, dans le fichier <b>${escapeHtml(depot.fichier)}</b> de ce dossier : <code>${escapeHtml(l)}</code>`;
+          ou.innerHTML = `Avec les journaux de la caisse, dans le fichier <b>${escapeHtml(depot.fichier)}</b> de ce dossier : <code>${escapeHtml(l)}</code>`;
         } else {
           ou.textContent = `Dans ${l}. Enregistrez-en une copie de temps en temps : effacer les données du navigateur les effacerait.`;
         }

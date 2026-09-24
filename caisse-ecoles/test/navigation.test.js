@@ -91,7 +91,7 @@ test('confirm() devient une boîte « OK / Annuler » en français', () => {
 });
 
 test('une question qui détruit quelque chose a « Annuler » par défaut : Entrée ne supprime rien', () => {
-  for (const q of ['Supprimer la pièce n° 2 (RECETTE - Vente de fondues - T. Morel) et ses justificatifs ?', 'Retirer le justificatif « ticket.pdf » ?', 'Remplacer le registre 2026 (12 pièce(s)) par cette sauvegarde ?']) {
+  for (const q of ['Supprimer la pièce n° 2 (RECETTE - Vente de fondues - T. Morel) et ses justificatifs ?', 'Retirer le justificatif « ticket.pdf » ?', 'Remplacer le journal 2026 (12 pièce(s)) par cette sauvegarde ?']) {
     assert.equal(D.boiteConfirmation(q).defaultId, 1, q);
   }
   // « supprimer » au milieu d'un mot ne compte pas

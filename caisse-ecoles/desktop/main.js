@@ -253,7 +253,7 @@ function createWindow() {
     dgeoView.webContents.executeJavaScript(`(function(){var s=document.getElementById('compta-theme')||document.createElement('style');s.id='compta-theme';s.textContent=${JSON.stringify(css)};document.documentElement.appendChild(s);})()`, true)
       .catch((e) => logLine(`thème DGEO : ${e.message}`));
   });
-  dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage du logiciel de décompte…', true));
+  dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage de Décompte DGEO…', true));
   launchDgeo().catch((e) => logLine(`Décompte DGEO : ${(e && e.message) || e}`));
 
   // Une fiche non enregistrée (ou un décompte en cours) ne part pas sans qu'on l'ait dit.
@@ -468,7 +468,7 @@ async function launchDgeo() {
     pushShellState();
     return null;
   }
-  if (dgeo.status !== 'ready' && dgeoView) dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage du logiciel de décompte…', true));
+  if (dgeo.status !== 'ready' && dgeoView) dgeoView.webContents.loadURL(dgeoPlaceholder('Décompte DGEO', 'Démarrage de Décompte DGEO…', true));
   pushShellState();
   const url = await startDgeo();
   if (!dgeoView) return url;
@@ -1148,10 +1148,10 @@ ipcMain.handle('donnees:choisir', async () => {
     const q = await dialog.showMessageBox(mainWindow, {
       type: 'question',
       title: APP_TITLE,
-      message: 'Emporter les registres de ce PC dans ce dossier ?',
+      message: 'Emporter les journaux de ce PC dans ce dossier ?',
       detail: 'Le dossier choisi ne contient pas encore de caisse.\n\n'
-        + '« Emporter » y copie les registres, les justificatifs, les scans et les décomptes de ce PC : c\'est ce qu\'il faut la première fois. '
-        + 'Rien n\'est retiré de ce PC.\n\n« Partir de zéro » laisse le dossier vide : les registres de ce PC n\'y seront pas. '
+        + '« Emporter » y copie les journaux, les justificatifs, les scans et les décomptes de ce PC : c\'est ce qu\'il faut la première fois. '
+        + 'Rien n\'est retiré de ce PC.\n\n« Partir de zéro » laisse le dossier vide : les journaux de ce PC n\'y seront pas. '
         + 'Tant qu\'aucune pièce n\'y est saisie, vous pourrez encore les emporter (« Revenir aux données de ce PC », puis « Mettre les données sur le serveur… »).',
       buttons: ['Emporter', 'Partir de zéro', 'Annuler'],
       defaultId: 0,

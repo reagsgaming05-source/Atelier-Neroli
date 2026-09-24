@@ -44,8 +44,8 @@
 
   /* ---------------- grille des coupures ---------------- */
   function buildRows() {
-    const row = (d, kind) => `<tr data-denom="${d}" class="${kind}"><td class="lbl">${kind === 'billet' ? 'Billet' : 'Pièce'} <b>${denomLabel(d)}</b></td>` +
-      `<td class="qty"><input type="number" min="0" step="1" inputmode="numeric" data-denom="${d}" placeholder="0" aria-label="Nombre de ${kind === 'billet' ? 'billets' : 'pièces'} de ${denomLabel(d)}"></td>` +
+    const row = (d, kind) => `<tr data-denom="${d}" class="${kind}"><td class="lbl">${kind === 'billet' ? 'Billet' : 'Monnaie'} <b>${denomLabel(d)}</b></td>` +
+      `<td class="qty"><input type="number" min="0" step="1" inputmode="numeric" data-denom="${d}" placeholder="0" aria-label="Nombre de ${kind === 'billet' ? 'billets' : 'pièces de monnaie'} de ${denomLabel(d)}"></td>` +
       `<td class="num line" data-line="${d}">0.00</td></tr>`;
     els.cRows.innerHTML = '<tr class="grp"><th colspan="3">Billets</th></tr>' + R.BILLETS.map((d) => row(d, 'billet')).join('') +
       '<tr class="grp"><th colspan="3">Monnaie</th></tr>' + R.PIECES.map((d) => row(d, 'piece')).join('');
@@ -192,7 +192,7 @@
         `<td class="acts"><button type="button" class="small ghost" data-releve="${c.id}" title="Relevé de caisse de ce comptage (PDF)">${ico('printer')}</button>` +
         `<button type="button" class="small ghost" data-edit="${c.id}" title="Corriger ce comptage">${ico('pen')}</button>` +
         `<button type="button" class="small ghost danger" data-del="${c.id}" title="Supprimer ce comptage">${ico('trash')}</button></td></tr>`;
-    }).join('') || '<tr><td colspan="8" class="legend">Aucun comptage enregistré cette année. Comptez les billets et les pièces ci-dessus, puis « Enregistrer le comptage ».</td></tr>';
+    }).join('') || '<tr><td colspan="8" class="legend">Aucun comptage enregistré cette année. Comptez les billets et la monnaie ci-dessus, puis « Enregistrer le comptage ».</td></tr>';
   }
 
   /* ---------------- formulaire ---------------- */
@@ -266,11 +266,11 @@
 
   if (els.btnReleve) els.btnReleve.addEventListener('click', async () => {
     const reg = S.state.reg;
-    if (!reg) { notice('err', 'Aucun registre ouvert.'); return; }
+    if (!reg) { notice('err', 'Aucun journal ouvert.'); return; }
     const date = els.cDate.value;
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { notice('err', 'Date du comptage manquante ou invalide : le relevé n\'a pas été produit.'); return; }
     const counts = readCounts();
-    if (!Object.keys(counts).length) { notice('err', 'Aucun billet ni aucune pièce compté(e) : il n\'y a rien à mettre sur le relevé.'); return; }
+    if (!Object.keys(counts).length) { notice('err', 'Rien n\'est compté, ni billets ni monnaie : il n\'y a rien à mettre sur le relevé.'); return; }
     const t = R.countTotal(counts);
     const w = window.open('', '_blank'); // ouverte dans le clic, remplie après
     try {
@@ -302,13 +302,13 @@
 
   async function saveCount() {
     const reg = S.state.reg;
-    if (!reg) { notice('err', "Aucun registre ouvert : le comptage n'a pas pu être enregistré."); return; }
+    if (!reg) { notice('err', "Aucun journal ouvert : le comptage n'a pas pu être enregistré."); return; }
     const date = els.cDate.value;
     const errs = [];
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) errs.push('Date manquante ou invalide');
-    else if (String(date).slice(0, 4) !== String(reg.annee)) errs.push(`La date n'est pas dans l'année ${reg.annee} du registre ouvert`);
+    else if (String(date).slice(0, 4) !== String(reg.annee)) errs.push(`La date n'est pas dans l'année ${reg.annee} du journal ouvert`);
     const counts = readCounts();
-    if (!Object.keys(counts).length) errs.push('Aucun billet ni aucune pièce compté(e)');
+    if (!Object.keys(counts).length) errs.push('Rien n\'est compté, ni billets ni monnaie');
     if (errs.length) {
       els.countErrors.innerHTML = `<div class="notice err"><b>Le comptage n'est pas enregistré :</b><ul>${errs.map((e) => `<li>${escapeHtml(e)}</li>`).join('')}</ul></div>`;
       return;
@@ -343,7 +343,7 @@
     // résultat reste lisible ici et dans l'historique, où la ligne est surlignée, avec son relevé.
     state.dernierEnregistre = c.id;
     newCount();
-    notice(Math.abs(ecart) < 0.005 ? 'ok' : 'warn', `<b>Comptage du ${fmtDate(date)} ${ref ? 'corrigé' : 'enregistré'}</b> : <b>${fmtCHF(c.total)}</b> en caisse (${fmtCHF(c.billets)} en billets, ${fmtCHF(c.pieces)} en pièces). ` +
+    notice(Math.abs(ecart) < 0.005 ? 'ok' : 'warn', `<b>Comptage du ${fmtDate(date)} ${ref ? 'corrigé' : 'enregistré'}</b> : <b>${fmtCHF(c.total)}</b> en caisse (${fmtCHF(c.billets)} en billets, ${fmtCHF(c.pieces)} en monnaie). ` +
       (Math.abs(ecart) < 0.005 ? 'La caisse correspond au journal.' : `Écart avec le journal à cette date : <b>${signed(ecart)}</b>.`) +
       ` <button type="button" data-releve-id="${c.id}">Relevé de caisse de ce comptage</button>` +
       '<br>Le formulaire est prêt pour le prochain comptage ; celui-ci est surligné dans l\'historique.', { keep: true, cle: 'enregistrement' });

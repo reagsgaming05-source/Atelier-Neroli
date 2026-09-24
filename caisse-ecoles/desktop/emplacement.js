@@ -78,7 +78,7 @@ function ecrireEmplacement(dossierReglage, chemin) {
     return f;
   }
   fs.writeFileSync(f, [
-    '# Compta Blonay : où sont les registres, les justificatifs et les scans.',
+    '# Compta Blonay : où sont les journaux, les justificatifs et les scans.',
     '# Effacez ce fichier pour revenir aux données de ce PC (dossier « data » à côté du programme).',
     chemin,
     '',
@@ -156,7 +156,7 @@ function resumeCopie(copie) {
   const et = (l) => (l.length > 1 ? `${l.slice(0, -1).join(', ')} et ${l[l.length - 1]}` : l[0] || '');
   const a = copie.annees || [];
   const parts = [];
-  if (copie.dossiers.includes('caisse')) parts.push(`${a.length > 1 ? 'les registres' : 'le registre'}${a.length ? ` ${et(a.map(String))}` : ''} (avec ${a.length > 1 ? 'leurs' : 'ses'} justificatifs)`);
+  if (copie.dossiers.includes('caisse')) parts.push(`${a.length > 1 ? 'les journaux' : 'le journal'}${a.length ? ` ${et(a.map(String))}` : ''} (avec ${a.length > 1 ? 'leurs' : 'ses'} justificatifs)`);
   if (copie.dossiers.includes('Scans')) parts.push('les scans du copieur');
   if (copie.dossiers.includes('Décomptes')) parts.push('les décomptes');
   return et(parts);

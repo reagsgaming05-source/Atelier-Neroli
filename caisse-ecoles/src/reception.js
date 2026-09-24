@@ -143,9 +143,9 @@
     const annee = doc.marque.annee;
     let reg = null;
     try { reg = await storage.load(annee); } catch (e) { reg = null; }
-    if (!reg) return { ok: false, raison: `le registre ${annee} est introuvable sur ce poste` };
+    if (!reg) return { ok: false, raison: `le journal ${annee} est introuvable sur ce poste` };
     const piece = (reg.pieces || []).find((p) => p.id === doc.marque.id);
-    if (!piece) return { ok: false, raison: `la pièce n'est plus dans le registre ${annee}` };
+    if (!piece) return { ok: false, raison: `la pièce n'est plus dans le journal ${annee}` };
 
     // Rescanner une pièce doit REMPLACER son scan signé, pas en empiler un second. Le stockage
     // par fichiers cherche un nom libre quand le nom est pris (« piece-signee (1).pdf ») : sans
@@ -168,7 +168,7 @@
     try {
       await storage.save(reg);
     } catch (e) {
-      return { ok: false, raison: `registre non enregistré (${(e && e.message) || e})` };
+      return { ok: false, raison: `journal non enregistré (${(e && e.message) || e})` };
     }
     // Le bac à courrier : en plus d'être attaché au journal, un décompte est posé dans un dossier
     // qu'on ouvre dans l'explorateur pour voir ce qu'il reste à faire. Un échec ici ne remet pas
@@ -314,8 +314,8 @@
         ? 'C\'est une fiche PIÈCE COMPTABLE, mais son code n\'a pas pu être lu (pli, agrafe, tache ?). Tapez le n° écrit sur la fiche pour la joindre à sa pièce.'
         : d.etat === 'inconnue'
           ? (d.registreAbsent
-            ? `Le code désigne une pièce de ${annee}, et le registre ${annee} n'est pas dans les données de ce poste. Tapez le n° d'une pièce de l'année ouverte pour l'y joindre, ou écartez ce document.`
-            : `Le code désigne une pièce du registre ${annee} qui n'y est plus (supprimée depuis l'impression ?). Tapez le n° de la pièce à laquelle joindre ce document, ou écartez-le.`)
+            ? `Le code désigne une pièce de ${annee}, et le journal ${annee} n'est pas dans les données de ce poste. Tapez le n° d'une pièce de l'année ouverte pour l'y joindre, ou écartez ce document.`
+            : `Le code désigne une pièce du journal ${annee} qui n'y est plus (supprimée depuis l'impression ?). Tapez le n° de la pièce à laquelle joindre ce document, ou écartez-le.`)
           : d.etat === 'doublon'
             ? 'Cette pièce est déjà venue plus haut dans la même pile : le chargeur a sans doute pris la feuille deux fois. Écartez ce doublon ; ne remplacez le scan joint que si celui-ci est le bon.'
             : '';
@@ -496,10 +496,10 @@
     const no = Number(String(champ.value).trim());
     if (!Number.isInteger(no) || no <= 0) { majBandeau('Tapez le n° de la pièce à laquelle joindre ce document.', 'warn'); champ.focus(); return; }
     const piece = (reg.pieces || []).find((p) => p.no === no);
-    if (!piece) { majBandeau(`Aucune pièce n° ${no} dans le registre ${reg.annee}.`, 'err'); champ.focus(); return; }
+    if (!piece) { majBandeau(`Aucune pièce n° ${no} dans le journal ${reg.annee}.`, 'err'); champ.focus(); return; }
     const marque = { annee: reg.annee, id: piece.id };
     const deja = await scanDejaJoint(marque);
-    if (!window.confirm(`Joindre ce document (${plur(Number(d.pages) || 1, 'page')}) à la pièce n° ${no} du registre ${reg.annee} ?\n\n` +
+    if (!window.confirm(`Joindre ce document (${plur(Number(d.pages) || 1, 'page')}) à la pièce n° ${no} du journal ${reg.annee} ?\n\n` +
       `${piece.libelle || ''} — ${fmtCHF(piece.montant)}` +
       (deja ? `\n\nCette pièce a déjà un scan signé${deja.pages ? ` (${plur(deja.pages, 'page')})` : ''} : il sera remplacé par celui-ci.` : ''))) return;
     await joindreEtRetirer(d, marque, piece);

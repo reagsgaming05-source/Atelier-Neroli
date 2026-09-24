@@ -513,11 +513,11 @@
     if (p.no == null || !Number.isInteger(p.no) || p.no <= 0) err('pNo', 'Numéro de pièce à indiquer (un nombre entier : 1, 2, 3…)', reg ? { libre: nextNo(reg) } : null);
     else if (reg && reg.pieces.some((x) => x.id !== p.id && x.no === p.no)) {
       const libre = nextNo({ pieces: reg.pieces.filter((x) => x.id !== p.id) });
-      err('pNo', `Le n° ${p.no} existe déjà dans le registre : le prochain numéro libre est le ${libre}`, { libre });
+      err('pNo', `Le n° ${p.no} existe déjà dans le journal : le prochain numéro libre est le ${libre}`, { libre });
     }
     if (!isRealDate(p.date)) err('pDate', 'Date à indiquer');
     else if (reg && String(p.date).slice(0, 4) !== String(reg.annee)) {
-      err('pDate', `La date n'est pas dans l'année ${reg.annee}, celle du registre ouvert. Pour une autre année : espace « L'année », « Changer d'année »`);
+      err('pDate', `La date n'est pas dans l'année ${reg.annee}, celle du journal ouvert. Pour une autre année : espace « L'année », « Changer d'année »`);
     }
     if (!p.type) err('pType', "Type d'écriture à choisir");
     if (!(p.montant > 0)) {
@@ -1009,7 +1009,7 @@
             return { fusion: bilan };
           }
           const disque = parse(r.disque);
-          if (!disque) throw new Error("le registre enregistré par l'autre poste est illisible : rien n'a été écrit par-dessus");
+          if (!disque) throw new Error("le journal enregistré par l'autre poste est illisible : rien n'a été écrit par-dessus");
           const f = fusionner(attendu == null ? null : parse(attendu), reg, disque);
           for (const k of Object.keys(f.reg)) reg[k] = f.reg[k];
           bilan = {
@@ -1019,7 +1019,7 @@
           };
           attendu = r.disque;
         }
-        throw new Error("le registre est modifié sans arrêt sur un autre poste : rien n'a été écrit, réessayez dans un instant");
+        throw new Error("le journal est modifié sans arrêt sur un autre poste : rien n'a été écrit, réessayez dans un instant");
       },
       /** Reprend ce qu'un autre poste a enregistré depuis la dernière lecture (voir reprendreDuDisque). */
       relire: async (reg) => reprendreDuDisque(reg, await F.load(reg.annee)),

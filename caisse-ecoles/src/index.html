@@ -253,12 +253,12 @@
   <details class="card fold" id="step1">
     <summary><svg class="ico"><use href="#i-sliders"/></svg> Réglages de la lecture <span class="legend" id="step1Resume"></span></summary>
     <div class="choice seg">
-      <label><input type="radio" name="mode" value="registre" checked> Registre de l'année (Saisie des pièces)</label>
+      <label><input type="radio" name="mode" value="registre" checked> Journal de l'année (Saisie des pièces)</label>
       <label><input type="radio" name="mode" value="existing"> Classeur Excel existant</label>
       <label><input type="radio" name="mode" value="new"> Nouveau classeur (nouvelle année)</label>
     </div>
     <div id="registreBox">
-      <div class="info" id="registreInfo">Registre de l'année en cours de chargement…</div>
+      <div class="info" id="registreInfo">Journal de l'année en cours de chargement…</div>
     </div>
     <div id="newBox" class="hidden">
       <div class="row">
@@ -276,8 +276,11 @@
     <div id="existingBox" class="hidden">
       <div class="row">
         <div class="field">
-          <label for="xlsxFile">Classeur Excel (.xlsx) de l'année en cours (année commencée à l'ancienne) – les nouvelles pièces sont ajoutées à la suite, et ses écritures peuvent être reprises dans le registre</label>
-          <input type="file" id="xlsxFile" accept=".xlsx">
+          <label for="xlsxFile">Classeur Excel (.xlsx) de l'année en cours (année commencée à l'ancienne) – les nouvelles pièces sont ajoutées à la suite, et ses écritures peuvent être reprises dans le journal</label>
+          <!-- Le champ « fichier » du navigateur dit « Choose File / No file chosen », en anglais
+               même dans l'application fenêtrée : caché, un bouton en français l'ouvre. -->
+          <input type="file" id="xlsxFile" accept=".xlsx" class="hidden">
+          <div><button type="button" class="small" id="btnPickXlsx"><svg class="ico"><use href="#i-upload"/></svg> Choisir le classeur Excel…</button></div>
         </div>
       </div>
       <div class="info" id="existingInfo">Aucun classeur chargé.</div>
@@ -386,7 +389,7 @@
     <div class="toolbar">
       <button type="button" class="primary" id="btnExcel"><svg class="ico"><use href="#i-grid"/></svg> Fichier Excel de l'année</button>
       <button type="button" id="btnReport"><svg class="ico"><use href="#i-file"/></svg> Rapport de contrôle</button>
-      <button type="button" id="btnToRegister" class="hidden" title="Verse ces écritures dans le registre de l'année (Saisie des pièces), avec l'image de chaque pièce en justificatif. Inutile quand le registre est déjà la base : les pièces lues y entrent toutes seules."><svg class="ico"><use href="#i-book"/></svg> Verser au registre de l'année</button>
+      <button type="button" id="btnToRegister" class="hidden" title="Verse ces écritures dans le journal de l'année (Saisie des pièces), avec l'image de chaque pièce en justificatif. Inutile quand le journal est déjà la base : les pièces lues y entrent toutes seules."><svg class="ico"><use href="#i-book"/></svg> Verser au journal de l'année</button>
       <span class="legend" id="excelHint"></span>
     </div>
   </section>
@@ -396,7 +399,7 @@
   <header class="page-head">
     <div>
       <h1>Compter la caisse</h1>
-      <p>Comptez les billets et les pièces : l'application calcule le solde compté, le compare au dernier comptage et au solde du journal à cette date, et garde l'historique dans le registre de l'année.</p>
+      <p>Comptez les billets et la monnaie : l'application calcule le solde compté, le compare au dernier comptage et au solde du journal à cette date, et garde l'historique dans le journal de l'année.</p>
     </div>
   </header>
   <div class="layout-count">
@@ -495,7 +498,7 @@
 
   <section class="card" id="carteDecomptes">
     <h2><span class="left"><svg class="ico"><use href="#i-list"/></svg> Décomptes à faire <span class="legend" id="decomptesCompte"></span></span> <button type="button" class="small ghost" id="btnOuvrirDecomptes2" title="Décomptes\À faire\Camp et Course d'école : ce qu'il reste à faire, dans l'explorateur"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button></h2>
-    <p class="legend">Les décomptes du registre ouvert marqués « décompte à faire » sur leur fiche. C'est le même contenu que le dossier <code>Décomptes\À faire</code> — en plus de ceux dont le scan signé n'est pas encore revenu.</p>
+    <p class="legend">Les décomptes du journal ouvert marqués « décompte à faire » sur leur fiche. C'est le même contenu que le dossier <code>Décomptes\À faire</code> — en plus de ceux dont le scan signé n'est pas encore revenu.</p>
     <div id="decomptesListe"></div>
   </section>
 </div>
@@ -518,7 +521,7 @@
       </div>
       <button type="button" class="small" id="btnNewYear" style="align-self:flex-end;height:36px"><svg class="ico"><use href="#i-plus"/></svg> Nouvelle année</button>
       <span class="hidden" id="newYearBox" style="display:inline-flex;gap:6px;align-items:center;align-self:flex-end">
-        <input type="number" id="newYearInput" min="1990" max="2100" step="1" style="width:110px;height:36px" aria-label="Nouvelle année du registre">
+        <input type="number" id="newYearInput" min="1990" max="2100" step="1" style="width:110px;height:36px" aria-label="Nouvelle année du journal">
         <button type="button" class="small primary" id="btnNewYearOk" style="height:36px">Créer</button>
         <button type="button" class="small ghost" id="btnNewYearCancel" style="height:36px">Annuler</button>
       </span>
@@ -557,7 +560,7 @@
 
   <section class="card">
     <h2><svg class="ico"><use href="#i-upload"/></svg> Reprendre une année commencée à l'ancienne</h2>
-    <p class="legend">Si l'année a été tenue dans un classeur Excel (à la main, ou produit par les pièces scannées), ses écritures se versent ici dans le registre : rien n'est compté deux fois, la numérotation continue, les pièces reprises sont marquées <i>Excel</i> dans le journal.</p>
+    <p class="legend">Si l'année a été tenue dans un classeur Excel (à la main, ou produit par les pièces scannées), ses écritures se versent ici dans le journal : rien n'est compté deux fois, la numérotation continue, les pièces reprises sont marquées <i>Excel</i> dans le journal.</p>
     <div class="toolbar">
       <button type="button" id="btnRegExcelIn"><svg class="ico"><use href="#i-upload"/></svg> Reprendre un classeur Excel…</button>
       <input type="file" id="regExcelFile" accept=".xlsx" class="hidden">
@@ -579,7 +582,7 @@
 
   <section class="card hidden" id="carteEmplacement">
     <h2><span class="left"><svg class="ico"><use href="#i-users"/></svg> Où sont les données <span class="badge-soft" id="emplacementGenre"></span></span></h2>
-    <p class="legend">Pour que plusieurs postes partagent la même caisse, <b>le programme reste sur chaque PC et seules les données vont sur le serveur</b> : registres, justificatifs, scans du copieur et décomptes. Lancer le programme lui-même depuis le serveur est lent et souvent bloqué par la sécurité du réseau. Deux postes peuvent travailler en même temps : ce que l'un enregistre est repris par l'autre, rien ne s'écrase.</p>
+    <p class="legend">Pour que plusieurs postes partagent la même caisse, <b>le programme reste sur chaque PC et seules les données vont sur le serveur</b> : journaux, justificatifs, scans du copieur et décomptes. Lancer le programme lui-même depuis le serveur est lent et souvent bloqué par la sécurité du réseau. Deux postes peuvent travailler en même temps : ce que l'un enregistre est repris par l'autre, rien ne s'écrase.</p>
     <code id="emplacementChemin" class="depot-chemin"></code>
     <div class="toolbar" style="margin-top:10px">
       <button type="button" id="btnEmplacementChoisir"><svg class="ico"><use href="#i-folder"/></svg> <span id="btnEmplacementChoisirTexte">Mettre les données sur le serveur…</span></button>
@@ -647,8 +650,8 @@
   </header>
 
   <section class="card" id="recapCard">
-    <h2><svg class="ico"><use href="#i-layers"/></svg> Décomptes du registre <span id="recapYear"></span></h2>
-    <div class="hint" style="margin-bottom:12px">Chaque décompte passé en pièce DECOMPTE dans Caisse écoles (année du registre ouvert) apparaît ici. Cochez ceux à reprendre, puis générez le document : n° de chaque décompte, montant et total, prêt à être remis avec les pièces.</div>
+    <h2><svg class="ico"><use href="#i-layers"/></svg> Décomptes du journal <span id="recapYear"></span></h2>
+    <div class="hint" style="margin-bottom:12px">Chaque décompte passé en pièce DECOMPTE dans Caisse écoles (année du journal ouvert) apparaît ici. Cochez ceux à reprendre, puis générez le document : n° de chaque décompte, montant et total, prêt à être remis avec les pièces.</div>
     <div class="toolbar top">
       <div class="choice seg" id="recapFilter" style="margin:0">
         <label><input type="radio" name="recapFilter" value="course" checked> Courses d'école</label>

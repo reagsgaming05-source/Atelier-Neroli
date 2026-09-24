@@ -354,7 +354,7 @@
     if (state.mode === 'registre') { const reg = registre(); return reg ? window.CaisseRegistre.entriesOf(reg) : []; }
     return state.mode === 'existing' && state.existing ? state.existing.entries : [];
   }
-  const baseLabel = () => (state.mode === 'registre' ? 'le registre' : 'le classeur');
+  const baseLabel = () => (state.mode === 'registre' ? 'le journal' : 'le classeur');
   const numNo = (e) => (e.no == null || e.no === '' ? NaN : Number(e.no));
 
   /* ---------------- Réglages de la lecture : base des écritures ---------------- */
@@ -389,7 +389,7 @@
     if (!els.step1Resume) return;
     const base = state.mode === 'new' ? 'nouveau classeur'
       : state.mode === 'existing' ? 'classeur Excel existant'
-      : "registre de l'année";
+      : "journal de l'année";
     const ocr = els.optOcr && els.optOcr.checked ? 'relecture sur l\'image (OCR) activée' : 'relecture sur l\'image (OCR) désactivée';
     els.step1Resume.textContent = `— ${base}, compte caisse ${getCaisse()}, ${ocr}`;
   }
@@ -397,10 +397,10 @@
   function renderRegistreInfo() {
     if (!els.registreInfo) return;
     const reg = registre();
-    if (!reg) { els.registreInfo.textContent = "Registre de l'année indisponible : ouvrez d'abord « Saisie des pièces »."; return; }
+    if (!reg) { els.registreInfo.textContent = "Journal de l'année indisponible : ouvrez d'abord « Saisie des pièces »."; return; }
     const j = window.CaisseRegistre.journal(reg);
     const last = reg.pieces.length ? reg.pieces[reg.pieces.length - 1] : null;
-    els.registreInfo.innerHTML = `Registre <b>${reg.annee}</b> (Saisie des pièces) : <b>${reg.pieces.length}</b> pièce(s), solde à nouveau <b>${fmtCHF(j.start)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}` +
+    els.registreInfo.innerHTML = `Journal <b>${reg.annee}</b> (Saisie des pièces) : <b>${reg.pieces.length}</b> pièce(s), solde à nouveau <b>${fmtCHF(j.start)}</b>${reg.opening.date ? ` au ${escapeHtml(P.isoToDisplay(reg.opening.date))}` : ''}` +
       (last ? `, dernière pièce n° <b>${last.no == null ? '?' : last.no}</b>${last.date ? ` du ${escapeHtml(P.isoToDisplay(last.date))}` : ''}` : '') + `, solde actuel <b>${fmtCHF(j.end)}</b>. ` +
       `Les pièces lues ci-dessous entrent dans ce journal dès la lecture, marquées « à vérifier » : il n'y a qu'une seule liste. ` +
       `<button type="button" class="small" data-act="goSaisie">Ouvrir la saisie des pièces</button>`;
@@ -421,6 +421,8 @@
     refreshAll();
   });
 
+  const btnPickXlsx = $('btnPickXlsx');
+  if (btnPickXlsx) btnPickXlsx.addEventListener('click', () => els.xlsxFile.click());
   els.xlsxFile.addEventListener('change', async () => {
     const file = els.xlsxFile.files[0];
     if (!file) return;
@@ -436,7 +438,7 @@
         `solde à nouveau <b>${fmtCHF(data.opening.amount)}</b>` + (data.opening.date ? ` au ${P.isoToDisplay(data.opening.date)}` : '') +
         (last ? `, dernière pièce n° <b>${escapeHtml(last.no)}</b>` + (last.date ? ` du ${P.isoToDisplay(last.date)}` : '') : '') +
         `, solde actuel <b>${fmtCHF(totals.end)}</b>.` +
-        (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le registre de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le registre de l'année</button>` : '');
+        (window.CaisseSaisie && window.CaisseSaisie.importWorkbook ? ` <button type="button" class="small" data-act="toRegistre" title="Année commencée à l'ancienne : ses écritures entrent dans le journal de l'année (Saisie des pièces), rien n'est compté deux fois">Reprendre ces écritures dans le journal de l'année</button>` : '');
       state.existing.buffer = buf;
       const saisi = window.CaisseRegistre && window.CaisseRegistre.parseAmountInput(els.openingAmount.value);
       if (!saisi) els.openingAmount.value = fmtCHF(totals.end);
@@ -2966,7 +2968,7 @@
       const trouvees = documents.filter((x) => x.etat === 'trouvee');
       const autres = documents.length - trouvees.length;
       if (!trouvees.length) {
-        notice(els.pdfNotices, 'warn', `Aucune fiche de « ${escapeHtml(d.name)} » ne correspond à une pièce des registres de ce poste : rien n'a été joint.`);
+        notice(els.pdfNotices, 'warn', `Aucune fiche de « ${escapeHtml(d.name)} » ne correspond à une pièce des journaux de ce poste : rien n'a été joint.`);
         return;
       }
       const liste = trouvees.map((x) => `n° ${x.piece.no}`).join(', ');
@@ -2998,7 +3000,7 @@
       const entries = state.entries.filter((e) => !e.manual || e.libelle);
       if (!entries.length) return;
       const pending = entries.filter((e) => rowStatus(e) !== 'ok');
-      if (pending.length && !confirm(`${pending.length} ligne(s) sont encore à vérifier (orange). Les ajouter quand même au registre ?`)) return;
+      if (pending.length && !confirm(`${pending.length} ligne(s) sont encore à vérifier (orange). Les ajouter quand même au journal ?`)) return;
       // image de la pièce (page rendue en JPEG) jointe en justificatif
       const getImage = async (e) => {
         const ref = e.page ? pageRef(e.page) : null;

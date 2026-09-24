@@ -260,7 +260,7 @@
       y = top;
       text(bold, title, left, y, 15);
       y -= 18;
-      text(normal, opts.subtitle || `Caisse écoles – registre ${reg.annee} – établi le ${dateStr}`, left, y, 10, GREY);
+      text(normal, opts.subtitle || `Caisse écoles – journal ${reg.annee} – établi le ${dateStr}`, left, y, 10, GREY);
       y -= 22;
       // en-tête du tableau
       page.drawRectangle({ x: left, y: y - pad - 3, width: right - left, height: lineH + pad + 2, color: rgb(0.94, 0.95, 0.97) });
