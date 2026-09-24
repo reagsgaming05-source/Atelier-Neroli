@@ -56,19 +56,23 @@ Mise en place, une fois, dans cet ordre :
      \\SERVEUR\Partage dans la barre du haut, créez le dossier ComptaBlonay-donnees,
      choisissez-le et acceptez « Emporter ». Les registres, justificatifs et scans partent
      sur le serveur ; rien n'est retiré du PC.
-  2. Copiez le dossier ComptaBlonay de ce zip (le zip, pas le dossier du PC) sur le serveur :
-     \\SERVEUR\Partage\ComptaBlonay\
-  3. Dans ce dossier du serveur, créez avec le Bloc-notes un fichier donnees.txt contenant
-     une seule ligne, l'adresse du dossier des données :
-         \\SERVEUR\Partage\ComptaBlonay-donnees
-     Tous les postes le recevront : ils partageront la même caisse.
-  4. Sur CHAQUE PC, celui de l'étape 1 compris : ouvrez \\SERVEUR\Partage\ComptaBlonay\ et
-     double-cliquez sur « Installer sur ce PC ». Il copie le programme sur le PC (dans le
-     profil de la personne, sans droits d'administrateur) et pose sur le bureau un raccourci
-     « Compta Blonay ». C'est ce raccourci qu'on utilise ensuite, toujours. Chaque personne
-     qui ouvre sa propre session Windows sur le PC fait cette étape pour elle.
+  2. Fermez Compta Blonay. Copiez le dossier ComptaBlonay de ce zip (le zip, pas le dossier
+     du PC) sur le serveur, À CÔTÉ du dossier des données :
+         \\SERVEUR\Partage\ComptaBlonay\
+         \\SERVEUR\Partage\ComptaBlonay-donnees\    (créé à l'étape 1)
+  3. Sur CHAQUE PC, celui de l'étape 1 compris : ouvrez
+         \\SERVEUR\Partage\ComptaBlonay\Installation sur plusieurs PC\
+     et double-cliquez sur « Installer sur ce PC ». Il copie le programme sur le PC (dans le
+     profil de la personne, sans droits d'administrateur), trouve le dossier des données et
+     le note pour tous les PC, puis pose sur le bureau un raccourci « Compta Blonay ». C'est ce
+     raccourci qu'on utilise ensuite, toujours. Chaque personne qui ouvre sa propre session
+     Windows sur le PC fait cette étape pour elle.
      L'ancien dossier ComptaBlonay du PC de l'étape 1 peut être rangé une fois vérifié que
      la caisse s'ouvre bien par le raccourci.
+
+  Si le dossier des données n'est pas à côté du programme, l'installateur le dit. Il faut
+  alors poser dans \\SERVEUR\Partage\ComptaBlonay\ un fichier donnees.txt (Bloc-notes) qui
+  contient une seule ligne : l'adresse du dossier des données.
 
 Mettre à jour, à chaque nouvelle version :
 
