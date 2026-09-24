@@ -59,8 +59,8 @@
   <nav class="nav" id="appTabs">
     <div class="section">Espaces</div>
     <button type="button" class="apptab active" data-panel="panelSaisie" title="Saisie des pièces"><svg class="ico"><use href="#i-pen"/></svg><span class="lbl">Saisie des pièces<small>Fiche, journal, Excel, PDF</small></span><span class="navbadge hidden" id="navBadgeSaisie" title="Décomptes terminés dans Décompte DGEO, à passer en pièce"></span></button>
-    <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Lecture des PDF, contrôle</small></span></button>
-    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Scans du copieur, à valider</small></span><span class="navbadge hidden" id="navBadgeReception" data-badge-reception title="Documents scannés en attente de validation"></span></button>
+    <button type="button" class="apptab" data-panel="panelScan" title="Pièces scannées — fiches remplies à la main"><svg class="ico"><use href="#i-scan"/></svg><span class="lbl">Pièces scannées<small>Fiches remplies à la main</small></span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception — fiches signées, décomptes à faire"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Fiches signées, décomptes à faire</small></span><span class="navbadge hidden" id="navBadgeReception" data-badge-reception title="Documents scannés en attente de validation"></span></button>
     <button type="button" class="apptab" data-panel="panelCaisse" title="Compter la caisse"><svg class="ico"><use href="#i-coins"/></svg><span class="lbl">Compter la caisse<small>Billets, pièces, soldes</small></span></button>
     <button type="button" class="apptab" data-panel="panelAnnee" title="L'année ouverte"><svg class="ico"><use href="#i-calendar"/></svg><span class="lbl">L'année<small>Solde à nouveau, sauvegardes, serveur</small></span></button>
     <button type="button" class="apptab" data-panel="panelDonnees" title="Les listes de l'application"><svg class="ico"><use href="#i-sliders"/></svg><span class="lbl">Données<small>Comptes, classes, noms</small></span></button>
@@ -73,7 +73,7 @@
     <button type="button" class="apptab" data-dgeo="sec-rows" title="Lignes du décompte"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Lignes du décompte<small>Part État, Excel</small></span></button>
     <div class="section">Décomptes</div>
     <button type="button" class="apptab" data-panel="panelRecap" title="Récapitulatif des décomptes"><svg class="ico"><use href="#i-list"/></svg><span class="lbl">Récapitulatif<small>N°, montants, total (PDF)</small></span></button>
-    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception des scans"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Décomptes à faire, scans du copieur</small></span><span class="navbadge hidden" id="navBadgeReceptionDgeo" data-badge-reception title="Documents scannés en attente de validation"></span></button>
+    <button type="button" class="apptab" data-panel="panelReception" title="Boîte de réception — fiches signées, décomptes à faire"><svg class="ico"><use href="#i-folder"/></svg><span class="lbl">Boîte de réception<small>Fiches signées, décomptes à faire</small></span><span class="navbadge hidden" id="navBadgeReceptionDgeo" data-badge-reception title="Documents scannés en attente de validation"></span></button>
     <div class="navnote">
       <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optDgeoSkip" checked> <span>La pièce comptable de la caisse ouvre le dossier scanné : elle est retirée avant l'analyse (reconnue par son texte ; à défaut, la première page).</span></label>
       <div class="legend" id="dgeoCleanInfo" style="margin-top:6px"></div>
@@ -200,16 +200,23 @@
   <header class="page-head">
     <div>
       <h1>Pièces scannées</h1>
-      <p>Les pièces déjà remplies à la main et scannées sont lues trois fois (couche texte, OCR local, Tesseract natif), puis contrôlées et versées dans le registre de l'année, celui de la saisie des pièces : les deux espaces travaillent sur les mêmes écritures, et le fichier Excel de l'année les contient toutes.</p>
+      <p>Déposez le PDF de vos fiches PIÈCE COMPTABLE remplies à la main : l'application lit chaque fiche et l'ajoute au journal de l'année, marquée « à vérifier ». Vous regardez chaque ligne — les orange d'abord — et cochez « Vérifié » : c'est la même vérification que dans le journal.</p>
     </div>
   </header>
 
+  <nav class="aiguillage" aria-label="Quel papier va dans quel espace">
+    <span class="aig-t">Quel papier va où ?</span>
+    <button type="button" class="aig ici" data-aller="panelScan" aria-current="page"><b>Fiche remplie à la main</b><small>sans code QR · lue ici et ajoutée au journal</small></button>
+    <button type="button" class="aig" data-aller="panelReception"><b>Fiche imprimée ici, revenue signée</b><small>avec code QR · Boîte de réception : jointe à sa pièce</small></button>
+    <button type="button" class="aig" data-aller="panelSaisie"><b>Ticket, facture, photo</b><small>Saisie des pièces : joint à la fiche de sa pièce</small></button>
+  </nav>
+
   <section class="card" id="step2">
-    <h2><span class="n">1</span> Vos pièces comptables scannées (PDF)</h2>
+    <h2><span class="n">1</span> Vos fiches remplies à la main, scannées (PDF)</h2>
     <div class="dropzone" id="dropzone">
       <svg class="ico lg"><use href="#i-upload"/></svg>
       <div><strong>Glissez un ou plusieurs PDF ici</strong> ou <button type="button" class="link" id="btnPickPdf">choisissez des fichiers</button></div>
-      <div class="fine">Les pièces peuvent être réparties dans plusieurs fichiers (« Pce 01 à 33.pdf », « Pce 34 à 60.pdf ») : ajoutez-en à tout moment et mettez-les dans l'ordre ci-dessous. Les PDF scannés avec reconnaissance de texte (« PDF consultable », comme ceux du copieur) sont lus plus vite ; les autres passent par l'OCR.</div>
+      <div class="fine">Les fiches peuvent être réparties dans plusieurs fichiers (« Pce 01 à 33.pdf », « Pce 34 à 60.pdf ») : ajoutez-en à tout moment, même un autre jour, et mettez-les dans l'ordre ci-dessous. Un fichier déjà lu ne remplace jamais les pièces d'un autre. Un PDF scanné sans texte est lu sur l'image, un peu plus lentement.</div>
       <input type="file" id="pdfFile" accept="application/pdf,.pdf" multiple class="hidden">
     </div>
     <progress id="pdfProgress" max="100" value="0" class="hidden"></progress>
@@ -261,24 +268,29 @@
     </div>
     <div class="row" style="margin-top:14px">
       <div class="field">
-        <label for="caisseAccount">N° du compte caisse (tel qu'il figure sur les pièces)</label>
-        <input type="text" id="caisseAccount" value="9100.104" style="width:160px;font-family:var(--mono)">
+        <label for="caisseAccount">Compte caisse de l'année</label>
+        <input type="text" id="caisseAccount" value="9100.104" readonly style="width:160px;font-family:var(--mono)" title="Le compte caisse se règle une fois par année, dans L'année">
       </div>
-      <div class="hint" style="align-self:center;max-width:620px">Le compte caisse détermine le sens de l'écriture : caisse au <b>DOIT</b> → Débit (entrée), caisse à l'<b>AVOIR</b> → Crédit (sortie).</div>
+      <button type="button" class="small" data-aller="panelAnnee" style="align-self:flex-end;height:36px">Modifier dans L'année</button>
+      <div class="hint" style="align-self:center;max-width:560px">Il décide du sens de chaque écriture lue : caisse au <b>DOIT</b> → entrée (débit), caisse à l'<b>AVOIR</b> → sortie (crédit).</div>
     </div>
+    <div class="legend" id="caisseAncien" style="margin-top:8px"></div>
     <div class="row" style="margin-top:14px">
       <label class="check hint"><input type="checkbox" id="optOcr" checked>
-        <span><b>Lectures croisées par OCR local</b> (recommandé) : chaque pièce est relue sur l'image par les moteurs embarqués.
-        Les champs lus plusieurs fois à l'identique sont confirmés (liseré vert), les divergences passent en orange, et une pièce scannée sans texte est lue quand même.
-        Tout se passe sur ce PC, sans réseau ; comptez environ une seconde par pièce.</span></label>
+        <span><b>Relire chaque pièce sur l'image</b> (recommandé, environ une seconde par pièce) : les chiffres lus deux fois de la même façon sont confirmés, les autres passent en orange.
+        Un PDF scanné sans texte n'est lu que si cette case est cochée. Tout se passe sur ce PC.</span></label>
     </div>
-    <div class="legend" id="vocabInfo" style="margin-top:12px"></div>
+    <details class="technique">
+      <summary>Détails techniques</summary>
+      <div class="legend" id="vocabInfo"></div>
+    </details>
   </details>
 
   <section class="card hidden" id="step3">
     <h2><span class="n">2</span> Vérification des écritures</h2>
     <div class="hint">
-      Seules les lignes <span class="chip warn">⚠ orange</span> demandent un contrôle : la cellule en doute est colorée, l'explication apparaît sous la ligne
+      Chaque ligne est déjà au journal, marquée « à vérifier ». Quand vous avez regardé une pièce, cochez <b>Vérifié</b> : elle est alors vérifiée au journal aussi (et une pièce vérifiée au journal est cochée ici).
+      Les lignes <span class="chip warn">⚠ orange</span> demandent un contrôle attentif : la cellule en doute est colorée, l'explication apparaît sous la ligne
       et au survol. Les lignes <span class="chip ok">✓ vertes</span> ont été lues sans ambiguïté (montant lu sur la pièce, compte caisse d'un seul côté, comptes connus…). Le montant retenu est le <b>Total</b> en bas de la pièce ; la colonne SOMME, souvent vide, sert seulement de confirmation.
       Les cellules <span class="chip fixed">bleues</span> ont été corrigées automatiquement (détail en gris). Cliquez sur une ligne : la pièce s'affiche à droite avec des cadres
       <span style="color:#d97706;font-weight:600">orange</span> (zone en doute) et <span style="color:#2563eb;font-weight:600">bleus</span> (zones lues) ; cliquez sur l'image pour l'agrandir.
@@ -304,8 +316,8 @@
               <th>Date</th>
               <th>Compte</th>
               <th>Libellé</th>
-              <th>Débit</th>
-              <th>Crédit</th>
+              <th>Débit<br>(entrée)</th>
+              <th>Crédit<br>(sortie)</th>
               <th title="Fichier · page">Page</th>
               <th>Vérifié</th>
               <th></th>
@@ -336,24 +348,27 @@
       </div>
       <div>
         <h3 class="ctl-title">Rapprochement de la caisse</h3>
-        <div class="hint" style="margin-bottom:10px">Comptez l'argent en caisse (ou reprenez le solde du dernier décompte) et inscrivez-le ici : l'application compare avec le solde calculé. C'est le contrôle qui garantit qu'aucune écriture n'a été mal lue.</div>
-        <div class="row">
-          <div class="field">
-            <label for="checkBalance">Solde réel en caisse (CHF)</label>
-            <input type="text" inputmode="decimal" id="checkBalance" placeholder="ex. 4’825.55" style="width:160px">
+        <div id="rapprochementJournal" class="hidden"></div>
+        <div id="rapprochementSaisi">
+          <div class="hint" style="margin-bottom:10px">Comptez l'argent en caisse (ou reprenez le montant de votre dernier comptage de caisse) et inscrivez-le ici : l'application le compare au solde calculé du classeur. C'est le contrôle qui garantit qu'aucune écriture n'a été mal lue.</div>
+          <div class="row">
+            <div class="field">
+              <label for="checkBalance">Argent compté en caisse (CHF)</label>
+              <input type="text" inputmode="decimal" id="checkBalance" placeholder="ex. 4’825.55" style="width:160px">
+            </div>
+            <div class="field">
+              <label for="checkDate">à la date du (facultatif)</label>
+              <input type="date" id="checkDate">
+            </div>
           </div>
-          <div class="field">
-            <label for="checkDate">à la date du (facultatif)</label>
-            <input type="date" id="checkDate">
-          </div>
+          <div id="balanceResult" style="margin-top:12px"></div>
         </div>
-        <div id="balanceResult" style="margin-top:12px"></div>
       </div>
     </div>
     <div id="journalLink"></div>
     <div id="excelNotices"></div>
     <div class="toolbar">
-      <button type="button" class="primary" id="btnExcel"><svg class="ico"><use href="#i-grid"/></svg> Générer le fichier Excel</button>
+      <button type="button" class="primary" id="btnExcel"><svg class="ico"><use href="#i-grid"/></svg> Fichier Excel de l'année</button>
       <button type="button" id="btnReport"><svg class="ico"><use href="#i-file"/></svg> Rapport de contrôle</button>
       <button type="button" id="btnToRegister" class="hidden" title="Verse ces écritures dans le registre de l'année (Saisie des pièces), avec l'image de chaque pièce en justificatif. Inutile quand le registre est déjà la base : les pièces lues y entrent toutes seules."><svg class="ico"><use href="#i-book"/></svg> Verser au registre de l'année</button>
       <span class="legend" id="excelHint"></span>
@@ -415,15 +430,34 @@
   <header class="page-head">
     <div>
       <h1>Boîte de réception</h1>
-      <p>Les fiches imprimées portent un petit code QR. Vous les faites signer, vous empilez, et vous scannez toute la pile en un passage vers le dossier surveillé : l'application découpe à chaque code et rend chaque document à sa pièce. Rien n'entre au journal sans votre accord.</p>
+      <p>Les fiches imprimées par l'application portent un petit code QR. Faites-les signer, posez chaque fiche au-dessus de ses tickets, et scannez toute la pile au copieur : chaque document arrive ici, reconnu par son code. Cliquez « Joindre à la pièce » : le scan signé rejoint les justificatifs de sa pièce. Le journal, lui, ne change pas.</p>
     </div>
   </header>
 
-  <section class="card" id="receptionReglages">
-    <h2><svg class="ico"><use href="#i-folder"/></svg> Où le copieur dépose ses scans</h2>
-    <p class="legend">Réglez le copieur en « numériser vers un dossier » (SMB) et donnez-lui l'adresse ci-dessous. L'application y prend les PDF entiers, les range ensuite dans <code>traité\AAAA-MM</code>, ou dans <code>à revoir</code> si la lecture a échoué — <b>le fichier d'origine n'est jamais détruit</b>. Plusieurs postes peuvent surveiller le même dossier : un scan donné n'est pris que par un seul.</p>
+  <nav class="aiguillage" aria-label="Quel papier va dans quel espace">
+    <span class="aig-t">Quel papier va où ?</span>
+    <button type="button" class="aig" data-aller="panelScan"><b>Fiche remplie à la main</b><small>sans code QR · Pièces scannées : lue et ajoutée au journal</small></button>
+    <button type="button" class="aig ici" data-aller="panelReception" aria-current="page"><b>Fiche imprimée ici, revenue signée</b><small>avec code QR · jointe ici à sa pièce</small></button>
+    <button type="button" class="aig" data-aller="panelSaisie"><b>Ticket, facture, photo</b><small>Saisie des pièces : joint à la fiche de sa pièce</small></button>
+  </nav>
+
+  <section class="card">
+    <h2><span class="left"><svg class="ico"><use href="#i-scan"/></svg> Documents scannés <span class="legend" id="receptionCompte"></span></span> <button type="button" class="small ghost" id="btnScanRegarder" title="Ne pas attendre le prochain passage : regarder le dossier du copieur tout de suite"><svg class="ico"><use href="#i-refresh"/></svg> Regarder le dossier maintenant</button></h2>
+    <div id="receptionEtat" class="notice ok hidden"></div>
+    <div id="receptionRevoir"></div>
+    <div id="receptionGroupe" class="toolbar top hidden" style="margin-top:12px"></div>
+    <div id="receptionListe"></div>
+    <div id="receptionApercu" class="hidden">
+      <div class="toolbar top"><span class="legend">Aperçu du document</span><span class="spacer"></span><button type="button" class="small" id="btnReceptionFermer"><svg class="ico"><use href="#i-x"/></svg> Fermer</button></div>
+      <iframe id="receptionFrame"></iframe>
+    </div>
+  </section>
+
+  <details class="card fold" id="receptionReglages">
+    <summary><svg class="ico"><use href="#i-folder"/></svg> Où le copieur dépose ses scans <span class="legend" id="receptionResume"></span></summary>
+    <p class="legend">Réglage à faire une fois : mettez le copieur en « numériser vers un dossier » et donnez-lui l'adresse ci-dessous. L'application y prend les PDF entiers, puis les range dans <code>traité\AAAA-MM</code>, ou dans <code>à revoir</code> si la lecture a échoué — <b>le fichier d'origine n'est jamais détruit</b>. Plusieurs postes peuvent surveiller le même dossier : un scan donné n'est pris que par un seul.</p>
     <div class="depot">
-      <div class="depot-t"><svg class="ico sm"><use href="#i-folder"/></svg> Dossier de l'application <span class="badge-soft">surveillé d'office</span></div>
+      <div class="depot-t"><svg class="ico sm"><use href="#i-folder"/></svg> Dossier de l'application <span class="badge-soft">toujours surveillé</span></div>
       <code id="receptionDepot" class="depot-chemin"></code>
       <div class="toolbar" style="margin-top:8px">
         <button type="button" class="small" id="btnDepotCopier"><svg class="ico"><use href="#i-file"/></svg> Copier l'adresse</button>
@@ -435,31 +469,18 @@
     <div id="receptionDossiers" class="dliste" style="max-height:180px"></div>
     <div class="toolbar">
       <button type="button" class="small" id="btnScanAjouter"><svg class="ico"><use href="#i-plus"/></svg> Ajouter un dossier…</button>
-      <button type="button" class="small" id="btnScanRegarder"><svg class="ico"><use href="#i-refresh"/></svg> Regarder maintenant</button>
-      <button type="button" class="small ghost" id="btnReceptionDossier"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier de réception</button>
-      <button type="button" class="small ghost" id="btnOuvrirDecomptes" title="Décomptes\À faire\Camp et Course d'école : ce qu'il reste à faire, dans l'explorateur"><svg class="ico"><use href="#i-list"/></svg> Ouvrir les décomptes</button>
     </div>
     <div class="toolbar" style="gap:18px">
       <label class="check legend" style="align-items:center"><input type="checkbox" id="optScanActif" checked style="margin-top:0"> Surveiller le dossier</label>
-      <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optScanAuto"> <span>Ranger automatiquement les pièces reconnues, sans me demander. <i>Décoché au départ : un classement qui se trompe une fois sur dix coûte plus cher que pas de classement du tout.</i></span></label>
+      <label class="check legend" style="align-items:flex-start"><input type="checkbox" id="optScanAuto"> <span>Joindre tout seuls les documents reconnus sans doute possible, sans me demander. <i>Décoché au départ : vous regardez chaque document avant qu'il soit joint.</i></span></label>
     </div>
     <div class="legend" id="receptionInfo" style="margin-top:10px"></div>
-  </section>
+  </details>
 
   <section class="card" id="carteDecomptes">
-    <h2><span class="left"><svg class="ico"><use href="#i-list"/></svg> Décomptes à faire <span class="legend" id="decomptesCompte"></span></span> <button type="button" class="small ghost" id="btnOuvrirDecomptes2"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button></h2>
+    <h2><span class="left"><svg class="ico"><use href="#i-list"/></svg> Décomptes à faire <span class="legend" id="decomptesCompte"></span></span> <button type="button" class="small ghost" id="btnOuvrirDecomptes2" title="Décomptes\À faire\Camp et Course d'école : ce qu'il reste à faire, dans l'explorateur"><svg class="ico"><use href="#i-folder"/></svg> Ouvrir le dossier</button></h2>
     <p class="legend">Les décomptes du registre ouvert marqués « décompte à faire » sur leur fiche. C'est le même contenu que le dossier <code>Décomptes\À faire</code> — en plus de ceux dont le scan signé n'est pas encore revenu.</p>
     <div id="decomptesListe"></div>
-  </section>
-
-  <section class="card">
-    <h2><span class="left"><svg class="ico"><use href="#i-scan"/></svg> Documents scannés <span class="legend" id="receptionCompte"></span></span></h2>
-    <div id="receptionEtat" class="notice ok hidden"></div>
-    <div id="receptionListe"></div>
-    <div id="receptionApercu" class="hidden">
-      <div class="toolbar top"><span class="legend">Aperçu du document</span><span class="spacer"></span><button type="button" class="small" id="btnReceptionFermer"><svg class="ico"><use href="#i-x"/></svg> Fermer</button></div>
-      <iframe id="receptionFrame"></iframe>
-    </div>
   </section>
 </div>
 
@@ -653,6 +674,7 @@
 <!--INLINE_EXCEL-->
 <!--INLINE_REGISTRE-->
 <!--INLINE_ANNEE-->
+<!--INLINE_LOT-->
 <!--INLINE_QR-->
 <!--INLINE_MARQUE-->
 <!--INLINE_PDFPIECE-->

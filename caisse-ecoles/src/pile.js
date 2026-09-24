@@ -11,6 +11,8 @@
  * Règle de découpe : une page qui porte une marque OUVRE un document, qui court jusqu'à la marque
  * suivante. Les pages qui précèdent la première marque forment un document à part, sans marque —
  * une pièce d'avant le code QR, un courrier glissé par erreur, ou une pile posée à l'envers.
+ * Une fiche dont le code n'a pas pu être lu (plié, agrafé, taché) ouvre elle aussi un document,
+ * quand on sait que c'est une fiche : sinon elle serait collée, sans rien dire, à la pièce d'avant.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -25,15 +27,25 @@
    * Découpe une pile d'après les marques relevées page par page.
    *
    * `marques` : un élément par page, { annee, id } ou null.
-   * Rend [{ marque, pages: [n° de page, base 0], premiere, derniere, doublon }].
+   * `opts.fiches` : un élément par page, vrai si la page porte le formulaire « PIÈCE COMPTABLE »
+   *   (reconnu à son texte). Une telle page sans marque lisible ouvre un document « code
+   *   illisible » : collée à la pièce d'avant, elle en devenait la troisième page, et cette pièce
+   *   restait « reconnue » pendant que la sienne disparaissait de la liste.
+   * Rend [{ marque, pages: [n° de page, base 0], premiere, derniere, doublon, codeIllisible }].
    */
-  function decouper(marques) {
+  function decouper(marques, opts) {
     const liste = Array.isArray(marques) ? marques : [];
+    const fiches = opts && Array.isArray(opts.fiches) ? opts.fiches : [];
     const docs = [];
     let courant = null;
     liste.forEach((m, i) => {
       if (m && cle(m)) {
         courant = { marque: { annee: m.annee, id: m.id }, pages: [i], premiere: i, derniere: i, doublon: false };
+        docs.push(courant);
+        return;
+      }
+      if (fiches[i]) {
+        courant = { marque: null, codeIllisible: true, pages: [i], premiere: i, derniere: i, doublon: false };
         docs.push(courant);
         return;
       }
@@ -69,6 +81,7 @@
    *   'inconnue'    marque lisible, mais aucune pièce de ce nom (registre d'une autre année pas
    *                 encore ouvert sur ce poste, ou pièce supprimée depuis l'impression) ;
    *   'doublon'     cette pièce est déjà venue plus haut dans la même pile ;
+   *   'code-illisible' une fiche PIÈCE COMPTABLE dont le code n'a pas pu être lu ;
    *   'sans-marque' aucun code QR : fiche d'avant le code, document étranger, ou pile à l'envers.
    */
   function classer(documents, pieces) {
@@ -76,7 +89,7 @@
       ? pieces
       : (annee, id) => (pieces && pieces.get ? pieces.get(`${annee}:${id}`) : null);
     return (documents || []).map((d) => {
-      if (!d.marque) return Object.assign({}, d, { piece: null, etat: 'sans-marque' });
+      if (!d.marque) return Object.assign({}, d, { piece: null, etat: d.codeIllisible ? 'code-illisible' : 'sans-marque' });
       let piece = null;
       try { piece = chercher(d.marque.annee, d.marque.id) || null; } catch (e) { piece = null; }
       if (!piece) return Object.assign({}, d, { piece: null, etat: 'inconnue' });
@@ -84,18 +97,46 @@
     });
   }
 
-  /** Ce qu'il y a dans la pile, en une phrase : { total, trouvees, inconnues, doublons, sansMarque }. */
+  /**
+   * Ce qu'il y a dans la pile : { total, trouvees, inconnues, doublons, illisibles, sansMarque,
+   * pages, ordreDouteux }.
+   *
+   * `ordreDouteux` : la pile commence par des pages sans code, puis viennent des fiches marquées.
+   * C'est ce que donne une pile posée à l'envers (tickets avant leur fiche) : chaque ticket part
+   * alors avec la fiche d'AVANT. Rien ne permet de le corriger sûrement : on le dit.
+   */
   function resume(documents) {
-    const out = { total: 0, trouvees: 0, inconnues: 0, doublons: 0, sansMarque: 0, pages: 0 };
-    for (const d of documents || []) {
+    const out = { total: 0, trouvees: 0, inconnues: 0, doublons: 0, illisibles: 0, sansMarque: 0, pages: 0, ordreDouteux: false };
+    const liste = documents || [];
+    for (const d of liste) {
       out.total += 1;
       out.pages += (d.pages || []).length;
       if (d.etat === 'trouvee') out.trouvees += 1;
       else if (d.etat === 'inconnue') out.inconnues += 1;
       else if (d.etat === 'doublon') out.doublons += 1;
+      else if (d.etat === 'code-illisible') out.illisibles += 1;
       else out.sansMarque += 1;
     }
+    out.ordreDouteux = liste.length > 1 && liste[0].etat === 'sans-marque' && liste.some((d) => d.marque);
     return out;
+  }
+
+  /** Le bilan d'une pile en une phrase : « 2 pièces reconnues, 1 en double, 2 à regarder ». */
+  function phrase(r) {
+    const parts = [];
+    if (r.trouvees) parts.push(`${r.trouvees} ${r.trouvees > 1 ? 'pièces reconnues' : 'pièce reconnue'}`);
+    if (r.doublons) parts.push(`${r.doublons} en double`);
+    const aRegarder = (r.inconnues || 0) + (r.sansMarque || 0) + (r.illisibles || 0);
+    if (aRegarder) parts.push(`${aRegarder} à regarder`);
+    return parts.join(', ');
+  }
+
+  /** Les pages d'un document, dites pour qu'une page de trop se remarque. */
+  function pagesDe(n, avecFiche) {
+    const k = Number(n) || 1;
+    if (k <= 1) return '1 page';
+    if (!avecFiche) return `${k} pages`;
+    return `${k} pages : la fiche et ${k - 1} ${k - 1 > 1 ? 'pages jointes' : 'page jointe'}`;
   }
 
   /**
@@ -152,5 +193,5 @@
     return { dossier, nom: nomLisible(piece) };
   }
 
-  return { decouper, classer, resume, cle, NOM_SIGNEE, rangement, genreDeDecompte, nomLisible, RACINE_DECOMPTES, A_FAIRE };
+  return { decouper, classer, resume, phrase, pagesDe, cle, NOM_SIGNEE, rangement, genreDeDecompte, nomLisible, RACINE_DECOMPTES, A_FAIRE };
 });

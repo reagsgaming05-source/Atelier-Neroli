@@ -11,6 +11,8 @@
   const X = window.CaisseExcel;
   const pdfjsLib = window.pdfjsLib;
   const O = window.CaisseOCR || null; // seconde lecture par OCR local (src/ocr.js)
+  const L = window.CaisseLot; // le lot lu et le journal de l'année : clés, versement, vérification (src/lot.js)
+  const M = window.CaisseMarque || null; // code QR des fiches imprimées par l'application (src/marque.js)
   // Base de référence intégrée à l'application (générée depuis un classeur, voir
   // tools/build-vocab.js). Les noms de personnes sont dans un module séparé.
   const BASE_VOCAB = (function () {
@@ -48,8 +50,8 @@
   const state = {
     mode: 'registre', // base des écritures : registre de l'année (Saisie des pièces), classeur existant ou nouveau classeur
     existing: null, // { fileName, opening, entries, buffer }
-    docs: [], // [{ id, name, doc (pdf.js), numPages, pages: [{pageInDoc,width,height,words}], pieceCount }]
-    nextDocId: 1,
+    docs: [], // [{ id, name, empreinte, doc (pdf.js), numPages, pages: [{pageInDoc,width,height,words}], pieceCount, signees }]
+    nextDocId: 1, // n° d'ordre dans la séance : il repart à 1 à chaque ouverture, il ne sert donc jamais de clé au journal
     pages: [], // pages globales : { pageNumber, docId, pageInDoc, width, height, words }
     entries: [], // écritures nouvelles (modifiables)
     duplicates: [],
@@ -62,6 +64,14 @@
     vocab: null, // vocabulaire appris (classeur + mémoire locale)
     // seconde lecture par OCR local : relectures par zone, indexées par « doc:page:partie »
     ocr: { status: 'idle', engine: null, reads: new Map(), doneKeys: new Set(), done: 0, total: 0, run: 0, error: null, native: null },
+    // écritures que la personne a sorties du lot (✕ de la ligne, pièce supprimée du journal) :
+    // la relecture suivante ne doit pas les faire revenir
+    ecartees: new Set(),
+    // clés vues au journal pendant la séance, par année : une clé connue qui n'y est plus a été
+    // supprimée du journal, et le versement suivant ne doit pas la remettre
+    connues: { annee: null, cles: new Set() },
+    // dernier versement au journal : une erreur d'enregistrement se dit, et se rattrape
+    versement: { erreur: null, enAttente: false },
   };
 
   const $ = (id) => document.getElementById(id);
@@ -116,10 +126,13 @@
     excelHint: $('excelHint'),
   };
 
-  try {
-    const saved = localStorage.getItem('caisse.compte');
-    if (saved) els.caisse.value = saved;
-  } catch (e) { /* ignore */ }
+  // Le compte caisse est celui de l'année (L'année › Année ouverte) : un seul réglage. Ce PC en
+  // gardait autrefois un second, pour la lecture des scans, qui ne suivait pas le premier : changé
+  // en début d'année dans L'année, il laissait les scans lus avec l'ancien — et c'est lui qui
+  // décide du sens des écritures. L'ancien réglage n'est plus lu que pour une première année, et
+  // proposé une fois s'il diffère (renderCaisseLecture), jamais pris en douce.
+  let ancienCompteLecture = null;
+  try { ancienCompteLecture = localStorage.getItem('caisse.compte'); } catch (e) { /* ignore */ }
 
   /* ---------------- Vocabulaire appris (mémoire locale du PC) ---------------- */
   function loadVocab() {
@@ -268,7 +281,48 @@
   }
 
   function getCaisse() {
-    return P.normalizeAccount(els.caisse.value) || P.DEFAULT_CAISSE;
+    const reg = registre();
+    const compte = reg && reg.caisse ? reg.caisse : (ancienCompteLecture || '');
+    return P.normalizeAccount(compte) || P.DEFAULT_CAISSE;
+  }
+
+  /** Le compte caisse, tel que la lecture s'en sert : affiché, pas modifiable ici. */
+  function renderCaisseLecture() {
+    if (els.caisse) els.caisse.value = getCaisse();
+    const box = document.getElementById('caisseAncien');
+    if (!box) return;
+    const reg = registre();
+    const ancien = ancienCompteLecture ? P.normalizeAccount(ancienCompteLecture) : '';
+    if (!reg || !ancien || ancien === getCaisse()) {
+      box.innerHTML = '';
+      if (reg && ancien && ancien === getCaisse()) oublierAncienCompte(); // les deux disent la même chose
+      return;
+    }
+    box.innerHTML = `Ce PC lisait jusqu'ici les pièces avec le compte caisse <b>${escapeHtml(ancien)}</b>, alors que l'année ${reg.annee} indique <b>${escapeHtml(getCaisse())}</b>. ` +
+      `C'est maintenant le compte de l'année qui compte, pour la saisie comme pour la lecture. ` +
+      `<button type="button" class="small" data-caisse="prendre">Mettre ${escapeHtml(ancien)} pour l'année ${reg.annee}</button> ` +
+      `<button type="button" class="small" data-caisse="garder">Garder ${escapeHtml(getCaisse())}</button>`;
+  }
+  function oublierAncienCompte() {
+    ancienCompteLecture = null;
+    try { localStorage.removeItem('caisse.compte'); } catch (e) { /* ignore */ }
+  }
+  {
+    const box = document.getElementById('caisseAncien');
+    if (box) box.addEventListener('click', async (ev) => {
+      const b = ev.target.closest('button[data-caisse]');
+      const reg = registre();
+      if (!b || !reg || !window.CaisseSaisie) return;
+      if (b.dataset.caisse === 'prendre') {
+        const avant = reg.caisse;
+        reg.caisse = P.normalizeAccount(ancienCompteLecture) || reg.caisse;
+        try { await window.CaisseSaisie.saveReg(); } catch (e) { reg.caisse = avant; return; } // saveReg a dit pourquoi
+        window.CaisseSaisie.renderJournal();
+      }
+      oublierAncienCompte();
+      renderCaisseLecture();
+      renderStep1Resume();
+    });
   }
 
   /** Registre de l'année ouvert dans « Saisie des pièces » (même année, mêmes écritures). */
@@ -336,7 +390,7 @@
     const base = state.mode === 'new' ? 'nouveau classeur'
       : state.mode === 'existing' ? 'classeur Excel existant'
       : "registre de l'année";
-    const ocr = els.optOcr && els.optOcr.checked ? 'OCR activé' : 'OCR désactivé';
+    const ocr = els.optOcr && els.optOcr.checked ? 'relecture sur l\'image (OCR) activée' : 'relecture sur l\'image (OCR) désactivée';
     els.step1Resume.textContent = `— ${base}, compte caisse ${getCaisse()}, ${ocr}`;
   }
 
@@ -353,8 +407,15 @@
   }
   if (els.registreInfo) els.registreInfo.addEventListener('click', (ev) => { if (ev.target.closest('button[data-act="goSaisie"]')) showPanel('panelSaisie'); });
   // le registre a changé (ouvert, pièce enregistrée, classeur repris) : la base se met à jour
+  let caisseLue = null;
   document.addEventListener('caisse:registre', () => {
-    if (state.mode !== 'registre' || versementEnCours) return;
+    // le compte caisse vient de l'année : changé dans L'année, il change la lecture, quelle que
+    // soit la base des écritures
+    const caisseChangee = caisseLue !== null && caisseLue !== getCaisse();
+    caisseLue = getCaisse();
+    renderCaisseLecture();
+    renderStep1Resume();
+    if (versementEnCours || (state.mode !== 'registre' && !caisseChangee)) return;
     renderRegistreInfo();
     if (state.pages.length) reparse();
     refreshAll();
@@ -406,11 +467,6 @@
 
   els.openingDate.addEventListener('change', refreshAll);
   els.openingAmount.addEventListener('input', refreshAll);
-  els.caisse.addEventListener('change', () => {
-    try { localStorage.setItem('caisse.compte', els.caisse.value); } catch (e) { /* ignore */ }
-    renderStep1Resume();
-    if (state.pages.length) { reparse(); refreshAll(); }
-  });
 
   /* ---------------- Étape 1 : PDF (plusieurs fichiers) ---------------- */
   els.btnPickPdf.addEventListener('click', () => els.pdfFile.click());
@@ -430,9 +486,18 @@
     if (!pdfjsLib) { alert('pdf.js non chargé'); return; }
     if (state.loading) { alert('Veuillez attendre la fin du chargement en cours.'); return; }
     const pdfs = files.filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
-    const rejected = files.length - pdfs.length;
+    // Une photo de ticket déposée ici n'est pas une erreur de manipulation à sanctionner : c'est
+    // un justificatif arrivé au mauvais endroit. On dit où il va, avec de quoi y aller.
+    const images = files.filter((f) => !pdfs.includes(f) && (/^image\//.test(f.type || '') || /\.(jpe?g|png|heic|gif|bmp|tiff?)$/i.test(f.name)));
+    const autres = files.filter((f) => !pdfs.includes(f) && !images.includes(f));
     els.pdfNotices.innerHTML = '';
-    if (rejected) notice(els.pdfNotices, 'warn', `${rejected} fichier(s) ignoré(s) : seuls les PDF sont acceptés.`);
+    if (images.length) {
+      notice(els.pdfNotices, 'warn', `${images.map((f) => `« ${escapeHtml(f.name)} »`).join(', ')} : ${images.length > 1 ? 'ce sont des photos' : 'c\'est une photo'}. ` +
+        'Pièces scannées lit les fiches PIÈCE COMPTABLE en PDF. Une photo de ticket ou de facture est un justificatif : ' +
+        'ouvrez sa pièce dans Saisie des pièces et joignez-la sous « Justificatifs joints ». ' +
+        '<button type="button" class="small" data-aller="panelSaisie">Aller à la saisie des pièces</button>');
+    }
+    if (autres.length) notice(els.pdfNotices, 'warn', `${autres.map((f) => `« ${escapeHtml(f.name)} »`).join(', ')} : pas un PDF, ${autres.length > 1 ? 'ignorés' : 'ignoré'}.`);
     if (!pdfs.length) return;
     // Ordre naturel des noms (Pce 01 à 33, Pce 34 à 60, ...)
     pdfs.sort((a, b) => naturalCompare(a.name, b.name));
@@ -446,6 +511,15 @@
       els.pdfInfo.textContent = `Lecture de ${file.name} (${fileIdx + 1}/${totalFiles})…`;
       try {
         const buf = await file.arrayBuffer();
+        // L'empreinte du contenu fait la clé des pièces au journal (lot.js) : calculée AVANT de
+        // confier les octets à pdf.js, qui les emporte dans son processus de lecture.
+        const empreinte = L.empreinte(new Uint8Array(buf));
+        const meme = state.docs.find((d) => d.empreinte === empreinte);
+        if (meme) {
+          notice(els.pdfNotices, 'warn', `Le fichier <b>${escapeHtml(file.name)}</b> est déjà chargé${meme.name !== file.name ? ` (même contenu que « ${escapeHtml(meme.name)} »)` : ''} : ignoré.`);
+          fileIdx++;
+          continue;
+        }
         const doc = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
         const pages = [];
         for (let i = 1; i <= doc.numPages; i++) {
@@ -456,13 +530,7 @@
           els.pdfProgress.value = Math.round(((fileIdx + i / doc.numPages) / totalFiles) * 100);
           if (i % 5 === 0) await new Promise((r) => setTimeout(r, 0));
         }
-        const existingSame = state.docs.find((d) => d.name === file.name && d.numPages === doc.numPages);
-        if (existingSame) {
-          notice(els.pdfNotices, 'warn', `Le fichier <b>${escapeHtml(file.name)}</b> est déjà chargé : ignoré.`);
-          try { doc.destroy(); } catch (e) { /* ignore */ }
-        } else {
-          state.docs.push({ id: state.nextDocId++, name: file.name, doc, numPages: doc.numPages, pages, pieceCount: 0 });
-        }
+        state.docs.push({ id: state.nextDocId++, name: file.name, empreinte, doc, numPages: doc.numPages, pages, pieceCount: 0, signees: await marquesEnTete(doc) });
       } catch (e) {
         console.error(e);
         notice(els.pdfNotices, 'err', `Impossible de lire <b>${escapeHtml(file.name)}</b> : ${escapeHtml(e.message || e)}`);
@@ -474,12 +542,39 @@
     afterDocsChanged();
   }
 
+  /**
+   * Nombre de codes QR de fiches imprimées par l'application sur les premières pages d'un PDF.
+   * Une pile de fiches revenues signées commence par une fiche (ou par son ticket, si elle a été
+   * posée à l'envers) : deux pages suffisent à la reconnaître, sans ralentir la lecture d'un gros
+   * lot rempli à la main. Ces fiches-là ne sont pas à relire : leur pièce existe déjà, et c'est la
+   * Boîte de réception qui y joint le scan signé.
+   */
+  async function marquesEnTete(doc) {
+    if (!M || !M.chercher) return 0;
+    let n = 0;
+    for (let i = 1; i <= Math.min(2, doc.numPages); i++) {
+      try {
+        const page = await doc.getPage(i);
+        const vp = page.getViewport({ scale: 150 / 72 });
+        const c = document.createElement('canvas');
+        c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        const img = ctx.getImageData(0, 0, c.width, c.height);
+        if (M.chercher(img.data, img.width, img.height)) n++;
+      } catch (e) { /* une page qui ne se rend pas ne dit rien */ }
+    }
+    return n;
+  }
+
   function afterDocsChanged() {
     rebuildPages();
     if (state.pages.length) {
       const detected = P.detectCaisseAccount(state.pages);
       if (detected && detected !== getCaisse()) {
-        notice(els.pdfNotices, 'warn', `Le compte le plus fréquent sur les pièces est <b>${escapeHtml(detected)}</b>, alors que le compte caisse réglé est <b>${escapeHtml(getCaisse())}</b>. Vérifiez-le dans « Réglages de la lecture ».`);
+        notice(els.pdfNotices, 'warn', `Le compte le plus fréquent sur les pièces est <b>${escapeHtml(detected)}</b>, alors que le compte caisse de l'année est <b>${escapeHtml(getCaisse())}</b> : c'est lui qui décide du sens de chaque écriture. ` +
+          `Si c'est l'année qui se trompe, corrigez-le dans L'année. <button type="button" class="small" data-aller="panelAnnee">Ouvrir L'année</button>`);
       }
     }
     reparse();
@@ -493,8 +588,9 @@
     let n = 1;
     for (const d of state.docs) {
       d.pieceCount = 0;
+      if (d.signees) continue; // fiches signées : leur place est la Boîte de réception, pas le journal
       for (const p of d.pages) {
-        const page = { pageNumber: n++, docId: d.id, pageInDoc: p.pageInDoc, width: p.width, height: p.height, words: p.words, source: p.source || 'text' };
+        const page = { pageNumber: n++, docId: d.id, empreinte: d.empreinte, pageInDoc: p.pageInDoc, width: p.width, height: p.height, words: p.words, source: p.source || 'text' };
         d.pieceCount += P.countForms(page);
         pages.push(page);
       }
@@ -546,7 +642,7 @@
       `<tr data-id="${d.id}">` +
       `<td class="badge">F${i + 1}</td>` +
       `<td class="name">${escapeHtml(d.name)}</td>` +
-      `<td class="meta">${d.numPages} page(s) · ${d.pieceCount} pièce(s)</td>` +
+      `<td class="meta">${d.numPages} page(s) · ${d.signees ? 'fiches signées (code QR) : pour la Boîte de réception' : `${d.pieceCount} pièce(s)`}</td>` +
       `<td class="actions">` +
       `<button type="button" class="small" data-action="up" title="Monter" ${i === 0 ? 'disabled' : ''}>▲</button>` +
       `<button type="button" class="small" data-action="down" title="Descendre" ${i === state.docs.length - 1 ? 'disabled' : ''}>▼</button>` +
@@ -555,7 +651,60 @@
     ).join('');
   }
 
-  els.pdfList.addEventListener('click', (ev) => {
+  /** Pièces du journal lues dans ces fichiers : combien attendent encore d'être vérifiées. */
+  function piecesDesFichiers(docs) {
+    const reg = registre();
+    const toutes = reg ? reg.pieces.filter((p) => docs.some((d) => L.duFichier(p.scanKey, d.empreinte))) : [];
+    return { aVerifier: toutes.filter((p) => p.aVerifier).length, verifiees: toutes.filter((p) => !p.aVerifier).length };
+  }
+
+  /** Clés des écritures qui n'ont pas de fichier derrière elles (pages posées par les essais). */
+  function clesSansFichier() {
+    return state.entries.filter((e) => !e.manual && e.sourceKey && !state.docs.some((d) => L.duFichier(e.sourceKey, d.empreinte))).map((e) => e.sourceKey);
+  }
+
+  /**
+   * Retire des fichiers du lot, et leurs pièces pas encore vérifiées du journal avec eux. La croix
+   * d'un fichier et « Tout retirer » font la même chose, l'une pour un fichier, l'autre pour tous :
+   * la croix laissait les pièces au journal, marquées « à vérifier » et comptées dans le solde,
+   * alors que sa question annonçait le contraire. Ce qui a été vérifié reste au journal.
+   */
+  async function oterFichiers(docs, autresCles) {
+    const reg = registre();
+    let partis = [];
+    if (reg && window.CaisseRegistre) {
+      for (const d of docs) if (d.empreinte) partis = partis.concat(L.retirerFichier(reg, d.empreinte));
+      if (autresCles && autresCles.length) partis = partis.concat(window.CaisseRegistre.removeScanBatch(reg, autresCles));
+    }
+    for (const d of docs) {
+      const i = state.docs.indexOf(d);
+      if (i >= 0) state.docs.splice(i, 1);
+      try { d.doc.destroy(); } catch (e) { /* ignore */ }
+      for (const k of Array.from(state.renderCache.keys())) if (k.startsWith(`${d.id}:`)) state.renderCache.delete(k);
+      // relu un autre jour, le même fichier doit pouvoir revenir : on oublie ses clés
+      for (const set of [state.connues.cles, state.ecartees]) for (const k of Array.from(set)) if (L.duFichier(k, d.empreinte)) set.delete(k);
+    }
+    for (const k of autresCles || []) { state.connues.cles.delete(k); state.ecartees.delete(k); }
+    let erreur = null;
+    if (partis.length && window.CaisseSaisie) {
+      try { await enregistrerJournal(); } catch (e) { erreur = e; }
+    }
+    return { partis: partis.length, erreur };
+  }
+
+  /** Ce que le retrait a fait au journal, en une phrase. */
+  function direRetrait(quoi, r, verifiees) {
+    if (!r.partis && !verifiees) return;
+    if (r.erreur) {
+      notice(els.pdfNotices, 'err', `${quoi} retiré, mais le journal n'a pas pu être enregistré : ${escapeHtml((r.erreur && r.erreur.message) || r.erreur)}. ` +
+        '<button type="button" class="small" data-journal="reessayer">Réessayer l\'enregistrement</button>');
+      return;
+    }
+    notice(els.pdfNotices, 'ok', `${quoi} retiré : ${r.partis} pièce(s) pas encore vérifiée(s) retirée(s) du journal` +
+      (verifiees ? ` ; ${verifiees} pièce(s) déjà vérifiée(s) y restent.` : '.'));
+  }
+
+  els.pdfList.addEventListener('click', async (ev) => {
     const btn = ev.target.closest('button[data-action]');
     if (!btn) return;
     const tr = btn.closest('tr');
@@ -569,10 +718,17 @@
       [state.docs[idx + 1], state.docs[idx]] = [state.docs[idx], state.docs[idx + 1]];
     } else if (action === 'remove') {
       const d = state.docs[idx];
-      if (!confirm(`Retirer le fichier « ${d.name} » et ses ${d.pieceCount} pièce(s) ?`)) return;
-      state.docs.splice(idx, 1);
-      try { d.doc.destroy(); } catch (e) { /* ignore */ }
-      for (const k of Array.from(state.renderCache.keys())) if (k.startsWith(`${d.id}:`)) state.renderCache.delete(k);
+      const n = piecesDesFichiers([d]);
+      const question = n.aVerifier
+        ? `Retirer le fichier « ${d.name} » ?\n\nSes ${n.aVerifier} pièce(s) pas encore vérifiée(s) seront aussi retirées du journal.` +
+          (n.verifiees ? ` Ses ${n.verifiees} pièce(s) déjà vérifiée(s) y restent.` : '')
+        : `Retirer le fichier « ${d.name} » de la liste ?` + (n.verifiees ? `\n\nSes ${n.verifiees} pièce(s) déjà vérifiée(s) restent dans le journal.` : '');
+      if (!confirm(question)) return;
+      const r = await oterFichiers([d]);
+      els.pdfNotices.innerHTML = '';
+      afterDocsChanged();
+      direRetrait(`« ${escapeHtml(d.name)} »`, r, n.verifiees);
+      return;
     } else {
       return;
     }
@@ -598,18 +754,22 @@
     afterDocsChanged();
   });
 
-  els.btnClearFiles.addEventListener('click', () => {
+  /** « Tout retirer » : tous les fichiers, et leurs pièces pas encore vérifiées du journal. */
+  async function toutRetirer() {
     if (!state.docs.length) return;
-    if (!confirm('Retirer tous les fichiers PDF chargés ? Les écritures reconnues (et vos corrections) seront effacées.')) return;
-    // les pièces versées au journal et pas encore vérifiées partent avec le lot
-    retirerDuJournal().then((n) => { if (n) notice(els.pdfNotices, 'ok', `${n} pièce(s) non vérifiée(s) retirée(s) du journal.`); });
-    for (const d of state.docs) { try { d.doc.destroy(); } catch (e) { /* ignore */ } }
-    state.docs = [];
+    const n = piecesDesFichiers(state.docs);
+    const question = 'Retirer tous les fichiers chargés ?\n\n' + (n.aVerifier
+      ? `Leurs ${n.aVerifier} pièce(s) pas encore vérifiée(s) seront aussi retirées du journal.` + (n.verifiees ? ` Les ${n.verifiees} pièce(s) déjà vérifiée(s) y restent.` : '')
+      : 'Les écritures lues et vos corrections à l\'écran seront effacées.' + (n.verifiees ? ` Les ${n.verifiees} pièce(s) déjà vérifiée(s) restent dans le journal.` : ''));
+    if (!confirm(question)) return;
+    const r = await oterFichiers(state.docs.slice(), clesSansFichier());
     state.renderCache.clear();
     els.pdfNotices.innerHTML = '';
     els.pdfInfo.textContent = '';
     afterDocsChanged();
-  });
+    direRetrait('Le lot est', r, n.verifiees);
+  }
+  els.btnClearFiles.addEventListener('click', toutRetirer);
 
   /**
    * Analyse toutes les pages chargées. Les écritures déjà présentes (même fichier, même page)
@@ -630,16 +790,16 @@
 
     // Une page peut porter deux formulaires « PIÈCE COMPTABLE » : la clé retient aussi lequel,
     // sinon les deux écritures retombaient sur le même objet à la relecture (une pièce perdue,
-    // l'autre en double dans le tableau, les totaux et le classeur produit).
-    const sourceKey = (globalPage, part) => {
-      const p = state.pages.find((x) => x.pageNumber === globalPage);
-      return p ? `${p.docId}:${p.pageInDoc}:${part == null ? '' : part}` : null;
-    };
+    // l'autre en double dans le tableau, les totaux et le classeur produit). Et elle tient au
+    // contenu du fichier, pas à son rang dans la séance : c'est elle qui retrouve la pièce au
+    // journal, d'un jour à l'autre (lot.js).
+    const sourceKey = (globalPage, part) => L.cleDePage(state.pages.find((x) => x.pageNumber === globalPage), part);
     const previous = new Map();
     for (const e of state.entries) if (e.sourceKey) previous.set(e.sourceKey, e);
     const manual = state.entries.filter((e) => e.manual);
 
-    const entries = res.entries.map((e) => {
+    // une écriture sortie du lot par la personne ne revient pas à la relecture suivante
+    const entries = res.entries.filter((e) => !state.ecartees.has(sourceKey(e.page, e.part))).map((e) => {
       const key = sourceKey(e.page, e.part);
       const old = key ? previous.get(key) : null;
       if (old) {
@@ -662,7 +822,7 @@
         old.raw = e.raw;
         if (!old.edited) {
           old.no = e.no; old.date = e.date; old.compte = e.compte || ''; old.libelle = e.libelle; old.debit = e.debit; old.credit = e.credit;
-          old.checked = valideALaMain && !nouvelAvert ? true : e.warnings.length === 0;
+          old.checked = valideALaMain && !nouvelAvert;
         }
         return old;
       }
@@ -685,7 +845,10 @@
         candidates: e.candidates,
         crossChecked: !!e.crossChecked,
         raw: e.raw,
-        checked: e.warnings.length === 0,
+        // « Vérifié » veut dire qu'une personne a regardé la pièce, comme au journal : une ligne
+        // lue sans doute n'est pas pour autant vérifiée. Cochée d'office, elle laissait croire le
+        // travail fait, alors que le journal l'attendait encore.
+        checked: false,
         manual: false,
         edited: false,
       };
@@ -705,16 +868,34 @@
     parseBox.innerHTML = '';
 
     const textPages = state.pages.filter((p) => p.words.length).length;
-    if (state.docs.length) {
-      els.pdfInfo.innerHTML =
-        `<b>${state.docs.length}</b> fichier(s), ${state.pages.length} page(s), ${res.pieceCount} pièce(s) comptable(s) reconnue(s), ` +
+    // la ligne d'information disait encore « 3 pièce(s) reconnue(s) » une fois tous les fichiers retirés
+    els.pdfInfo.innerHTML = !state.docs.length ? ''
+      : `<b>${state.docs.length}</b> fichier(s), ${state.pages.length} page(s), ${res.pieceCount} pièce(s) comptable(s) reconnue(s), ` +
         `<b>${state.entries.filter((e) => !e.manual).length}</b> écriture(s)` +
         (res.duplicates.length ? `, ${res.duplicates.length} doublon(s) ignoré(s)` : '') + '.';
+
+    // Fiches imprimées par l'application et revenues signées : pas relues ici, et le dire.
+    for (const d of state.docs.filter((x) => x.signees)) {
+      notice(parseBox, 'warn', `<b>« ${escapeHtml(d.name)} »</b> : ce sont des fiches imprimées par l'application et revenues signées (elles portent un code QR). ` +
+        'Elles ne sont pas relues ici, et rien n\'a été ajouté au journal : leur place est la Boîte de réception, qui joint chaque scan à sa pièce. ' +
+        `<button type="button" class="small" data-signees="${d.id}">${window.CaisseScan ? 'Envoyer à la Boîte de réception' : 'Joindre ces fiches à leurs pièces…'}</button>`);
     }
-    if (state.pages.length && !textPages) {
-      notice(parseBox, 'err', "Ces PDF ne contiennent aucun texte : ils ont été scannés sans reconnaissance de texte (OCR). Rescannez-les en mode « PDF consultable » (option OCR du copieur) ou utilisez la fonction de reconnaissance de texte d'Acrobat, puis réessayez.");
-    } else if (state.pages.length && !res.pieceCount) {
-      notice(parseBox, 'err', "Aucune pièce comptable n'a été reconnue (formulaire « PIÈCE COMPTABLE » avec colonnes DOIT / SOMME / AVOIR).");
+    // Un fichier sans fiche lisible. Le message ne doit pas mentir : une page sans texte que la
+    // relecture sur l'image a lue n'a pas besoin d'être « rescannée » — ce n'est simplement pas
+    // une fiche, et un ticket a sa place ailleurs. Tant que la relecture n'a pas fini, on ne dit rien.
+    const ocrPossible = ocrEnabled() && O && O.available() && state.ocr.status !== 'unavailable';
+    const enLecture = (p) => !p.words.length && ocrPossible && !state.ocr.doneKeys.has(`${p.docId}:${p.pageInDoc}`);
+    for (const d of state.docs.filter((x) => !x.signees && !x.pieceCount)) {
+      const sesPages = state.pages.filter((p) => p.docId === d.id);
+      if (sesPages.some(enLecture)) continue;
+      if (!ocrPossible && sesPages.every((p) => !p.words.length)) {
+        notice(parseBox, 'err', `<b>« ${escapeHtml(d.name)} »</b> ne contient aucun texte, et la relecture sur l'image est ${ocrEnabled() || !O || !O.available() ? 'indisponible ici' : 'désactivée (Réglages de la lecture)'} : ` +
+          'rien n\'a pu y être lu. Activez-la, ou rescannez le document en « PDF consultable » (réglage du copieur).');
+      } else {
+        notice(parseBox, 'warn', `<b>« ${escapeHtml(d.name)} »</b> : aucune fiche PIÈCE COMPTABLE dans ce fichier, rien n'a été ajouté au journal. ` +
+          'Un ticket ou une facture est un justificatif : ouvrez sa pièce dans Saisie des pièces et joignez-y ce fichier (« Justificatifs joints »). ' +
+          '<button type="button" class="small" data-aller="panelSaisie">Aller à la saisie des pièces</button>');
+      }
     }
     if (res.duplicates.length) {
       notice(parseBox, 'ok', 'Pièces en double (même numéro et même montant, copie jointe à une autre pièce) ignorées : ' +
@@ -723,8 +904,8 @@
     for (const w of res.warnings) notice(parseBox, 'warn', escapeHtml(w));
     if (state.pages.length && textPages && textPages < state.pages.length) {
       const list = res.emptyPages.slice(0, 40).map((n) => `<button type="button" class="small" data-action="show-page" data-page="${n}">${escapeHtml(pageLabel(n))}</button>`).join(' ');
-      notice(parseBox, 'warn', `${state.pages.length - textPages} page(s) sans texte (tickets, photos) : normal pour les justificatifs. ` +
-        `Si l'une d'elles est une pièce comptable, elle a été scannée sans reconnaissance de texte : ajoutez-la à la main (« Ajouter une écriture manuelle »). Voir : ${list}` +
+      notice(parseBox, 'warn', `${state.pages.length - textPages} page(s) sans fiche lisible (tickets, photos) : normal pour les justificatifs. ` +
+        `Si l'une d'elles est une fiche PIÈCE COMPTABLE, ajoutez-la à la main (« Écriture manuelle »). Voir : ${list}` +
         (res.emptyPages.length > 40 ? ' …' : ''));
     }
   }
@@ -835,8 +1016,11 @@
       return;
     }
     if (o.status === 'done') {
+      // rien de relu (un ticket, aucune fiche) : pas de bandeau vert « terminé » à côté de
+      // l'erreur qui dit qu'il n'y avait rien à lire
+      if (!extraHtml) { box.classList.add('hidden'); return; }
       box.classList.add('ok');
-      box.innerHTML = extraHtml || '';
+      box.innerHTML = extraHtml;
     }
   }
 
@@ -853,6 +1037,7 @@
       }
     }
     const ocrPages = state.pages.filter((p) => p.source === 'ocr').length;
+    if (!entries && !ocrPages) return '';
     const o = state.ocr;
     const who = o.native && o.native.available ? `3 lectures${o.native.legacy ? ' + moteur historique sur les chiffres' : ''}` : '2 lectures';
     return `✓ Lectures croisées terminées (${who}) sur ${entries} pièce(s) : <b>${confirmed}</b> champ(s) confirmé(s) (liseré vert)` +
@@ -984,9 +1169,10 @@
       if (sens === 'credit') { e.credit = v; e.debit = null; setInput('credit', fmtInput(v)); setInput('debit', ''); }
       else { e.debit = v; e.credit = null; setInput('debit', fmtInput(v)); setInput('credit', ''); }
     } else return;
-    e.edited = true;
+    corriger(e);
     e.resolved = Object.assign({}, e.resolved, { [field]: true });
     updateRowStatus(id);
+    verserBientot();
   }
 
   // réglage mémorisé sur ce PC
@@ -1006,6 +1192,33 @@
   }
 
   /* ---------------- Étape 2 : tableau ---------------- */
+  /**
+   * La personne coche (ou décoche) « Vérifié » : c'est une vérification au journal aussi — il n'y
+   * avait qu'une liste, mais deux vérifications, et celle d'ici ne comptait pas là-bas. L'intention
+   * est gardée jusqu'au versement suivant (verserAuJournal), pour que la mise à jour depuis le
+   * journal (accorderAuJournal) ne la défasse pas entre-temps.
+   */
+  function verifier(e, oui) {
+    e.checked = !!oui;
+    e.verifDemande = !!oui;
+    e.edited = true;
+  }
+  /** La personne corrige une ligne : la correction va au journal, même sur une pièce déjà vérifiée. */
+  function corriger(e) {
+    e.edited = true;
+    e.corrDemande = true;
+  }
+  let versementDiffere = null;
+  /** Verse au journal ce qui vient d'être fait à l'écran, sans attendre le rafraîchissement suivant. */
+  function verserBientot() {
+    clearTimeout(versementDiffere);
+    versementDiffere = setTimeout(() => {
+      verserAuJournal()
+        .then(() => { if (state.entries.length) { renderTotals(); renderChecks(); } })
+        .catch(() => { /* dit par saveReg, et par le bandeau du lot (renderJournalLink) */ });
+    }, 350);
+  }
+
   function rowIssues(e) {
     const errs = [];
     if (!e.date) errs.push('Date manquante');
@@ -1078,8 +1291,9 @@
     return { cls: '', title: '' };
   }
 
+  // à vérifier, comme au journal : pas encore regardée par une personne, ou encore en doute
   function hasDoubt(e) {
-    return rowStatus(e) !== 'ok';
+    return !e.checked || rowStatus(e) !== 'ok';
   }
 
   function renderTable() {
@@ -1089,7 +1303,7 @@
     for (const e of state.entries) {
       const status = rowStatus(e);
       const tr = document.createElement('tr');
-      tr.className = 'entry' + (e.id === state.selectedId ? ' selected' : '') + (status === 'warn' ? ' warn-row' : '') + (filter && status === 'ok' ? ' hidden-row' : '');
+      tr.className = 'entry' + (e.id === state.selectedId ? ' selected' : '') + (status === 'warn' ? ' warn-row' : '') + (filter && !hasDoubt(e) ? ' hidden-row' : '');
       tr.dataset.id = e.id;
       const a = {
         no: cellAttrs(e, 'no'), date: cellAttrs(e, 'date'), compte: cellAttrs(e, 'compte'), libelle: cellAttrs(e, 'libelle'), montant: cellAttrs(e, 'montant'),
@@ -1104,14 +1318,14 @@
         `<td><input type="number" class="num ${a.montant.cls}" title="${escapeHtml(a.montant.title)}" step="0.01" data-field="debit" value="${fmtInput(e.debit)}"></td>` +
         `<td><input type="number" class="num ${a.montant.cls}" title="${escapeHtml(a.montant.title)}" step="0.01" data-field="credit" value="${fmtInput(e.credit)}"></td>` +
         `<td class="page">${e.page ? pageLabel(e.page, true) : (e.manual ? 'manuel' : '')}</td>` +
-        `<td class="check"><input type="checkbox" data-field="checked" ${e.checked ? 'checked' : ''} title="Marquer comme vérifié"></td>` +
+        `<td class="check"><input type="checkbox" data-field="checked" ${e.checked ? 'checked' : ''} title="J'ai regardé cette pièce : elle est aussi vérifiée au journal"></td>` +
         `<td><button type="button" class="small danger" data-action="delete" title="Supprimer cette écriture">✕</button></td>`;
       body.appendChild(tr);
 
       const msgs = rowMessages(e);
       if (msgs) {
         const tr2 = document.createElement('tr');
-        tr2.className = 'msgs' + (filter && status === 'ok' ? ' hidden-row' : '');
+        tr2.className = 'msgs' + (filter && !hasDoubt(e) ? ' hidden-row' : '');
         tr2.dataset.id = e.id;
         tr2.innerHTML = `<td colspan="10">${msgs}</td>`;
         body.appendChild(tr2);
@@ -1177,12 +1391,14 @@
     const errs = state.entries.filter((e) => rowStatus(e) === 'err').length;
     const warns = state.entries.filter((e) => rowStatus(e) === 'warn').length;
     const fixed = state.entries.filter((e) => (e.notes || []).length).length;
-    els.rowSummary.innerHTML = `${n} écriture(s) – <span style="color:var(--ok)">${n - errs - warns} en ordre</span>` +
-      (warns ? `, <span style="color:var(--warn)">${warns} à vérifier</span>` : '') +
+    const verifiees = state.entries.filter((e) => !hasDoubt(e)).length;
+    els.rowSummary.innerHTML = `${n} écriture(s) – <span style="color:var(--ok)">${verifiees} vérifiée(s)</span>` +
+      (warns ? `, <span style="color:var(--warn)">${warns} en doute (orange)</span>` : '') +
       (errs ? `, <span style="color:var(--err)">${errs} incomplète(s)</span>` : '') +
       (fixed ? ` <span style="color:#2563eb" title="Lignes dont un mot, un nom ou un compte a été corrigé automatiquement (cellule bleue)">· ${fixed} corrigée(s)</span>` : '');
-    els.btnNextDoubt.disabled = !(errs + warns);
-    els.btnVerifyNext.disabled = !(errs + warns);
+    // « Vérifié → suivante » mène à la prochaine ligne pas encore vérifiée, en doute ou non
+    els.btnNextDoubt.disabled = verifiees === n;
+    els.btnVerifyNext.disabled = verifiees === n;
   }
 
   function updateRowStatus(id) {
@@ -1250,7 +1466,7 @@
       const v = input.value.trim();
       e[field] = v === '' ? null : P.round2(Number(v.replace(',', '.')));
     }
-    e.edited = true;
+    corriger(e); // versée au journal à la fin de la saisie du champ (« change », ci-dessous)
     updateRowStatus(id);
     renderTotals();
     renderChecks();
@@ -1270,10 +1486,11 @@
       if (e0) noteEdit(e0, input.dataset.field, input.dataset.orig, input.value);
       input.dataset.orig = input.value;
     }
+    if (input.dataset.field) verserBientot(); // la correction ou la coche vaut au journal
     if (input.dataset.field === 'checked') {
       const id = Number(input.closest('tr').dataset.id);
       const e = state.entries.find((x) => x.id === id);
-      if (e) { e.checked = input.checked; e.edited = true; updateRowStatus(id); }
+      if (e) { verifier(e, input.checked); updateRowStatus(id); }
     } else if (input.dataset.field === 'date') {
       // reformate la date proprement
       const id = Number(input.closest('tr').dataset.id);
@@ -1295,7 +1512,8 @@
     const montant = e.debit != null ? e.debit : e.credit;
     if (montant == null) return;
     if (side === 'debit') { e.debit = montant; e.credit = null; } else { e.credit = montant; e.debit = null; }
-    e.edited = true;
+    corriger(e);
+    verserBientot();
     e.resolved = Object.assign({}, e.resolved, { montant: true });
     const row = els.body.querySelector(`tr.entry[data-id="${id}"]`);
     if (row) {
@@ -1332,7 +1550,8 @@
       if (e) {
         rememberCorrection('compte', e.compte, useBtn.dataset.account);
         e.compte = useBtn.dataset.account;
-        e.edited = true;
+        corriger(e);
+        verserBientot();
         e.resolved = Object.assign({}, e.resolved, { compte: true });
         const input = els.body.querySelector(`tr.entry[data-id="${id}"] input[data-field="compte"]`);
         if (input) input.value = e.compte;
@@ -1342,17 +1561,36 @@
     }
     if (btn) {
       const e = state.entries.find((x) => x.id === id);
-      if (e && confirm(`Supprimer l'écriture n° ${e.no != null ? e.no : '?'} ?`)) {
-        state.entries = state.entries.filter((x) => x.id !== id);
-        if (state.selectedId === id) state.selectedId = null;
-        renderTable();
-        renderTotals();
-        renderPreview();
-      }
+      if (e) supprimerLigne(e);
       return;
     }
     if (state.selectedId !== id) selectEntry(id);
   });
+
+  /**
+   * Supprime une ligne du lot. Sa pièce pas encore vérifiée quitte le journal avec elle : la ligne
+   * disparaissait de l'écran mais sa pièce restait au journal, « à vérifier », sans plus appartenir
+   * à aucun lot — et la relecture suivante la faisait revenir à l'écran.
+   */
+  async function supprimerLigne(e) {
+    const reg = registre();
+    const piece = reg && e.sourceKey && !e.manual ? reg.pieces.find((p) => p.scanKey === e.sourceKey) : null;
+    const question = `Supprimer l'écriture n° ${e.no != null ? e.no : '?'} de ce lot ?` + (!piece ? ''
+      : piece.aVerifier ? '\n\nElle sera aussi retirée du journal, où elle n\'a pas encore été vérifiée.'
+        : piece.source === 'scan' ? '\n\nElle reste dans le journal, où elle a déjà été vérifiée : supprimez-la dans Saisie des pièces si elle n\'a pas lieu d\'être.' : '');
+    if (!confirm(question)) return;
+    if (e.sourceKey) { state.ecartees.add(e.sourceKey); state.connues.cles.delete(e.sourceKey); }
+    state.entries = state.entries.filter((x) => x.id !== e.id);
+    if (state.selectedId === e.id) state.selectedId = null;
+    renderTable();
+    renderTotals();
+    renderChecks();
+    renderPreview();
+    if (piece && piece.aVerifier && window.CaisseRegistre) {
+      window.CaisseRegistre.removeScanBatch(reg, [e.sourceKey]);
+      try { await enregistrerJournal(); } catch (err) { /* dit par saveReg et le bandeau du lot */ }
+    }
+  }
 
   els.body.addEventListener('focusin', (ev) => {
     const tr = ev.target.closest('tr');
@@ -1390,9 +1628,10 @@
         `Voulez-vous plutôt les contrôler une par une (Annuler), ou tout valider quand même (OK) ?`);
       if (!ok) { gotoNextDoubt(null); return; }
     }
-    state.entries.forEach((e) => { e.checked = true; e.edited = true; });
+    state.entries.forEach((e) => verifier(e, true));
     renderTable();
     renderChecks();
+    verserBientot();
   });
 
   els.filterDoubt.addEventListener('change', () => renderTable());
@@ -1416,18 +1655,18 @@
   }
 
   els.btnNextDoubt.addEventListener('click', () => {
-    if (!gotoNextDoubt(state.selectedId)) alert('Aucune ligne à vérifier : tout est en ordre.');
+    if (!gotoNextDoubt(state.selectedId)) alert('Aucune ligne à vérifier : toutes sont vérifiées.');
   });
 
   els.btnVerifyNext.addEventListener('click', () => {
     const e = state.entries.find((x) => x.id === state.selectedId);
     if (e) {
-      e.checked = true;
-      e.edited = true;
+      verifier(e, true);
       const cb = els.body.querySelector(`tr.entry[data-id="${e.id}"] input[data-field="checked"]`);
       if (cb) cb.checked = true;
       updateRowStatus(e.id);
       if (els.filterDoubt.checked) renderTable();
+      verserBientot();
     }
     if (!gotoNextDoubt(state.selectedId)) { renderPreview(); alert('Toutes les lignes sont vérifiées.'); }
   });
@@ -1548,9 +1787,12 @@
     document.body.appendChild(box);
   });
 
-  // Raccourcis clavier : Ctrl/⌘+Entrée = vérifié puis ligne suivante à contrôler
+  // Raccourcis clavier : Ctrl/⌘+Entrée = vérifié puis ligne suivante à contrôler. Seulement quand
+  // on regarde cet espace : l'étape 2 reste « affichée » dans l'espace caché dès qu'un lot est
+  // chargé, et le Ctrl+Entrée de la fiche de saisie y marquait en cachette une ligne vérifiée.
+  const scanVisible = () => { const p = document.getElementById('panelScan'); return !!p && !p.classList.contains('hidden'); };
   document.addEventListener('keydown', (ev) => {
-    if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter' && !els.step3.classList.contains('hidden')) {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter' && scanVisible() && !els.step3.classList.contains('hidden') && !review.open) {
       ev.preventDefault();
       els.btnVerifyNext.click();
     }
@@ -1598,7 +1840,7 @@
         else if (f === 'compte') e.compte = val.trim();
         else if (f === 'libelle') e.libelle = val;
         else if (f === 'debit' || f === 'credit') e[f] = val.trim() === '' ? null : P.round2(Number(val.replace(',', '.')));
-        e.edited = true;
+        corriger(e);
         const champ = { no: 'no', date: 'date', compte: 'compte', libelle: 'libelle', debit: 'montant', credit: 'montant' }[f];
         if (champ) e.resolved = Object.assign({}, e.resolved, { [champ]: true });
         renderReviewMessages();
@@ -1618,6 +1860,7 @@
   function closeReview() {
     review.open = false;
     if (review.el) review.el.style.display = 'none';
+    verserBientot(); // les corrections faites dans le volet vont au journal
     renderTable();
     renderTotals();
     renderChecks();
@@ -1628,7 +1871,8 @@
     const e = state.entries.find((x) => x.id === review.id);
     if (!e) return;
     e.seen = true;
-    if (ok && rowStatus(e) !== 'err') e.checked = true;
+    if (ok && rowStatus(e) !== 'err') verifier(e, true);
+    verserBientot(); // « Correct » ici vaut vérification au journal
   }
 
   function moveReview(step) {
@@ -1698,13 +1942,13 @@
     $('rvOk2').addEventListener('click', () => { markReviewed(true); moveReview(1); });
     $('rvSwap').addEventListener('click', () => {
       const d = e.debit; e.debit = e.credit; e.credit = d;
-      e.edited = true;
+      corriger(e);
       e.resolved = Object.assign({}, e.resolved, { montant: true });
       renderReview();
     });
     $('rvSide').querySelectorAll('button[data-rv-account]').forEach((b) => b.addEventListener('click', () => {
       e.compte = b.dataset.rvAccount;
-      e.edited = true;
+      corriger(e);
       e.resolved = Object.assign({}, e.resolved, { compte: true });
       renderReview();
     }));
@@ -1797,7 +2041,7 @@
       `<dt>Pièces affichées à l'écran</dt><dd>${c.count - c.jamaisVues.length} sur ${c.count}</dd>` +
       `<dt>Lignes encore signalées</dt><dd class="${signalees.length ? 'ko' : 'ok'}">${signalees.length}</dd>` +
       `</dl>` +
-      (state.ocr.status === 'done' ? `<h2>Seconde lecture (OCR local)</h2><div>${ocrSummaryHtml()}</div>` : '') +
+      (state.ocr.status === 'done' && ocrSummaryHtml() ? `<h2>Seconde lecture (OCR local)</h2><div>${ocrSummaryHtml()}</div>` : '') +
       (signalees.length ? `<h2>Pièces signalées</h2><table><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Page</th><th>Motif</th></tr>` +
         signalees.map(ligne).join('') + `</table>` : '<h2>Pièces signalées</h2><div class="ok">Aucune.</div>') +
       `<h2>Toutes les écritures du lot</h2><table><tr><th>N°</th><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Page</th><th>Motif</th></tr>` +
@@ -1852,20 +2096,30 @@
       for (let n = Math.min.apply(null, nos); n <= Math.max.apply(null, nos); n++) if (!counts.has(n)) manquants.push(n);
     }
     // n° déjà dans la base : même montant, la pièce y est déjà (pas comptée deux fois) ; autre montant, conflit
-    const exist = new Map();
-    for (const e of existingEntries()) { const n = numNo(e); if (!isNaN(n)) exist.set(n, e); }
-    const cents = (v) => Math.round((Number(v) || 0) * 100);
-    const dejaLa = []; const conflits = [];
-    for (const e of news) {
-      const n = numNo(e); const x = !isNaN(n) ? exist.get(n) : null;
-      if (!x) continue;
-      if (cents(x.debit) === cents(e.debit) && cents(x.credit) === cents(e.credit)) dejaLa.push(n); else conflits.push(n);
+    let dejaLa = []; let conflits = []; let lot = null;
+    const reg = state.mode === 'registre' ? registre() : null;
+    if (reg) {
+      // Le registre de l'année : les pièces que ce lot vient d'y verser ne sont pas « déjà là ».
+      // Comparé au registre entier, le contrôle annonçait « 3 pièces déjà dans le registre : non
+      // comptées deux fois » juste après la lecture de ces trois pièces.
+      lot = L.bilanDuLot(reg, news.filter((e) => !e.manual && e.sourceKey));
+      dejaLa = lot.dejaLa; conflits = lot.conflits;
+    } else {
+      const exist = new Map();
+      for (const e of existingEntries()) { const n = numNo(e); if (!isNaN(n)) exist.set(n, e); }
+      const cents = (v) => Math.round((Number(v) || 0) * 100);
+      for (const e of news) {
+        const n = numNo(e); const x = !isNaN(n) ? exist.get(n) : null;
+        if (!x) continue;
+        if (cents(x.debit) === cents(e.debit) && cents(x.credit) === cents(e.credit)) dejaLa.push(n); else conflits.push(n);
+      }
     }
     const sansNo = news.filter((e) => e.no == null || e.no === '').length;
     const aVerifier = news.filter((e) => rowStatus(e) === 'warn');
     const incompletes = news.filter((e) => rowStatus(e) === 'err');
     const jamaisVues = news.filter((e) => !e.seen && !e.checked && !e.edited && !e.manual);
-    return { doublons, manquants, dejaLa: uniqList(dejaLa), conflits: uniqList(conflits), sansNo, aVerifier, incompletes, jamaisVues, count: news.length };
+    const verifiees = news.filter((e) => !hasDoubt(e)).length;
+    return { doublons, manquants, dejaLa: uniqList(dejaLa), conflits: uniqList(conflits), sansNo, aVerifier, incompletes, jamaisVues, verifiees, lot, count: news.length };
   }
 
   function renderChecks() {
@@ -1875,30 +2129,71 @@
       `<tr class="${level}"><td class="k">${k}</td><td class="v">${v}${action || ''}</td></tr>`;
     const btn = (label, act) => ` <button type="button" class="small" data-check="${act}">${label}</button>`;
     const rows = [];
+    const nos = (list) => `n° ${list.slice(0, 20).join(', ')}${list.length > 20 ? '…' : ''}`;
     rows.push(line('Pièces lues dans ce lot', `${c.count}`, 'ok'));
+    if (c.lot) {
+      const ajoutees = c.lot.pieces.map((p) => (p.no == null ? '?' : p.no));
+      rows.push(line('Ajoutées au journal par ce lot', ajoutees.length ? `${ajoutees.length} (${nos(ajoutees)})` : 'aucune', 'ok'));
+    }
     rows.push(c.manquants.length
       ? line('Numéros manquants dans la suite', `${c.manquants.length} : ${c.manquants.slice(0, 20).join(', ')}${c.manquants.length > 20 ? '…' : ''}`, 'err')
       : line('Suite des numéros', 'complète, sans trou', 'ok'));
     rows.push(c.doublons.length
       ? line('Numéros en double', `${c.doublons.join(', ')}`, 'err', btn('Voir', 'dup'))
       : line('Numéros en double', 'aucun', 'ok'));
-    if (c.conflits.length) rows.push(line(`Numéros déjà dans ${baseLabel()} avec un autre montant`, c.conflits.join(', '), 'err'));
-    if (c.dejaLa.length) rows.push(line(`Pièces déjà dans ${baseLabel()}`, `${c.dejaLa.length} (n° ${c.dejaLa.slice(0, 20).join(', ')}${c.dejaLa.length > 20 ? '…' : ''}) : non comptées deux fois`, 'ok'));
+    if (c.conflits.length) rows.push(line(c.lot ? 'Numéros déjà au journal avec un autre montant' : `Numéros déjà dans ${baseLabel()} avec un autre montant`, c.conflits.join(', '), 'err'));
+    if (c.dejaLa.length) {
+      rows.push(line(c.lot ? 'Déjà au journal (saisies à la main ou lues dans un autre fichier)' : `Pièces déjà dans ${baseLabel()}`,
+        `${c.dejaLa.length} (${nos(c.dejaLa)}) : non comptées deux fois`, 'ok'));
+    }
     if (c.sansNo) rows.push(line('Pièces sans numéro', String(c.sansNo), 'err'));
     rows.push(c.incompletes.length
       ? line('Lignes incomplètes', String(c.incompletes.length), 'err', btn('Voir', 'err'))
       : line('Lignes incomplètes', 'aucune', 'ok'));
     rows.push(c.aVerifier.length
-      ? line('Lignes à vérifier', String(c.aVerifier.length), 'warn', btn('Voir', 'warn'))
-      : line('Lignes à vérifier', 'aucune', 'ok'));
+      ? line('Lignes en doute (orange)', String(c.aVerifier.length), 'warn', btn('Voir', 'warn'))
+      : line('Lignes en doute (orange)', 'aucune', 'ok'));
+    rows.push(line('Pièces vérifiées', `${c.verifiees} sur ${c.count}`, c.verifiees === c.count ? 'ok' : 'warn',
+      c.verifiees < c.count ? btn('Suivante à vérifier', 'next') : ''));
     rows.push(c.jamaisVues.length
       ? line('Pièces jamais affichées', `${c.jamaisVues.length} sur ${c.count}`, 'warn', btn('Contrôler', 'review'))
       : line('Pièces affichées au moins une fois', `${c.count} sur ${c.count}`, 'ok'));
-    rows.push(line('Total des débits', fmtCHF(t.debits), 'ok'));
-    rows.push(line('Total des crédits', fmtCHF(t.credits), 'ok'));
-    rows.push(line('Solde calculé', fmtCHF(t.end), 'ok'));
+    // Dans le registre, ces totaux sont ceux de l'année entière : le dire, sinon on les prend pour ceux du lot.
+    rows.push(line(c.lot ? 'Entrées de l\'année (débits)' : 'Total des débits (entrées)', fmtCHF(t.debits), 'ok'));
+    rows.push(line(c.lot ? 'Sorties de l\'année (crédits)' : 'Total des crédits (sorties)', fmtCHF(t.credits), 'ok'));
+    rows.push(line(c.lot ? 'Solde du journal' : 'Solde calculé', fmtCHF(t.end), 'ok'));
     els.checkTable.innerHTML = rows.join('');
-    renderBalanceCheck();
+    renderRapprochement();
+  }
+
+  /**
+   * Rapprochement de la caisse. Avec le registre de l'année, il existe déjà : c'est « Compter la
+   * caisse », qui garde l'historique des comptages. Le refaire ici, avec un champ qui n'enregistrait
+   * rien et d'autres mots, laissait deux contrôles dont on ne savait lequel faisait foi. On montre
+   * donc le dernier comptage enregistré et son écart avec le journal, et le chemin pour compter.
+   * Avec un classeur Excel (nouveau ou existant), il n'y a pas de journal : le champ reste.
+   */
+  function renderRapprochement() {
+    const reg = state.mode === 'registre' ? registre() : null;
+    const box = document.getElementById('rapprochementJournal');
+    const saisi = document.getElementById('rapprochementSaisi');
+    if (box) box.classList.toggle('hidden', !reg);
+    if (saisi) saisi.classList.toggle('hidden', !!reg);
+    if (!reg || !box) { renderBalanceCheck(); return; }
+    const R = window.CaisseRegistre;
+    const comptages = (reg.comptages || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.createdAt).localeCompare(String(b.createdAt)));
+    const dernier = comptages.length ? comptages[comptages.length - 1] : null;
+    const bouton = '<div class="toolbar"><button type="button" class="small" data-aller="panelCaisse"><svg class="ico"><use href="#i-coins"/></svg> Compter la caisse</button></div>';
+    if (!dernier) {
+      box.innerHTML = `<div class="hint">Aucun comptage de caisse enregistré en ${reg.annee}. Comptez l'argent dans « Compter la caisse » : l'application le compare au solde du journal, ce lot compris, et garde l'historique des comptages. C'est le contrôle qui montre qu'aucune écriture n'a été mal lue.</div>` + bouton;
+      return;
+    }
+    const livre = R.balanceAt(reg, dernier.date);
+    const ecart = P.round2(dernier.total - livre);
+    const juste = Math.abs(ecart) < 0.005;
+    box.innerHTML = `<div class="balance-box ${juste ? 'ok' : 'err'}">Dernier comptage enregistré, le ${escapeHtml(P.isoToDisplay(dernier.date))} : <b>${escapeHtml(fmtCHF(dernier.total))}</b> en caisse. ` +
+      `Solde du journal à cette date : ${escapeHtml(fmtCHF(livre))}. ${juste ? '✓ La caisse correspond au journal.' : `Écart : <b>${escapeHtml((ecart > 0 ? '+' : '') + fmtCHF(ecart))}</b>.`}</div>` +
+      `<div class="hint" style="margin-top:8px">${juste ? 'Après de nouvelles pièces, un nouveau comptage le confirme.' : 'Ouvrez « Compter la caisse » : il dit quelle pièce peut expliquer l\'écart.'}</div>` + bouton;
   }
 
   /** Écritures à prendre en compte pour le rapprochement : jusqu'à la date du comptage si elle est indiquée. */
@@ -1977,6 +2272,7 @@
     if (!b) return;
     const c = lotChecks();
     if (b.dataset.check === 'review') { openReview(c.jamaisVues[0] ? c.jamaisVues[0].id : null); return; }
+    if (b.dataset.check === 'next') { els.step3.scrollIntoView({ behavior: 'smooth', block: 'start' }); gotoNextDoubt(null); return; }
     const list = b.dataset.check === 'dup'
       ? state.entries.filter((e) => c.doublons.includes(Number(e.no)))
       : b.dataset.check === 'err' ? c.incompletes : c.aVerifier;
@@ -1987,6 +2283,8 @@
 
   /** Solde réel compté tel que tapé dans le champ, ou null. */
   function soldeCompte() {
+    // avec le registre, le champ est masqué : le rapprochement se fait dans « Compter la caisse »
+    if (state.mode === 'registre' && registre()) return null;
     const v = els.checkBalance.value.trim();
     if (v === '') return null;
     const n = window.CaisseRegistre ? window.CaisseRegistre.parseAmountInput(v) : Number(v.replace(',', '.'));
@@ -2003,24 +2301,42 @@
 
   function renderTotals() {
     const opening = currentOpening();
-    // seulement les écritures qui ne sont pas déjà dans la base : sinon, après « Ajouter au
-    // registre », les quatre tuiles ne s'additionnaient plus
-    const tNew = X.computeTotals({ amount: 0 }, freshEntries());
-    const tAll = X.computeTotals(opening, allEntriesForExcel());
-    const exist = existingEntries();
-    const cards = [
-      ['Solde de départ' + (state.mode !== 'new' && exist.length ? (state.mode === 'registre' ? ' (registre)' : ' (classeur)') : ''), fmtCHF(state.mode !== 'new' && exist.length ? X.computeTotals(opening, exist).end : opening.amount), ''],
-      ['Débits (nouvelles pièces)', '+ ' + fmtCHF(tNew.debits), ''],
-      ['Crédits (nouvelles pièces)', '− ' + fmtCHF(tNew.credits), ''],
-      ['Solde final', fmtCHF(tAll.end), 'end'],
-    ];
+    const reg = state.mode === 'registre' ? registre() : null;
+    let cards;
+    if (reg) {
+      // Le lot est déjà au journal : on montre ce qu'il y a apporté. Les tuiles disaient « Débits
+      // (nouvelles pièces) + 0.00 » juste après la lecture de 552.00 d'entrées, et un « solde de
+      // départ » qui comprenait déjà le lot. Ici, avant + entrées − sorties = avec.
+      const b = L.bilanDuLot(reg, state.entries.filter((e) => !e.manual && e.sourceKey));
+      cards = [
+        ['Journal avant ce lot', fmtCHF(b.avant), ''],
+        ['Entrées de ce lot (débits)', '+ ' + fmtCHF(b.entrees), ''],
+        ['Sorties de ce lot (crédits)', '− ' + fmtCHF(b.sorties), ''],
+        ['Solde du journal avec ce lot', fmtCHF(b.avec), 'end'],
+      ];
+    } else {
+      // seulement les écritures qui ne sont pas déjà dans le classeur : sinon les quatre tuiles
+      // ne s'additionnaient plus
+      const tNew = X.computeTotals({ amount: 0 }, freshEntries());
+      const tAll = X.computeTotals(opening, allEntriesForExcel());
+      const exist = existingEntries();
+      cards = [
+        [state.mode !== 'new' && exist.length ? 'Solde du classeur' : 'Solde à nouveau', fmtCHF(state.mode !== 'new' && exist.length ? X.computeTotals(opening, exist).end : opening.amount), ''],
+        ['Entrées (débits), nouvelles pièces', '+ ' + fmtCHF(tNew.debits), ''],
+        ['Sorties (crédits), nouvelles pièces', '− ' + fmtCHF(tNew.credits), ''],
+        ['Solde final', fmtCHF(tAll.end), 'end'],
+      ];
+    }
     els.totals.innerHTML = cards.map(([l, v, c]) => `<div class="t ${c}"><div class="l">${escapeHtml(l)}</div><div class="v">${escapeHtml(v)}</div></div>`).join('');
   }
 
   function refreshAll() {
     renderOpeningHint(); // signale un solde à nouveau tapé mais illisible
-    // les écritures lues entrent au journal (une seule liste) ; sans effet si rien n'a changé
-    verserAuJournal().catch((e) => console && console.warn && console.warn('versement au journal', e));
+    // D'abord ce que le journal dit du lot (pièces vérifiées ou supprimées dans la saisie), puis ce
+    // que le lot apporte au journal (une seule liste) ; sans effet si rien n'a changé. Une erreur
+    // d'enregistrement n'est plus avalée : saveReg la dit, et le bandeau du lot (renderJournalLink).
+    accorderAuJournal();
+    verserAuJournal().catch(() => { /* dite par saveReg et par le bandeau du lot */ });
     renderJournalLink();
     const has = state.entries.length > 0;
     els.step3.classList.toggle('hidden', !has);
@@ -2286,24 +2602,82 @@
       scanKey: e.sourceKey, no: e.no, date: e.date, compte: e.compte, libelle: e.libelle,
       debit: e.debit, credit: e.credit, page: e.page,
       warnings: (e.warnings || []).slice(0, 12),
+      // ce que la personne a fait ici et qui doit valoir au journal (lot.js, verser)
+      verifie: e.verifDemande, corrige: !!e.corrDemande,
+      ligne: e,
     }));
+  }
+
+  /** Le registre ouvert a-t-il changé d'année ? Les clés vues au journal ne valent que pour la sienne. */
+  function connuesDe(reg) {
+    if (state.connues.annee !== reg.annee) state.connues = { annee: reg.annee, cles: new Set() };
+    return state.connues.cles;
+  }
+
+  /**
+   * Ce que le journal dit du lot, reporté à l'écran : une pièce vérifiée au journal l'est ici aussi
+   * — coche et valeurs, le journal fait foi, corrections de la fiche comprises —, et une pièce
+   * supprimée du journal quitte le lot au lieu d'y être remise au versement suivant. Une coche ou
+   * une correction faite ici et pas encore versée n'est pas écrasée.
+   */
+  function accorderAuJournal() {
+    const reg = state.mode === 'registre' ? registre() : null;
+    if (!reg) return;
+    const r = L.accorder(reg, state.entries.filter((e) => !e.manual && e.sourceKey), connuesDe(reg));
+    for (const { entree: e, verifiee, valeurs } of r.lignes) {
+      if (e.verifDemande === undefined) e.checked = verifiee;
+      if (valeurs && !e.corrDemande) { Object.assign(e, valeurs); e.edited = true; }
+    }
+    if (r.retirees.length) {
+      for (const e of r.retirees) { state.ecartees.add(e.sourceKey); state.connues.cles.delete(e.sourceKey); }
+      const partis = new Set(r.retirees);
+      state.entries = state.entries.filter((e) => !partis.has(e));
+      const nos = r.retirees.map((e) => (e.no == null ? '?' : e.no)).join(', ');
+      notice(els.pdfNotices, 'ok', r.retirees.length > 1
+        ? `Les pièces n° ${escapeHtml(nos)} ont été supprimées du journal : elles sont retirées de ce lot.`
+        : `La pièce n° ${escapeHtml(nos)} a été supprimée du journal : elle est retirée de ce lot.`);
+    }
+  }
+
+  /**
+   * Enregistre le registre après un versement. Une erreur n'est plus avalée : saveReg la dit
+   * (notice), le bandeau du lot aussi, et ce qui a été versé reste dans le registre ouvert — le
+   * versement suivant réessaie de l'enregistrer, même s'il n'a rien de neuf à verser.
+   */
+  async function enregistrerJournal() {
+    let erreur = null;
+    versementEnCours = true; // saveReg prévient l'écran des scans : on ne se relance pas soi-même
+    try { await window.CaisseSaisie.saveReg(); } catch (e) { erreur = e; } finally { versementEnCours = false; }
+    state.versement.erreur = erreur ? ((erreur && erreur.message) || String(erreur)) : null;
+    state.versement.enAttente = !!erreur;
+    try { window.CaisseSaisie.renderJournal(); } catch (e) { /* l'affichage suivra */ }
+    renderJournalLink();
+    if (erreur) throw erreur;
   }
 
   async function verserAuJournal() {
     if (versementEnCours || state.mode !== 'registre') return null;
     const reg = registre();
     if (!reg || !window.CaisseSaisie || !window.CaisseRegistre) return null;
+    const connues = connuesDe(reg);
     const entries = scanEntries();
-    if (!entries.length) return null;
-    const res = window.CaisseRegistre.syncScanBatch(reg, entries);
-    if (!(res.ajoutees.length || res.misesAJour.length || res.rattachees.length)) return res;
-    versementEnCours = true; // saveReg prévient l'écran des scans : on ne se relance pas soi-même
-    try {
-      await window.CaisseSaisie.saveReg();
-      window.CaisseSaisie.renderJournal();
-    } finally { versementEnCours = false; }
-    renderJournalLink();
-    if (res.ajoutees.length) joindreImages(res.ajoutees);
+    const res = entries.length ? L.verser(reg, entries, { connues }) : null;
+    // Ce que le journal porte désormais de ce lot : si l'une de ces pièces en disparaît, c'est que
+    // la personne l'a supprimée (accorderAuJournal). Et les gestes faits ici y sont passés : le
+    // registre ouvert les porte, on peut les oublier.
+    const presentes = new Set(reg.pieces.map((p) => p.scanKey).filter(Boolean));
+    for (const x of entries) {
+      if (presentes.has(x.scanKey)) connues.add(x.scanKey);
+      if (x.ligne.verifDemande === x.verifie) delete x.ligne.verifDemande;
+      if (x.corrige) delete x.ligne.corrDemande;
+    }
+    if (res && (res.corrigees.length || res.nonCorrigees.length)) {
+      state.versement.corrigees = res.corrigees.map((p) => p.no);
+      state.versement.nonCorrigees = res.nonCorrigees.map((p) => p.no);
+    }
+    if (!(L.aChange(res) || state.versement.enAttente)) return res;
+    await enregistrerJournal();
+    if (res && res.ajoutees.length) joindreImages(res.ajoutees);
     return res;
   }
 
@@ -2329,8 +2703,7 @@
         } catch (err) { /* sans image : la pièce reste au journal */ }
       }
       if (n) {
-        versementEnCours = true;
-        try { await window.CaisseSaisie.saveReg(); window.CaisseSaisie.renderJournal(); } finally { versementEnCours = false; }
+        try { await enregistrerJournal(); } catch (err) { /* dit par saveReg et le bandeau du lot */ }
       }
     } finally { imagesEnCours = false; }
   }
@@ -2349,43 +2722,128 @@
     return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
   }
 
-  /** Retire du journal les pièces de ce lot qui n'ont pas encore été vérifiées. */
+  /**
+   * Retire du journal les pièces de ce lot qui n'ont pas encore été vérifiées, sans décharger les
+   * fichiers (les essais s'en servent ; à l'écran, « Retirer ce lot » retire aussi les fichiers,
+   * sans quoi le versement suivant les remettrait).
+   */
   async function retirerDuJournal() {
     const reg = registre();
     if (!reg || !window.CaisseRegistre || !window.CaisseSaisie) return 0;
-    const partis = window.CaisseRegistre.removeScanBatch(reg, scanEntries().map((e) => e.scanKey));
+    let partis = [];
+    for (const d of state.docs) if (d.empreinte) partis = partis.concat(L.retirerFichier(reg, d.empreinte));
+    const cles = scanEntries().map((e) => e.scanKey);
+    partis = partis.concat(window.CaisseRegistre.removeScanBatch(reg, cles));
+    for (const k of cles) state.connues.cles.delete(k); // retirées à dessein, pas supprimées dans la saisie
     if (!partis.length) return 0;
-    versementEnCours = true;
-    try { await window.CaisseSaisie.saveReg(); window.CaisseSaisie.renderJournal(); } finally { versementEnCours = false; }
-    renderJournalLink();
+    await enregistrerJournal();
     return partis.length;
   }
 
+  /**
+   * Le bandeau du lot, sous le contrôle : où sont les pièces lues, combien restent à vérifier —
+   * ou, si l'enregistrement a échoué, qu'elles ne sont PAS encore dans les fichiers. Il disait
+   * « déjà dans le journal » dans tous les cas, erreur d'enregistrement comprise.
+   */
   function renderJournalLink() {
     const box = document.getElementById('journalLink');
     if (!box) return;
     const reg = registre();
-    if (state.mode !== 'registre' || !reg || !state.entries.some((e) => !e.manual)) { box.innerHTML = ''; return; }
-    const aVerifier = window.CaisseRegistre.pendingPieces(reg).length;
-    box.innerHTML = `<div class="notice ok">Ces écritures sont <b>déjà dans le journal</b> du registre ${reg.annee} : il n'y a qu'une seule liste. ` +
-      (aVerifier ? `<b>${aVerifier}</b> pièce(s) y sont marquées « à vérifier » tant que vous ne les avez pas regardées. ` : '') +
-      `<button type="button" class="small" data-journal="voir">Ouvrir le journal</button> ` +
-      `<button type="button" class="small danger" data-journal="retirer">Retirer ce lot du journal</button></div>`;
+    if (reg && state.versement.erreur) {
+      box.innerHTML = `<div class="notice err"><b>Le journal n'a pas pu être enregistré</b> : ${escapeHtml(state.versement.erreur)}. ` +
+        'Les pièces lues sont à l\'écran et dans le journal ouvert, mais pas encore dans les fichiers de l\'application : ne fermez pas l\'application avant d\'avoir réessayé. ' +
+        '<button type="button" class="small" data-journal="reessayer">Réessayer l\'enregistrement</button></div>';
+      return;
+    }
+    const lot = state.entries.filter((e) => !e.manual && e.sourceKey);
+    if (state.mode !== 'registre' || !reg || !lot.length) { box.innerHTML = ''; return; }
+    const b = L.bilanDuLot(reg, lot);
+    if (!b.pieces.length && !b.rattachees.length) { box.innerHTML = ''; return; }
+    const parts = [];
+    if (b.pieces.length) parts.push(`${b.pieces.length} pièce(s) ajoutée(s)`);
+    if (b.rattachees.length) parts.push(`${b.rattachees.length} déjà saisie(s) à la main`);
+    const corr = state.versement.corrigees || [];
+    const nonCorr = state.versement.nonCorrigees || [];
+    box.innerHTML = `<div class="notice ok">Ce lot est <b>dans le journal ${reg.annee}</b> (${parts.join(', ')}) : c'est la même liste qu'en Saisie des pièces. ` +
+      (b.aVerifier
+        ? `<b>${b.aVerifier}</b> pièce(s) y ${b.aVerifier > 1 ? 'sont encore marquées' : 'est encore marquée'} « à vérifier » : cochez « Vérifié » ici ou dans le journal, c'est la même chose. `
+        : 'Toutes ses pièces sont vérifiées. ') +
+      (corr.length ? `Correction reportée au journal : n° ${escapeHtml(corr.join(', '))}. ` : '') +
+      (nonCorr.length ? `<br>N° ${escapeHtml(nonCorr.join(', '))} : pièce saisie à la main, la lecture ne la modifie pas — corrigez-la dans Saisie des pièces. ` : '') +
+      '<button type="button" class="small" data-journal="voir">Ouvrir le journal</button> ' +
+      '<button type="button" class="small danger" data-journal="retirer">Retirer ce lot…</button></div>';
   }
 
+  // Boutons des bandeaux de l'espace (lot au journal, retrait, fiches signées)
   {
-    const box = document.getElementById('journalLink');
-    if (box) box.addEventListener('click', async (ev) => {
+    const panneau = document.getElementById('panelScan');
+    if (panneau) panneau.addEventListener('click', async (ev) => {
+      const s = ev.target.closest('button[data-signees]');
+      if (s) { const d = state.docs.find((x) => x.id === Number(s.dataset.signees)); if (d) envoyerALaBoite(d, s); return; }
       const b = ev.target.closest('button[data-journal]');
       if (!b) return;
       if (b.dataset.journal === 'voir') { showPanel('panelSaisie'); return; }
-      const reg = registre();
-      const n = window.CaisseRegistre.pendingPieces(reg).filter((p) => p.scanKey).length;
-      if (!confirm(`Retirer du journal les ${n} pièce(s) de ce lot qui ne sont pas encore vérifiées ?\n\nCelles que vous avez déjà vérifiées restent au journal.`)) return;
-      const partis = await retirerDuJournal();
-      notice(els.pdfNotices, 'ok', `${partis} pièce(s) retirée(s) du journal.`);
+      if (b.dataset.journal === 'retirer') { toutRetirer(); return; }
+      if (b.dataset.journal === 'reessayer') {
+        b.disabled = true;
+        state.versement.enAttente = true;
+        try {
+          await verserAuJournal();
+          notice(els.pdfNotices, 'ok', 'Journal enregistré.');
+        } catch (e) { /* toujours en échec : saveReg et le bandeau le disent */ } finally { b.disabled = false; }
+      }
     });
   }
+
+  /**
+   * Fiches imprimées par l'application et revenues signées, déposées ici par erreur : elles vont à
+   * la Boîte de réception, qui joint chaque scan à sa pièce. Dans le fichier HTML seul, il n'y a
+   * pas de boîte d'attente : on joint directement ce qui est reconnu, après accord.
+   */
+  async function envoyerALaBoite(d, bouton) {
+    const B = window.CaisseReception;
+    if (!B) return;
+    let octets = null;
+    try { octets = await d.doc.getData(); } catch (e) { octets = null; }
+    if (!octets) { notice(els.pdfNotices, 'err', `« ${escapeHtml(d.name)} » n'a pas pu être relu.`); return; }
+    if (bouton) bouton.disabled = true;
+    try {
+      if (window.CaisseScan && B.accueillir) {
+        const r = await B.accueillir(d.name, octets);
+        if (!r.ok) { notice(els.pdfNotices, 'err', `« ${escapeHtml(d.name)} » n'a pas pu être mis dans la Boîte de réception : ${escapeHtml(r.raison || '')}`); return; }
+        await oterFichiers([d]);
+        els.pdfNotices.innerHTML = '';
+        afterDocsChanged();
+        showPanel('panelReception');
+        return;
+      }
+      const { documents } = await B.depouiller(d.name, octets);
+      const trouvees = documents.filter((x) => x.etat === 'trouvee');
+      const autres = documents.length - trouvees.length;
+      if (!trouvees.length) {
+        notice(els.pdfNotices, 'warn', `Aucune fiche de « ${escapeHtml(d.name)} » ne correspond à une pièce des registres de ce poste : rien n'a été joint.`);
+        return;
+      }
+      const liste = trouvees.map((x) => `n° ${x.piece.no}`).join(', ');
+      if (!confirm(`Joindre le scan signé de ${trouvees.length} pièce(s) (${liste}) à sa ligne du journal ?` +
+        (autres ? `\n\n${autres} document(s) du fichier ne correspondent à aucune pièce de ce poste : ils ne seront pas joints.` : ''))) return;
+      const echecs = [];
+      for (const x of trouvees) { const r = await B.joindre(x); if (!r.ok) echecs.push(`n° ${x.piece.no} : ${r.raison}`); }
+      await oterFichiers([d]);
+      els.pdfNotices.innerHTML = '';
+      afterDocsChanged();
+      notice(els.pdfNotices, echecs.length ? 'warn' : 'ok', `${trouvees.length - echecs.length} scan(s) signé(s) joint(s) à leur pièce.` +
+        (echecs.length ? ` Non joints : ${escapeHtml(echecs.join(' ; '))}.` : ''));
+    } finally { if (bouton) bouton.disabled = false; }
+  }
+
+  // Aiguillage entre les espaces : tout bouton « data-aller » ouvre l'espace qu'il nomme.
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-aller]');
+    if (!b || !document.getElementById(b.dataset.aller)) return;
+    showPanel(b.dataset.aller);
+    try { window.scrollTo({ top: 0 }); } catch (e) { /* ignore */ }
+  });
 
   /* ---------------- Vers le registre de l'année (onglet Saisie) ---------------- */
   const btnToRegister = document.getElementById('btnToRegister');

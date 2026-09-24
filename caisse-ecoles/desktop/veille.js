@@ -153,6 +153,14 @@ function creerVeille(opts) {
   let enCours = false;
   let minuteur = null;
   const compteur = { tours: 0, traites: 0, revoir: 0, erreurs: 0 };
+  /**
+   * Les derniers scans mis « à revoir », avec leur raison : l'écran n'en montrait qu'un compteur,
+   * sans dire lequel ni pourquoi. Les plus récents seulement — c'est un signal, pas une archive :
+   * la note .txt à côté du fichier garde la raison pour toujours.
+   */
+  const aRevoir = [];
+  const A_REVOIR_MAX = 20;
+  let dernierTour = null;
 
   function noter(ligne) {
     try { journal(`[veille] ${ligne}`); } catch (e) { /* le journal ne doit jamais faire tomber la veille */ }
@@ -191,6 +199,8 @@ function creerVeille(opts) {
       const note = `${nomOrigine}\n${new Date(t).toISOString()}\n\n${raison}\n`;
       try { await fsp.writeFile(path.join(dest, `${nom.slice(0, -4)}.txt`), note, 'utf8'); } catch (e) { /* le PDF est sauf, c'est l'essentiel */ }
       compteur.revoir += 1;
+      aRevoir.push({ nom: nomOrigine, raison, quand: new Date(t).toISOString(), dossier: racine, fichier: nom });
+      if (aRevoir.length > A_REVOIR_MAX) aRevoir.splice(0, aRevoir.length - A_REVOIR_MAX);
       noter(`à revoir : ${nomOrigine} — ${raison}`);
     } else {
       compteur.traites += 1;
@@ -410,6 +420,7 @@ function creerVeille(opts) {
         sortie.erreurs.push(...r.erreurs);
       }
       compteur.tours += 1;
+      dernierTour = maintenant();
     } finally {
       enCours = false;
     }
@@ -428,7 +439,7 @@ function creerVeille(opts) {
     if (minuteur) { clearInterval(minuteur); minuteur = null; }
   }
 
-  const etat = () => Object.assign({ poste, instance, actif: !!minuteur, enCours }, compteur);
+  const etat = () => Object.assign({ poste, instance, actif: !!minuteur, enCours, dernierTour, aRevoir: aRevoir.map((x) => Object.assign({}, x)) }, compteur);
 
   return { tour, demarrer, arreter, etat, poste, instance };
 }

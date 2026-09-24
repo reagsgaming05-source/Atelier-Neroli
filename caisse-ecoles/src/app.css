@@ -492,6 +492,18 @@ h3.regbloc .legend { font-weight: 400; }
 .dgeo-pending .item .what b { color: var(--accent); }
 
 /* ---------------------------------------------------------------- écran des pièces scannées */
+/* Quel papier va où : en tête de Pièces scannées et de la Boîte de réception, les trois chemins
+   côte à côte, celui où l'on est marqué. */
+.aiguillage { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: -6px 0 18px; }
+.aiguillage .aig-t { align-self: center; font-size: 12px; font-weight: 600; color: var(--muted); margin-right: 4px; }
+.aiguillage .aig { flex: 1 1 220px; height: auto; min-height: 50px; padding: 8px 12px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; text-align: left; line-height: 1.3; }
+.aiguillage .aig b { font-size: 13px; color: var(--ink); }
+.aiguillage .aig small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.aiguillage .aig.ici { background: var(--accent-soft); border-color: #cddcf7; box-shadow: none; cursor: default; }
+.aiguillage .aig.ici b { color: var(--accent); }
+details.technique { margin-top: 12px; font-size: 12px; }
+details.technique > summary { cursor: pointer; color: var(--muted); font-weight: 500; }
+details.technique > .legend { margin-top: 6px; }
 .steps { display: flex; flex-direction: column; gap: 0; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; margin-top: 12px; }
 @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
@@ -718,6 +730,13 @@ table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-
 .rec-t b { font-variant-numeric: tabular-nums; }
 .rec .chip { flex: none; align-self: flex-start; }
 .rec-act { flex: none; display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+/* toutes les pages d'un document, en petit : une fiche collée à la pièce voisine doit se voir */
+.rec-pages { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.rec-pages canvas { width: 45px; height: 64px; border: 1px solid var(--line); border-radius: 4px; background: #f1f5f9; }
+.rec-ratt { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.rec-ratt input { width: 76px; height: 28px; padding: 0 8px; font-size: 12.5px; }
+.rec-act .rec-sec { font-size: 12px; }
+#receptionRevoir .notice ul { margin-top: 4px; }
 #receptionListe { border: 1px solid var(--line); border-radius: 10px; background: #fff; margin-top: 12px; }
 #receptionFrame { width: 100%; height: 70vh; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 #receptionApercu { margin-top: 14px; }
