@@ -384,12 +384,13 @@
       </table>
       <div id="countErrors"></div>
       <div class="toolbar">
-        <button type="button" class="primary" id="btnCountSave"><svg class="ico"><use href="#i-save"/></svg> Enregistrer le comptage</button>
-        <button type="button" id="btnCountLoadPrev" title="Remplit les quantités avec celles du dernier comptage, pour ne corriger que ce qui a changé"><svg class="ico"><use href="#i-refresh"/></svg> Reprendre le dernier comptage</button>
-        <button type="button" id="btnReleve" title="Le formulaire officiel « Relevé de caisse », rempli avec ce comptage, à imprimer et faire viser"><svg class="ico"><use href="#i-printer"/></svg> Relevé de caisse (PDF)</button>
+        <button type="button" class="primary" id="btnCountSave"><svg class="ico"><use href="#i-save"/></svg> <span id="btnCountSaveTexte">Enregistrer le comptage</span></button>
+        <button type="button" id="btnCountLoadPrev" title="Remplit les quantités avec celles du dernier comptage enregistré, pour ne corriger que ce qui a changé : c'est un nouveau comptage, l'ancien reste dans l'historique"><svg class="ico"><use href="#i-refresh"/></svg> Partir des quantités du dernier comptage</button>
+        <button type="button" id="btnReleve" title="Le formulaire officiel « Relevé de caisse », rempli avec ce comptage, à imprimer et faire viser (les noms des visas se règlent dans « L'année »)"><svg class="ico"><use href="#i-printer"/></svg> Relevé de caisse (PDF)</button>
         <span class="spacer"></span>
-        <button type="button" class="ghost" id="btnCountNew"><svg class="ico"><use href="#i-plus"/></svg> Nouveau comptage</button>
+        <button type="button" class="ghost" id="btnCountNew"><svg class="ico"><use href="#i-plus"/></svg> <span id="btnCountNewTexte">Nouveau comptage</span></button>
       </div>
+      <div id="countNotices"></div>
     </section>
     <section class="card" id="countSoldes">
       <h2><svg class="ico"><use href="#i-wallet"/></svg> Soldes</h2>
@@ -406,7 +407,6 @@
         <tbody id="countBody"></tbody>
       </table>
     </div>
-    <div id="countNotices"></div>
   </section>
 </div>
 
@@ -641,6 +641,7 @@
 <!--INLINE_OCR-->
 <!--INLINE_EXCEL-->
 <!--INLINE_REGISTRE-->
+<!--INLINE_ANNEE-->
 <!--INLINE_QR-->
 <!--INLINE_MARQUE-->
 <!--INLINE_PDFPIECE-->

@@ -550,7 +550,8 @@ table.denoms tfoot td { border-bottom: 0; padding-top: 8px; font-weight: 600; co
 table.denoms tfoot tr:first-child td { border-top: 2px solid var(--line); padding-top: 12px; }
 table.denoms tfoot tr.grand td { font-size: 17px; color: var(--accent); padding-top: 6px; }
 .totals.kpi-col { grid-template-columns: 1fr 1fr; }
-.totals .t .d { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+/* l'explication d'un écart se lit, elle ne se devine pas : taille normale, couleur foncée */
+.totals .t .d { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.4; }
 .totals .t.end .d { color: rgba(255, 255, 255, 0.85); }
 .totals .t.err { border-color: var(--err-line); background: var(--err-soft); }
 .totals .t.ok { border-color: var(--ok-line); background: var(--ok-soft); }
