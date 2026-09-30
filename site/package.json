@@ -17,7 +17,7 @@
     "db:generate": "drizzle-kit generate",
     "test": "tsx --test \"test/*.test.ts\"",
     "e2e": "node test/parcours-offre.mjs",
-    "vitrine": "node test/figer.mjs"
+    "vitrine": "node test/figer.mjs && node test/un-seul-fichier.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

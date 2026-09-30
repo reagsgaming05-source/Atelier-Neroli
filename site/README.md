@@ -127,10 +127,15 @@ Le type se déduit de l'IBAN : la banque rejette le mélange, et le code le refu
 
 ## Montrer le site sans hébergeur (vitrine figée)
 
-`npm run vitrine` fige le site public en douze pages autonomes dans `site/vitrine/` :
-CSS intégré, polices en base64, liens internes réécrits en fichiers voisins.
-Aucun serveur, aucun script, aucune requête sortante — le dossier s'ouvre par un
-double-clic, se met sur une clé USB ou se publie tel quel.
+`npm run vitrine` fige le site public dans `site/vitrine/` : douze pages
+autonomes, CSS intégré, polices en base64, liens internes réécrits en fichiers
+voisins. Aucun serveur, aucun script, aucune requête sortante — le dossier
+s'ouvre par un double-clic, se met sur une clé USB ou se publie tel quel.
+
+Il produit en plus **`Blonay-PDF-site.html`** : les douze pages réunies en un
+seul fichier de 568 Ko, navigation comprise. Un seul fichier à envoyer par
+courriel ou à ouvrir sur un téléphone, là où le dossier complet demande de
+garder les fichiers ensemble.
 
 Le dépôt le publie sur **GitHub Pages** à chaque modification de `site/vitrine/`
 (`.github/workflows/pages.yml`), à une adresse que n'importe qui peut ouvrir sans
