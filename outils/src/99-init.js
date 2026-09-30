@@ -215,6 +215,25 @@
     // déjà un) ; « Ajouter un document » le combine au document en cours.
     let modeOuverture = '';
     const openPicker = mode => { modeOuverture = mode || ''; el.fileInput.value = ''; el.fileInput.click(); };
+    choisirDesFichiers = openPicker; // « Fusionner des PDF », dans le panneau des outils
+
+    // Replier le panneau : la place revient au document. Le choix est retenu.
+    const espace = $('.workspace'), btnReplier = $('#btn-replier');
+    const poserLeRepli = replie => {
+      espace.classList.toggle('replie', replie);
+      btnReplier.setAttribute('aria-expanded', replie ? 'false' : 'true');
+      btnReplier.title = (replie ? 'Déplier' : 'Replier') + ' le panneau (Ctrl+Maj+B)';
+      btnReplier.setAttribute('aria-label', btnReplier.title);
+      try { localStorage.setItem('blonay-panneau-replie', replie ? '1' : ''); } catch (_) {}
+      planifierAjustementBarre();
+    };
+    try { if (localStorage.getItem('blonay-panneau-replie')) poserLeRepli(true); } catch (_) {}
+    btnReplier.addEventListener('click', () => poserLeRepli(!espace.classList.contains('replie')));
+    window.addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || (e.key || '').toLowerCase() !== 'b') return;
+      e.preventDefault();
+      poserLeRepli(!espace.classList.contains('replie'));
+    });
     el.btnOpen.addEventListener('click', () => openPicker('onglet'));
     el.btnAdd.addEventListener('click', () => openPicker(''));
     el.btnChoose.addEventListener('click', () => openPicker(''));
@@ -336,9 +355,25 @@
       document.documentElement.style.setProperty('--tuile', el.zoom.value + 'px');
       try { localStorage.setItem('blonay-zoom', el.zoom.value); } catch (_) {}
     });
+    // Sans réglage retenu, la taille des vignettes se déduit de la place : sur
+    // un grand écran, quatre pages occupaient le coin supérieur gauche d'une
+    // table qui pouvait en montrer vingt, et le curseur qui aurait corrigé cela
+    // est petit, sans libellé, en bas à droite — personne ne le trouve.
+    function tuilesALaPlace() {
+      const table = $('#canvas');
+      const dispo = (table ? table.clientWidth : window.innerWidth) - 44;
+      if (dispo < 200) return null;
+      // On vise six colonnes, sans jamais sortir des bornes du curseur.
+      const large = Math.floor((dispo - 5 * 18) / 6);
+      return Math.max(120, Math.min(300, large));
+    }
     try {
       const z = localStorage.getItem('blonay-zoom');
       if (z && +z >= 120 && +z <= 300) { el.zoom.value = z; document.documentElement.style.setProperty('--tuile', z + 'px'); }
+      else {
+        const t = tuilesALaPlace();
+        if (t) { el.zoom.value = t; document.documentElement.style.setProperty('--tuile', t + 'px'); }
+      }
     } catch (_) {}
 
     // --- tiles: clicks
@@ -634,7 +669,9 @@
   }
 
   const origRender = render;
-  render = function () { origRender(); renderTools(); };
+  // La barre est remesurée après chaque rendu : passer en lecture fait
+  // apparaître les contrôles de zoom, et c'est précisément là qu'elle débordait.
+  render = function () { origRender(); renderTools(); planifierAjustementBarre(); };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

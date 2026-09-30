@@ -69,7 +69,10 @@
     (o.actions || [{ label: 'Fermer', primary: true, onClick: close }]).forEach(a => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn' + (a.primary ? ' primary' : '');
+      // « péril » : une action qu'on ne rattrape pas. Elle ne doit pas se
+      // confondre avec l'action principale voisine — c'est ainsi qu'on
+      // caviarde tout un document en croyant remplacer un mot.
+      b.className = 'tb-btn' + (a.primary ? ' primary' : '') + (a.peril ? ' peril' : '');
       b.textContent = a.label;
       if (a.id) b.id = a.id;
       b.addEventListener('click', () => a.onClick(close, api));

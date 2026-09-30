@@ -103,6 +103,9 @@
   <div class="onglets" id="onglets" hidden role="tablist" aria-label="Documents ouverts dans cette fenêtre"></div>
   <aside class="side" aria-label="Panneau latéral">
     <div class="tabs" role="tablist">
+      <button class="replier" id="btn-replier" type="button" title="Replier le panneau (Ctrl+Maj+B)" aria-label="Replier le panneau" aria-expanded="true">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 4 5.5 8l4 4"/></svg>
+      </button>
       <button class="tab" id="tab-docs" role="tab" aria-selected="true" aria-controls="pane-docs" type="button">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5H4.5A1.5 1.5 0 0 0 3 3v10a1.5 1.5 0 0 0 1.5 1.5h7A1.5 1.5 0 0 0 13 13V5z"/><path d="M9.5 1.5V5H13"/></svg>
         Documents
@@ -144,6 +147,12 @@
     </div>
 
     <div class="pane" id="pane-tools" role="tabpanel" aria-labelledby="tab-tools" hidden>
+      <div class="outil-filtre">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+        <label for="outil-q" class="sr-only">Chercher un outil</label>
+        <input type="text" id="outil-q" placeholder="Chercher un outil…" autocomplete="off" spellcheck="false">
+        <button type="button" id="outil-q-vider" class="vider" title="Effacer" aria-label="Effacer la recherche" hidden>&times;</button>
+      </div>
       <div id="tool-groups"></div>
     </div>
 

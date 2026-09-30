@@ -14,8 +14,24 @@ async function caviarderTout(page, app, terme) {
   await page.fill('#se-q', terme);
   await expect.poll(() => page.locator('#se-compte').textContent(), { timeout: 30000 }).not.toBe('');
   await page.click('#se-caviarder');
+  // Caviarder efface du texte pour de bon : l'application demande confirmation.
+  await page.click('#se-caviarder-oui');
   await expect.poll(() => app.dernier(), { timeout: 90000 }).toMatch(/caviard/i);
 }
+
+test('la confirmation protège : en renonçant, le document n\'est pas touché', async ({ app, page }) => {
+  await app.ouvrir('decision.pdf', docConfidentiel());
+  await page.click('#btn-search');
+  await page.fill('#se-q', 'Vasilakis');
+  await expect.poll(() => page.locator('#se-compte').textContent(), { timeout: 30000 }).not.toBe('');
+  await page.click('#se-caviarder');
+  await page.click('#se-caviarder-non');
+  await app.vue('organiser');
+  // Aucune annotation posée : le renoncement n'a rien écrit.
+  await expect(page.locator('#pages .tile .flag.ann')).toHaveCount(0);
+  const { octets } = await app.exporter();
+  expect(await texteDuPdf(page, octets), 'le nom est toujours là').toContain('Vasilakis');
+});
 
 test('le mot caviardé ne se relit plus dans le PDF exporté', async ({ app, page }) => {
   await app.ouvrir('decision.pdf', docConfidentiel());

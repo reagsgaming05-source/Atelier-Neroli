@@ -33,6 +33,8 @@
     $('#app-main').hidden = false;
     $('#app-status').hidden = false;
     init();
+    // La barre vient d'apparaître : c'est le premier moment où elle se mesure.
+    surveillerLaBarre();
   }
 
   async function boot() {

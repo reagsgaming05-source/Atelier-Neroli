@@ -225,6 +225,30 @@
   }
   function effacerRecherche() { recherche.marques = null; recherche.cur = -1; poserMarquesTuiles(); poserMarquesLecture(); }
 
+  // Une confirmation qui dit ce qui va se passer, et à combien d'endroits.
+  // « Êtes-vous sûr ? » ne renseigne personne ; le nombre, si.
+  function confirmerLeCaviardage(terme, occurrences) {
+    return new Promise(res => {
+      let repondu = false;
+      dialog({
+        title: 'Caviarder dans tout le document',
+        icon: IC.search,
+        build: b => {
+          b.append(note(plural(occurrences, 'occurrence', 'occurrences') + ' de « ' + terme + ' »'
+            + (occurrences > 1 ? ' seront masquées' : ' sera masquée') + ' d\'un rectangle noir, et le texte'
+            + ' correspondant sera retiré du fichier à l\'enregistrement.', 'warn'));
+          b.append(note('C\'est ce qu\'il faut avant de publier un document : le texte ne se retrouve pas en le'
+            + ' sélectionnant. Ctrl+Z défait l\'opération tant que le document n\'est pas enregistré.'));
+        },
+        onClose: () => { if (!repondu) res(false); },
+        actions: [
+          { id: 'se-caviarder-non', label: 'Annuler', onClick: close => close() },
+          { id: 'se-caviarder-oui', label: 'Caviarder', peril: true, onClick: close => { repondu = true; res(true); close(); } },
+        ],
+      });
+    });
+  }
+
   function toolSearch() {
     const q = input('se-q', 'text', '');
     q.placeholder = 'Mot ou expression à rechercher';
@@ -338,10 +362,16 @@
       onClose: () => { token++; effacerRecherche(); },
       actions: [
         { label: 'Fermer', onClick: c => c() },
-        { id: 'se-caviarder', label: 'Caviarder tout', onClick: async close => {
+        { id: 'se-caviarder', label: 'Caviarder tout', peril: true, onClick: async close => {
           const term = q.value.trim();
           if (term.length < 2 || !total) return;
           const entier = mot.input.checked;
+          // Caviarder retire le texte du fichier : c'est le geste qu'une
+          // commune fait avant de publier un dossier d'enquête, et celui qu'on
+          // ne rattrape pas une fois le PDF parti. Il se confirme, en disant
+          // combien d'occurrences et ce qui leur arrive.
+          const combien = total;
+          if (!(await confirmerLeCaviardage(term, combien))) return;
           token++; close();
           setBusy('Caviardage de « ' + term + ' »…', 0, { annuler: true });
           try {

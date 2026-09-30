@@ -123,3 +123,30 @@ test('sans document, le panneau et la table descendent jusqu\'en bas', async ({ 
   expect(bas.panneau, 'le panneau va jusqu\'en bas de l\'espace de travail').toBe(bas.espace);
   expect(bas.table, 'la table aussi').toBe(bas.espace);
 });
+
+// La barre d'outils se resserrait par paliers de largeur — 1460, 1320, 1080,
+// 960 px. Entre deux paliers, rien ne rattrapait : à 1500 px, la taille
+// d'ouverture de la fenêtre, elle mesurait 1596 px et « Enregistrer » sortait
+// de l'écran. Et elle tenait tant qu'aucun document n'était ouvert, pour
+// déborder dès qu'on en ouvrait un, les contrôles de zoom apparaissant.
+// On mesure donc à des largeurs choisies entre les anciens paliers.
+test('la barre d\'outils tient à toutes les largeurs, document ouvert compris', async ({ app, page }) => {
+  await app.ouvrir('rapport.pdf', pdfVide(3));
+  for (const largeur of [1920, 1600, 1500, 1440, 1366, 1280, 1200, 1100, 1000, 950, 901]) {
+    await page.setViewportSize({ width: largeur, height: 820 });
+    await page.waitForTimeout(120);
+    const etat = await page.evaluate(() => {
+      const barre = document.querySelector('#app-toolbar');
+      const enregistrer = document.querySelector('#btn-export').getBoundingClientRect();
+      return {
+        deborde: barre.scrollWidth > barre.clientWidth + 1,
+        bordDroit: Math.round(enregistrer.right),
+        largeurBouton: Math.round(enregistrer.width),
+        ecran: document.documentElement.clientWidth,
+      };
+    });
+    expect(etat.deborde, `la barre déborde à ${largeur} px`).toBe(false);
+    expect(etat.largeurBouton, `« Enregistrer » a disparu à ${largeur} px`).toBeGreaterThan(0);
+    expect(etat.bordDroit, `« Enregistrer » sort de l'écran à ${largeur} px`).toBeLessThanOrEqual(etat.ecran + 1);
+  }
+});

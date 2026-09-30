@@ -240,6 +240,17 @@
     el.btnPrint.disabled = !has || state.busy;
     el.btnSelectAll.disabled = !has;
     el.btnSearch.disabled = !has;
+    // Le champ du nom est juste à gauche d'« Enregistrer » : on croit que le
+    // bouton écrit là. Dans l'application, il réécrit le fichier ouvert ; le
+    // champ sert à « Enregistrer sous… » et aux exports. L'infobulle le dit,
+    // et nomme le fichier qui sera réellement remplacé.
+    if (state.bureau) {
+      const vise = typeof cheminDocument === 'function' ? cheminDocument() : '';
+      el.btnExport.title = (vise ? 'Enregistrer « ' + nomDe(vise) + ' » (Ctrl+S)' : 'Enregistrer (Ctrl+S)')
+        + ' · Enregistrer sous… : Ctrl+Maj+S';
+      const champ = el.filename && el.filename.closest('.filename');
+      if (champ) champ.title = 'Nom proposé pour « Enregistrer sous… » et les exports. « Enregistrer » réécrit le fichier ouvert.';
+    }
     $$('[data-tool]').forEach(b => {
       const need = b.dataset.need;
       b.disabled = state.busy || (need === 'pages' && !has) || (need === 'sel' && !state.selected.size) || (need === 'zip' && (!has || !FEAT.zip));
