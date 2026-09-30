@@ -18,7 +18,7 @@
     "smoke": "node smoke-test.js",
     "comptes": "node comptes-test.js",
     "maj": "node maj-test.js",
-    "dist:mac": "npm run prepare-app && electron-builder --mac dir"
+    "dist:mac": "npm run prepare-app && electron-builder --mac dir --universal"
   },
   "devDependencies": {
     "electron": "33.4.11",
