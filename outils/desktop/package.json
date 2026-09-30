@@ -44,7 +44,8 @@
       "app/**",
       "build/icon.png",
       "build/icon.ico",
-      "build/icon-1024.png"
+      "build/icon-1024.png",
+      "build/entitlements.mac.plist"
     ],
     "asar": true,
     "win": {
@@ -73,8 +74,11 @@
       ],
       "icon": "build/icon-1024.png",
       "category": "public.app-category.productivity",
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "gatekeeperAssess": false,
+      "notarize": false
     }
   }
 }

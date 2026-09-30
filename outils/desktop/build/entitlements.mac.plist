@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Les autorisations dont Electron a besoin sous « hardened runtime », qui est
+  lui-même exigé par la notarisation d'Apple.
+
+  Chromium compile le JavaScript en code machine pendant l'exécution, et charge
+  ses propres bibliothèques : sans ces quatre lignes, l'application est bien
+  notarisée mais se ferme au démarrage, ce qui est pire qu'un refus franc.
+-->
+<plist version="1.0">
+<dict>
+  <!-- La compilation à la volée du JavaScript. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <!-- Le code produit à la volée n'est pas signé : il ne peut pas l'être. -->
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <!-- Electron passe par des variables d'environnement pour ses bibliothèques. -->
+  <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+  <true/>
+  <!-- Les bibliothèques d'Electron sont signées par nous, pas par Apple. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>

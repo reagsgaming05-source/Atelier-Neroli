@@ -364,10 +364,32 @@ jobs:
         working-directory: outils/desktop
         run: npm ci
 
+      # Le certificat « Developer ID Application », exporté en .p12 puis encodé
+      # en base64 dans les secrets du dépôt. Sans lui, la construction continue
+      # et signe « ad hoc » : l'application tourne, mais macOS demandera son
+      # accord à chaque poste.
+      - name: Certificat de signature (s'il est fourni)
+        id: certificat
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERTIFICAT_P12 }}
+        run: |
+          if [ -n "$CSC_LINK" ]; then
+            echo "signe=oui" >> "$GITHUB_OUTPUT"
+            echo "Certificat fourni : l'application sera signée puis notarisée."
+          else
+            echo "signe=non" >> "$GITHUB_OUTPUT"
+            echo "::warning::Aucun certificat Apple : signature ad hoc. macOS demandera l'accord de chaque utilisateur."
+          fi
+
       - name: Empaqueter (Electron, binaire universel)
         working-directory: outils/desktop
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          # Quand le certificat est là, electron-builder le trouve par CSC_LINK
+          # et signe pour de bon. Sinon on lui interdit de chercher une identité
+          # sur la machine, et nous signerons ad hoc plus bas.
+          CSC_LINK: ${{ secrets.MAC_CERTIFICAT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICAT_MOT_DE_PASSE }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CERTIFICAT_P12 != '' && 'true' || 'false' }}
         run: npm run dist:mac
 
       - name: Assembler le dossier
@@ -403,14 +425,15 @@ jobs:
           done
           echo "architectures : $(lipo -archs "$binaire")"
 
-          # Nous n'avons pas de certificat Apple, donc pas de notarisation. Mais
-          # une signature « ad hoc » — le tiret à la place d'une identité — reste
-          # nécessaire : sans elle, un Mac à puce Apple refuse de lancer le
-          # paquet, et ce sont toutes les machines vendues depuis 2020. Le lieur
-          # en pose une sur le binaire, jamais sur le paquet : c'est à nous de le
-          # faire, après que tout est en place.
-          codesign --force --deep --sign - "$paquet"
-          codesign --verify --deep --strict "$paquet" || { echo "::error::le paquet n'est pas signé, même ad hoc"; exit 1; }
+          # Sans certificat Apple, une signature « ad hoc » — le tiret à la place
+          # d'une identité — reste nécessaire : sans elle, un Mac à puce Apple
+          # refuse de lancer le paquet, et ce sont toutes les machines vendues
+          # depuis 2020. Le lieur en pose une sur le binaire, jamais sur le
+          # paquet : c'est à nous de le faire, une fois tout en place.
+          if [ "${{ steps.certificat.outputs.signe }}" != "oui" ]; then
+            codesign --force --deep --sign - "$paquet"
+          fi
+          codesign --verify --deep --strict "$paquet" || { echo "::error::le paquet n'est pas signé"; exit 1; }
           codesign -dv "$paquet" 2>&1 | head -6
 
       - name: Test de fumée de l'application empaquetée
@@ -426,6 +449,39 @@ jobs:
       - name: Comptes — la connexion d'abord, sur l'application empaquetée
         working-directory: outils/desktop
         run: node comptes-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
+
+      # Notariser, c'est soumettre le paquet à Apple, qui l'analyse et rend un
+      # « ticket ». Agrafé au paquet, ce ticket permet à n'importe quel Mac de
+      # l'ouvrir sans rien demander, même sans connexion — c'est la seule façon
+      # d'éviter le clic droit puis « Ouvrir » sur chaque poste.
+      #
+      # L'agrafage se fait sur le paquet, avant le zip livré : un ticket posé
+      # après ne voyagerait pas avec l'application.
+      - name: Notariser chez Apple
+        if: steps.certificat.outputs.signe == 'oui'
+        working-directory: outils/desktop
+        env:
+          CLE_API: ${{ secrets.MAC_API_CLE_P8 }}
+          CLE_ID: ${{ secrets.MAC_API_CLE_ID }}
+          CLE_EMETTEUR: ${{ secrets.MAC_API_EMETTEUR }}
+        run: |
+          set -euo pipefail
+          paquet=dist/BlonayPDF/BlonayPDF.app
+          cle="$RUNNER_TEMP/cle-api.p8"
+          printf '%s' "$CLE_API" | base64 --decode > "$cle"
+          trap 'rm -f "$cle"' EXIT
+
+          # Apple veut une archive, pas un dossier.
+          ditto -c -k --keepParent "$paquet" "$RUNNER_TEMP/a-notariser.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/a-notariser.zip" \
+            --key "$cle" --key-id "$CLE_ID" --issuer "$CLE_EMETTEUR" \
+            --wait --timeout 30m
+
+          xcrun stapler staple "$paquet"
+          xcrun stapler validate "$paquet" || { echo "::error::le ticket de notarisation n'est pas agrafé"; exit 1; }
+          # Le verdict tel que le rendra le Mac d'en face.
+          spctl -a -vvv -t exec "$paquet"
+          echo "Notarisé et agrafé."
 
       - name: Archive zip
         working-directory: outils/desktop
@@ -452,6 +508,14 @@ jobs:
           echo "liens symboliques préservés : $liens"
           test "$liens" -gt 0 || { echo "::error::aucun lien symbolique : le paquet est cassé"; exit 1; }
           codesign --verify --deep "$essai/BlonayPDF/BlonayPDF.app" || { echo "::error::la signature n'a pas survécu au zip"; exit 1; }
+          if [ "${{ steps.certificat.outputs.signe }}" = "oui" ]; then
+            # C'est ici que se joue la promesse faite à l'utilisateur : une
+            # application qui s'ouvre d'un double-clic. On la vérifie sur le zip
+            # décompressé, c'est-à-dire sur ce qu'il recevra vraiment.
+            xcrun stapler validate "$essai/BlonayPDF/BlonayPDF.app" || { echo "::error::le ticket de notarisation n'a pas survécu au zip"; exit 1; }
+            spctl -a -vvv -t exec "$essai/BlonayPDF/BlonayPDF.app" || { echo "::error::macOS refuserait d'ouvrir cette application"; exit 1; }
+            echo "Notarisation vérifiée sur l'archive livrée."
+          fi
           rm -rf "$essai"
 
       - uses: actions/upload-artifact@v4
@@ -471,9 +535,13 @@ jobs:
           titre="Blonay PDF — Mac (dernière version)"
           zip="$GITHUB_WORKSPACE/BlonayPDF-mac.zip"
           test -f "$zip" || { echo "::error::zip introuvable"; exit 1; }
-          notes=$(cat <<'NOTES'
-          Version Mac : décompressez le zip, puis **clic droit sur `BlonayPDF.app` > Ouvrir** au premier lancement.
-          Ce clic droit est nécessaire une seule fois : l'application n'est pas signée par un développeur inscrit chez Apple, alors macOS demande votre accord. Voir `LISEZMOI-mac.txt`.
+          if [ "${{ steps.certificat.outputs.signe }}" = "oui" ]; then
+            ouverture='Décompressez le zip et double-cliquez sur `BlonayPDF.app`. Rien d'"'"'autre : l'"'"'application est signée et notarisée par Apple, elle s'"'"'ouvre sur n'"'"'importe quel Mac, y compris un poste d'"'"'entreprise.'
+          else
+            ouverture='Décompressez le zip, puis **clic droit sur `BlonayPDF.app` > Ouvrir** au premier lancement. Ce clic droit n'"'"'est nécessaire qu'"'"'une fois : cette version n'"'"'est pas notarisée, alors macOS demande votre accord. Voir `LISEZMOI-mac.txt`.'
+          fi
+          notes=$(cat <<NOTES
+          $ouverture
           Binaire universel : Mac Intel et Mac à puce Apple.
           Aucune installation, aucun navigateur : tout est inclus (lecture, organisation, correction du texte, annotations, formulaires, caviardage, OCR, impression avec livret).
           Aucune donnée ne quitte le Mac.

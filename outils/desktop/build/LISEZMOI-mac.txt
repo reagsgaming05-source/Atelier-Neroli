@@ -6,15 +6,14 @@ Mac. Vous pouvez le poser sur le Bureau, dans Applications, sur un disque
 partagé ou sur une clé : il fonctionne depuis n'importe où.
 
 
-PREMIER LANCEMENT — À LIRE, SINON ÇA NE S'OUVRE PAS
----------------------------------------------------
-macOS bloque par défaut les applications qui ne viennent pas de l'App Store et
-ne sont pas signées par un développeur inscrit chez Apple. C'est notre cas :
-l'inscription coûte une centaine de francs par an, et nous ne l'avons pas prise.
-L'application n'est pas dangereuse pour autant — mais votre Mac ne peut pas le
-vérifier tout seul, alors il refuse.
+PREMIER LANCEMENT
+-----------------
+Normalement, un double-clic suffit : l'application est signée et notarisée par
+Apple, ce qui la rend ouvrable sur n'importe quel Mac, y compris un poste
+d'entreprise, sans demander de mot de passe administrateur.
 
-Une seule fois, au premier lancement :
+Si votre Mac refuse quand même — vous avez une version plus ancienne, ou votre
+informatique applique une règle plus stricte —, une seule fois :
 
   1. Clic DROIT (ou Contrôle + clic) sur BlonayPDF.app
   2. « Ouvrir » dans le menu qui apparaît
