@@ -57,12 +57,23 @@ function menage() {
     // l'instance relancée après la connexion ; elle gardait le verrou
     // d'instance unique, et le lancement suivant ressortait aussitôt — ce que
     // le pilote signale par « browser has been closed », sans dire pourquoi.
+    //
+    // Et tuer une fois ne suffit pas : l'application se relance elle-même après
+    // la connexion, si bien qu'entre le moment où l'on tue et celui où l'on
+    // regarde, le remplaçant peut naître, verrou en main. On insiste donc
+    // jusqu'à ce qu'il n'en reste aucun — deux fois de suite, à 400 ms
+    // d'intervalle, pour laisser à une relance en route le temps d'apparaître.
     require('child_process').execSync(
       'pkill -f ' + JSON.stringify('node_modules/electron/dis[t]/electron') + ' ; '
       // -x vise le nom du processus, pas sa ligne de commande : viser la ligne
       // attraperait n'importe quel shell qui mentionne le nom, y compris celui
       // qui lance ce test.
-      + 'pkill -x BlonayPDF ; true',
+      + 'propre=0; n=0; '
+      + 'while [ $n -lt 30 ]; do '
+      + '  if pgrep -x BlonayPDF >/dev/null 2>&1; then pkill -x BlonayPDF 2>/dev/null; propre=0; '
+      + '  else propre=$((propre+1)); [ $propre -ge 2 ] && break; fi; '
+      + '  sleep 0.4; n=$((n+1)); '
+      + 'done; true',
       { stdio: 'ignore' },
     );
   } catch (e) { /* rien à tuer */ }
