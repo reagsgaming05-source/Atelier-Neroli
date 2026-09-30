@@ -31,6 +31,9 @@ const PNG = [
   ['docs/icon-192.png', 192],
   ['docs/icon-512.png', 512],
   ['outils/desktop/build/icon.png', 256],
+  // macOS veut au moins 512 pour fabriquer son .icns ; 1024 est la taille de
+  // référence, celle que le Dock affiche sur un écran Retina.
+  ['outils/desktop/build/icon-1024.png', 1024],
   ['outils/application/icon-32.png', 32],
   ['outils/application/icon-48.png', 48],
   ['outils/application/icon-256.png', 256],

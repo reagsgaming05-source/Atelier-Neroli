@@ -4,7 +4,7 @@
 // décision testée ici — celle du dossier de données.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ouRanger, cheminReseau, POURQUOI, MARQUEUR, nomDeDossier, listerComptes } = require('../desktop/ou-ranger');
+const { ouRanger, cheminReseau, POURQUOI, MARQUEUR, nomDeDossier, listerComptes, dossierPortable } = require('../desktop/ou-ranger');
 
 // Une sonde qui répond ce qu'on lui dit, et qui note ce qu'on lui a demandé :
 // sur un partage, on ne veut même pas qu'un dossier « data » soit créé.
@@ -192,4 +192,30 @@ test('un mot de passe trop court est refusé, avec une phrase à montrer', () =>
   assert.match(motDePasseAcceptable('abc'), /au moins 4/);
   assert.equal(motDePasseAcceptable('abcd'), '');
   assert.match(motDePasseAcceptable('x'.repeat(300)), /trop long/);
+});
+
+// Sous macOS, l'exécutable est enfoui dans le paquet. Le dossier que la personne
+// voit — celui où elle a posé l'application, avec « data » à côté — est celui
+// qui contient le .app, trois niveaux plus haut.
+test('sous macOS, le dossier de l\'application est celui qui contient le paquet', () => {
+  assert.equal(
+    dossierPortable('/Users/marie/Bureau/BlonayPDF/BlonayPDF.app/Contents/MacOS', 'darwin'),
+    '/Users/marie/Bureau/BlonayPDF',
+  );
+  assert.equal(
+    dossierPortable('/Volumes/Partage/Outils/BlonayPDF.app/Contents/MacOS/', 'darwin'),
+    '/Volumes/Partage/Outils',
+  );
+  // Un paquet renommé reste un paquet.
+  assert.equal(dossierPortable('/Applications/Blonay PDF.app/Contents/MacOS', 'darwin'), '/Applications');
+});
+
+test('ailleurs, et hors paquet, le dossier de l\'exécutable suffit', () => {
+  assert.equal(dossierPortable('C:\\Outils\\BlonayPDF', 'win32'), 'C:\\Outils\\BlonayPDF');
+  assert.equal(dossierPortable('/opt/blonaypdf', 'linux'), '/opt/blonaypdf');
+  // Sous macOS mais lancé depuis les sources : aucun paquet à remonter.
+  assert.equal(dossierPortable('/home/marie/projet/desktop', 'darwin'), '/home/marie/projet/desktop');
+  // Un chemin qui contient « .app » sans être un paquet ne doit pas tromper.
+  assert.equal(dossierPortable('/Users/marie/mes.app.sauvegardes/bin', 'darwin'), '/Users/marie/mes.app.sauvegardes/bin');
+  assert.equal(dossierPortable('', 'darwin'), '');
 });

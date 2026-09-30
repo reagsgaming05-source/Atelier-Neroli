@@ -17,7 +17,8 @@
     "dist:linux": "npm run prepare-app && electron-builder --linux dir",
     "smoke": "node smoke-test.js",
     "comptes": "node comptes-test.js",
-    "maj": "node maj-test.js"
+    "maj": "node maj-test.js",
+    "dist:mac": "npm run prepare-app && electron-builder --mac dir"
   },
   "devDependencies": {
     "electron": "33.4.11",
@@ -42,7 +43,8 @@
       "choix-profil.html",
       "app/**",
       "build/icon.png",
-      "build/icon.ico"
+      "build/icon.ico",
+      "build/icon-1024.png"
     ],
     "asar": true,
     "win": {
@@ -59,6 +61,20 @@
     },
     "electronDownload": {
       "cache": ".electron-cache"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "build/icon-1024.png",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
     }
   }
 }

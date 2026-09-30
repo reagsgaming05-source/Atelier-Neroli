@@ -409,6 +409,32 @@ npm run e2e     # le parcours d'achat entier, dans un navigateur
 
 Voir `site/README.md`, en particulier la section **« À vérifier avant de vendre »** : l'IBAN, l'IDE et les prix livrés sont des valeurs provisoires.
 
+## Version Mac
+
+Même application, même code : seul l'emballage change. **Binaire universel** — le
+même paquet tourne sur les Mac Intel et sur les Mac à puce Apple.
+
+1. Téléchargez **`BlonayPDF-mac.zip`** depuis la page *Releases* (« Blonay PDF — Mac »).
+2. Décompressez où vous voulez : Bureau, Applications, disque partagé, clé USB.
+3. **Clic droit sur `BlonayPDF.app` › Ouvrir**, puis « Ouvrir » dans la fenêtre d'avertissement.
+
+Ce clic droit n'est nécessaire qu'**une seule fois**. macOS bloque par défaut
+les applications qui ne sont pas signées par un développeur inscrit chez Apple —
+une inscription payante que nous n'avons pas prise. L'application est signée
+« ad hoc », ce qui suffit à la faire tourner sur les Mac à puce Apple, mais pas à
+convaincre Gatekeeper tout seul. Si le message dit « endommagé », c'est le sceau
+de quarantaine du téléchargement : `xattr -dr com.apple.quarantine /chemin/vers/BlonayPDF.app`.
+
+Le reste est identique à la version Windows : rien n'est installé, la connexion
+est demandée au lancement, chacune a son dossier dans `data/`, et une mise à jour
+se fait en posant le nouveau zip à côté de l'application.
+
+Un détail qui n'en est pas un : sous macOS l'exécutable est enfoui dans
+`BlonayPDF.app/Contents/MacOS`. S'y fier écrirait `data/` **à l'intérieur** du
+paquet — invisible dans le Finder, et effacé à la première mise à jour. Le
+dossier retenu est donc celui qui contient le paquet
+(`dossierPortable`, `outils/desktop/ou-ranger.js`, éprouvé dans les tests).
+
 ## L'installer comme une vraie application
 
 Le dossier `docs/` contient la même application, accompagnée d'un manifeste, de

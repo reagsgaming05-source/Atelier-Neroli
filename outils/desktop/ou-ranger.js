@@ -101,6 +101,31 @@ function cheminReseau(chemin) {
   return /^\\\\[^\\]/.test(p);
 }
 
+/**
+ * Le dossier que la personne voit : celui où elle a posé l'application, à côté
+ * duquel vivent « data », le LISEZMOI et le zip d'une mise à jour.
+ *
+ * Sous Windows et Linux, c'est celui de l'exécutable. Sous macOS, non :
+ * l'exécutable est enfoui dans BlonayPDF.app/Contents/MacOS, et s'y fier
+ * écrirait les dossiers de chacun à l'intérieur du paquet — invisibles dans le
+ * Finder, et effacés au premier remplacement de l'application.
+ */
+/**
+ * Le script de mise à jour, posé à côté de l'application. Windows lance un
+ * .cmd ; macOS et Linux un .command, qu'un double-clic dans le Finder ouvre
+ * dans le Terminal.
+ */
+function nomDuScriptDeMaj(plateforme) {
+  return plateforme === 'win32' ? 'Mettre-a-jour.cmd' : 'Mettre-a-jour.command';
+}
+
+function dossierPortable(dossierDeLExe, plateforme) {
+  const chemin = String(dossierDeLExe || '');
+  if (plateforme !== 'darwin') return chemin;
+  const paquet = chemin.match(/^(.*)\/[^/]+\.app\/Contents\/MacOS\/?$/);
+  return paquet ? paquet[1] : chemin;
+}
+
 // Rend l'endroit choisi et la raison, pour que l'application puisse le dire à
 // qui se demande où sont passés ses tampons.
 //   'comptes' : un dossier par personne dans data/, ouvert par un mot de passe
@@ -136,4 +161,4 @@ const POURQUOI = {
   'lecture-seule': 'Le dossier de l\u2019application est en lecture seule : vos données sont dans votre profil Windows.',
 };
 
-module.exports = { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, lireTexte, POURQUOI };
+module.exports = { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, lireTexte, dossierPortable, nomDuScriptDeMaj, POURQUOI };

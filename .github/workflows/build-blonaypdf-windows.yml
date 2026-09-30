@@ -1,4 +1,4 @@
-name: Blonay PDF – Windows portable
+name: Blonay PDF – Windows et Mac
 
 on:
   push:
@@ -315,3 +315,177 @@ jobs:
           if (-not $pose) { throw "La release $tag n'a pas de zip : le lien de téléchargement serait mort." }
           if ([int64]$pose -ne $attendu) { throw "Le zip posé fait $pose octets au lieu de $attendu." }
           Write-Host "Zip publié : $pose octets."
+
+  # ---------------------------------------------------------------------------
+  # La version Mac. Même application, même code : seul l'emballage change.
+  #
+  # Construite sur un vrai macOS, parce qu'un paquet .app se signe et se
+  # compresse avec les outils du système — un zip fabriqué ailleurs perd les
+  # liens symboliques des frameworks, et l'application refuse de s'ouvrir.
+  #
+  # Binaire universel : le même paquet tourne sur les Mac Intel et sur les Mac
+  # à puce Apple. Nous n'avons pas de certificat Apple, donc pas de
+  # notarisation : le premier lancement demande un clic droit > Ouvrir, ce que
+  # LISEZMOI-mac.txt explique.
+  # ---------------------------------------------------------------------------
+  mac:
+    needs: e2e
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: outils
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Bibliothèques de la page (pdf.js, pdf-lib, JSZip, depuis npm)
+        run: npm run libs
+
+      - name: Application autonome (source unique → versions livrées)
+        run: npm run build
+
+      - name: Dépendances de l'application fenêtrée
+        working-directory: outils/desktop
+        run: npm ci
+
+      - name: Empaqueter (Electron, binaire universel)
+        working-directory: outils/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run dist:mac
+
+      - name: Assembler le dossier
+        working-directory: outils/desktop
+        run: |
+          set -euo pipefail
+          # Le dossier de sortie s'appelle mac-universal, mac-arm64 ou mac selon
+          # l'architecture : on prend celui qui porte le paquet.
+          paquet=$(find dist -maxdepth 2 -name "BlonayPDF.app" -print -quit)
+          test -n "$paquet" || { echo "::error::BlonayPDF.app introuvable dans dist/"; exit 1; }
+          echo "paquet : $paquet"
+          rm -rf dist/BlonayPDF && mkdir -p dist/BlonayPDF
+          ditto "$paquet" dist/BlonayPDF/BlonayPDF.app
+          cp ../../README.md dist/BlonayPDF/LISEZMOI.md
+          cp build/LISEZMOI-mac.txt dist/BlonayPDF/LISEZMOI-mac.txt
+          cp build/Mettre-a-jour.command dist/BlonayPDF/Mettre-a-jour.command
+          chmod +x dist/BlonayPDF/Mettre-a-jour.command
+          # La fiche de version voyage à la racine du dossier : c'est elle que
+          # l'application lit dans un zip posé à côté d'elle pour savoir s'il est
+          # plus récent. Sans elle, la mise à jour ne se proposerait jamais.
+          cp construction.json dist/BlonayPDF/version.json
+          ls -la dist/BlonayPDF
+
+      - name: L'application est bien universelle
+        working-directory: outils/desktop
+        run: |
+          set -euo pipefail
+          binaire=dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
+          file "$binaire"
+          lipo -archs "$binaire"
+          for arch in x86_64 arm64; do
+            lipo -archs "$binaire" | grep -qw "$arch" || { echo "::error::$arch manque : les Mac correspondants ne pourront pas l'ouvrir"; exit 1; }
+          done
+          # Sans au moins une signature ad hoc, un Mac à puce Apple refuse de
+          # lancer le binaire — le paquet serait inutilisable sur les machines
+          # vendues depuis 2020.
+          codesign -dv "dist/BlonayPDF/BlonayPDF.app" 2>&1 | head -5
+          codesign --verify --deep "dist/BlonayPDF/BlonayPDF.app" || { echo "::error::le paquet n'est pas signé, même ad hoc"; exit 1; }
+
+      - name: Test de fumée de l'application empaquetée
+        working-directory: outils/desktop
+        run: |
+          set -euo pipefail
+          node smoke-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
+          rm -rf dist/BlonayPDF/data
+
+      # La remontée du chemin hors du paquet .app est éprouvée à part, dans les
+      # tests unitaires (dossierPortable). Ici, c'est le parcours des comptes
+      # qu'on rejoue sur l'application empaquetée pour de vrai.
+      - name: Comptes — la connexion d'abord, sur l'application empaquetée
+        working-directory: outils/desktop
+        run: node comptes-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
+
+      - name: Archive zip
+        working-directory: outils/desktop
+        run: |
+          set -euo pipefail
+          # ditto, et non zip : lui seul préserve les liens symboliques des
+          # frameworks et les droits d'exécution. Un zip ordinaire produit une
+          # application qui ne s'ouvre pas.
+          ditto -c -k --sequesterRsrc --keepParent dist/BlonayPDF "$GITHUB_WORKSPACE/BlonayPDF-mac.zip"
+          ls -la "$GITHUB_WORKSPACE/BlonayPDF-mac.zip"
+
+      - name: Le zip se décompresse en une application qui s'ouvre
+        run: |
+          set -euo pipefail
+          essai=$(mktemp -d)
+          ditto -x -k "$GITHUB_WORKSPACE/BlonayPDF-mac.zip" "$essai"
+          test -x "$essai/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF" || { echo "::error::le binaire a perdu son droit d'exécution dans le zip"; exit 1; }
+          test -f "$essai/BlonayPDF/version.json" || { echo "::error::la fiche de version manque dans l'archive"; exit 1; }
+          test -f "$essai/BlonayPDF/LISEZMOI-mac.txt" || { echo "::error::le LISEZMOI manque"; exit 1; }
+          test -x "$essai/BlonayPDF/Mettre-a-jour.command" || { echo "::error::le script de mise à jour n'est pas exécutable"; exit 1; }
+          # Les frameworks d'Electron sont pleins de liens symboliques ; s'ils
+          # arrivent en copies, l'application pèse le triple et ne démarre pas.
+          liens=$(find "$essai/BlonayPDF/BlonayPDF.app" -type l | wc -l | tr -d " ")
+          echo "liens symboliques préservés : $liens"
+          test "$liens" -gt 0 || { echo "::error::aucun lien symbolique : le paquet est cassé"; exit 1; }
+          codesign --verify --deep "$essai/BlonayPDF/BlonayPDF.app" || { echo "::error::la signature n'a pas survécu au zip"; exit 1; }
+          rm -rf "$essai"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BlonayPDF-mac
+          path: BlonayPDF-mac.zip
+          retention-days: 14
+
+      - name: Publier la version Mac (pré-release « blonaypdf-mac-latest »)
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          tag=blonaypdf-mac-latest
+          titre="Blonay PDF — Mac (dernière version)"
+          zip="$GITHUB_WORKSPACE/BlonayPDF-mac.zip"
+          test -f "$zip" || { echo "::error::zip introuvable"; exit 1; }
+          notes=$(cat <<'NOTES'
+          Version Mac : décompressez le zip, puis **clic droit sur `BlonayPDF.app` > Ouvrir** au premier lancement.
+          Ce clic droit est nécessaire une seule fois : l'application n'est pas signée par un développeur inscrit chez Apple, alors macOS demande votre accord. Voir `LISEZMOI-mac.txt`.
+          Binaire universel : Mac Intel et Mac à puce Apple.
+          Aucune installation, aucun navigateur : tout est inclus (lecture, organisation, correction du texte, annotations, formulaires, caviardage, OCR, impression avec livret).
+          Aucune donnée ne quitte le Mac.
+          NOTES
+          )
+          notes="$notes
+
+          Construit automatiquement depuis le commit ${{ github.sha }}."
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "$titre" --notes "$notes" --prerelease=true
+          else
+            gh release create "$tag" --title "$titre" --notes "$notes" --prerelease
+          fi || { echo "::error::impossible de préparer la release $tag"; exit 1; }
+
+          # Le téléversement échoue de temps en temps : on réessaie, et on ne
+          # déclare l'étape réussie qu'après avoir vu le fichier en ligne, à la
+          # bonne taille. Un lien mort chez les collègues, c'est déjà arrivé.
+          attente=2
+          for essai in 1 2 3 4 5; do
+            if gh release upload "$tag" "$zip" --clobber; then break; fi
+            if [ "$essai" = 5 ]; then echo "::error::le zip n'a pas pu être posé après cinq tentatives"; exit 1; fi
+            echo "Téléversement manqué (tentative $essai). Nouvelle tentative dans ${attente}s."
+            sleep "$attente"; attente=$((attente * 2))
+          done
+
+          attendu=$(stat -f %z "$zip")
+          pose=$(gh release view "$tag" --json assets --jq '.assets[] | select(.name == "BlonayPDF-mac.zip") | .size')
+          test -n "$pose" || { echo "::error::la release n'a pas de zip : le lien serait mort"; exit 1; }
+          test "$pose" = "$attendu" || { echo "::error::le zip posé fait $pose octets au lieu de $attendu"; exit 1; }
+          echo "Zip publié : $pose octets."

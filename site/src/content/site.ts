@@ -30,11 +30,11 @@ export const site = {
   ],
   vatNote: "Prix en CHF, TVA 8.1 % incluse.",
   platforms: ["Web", "Windows", "macOS"],
-  /** Liens vers l'application : à renseigner lorsque les builds sont disponibles. */
+  /** Les archives publiées par le dépôt, reconstruites à chaque modification. */
   downloads: {
-    web: "#",
-    windows: "#",
-    mac: "#",
+    web: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/tag/blonaypdf-windows-latest",
+    windows: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/download/blonaypdf-windows-latest/BlonayPDF-windows.zip",
+    mac: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/download/blonaypdf-mac-latest/BlonayPDF-mac.zip",
   },
 };
 

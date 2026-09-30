@@ -1,0 +1,75 @@
+BLONAY PDF — version Mac
+========================
+
+TOUT EST DANS CE DOSSIER. Rien ne s'installe, rien n'est écrit ailleurs sur le
+Mac. Vous pouvez le poser sur le Bureau, dans Applications, sur un disque
+partagé ou sur une clé : il fonctionne depuis n'importe où.
+
+
+PREMIER LANCEMENT — À LIRE, SINON ÇA NE S'OUVRE PAS
+---------------------------------------------------
+macOS bloque par défaut les applications qui ne viennent pas de l'App Store et
+ne sont pas signées par un développeur inscrit chez Apple. C'est notre cas :
+l'inscription coûte une centaine de francs par an, et nous ne l'avons pas prise.
+L'application n'est pas dangereuse pour autant — mais votre Mac ne peut pas le
+vérifier tout seul, alors il refuse.
+
+Une seule fois, au premier lancement :
+
+  1. Clic DROIT (ou Contrôle + clic) sur BlonayPDF.app
+  2. « Ouvrir » dans le menu qui apparaît
+  3. Une fenêtre prévient que le développeur ne peut pas être vérifié :
+     cliquez sur « Ouvrir »
+
+Ensuite, un double-clic ordinaire suffit, pour toujours.
+
+Si le message dit « BlonayPDF est endommagé et ne peut pas être ouvert », c'est
+le sceau de quarantaine posé par le téléchargement. Ouvrez le Terminal
+(Applications > Utilitaires) et collez cette ligne, en remplaçant le chemin par
+celui de votre dossier :
+
+  xattr -dr com.apple.quarantine /chemin/vers/BlonayPDF.app
+
+Un glisser-déposer du fichier depuis le Finder écrit le chemin à votre place.
+
+
+CE QUE FAIT L'APPLICATION
+-------------------------
+Lire, organiser, fusionner, diviser, faire pivoter, numéroter, filigraner.
+Corriger le texte, annoter, surligner, commenter. Signer et tamponner.
+Remplir et créer des formulaires. Caviarder pour de bon. Reconnaître le texte
+d'un document scanné (français et allemand). Comparer deux versions. Convertir
+un tableau vers Excel. Traiter par lots. Imprimer, livret compris.
+
+AUCUNE DONNÉE NE SORT DU MAC. Les documents sont lus, modifiés et réassemblés
+dans la fenêtre. L'application n'ouvre aucune connexion pour traiter un
+fichier : cela se vérifie en coupant le réseau.
+
+
+PLUSIEURS PERSONNES
+-------------------
+La connexion est la première chose que l'on voit au lancement. Chacune crée son
+compte — prénom, nom, mot de passe — et retrouve ensuite ses tampons, sa
+signature et ses récents dans son propre dossier, à l'intérieur de « data ».
+La connexion tient jusqu'à « Fichier > Se déconnecter ».
+
+
+METTRE À JOUR
+-------------
+Posez le nouveau BlonayPDF-mac.zip à côté de l'application : au lancement
+suivant, elle le voit et propose de se mettre à jour. Tout est fermé, remplacé,
+puis rouvert, sans toucher à « data ».
+
+À la main : fermez l'application, puis double-cliquez sur
+« Mettre-a-jour.command ». Si le Mac refuse de lancer ce fichier, ouvrez le
+Terminal dans le dossier et tapez : chmod +x Mettre-a-jour.command
+
+« Aide > À propos » indique la version installée, avec sa date.
+
+
+CE QUI N'EST PAS PROTÉGÉ
+------------------------
+Le mot de passe empêche d'ouvrir le compte d'une autre DEPUIS L'APPLICATION. Il
+n'empêche pas de lire les fichiers : qui ouvre le dossier dans le Finder voit
+data/<nom> et son contenu, signature comprise. Le verrou est sur la porte de
+l'application, pas sur celle du dossier.

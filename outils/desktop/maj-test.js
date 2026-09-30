@@ -20,7 +20,7 @@ const assert = require('node:assert/strict');
 const { _electron: electron } = require('playwright-core');
 const { zipDe } = require('../test/zip-dessai.js');
 const { poserLeJeton } = require('./version-posee.js');
-const { MARQUEUR } = require('./ou-ranger.js');
+const { MARQUEUR, nomDuScriptDeMaj } = require('./ou-ranger.js');
 
 const exe = process.argv[2];
 const base = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-maj-'));
@@ -48,7 +48,7 @@ function installation(nom, fiche) {
   // cas — c'est ce qui compte ici.
   fs.writeFileSync(path.join(d, MARQUEUR), '');
   const temoin = path.join(d, 'temoin.txt');
-  const script = path.join(d, 'Mettre-a-jour.cmd');
+  const script = path.join(d, nomDuScriptDeMaj(process.platform));
   if (process.platform === 'win32') {
     fs.writeFileSync(script, '@echo off\r\necho %BLONAY_MAJ_AUTO% %1> "%~dp0temoin.txt"\r\n');
   } else {

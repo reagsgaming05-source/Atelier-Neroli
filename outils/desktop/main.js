@@ -26,7 +26,10 @@ try { VERSION = JSON.parse(fs.readFileSync(path.join(__dirname, 'app', 'construc
 const CONSTRUCTION = String(VERSION.construction || '');
 // BLONAY_DOSSIER_APP : le test de fumée fait passer un dossier d'essai pour le
 // dossier de l'application, afin que le choix du rangement se joue pour de vrai.
-const PORTABLE_DIR = process.env.BLONAY_DOSSIER_APP || path.dirname(process.execPath);
+const PORTABLE_DIR = process.env.BLONAY_DOSSIER_APP
+  || require('./ou-ranger').dossierPortable(path.dirname(process.execPath), process.platform);
+
+const SCRIPT_MAJ = require('./ou-ranger').nomDuScriptDeMaj(process.platform);
 const { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = require('./comptes');
 const { miseAJourPosee, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons } = require('./version-posee');
@@ -700,7 +703,7 @@ async function chercherUneMiseAJour(demandee) {
 }
 
 function lancerLaMiseAJour(trouvee) {
-  const script = path.join(PORTABLE_DIR, 'Mettre-a-jour.cmd');
+  const script = path.join(PORTABLE_DIR, SCRIPT_MAJ);
   if (!fs.existsSync(script)) {
     direA({
       type: 'warning', title: APP_TITLE, noLink: true,
