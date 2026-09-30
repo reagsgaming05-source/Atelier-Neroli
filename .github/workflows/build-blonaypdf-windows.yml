@@ -371,25 +371,46 @@ jobs:
       - name: Certificat de signature (s'il est fourni)
         id: certificat
         env:
-          CSC_LINK: ${{ secrets.MAC_CERTIFICAT_P12 }}
+          P12: ${{ secrets.MAC_CERTIFICAT_P12 }}
+          MOT_DE_PASSE: ${{ secrets.MAC_CERTIFICAT_MOT_DE_PASSE }}
         run: |
-          if [ -n "$CSC_LINK" ]; then
-            echo "signe=oui" >> "$GITHUB_OUTPUT"
-            echo "Certificat fourni : l'application sera signée puis notarisée."
-          else
+          set -euo pipefail
+          if [ -z "$P12" ]; then
+            # Rien poser du tout. Un CSC_LINK vide n'est pas « pas de
+            # certificat » pour electron-builder : il le prend pour un chemin,
+            # le résout sur le dossier du projet et s'arrête sur « not a file ».
+            # C'est ce qui a fait échouer la construction Mac.
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
             echo "signe=non" >> "$GITHUB_OUTPUT"
             echo "::warning::Aucun certificat Apple : signature ad hoc. macOS demandera l'accord de chaque utilisateur."
+            exit 0
           fi
+          # Le certificat est posé dans un fichier hors du dépôt : le base64
+          # tient sur plusieurs lignes, et une valeur multiligne ne traverse pas
+          # l'environnement d'une étape à l'autre.
+          fichier="$RUNNER_TEMP/certificat.p12"
+          # --decode sur le base64 de GNU, -D sur celui de BSD : selon l'image du
+          # runner, c'est l'un ou l'autre.
+          printf '%s' "$P12" | base64 --decode > "$fichier" 2>/dev/null \
+            || printf '%s' "$P12" | base64 -D > "$fichier" 2>/dev/null \
+            || { echo "::error::MAC_CERTIFICAT_P12 n'est pas du base64 : exportez le .p12 puis « base64 -i certificat.p12 | pbcopy »"; exit 1; }
+          test -s "$fichier" || { echo "::error::MAC_CERTIFICAT_P12 est vide une fois décodé"; exit 1; }
+          echo "CSC_LINK=$fichier" >> "$GITHUB_ENV"
+          echo "CSC_IDENTITY_AUTO_DISCOVERY=true" >> "$GITHUB_ENV"
+          # Le mot de passe peut contenir n'importe quoi, y compris un retour à
+          # la ligne : il passe par la forme à délimiteur.
+          {
+            echo "CSC_KEY_PASSWORD<<FIN_DU_MOT_DE_PASSE"
+            printf '%s\n' "$MOT_DE_PASSE"
+            echo "FIN_DU_MOT_DE_PASSE"
+          } >> "$GITHUB_ENV"
+          echo "signe=oui" >> "$GITHUB_OUTPUT"
+          echo "Certificat fourni : l'application sera signée puis notarisée."
 
       - name: Empaqueter (Electron, binaire universel)
         working-directory: outils/desktop
-        env:
-          # Quand le certificat est là, electron-builder le trouve par CSC_LINK
-          # et signe pour de bon. Sinon on lui interdit de chercher une identité
-          # sur la machine, et nous signerons ad hoc plus bas.
-          CSC_LINK: ${{ secrets.MAC_CERTIFICAT_P12 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICAT_MOT_DE_PASSE }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CERTIFICAT_P12 != '' && 'true' || 'false' }}
+        # CSC_LINK, CSC_KEY_PASSWORD et CSC_IDENTITY_AUTO_DISCOVERY viennent de
+        # l'étape ci-dessus, qui ne les pose que s'il y a de quoi signer.
         run: npm run dist:mac
 
       - name: Assembler le dossier
