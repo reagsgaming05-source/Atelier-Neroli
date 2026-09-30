@@ -30,8 +30,20 @@ const DELAI = 9000; // l'application attend ce délai avant de regarder
 
 function menage() {
   try {
-    if (process.platform === 'win32') require('child_process').execSync('taskkill /F /IM BlonayPDF.exe /T', { stdio: 'ignore' });
-    else require('child_process').execSync('pkill -f ' + JSON.stringify('node_modules/electron/dis[t]/electron') + ' || true');
+    if (process.platform === 'win32') { require('child_process').execSync('taskkill /F /IM BlonayPDF.exe /T', { stdio: 'ignore' }); return; }
+    // Deux façons de lancer, donc deux choses à tuer : l'Electron des sources,
+    // et l'application empaquetée. Ne viser que la première laissait survivre
+    // l'instance relancée après la connexion ; elle gardait le verrou
+    // d'instance unique, et le lancement suivant ressortait aussitôt — ce que
+    // le pilote signale par « browser has been closed », sans dire pourquoi.
+    require('child_process').execSync(
+      'pkill -f ' + JSON.stringify('node_modules/electron/dis[t]/electron') + ' ; '
+      // -x vise le nom du processus, pas sa ligne de commande : viser la ligne
+      // attraperait n'importe quel shell qui mentionne le nom, y compris celui
+      // qui lance ce test.
+      + 'pkill -x BlonayPDF ; true',
+      { stdio: 'ignore' },
+    );
   } catch (e) { /* rien à tuer */ }
 }
 
