@@ -47,11 +47,12 @@
       ] },
       { title: 'Protéger', items: [
         { id: 'password', name: 'Mot de passe', sub: 'Chiffrement et autorisations', icon: IC.lock, need: 'pages', run: toolPassword, active: () => !!state.security },
+        { id: 'certificat', name: 'Signer avec un certificat', sub: 'Un certificat personnel (.p12, .pfx), signature numérique', icon: IC.draw, need: 'pages', run: toolCertificat },
         { id: 'signatures', name: 'Vérifier les signatures', sub: 'Un document signé reçu : intact, modifié, signé par qui', icon: IC.lock, run: toolSignatures, active: () => state.sources.some(s => s.proprietes && s.proprietes.signatures) },
         { id: 'flatten', name: 'Aplatir', sub: 'Figer les champs et les annotations', icon: IC.flat, need: 'pages', run: toolFlatten, active: () => state.flatten || state.figerAnnotations },
       ] },
       { title: 'Document', items: [
-        { id: 'props', name: 'Propriétés', sub: 'Titre, auteur, mots-clés', icon: IC.info, need: 'pages', run: toolProperties, active: () => !!(state.meta.title || state.meta.author || state.meta.subject || state.meta.keywords) },
+        { id: 'props', name: 'Propriétés', sub: 'Titre, auteur, langue, accessibilité', icon: IC.info, need: 'pages', run: toolProperties, active: () => !!(state.meta.title || state.meta.author || state.meta.subject || state.meta.keywords || state.meta.balise) },
         { id: 'search', name: 'Rechercher, remplacer', sub: 'Ou caviarder, dans tout le document', icon: IC.search, need: 'pages', run: toolSearch },
         { id: 'tableau', name: 'Copier un tableau', sub: 'Vers Excel, en colonnes', icon: IC.tableau, need: 'pages', run: toolTableau },
         { id: 'ocr', name: 'Reconnaître le texte', sub: 'OCR local : un scan devient cherchable', icon: IC.ocr, need: 'pages', run: toolOcr, active: () => state.pages.some(p => p.ocr) },

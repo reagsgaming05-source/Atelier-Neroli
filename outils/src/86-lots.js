@@ -407,12 +407,19 @@
     const a = input('pr-author', 'text', state.meta.author);
     const s = input('pr-subject', 'text', state.meta.subject);
     const k = input('pr-keywords', 'text', state.meta.keywords);
+    const langue = select('pr-langue', BALISAGE_LANGUES, state.meta.langue || 'fr');
+    const balise = checkbox('pr-balise', 'Balisage d\'accessibilité (PDF balisé pour les lecteurs d\'écran)', !!state.meta.balise);
     dialog({
       title: 'Propriétés du document', icon: IC.info,
       build: b => {
-        b.append(field('Titre', t));
+        b.append(field('Titre', t, 'Affiché dans la barre de la fenêtre ; indispensable à l\'accessibilité.'));
         b.append(rowOf([field('Auteur', a), field('Sujet', s)]));
         b.append(field('Mots-clés', k, 'Séparés par des virgules.'));
+        b.append(groupOf('Accessibilité', [
+          rowOf([field('Langue du document', langue)], true),
+          balise,
+          note('Le balisage décrit au lecteur d\'écran la structure du document : le sommaire et les intercalaires d\'un dossier sont de vrais titres et une vraie table des matières ; les numérotations et filigranes sont écartés de la lecture ; chaque page venue d\'un autre fichier forme un bloc, lu dans l\'ordre du fichier d\'origine. Les titres, listes et tableaux de ces pages ne sont pas devinés, et les liens, annotations et champs de formulaire ne sont pas balisés : ce n\'est pas un PDF/UA.'),
+        ]));
         const dl = document.createElement('dl'); dl.className = 'kv';
         const rows = [['Pages', state.pages.length], ['Documents ouverts', state.sources.length],
           ['Poids des sources', fmtSize(state.sources.reduce((x, y) => x + y.bytes.byteLength, 0))],
@@ -423,7 +430,7 @@
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Enregistrer', primary: true, onClick: close => {
         snapshot();
-        state.meta = { title: t.value.trim(), author: a.value.trim(), subject: s.value.trim(), keywords: k.value.trim() };
+        state.meta = { title: t.value.trim(), author: a.value.trim(), subject: s.value.trim(), keywords: k.value.trim(), balise: balise.input.checked, langue: langue.value };
         state.touched = true; render(); close();
         setLast('Propriétés enregistrées');
       } }],

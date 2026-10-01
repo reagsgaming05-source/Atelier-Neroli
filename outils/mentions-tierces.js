@@ -39,6 +39,9 @@ const COMPOSANTS = [
     dependances: 'Inclut restructure, brotli, dfa, fflate, unicode-properties et unicode-trie (MIT), '
       + 'https://github.com/foliojs/restructure, https://github.com/foliojs/brotli.js, https://github.com/foliojs/dfa, '
       + 'https://github.com/101arrowz/fflate, https://github.com/foliojs/unicode-properties, https://github.com/foliojs/unicode-trie' },
+  { nom: 'node-forge', version: '1.3.1', licence: 'BSD-3-Clause (offert au choix en BSD ou GPLv2 ; la BSD est retenue)',
+    auteur: 'Digital Bazaar, Inc. et contributeurs', role: 'lecture des certificats PKCS#12 (.p12, .pfx) et création de la signature numérique',
+    fichier: ['node-forge-1.3.1', 'LICENSE'] },
   { nom: 'Arimo (police sans empattement, de mêmes largeurs que Helvetica et Arial)', version: '0.4.3', licence: 'SIL Open Font License 1.1',
     auteur: 'The Arimo Project Authors', role: 'écriture des textes ajoutés aux PDF avec des caractères hors du jeu Windows, et PDF/A',
     fichier: ['expo-google-fonts-arimo-0.4.3', 'LICENSE_FONT'] },

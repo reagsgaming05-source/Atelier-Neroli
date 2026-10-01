@@ -241,7 +241,10 @@
   // (opts.archivage) écrit toujours avec des polices incorporées.
   async function buildPdf(pages, opts) {
     opts = opts || {};
-    const veut = !!(opts.archivage || opts.unicode);
+    // Le balisage s'écrit avec des polices incorporées : un lecteur d'écran lit le texte d'une police
+    // qui sait dire quelle lettre est quelle lettre, et l'archivage comme l'accessibilité l'exigent.
+    const balise = opts.balise != null ? !!opts.balise : !!(state.meta && state.meta.balise);
+    const veut = !!(opts.archivage || opts.unicode || balise);
     const octets = await avecEcritureUnicode(veut, () => construirePdf(pages, opts));
     if (!veut && FEAT.unicode && caracteresPerdus().length) {
       signaler('Caractères', 'Des caractères hors du jeu Windows sont écrits avec une police incorporée.', 'info');
@@ -309,7 +312,10 @@
     // objets orphelins — tout ce qui fait qu'un nom noirci sur la page se
     // retrouve encore dans le fichier. On rebâtit un document neuf, qui ne
     // reprend que ce que les pages atteignent.
-    const inPlace = !rasterSet.size && !opts.noInPlace && !opts.archivage && !caviarde && canExportInPlace(pages);
+    // Le balisage se refait avec le fichier : celui d'un document balisé qu'on réécrirait sur place resterait faux.
+    const meta0 = specs.length ? purgeMeta(state.meta, specs) : state.meta;
+    const veutBalise = opts.balise != null ? !!opts.balise : !!(meta0 && meta0.balise);
+    const inPlace = !rasterSet.size && !opts.noInPlace && !opts.archivage && !veutBalise && !caviarde && canExportInPlace(pages);
     let out, mapped;
     if (inPlace) {
       out = await sourceDoc(state.sources[0], false);
@@ -360,10 +366,14 @@
     try { out.getForm().getFields().forEach(f => nomsPris.add(f.getName())); } catch (e) { signaler('Noms des champs de formulaire', e); }
     const file = safeBase(el.filename.value);
     const bates = state.stamp && state.stamp.batesPrefix != null ? state.stamp : null;
+    // Le balisage d'accessibilité : demandé dans les propriétés du document, ou par l'appelant.
+    const balisage = veutBalise ? creerBalisage(out, { langue: (meta0 && meta0.langue) || 'fr', titre: (meta0 && meta0.title) || file, producteur: APP, sansXmp: !!opts.archivage }) : null;
     for (let i = 0; i < mapped.length; i++) {
       const { p, page } = mapped[i];
       const g = pageGeom(p);
       const raster = rasterSet.has(p.id);
+      const PB = balisage ? balisage.page(page) : null;
+      if (balisage && raster) await baliserPageSource(balisage, PB, p, raster, i + 1);
       if (!raster) {
         page.setRotation(degrees(g.total));
         // Les images refaites entrent dans le document sous un nom neuf ;
@@ -383,20 +393,29 @@
         // D'abord ce qui peut être réécrit dans le flux de la page : ni
         // rectangle, ni fond relevé, rien d'autre ne bouge.
         const enPlace = fxRetoucher(out, page, p, fonts, renommages, specs);
-        await drawAnnotations(out, page, p, fonts, images, enPlace);
+        if (balisage) await baliserPageSource(balisage, PB, p, raster, i + 1);
+        // Ce que l'utilisateur a dessiné dans la page forme un bloc de plus, après le contenu d'origine.
+        const dessine = p.ann.some(a => !enCommentaire(a) && a.type !== 'champ');
+        await baliser(balisage, dessine ? PB : null, 'Div', {}, () => drawAnnotations(out, page, p, fonts, images, enPlace));
       }
       await poserChamps(out, page, p, fonts, nomsPris);
       await poserAnnotationsReelles(out, page, p, fonts);
-      await poserTexteOcr(out, page, p, fonts);
-      if (!raster) await dessinerMention(out, page, p, fonts);
-      await drawWatermark(out, page, p, fonts);
+      // Le texte reconnu forme un paragraphe ; l'image dessous est un artefact.
+      await baliser(balisage, p.ocr && p.ocr.mots && p.ocr.mots.length ? PB : null, 'P', {}, () => poserTexteOcr(out, page, p, fonts));
+      // La pagination, les filigranes et les mentions ne sont pas du contenu : un lecteur d'écran ne les relit pas.
+      if (!raster) await artefact(balisage, PB, 'Footer', () => dessinerMention(out, page, p, fonts));
+      await artefact(balisage, PB, 'Watermark', () => drawWatermark(out, page, p, fonts));
       const num = (state.stamp ? state.stamp.start : 1) + i;
-      await drawStamp(out, page, p, fonts, {
+      await artefact(balisage, state.stamp ? PB : null, null, () => drawStamp(out, page, p, fonts, {
         i, p: num, n: pages.length, date: todayStr(), file,
         bates: bates ? (bates.batesPrefix || '') + pad(num, bates.batesDigits || 4) : String(num),
-      });
+      }));
       if (i % 12 === 0) onProgress(i / mapped.length, 'Assemblage… ' + (i + 1) + '/' + mapped.length);
     }
+
+    // L'arbre de structure se pose une fois toutes les pages écrites.
+    if (balisage) { balisage.terminer(); opts.balisee = true; }
+    opts.rapportBalisage = balisage ? controlerBalisage(out) : null;
 
     poserSignets(out, mapped, specs.length ? purgeSignets(state.signets, specs) : state.signets);
 

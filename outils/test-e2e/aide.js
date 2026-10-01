@@ -291,6 +291,52 @@ class App {
   }
 }
 
+// Un PDF dont les polices sont incorporées, fabriqué dans la page avec les polices du logiciel.
+async function pdfEmbarque(page, ajouts) {
+  const b64 = await page.evaluate(async (ajouts) => {
+    const gunzip = async (id) => {
+      const u = Uint8Array.from(atob(document.getElementById(id).textContent.trim()), (c) => c.charCodeAt(0));
+      return new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+    };
+    const { PDFDocument, PDFName, PDFString, PDFHexString, rgb } = window.PDFLib;
+    const d = await PDFDocument.create();
+    d.registerFontkit(window.fontkit);
+    const f = await d.embedFont(await gunzip('police-sans-r'), { subset: true });
+    const n = ajouts.pages || 2;
+    for (let i = 0; i < n; i++) {
+      const p = d.addPage([595, 842]);
+      p.drawText('Page ' + (i + 1) + ' — Zürich, Łódź', { x: 70, y: 760, size: 14, font: f });
+      p.drawRectangle({ x: 70, y: 700, width: 120, height: 14, color: rgb(0.8, 0.1, 0.1) });
+    }
+    if (ajouts.javascript) {
+      d.catalog.set(PDFName.of('OpenAction'), d.context.obj({ S: 'JavaScript', JS: PDFString.of('app.alert(1)') }));
+      d.catalog.set(PDFName.of('Names'), d.context.obj({ JavaScript: d.context.obj({ Names: [PDFString.of('x'), d.context.obj({ S: 'JavaScript', JS: PDFString.of('1') })] }) }));
+    }
+    if (ajouts.piece) {
+      const flux = d.context.stream('pièce jointe', { Type: 'EmbeddedFile' });
+      const spec = d.context.obj({ Type: 'Filespec', F: PDFString.of('note.txt'), EF: d.context.obj({ F: d.context.register(flux) }) });
+      const noms = d.catalog.lookup(PDFName.of('Names')) || d.context.obj({});
+      noms.set(PDFName.of('EmbeddedFiles'), d.context.obj({ Names: [PDFString.of('note.txt'), d.context.register(spec)] }));
+      d.catalog.set(PDFName.of('Names'), noms);
+    }
+    if (ajouts.lien) {
+      const a = d.context.obj({ Type: 'Annot', Subtype: 'Link', Rect: [70, 700, 190, 714], Border: [0, 0, 0], A: d.context.obj({ S: 'URI', URI: PDFString.of('https://example.org/') }) });
+      d.getPage(0).node.set(PDFName.of('Annots'), d.context.obj([d.context.register(a)]));
+    }
+    if (ajouts.formulaire) {
+      const form = d.getForm();
+      const t = form.createTextField('Nom');
+      t.addToPage(d.getPage(0), { x: 70, y: 600, width: 200, height: 20, font: f });
+      t.setText('Müller');
+    }
+    const o = await d.save();
+    let s = ''; for (let i = 0; i < o.length; i++) s += String.fromCharCode(o[i]);
+    return btoa(s);
+  }, ajouts || {});
+  return Buffer.from(b64, 'base64');
+}
+
+
 // ---------------------------------------------------------------------------
 //  Le scénario type : une page ouverte, et aucune erreur JavaScript tolérée
 // ---------------------------------------------------------------------------
@@ -311,5 +357,5 @@ const test = base.extend({
 module.exports = {
   test, expect, App, PAGE,
   pdfDe, pdfVide, pdfTexte,
-  compterPages, compterTournees, estUnPdf, texteDuFlux, texteDuPdf, textesDuPdf, annotationsDuPdf, liensDuPdf, fluxDecompresses, brut,
+  pdfEmbarque, compterPages, compterTournees, estUnPdf, texteDuFlux, texteDuPdf, textesDuPdf, annotationsDuPdf, liensDuPdf, fluxDecompresses, brut,
 };

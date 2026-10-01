@@ -186,7 +186,8 @@
     const retraits = state.pages.reduce((n, p) => n + ((p.retraits || []).length), 0);
     if (retraits) items.push({ label: 'Commentaires retirés', value: String(retraits), clear: () => { snapshot(); state.pages.forEach(p => { p.retraits = []; peintes.delete(p.id); }); render(); } });
     const m = state.meta;
-    if (m.title || m.author || m.subject || m.keywords) items.push({ label: 'Propriétés', value: m.title || m.author || 'définies', clear: () => { snapshot(); state.meta = { title: '', author: '', subject: '', keywords: '' }; render(); } });
+    if (m.title || m.author || m.subject || m.keywords) items.push({ label: 'Propriétés', value: m.title || m.author || 'définies', clear: () => { snapshot(); state.meta = { title: '', author: '', subject: '', keywords: '', balise: !!state.meta.balise, langue: state.meta.langue || 'fr' }; render(); } });
+    if (m.balise) items.push({ label: 'Balisage', value: 'PDF balisé (' + (m.langue || 'fr') + ')', clear: () => { snapshot(); state.meta = Object.assign({}, state.meta, { balise: false }); render(); } });
     const anyForm = state.sources.some(s => s.formValues && Object.keys(s.formValues).length);
     if (anyForm) items.push({ label: 'Formulaire', value: 'rempli', clear: () => { snapshot(); state.sources.forEach(s => { s.formValues = null; }); render(); } });
 

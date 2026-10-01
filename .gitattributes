@@ -12,3 +12,10 @@
 # Sauf les scripts Windows : cmd.exe veut des fins de ligne CRLF, et un
 # « goto » derriere une fin de ligne seule ne retombe pas toujours sur ses pieds.
 *.cmd  text eol=crlf
+# Les PDF d'essai sont des octets, pas du texte : une signature numérique se calcule sur eux, et
+# une fin de ligne convertie par un poste Windows la rend « altérée ».
+*.pdf  binary
+*.p12  binary
+*.pfx  binary
+*.ttf  binary
+*.gz   binary

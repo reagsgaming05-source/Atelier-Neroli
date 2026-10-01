@@ -38,68 +38,91 @@
   // gardent leurs accents, et ces pages sont conformes au PDF/A comme le reste.
   function fabriquerPagesDossier(o) { return avecEcritureUnicode(true, () => fabriquerPagesDossierEnPolices(o)); }
   async function fabriquerPagesDossierEnPolices(o) {
-    const { PDFDocument, rgb } = PDFLib;
+    const { PDFDocument, PDFOperator, PDFName, rgb } = PDFLib;
     const doc = await PDFDocument.create();
     const reg = await policeDeBase(doc, false);
     const gras = await policeDeBase(doc, true);
     const W = 595.28, H = 841.89, marge = 60;
     const gris = rgb(0.42, 0.45, 0.5), noir = rgb(0.08, 0.09, 0.11), bleu = rgb(0.15, 0.39, 0.79);
     const PAR_PAGE = 32;
+    // Chaque texte est écrit dans une séquence balisée (titre, paragraphe, ligne de sommaire) et chaque
+    // décor (filet, points de conduite, pied de page) dans un artefact : de quoi donner à ces pages
+    // leur vraie structure quand le balisage est demandé. `structure[k]` dit, pour la page k, qui est qui.
+    const structure = [];
+    const nouvellePage = () => { const pg = doc.addPage([W, H]); pg.__desc = []; pg.__mcid = 0; structure.push(pg.__desc); return pg; };
+    const dans = (pg, role, id, parent, travail) => {
+      const mcid = pg.__mcid++;
+      pg.__desc.push({ mcid, role, id, dans: parent });
+      pg.pushOperators(PDFOperator.of('BDC', [PDFName.of(role), doc.context.obj({ MCID: mcid })]));
+      travail();
+      pg.pushOperators(PDFOperator.of('EMC', []));
+    };
+    const decor = (pg, sousType, travail) => {
+      const props = { Type: 'Pagination' };
+      if (sousType) props.Subtype = sousType;
+      pg.pushOperators(PDFOperator.of('BDC', [PDFName.of('Artifact'), doc.context.obj(props)]));
+      travail();
+      pg.pushOperators(PDFOperator.of('EMC', []));
+    };
     if (o.sommaire) {
       const nbPages = Math.max(1, Math.ceil(o.pieces.length / PAR_PAGE));
       for (let k = 0; k < nbPages; k++) {
-        const pg = doc.addPage([W, H]);
+        const pg = nouvellePage();
         let y = H - 80;
         if (k === 0) {
-          pg.drawText('Sommaire', { x: marge, y, size: 24, font: gras, color: noir });
+          dans(pg, 'H1', null, null, () => pg.drawText('Sommaire', { x: marge, y, size: 24, font: gras, color: noir }));
           y -= 30;
-          pg.drawText(couperTexte(reg, o.titre, 12, W - 2 * marge), { x: marge, y, size: 12, font: reg, color: gris });
+          dans(pg, 'P', null, null, () => pg.drawText(couperTexte(reg, o.titre, 12, W - 2 * marge), { x: marge, y, size: 12, font: reg, color: gris }));
           y -= 18;
-          pg.drawText(winAnsi(plural(o.pieces.length, 'pi\u00e8ce', 'pi\u00e8ces') + ' \u00b7 ' + plural(o.totalPages, 'page', 'pages') + ' \u00b7 ' + todayStr()), { x: marge, y, size: 10, font: reg, color: gris });
+          dans(pg, 'P', null, null, () => pg.drawText(winAnsi(plural(o.pieces.length, 'pièce', 'pièces') + ' · ' + plural(o.totalPages, 'page', 'pages') + ' · ' + todayStr()), { x: marge, y, size: 10, font: reg, color: gris }));
           y -= 14;
         } else {
-          pg.drawText('Sommaire (suite)', { x: marge, y, size: 16, font: gras, color: noir });
+          dans(pg, 'H1', null, null, () => pg.drawText('Sommaire (suite)', { x: marge, y, size: 16, font: gras, color: noir }));
           y -= 16;
         }
-        pg.drawRectangle({ x: marge, y: y - 6, width: W - 2 * marge, height: 1.2, color: bleu });
+        decor(pg, null, () => pg.drawRectangle({ x: marge, y: y - 6, width: W - 2 * marge, height: 1.2, color: bleu }));
         y -= 30;
+        pg.__desc.push({ role: 'TOC', id: 'toc' });
         o.pieces.slice(k * PAR_PAGE, (k + 1) * PAR_PAGE).forEach(pc => {
-          const num = winAnsi('Pi\u00e8ce n\u00b0 ' + pc.n);
-          pg.drawText(num, { x: marge, y, size: 11, font: gras, color: noir });
-          const pageTxt = pc.debut > 0 ? 'p. ' + pc.debut : '\u2014';
+          const ligne = 'toci-' + pc.n;
+          const num = winAnsi('Pièce n° ' + pc.n);
+          dans(pg, 'TOCI', ligne, 'toc', () => pg.drawText(num, { x: marge, y, size: 11, font: gras, color: noir }));
+          const pageTxt = pc.debut > 0 ? 'p. ' + pc.debut : '—';
           const wp = reg.widthOfTextAtSize(pageTxt, 11);
-          pg.drawText(pageTxt, { x: W - marge - wp, y, size: 11, font: reg, color: noir });
           const xT = marge + 78;
           const titre = couperTexte(reg, pc.titre, 11, W - marge - wp - 14 - xT);
-          pg.drawText(titre, { x: xT, y, size: 11, font: reg, color: noir });
+          dans(pg, 'TOCI', ligne, 'toc', () => pg.drawText(titre, { x: xT, y, size: 11, font: reg, color: noir }));
+          dans(pg, 'TOCI', ligne, 'toc', () => pg.drawText(pageTxt, { x: W - marge - wp, y, size: 11, font: reg, color: noir }));
           // les points de conduite
           const xFin = W - marge - wp - 8, xDeb = xT + reg.widthOfTextAtSize(titre, 11) + 6;
-          for (let x = xDeb; x < xFin; x += 5) pg.drawCircle({ x, y: y + 2, size: 0.55, color: gris });
+          decor(pg, null, () => { for (let x = xDeb; x < xFin; x += 5) pg.drawCircle({ x, y: y + 2, size: 0.55, color: gris }); });
           y -= 22;
         });
-        pg.drawText(winAnsi(o.titre), { x: marge, y: 40, size: 9, font: reg, color: gris });
+        decor(pg, 'Footer', () => pg.drawText(winAnsi(o.titre), { x: marge, y: 40, size: 9, font: reg, color: gris }));
       }
     }
     if (o.intercalaires) {
       o.pieces.forEach(pc => {
-        const pg = doc.addPage([W, H]);
-        const sur = winAnsi('PI\u00c8CE N\u00b0');
-        pg.drawText(sur, { x: (W - gras.widthOfTextAtSize(sur, 16)) / 2, y: H - 300, size: 16, font: gras, color: bleu });
+        const pg = nouvellePage();
+        const sur = winAnsi('PIÈCE N°');
+        dans(pg, 'H1', 'titre', null, () => pg.drawText(sur, { x: (W - gras.widthOfTextAtSize(sur, 16)) / 2, y: H - 300, size: 16, font: gras, color: bleu }));
         const n = String(pc.n);
-        pg.drawText(n, { x: (W - gras.widthOfTextAtSize(n, 120)) / 2, y: H - 420, size: 120, font: gras, color: noir });
+        dans(pg, 'H1', 'titre', null, () => pg.drawText(n, { x: (W - gras.widthOfTextAtSize(n, 120)) / 2, y: H - 420, size: 120, font: gras, color: noir }));
         let y = H - 480;
         replierPdf(gras, pc.titre, 20, W - 2 * marge, 3).forEach(l => {
-          pg.drawText(l, { x: (W - gras.widthOfTextAtSize(l, 20)) / 2, y, size: 20, font: gras, color: noir });
+          dans(pg, 'H1', 'titre', null, () => pg.drawText(l, { x: (W - gras.widthOfTextAtSize(l, 20)) / 2, y, size: 20, font: gras, color: noir }));
           y -= 28;
         });
         const sous = winAnsi(pc.debut > 0
-          ? plural(pc.pages.length, 'page', 'pages') + (o.numerotation && pc.pages.length ? ' \u00b7 pages ' + (pc.debut + (o.intercalaires ? 1 : 0)) + ' \u00e0 ' + (pc.debut + pc.pages.length - (o.intercalaires ? 0 : 1)) : '')
-          : 'pi\u00e8ce retir\u00e9e du dossier');
-        pg.drawText(sous, { x: (W - reg.widthOfTextAtSize(sous, 11)) / 2, y: y - 6, size: 11, font: reg, color: gris });
-        pg.drawText(winAnsi(o.titre), { x: marge, y: 40, size: 9, font: reg, color: gris });
+          ? plural(pc.pages.length, 'page', 'pages') + (o.numerotation && pc.pages.length ? ' · pages ' + (pc.debut + (o.intercalaires ? 1 : 0)) + ' à ' + (pc.debut + pc.pages.length - (o.intercalaires ? 0 : 1)) : '')
+          : 'pièce retirée du dossier');
+        dans(pg, 'P', null, null, () => pg.drawText(sous, { x: (W - reg.widthOfTextAtSize(sous, 11)) / 2, y: y - 6, size: 11, font: reg, color: gris }));
+        decor(pg, 'Footer', () => pg.drawText(winAnsi(o.titre), { x: marge, y: 40, size: 9, font: reg, color: gris }));
       });
     }
-    return doc.save();
+    const octets = await doc.save();
+    octets.structure = structure;
+    return octets;
   }
   // Le sommaire et les intercalaires suivent le document : dès que l'ordre
   // des pages change, les pages générées sont refaites avec les bons
@@ -158,7 +181,7 @@
       // leur identité (signets, mentions, position), seul le contenu change.
       const miennes = state.pages.filter(p => p.src === ancien.id);
       const neuf = await addPdfSource(ancien.name, buf, { silent: true });
-      neuf.genere = true; neuf.hue = ancien.hue;
+      neuf.genere = true; neuf.hue = ancien.hue; neuf.structure = bytes.structure;
       state.pages = state.pages.filter(p => p.src !== neuf.id);
       miennes.forEach(p => { p.src = neuf.id; });
       state.sources = state.sources.filter(s => s !== ancien);
@@ -230,7 +253,7 @@
           if (o.sommaire || o.intercalaires) {
             const bytes = await fabriquerPagesDossier(o);
             const genere = await addPdfSource('Sommaire et intercalaires', bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), { silent: true });
-            genere.genere = true;
+            genere.genere = true; genere.structure = bytes.structure;
             gPages = state.pages.filter(p => p.src === genere.id);
           }
           const ordre = [];

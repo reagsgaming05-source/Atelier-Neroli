@@ -104,7 +104,9 @@
   function proprReconstruit(pages, opts) {
     const specs = (state.purges || []).filter(x => x && x.terme);
     const caviarde = specs.length > 0 || pages.some(p => (p.ann || []).some(a => a.type === 'redact' || (a.type === 'edit' && a.efface)));
-    return !!(opts && (opts.noInPlace || opts.rasterize)) || caviarde || !canExportInPlace(pages);
+    // Un document dont on demande le balisage est lui aussi refait en entier.
+    const balise = opts && opts.balise != null ? !!opts.balise : !!(state.meta && state.meta.balise);
+    return !!(opts && (opts.noInPlace || opts.rasterize || opts.archivage)) || caviarde || balise || !canExportInPlace(pages);
   }
   // Pourquoi la conformité PDF/A ne peut pas être gardée : ce que l'export ajoute.
   function proprRaisonsPdfa(pages, srcs) {
@@ -142,7 +144,12 @@
         ? '« ' + s.name + ' » est un formulaire XFA : il ne sera pas conservé comme formulaire.'
         : '« ' + s.name + ' » est un formulaire XFA : il est conservé tel quel, mais ce logiciel ne le modifie pas, et ce que vous y ajoutez peut ne pas s\'afficher dans Adobe Reader.');
       if (p.pdfa && !(opts && opts.archivage) && !proprPdfaGardable(pages, srcs)) pertes.push('« ' + s.name + ' » perd sa conformité PDF/A-' + p.pdfa.toLowerCase() + ' (' + proprRaisonsPdfa(pages, srcs).join(', ') + '). La copie ne se déclarera plus PDF/A.');
-      if (p.balise && proprReconstruit(pages, opts)) pertes.push('« ' + s.name + ' » perd son balisage d\'accessibilité : le texte ne sera plus lisible comme tel par un lecteur d\'écran.');
+      if (p.balise && proprReconstruit(pages, opts)) {
+        const nouveau = opts && opts.balise != null ? !!opts.balise : !!(state.meta && state.meta.balise);
+        pertes.push(nouveau
+          ? '« ' + s.name + ' » est balisé : son balisage d\'origine (titres, listes, tableaux) est remplacé par un balisage plus simple, un bloc par page.'
+          : '« ' + s.name + ' » perd son balisage d\'accessibilité : le texte ne sera plus lisible comme tel par un lecteur d\'écran.');
+      }
     });
     return pertes;
   }
@@ -219,10 +226,11 @@
         if (sig) { page.node.set(PDFName.of('Annots'), out.context.obj(gardees)); retire = true; }
       } catch (e) { signaler('Signatures', e); }
       // Le balisage se reconstruit avec le fichier : ses renvois ne mènent plus nulle part.
-      try { if (proprReconstruit(pages, opts)) ote(page.node, 'StructParents'); } catch (e) { signaler('Renvois du balisage', e); }
+      try { if (proprReconstruit(pages, opts) && !(opts && opts.balisee)) ote(page.node, 'StructParents'); } catch (e) { signaler('Renvois du balisage', e); }
     });
     try {
-      if (proprReconstruit(pages, opts)) { ote(out.catalog, 'StructTreeRoot'); ote(out.catalog, 'MarkInfo'); }
+      // Le balisage d'origine ne suit pas ; celui que ce logiciel vient d'écrire, si.
+      if (proprReconstruit(pages, opts) && !(opts && opts.balisee)) { ote(out.catalog, 'StructTreeRoot'); ote(out.catalog, 'MarkInfo'); }
     } catch (e) { signaler('Balisage non retiré', e); }
 
     // L'archivage demandé en PDF/A-2b : contrôlé, corrigé, puis déclaré ou non (voir 53-conformite.js).
@@ -239,7 +247,8 @@
     }
     try {
       // Quelle que soit la raison, la déclaration ne reste pas : ni XMP « pdfaid », ni intention de sortie.
-      ote(out.catalog, 'Metadata');
+      // Les métadonnées que le balisage vient d'écrire (titre, langue) ne déclarent pas PDF/A : elles restent.
+      if (!(opts && opts.balisee)) ote(out.catalog, 'Metadata');
       ote(out.catalog, 'OutputIntents');
     } catch (e) { signaler('Déclaration PDF/A non retirée', e); }
     if (retire) { try { ramasserLesObjets(out); } catch (e) { signaler('Propriétés du document', e); } }

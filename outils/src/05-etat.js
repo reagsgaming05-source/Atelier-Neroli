@@ -9,7 +9,7 @@
     anchor: null,
     history: [], redo: [],
     touched: false, hueIdx: 0, filenameDirty: false, busy: false,
-    meta: { title: '', author: '', subject: '', keywords: '' },
+    meta: { title: '', author: '', subject: '', keywords: '', balise: false, langue: 'fr' },
     watermark: null,
     stamp: null,
     security: null,
@@ -38,7 +38,7 @@
   function etatVierge() {
     return {
       sources: [], pages: [], selected: new Set(), anchor: null, history: [], redo: [], touched: false, hueIdx: 0, filenameDirty: false,
-      meta: { title: '', author: '', subject: '', keywords: '' }, watermark: null, stamp: null, security: null, flatten: false,
+      meta: { title: '', author: '', subject: '', keywords: '', balise: false, langue: 'fr' }, watermark: null, stamp: null, security: null, flatten: false,
       signets: [], purges: [], figerAnnotations: false, dossier: null, nomFichier: '',
       // Le fichier que « Enregistrer » réécrit (application), la confirmation
       // déjà donnée pour ce fichier, et la clé du dépôt de récupération.

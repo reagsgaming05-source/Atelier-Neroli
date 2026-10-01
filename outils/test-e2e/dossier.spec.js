@@ -24,7 +24,8 @@ async function dossierDeDeuxPieces(app, page) {
 // Ce que le sommaire annonce, et où les pièces se trouvent réellement.
 function annoncesEtPositions(pages) {
   const annonces = {};
-  for (const m of pages[0].matchAll(/Pièce n°\s*(\d+)\s*p\.\s*(\d+)/g)) annonces[m[1]] = Number(m[2]);
+  // Chaque ligne se lit dans l'ordre logique (le numéro, le titre, la page) : le titre s'intercale entre les deux.
+  for (const m of pages[0].matchAll(/Pièce n°\s*(\d+)(?:(?!Pièce n°).)*?p\.\s*(\d+)/g)) annonces[m[1]] = Number(m[2]);
   const positions = {};
   pages.forEach((t, i) => {
     const m = /PIÈCE N°\s*(\d+)/.exec(t);

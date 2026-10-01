@@ -439,6 +439,21 @@
   <li><strong>Une version allégée</strong> : les pages deviennent des images, et l'application compare les tailles avant et après.</li>
 </ul>
 
+<h3>Archiver en PDF/A-2b</h3>
+<p>Pour une archive communale ou cantonale, l'outil <strong>Archiver en PDF/A-2b</strong> (famille <em>Exporter</em>) écrit le document dans le format d'archivage à long terme (norme ISO 19005-2) : polices incorporées au fichier, ni mot de passe ni script, formulaires aplatis. Le document est reconstruit, <strong>contrôlé</strong>, et n'est déclaré PDF/A-2b que si rien ne s'y oppose.</p>
+<ul class="points">
+  <li>Les <strong>scripts et fichiers joints</strong> sont retirés, et le logiciel le dit. Un document protégé par mot de passe ne s'archive pas : retirez d'abord la protection.</li>
+  <li>Les pages dont les <strong>polices ne sont pas incorporées</strong> au fichier d'origine ne peuvent pas être conformes : le logiciel ne peut pas incorporer une police qu'il n'a pas. Il les nomme, page par page, et propose de les <strong>convertir en images</strong> — leur apparence est gardée, leur texte non (sauf s'il a été lu par la reconnaissance de texte). Rien n'est converti sans votre accord.</li>
+  <li>Si, malgré tout, quelque chose s'oppose à la conformité, le fichier <strong>ne se déclare pas PDF/A</strong> : vous pouvez l'enregistrer quand même, mais il ne promet rien qu'il ne tient pas.</li>
+</ul>
+<div class="attention">
+  <div class="titre">Un contrôle, pas une certification</div>
+  <p>Le contrôle intégré couvre les causes d'échec les plus courantes ; ce n'est pas une validation complète de la norme (plus de cent quarante règles). Les documents que ce logiciel produit sont validés, à chaque construction, par <strong>veraPDF</strong>, le validateur de référence ; pour un fichier qui vous est confié, passez-le dans veraPDF (gratuit).</p>
+</div>
+
+<h3>Les lettres que le PDF ne connaissait pas</h3>
+<p>Les polices standard d'un PDF ne savent écrire que l'alphabet de l'Europe de l'Ouest : « Milošević » devenait « Miloševi? ». Le logiciel embarque désormais trois familles de polices libres (de mêmes largeurs que Helvetica, Times et Courier) : un nom polonais, croate, tchèque, grec ou cyrillique s'écrit tel quel dans un filigrane, un tampon, une note ou un champ de formulaire. Le document ne contient que les lettres utilisées. Les idéogrammes et l'arabe ne sont pas pris en charge : le logiciel les nomme avant d'écrire, au lieu de les remplacer par « ? » en silence.</p>
+
 <h3>Imprimer</h3>
 <p><strong>Imprimer</strong> (<kbd>Ctrl</kbd> + <kbd>P</kbd>) envoie directement à l'imprimante, sans passer par une autre fenêtre. La qualité se choisit : fine (300 ppp), normale (200) ou rapide (150). L'impression en livret est disponible. Pour n'imprimer que certaines pages, choisissez <em>Pages</em> et écrivez « 2-3, 5 » : un numéro qui n'existe pas dans le document ne désigne rien, et l'application le dit plutôt que d'imprimer une autre page.</p>
 
@@ -470,6 +485,22 @@
 <h3>Formulaires</h3>
 <p>Les champs d'un PDF de formulaire — texte, cases à cocher, listes, boutons — sont détectés et remplissables dans l'application. Les valeurs peuvent rester modifiables, ou être figées. Si les pages sont réorganisées ou fusionnées, elles sont figées automatiquement, faute de quoi la saisie serait perdue.</p>
 
+<h3>Vérifier les signatures d'un document reçu</h3>
+<p>Un document signé arrive par courriel : l'outil <strong>Vérifier les signatures</strong> (famille <em>Protéger</em>) dit, sur ce poste et sans rien envoyer, si le contenu signé est <strong>intact</strong>, ce qui a pu être <strong>ajouté après</strong> la signature, et <strong>qui</strong> a signé d'après son certificat (le nom, l'organisation, la chaîne de certificats jointe, la date, le motif). L'empreinte et la signature sont recalculées, pas seulement lues ; un document qui a été modifié est dit modifié, avec la raison.</p>
+<div class="attention">
+  <div class="titre">Ce que ce contrôle ne dit pas</div>
+  <p>Il ne dit pas si l'autorité qui a délivré le certificat est <strong>reconnue</strong> (le logiciel ne porte aucune liste d'autorités), ni si le certificat a été <strong>révoqué</strong> (il faudrait interroger l'autorité par internet, ce que ce logiciel ne fait jamais), ni la <strong>valeur légale</strong> de la signature. Un certificat « auto-signé » peut être fabriqué par n'importe qui au nom de n'importe qui : la signature prouve alors que le document n'a pas changé, pas qui l'a signé. Pour une décision qui engage, faites valider le document par un prestataire reconnu.</p>
+</div>
+
+<h3>Signer avec un certificat personnel</h3>
+<p>L'outil <strong>Signer avec un certificat</strong> signe le document avec le certificat qui vous a été remis (un fichier <code>.p12</code> ou <code>.pfx</code>, protégé par un mot de passe). Le certificat est lu sur ce poste ; sa clé n'en sort jamais et n'est pas gardée, et le mot de passe est redemandé à chaque signature. On peut poser un <strong>cartouche visible</strong> (page et coin au choix, même sur une page pivotée), un motif et un lieu. Le fichier signé est relu et vérifié avant d'être enregistré ; un document protégé par mot de passe ne se signe pas.</p>
+<ul class="points">
+  <li>La signature est une signature numérique PDF ordinaire (PKCS#7, SHA-256) que les lecteurs usuels vérifient.</li>
+  <li>Sa <strong>valeur juridique dépend du certificat</strong> (un certificat qualifié d'un prestataire reconnu n'a pas la même portée qu'un autre), pas de ce logiciel.</li>
+  <li>La date est celle de l'horloge du poste : il n'y a pas d'horodatage d'une autorité de temps (il demanderait internet).</li>
+  <li>Seules les clés RSA sont prises en charge.</li>
+</ul>
+
 <h3>Remplir en série, depuis un tableau</h3>
 <p>Convocations, attestations, bulletins d'inscription : l'outil <strong>Remplir en série (CSV)</strong> (famille <em>Formulaires</em>) fait une copie du formulaire par ligne d'un tableau. Enregistrez le tableau d'Excel en <em>CSV</em>, avec une première ligne d'en-têtes ; choisissez-le ; l'application relie d'elle-même chaque champ à la colonne de même nom, et vous corrigez ce qui ne l'est pas. Les copies sortent en <strong>un fichier par ligne</strong> (réunis dans une archive ZIP, nommés par exemple « {Nom}-{Prénom} ») ou en <strong>un seul PDF</strong>.</p>
 <ul class="points">
@@ -488,6 +519,15 @@
   <img src="captures/a7-outils.png" alt="Le panneau Outils">
   <figcaption>Le panneau <strong>Outils</strong> : tout ce que l'application sait faire, rangé par famille.</figcaption>
 </figure>
+
+<h3>Rendre un document accessible (balisage)</h3>
+<p>Un lecteur d'écran ne lit pas des pages : il lit une structure. Dans <strong>Propriétés</strong>, cochez <em>Balisage d'accessibilité</em>, choisissez la langue du document et donnez-lui un titre : le PDF produit déclare sa langue, affiche son titre dans la barre de la fenêtre et porte un arbre de structure.</p>
+<ul class="points">
+  <li>Le <strong>sommaire et les intercalaires</strong> d'un dossier de pièces sont de vrais titres et une vraie table des matières.</li>
+  <li>Les <strong>numérotations, filigranes et mentions</strong> sont écartés de la lecture : un lecteur d'écran ne les relit pas à chaque page.</li>
+  <li>Une page venue d'un autre fichier forme <strong>un bloc</strong>, lu dans l'ordre du fichier d'origine. Une page <strong>scannée sans texte reconnu</strong> est une figure dont le texte de remplacement le dit ; une page dont le texte a été <strong>reconnu</strong> devient un paragraphe.</li>
+  <li>Ce que le logiciel ne devine pas — titres, listes et tableaux des pages venues d'ailleurs ; liens, annotations et champs de formulaire — n'est pas balisé. Un faux titre est pire que pas de titre. <strong>Ce n'est donc pas un PDF/UA</strong>, et le fichier ne se déclare pas tel.</li>
+</ul>
 
 <h3>Reconnaître le texte d'un scan (OCR)</h3>
 <p>Un document scanné n'est qu'une image : rien ne s'y cherche ni ne s'y sélectionne. La reconnaissance de texte y remédie, <strong>en français et en allemand</strong>, entièrement sur le poste — rien n'est envoyé nulle part. Le temps restant est annoncé pendant le travail, et l'opération s'interrompt par le bouton en bas de la fenêtre ou par <kbd>Échap</kbd>. Le texte reconnu sert ensuite à la recherche, au remplacement, au tableau et à la correction, et repart dans le PDF exporté : invisible, mais sélectionnable et cherchable.</p>

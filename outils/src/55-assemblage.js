@@ -265,7 +265,11 @@
       try {
         const r = rectToUser({ x: a.x, y: a.y, w: a.w, h: a.h }, g);
         if (r.w <= 0 || r.h <= 0) continue;
-        const f = form.createTextField(champNom(a, pris));
+        const nomChamp = champNom(a, pris);
+        const f = form.createTextField(nomChamp);
+        // L'info-bulle (/TU) est ce qu'un lecteur d'écran annonce pour le champ : à défaut d'autre
+        // libellé, le nom du champ plutôt que rien.
+        try { f.acroField.dict.set(PDFLib.PDFName.of('TU'), PDFLib.PDFHexString.fromText(String(a.libelle || nomChamp))); } catch (e) { signaler('Description du champ', e, 'info'); }
         if (a.multi) f.enableMultiline();
         if (a.valeur) f.setText(String(a.valeur));
         f.addToPage(page, {

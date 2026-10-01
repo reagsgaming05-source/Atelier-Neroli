@@ -85,6 +85,7 @@ const langue = code => fs.readFileSync(path.join(LIB, 'tesseract.js-data-' + cod
 // document, et poser des polices incorporées pour le PDF/A. Les polices sont comprimées
 // (gzip) puis codées en base 64 ; l'application ne les décomprime qu'au moment d'en avoir besoin.
 const zlib = require('zlib');
+const forgeLib = read('node-forge-1.3.1/dist/forge.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
 const fontkit = read('cantoo-fontkit-2.0.12/dist/fontkit.umd.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
 const POLICES_UNICODE = [
   ['sans-r', 'expo-google-fonts-arimo-0.4.3', '400Regular/Arimo_400Regular.ttf'],
@@ -117,6 +118,8 @@ const inline = [
   '<!-- fontkit 2.0.12 (MIT) ; polices Arimo, Tinos et Cousine (SIL OFL 1.1) -->',
   '<script>' + fontkit + '</script>',
   POLICES_UNICODE,
+  '<!-- node-forge 1.3.1 (BSD-3-Clause) : certificats PKCS#12 et signature numérique -->',
+  '<script>' + forgeLib + '</script>',
 ].join('\n');
 // Remplacement par fonction : sinon les $& ou $` du code des bibliothèques
 // seraient interprétés comme des motifs et injecteraient le reste de la page.
@@ -136,7 +139,10 @@ noFonts = vidage(noFonts, 'EN_LIGNE', /const EN_LIGNE = true;/, 'const EN_LIGNE 
 // Garde-fou : le code de l'application (hors bibliothèques embarquées, qui
 // portent leurs propres noms d'espaces XML) ne doit contenir aucune adresse
 // réseau. C'est ce que lira un informaticien qui fait un « grep http ».
-const adresses = (noFonts.match(/https?:\/\/[^\s"'<>)\\]+/g) || []).filter(u => !/^https?:\/\/www\.w3\.org\//.test(u));
+// Les identifiants d'espaces de noms XML (W3C, Dublin Core et Adobe pour les métadonnées XMP) ne sont
+// pas des adresses que l'on appelle : ils désignent un vocabulaire, et ne sont jamais téléchargés.
+const ESPACES_DE_NOMS = /^(https?:\/\/www\.w3\.org\/|http:\/\/purl\.org\/dc\/elements\/1\.1\/|http:\/\/ns\.adobe\.com\/pdf\/1\.3\/)/;
+const adresses = (noFonts.match(/https?:\/\/[^\s"'<>)\\]+/g) || []).filter(u => !ESPACES_DE_NOMS.test(u));
 if (adresses.length) throw new Error('adresse réseau dans le code de l\'application livrée : ' + [...new Set(adresses)].join(', '));
 const offline = noFonts.replace('<script>\n(() => {', () => inline + '\n<script>\n(() => {');
 if (offline === src) throw new Error("point d'insertion introuvable");
