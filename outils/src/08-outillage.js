@@ -3,6 +3,9 @@
   // =====================================================================
   let toastTimer = null;
   function toast(msg, kind) {
+    // Une erreur s'annonce tout de suite (alert), le reste attend qu'on ait fini de parler (status).
+    el.toast.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    el.toast.setAttribute('aria-live', kind === 'error' ? 'assertive' : 'polite');
     el.toast.textContent = msg;
     el.toast.className = 'toast show' + (kind ? ' ' + kind : '');
     clearTimeout(toastTimer);
@@ -37,9 +40,24 @@
     const sep = langue === 'de' ? '.' : '/';
     return pad(d.getDate(), 2) + sep + pad(d.getMonth() + 1, 2) + sep + d.getFullYear();
   }
+  // Le bouton dont le clic vient de lancer l'opération prend l'état « occupé » le temps qu'elle dure : un disque
+  // à la place de son icône, au bout du curseur, plutôt qu'un seul signe de vie en bas à gauche de la fenêtre.
+  function marquerOccupe(on) {
+    if (on) {
+      const d = state.dernierClic;
+      const b = d && d.bouton && d.bouton.isConnected && performance.now() - d.t < 1500 ? d.bouton : null;
+      state.boutonOccupe = b;
+      if (b) b.setAttribute('aria-busy', 'true');
+    } else if (state.boutonOccupe) {
+      state.boutonOccupe.removeAttribute('aria-busy');
+      state.boutonOccupe = null;
+    }
+  }
   function setBusy(text, pct, o) {
+    const etait = state.busy;
     if (text && !state.busy) state.messageBusy = '';
     state.busy = !!text;
+    if (text && !etait) marquerOccupe(true); else if (!text) marquerOccupe(false);
     if (!text) annulable(false); else if (o && o.annuler) annulable(true);
     if (text) {
       el.last.replaceChildren();
@@ -52,7 +70,11 @@
       state.messageBusy = '';
     }
     el.progress.hidden = !(text && typeof pct === 'number');
-    if (text && typeof pct === 'number') el.progressBar.style.width = Math.round(pct * 100) + '%';
+    if (text && typeof pct === 'number') {
+      el.progressBar.style.width = Math.round(pct * 100) + '%';
+      el.progress.setAttribute('aria-valuenow', String(Math.round(pct * 100)));
+      el.progress.setAttribute('aria-valuetext', text + ' : ' + Math.round(pct * 100) + ' %');
+    }
     vue.syncButtons();
   }
   const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));

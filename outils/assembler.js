@@ -26,6 +26,27 @@ const REPERE_DICO_DE = '<!--@dico-de@-->\n';
 // la page le reçoit à l'endroit que src/01-langue.js lui réserve, indenté comme le reste du module.
 const REPERE_TRADUCTEUR = '  /*@traducteur@*/\n';
 
+// Les polices de l'interface sont dans la feuille de style, en WOFF2 : sans elles, Geist, Geist Mono et Instrument
+// Serif — celles pour lesquelles l'interface a été dessinée — retombent sur ce que le poste a, et la page se mesure
+// à des largeurs que personne n'a vues (24 % de plus pour « Tout sélectionner »). Le marqueur est dans style.css.
+const REPERE_POLICES = '/*@polices@*/\n';
+const POLICES_INTERFACE = [
+  ['Geist', 'fontsource-variable-geist-5.3.0/files/geist-latin-wght-normal.woff2', '100 900'],
+  ['Geist Mono', 'fontsource-variable-geist-mono-5.3.0/files/geist-mono-latin-wght-normal.woff2', '100 900'],
+  ['Instrument Serif', 'fontsource-instrument-serif-5.3.0/files/instrument-serif-latin-400-normal.woff2', '400'],
+];
+// le sous-ensemble « latin » de fontsource : le français et l'allemand, les guillemets, l'euro, les tirets
+const PLAGE_LATIN = 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD';
+function policesInterface() {
+  return POLICES_INTERFACE.map(([famille, fichier, graisse]) => {
+    const p = path.join(__dirname, 'libs', fichier);
+    if (!fs.existsSync(p)) throw new Error('police de l\'interface introuvable : ' + p + ' (npm run libs)');
+    return '  @font-face { font-family: "' + famille + '"; font-style: normal; font-weight: ' + graisse + '; font-display: swap;\n'
+      + '    src: url(data:font/woff2;base64,' + fs.readFileSync(p).toString('base64') + ') format("woff2");\n'
+      + '    unicode-range: ' + PLAGE_LATIN + '; }\n';
+  }).join('');
+}
+
 function lire(f) {
   // Windows convertit les fins de ligne au passage : on travaille en LF.
   return fs.readFileSync(path.join(SRC, f), 'utf8').replace(/\r\n/g, '\n');
@@ -73,8 +94,32 @@ function dictionnaireAllemand() {
   return '<script type="application/json" id="aktum-dico-de">' + JSON.stringify(dico).replace(/</g, '\\u003c') + '</script>\n';
 }
 
+// Les icônes ne s'écrivent qu'une fois : le registre de src/11-icones.js. La page y renvoie par un repère
+// <!--@ic:nom--> que cette fonction remplace par le dessin, à la construction (le dessin est donc là dès le premier
+// rendu, sans attendre le JavaScript), avec le même trait que les icônes que le programme pose lui-même.
+function registreIcones() {
+  const src = lire('11-icones.js');
+  const debut = src.indexOf('const IC = {');
+  const fin = src.indexOf('\n  };', debut);
+  if (debut < 0 || fin < 0) throw new Error('src/11-icones.js : registre des icônes introuvable');
+  return new Function('return ' + src.slice(debut + 'const IC = '.length, fin + 4))();
+}
+
+function svgIcone(nom, registre) {
+  const d = registre[nom];
+  if (!d) throw new Error('src/page.html : icône inconnue « ' + nom + ' »');
+  const formes = (Array.isArray(d) ? d : [d]).map((p) => {
+    if (p.charAt(0) !== 'C') return '<path d="' + p + '"/>';
+    const a = p.slice(1).split(',');
+    return '<circle cx="' + a[0] + '" cy="' + a[1] + '" r="' + a[2] + '"/>';
+  }).join('');
+  return '<svg aria-hidden="true" focusable="false" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + formes + '</svg>';
+}
+
 function assembler() {
   let page = lire('page.html');
+  const icones = registreIcones();
+  page = page.replace(/<!--@ic:(\w+)-->/g, (_, nom) => svgIcone(nom, icones));
   for (const [repere, quoi] of [[REPERE_STYLE, 'style'], [REPERE_MODULES, 'modules'],
     [REPERE_MARQUE, 'marque'], [REPERE_FAVICON, 'favicon'], [REPERE_DICO_DE, 'dico-de']]) {
     if (!page.includes(repere)) throw new Error('repère ' + quoi + ' introuvable dans src/page.html');
@@ -84,7 +129,9 @@ function assembler() {
   js = js.replace(REPERE_TRADUCTEUR, () => traducteur());
   // Fonction de remplacement plutôt que chaîne : un « $& » dans le code serait
   // sinon interprété par String.replace.
-  page = page.replace(REPERE_STYLE, () => lire('style.css'));
+  const feuille = lire('style.css');
+  if (!feuille.includes(REPERE_POLICES)) throw new Error('repère polices introuvable dans src/style.css');
+  page = page.replace(REPERE_STYLE, () => feuille.replace(REPERE_POLICES, () => policesInterface()));
   page = page.replace(REPERE_MODULES, () => js);
   page = page.replace(REPERE_MARQUE, () => traceMarque() + '\n');
   page = page.replace(REPERE_FAVICON, favicon);
@@ -92,4 +139,4 @@ function assembler() {
   return page;
 }
 
-module.exports = { assembler, modules, traceMarque };
+module.exports = { assembler, modules, traceMarque, registreIcones, svgIcone };

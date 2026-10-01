@@ -17,13 +17,26 @@
 
   const DEGRES_BARRE = 4;
 
+  // Les trois onglets du panneau (Documents, Outils, Signets) tiennent en français avec leur icône ; en allemand, des
+  // mots plus longs ne tiennent plus avec : l'icône cède la place, le libellé reste entier. On mesure, on ne devine pas.
+  function ajusterLesOnglets() {
+    const rangee = document.querySelector('.side .tabs');
+    if (!rangee) return;
+    rangee.classList.remove('sans-icones');
+    if (Array.from(rangee.querySelectorAll('.tab')).some(t => t.scrollWidth > t.clientWidth + 1)) rangee.classList.add('sans-icones');
+  }
+
   function ajusterLaBarre() {
+    ajusterLesOnglets();
     const barre = document.getElementById('app-toolbar');
     if (!barre || barre.hidden) return;
     for (let n = 1; n <= DEGRES_BARRE; n++) barre.classList.remove('serre-' + n);
-    // Sous 900 px, la barre passe à la ligne : elle a toute la place qu'elle
-    // veut, et la resserrer ne ferait que retirer des mots pour rien.
-    if (window.innerWidth <= 900) return;
+    // Sous 872 px (le point de bascule de la feuille de style : le panneau passe
+    // au-dessus du document), la barre passe à la ligne : elle a toute la place
+    // qu'elle veut, et la resserrer ne ferait que retirer des mots pour rien.
+    // Au-dessus, elle tient sur une ligne, et la fenêtre de l'application ne
+    // descend pas sous 880 px (desktop/main.js) : elle ne bascule donc jamais.
+    if (window.innerWidth <= 872) return;
     for (let n = 1; n <= DEGRES_BARRE; n++) {
       if (barre.scrollWidth <= barre.clientWidth + 1) return;
       barre.classList.add('serre-' + n);
@@ -42,6 +55,8 @@
   function surveillerLaBarre() {
     planifierAjustementBarre();
     window.addEventListener('resize', planifierAjustementBarre);
+    // La langue change les libellés, donc leurs largeurs : la traduction de la page se fait juste après l'événement.
+    window.addEventListener('aktum-langue', () => setTimeout(planifierAjustementBarre, 80));
     // Les polices arrivent après le premier rendu et changent la largeur des
     // libellés : sans cette mesure-là, la barre est ajustée sur des mesures
     // faites avec la police de secours.

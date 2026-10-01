@@ -756,6 +756,34 @@ function initialiserLaLangue() {
   });
 }
 
+// Les outils du volet, tels que la page les envoie (voir src/96-panneau.js) : [{ titre, outils: [{ id, nom }] }].
+// Rien n'est jamais exécuté d'ici : une entrée du menu renvoie à la page son identifiant, et c'est elle qui sait quoi faire.
+let MENU_OUTILS = null;
+const SUR = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
+ipcMain.on('aktum:menu-outils', (_e, liste) => {
+  if (!Array.isArray(liste) || liste.length > 20) return;
+  const propre = [];
+  for (const g of liste) {
+    if (!g || !SUR(g.titre, 60) || !Array.isArray(g.outils) || g.outils.length > 60) return;
+    const outils = [];
+    for (const o of g.outils) { if (!o || !SUR(o.id, 40) || !/^[\w-]+$/.test(o.id) || !SUR(o.nom, 80)) return; outils.push({ id: o.id, nom: o.nom }); }
+    propre.push({ titre: g.titre, outils });
+  }
+  MENU_OUTILS = propre;
+  buildMenu();
+});
+// Avant que la page n'ait envoyé sa liste (ou si elle ne le fait pas), le menu garde ses entrées d'origine.
+const OUTILS_PAR_DEFAUT = [
+  { label: 'Éditeur de page', click: () => envoyer('editeur') },
+  { type: 'separator' },
+  { label: 'Reconnaître le texte (OCR)…', click: () => envoyer('ocr') },
+  { label: 'Comparer deux versions…', click: () => envoyer('comparer') },
+  { label: 'Copier un tableau vers Excel…', click: () => envoyer('tableau') },
+  { type: 'separator' },
+  { label: 'Constituer un dossier de pièces…', click: () => envoyer('dossier') },
+  { label: 'Traiter plusieurs fichiers…', click: () => envoyer('lots') },
+];
+
 function buildMenu() {
   const template = [
     {
@@ -805,7 +833,24 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Fermer l\'onglet', accelerator: 'CmdOrCtrl+W', click: () => envoyer('fermer-onglet') },
         { label: 'Fermer la fenêtre', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
-        { label: 'Quitter', accelerator: 'Alt+F4', role: 'quit' },
+        // Pas d'accélérateur écrit à la main : le système sait comment on quitte (Alt+F4 sous Windows, Cmd+Q sous macOS).
+        { label: 'Quitter', role: 'quit' },
+      ],
+    },
+    {
+      // Sous macOS, les touches d'édition ne passent que par ce menu : sans lui, Cmd+C, Cmd+V et Cmd+X ne font rien
+      // dans un champ. Annuler, Rétablir et Tout sélectionner sont rendus à la page, qui sait s'ils visent un champ
+      // de saisie (le système fait) ou le document (l'application fait).
+      label: 'Édition',
+      submenu: [
+        { label: 'Annuler l\'action', accelerator: 'CmdOrCtrl+Z', click: () => envoyer('annuler') },
+        { label: 'Rétablir l\'action', accelerator: 'CmdOrCtrl+Shift+Z', click: () => envoyer('retablir') },
+        { type: 'separator' },
+        { label: 'Couper', role: 'cut' },
+        { label: 'Copier', role: 'copy' },
+        { label: 'Coller', role: 'paste' },
+        { type: 'separator' },
+        { label: 'Tout sélectionner', accelerator: 'CmdOrCtrl+A', click: () => envoyer('tout-selectionner') },
       ],
     },
     {
@@ -829,16 +874,13 @@ function buildMenu() {
     {
       label: 'Outils',
       submenu: [
-        { label: 'Éditeur de page', click: () => envoyer('editeur') },
         { label: 'Rechercher, remplacer, caviarder…', accelerator: 'CmdOrCtrl+F', click: () => envoyer('rechercher') },
         { label: 'Ajouter un signet', accelerator: 'CmdOrCtrl+B', click: () => envoyer('signet') },
         { type: 'separator' },
-        { label: 'Reconnaître le texte (OCR)…', click: () => envoyer('ocr') },
-        { label: 'Comparer deux versions…', click: () => envoyer('comparer') },
-        { label: 'Copier un tableau vers Excel…', click: () => envoyer('tableau') },
-        { type: 'separator' },
-        { label: 'Constituer un dossier de pièces…', click: () => envoyer('dossier') },
-        { label: 'Traiter plusieurs fichiers…', click: () => envoyer('lots') },
+        // Les trente outils du volet, par groupe : les mêmes noms, dans la langue affichée (la page les a déjà traduits).
+        ...(MENU_OUTILS
+          ? MENU_OUTILS.map((g) => ({ brut: true, label: g.titre, submenu: g.outils.map((o) => ({ brut: true, label: o.nom, click: () => envoyer('outil:' + o.id) })) }))
+          : OUTILS_PAR_DEFAUT),
       ],
     },
     {

@@ -33,4 +33,7 @@ contextBridge.exposeInMainWorld('AktumDesktop', {
   choisirLangue: (l) => ipcRenderer.invoke('aktum:choisir-langue', l),
   onLangue: (cb) => ipcRenderer.on('aktum:langue', (_e, l) => cb(l)),
   imprimer: (o) => ipcRenderer.invoke('aktum:imprimer', o),
+  // La liste des outils du volet, rangée par groupe et déjà dans la langue affichée : le menu « Outils » la reprend telle
+  // quelle, de sorte que ses entrées sont celles du volet, jamais une seconde liste à tenir à jour.
+  definirMenuOutils: (liste) => ipcRenderer.send('aktum:menu-outils', liste),
 });

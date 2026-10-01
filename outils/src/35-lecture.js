@@ -110,6 +110,24 @@
   // Le texte de la page, invisible mais sélectionnable par-dessus l'image :
   // on copie une adresse, un montant, comme dans n'importe quelle visionneuse.
   // Sur un scan reconnu, ce sont les mots de l'OCR qui se posent.
+  // Les titres du document, pour qui ne le lit pas à l'œil : un texte nettement plus gros que le texte courant de la page,
+  // court, est exposé comme titre (niveaux 3 et 4, sous le titre « Document » de la zone). C'est une lecture de la mise en
+  // forme, pas de la structure du PDF : un document balisé s'expose mieux, mais celui-ci n'a pas à l'être pour qu'on s'y repère.
+  function marquerLesTitres(couche) {
+    const spans = Array.from(couche.querySelectorAll('span')).filter(s => s.textContent.trim());
+    const tailles = spans.map(s => { const m = /\*\s*([\d.]+)px/.exec(s.style.fontSize || ''); return m ? +m[1] : 0; });
+    const connues = tailles.filter(t => t > 0).sort((a, b) => a - b);
+    if (connues.length < 4) return;
+    const mediane = connues[Math.floor(connues.length / 2)], plus = connues[connues.length - 1];
+    spans.forEach((s, i) => {
+      const long = s.textContent.trim().length;
+      if (tailles[i] >= mediane * 1.35 && long >= 2 && long <= 90) {
+        s.setAttribute('role', 'heading');
+        s.setAttribute('aria-level', tailles[i] >= plus * 0.9 ? '3' : '4');
+      }
+    });
+  }
+
   async function lectureCoucheTexte(f, p, page, g) {
     const vieux = f.querySelector('.couche-texte');
     if (vieux) vieux.remove();
@@ -122,6 +140,7 @@
       const tc = await page.getTextContent();
       if (tc.items.some(it => it.str && it.str.trim()) && typeof pdfjs.renderTextLayer === 'function') {
         await pdfjs.renderTextLayer({ textContentSource: tc, container: couche, viewport: vp, textDivs: [] }).promise;
+        marquerLesTitres(couche);
         pose = true;
       }
     } catch (e) { signaler('Couche de texte', e); }
@@ -176,8 +195,11 @@
         + (src ? '  \u00b7  ' + baseName(src.name) : '');
       const nm = f.querySelector('.num');
       nm.dataset.legende = legende;
-      nm.setAttribute('aria-label', 'Page ' + (i + 1) + ' sur ' + state.pages.length
-        + (src ? ', ' + baseName(src.name) : ''));
+      const etiquette = 'Page ' + (i + 1) + ' sur ' + state.pages.length + (src ? ', ' + baseName(src.name) : '');
+      nm.setAttribute('aria-label', etiquette);
+      // Chaque feuille est une région nommée : on se déplace de page en page aux repères, comme on le ferait dans le papier.
+      f.setAttribute('role', 'region');
+      f.setAttribute('aria-label', etiquette);
       if (peintes.get(p.id) !== lectureCle(p)) {
         const att = f.querySelector('.attente');
         if (att) att.hidden = false;

@@ -2,8 +2,16 @@
   //  Icons
   // =====================================================================
   const SVGNS = 'http://www.w3.org/2000/svg';
+  // Un seul jeu d'icônes : une grille de 16, un trait de 1,5, bouts et jointures arrondis, des rectangles aux coins
+  // vifs (les jointures les arrondissent d'un demi-trait). Les dessins de la page (src/page.html) n'existent pas
+  // ailleurs : leur emplacement y est un repère « ic:nom » entre commentaires HTML, que l'assembleur remplace par le dessin d'ici, de sorte
+  // qu'une icône ne s'écrit qu'une fois. L'épaisseur (`sw`) ne se change que pour garder le même trait optique à
+  // une taille réduite (la croix des petits boutons de fermeture), jamais pour « alourdir » une icône.
+  // Elle est décorative : le nom d'un bouton vient de son libellé, pas de son dessin.
   function icon(d, extra) {
     const s = document.createElementNS(SVGNS, 'svg');
+    s.setAttribute('aria-hidden', 'true');
+    s.setAttribute('focusable', 'false');
     s.setAttribute('viewBox', '0 0 16 16');
     s.setAttribute('fill', 'none');
     s.setAttribute('stroke', 'currentColor');
@@ -30,14 +38,12 @@
     check: 'm3.5 8.5 3 3 6-7',
     plus: 'M8 3v10M3 8h10',
     doc: ['M9.5 1.5H4.5A1.5 1.5 0 0 0 3 3v10a1.5 1.5 0 0 0 1.5 1.5h7A1.5 1.5 0 0 0 13 13V5z', 'M9.5 1.5V5H13'],
-    split: ['M3 3.5h4.5v9H3z', 'M9.5 3.5H14v9H9.5z'],
     image: ['M2.5 3.5h11v9h-11z', 'M2.5 10.5 6 7l2.5 2.5L11 7l2.5 2.5', 'C5.5,6,1'],
     text: ['M4 4V2.8h8V4', 'M8 2.8v10.4', 'M6 13.2h4'],
     stamp: ['M4 13.5h8', 'M5.5 11.5h5l-.5-3a2.5 2.5 0 1 0-4 0z'],
     water: ['M8 2.5s4 4.5 4 7a4 4 0 0 1-8 0c0-2.5 4-7 4-7z'],
     header: ['M2.5 3.5h11', 'M2.5 12.5h11', 'M4.5 6.5h7M4.5 9h5'],
     lock: ['M3.5 7.5h9v6h-9z', 'M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5'],
-    zip: ['M3 2.5h10v11H3z', 'M7.5 2.5v2M8.5 4.5v2M7.5 6.5v2M8.5 8.5v1.5h-1V8.5'],
     txt: ['M4 2.5h5.5L12 5v8.5H4z', 'M9.5 2.5V5H12', 'M6 8h4M6 10.5h4'],
     zap: ['M8.5 2 4 9h3.5L7 14l4.5-7H8z'],
     resize: ['M2.5 2.5h11v11h-11z', 'M6 6h4v4H6z'],
@@ -60,10 +66,18 @@
     editText: ['M2.5 5V3.5h7V5', 'M6 3.5v7M4.5 10.5h3', 'M9.5 13.5l4.5-4.5-1.5-1.5L8 12v1.5z'],
     signet: ['M4 2.5h8v11l-4-3-4 3z'],
     deux: ['M1.5 3h5.5v10H1.5z', 'M9 3h5.5v10H9z'],
+    ouvrir: ['M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v6.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5z'],
+    annuler: ['M6 3 3 6l3 3', 'M3 6h6.5a3.5 3.5 0 0 1 0 7H6'],
+    retablir: ['m10 3 3 3-3 3', 'M13 6H6.5a3.5 3.5 0 0 0 0 7H10'],
+    lire: ['M8 4v9', 'M8 4 3 5.2v8L8 12', 'M8 4l5 1.2v8L8 12'],
+    toutSelect: ['M2.5 2.5h11v11h-11z', 'm5.5 8 2 2 3.5-4'],
+    aide: ['C8,8,6', 'M6.3 6.2a1.8 1.8 0 1 1 2.3 1.9c-.4.2-.6.5-.6.9v.3', 'M8 11.6h.01'],
+    outils: ['M10.8 2.6a3.5 3.5 0 0 0-4.6 4.3l-4 4a1.3 1.3 0 0 0 1.9 1.9l4-4a3.5 3.5 0 0 0 4.3-4.6L10.2 6 9 4.8z'],
+    alerte: ['M8 2.5 14 13H2z', 'M8 6.5v3', 'M8 11.2h.01'],
+    dupliquer: ['M5.5 5.5h8v8h-8z', 'M10.5 5.5v-2A1.5 1.5 0 0 0 9 2H4a1.5 1.5 0 0 0-1.5 1.5v5A1.5 1.5 0 0 0 4 10h1.5'],
     compare: ['M8 2v12', 'M2.5 4h4v8h-4z', 'M9.5 4h4v8h-4z', 'M4.5 7h0M11.5 9h0'],
     dossier: ['M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v6.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5z', 'M5 9.5h6'],
-    lots: ['M2.5 3.5h5v5h-5z', 'M8.5 3.5h5v5h-5z', 'M2.5 9.5h5v4h-5z', 'M8.5 9.5h5v4h-5z'],
+    grille: ['M2.5 2.5h4v4h-4z', 'M9.5 2.5h4v4h-4z', 'M2.5 9.5h4v4h-4z', 'M9.5 9.5h4v4h-4z'],
     tableau: ['M2.5 3.5h11v9h-11z', 'M2.5 6.5h11M2.5 9.5h11', 'M6 3.5v9M10 3.5v9'],
     ocr: ['M2.5 5.5v-2h2M11.5 3.5h2v2M13.5 10.5v2h-2M4.5 12.5h-2v-2', 'M5.5 8h5', 'M8 6v4'],
-    remplacer: ['M3 5.5h7l-2-2M13 10.5H6l2 2'],
   };

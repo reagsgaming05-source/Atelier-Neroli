@@ -19,6 +19,10 @@
     el.onglets.hidden = !montrer;
     el.onglets.replaceChildren();
     if (!montrer) return;
+    // Le tablist ne contient que des onglets : le bouton « + » est à côté, pas dedans.
+    const liste = document.createElement('div');
+    liste.className = 'onglets-liste'; liste.setAttribute('role', 'tablist');
+    liste.setAttribute('aria-label', 'Documents ouverts dans cette fenêtre');
     onglets.forEach(o => {
       const e = o.id === ongletActif ? prendreEtat() : o.etat;
       const t = document.createElement('div');
@@ -26,7 +30,11 @@
       // Un seul onglet est atteignable par Tab ; les flèches font le reste.
       t.tabIndex = o.id === ongletActif ? 0 : -1;
       t.dataset.onglet = o.id;
+      t.id = 'onglet-' + o.id;
+      t.setAttribute('aria-controls', 'canvas');
       t.setAttribute('aria-selected', o.id === ongletActif ? 'true' : 'false');
+      // Le document affiché est le panneau de l'onglet actif : il porte son nom.
+      if (o.id === ongletActif && el.canvas) el.canvas.setAttribute('aria-labelledby', t.id);
       const titre = titreEtat(e);
       const modifie = !!(e.touched && e.pages.length);
       t.title = titre + (modifie ? ' · modifié' : '');
@@ -41,8 +49,9 @@
       t.addEventListener('click', () => activerOnglet(o.id));
       t.addEventListener('contextmenu', ev => menuOnglet(ev, o.id));
       t.addEventListener('keydown', ev => surOngletTouche(ev, o.id));
-      el.onglets.appendChild(t);
+      liste.appendChild(t);
     });
+    el.onglets.appendChild(liste);
     const plus = document.createElement('button');
     plus.type = 'button'; plus.className = 'onglet-plus'; plus.id = 'onglet-plus';
     plus.title = 'Nouvel onglet (Ctrl+T)'; plus.setAttribute('aria-label', 'Nouvel onglet');

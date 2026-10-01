@@ -29,6 +29,8 @@ function estUnTexte(s) {
   if (/^[a-z][a-zA-Z0-9_\-.:\/+=;,*]*$/.test(t) && !/[À-ÿ]/.test(t)) return false;   // identifiant, classe, type MIME, extension
   if (!/[a-zà-ÿ]/.test(t) && !/\s/.test(t)) return false;                              // SIGLE ou nom technique seul : PNG, CHF, SHA-256, DEFLATE (« PIÈCE N° » compte, « CONFIDENTIEL » est retenu à la main)
   if (/^__[A-Z_]+__$/.test(t)) return false;                                            // repère remplacé à la construction
+  if (/^[Mm][-\d.\s,]*[-\d.\s,MmLlHhVvCcAaZz]*$/.test(t) && /\d/.test(t)) return false;
+  if (/^\d+(\.\d+)?(px|em|rem|%)(\s|$)|var\(--/.test(t)) return false;                       // une valeur de style : « 1px solid var(--trait) »           // tracé d'icône (src/11-icones.js) : « M6 3 3 6l3 3 »
   if (/^[A-Za-z0-9+\/=]{24,}$/.test(t)) return false;                                  // base 64
   if (/\bconst \w+ =|=> \{|\bself\.|\bawait\b/.test(t)) return false;                         // du code (le travailleur de rendu)
   if (/\\[dsSwWbB]|\(\?:|\[\^/.test(t)) return false;                                   // morceau d'expression régulière

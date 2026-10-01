@@ -39,7 +39,7 @@ const attendre = async (cond, quoi, delai) => {
 };
 // Un clic sur « Français » / « Deutsch » dans Aide ▸ Langue, comme à la souris.
 const choisirDansLeMenu = (app, nom) => app.evaluate(({ Menu }, nom) => {
-  const aide = Menu.getApplicationMenu().items[3];
+  const aide = Menu.getApplicationMenu().items[4];
   const langue = aide.submenu.items.find((i) => i.submenu);
   langue.submenu.items.find((i) => i.label === nom).click();
 }, nom);
@@ -56,7 +56,7 @@ const choisirDansLeMenu = (app, nom) => app.evaluate(({ Menu }, nom) => {
   // 1. Imposée (essais) : l'allemand, partout
   let app = await lancer({ ...env, AKTUM_LANGUE: 'de' });
   let win = await fenetrePrete(app);
-  await etape('le menu est en allemand', async () => assert.deepEqual(await menu(app), ['Datei', 'Ansicht', 'Werkzeuge', 'Hilfe']));
+  await etape('le menu est en allemand', async () => assert.deepEqual(await menu(app), ['Datei', 'Bearbeiten', 'Ansicht', 'Werkzeuge', 'Hilfe']));
   await etape('la page est en allemand et le sait', async () => {
     assert.equal(await win.evaluate(() => document.documentElement.lang), 'de');
     assert.equal(await win.evaluate(() => window.AktumDesktop.langue), 'de');
@@ -67,14 +67,14 @@ const choisirDansLeMenu = (app, nom) => app.evaluate(({ Menu }, nom) => {
   await etape('le menu passe la page en français', async () => {
     await choisirDansLeMenu(app, 'Français');
     await attendre(async () => (await win.evaluate(() => document.documentElement.lang)) === 'fr', 'la page passe en français');
-    assert.deepEqual(await menu(app), ['Fichier', 'Affichage', 'Outils', 'Aide']);
+    assert.deepEqual(await menu(app), ['Fichier', 'Édition', 'Affichage', 'Outils', 'Aide']);
     assert.match(await win.locator('#btn-open').getAttribute('title'), /Ouvrir/);
     await attendre(() => fs.existsSync(reglages) && JSON.parse(fs.readFileSync(reglages, 'utf8')).langue === 'fr', 'le choix est écrit dans reglages.json');
   });
   // 3. La page change la langue : le menu suit
   await etape('le bouton de la page passe le menu en allemand', async () => {
     await win.click('#btn-langue');
-    await attendre(async () => JSON.stringify(await menu(app)) === JSON.stringify(['Datei', 'Ansicht', 'Werkzeuge', 'Hilfe']), 'le menu passe en allemand');
+    await attendre(async () => JSON.stringify(await menu(app)) === JSON.stringify(['Datei', 'Bearbeiten', 'Ansicht', 'Werkzeuge', 'Hilfe']), 'le menu passe en allemand');
     await attendre(() => JSON.parse(fs.readFileSync(reglages, 'utf8')).langue === 'de', 'le choix est écrit');
   });
   await etape('la licence est rédigée dans la langue de la page', async () => {
@@ -88,7 +88,7 @@ const choisirDansLeMenu = (app, nom) => app.evaluate(({ Menu }, nom) => {
   win = await fenetrePrete(app);
   await etape('le réglage mémorisé est repris', async () => {
     assert.equal(await win.evaluate(() => document.documentElement.lang), 'de');
-    assert.deepEqual(await menu(app), ['Datei', 'Ansicht', 'Werkzeuge', 'Hilfe']);
+    assert.deepEqual(await menu(app), ['Datei', 'Bearbeiten', 'Ansicht', 'Werkzeuge', 'Hilfe']);
   });
   await fermer(app);
 

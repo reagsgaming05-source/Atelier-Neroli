@@ -78,7 +78,7 @@
     }
     return { sorties, rapport };
   }
-  function toolLots() {
+  function toolLots(opVoulue) {
     const fichiers = [];
     const liste = document.createElement('div'); liste.className = 'list';
     const inp = document.createElement('input');
@@ -111,13 +111,13 @@
       Array.from(inp.files || []).forEach(f => { if ((isPdf(f) || isImage(f)) && !fichiers.some(x => x.name === f.name && x.size === f.size)) fichiers.push(f); });
       remplir();
     });
-    const op = select('lots-op', LOTS, 'vides');
+    const op = select('lots-op', LOTS, LOTS.some(l => l[0] === opVoulue) ? opVoulue : 'vides');
     const pw = input('lots-pw', 'password', ''), pwo = input('lots-pwo', 'password', '');
     const pwWrap = rowOf([field('Mot de passe d\'ouverture', pw), field('Mot de passe propriétaire', pwo, 'Facultatif')]);
     pwWrap.hidden = true;
     op.addEventListener('change', () => { pwWrap.hidden = op.value !== 'proteger'; });
     dialog({
-      title: 'Traiter plusieurs fichiers', icon: IC.lots, wide: true, submitOnEnter: false,
+      title: 'Traiter plusieurs fichiers', icon: IC.grille, wide: true, submitOnEnter: false,
       build: b => {
         b.append(rowOf([choisir, info], true));
         b.append(inp);
@@ -147,7 +147,7 @@
           }
           setLast('Lot traité : ' + plural(r.sorties.length, 'fichier produit', 'fichiers produits'));
           dialog({
-            title: 'Lot traité', icon: IC.lots,
+            title: 'Lot traité', icon: IC.grille,
             build: b => {
               b.append(note(plural(r.sorties.length, 'fichier produit', 'fichiers produits') + (r.sorties.length > 1 && FEAT.zip ? ', réunis dans une archive ZIP.' : '.')));
               const ul = document.createElement('div'); ul.className = 'list';
@@ -182,7 +182,7 @@
     const rangesWrap = field('Plages de pages', ranges, 'Exemple : 1-3, 5, 8-10 — un fichier par plage.');
     everyWrap.hidden = true; rangesWrap.hidden = true;
     dialog({
-      title: 'Diviser le document', icon: IC.split,
+      title: 'Diviser le document', icon: IC.deux,
       build: b => {
         b.append(field('Découpage', mode));
         b.append(everyWrap, rangesWrap);

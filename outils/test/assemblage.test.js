@@ -55,10 +55,16 @@ test('le dessin livré ne porte pas les commentaires qui l\'expliquent', () => {
   assert.ok(!traceMarque().includes('<!--'), 'la page ne reçoit que le tracé');
 });
 
-test('la feuille de style est celle de src/', () => {
+test('la feuille de style est celle de src/, polices de l\'interface en plus', () => {
   const css = fs.readFileSync(path.join(SRC, 'style.css'), 'utf8').replace(/\r\n/g, '\n');
-  assert.ok(source.includes(css), 'le contenu de style.css se retrouve tel quel');
+  assert.ok(css.includes('/*@polices@*/'), 'src/style.css a son repère de polices');
+  // le repère devient les trois @font-face ; le reste de la feuille se retrouve tel quel
+  const sansPolices = source.replace(/  @font-face \{[^\n]*\n    src: url\(data:font\/woff2;base64,[^)]*\) format\("woff2"\);\n    unicode-range: [^\n]*\n/g, '');
+  assert.ok(sansPolices.includes(css.replace('/*@polices@*/\n', '')), 'le contenu de style.css se retrouve tel quel');
   assert.ok(css.includes(':root'), 'et ce sont bien des styles');
+  const familles = [...source.matchAll(/@font-face \{ font-family: "([^"]+)"/g)].map(m => m[1]);
+  assert.deepStrictEqual(familles, ['Geist', 'Geist Mono', 'Instrument Serif'], 'les polices de l\'interface sont embarquées');
+  assert.ok(!/fonts\.g(oogleapis|static)\.com/.test(source), 'aucun appel à Google Fonts');
 });
 
 test('le script recollé se lit d\'un bloc', () => {

@@ -288,7 +288,7 @@
       sv.setAttribute('viewBox', '0 0 24 24');
       sv.setAttribute('fill', 'none');
       sv.setAttribute('stroke', 'currentColor');
-      sv.setAttribute('stroke-width', '1.4');
+      sv.setAttribute('stroke-width', '1.5');
       sv.setAttribute('stroke-linejoin', 'round');
       traits.forEach(d => { const p = document.createElementNS(SVGNS, 'path'); p.setAttribute('d', d); sv.appendChild(p); });
       const t = document.createElement('span'); t.textContent = nom;

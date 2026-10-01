@@ -3,6 +3,7 @@
      Le plateau est graphite et froid, les feuilles sont chaudes et vives,
      l'action est bleue. Les angles vifs sont réservés au papier.
      ===================================================================== */
+/*@polices@*/
   :root {
     color-scheme: dark;
 
@@ -16,17 +17,22 @@
 
     /* traits */
     --trait: #2E3841;
-    --trait-fin: #232B33;
+    --trait-fin: #2A333B;
+    /* bordure d'un champ de saisie : 3:1 au moins sur le fond (WCAG 1.4.11) ; --trait reste pour les filets décoratifs */
+    --trait-champ: #738290;
     --lueur: rgba(255, 255, 255, .045);
 
     /* texte */
     --texte: #E7ECF1;
-    --texte-2: #98A6B4;
-    --texte-3: #64727F;
+    --texte-2: #A7B4C0;
+    --texte-3: #90A0AE;
 
     /* signaux */
-    --bleu: #3F7BF2;
+    /* le bleu des aplats (bouton principal : le libellé blanc y passe 4,5:1) ; --bleu-vif sert au texte et à l'anneau de focus */
+    --bleu: #2F6AE0;
+    --bleu-survol: #2859C6;
     --bleu-vif: #5B92FF;
+    --focus: #5B92FF;
     --bleu-ombre: rgba(63, 123, 242, .22);
     --bleu-encre: #FFFFFF;
     --ambre: #E0A33C;
@@ -43,6 +49,7 @@
     --ombre-levee: 0 2px 3px rgba(0, 0, 0, .45), 0 18px 34px -10px rgba(0, 0, 0, .6);
     --ombre-flottante: 0 1px 2px rgba(0, 0, 0, .4), 0 24px 48px -12px rgba(0, 0, 0, .65);
     --voile: rgba(8, 11, 14, .72);
+    --desactive: .4;
 
     --tuile: 158px;
     --rond: 10px;
@@ -57,23 +64,27 @@
   @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
       color-scheme: light;
+      /* quatre profondeurs, comme en sombre : le plateau, le panneau, la barre et ce qui se lève */
       --encre: #FFFFFF;
-      --table: #F1F2F4;
-      --feutre: #FFFFFF;
+      --table: #EDEFF2;
+      --feutre: #F7F8FA;
       --relief: #FFFFFF;
       --survol: rgba(22, 26, 32, .06);
       --papier: #FFFFFF;
       --trait: #E2E5E9;
-      --trait-fin: #EDEFF2;
+      --trait-fin: #E7EAEE;
+      --trait-champ: #767F8A;
       --lueur: rgba(255, 255, 255, .9);
       --texte: #22262C;
-      --texte-2: #5B636E;
-      --texte-3: #8A929D;
+      --texte-2: #4C5560;
+      --texte-3: #5F6873;
       --bleu: #1473E6;
+      --bleu-survol: #0D66D0;
       --bleu-vif: #0D66D0;
+      --focus: #1473E6;
       --bleu-ombre: rgba(20, 115, 230, .13);
       --bleu-encre: #FFFFFF;
-      --ambre: #9A6B08;
+      --ambre: #8F6307;
       --rouge: #C7342B;
       --rouge-ombre: rgba(199, 52, 43, .10);
       --vert: #16795A;
@@ -87,23 +98,27 @@
   }
   :root[data-theme="light"] {
     color-scheme: light;
+    /* quatre profondeurs, comme en sombre : le plateau, le panneau, la barre et ce qui se lève */
     --encre: #FFFFFF;
-    --table: #F1F2F4;
-    --feutre: #FFFFFF;
+    --table: #EDEFF2;
+    --feutre: #F7F8FA;
     --relief: #FFFFFF;
     --survol: rgba(22, 26, 32, .06);
     --papier: #FFFFFF;
     --trait: #E2E5E9;
-    --trait-fin: #EDEFF2;
+    --trait-fin: #E7EAEE;
+    --trait-champ: #767F8A;
     --lueur: rgba(255, 255, 255, .9);
     --texte: #22262C;
-    --texte-2: #5B636E;
-    --texte-3: #8A929D;
+    --texte-2: #4C5560;
+    --texte-3: #5F6873;
     --bleu: #1473E6;
+    --bleu-survol: #0D66D0;
     --bleu-vif: #0D66D0;
+    --focus: #1473E6;
     --bleu-ombre: rgba(20, 115, 230, .13);
     --bleu-encre: #FFFFFF;
-    --ambre: #9A6B08;
+    --ambre: #8F6307;
     --rouge: #C7342B;
     --rouge-ombre: rgba(199, 52, 43, .10);
     --vert: #16795A;
@@ -131,6 +146,19 @@
   button, input, select, textarea { font: inherit; color: inherit; }
   button { cursor: pointer; }
 
+  /* Les états de tout bouton, dits une fois : un bouton désactivé n'a pas l'air d'un bouton actif, un bouton
+     enfoncé le montre, et un bouton dont l'opération dure (export, reconnaissance de texte, recherche, lots)
+     prend la place de son icône pour un disque qui tourne — là où l'œil est déjà, pas à mille pixels de là. */
+  button:disabled, [aria-disabled="true"] { opacity: var(--desactive); cursor: not-allowed; }
+  button:not(:disabled):active { transform: translateY(.5px); }
+  button[aria-busy="true"] { cursor: progress; pointer-events: none; }
+  button[aria-busy="true"] > svg { display: none; }
+  button[aria-busy="true"]::before {
+    content: ""; flex: none; width: 13px; height: 13px; border-radius: 50%;
+    border: 2px solid color-mix(in srgb, currentColor 28%, transparent); border-top-color: currentColor;
+    animation: tourne .7s linear infinite;
+  }
+
   /* Une interface ne se sélectionne pas. Sans cette règle, un glissé qui
      dépassait le bas d'une page emportait le numéro de page, le libellé du
      bouton « Modifier » et la barre d'état avec le texte du document : on
@@ -140,7 +168,7 @@
   body { user-select: none; }
   .couche-texte, .dlg-body, input, textarea, [contenteditable] { user-select: text; }
   button { user-select: none; }
-  :focus-visible { outline: 2px solid var(--bleu); outline-offset: 2px; border-radius: 3px; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   [hidden] { display: none !important; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   svg { display: block; }
@@ -187,13 +215,13 @@
   .tb-btn:hover:not(:disabled) { background: var(--survol); }
   .tb-btn:hover:not(:disabled) svg { color: var(--texte); }
   .tb-btn:active:not(:disabled) { transform: translateY(.5px); }
-  .tb-btn:disabled { opacity: .34; cursor: not-allowed; }
+  .tb-btn:disabled { opacity: var(--desactive); cursor: not-allowed; }
   .tb-btn.primary {
     background: var(--bleu); color: var(--bleu-encre); font-weight: 600;
     padding: 0 14px; box-shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 0 0 3px transparent;
   }
   .tb-btn.primary svg { color: currentColor; }
-  .tb-btn.primary:hover:not(:disabled) { background: var(--bleu-vif); box-shadow: 0 2px 8px var(--bleu-ombre), 0 0 0 3px var(--bleu-ombre); }
+  .tb-btn.primary:hover:not(:disabled) { background: var(--bleu-survol); box-shadow: 0 2px 8px var(--bleu-ombre), 0 0 0 3px var(--bleu-ombre); }
   /* Une action qu'on ne rattrape pas : elle se voit, et ne ressemble pas à sa
      voisine principale. Le caviardage retire le texte du fichier. */
   .tb-btn.peril { color: var(--rouge); border-color: color-mix(in srgb, var(--rouge) 38%, transparent); }
@@ -207,7 +235,7 @@
 
   .filename {
     position: relative; display: flex; align-items: center; flex: 0 100 auto; min-width: 96px; height: 30px;
-    background: var(--survol); border: 1px solid var(--trait);
+    background: var(--survol); border: 1px solid var(--trait-champ);
     border-radius: var(--rond-petit); padding: 0 11px; margin-right: 5px;
     transition: border-color .14s var(--elan), background .14s var(--elan);
   }
@@ -217,11 +245,11 @@
     font-family: var(--chiffre); font-size: 12.5px; text-align: right; letter-spacing: -.01em;
   }
   .filename input:focus { outline: none; }
-  .filename:focus-within { border-color: var(--bleu); background: var(--relief); }
+  .filename:focus-within { border-color: var(--focus); background: var(--relief); outline: 2px solid var(--focus); outline-offset: 2px; }
   .filename .ext { font-family: var(--chiffre); font-size: 12.5px; color: var(--texte-3); }
 
   /* ---------- espace de travail ---------- */
-  .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 272px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 320px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   /* ---------- onglets : plusieurs documents dans la fenêtre ---------- */
   /* Les rangées sont dites, jamais devinées. Sans cela, la barre d'onglets
      masquée — elle l'est tant qu'un seul document est ouvert — sort de la
@@ -241,11 +269,12 @@
   .onglet .mod { color: var(--ambre); font-weight: 700; flex: none; }
   .onglet:hover { color: var(--texte); }
   .onglet[aria-selected="true"] { background: var(--relief); color: var(--texte); box-shadow: inset 0 2px 0 var(--bleu); }
-  .onglet:focus-visible { outline: 2px solid var(--bleu); outline-offset: -2px; }
-  .onglet.cible { outline: 2px solid var(--bleu); outline-offset: -2px; background: var(--bleu-ombre); color: var(--texte); }
+  .onglet:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .onglet.cible { outline: 2px solid var(--focus); outline-offset: -2px; background: var(--bleu-ombre); color: var(--texte); }
   .onglet .x { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: var(--texte-3); display: grid; place-items: center; flex: none; }
   .onglet .x:hover { background: var(--rouge-ombre); color: var(--rouge); }
   .onglet .x svg { width: 10px; height: 10px; }
+  .onglets-liste { display: flex; align-items: flex-end; gap: 3px; min-width: 0; }
   .onglet-plus { width: 30px; height: 30px; border: 1px dashed var(--trait); border-radius: 8px 8px 0 0; background: transparent; color: var(--texte-3); display: grid; place-items: center; flex: none; margin-bottom: 1px; }
   .onglet-plus:hover { color: var(--texte); border-color: var(--texte-3); }
   .onglet-plus svg { width: 13px; height: 13px; }
@@ -253,7 +282,8 @@
     grid-row: 2; display: flex; flex-direction: column; min-height: 0;
     background: var(--feutre); border-right: 1px solid var(--trait);
   }
-  .tabs { display: flex; gap: 3px; padding: 10px 12px 2px; flex: none; }
+  .tabs { display: flex; gap: 2px; padding: 10px 10px 2px; flex: none; }
+  .tabs-liste { display: flex; gap: 2px; flex: 1; min-width: 0; }
   /* Replier le panneau rend sa largeur au document. Avec un seul document
      ouvert, il affiche trois lignes pour six cents pixels de haut, pendant que
      la page s'affiche petite au centre. */
@@ -273,12 +303,13 @@
   .workspace.replie .replier svg { transform: rotate(180deg); }
   @media (prefers-reduced-motion: reduce) { .replier svg { transition: none; } }
   .tab {
-    flex: 1; height: 31px; border-radius: var(--rond-petit); border: 1px solid transparent;
-    background: transparent; color: var(--texte-2); font-weight: 500;
-    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    flex: 1 1 auto; min-width: 0; height: 31px; padding: 0 6px; border-radius: var(--rond-petit); border: 1px solid transparent;
+    background: transparent; color: var(--texte-2); font-weight: 500; font-size: 12.5px; white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
     transition: background .14s var(--elan), color .14s var(--elan);
   }
-  .tab svg { width: 15px; height: 15px; }
+  .tab svg { width: 15px; height: 15px; flex: none; }
+  .tabs.sans-icones .tab svg { display: none; }
   .tab:hover { background: var(--survol); color: var(--texte); }
   .tab[aria-selected="true"] { background: var(--relief); color: var(--texte); box-shadow: 0 1px 2px rgba(0, 0, 0, .22), inset 0 1px 0 var(--lueur); }
   .pane { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
@@ -288,6 +319,7 @@
     display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 8px; flex: none;
     font-size: 10.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--texte-3);
   }
+  .panel-head h3 { margin: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; }
   .panel-head .count { font-family: var(--chiffre); font-weight: 400; letter-spacing: 0; font-variant-numeric: tabular-nums; }
   .doc-list { list-style: none; margin: 0; padding: 0 10px; display: flex; flex-direction: column; gap: 3px; }
   .doc {
@@ -304,6 +336,7 @@
   .doc:hover { background: var(--survol); }
   .doc:hover::before { top: 7px; bottom: 7px; }
   .doc.active { background: var(--bleu-ombre); }
+  .doc-main { flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
   .doc-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .doc-meta { font-family: var(--chiffre); font-size: 11px; color: var(--texte-3); margin-top: 3px; font-variant-numeric: tabular-nums; }
   .badge {
@@ -349,21 +382,32 @@
   .outil-filtre .vider:hover { color: var(--texte); background: var(--survol); }
   .outil-rien { margin: 18px 12px; color: var(--texte-3); font-size: 12.5px; line-height: 1.5; }
 
-  .tool-group { padding: 2px 10px 8px; }
-  .tool-group h3 {
-    margin: 14px 6px 6px; font-size: 10.5px; font-weight: 600; letter-spacing: .13em;
-    text-transform: uppercase; color: var(--texte-3);
+  /* Les outils tiennent sur deux colonnes, rangés en groupes qui se replient (l'état est retenu) : quatre-vingts pour cent
+     de la liste se voit sans défiler, au lieu de sept outils sur vingt-six. Le sous-titre est une infobulle. */
+  .tool-group { padding: 2px 10px 6px; }
+  .tool-group h3 { margin: 4px 0 2px; font: inherit; }
+  .groupe-tete {
+    display: flex; align-items: center; gap: 6px; width: 100%; padding: 7px 6px; border: 0; border-radius: 6px;
+    background: none; color: var(--texte-3); text-align: left;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase;
   }
+  .groupe-tete:hover { color: var(--texte); background: var(--survol); }
+  .groupe-tete svg { width: 12px; height: 12px; flex: none; transform: rotate(90deg); transition: transform .14s var(--elan); }
+  .groupe-tete[aria-expanded="false"] svg { transform: rotate(0deg); }
+  .groupe-tete .g-nb { margin-left: auto; font-family: var(--chiffre); font-weight: 500; letter-spacing: 0; }
+  .tool-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
+  .tool-grille[hidden] { display: none; }
   .tool {
-    position: relative; display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 11px;
+    position: relative; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 42px; padding: 7px 8px;
     border: 1px solid transparent; border-radius: var(--rond-petit); background: transparent; text-align: left; color: var(--texte);
     transition: background .14s var(--elan), transform .14s var(--elan);
   }
   .tool:hover:not(:disabled) { background: var(--survol); }
-  .tool:disabled { opacity: .36; cursor: not-allowed; }
+  .tool:disabled { opacity: var(--desactive); cursor: not-allowed; }
   .tool svg { width: 17px; height: 17px; flex: none; color: var(--texte-3); }
-  .tool .t-name { font-weight: 500; }
-  .tool .t-sub { font-size: 11.5px; color: var(--texte-3); }
+  .tool .t-texte { min-width: 0; }
+  .tool .t-name { display: block; font-size: 12.5px; font-weight: 500; line-height: 1.25; overflow-wrap: anywhere; }
+  .tool .t-sub { display: none; }
   .tool .dot { margin-left: auto; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--vert); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vert) 18%, transparent); }
 
   .shortcuts { margin-top: 18px; padding: 14px 16px; border-top: 1px solid var(--trait-fin); flex: none; }
@@ -415,7 +459,7 @@
   .tile.arrive { animation: pose .4s var(--elan) backwards; }
   @keyframes pose { from { opacity: 0; transform: translateY(8px) scale(.985); } }
   .tile:focus-visible { outline: none; }
-  .tile:focus-visible .thumb { box-shadow: 0 0 0 2px var(--bleu); }
+  .tile:focus-visible .thumb { box-shadow: 0 0 0 2px var(--focus); }
   .thumb {
     position: relative; aspect-ratio: 1 / 1.414; display: grid; place-items: center;
     transition: transform .18s var(--elan);
@@ -487,7 +531,7 @@
     display: grid; place-items: center; transition: background .12s, color .12s;
   }
   .tile-tools button:hover:not(:disabled) { background: var(--bleu-ombre); color: var(--texte); }
-  .tile-tools button:disabled { opacity: .28; cursor: not-allowed; }
+  .tile-tools button:disabled { opacity: var(--desactive); cursor: not-allowed; }
   .tile-tools button.danger:hover { color: var(--rouge); background: var(--rouge-ombre); }
   .tile-tools button svg { width: 14px; height: 14px; }
   .tile-tools .sep { width: 1px; background: var(--trait); margin: 5px 2px; }
@@ -502,7 +546,7 @@
   }
   .tile:hover .pos { border-color: var(--trait); color: var(--texte); }
   .pos:hover { border-color: var(--texte-3); color: var(--texte); }
-  .pos:focus { outline: none; border-color: var(--bleu); background: var(--relief); }
+  .pos:focus { border-color: var(--focus); background: var(--relief); }
   .tile.selected .pos { border-color: var(--bleu); color: var(--bleu-vif); }
   .src-label { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 11.5px; color: var(--texte-3); }
   .src-label .swatch { flex: none; width: 6px; height: 6px; border-radius: 50%; background: hsl(var(--h) var(--teinte-s) var(--teinte-l)); }
@@ -585,6 +629,8 @@
     opacity: 0; transition: opacity .14s var(--elan);
   }
   .feuille-vue:hover .retoucher, .feuille-vue .retoucher:focus-visible { opacity: 1; }
+  /* la sélection de pages se voit aussi en lecture : le même liseré que sur une vignette */
+  .feuille-vue.selected canvas { box-shadow: 0 0 0 3px var(--focus), var(--ombre-levee); }
   .feuille-vue .retoucher:hover { border-color: var(--bleu); color: var(--texte); }
   .feuille-vue .retoucher svg { width: 13px; height: 13px; }
   @media (hover: none) { .feuille-vue .retoucher { opacity: 1; } }
@@ -607,16 +653,16 @@
   }
   .zoom-lecture button:hover { background: var(--survol); color: var(--texte); }
   .zoom-lecture select {
-    height: 30px; border-radius: 7px; border: 1px solid var(--trait); background: var(--relief);
+    height: 30px; border-radius: 7px; border: 1px solid var(--trait-champ); background: var(--relief);
     color: var(--texte); font-family: var(--chiffre); font-size: 12px; padding: 0 4px; min-width: 104px;
   }
   .page-courante { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
   .page-courante input {
-    width: 42px; height: 24px; text-align: center; border-radius: 6px; border: 1px solid var(--trait);
+    width: 42px; height: 24px; text-align: center; border-radius: 6px; border: 1px solid var(--trait-champ);
     background: var(--encre); color: var(--texte); font-family: var(--chiffre); font-size: 11.5px;
     font-variant-numeric: tabular-nums;
   }
-  .page-courante input:focus { outline: none; border-color: var(--bleu); }
+  .page-courante input:focus { border-color: var(--focus); }
 
   /* ---------- table vide ---------- */
   .dropzone {
@@ -668,9 +714,9 @@
   .moveto input {
     width: 54px; height: 29px; text-align: center; border-radius: 6px;
     font-family: var(--chiffre); font-size: 12.5px; font-variant-numeric: tabular-nums;
-    background: var(--survol); border: 1px solid var(--trait); color: var(--texte);
+    background: var(--survol); border: 1px solid var(--trait-champ); color: var(--texte);
   }
-  .moveto input:focus { outline: none; border-color: var(--bleu); background: var(--relief); }
+  .moveto input:focus { border-color: var(--focus); background: var(--relief); }
   .moveto .go { height: 29px; padding: 0 11px; border-radius: 6px; border: 1px solid var(--trait); background: var(--survol); font-weight: 500; transition: background .14s, color .14s, border-color .14s; }
   .moveto .go:hover { background: var(--bleu); color: var(--bleu-encre); border-color: transparent; }
 
@@ -692,7 +738,7 @@
   .progress { flex: none; width: 120px; height: 4px; border-radius: 3px; background: var(--trait); overflow: hidden; }
   .progress i { display: block; height: 100%; width: 0; background: var(--bleu); border-radius: 3px; transition: width .18s var(--elan); }
   .annuler-op { height: 24px; padding: 0 9px; border: 1px solid var(--trait); font-size: 11.5px; }
-  .annuler-op:disabled { opacity: .6; }
+  .annuler-op:disabled { opacity: var(--desactive); }
   .avis { height: 24px; padding: 0 8px; gap: 5px; border: 1px solid var(--trait); font-family: var(--chiffre); font-size: 11.5px; color: var(--texte-2); }
   .avis svg { width: 13px; height: 13px; }
   .avis.grave { color: var(--ambre); border-color: var(--ambre); }
@@ -750,7 +796,8 @@
   .apercu-tableau td.nombre { text-align: right; }
   .menu-ctx { position: fixed; z-index: 120; min-width: 230px; padding: 6px; background: var(--feutre); border: 1px solid var(--trait); border-radius: 12px; box-shadow: var(--ombre-flottante); animation: pose-fenetre .12s var(--elan); }
   .menu-ctx button { display: flex; align-items: center; gap: 10px; width: 100%; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--texte); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
-  .menu-ctx button:hover, .menu-ctx button:focus-visible { background: var(--survol); outline: none; }
+  .menu-ctx button:hover, .menu-ctx button:focus-visible { background: var(--survol); }
+  .menu-ctx button:focus-visible { outline-offset: -2px; }
   .menu-ctx button:disabled { color: var(--texte-3); cursor: default; background: transparent; }
   .menu-ctx button.danger:hover { color: var(--rouge); }
   .menu-ctx button svg { width: 15px; height: 15px; color: var(--texte-2); flex: none; }
@@ -775,14 +822,22 @@
   .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .field > label, .field-label { font-size: 11.5px; font-weight: 500; color: var(--texte-2); letter-spacing: .01em; }
   .field input[type="text"], .field input[type="number"], .field input[type="password"], .field select, .field textarea {
-    height: 35px; padding: 0 11px; border-radius: var(--rond-petit); border: 1px solid var(--trait);
+    height: 35px; padding: 0 11px; border-radius: var(--rond-petit); border: 1px solid var(--trait-champ);
     background: var(--encre); color: var(--texte); min-width: 0; width: 100%;
     transition: border-color .14s, box-shadow .14s;
   }
   .field textarea { height: auto; min-height: 72px; padding: 9px 11px; resize: vertical; font-family: inherit; line-height: 1.5; }
-  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--bleu); box-shadow: 0 0 0 3px var(--bleu-ombre); }
-  .field input[type="color"] { width: 44px; height: 35px; padding: 3px; border-radius: var(--rond-petit); border: 1px solid var(--trait); background: var(--encre); cursor: pointer; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--focus); box-shadow: 0 0 0 3px var(--bleu-ombre); }
+  .field input[type="color"] { width: 44px; height: 35px; padding: 3px; border-radius: var(--rond-petit); border: 1px solid var(--trait-champ); background: var(--encre); cursor: pointer; }
   .field input[type="range"] { accent-color: var(--bleu); width: 100%; }
+  /* La piste d'un curseur est dessinée : sans cela elle garde le gris clair du navigateur, une barre blanche au milieu d'une fenêtre anthracite. */
+  input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; height: 20px; cursor: pointer; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--trait-champ); }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%;
+    background: var(--bleu); border: 2px solid var(--feutre); box-shadow: 0 0 0 1px var(--trait-champ);
+  }
+  input[type="range"]:focus-visible { outline-offset: 4px; }
   .field .hint { font-size: 11.5px; color: var(--texte-3); line-height: 1.5; }
   .row { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(142px, 1fr)); align-items: end; }
   .row.tight { grid-template-columns: repeat(auto-fit, minmax(106px, 1fr)); }
@@ -887,7 +942,7 @@
     line-height: 1.18; white-space: pre-wrap; overflow-wrap: anywhere;
     caret-color: var(--bleu); cursor: text;
   }
-  .ed-riche:focus { outline: none; border-color: var(--bleu); box-shadow: 0 0 0 3px var(--bleu-ombre); }
+  .ed-riche:focus { border-color: var(--focus); box-shadow: 0 0 0 3px var(--bleu-ombre); }
   .ed-riche span { white-space: pre-wrap; }
   .ed-riche ::selection { background: var(--bleu); color: #fff; }
 
@@ -910,15 +965,15 @@
   .ed-format button b, .ed-format button i { font-size: 13.5px; }
   .ed-format .taille {
     width: 46px; height: 27px; text-align: center; border-radius: 6px;
-    border: 1px solid var(--trait); background: var(--encre); color: var(--texte);
+    border: 1px solid var(--trait-champ); background: var(--encre); color: var(--texte);
     font-family: var(--chiffre); font-size: 12px; font-variant-numeric: tabular-nums;
   }
-  .ed-format .taille:focus { outline: none; border-color: var(--bleu); }
+  .ed-format .taille:focus { border-color: var(--focus); }
   .ed-format .police {
     height: 27px; max-width: 118px; padding: 0 4px; border-radius: 6px;
-    border: 1px solid var(--trait); background: var(--encre); color: var(--texte); font-size: 12px;
+    border: 1px solid var(--trait-champ); background: var(--encre); color: var(--texte); font-size: 12px;
   }
-  .ed-format .police:focus { outline: none; border-color: var(--bleu); }
+  .ed-format .police:focus { border-color: var(--focus); }
   .ed-format input[type="color"] {
     width: 27px; height: 27px; padding: 2px; border: 1px solid var(--trait);
     border-radius: 6px; background: var(--encre); cursor: pointer;
@@ -953,7 +1008,7 @@
     color: var(--texte-2); display: grid; place-items: center; font-size: 13px; line-height: 1;
   }
   .imp-nav button:hover:not(:disabled) { border-color: var(--bleu); color: var(--texte); }
-  .imp-nav button:disabled { opacity: .35; cursor: not-allowed; }
+  .imp-nav button:disabled { opacity: var(--desactive); cursor: not-allowed; }
   @media (max-width: 720px) { .imp-grille { grid-template-columns: 1fr; } .imp-apercu { position: static; } }
 
   .imp-destination { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 8px; background: var(--survol); font-size: 13px; }
@@ -1003,10 +1058,18 @@
      et sa place restent — il ne disparaît jamais de l'écran. */
   .toolbar.serre-4 .tb-btn.primary .lbl { display: none; }
   .toolbar.serre-4 .filename input { width: 84px; }
-  @media (max-width: 900px) {
+  @media (forced-colors: active) {
+    :focus-visible { outline-color: Highlight; }
+    .tb-btn, .tab, .onglet, .tool, .seg button { border: 1px solid ButtonText; }
+    .tb-btn[aria-pressed="true"], .tab[aria-selected="true"], .onglet[aria-selected="true"], .seg button[aria-pressed="true"],
+    .tile.selected .sheet { outline: 2px solid Highlight; outline-offset: -2px; }
+    button:disabled { opacity: 1; color: GrayText; border-color: GrayText; }
+  }
+  @media (max-width: 872px) {
     body { overflow: auto; height: auto; min-height: 100%; }
-    .workspace { grid-template-columns: 1fr; }
-    .side { border-right: 0; border-bottom: 1px solid var(--trait); }
+    .workspace, .workspace.replie { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
+    .side { grid-row: 2; grid-column: 1; border-right: 0; border-bottom: 1px solid var(--trait); }
+    .canvas { grid-row: 3; grid-column: 1; }
     .pane { overflow: visible; }
     .shortcuts { display: none; }
     .canvas { overflow: visible; padding: 18px 16px 96px; }

@@ -6,7 +6,9 @@
     li.className = 'tile';
     li.dataset.id = p.id;
     li.draggable = true;
-    li.tabIndex = 0;
+    // Un seul arrêt de tabulation pour toute la grille (voir majTabulationTuiles) : Tab la traverse d'un coup, les flèches
+    // vont de page en page.
+    li.tabIndex = -1;
     li.setAttribute('role', 'option');
 
     const thumb = document.createElement('div'); thumb.className = 'thumb';
@@ -33,6 +35,7 @@
       if (spec[0] === '|') { const s = document.createElement('span'); s.className = 'sep'; tools.appendChild(s); return; }
       const b = document.createElement('button');
       b.type = 'button'; b.dataset.act = spec[0]; b.title = spec[2];
+      b.tabIndex = -1; // à la souris ; au clavier, chaque geste a sa touche (Entrée, R, Suppr, Alt+flèches)
       b.setAttribute('aria-label', spec[2]);
       if (spec[0] === 'del') b.className = 'danger';
       b.appendChild(icon(spec[1]));
@@ -43,6 +46,7 @@
     const foot = document.createElement('div'); foot.className = 'tile-foot';
     const pos = document.createElement('input');
     pos.className = 'pos'; pos.type = 'text'; pos.inputMode = 'numeric'; pos.autocomplete = 'off';
+    pos.tabIndex = -1; // on y arrive en tapant un chiffre, ou la touche P, depuis la page
     pos.title = 'Position de la page : saisissez un numéro puis Entrée pour la déplacer';
     pos.setAttribute('aria-label', 'Position de la page');
     const lab = document.createElement('span'); lab.className = 'src-label';
@@ -148,11 +152,12 @@
       const li = document.createElement('li');
       const row = document.createElement('div');
       row.className = 'doc';
-      row.setAttribute('role', 'button');
-      row.tabIndex = 0;
       row.style.setProperty('--h', src.hue);
-      row.title = 'Sélectionner toutes les pages de ' + src.name;
-      const g = document.createElement('div');
+      // La ligne n'est pas un bouton (elle en contient un, pour retirer le document) : son texte l'est, et le retrait
+      // est son voisin. Un bouton qui en avalait un autre se lisait « seance.pdf 1 page Retirer seance.pdf… ».
+      const g = document.createElement('button');
+      g.type = 'button'; g.className = 'doc-main';
+      g.title = 'Sélectionner toutes les pages de ' + src.name;
       const name = document.createElement('div'); name.className = 'doc-name'; name.setAttribute('translate', 'no'); name.textContent = src.name;
       if (src.isSample) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'Exemple'; name.appendChild(b); }
       if (src.genere) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'Généré'; name.appendChild(b); }
@@ -169,8 +174,9 @@
       rm.appendChild(icon(IC.x, { sw: 1.7 }));
       rm.addEventListener('click', e => { e.stopPropagation(); removeSource(src.id); });
       row.append(g, rm);
-      row.addEventListener('click', () => selectSource(src.id));
-      row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectSource(src.id); } });
+      g.addEventListener('click', () => selectSource(src.id));
+      // à la souris, toute la ligne se prend, pas seulement son texte
+      row.addEventListener('click', e => { if (!e.target.closest('button')) selectSource(src.id); });
       li.appendChild(row);
       el.docList.appendChild(li);
     });
@@ -214,6 +220,9 @@
       t.classList.toggle('selected', sel);
       t.setAttribute('aria-selected', sel ? 'true' : 'false');
     });
+    // En vue Lire aussi, ce qui est sélectionné se voit : un liseré sur la feuille. Sans cela, la barre de sélection
+    // (Retirer, Pivoter…) surgissait pour des pages que rien n'indiquait.
+    feuilles.forEach((f, id) => f.classList.toggle('selected', state.selected.has(id)));
     const n = state.selected.size;
     el.selbar.hidden = n === 0;
     if (n) {
@@ -258,6 +267,17 @@
     });
   }
 
+  // Le modèle d'une liste à choix : un seul élément est dans l'ordre de tabulation (le dernier qui a eu le focus, ou la
+  // première page), les autres y entrent aux flèches. Sans cela, huit pages et leurs sept boutons font soixante-quatre
+  // arrêts de Tab avant de sortir de la grille.
+  let tuileTabulee = null;
+  function majTabulationTuiles(id) {
+    if (id != null) tuileTabulee = id;
+    const premier = state.pages.length ? state.pages[0].id : null;
+    const cible = tuileTabulee != null && tiles.has(tuileTabulee) ? tuileTabulee : premier;
+    tiles.forEach((t, k) => { t.tabIndex = k === cible ? 0 : -1; });
+  }
+
   function render() {
     if (state.silencieux) return;
     const alive = new Set(state.pages.map(p => p.id));
@@ -285,6 +305,7 @@
       frag.appendChild(t);
     });
     el.pages.replaceChildren(frag);
+    majTabulationTuiles();
 
     const has = state.pages.length > 0;
     el.dropzone.hidden = has;

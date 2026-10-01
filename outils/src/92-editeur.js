@@ -2,15 +2,40 @@
   //  Page editor
   // =====================================================================
 
-  function openEditor(pageId) {
+  // L'éditeur plaque l'écran : c'est une boîte modale, et elle doit se conduire comme les autres (voir dialog()).
+  // Pour le clavier et pour un lecteur d'écran, tout ce qui est derrière n'existe plus tant qu'elle est ouverte
+  // (`inert` retire le focus et les clics, aria-hidden le dit) ; le focus entre à l'ouverture, Tab y tourne, et il
+  // retourne à ce qui l'avait quand on referme.
+  const FOND_DE_L_EDITEUR = ['#app-toolbar', '#app-main', '#app-status', '#selbar'];
+  function edFond(inerte) {
+    FOND_DE_L_EDITEUR.forEach(sel => {
+      const n = $(sel);
+      if (!n) return;
+      n.inert = inerte;
+      if (inerte) n.setAttribute('aria-hidden', 'true'); else n.removeAttribute('aria-hidden');
+    });
+  }
+  function edCibles() {
+    return Array.from(ed.root.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'))
+      .filter(n => n.offsetWidth > 0 || n.offsetHeight > 0);
+  }
+
+  // `outil` : l'éditeur s'ouvre sur cet outil déjà choisi (« Caviarder une zone », « Tampon » du volet des outils).
+  function openEditor(pageId, outil) {
     const p = state.pages.find(x => x.id === pageId);
     if (!p) return;
-    ed.pageId = pageId; ed.sel = null; ed.tool = 'select'; ed.zoom = 'fit';
+    ed.pageId = pageId; ed.sel = null; ed.tool = outil && outil !== 'tampon' ? outil : 'select'; ed.zoom = 'fit';
     if (!ed.root) buildEditor();
+    if (ed.root.hidden) { ed.retour = document.activeElement; ed.retourPage = pageId; ed.retourOutil = ed.retour && ed.retour.dataset ? ed.retour.dataset.tool : null; }
     ed.root.hidden = false;
     document.body.style.overflow = 'hidden';
+    edFond(true);
     edSyncTools();
     edRenderPage();
+    const premier = edCibles()[0];
+    if (premier) premier.focus();
+    // Ces deux-là n'ont pas qu'un état à poser : on fait comme au clic sur leur bouton (le dialogue des tampons s'ouvre, le texte se repère).
+    if (outil === 'tampon' || outil === 'edittext') { const b = $('.ed-tool[data-tool="' + outil + '"]', ed.root); if (b) b.click(); }
   }
 
   function closeEditor() {
@@ -18,14 +43,39 @@
     edFermerSaisie();
     ed.root.hidden = true;
     document.body.style.overflow = '';
+    edFond(false);
     ed.pageId = null; ed.sel = null;
     vue.render();
+    // Le focus retourne là où il était : le bouton qui a ouvert l'éditeur, ou la vignette de la page quand c'est elle
+    // (la vue vient d'être redessinée : l'ancien élément n'existe peut-être plus).
+    try {
+      const t = ed.retourPage != null ? tiles.get(ed.retourPage) : null;
+      // la liste des outils vient d'être redessinée avec le reste : on retrouve le bouton par son identifiant
+      const outil = ed.retourOutil ? document.querySelector('#tool-groups [data-tool="' + ed.retourOutil + '"]') : null;
+      if (ed.retour && ed.retour.isConnected && ed.retour !== document.body) ed.retour.focus();
+      else if (outil) outil.focus();
+      else if (t) t.focus();
+    } catch (e) { signaler('Retour du focus', e, 'info'); }
+    ed.retour = null; ed.retourPage = null; ed.retourOutil = null;
   }
 
   function buildEditor() {
     const root = document.createElement('div');
     root.className = 'editor';
     root.hidden = true;
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-label', 'Éditeur de page');
+    // Tab tourne dans l'éditeur (une fenêtre ouverte par-dessus garde son propre clavier).
+    root.addEventListener('keydown', e => {
+      if (e.key !== 'Tab' || openDlg) return;
+      const cibles = edCibles();
+      if (!cibles.length) return;
+      const premier = cibles[0], dernier = cibles[cibles.length - 1];
+      if (!ed.root.contains(document.activeElement)) { e.preventDefault(); premier.focus(); }
+      else if (e.shiftKey && document.activeElement === premier) { e.preventDefault(); dernier.focus(); }
+      else if (!e.shiftKey && document.activeElement === dernier) { e.preventDefault(); premier.focus(); }
+    });
 
     const head = document.createElement('div'); head.className = 'ed-head';
     const title = document.createElement('span'); title.className = 'title'; title.textContent = 'Éditeur de page';
@@ -36,7 +86,8 @@
     nav.append(prev, label, next);
     const spacer = document.createElement('span'); spacer.className = 'tb-spacer';
     const zoomSel = select('ed-zoom', [['fit', 'Ajuster'], ['0.5', '50 %'], ['0.75', '75 %'], ['1', '100 %'], ['1.5', '150 %'], ['2', '200 %']], 'fit');
-    zoomSel.style.height = '32px'; zoomSel.style.borderRadius = '7px'; zoomSel.style.border = '1px solid var(--trait)';
+    zoomSel.style.height = '32px'; zoomSel.style.borderRadius = '7px'; zoomSel.style.border = '1px solid var(--trait-champ)';
+    zoomSel.setAttribute('aria-label', 'Zoom de la page');
     zoomSel.style.background = 'var(--survol)'; zoomSel.style.padding = '0 8px';
     zoomSel.addEventListener('change', () => { ed.zoom = zoomSel.value; edRenderPage(); });
     const done = document.createElement('button');

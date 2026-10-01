@@ -42,6 +42,15 @@ const COMPOSANTS = [
   { nom: 'node-forge', version: '1.3.1', licence: 'BSD-3-Clause (offert au choix en BSD ou GPLv2 ; la BSD est retenue)',
     auteur: 'Digital Bazaar, Inc. et contributeurs', role: 'lecture des certificats PKCS#12 (.p12, .pfx) et création de la signature numérique',
     fichier: ['node-forge-1.3.1', 'LICENSE'] },
+  { nom: 'Geist (police de l\'interface)', version: '5.3.0', licence: 'SIL Open Font License 1.1',
+    auteur: 'The Geist Project Authors (https://github.com/vercel/geist-font)', role: 'dessin des textes de l\'interface',
+    fichier: ['fontsource-variable-geist-5.3.0', 'LICENSE'] },
+  { nom: 'Geist Mono (police de l\'interface, chasse fixe)', version: '5.3.0', licence: 'SIL Open Font License 1.1',
+    auteur: 'The Geist Project Authors (https://github.com/vercel/geist-font)', role: 'idem, chiffres et noms de fichier',
+    fichier: ['fontsource-variable-geist-mono-5.3.0', 'LICENSE'] },
+  { nom: 'Instrument Serif (police de titrage de l\'interface)', version: '5.3.0', licence: 'SIL Open Font License 1.1',
+    auteur: 'The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif)', role: 'idem, nom du produit et titres de fenêtre',
+    fichier: ['fontsource-instrument-serif-5.3.0', 'LICENSE'] },
   { nom: 'Arimo (police sans empattement, de mêmes largeurs que Helvetica et Arial)', version: '0.4.3', licence: 'SIL Open Font License 1.1',
     auteur: 'The Arimo Project Authors', role: 'écriture des textes ajoutés aux PDF avec des caractères hors du jeu Windows, et PDF/A',
     fichier: ['expo-google-fonts-arimo-0.4.3', 'LICENSE_FONT'] },
@@ -109,6 +118,8 @@ function mentions({ version = '', construction = '' } = {}) {
   sortie.push('Les polices Arimo, Tinos et Cousine sont embarquées telles quelles, sans modification. Les');
   sortie.push('documents produits n\'en contiennent que les lettres utilisées (sous-ensemble), ce que la licence');
   sortie.push('OFL 1.1 permet ; le nom des polices reste celui de leurs auteurs.');
+  sortie.push('Geist, Geist Mono et Instrument Serif (interface) sont embarquées dans la feuille de style, en WOFF2, sous-ensemble');
+  sortie.push('latin tel que distribué par le projet fontsource, sans autre modification.');
   sortie.push('');
   sortie.push('Ce que ce logiciel n\'embarque pas : aucun module de statistiques, aucun code d\'un service en ligne.');
   sortie.push('Aucun composant sous GPL ou AGPL.');

@@ -169,6 +169,14 @@
   //  Init
   // =====================================================================
   function init() {
+    // Un bouton sans texte tire son nom de son infobulle : on le dit explicitement, car `title` seul n'est pas un nom fiable
+    // pour tous les lecteurs d'écran (la page a quatre boutons de ce genre : aide, thème, langue, replier).
+    $$('button[title]:not([aria-label])').forEach(b => { if (!b.textContent.trim()) b.setAttribute('aria-label', b.title); });
+    // Quel bouton vient d'être cliqué : de quoi lui donner l'état « occupé » quand son opération dure (voir setBusy).
+    document.addEventListener('click', (e) => {
+      const b = e.target && e.target.closest ? e.target.closest('button') : null;
+      state.dernierClic = { bouton: b, t: performance.now() };
+    }, true);
     Object.assign(el, {
       pages: $('#pages'), canvas: $('#canvas'), dropzone: $('#dropzone'), chips: $('#chips'),
       docList: $('#doc-list'), docsEmpty: $('#docs-empty'), docCount: $('#doc-count'),
@@ -219,11 +227,19 @@
 
     // tabs
     const tabs = [[$('#tab-docs'), $('#pane-docs')], [$('#tab-tools'), $('#pane-tools')], [$('#tab-plan'), $('#pane-plan')]];
+    // Le volet choisi est retenu, comme la vue, le thème et le repli du panneau : on rouvre là où on travaillait.
+    const poserVolet = (tab, pane) => tabs.forEach(([t, p]) => { t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); p.hidden = p !== pane; });
     tabs.forEach(([tab, pane]) => {
       tab.addEventListener('click', () => {
-        tabs.forEach(([t, p]) => { t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); p.hidden = p !== pane; });
+        poserVolet(tab, pane);
+        try { localStorage.setItem('aktum-volet', tab.id); } catch (e) { signaler('Volet du panneau', e, 'info'); }
       });
     });
+    try {
+      const retenu = localStorage.getItem('aktum-volet');
+      const choix = tabs.find(([t]) => t.id === retenu);
+      if (choix) poserVolet(choix[0], choix[1]);
+    } catch (e) { signaler('Volet du panneau', e, 'info'); }
 
     // « Ouvrir » ouvre un document à part (nouvel onglet si celui-ci en a
     // déjà un) ; « Ajouter un document » le combine au document en cours.
@@ -436,6 +452,8 @@
       menuPage(e, +f.dataset.id);
     });
 
+    // Le dernier élément qui a eu le focus est celui où Tab revient (voir majTabulationTuiles).
+    el.pages.addEventListener('focusin', e => { const t = e.target.closest('.tile'); if (t) majTabulationTuiles(+t.dataset.id); });
     el.pages.addEventListener('keydown', e => {
       const t = e.target.closest('.tile');
       if (!t || e.target !== t) return;
@@ -452,7 +470,26 @@
         if (e.altKey) { nudge(id, dir); return; }
         const next = state.pages[i + dir];
         if (next) { const nt = tiles.get(next.id); if (nt) nt.focus(); }
-      } else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deletePages(targetsFor(id)); }
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        // La grille est à deux dimensions : haut et bas vont à la page de la rangée voisine, dans la même colonne.
+        e.preventDefault();
+        const r = t.getBoundingClientRect(), cx = r.left + r.width / 2, bas = e.key === 'ArrowDown';
+        let meilleur = null, score = Infinity;
+        state.pages.forEach(p => {
+          const x = tiles.get(p.id);
+          if (!x || x === t) return;
+          const b = x.getBoundingClientRect();
+          if (bas ? b.top < r.top + r.height * 0.5 : b.bottom > r.bottom - r.height * 0.5) return;
+          const sc = Math.abs(b.top - r.top) * 1000 + Math.abs(cx - (b.left + b.width / 2));
+          if (sc < score) { score = sc; meilleur = x; }
+        });
+        if (meilleur) meilleur.focus();
+      } else if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        const x = tiles.get(state.pages[e.key === 'Home' ? 0 : state.pages.length - 1].id);
+        if (x) x.focus();
+      } else if (e.key === 'p' || e.key === 'P') { e.preventDefault(); t.querySelector('.pos').focus(); }
+      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deletePages(targetsFor(id)); }
       else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); rotatePages(targetsFor(id), e.shiftKey ? -90 : 90); }
       else if (/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
@@ -595,6 +632,8 @@
     });
 
     renderTools();
+    envoyerLeMenuDesOutils();
+    window.addEventListener('aktum-langue', envoyerLeMenuDesOutils);
     vue.render();
     // Lancée par l'exécutable, la page imprime directement : le moteur
     // d'affichage n'ouvre pas sa propre fenêtre d'impression.
@@ -622,6 +661,18 @@
     // La fenêtre de l'application (Electron) parle à la page par
     // window.AktumDesktop : les documents reçus, les commandes de son menu,
     // le résultat d'un enregistrement.
+    // Une commande d'édition du menu (Annuler, Rétablir, Tout sélectionner) rejoue la touche correspondante là où est le
+    // focus : tout ce qui sait y répondre — l'application sur le document, l'éditeur de page, une fenêtre — y répond
+    // comme à la touche. Si personne n'y répond et que le focus est dans un champ de saisie, c'est le champ qui fait.
+    const toucheEdition = (touche, maj) => {
+      const cible = document.activeElement || document.body;
+      const evt = new KeyboardEvent('keydown', { key: maj ? touche.toUpperCase() : touche, ctrlKey: true, shiftKey: maj, bubbles: true, cancelable: true });
+      if (!cible.dispatchEvent(evt)) return;
+      const champ = cible.isContentEditable || /^(input|textarea)$/i.test(cible.tagName || '');
+      if (!champ) return;
+      if (touche === 'a') { if (typeof cible.select === 'function') cible.select(); else document.execCommand('selectAll'); }
+      else document.execCommand(maj ? 'redo' : 'undo');
+    };
     const bureau = window.AktumDesktop || null;
     state.bureau = !!bureau;
     if (bureau) {
@@ -648,6 +699,10 @@
         else if (nom === 'zoom-page') { if (state.vue === 'lecture') poserZoom('page'); }
         else if (nom === 'deux-pages') { changerVue('lecture'); poserDispo(state.dispo === 'deux' ? 'une' : 'deux'); }
         else if (nom === 'signet') { if (state.pages.length) ajouterSignet(); }
+        else if (nom.startsWith('outil:')) lancerUnOutil(nom.slice(6));
+        else if (nom === 'annuler') toucheEdition('z', false);
+        else if (nom === 'retablir') toucheEdition('z', true);
+        else if (nom === 'tout-selectionner') toucheEdition('a', false);
         else if (nom === 'theme') el.btnTheme.click();
         else if (nom === 'raccourcis') toolHelp();
       };

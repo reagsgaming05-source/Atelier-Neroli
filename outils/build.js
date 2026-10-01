@@ -53,6 +53,7 @@ const csp = (extra, voisin) => '<meta http-equiv="Content-Security-Policy" conte
   + "worker-src blob:" + (extra ? " 'self'" : '') + '; '
   + "style-src 'unsafe-inline'; "
   + 'img-src data: blob:' + (extra ? " 'self'" : '') + '; '
+  + 'font-src data:; '
   + 'connect-src blob: data:' + (extra ? " 'self'" : '') + '; '
   + (extra ? "manifest-src 'self'; " : '')
   + "object-src 'none'; base-uri 'none'; form-action 'none'"
@@ -123,9 +124,9 @@ const inline = [
 ].join('\n');
 // Remplacement par fonction : sinon les $& ou $` du code des bibliothèques
 // seraient interprétés comme des motifs et injecteraient le reste de la page.
-// Hors ligne, inutile d'appeler Google Fonts : la page utilise les polices du système.
-const sansPolices = src.replace(/<link rel="preconnect"[^>]*>\n/g, '').replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>\n/, '');
-if (sansPolices === src) throw new Error('liens de polices introuvables');
+// Les polices de l'interface sont dans la feuille de style (voir assembler.js) : aucun appel à Google Fonts, nulle part.
+if (/fonts\.g(oogleapis|static)\.com/.test(src)) throw new Error('la page appelle encore Google Fonts : les polices de l\'interface sont embarquées');
+const sansPolices = src;
 // Ni adresse de CDN, ni message qui renvoie vers internet : ce qui part aux
 // postes ne charge rien de l'extérieur, et le dit.
 const vidage = (t, nom, re, remplacement) => {

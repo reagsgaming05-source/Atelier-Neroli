@@ -114,9 +114,32 @@ async function tournerPage(win, n) {
   const donnees = await app.evaluate(({ app }) => app.getPath('userData'));
   console.log('titre :', title, '| menu :', JSON.stringify(menu), '| données :', donnees);
   console.log(JSON.stringify(info));
-  verifier(title === 'Aktum PDF' && JSON.stringify(menu) === JSON.stringify(['Fichier', 'Affichage', 'Outils', 'Aide']), 'titre ou menu');
+  verifier(title === 'Aktum PDF' && JSON.stringify(menu) === JSON.stringify(['Fichier', 'Édition', 'Affichage', 'Outils', 'Aide']), 'titre ou menu');
   verifier(info.bureau && info.docs.length === 1 && /essai\.pdf/.test(info.docs[0]) && !info.exemple && info.imprimantes, 'document du lancement');
   verifier(info.bouton === 'Enregistrer', 'bouton Enregistrer');
+  // Le menu « Outils » reprend les outils du volet, par groupe : la page envoie sa liste, le menu la montre, et une entrée
+  // lance l'outil. (Le menu « Édition » a ses touches : sous macOS elles ne passent que par lui.)
+  const outils = await app.evaluate(({ Menu }) => {
+    const m = Menu.getApplicationMenu().items.find((i) => i.label === 'Outils');
+    return m.submenu.items.map((i) => ({ label: i.label, filles: i.submenu ? i.submenu.items.map((x) => x.label) : null }));
+  });
+  const groupes = outils.filter((i) => i.filles).map((i) => i.label);
+  console.log('menu Outils :', JSON.stringify(groupes));
+  verifier(['Organiser', 'Modifier', 'Exporter', 'Protéger', 'Document'].every((g) => groupes.includes(g)), 'les groupes du volet sont dans le menu Outils');
+  const toutes = outils.filter((i) => i.filles).reduce((a, i) => a.concat(i.filles), []);
+  verifier(toutes.length >= 30 && toutes.includes('Pages vierges') && toutes.includes('Caviarder une zone') && toutes.includes('Vérifier les signatures'), 'les trente outils sont dans le menu Outils (' + toutes.length + ')');
+  const edition = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.find((i) => i.label === 'Édition').submenu.items.filter((i) => i.label).map((i) => i.label + (i.accelerator ? ' [' + i.accelerator + ']' : '')));
+  console.log('menu Édition :', JSON.stringify(edition));
+  verifier(edition.length === 6 && edition.some((l) => /Couper/.test(l)) && edition.some((l) => /Coller/.test(l)) && edition.some((l) => /Tout sélectionner \[CmdOrCtrl\+A\]/.test(l)), 'le menu Édition a ses touches');
+  // une entrée du menu lance l'outil, comme un clic dans le volet
+  await app.evaluate(({ Menu }) => {
+    const g = Menu.getApplicationMenu().items.find((i) => i.label === 'Outils').submenu.items.find((i) => i.label === 'Organiser');
+    g.submenu.items.find((i) => i.label === 'Pages vierges').click();
+  });
+  await win.waitForSelector('.dialog', { state: 'visible', timeout: 15000 });
+  verifier(/vierge/i.test(await win.locator('.dialog .dlg-head h2').textContent()), 'l\'entrée « Pages vierges » du menu ouvre son outil');
+  await win.click('.dialog .dlg-head .x');
+  await win.waitForSelector('.dialog', { state: 'detached' });
   verifier(donnees === path.join(dossier, 'donnees'), 'dossier de données du test');
 
   // 1. Enregistrer sous… (menu) écrit un vrai PDF de 3 pages, sans boîte de dialogue en fumée
