@@ -1,0 +1,205 @@
+1150|Empfindlichkeit
+1151|Dezimaltrennzeichen
+1152|Aufteilen: eine Seite pro Datei
+1153|Durch Kommas getrennt.
+1154|Serie abgebrochen
+1155|Serie abgebrochen: Es wurde nichts geschrieben.
+1156|Aus der archivierten Datei werden entfernt: Skripte, Dateianhänge, Passwort. Die Formulare werden verflacht. Die Originaldatei wird nicht berührt.
+1157|Dient als Beschriftung des Feldes im PDF und wird grau angezeigt, solange es leer ist.
+1158|Nur die Seiten, die abweichen
+1159|Wenn die Seiten neu angeordnet oder zusammengeführt werden, werden die Felder automatisch verflacht, um die eingegebenen Werte zu erhalten.
+1160|=
+1161|=
+1162|Unterzeichner unbekannt
+1163|Signatur
+1164|Signatur abgebrochen
+1165|Signatur abgebrochen.
+1166|Signatur mit einem Zertifikat
+1167|Unterschrift eingefügt: Platzieren Sie sie, wo Sie möchten.
+1168|Signatur…
+1169|=
+1170|Signaturen
+1171|Signiert das Dokument mit dem persönlichen Zertifikat, das Ihnen ein Anbieter ausgehändigt hat (Datei .p12 oder .pfx). Das Zertifikat wird auf diesem Arbeitsplatz gelesen, sein Schlüssel verlässt ihn nie und wird nicht gespeichert; das Passwort wird bei jeder Signatur erneut verlangt.
+1172|Digital signiert von
+1173|Signieren
+1174|Mit einem Zertifikat signieren
+1175|Signieren und speichern
+1176|Lesezeichen entfernt · Strg+Z zum Rückgängigmachen
+1177|Lesezeichen
+1178|Lesezeichen (die Gliederung des Dokuments) und Lesen mit zwei Seiten nebeneinander.
+1179|Lesezeichen des Dokuments
+1180|Inhaltsverzeichnis
+1181|Inhaltsverzeichnis (Fortsetzung)
+1182|Inhaltsverzeichnis in Arbeit
+1183|Inhaltsverzeichnis und Trennblätter
+1184|Ton
+1185|Unterstreichung
+1186|Wellenunterstreichung
+1187|=
+1188|Teilmenge
+1189|=
+1190|=
+1191|Streng
+1192|«Streng» behält nur Seiten ohne die geringste Markierung. «Normal» toleriert eine Seitenzahl. «Tolerant» akzeptiert eine kurze Fusszeile und die Körnung eines Scanners.
+1193|=
+1194|=
+1195|=
+1196|Stiländerung
+1197|Stil des Werkzeugs
+1198|=
+1199|=
+1200|Weiter ›
+1201|Betreff
+1202|Entf
+1203|Löschen
+1204|Dieses Feld löschen
+1205|Hervorhebung
+1206|Hervorheben
+1207|=
+1208|=
+1209|Tabelle
+1210|Tabelle kopiert
+1211|=
+1212|=
+1213|Grösse
+1214|Grösse (pt)
+1215|Textgrösse in Punkt
+1216|Textgrösse in Punkt
+1217|Originalgrösse
+1218|Stempel
+1219|Stempel: Erhalten am, Bezahlt, Beglaubigte Kopie, Visiert…
+1220|Stempel gemerkt: Sie finden ihn in der Liste der Stempel.
+1221|Stempel (Erhalten am, Bezahlt, Beglaubigte Kopie, Visiert…) mit dem heutigen Datum und auf diesem Arbeitsplatz gemerkte Unterschriften.
+1222|Gespeicherte Stempel
+1223|=
+1224|=
+1225|=
+1226|=
+1227|=
+1228|Beenden
+1229|Text
+1230|Einzufügender Text
+1231|Durchgestrichener Text
+1232|Text kopiert.
+1233|Text korrigiert
+1234|Text der Zeile
+1235|Text der Seite kopiert.
+1236|Alternativtext
+1237|Bereits eingetragener Text
+1238|Text des Stempels — {date} für das heutige Datum
+1239|Text als Überblendung
+1240|Identischer Text auf dieser Seite.
+1241|unsichtbarer Text oder Text ausserhalb der Seite
+1242|Freier Text
+1243|Erkannter Text: 
+1244|Text, Datum, Dateiname
+1245|Text, Hervorhebung, Unterschrift
+1246|unsichtbare Texte oder Texte ausserhalb der Seite
+1247|=
+1248|=
+1249|=
+1250|Ziehen Sie an der Ecke, um die Grösse zu ändern, ziehen Sie das Objekt, um es zu verschieben.
+1251|Titel
+1252|Titel des Dossiers
+1253|Vorgeschlagener Titel für das Lesezeichen
+1254|Titel, Autor, Sprache, Barrierefreiheit
+1255|=
+1256|=
+1257|Tolerant
+1258|=
+1259|Alles
+1260|Alles abwählen
+1261|Alles auf dieser Seite löschen
+1262|Alles im Querformat
+1263|Alles im Hochformat
+1264|Alles entfernen
+1265|Alles auswählen
+1266|Alle Seiten
+1267|Alle Seiten enthalten bereits Text: nichts zu erkennen.
+1268|Einen Rahmen um jede Seite zeichnen
+1269|Zeichnen Sie zuerst Ihre Unterschrift.
+1270|Zeichnen Sie Ihre Unterschrift mit der Maus, dem Finger oder dem Stift.
+1271|Bearbeitet am {date}
+1272|Bearbeitung
+1273|Stapel wird bearbeitet…
+1274|Mehrere Dateien bearbeiten
+1275|Mehrere Dateien bearbeiten: leere Seiten, Komprimierung, Nummerierung, Schutz, Bilder in PDF, im Stapel.
+1276|=
+1277|Nicht gespeicherte Arbeit gefunden
+1278|Nicht gespeicherte Arbeit gelöscht
+1279|=
+1280|Sehr gross — 24 pt
+1281|links zu lang
+1282|zu lang für den Platz
+1283|=
+1284|=
+1285|=
+1286|=
+1287|=
+1288|=
+1289|=
+1290|eine Anzeige konnte nicht neu geschrieben werden; ihr Text bleibt unter der Abdeckung
+1291|Eine andere Datei…
+1292|Ein Zertifikat der Kette ist nicht von dem signiert, der es ausgestellt haben soll: Die Kette ist inkohärent.
+1293|Ein persönliches Zertifikat (.p12, .pfx), digitale Signatur
+1294|ein nicht erkannter Inhalt liegt unter dem Bereich: Die Seite wird in ein Bild umgewandelt
+1295|eine Zeichnung liegt unter dem Bereich: Die Seite wird in ein Bild umgewandelt
+1296|Ein empfangenes signiertes Dokument: intakt, geändert, von wem signiert
+1297|ein Beilagendossier
+1298|Eine Datei pro Zeile (ZIP)
+1299|ein Wasserzeichen
+1300|Ein Anführungszeichen ist nicht geschlossen: Das Dateiende wird als eine einzige Zelle gelesen.
+1301|Ein Trennblatt vor jeder Beilage (Titelseite «Beilage Nr.»)
+1302|ein Passwort
+1303|Ein als «Wang ?» geschriebener Name ist ein Dokument, das man nicht versenden kann. Ersetzen Sie diese Zeichen durch Buchstaben des lateinischen Alphabets oder exportieren Sie in Kenntnis der Sache.
+1304|ein Formularobjekt liegt unter dem Bereich: Die Seite wird in ein Bild umgewandelt
+1305|ein Formularobjekt enthält den geschwärzten Text: Die Seite wird in ein Bild umgewandelt
+1306|Eine oder mehrere Dateien
+1307|Ein einziges PDF
+1308|Ein Lesezeichen pro Beilage
+1309|Ein Inhaltsverzeichnis am Anfang des Dossiers (Beilagen und Seiten)
+1310|Eine Dateianhang-Anmerkung: PDF/A-2b lässt diese nicht zu.
+1311|Eine andere Person
+1312|Eine Kopie des Formulars pro Zeile einer Tabelle
+1313|Eine Speicheranfrage ist bereits offen: Beantworten Sie sie und versuchen Sie es dann erneut.
+1314|ein schief gesetztes Bild liegt unter dem Bereich: Die Seite wird in ein Bild umgewandelt
+1315|eine Nummerierung oder eine Kopfzeile
+1316|Eine Seite pro Datei
+1317|Eine fortlaufende Seitennummerierung in der Fusszeile
+1318|eine Schrift des Datenstroms lässt sich nicht neu schreiben: Die Seite wird in ein Bild umgewandelt
+1319|Eine gemerkte Unterschrift bleibt auf diesem Computer (Ordner data/ der Anwendung); sie wird nie in ein PDF geschrieben, ohne dass Sie sie dort setzen. Sie ist dort unverschlüsselt abgelegt: Auf einem gemeinsam genutzten Arbeitsplatz zeichnen Sie sie besser jedes Mal neu, statt sie zu merken.
+1320|Dringend
+1321|=
+1322|Bestätigen (Esc)
+1323|=
+1324|=
+1325|=
+1326|=
+1327|Prüfung der Signaturen
+1328|Prüfung der Schwärzung…
+1329|Signaturen prüfen
+1330|Sperre
+1331|Nach Excel, in Spalten
+1332|Version A (vorher)
+1333|Version B (nachher)
+1334|Online-Testversion: Sie lädt ihre Komponenten aus dem Internet. Für echte Dokumente verwenden Sie die portable Version, die nichts lädt.
+1335|Nur Rückseite
+1336|Grün
+1337|Video
+1338|Leeren
+1339|=
+1340|Komma (1234,50)
+1341|Visiert
+1342|Das spricht dagegen:
+1343|Ihre Dokumente verlassen diesen Computer nie. Sie werden vom Browser im Speicher dieser Seite gelesen, geändert und neu zusammengesetzt.
+1344|Ihre gemerkten Unterschriften — zum Einfügen anklicken
+1345|Ihr Stempel
+1346|Sie können weiterhin öffnen, lesen und suchen. Das Speichern und der Export neuer Dateien sind ausgesetzt; was geöffnet ist, bleibt unverändert, und die laufende Arbeit bleibt erhalten.
+1347|=
+1348|=
+1349|=
+1350|=
+1351|=
+1352|=
+1353|=
+1354|Eingabebereich

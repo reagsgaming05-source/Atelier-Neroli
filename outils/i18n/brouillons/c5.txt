@@ -1,0 +1,210 @@
+940|Seiten enthalten fast nichts
+941|Seiten nummeriert
+942|Nur gerade Seiten
+943|Seiten pro Blatt
+944|Seiten gedreht
+945|Seiten in der Grösse angepasst
+946|Seiten entfernt
+947|Seiten ohne Text
+948|Seiten schlecht lesbar
+949|Seiten ausgewählt
+950|Ausgewählte Seiten
+951|leere Seiten erkannt
+952|leere Seiten entfernt
+953|Leere Seiten, Komprimierung, Nummerierung… im Stapel
+954|Leere Seiten
+955|leere Seiten eingefügt
+956|Seitennummerierung
+957|=
+958|Papier
+959|Standardmässig werden Anmerkungen als echte PDF-Kommentare gespeichert: In Acrobat oder einem Browser sieht der Empfänger sie, kann sie verschieben, ändern oder entfernen. Fixiert werden sie wie Tinte Teil der Seite. Textkorrekturen, Bilder, Unterschriften und Schwärzungen werden immer in die Seite eingebrannt; eine geschwärzte Seite behält ihren scharfen Text, nur die abgedeckten Buchstaben und gegebenenfalls das Bild unter dem Rechteck werden neu erstellt.
+960|Stapelweise
+961|Nach Bereichen
+962|=
+963|vollkommen leer
+964|keine Ankerpunkte
+965|=
+966|Bezahlt am {date}
+967|Querformat
+968|pdf-lib nicht verfügbar
+969|Während der Testphase sind alle Funktionen offen, und die erzeugten Dateien tragen kein Wasserzeichen.
+970|Erlaubt das Aufheben der Einschränkungen. Leer lassen, um das Öffnungspasswort zu übernehmen.
+971|=
+972|Klein — 10 pt
+973|Beilage
+974|Dateianhang
+975|Beilage aus dem Dossier entfernt
+976|Beilagen
+977|Fusszeile
+978|Nach rechts drehen
+979|Nach links drehen
+980|Platz um die Zeile
+981|Byte-Bereich zu lang.
+982|Seitenbereiche
+983|Mehrere Dateien
+984|Mehrere Dateien in einem Dokument
+985|Mehrere Zeilen
+986|Mehrere Seiten werden in einem ZIP-Archiv zusammengefasst.
+987|PNG oder JPEG
+988|Grösse der Quellen
+989|Schrift
+990|Zusammengesetzte Schrift
+991|Schrift des Dokuments
+992|Schrift des Datenstroms
+993|Schrift des Textes
+994|=
+995|Polygon
+996|=
+997|=
+998|Hochformat
+999|Seine Unterschrift auf eine Seite setzen
+1000|Setzen ohne Merken
+1001|Sichtbares Signaturfeld setzen
+1002|Stempel setzen
+1003|Position
+1004|Position der Seite
+1005|Position der Seite: Geben Sie eine Nummer ein und drücken Sie Eingabe, um sie zu verschieben
+1006|Für {bates}
+1007|Zur Information
+1008|Für automatischen Duplexdruck wählen Sie in Ihrem Drucker «an der kurzen Kante wenden». An der langen Kante kämen die Rückseiten auf dem Kopf heraus.
+1009|Für automatischen Duplexdruck muss der Drucker in seinen Windows-Standardeinstellungen «an der kurzen Kante wenden» haben (Einstellungen › Drucker › Druckeinstellungen). An der langen Kante kämen die Rückseiten auf dem Kopf heraus.
+1010|Für eine Broschüre «Duplex, kurze Kante» oben. An der langen Kante kämen die Rückseiten auf dem Kopf heraus.
+1011|Prozentsatz
+1012|Anzeigeeinstellung
+1013|Einstellung zum Überschreiben
+1014|Einstellung zur Anordnung
+1015|Spracheinstellung
+1016|Designeinstellung
+1017|Zoomeinstellung
+1018|Bates-Präfix
+1019|Erste Nummer
+1020|Vorname
+1021|Beispiel wird vorbereitet…
+1022|Druck wird vorbereitet…
+1023|Erkennungs-Engine wird vorbereitet…
+1024|Darstellung
+1025|fast leer
+1026|Zwischenablage
+1027|=
+1028|Ersteller
+1029|Erzeugen
+1030|Eigenschaften
+1031|Dokumenteigenschaften
+1032|Eigenschaften gespeichert
+1033|Eigenschaften…
+1034|Passwortschutz
+1035|Passwortschutz aktiviert
+1036|Schutz entfernt
+1037|Geschützt
+1038|Schützen
+1039|Mit Passwort schützen
+1040|=
+1041|Bereinigung
+1042|Qualität
+1043|Qualität — 200 dpi
+1044|Bildqualität
+1045|Wenn die Korrektur in den verfügbaren Platz passt, wird sie direkt in die Seite geschrieben: Der Originaltext verschwindet endgültig, ohne Rechteck. Andernfalls wird sie darübergelegt, und der Originaltext darunter wird gelöscht.
+1046|Jemand hat diese Datei gespeichert, seit Sie sie geöffnet haben – eine Kollegin oder ein anderes Fenster dieses Computers. Sie jetzt zu ersetzen, würde ihre Änderungen verschwinden lassen.
+1047|Aktum PDF beenden
+1048|Beenden ohne Speichern
+1049|Tastenkürzel und Hilfe
+1050|Grund unbekannt
+1051|Schnell — 150 dpi
+1052|=
+1053|Zuletzt geöffnet
+1054|Suche
+1055|Suche…
+1056|Suchen (Strg+F): Das Panel schwebt neben dem Dokument, die Fundstellen werden auf den Seiten hervorgehoben, Eingabe oder Weiter springt zur nächsten; Option «ganzes Wort».
+1057|Suchen (ganzes Wort, Fundstellen hervorgehoben, Eingabe für die nächste), ersetzen, schwärzen
+1058|Suchen, ersetzen
+1059|Suchen, überall ersetzen, überall schwärzen, im ganzen Dokument.
+1060|Suchen, ersetzen, schwärzen
+1061|Erkennung unterbrochen: 
+1062|Erkennen
+1063|Text erkennen
+1064|Text erkennen (OCR)
+1065|Text erkennen (OCR): Ein Scan wird durchsuchbar, korrigierbar, und das exportierte PDF behält diesen Text, unsichtbar, aber markierbar. Französisch und Deutsch, alles lokal.
+1066|Text auf Seiten ohne Text erkennen
+1067|=
+1068|Nur Vorderseite
+1069|Duplex
+1070|Duplex, kurze Kante
+1071|Duplex, lange Kante
+1072|Erhalten am {date}
+1073|Wiederherstellung
+1074|Wiederherstellung: Die laufende Arbeit wird nach jeder Änderung wenige Sekunden später beiseitegelegt; nach einem abrupten Beenden wird sie beim nächsten Start angeboten.
+1075|Wiederherstellen
+1076|Grössenänderung…
+1077|Grösse ändern
+1078|Seitengrösse ändern
+1079|Verkleinern und exportieren
+1080|Dateigrösse verringern
+1081|Dateigrösse verringern (150 dpi)
+1082|Dateigrösse verringern
+1083|Seiten ausserhalb des Formats verkleinern
+1084|=
+1085|Abgelehnt
+1086|Ursprüngliche Einstellungen
+1087|unzulässige Formulareinstellungen entfernt
+1088|Von der Seite übernommen. Anzupassen, wenn der Hintergrund nicht einfarbig ist.
+1089|Bindung
+1090|Ersetzung
+1091|Ersetzen abgebrochen: Es wurde nichts geändert.
+1092|Datei ersetzen
+1093|Ersetzen durch
+1094|Alle ersetzen
+1095|«Alle ersetzen» korrigiert jeden betroffenen Block wie im Editor: gleiche Schriften, gleiches Layout. «Alles schwärzen» deckt jede Fundstelle mit einem schwarzen Rechteck ab und entfernt den Text beim Export aus der Datei.
+1096|Serie ausfüllen
+1097|Serie ausfüllen (CSV)
+1098|Formular ausfüllen
+1099|Ausfüllen von Formularen und Signaturen
+1100|Bilder werden gerendert…
+1101|Umbenennen
+1102|Lesezeichen umbenennen
+1103|Füllen Sie mindestens einen Bereich aus.
+1104|Verweise des Taggings
+1105|Seiten werden erfasst…
+1106|Text wird erfasst…
+1107|In Kacheln wiederholt
+1108|Zuklappen
+1109|Text übernehmen
+1110|Auflösung
+1111|=
+1112|Gross-/Kleinschreibung beachten
+1113|Akzente beachten
+1114|Ergebnis
+1115|Wiederholen
+1116|Entfernen
+1117|Dieses Lesezeichen entfernen
+1118|Diese Seite entfernen
+1119|Auswahl entfernen
+1120|Angekreuzte Seiten entfernen
+1121|Leere Seiten entfernen
+1122|Retusche im Datenstrom
+1123|Rückgabe des Fokus
+1124|Zurück zum Dokument
+1125|Nichts zu kopieren.
+1126|Nichts zu speichern.
+1127|Nichts zu drucken.
+1128|Nichts zu ersetzen: Der Text ist nicht bearbeitbar (Scan ohne OCR?).
+1129|Nichts zu melden.
+1130|=
+1131|Rot
+1132|=
+1133|=
+1134|Geben Sie mindestens zwei Zeichen ein.
+1135|Ohne automatischen Duplexdruck: Drucken Sie die Vorderseiten, legen Sie den Stapel wieder ein und drucken Sie dann die Rückseiten.
+1136|Ohne Titel
+1137|Skript oder unzulässige Aktion entfernt
+1138|Skripte oder unzulässige Aktionen entfernt
+1139|=
+1140|=
+1141|Auswahl
+1142|Auswahl im Editor
+1143|Auswählen
+1144|Seiten anhand ihrer Nummern auswählen
+1145|Auswählen und verschieben
+1146|Auswählen oder Auswahl aufheben
+1147|Nach Nummern auswählen
+1148|Einen Bereich auswählen
+1149|je nach deklarierter Stufe

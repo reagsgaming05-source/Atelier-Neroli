@@ -1,0 +1,200 @@
+740|=
+741|=
+742|Lizenz
+743|Links
+744|Ort (optional)
+745|Linie
+746|Linienzug
+747|Zeile kopiert
+748|Zeilen kopiert
+749|=
+750|Zertifikat lesen
+751|Lesen Sie zuerst das Zertifikat (Passwort, dann «Zertifikat lesen»).
+752|=
+753|Liste
+754|Auswahlliste eines Formularfeldes
+755|Dropdown-Liste
+756|Broschüre
+757|=
+758|Länge fehlt
+759|Länge über die Daten hinaus
+760|unbestimmte Länge bei einfachem Typ
+761|Länge abgeschnitten
+762|Länge zu gross
+763|Stapel bearbeitet
+764|=
+765|=
+766|=
+767|=
+768|=
+769|=
+770|=
+771|=
+772|=
+773|=
+774|=
+775|=
+776|=
+777|=
+778|Umschalt+Klick
+779|Umschalt+R
+780|Rand (Punkt)
+781|Rand (pt)
+782|=
+783|=
+784|winzige Markierungen
+785|=
+786|Gleiches Format wie die aktuelle Seite
+787|Merken
+788|Diesen Stempel merken
+789|Diese Unterschrift auf diesem Computer merken
+790|Seitenmenü: drehen, bearbeiten, Lesezeichen, Text kopieren, duplizieren, extrahieren, löschen — und bei einem Tab: speichern, schliessen
+791|=
+792|Seitenmetadaten nicht entfernt
+793|Dokumentmetadaten nicht entfernt
+794|Skalierung
+795|Textformatierung
+796|Seitenlayout
+797|Seitenlayout…
+798|=
+799|Geändert
+800|Bearbeiten
+801|Diese Seite bearbeiten
+802|Seite bearbeiten…
+803|Text bearbeiten
+804|Vorhandenen Text bearbeiten
+805|Beträge als Zahlen: 1'234.50 wird zu 1234.50, Währung und Leerzeichen entfernt
+806|=
+807|nicht zusammenhängende Teile
+808|Teile in verschiedenen Zeilen
+809|Wort hinzugefügt
+810|Passwort
+811|Öffnungspasswort
+812|Passwort des Zertifikats
+813|Falsches Passwort (oder beschädigte Datei).
+814|Falsches Passwort. 
+815|Besitzerpasswort
+816|Ganzes Wort
+817|Zu suchendes Wort oder Ausdruck
+818|Wort erkannt
+819|Wort entfernt
+820|Grund (optional)
+821|Wörter hinzugefügt
+822|Wörter erkannt
+823|Wörter entfernt
+824|Schlüsselwörter
+825|=
+826|=
+827|=
+828|=
+829|Nicht speichern
+830|Nicht mehr fragen: direkt ersetzen, wie Acrobat
+831|Auf der ersten Seite nichts anzeigen
+832|=
+833|Bereinigung der Datei
+834|Ein gescanntes Dokument bereinigen
+835|=
+836|Schwarz
+837|Dateinamen
+838|Für «Speichern unter…» und die Exporte vorgeschlagener Name. «Speichern» überschreibt die geöffnete Datei.
+839|Name, Vorname, Datum…
+840|Anzahl Seiten
+841|Anzahl Seiten pro Datei
+842|Namen der Formularfelder
+843|nicht veränderbar
+844|Normal
+845|Normal — 14 pt
+846|Normal — 200 dpi
+847|Notiz
+848|Notiz, Feld oder Dateianhang
+849|Notiz, Feld oder Dateianhang wurde entfernt
+850|Notizen, Felder oder Dateianhänge
+851|Notizen, Felder oder Dateianhänge wurden entfernt
+852|=
+853|=
+854|Neues Dokument
+855|Neuer Tab
+856|Neuer Tab (Strg+T)
+857|Seriennummer
+858|Nummern oder Bereiche, durch Kommas getrennt.
+859|Einfache oder Bates-Nummerierung
+860|Seiten nummerieren
+861|Seiten nummerieren (Fusszeile)
+862|=
+863|Formularobjekt
+864|unerreichbares Objekt konnte nicht aus der Datei entfernt werden
+865|unerreichbare Objekte konnten nicht aus der Datei entfernt werden
+866|Fundstelle geschwärzt
+867|Vorherige Fundstelle (Umschalt+Eingabe)
+868|Fundstelle ersetzt
+869|Nächste Fundstelle (Eingabe)
+870|Fundstellen geschwärzt
+871|Fundstellen ersetzt
+872|Lokale OCR: Ein Scan wird durchsuchbar
+873|Offerte
+874|geänderter Tab behalten
+875|Nächster Tab
+876|Tabs: mehrere Dokumente im Fenster, eine Seite lässt sich von einem Tab in den anderen ziehen.
+877|geänderte Tabs behalten
+878|Deckkraft
+879|=
+880|=
+881|Vorgang abgebrochen
+882|Reihenfolge
+883|Seitenreihenfolge umgekehrt
+884|Umgekehrte Reihenfolge, von der letzten zur ersten
+885|Organisieren
+886|Ausrichtung
+887|Original
+888|Oder im ganzen Dokument schwärzen
+889|Oder zeichnen Sie eine neue:
+890|Diesen Stempel vergessen
+891|Diese Unterschrift vergessen
+892|=
+893|=
+894|Öffnen abgebrochen
+895|Dokument wird geöffnet…
+896|Öffnen Sie zuerst die Dokumente, aus denen das Dossier besteht.
+897|Öffnen
+898|Seiteneditor öffnen
+899|Editor öffnen, in dem sich der vorhandene Text absatzweise korrigieren lässt
+900|Dokument öffnen (neuer Tab)
+901|Seite
+902|Seite hinzugefügt
+903|Seite mit anderem Aussehen
+904|Seite verschoben
+905|Seite verschoben
+906|Seite bezeichnet
+907|Seite weicht ab
+908|Seite dupliziert
+909|Seite gesendet
+910|Seite hat keinen getaggten Inhalt (leere Seite?)
+911|Seite hat keinen Text
+912|Seite konnte nicht analysiert werden
+913|Seite enthält fast nichts
+914|Seite nummeriert
+915|Seite gedreht
+916|Vorherige Seite
+917|Seite entfernt
+918|Seite ohne Text
+919|Seite schlecht lesbar
+920|Seite ausgewählt
+921|Nächste Seite
+922|leere Seite erkannt
+923|leere Seite entfernt
+924|Leere Seite
+925|leere Seite eingefügt
+926|=
+927|Seiten
+928|Zu druckende Seiten
+929|Seiten hinzugefügt
+930|Seiten mit anderem Aussehen
+931|Seiten verschoben
+932|Seiten bezeichnet
+933|Seiten weichen ab
+934|Seiten dupliziert
+935|Seiten gesendet
+936|Nur ungerade Seiten
+937|Seiten haben keinen getaggten Inhalt (leere Seiten?)
+938|Seiten haben keinen Text
+939|Seiten konnten nicht analysiert werden

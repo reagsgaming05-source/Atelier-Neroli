@@ -1,0 +1,170 @@
+0| — keine Spalte erkannt: Jede Zeile kommt in eine einzige Zelle.
+1| · kein Text
+2| · ohne Kopf- und Fusszeile
+3| · geändert
+4| · Seite fehlt
+5| · Arbeitsversion
+6| rechts
+7| links
+8| vor dem Abbruch.
+9| Es ist abgelaufen: Es kann nicht zum Signieren verwendet werden.
+10| Es ist selbstsigniert: Keine Zertifizierungsstelle steht dafür ein.
+11| Es ist noch nicht gültig.
+12| Einstellung aus der zuletzt angewendeten übernommen.
+13| Einstellung aus dem zuletzt angewendeten Wasserzeichen übernommen.
+14| Verbinden Sie mindestens ein Feld mit einer Spalte.
+15| wird geschwärzt
+16| werden geschwärzt
+17| Alle enthalten Text oder ein Bild.
+18|=
+19|=
+20|=
+21|-broschuere
+22|— nicht ausfüllen —
+23|, in einem ZIP-Archiv zusammengefasst.
+24|‹ Zurück
+25|=
+26|=
+27|«Speichern unter…» behält beide Versionen: Ihre bleibt unverändert, Ihre Fassung wird zu einer neuen Datei.
+28|(kein Text)
+29|{date} wird beim Anbringen des Stempels durch das heutige Datum ersetzt.
+30|{n} die Nummer der Zeile, {colonne} der Inhalt einer Zelle. Beispiel: {Name}-{Vorname}
+31|=
+32|=
+33|=
+34|=
+35|=
+36|=
+37|=
+38|=
+39|150 dpi
+40|16 Seiten
+41|=
+42|=
+43|=
+44|2 Seiten
+45|=
+46|=
+47|=
+48|=
+49|300 dpi (Druck)
+50|=
+51|=
+52|4 Seiten
+53|=
+54|6 Seiten
+55|=
+56|=
+57|72 dpi (Bildschirm)
+58|=
+59|=
+60|9 Seiten
+61|Rechts
+62|Links
+63|beim Export
+64|Beim Export werden die ursprünglichen Buchstaben unter diesem Block aus der Datei gelöscht; die Seite bleibt Text, ausser wenn ein Bild darunter liegt.
+65|Beim Export werden die Buchstaben unter dem Bereich aus der Datei gelöscht, und die Seite bleibt Text. Liegt ein Bild unter dem Bereich, wird die Seite in ein Bild umgewandelt.
+66|beim Öffnen
+67|Am Ende
+68|=
+69|A4, Letter, Ränder
+70|Wiederherstellung abgebrochen
+71|Barrierefreiheit
+72|=
+73|Aktiv
+74|Aktion rückgängig gemacht
+75|Aktion wiederhergestellt
+76|=
+77|Adresse der Seite
+78|Anzeige ohne Schrift
+79|In der Titelleiste des Fensters angezeigt; unverzichtbar für die Barrierefreiheit.
+80|Grösse erhöhen
+81|Hinzufügen
+82|Zum Dokument hinzufügen
+83|Bilder hinzufügen
+84|Text hinzufügen
+85|Ausfüllbares Feld hinzufügen
+86|Lesezeichen hinzufügen
+87|Anpassen
+88|=
+89|=
+90|=
+91|=
+92|Hash-Algorithmus von dieser Software nicht unterstützt.
+93|Algorithmus nicht unterstützt
+94|linksbündig
+95|Deutsch
+96|=
+97|=
+98|=
+99|Schriften werden analysiert
+100|Schriften werden analysiert…
+101|Winkel (°)
+102|=
+103|Anmerkung hinzugefügt
+104|Anmerkung druckbar gemacht
+105|Anmerkung ausgewählt
+106|Anmerkungen
+107|Anmerkungen druckbar gemacht
+108|=
+109|abgebrochen
+110|Abbrechen
+111|Diese Korrektur rückgängig machen
+112|Vorschau nicht verfügbar
+113|Vorschau nicht verfügbar.
+114|Vorschau…
+115|Verflachen
+116|Verflachen: Die Werte sind in den Kopien nicht mehr veränderbar
+117|Nach dem Ausfüllen verflachen (Werte nicht veränderbar)
+118|Dokument verflachen
+119|Formularfelder beim Export verflachen
+120|Verflachung des Formulars
+121|Darstellung eines Feldes
+122|Darstellung der Formularfelder
+123|Anwenden
+124|Anwenden auf
+125|Genehmigt
+126|Nach der Auswahl
+127|Archivierung abgebrochen
+128|Archivierung abgebrochen: Das Dokument ist nicht konform
+129|Archivierung abgebrochen.
+130|PDF/A-Archivierung
+131|Archivierung…
+132|Als PDF/A-2b archiviert
+133|ZIP-Archiv nicht verfügbar: Die Bilder werden einzeln gespeichert.
+134|Als PDF/A-2b archivieren
+135|=
+136|=
+137|=
+138|=
+139|Texterkennungs-Engine wird angehalten
+140|Anhalten…
+141|=
+142|=
+143|=
+144|=
+145|=
+146|Aussehen: Seite fehlt
+147|Zusammenstellung vor der Signatur…
+148|Zusammenstellung…
+149|Tipp: Geben Sie bei einer mit der Tastatur ausgewählten Seite eine Zahl ein, um sie direkt an diese Nummer zu verschieben.
+150|In der Mitte
+151|Am Anfang
+152|Kein Zertifikat ausgewählt.
+153|In den geöffneten Dokumenten wurde kein Formularfeld gefunden. Öffnen Sie zuerst das auszufüllende Formular und kehren Sie dann mit der CSV-Datei hierher zurück.
+154|In den geöffneten Dokumenten wurde kein Formularfeld gefunden. Sie können mit dem Seiteneditor Text hinzufügen.
+155|Keine Kommentare in den geöffneten Dokumenten.
+156|Kein Kommentar entfernt
+157|Kein Versand, kein Konto, kein Cookie, keine Reichweitenmessung, keine Kennung. Nach dem Schliessen wird nichts gespeichert ausser der Grösse der Vorschaubilder und dem gewählten Design.
+158|Keine Datei ausgewählt.
+159|Keine Datei ausgewählt. Eine erste Zeile mit Spaltenüberschriften, dann eine Zeile pro Kopie.
+160|Hier ist kein Text.
+161|Auf dieser Seite gibt es keinen bearbeitbaren Text: Starten Sie zuerst Werkzeuge › Text erkennen (OCR).
+162|Es wurde kein Text gefunden: Das Dokument ist wahrscheinlich ein Scan. Die Texterkennung ist hier nicht verfügbar.
+163|Kein Text auf diesen Seiten.
+164|Kein Text auf dieser Seite
+165|Kein Text auf dieser Seite (Scan? Starten Sie die Texterkennung).
+166|Kein Text auf dieser Seite.
+167|kein Ankerpunkt getroffen
+168|Keine Anmerkung ausgewählt. Klicken Sie auf der Seite auf eine, um sie zu verschieben, in der Grösse zu ändern oder ihren Stil zu ändern.
+169|keine Markierung, nur Körnung

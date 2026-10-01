@@ -1,0 +1,200 @@
+540|Wasserzeichen
+541|Wasserzeichen entfernt
+542|Inhaltsende fehlt
+543|unerwartetes Datenende
+544|Abschluss…
+545|Fein — 300 dpi
+546|Fein für scharfen Text; Schnell für ein grosses Dokument oder einen Entwurf.
+547|=
+548|=
+549|=
+550|=
+551|Schriftdatenstrom nicht lesbar
+552|Fokus des Fensters
+553|Hintergrund
+554|=
+555|=
+556|=
+557|=
+558|=
+559|=
+560|=
+561|Format
+562|Zielformat
+563|Langzeitarchivierungsformat, geprüft
+564|Formular
+565|Formulare
+566|Formulare, Signaturen und Anmerkungen
+567|=
+568|Französisch und Deutsch
+569|=
+570|=
+571|=
+572|=
+573|PDFs zusammenführen
+574|=
+575|Links
+576|Erzeugt
+577|=
+578|Drag & Drop
+579|Gross — 18 pt
+580|Fett
+581|Fett (Strg+B)
+582|Grau
+583|Hash von dieser Software nicht unterstützt.
+584|Oben rechts
+585|Oben links
+586|=
+587|=
+588|=
+589|=
+590|=
+591|=
+592|=
+593|Ignorieren und löschen
+594|Bild umgewandelt
+595|Hintergrundbild einer Korrektur
+596|Bild exportiert
+597|Bild eingefügt: Verschieben Sie es und ändern Sie dann die Grösse mit dem Griff.
+598|Bilder umgewandelt
+599|Bilder exportiert
+600|=
+601|Druck
+602|Druck: Qualität nach Wahl (fein, normal, schnell). Das Dokument wird als Bilder in der gewählten Feinheit gesendet – das ermöglicht den direkten Druck ohne weiteres Fenster.
+603|Druck abgebrochen.
+604|Drucker
+605|Drucker nicht verfügbar
+606|Standarddrucker von Windows
+607|Drucker
+608|Drucken
+609|Drucken (Strg+P)
+610|Informationen
+611|=
+612|Einfügen
+613|Diese Unterschrift einfügen
+614|Leere Seiten einfügen
+615|Bild einfügen
+616|Eine oder mehrere Seiten einfügen
+617|Einfügen
+618|=
+619|Trennblätter, nummerierte Beilagen, Inhaltsverzeichnis
+620|=
+621|Bezeichnung
+622|=
+623|Kursiv (Strg+I)
+624|=
+625|Tag verbleibend
+626|Protokoll kopiert.
+627|Protokoll der Sitzung
+628|Tage verbleibend
+629|JPEG, PNG, WebP als Seiten
+630|Blocksatz
+631|=
+632|das Hinzufügen von Seiten, die kein PDF/A sind
+633|Das ZIP-Archiv ist nicht verfügbar: Die Dateien werden einzeln gespeichert.
+634|das Zusammenfügen von Dokumenten mit verschiedenen PDF/A-Stufen
+635|Speichern ist in dieser Ansicht nicht verfügbar. Öffnen Sie die Seite in einem neuen Tab oder über die Datei aktum-pdf.html.
+636|Die Testphase ist beendet: Das Speichern ist ausgesetzt. Die laufende Arbeit bleibt erhalten; siehe «Lizenz» am unteren Fensterrand.
+637|Das Beispiel konnte nicht erstellt werden.
+638|Das Original ist nicht mehr verfügbar. «Speichern unter…» behält es und erstellt eine neue Datei.
+639|Die Kryptografie des Browsers ist in diesem Kontext nicht verfügbar.
+640|Das Signaturdatum ist nicht in der Signatur selbst enthalten: Es ist nicht belegt.
+641|Die Sprache des Dokuments ist nicht deklariert (/Lang).
+642|Die Lizenz wird in der Desktop-Anwendung gelesen.
+643|dasselbe Bild wird an mehreren Stellen verwendet: Die Seite wird in ein Bild umgewandelt
+644|Der Vermerk «Beilage Nr. …» oben rechts auf jeder Seite
+645|Die Seite kann niemanden kontaktieren: Ihre Sicherheitsregeln verbieten jede ausgehende Verbindung.
+646|Der von der Signatur angegebene Byte-Bereich entspricht nicht ihrem Wert: Die Datei ist inkohärent oder wurde manipuliert.
+647|die Texterkennung
+648|Die Texterkennung zeigt die verbleibende Zeit an.
+649|Die Texterkennung ist in dieser Version der Seite nicht verfügbar: Verwenden Sie die Offline-Version oder die Windows-Anwendung, die die Engine enthalten.
+650|Die Signatur (mit der Zertifikatskette) ist für den reservierten Bereich zu gross.
+651|Die Signatur ist intakt: Das Dokument ist so, wie es zum Zeitpunkt der Signatur war.
+652|Die Signatur konnte nicht gelesen werden.
+653|Die Signatur enthält keinen Unterzeichner.
+654|Die Signatur entspricht nicht dem beigefügten Zertifikat: Sie wurde gefälscht oder die Datei wurde verändert.
+655|Die Signatur enthält nicht den Fingerabdruck des Dokuments.
+656|Die Signatur trägt einen Zeitstempel einer Zeitstempelstelle; er wird hier nicht geprüft.
+657|Die Signatur belegt, dass das Dokument seither unverändert ist und dass sie mit dem Schlüssel dieses Zertifikats erstellt wurde. Ihr Rechtswert hängt vom Zertifikat ab (ein qualifiziertes Zertifikat eines anerkannten Anbieters hat nicht dieselbe Tragweite wie ein anderes), nicht von dieser Software. Das Datum ist dasjenige der Uhr dieses Arbeitsplatzes: Es gibt keinen Zeitstempel einer Zeitstempelstelle. Einmal signiert, ist jede Änderung der Datei erkennbar.
+658|die folgende Signatur
+659|Der Signaturbereich wurde in der Datei nicht gefunden.
+660|Leer lassen für ein später auszufüllendes Feld.
+661|Starten
+662|=
+663|Sprache
+664|Sprache des Dokuments
+665|Breite unbekannt
+666|Fehlende Breite einer Schrift
+667|Standardbreite einer Schrift
+668|Breiten einer Schrift
+669|Breiten einer zusammengesetzten Schrift
+670|Breiten der Ersatzschrift
+671|=
+672|=
+673|Das Tagging beschreibt dem Screenreader die Struktur des Dokuments: Inhaltsverzeichnis und Trennblätter eines Dossiers sind echte Überschriften und ein echtes Inhaltsverzeichnis; Nummerierungen und Wasserzeichen werden aus dem Lesefluss genommen; jede aus einer anderen Datei stammende Seite bildet einen Block, der in der Reihenfolge der Originaldatei gelesen wird. Überschriften, Listen und Tabellen dieser Seiten werden nicht erraten, und Links, Anmerkungen und Formularfelder werden nicht getaggt: Es ist kein PDF/UA.
+674|Das Zertifikat des Unterzeichners ist der Signatur nicht beigefügt.
+675|Das Zertifikat ist «selbstsigniert»: Es wurde von keiner Zertifizierungsstelle ausgestellt. Jeder kann eines im Namen von irgendwem herstellen: Die Signatur belegt, dass das Dokument unverändert ist, nicht wer es signiert hat.
+676|Die Verschlüsselung ist hier nicht verfügbar.
+677|Die Verschlüsselungskomponente fehlt in dieser Kopie der Software, die unvollständig ist. Laden Sie sie erneut von der Adresse herunter, von der Sie sie erhalten haben.
+678|Die Verschlüsselungskomponente konnte nicht geladen werden. Laden Sie die Seite mit aktiver Internetverbindung neu, um diese Funktion zu aktivieren.
+679|Der Inhalt wird ohne Verzerrung skaliert und zentriert. Das Dokument wird durch seine in der Grösse angepasste Version ersetzt.
+680|Der signierte Inhalt wurde seit der Signatur verändert: Sein Fingerabdruck ist nicht mehr derjenige, der signiert wurde.
+681|das Wiederherstellungsarchiv ist nicht lesbar
+682|Das zu öffnende Dokument wurde nicht gefunden. Öffnen Sie es mit der Schaltfläche Öffnen.
+683|Das zu öffnende Dokument konnte nicht gelesen werden.
+684|Das Dokument enthält Dateianhänge: PDF/A-2b lässt diese nicht zu.
+685|Das Dokument enthält JavaScript-Skripte: in einem PDF/A nicht zulässig.
+686|Das Dokument ist passwortgeschützt: Ein PDF/A darf nicht verschlüsselt sein.
+687|Das Dokument ist nicht getaggt.
+688|Das Dokument entspricht nicht mehr der Signatur.
+689|Das Dokument enthält zugeordnete Dateien: PDF/A-2b lässt diese nicht zu.
+690|Die Originaldatei bleibt unberührt, solange Sie sie nicht ersetzen: «Speichern unter…» behält eine Kopie.
+691|die Datei konnte nicht geschrieben werden
+692|Die geöffnete Datei wird durch die geänderte Version ersetzt:
+693|Die Datei kann trotzdem gespeichert werden, deklariert sich aber nicht als PDF/A: Ein Archiv, das sie erhält, sähe darin kein nicht gehaltenes Versprechen.
+694|Der Seitenhintergrund wurde unverändert unter den Text kopiert. Hier eine Farbe zu wählen, ersetzt ihn durch eine Fläche.
+695|Das Formular verlangt, beim Öffnen neu gezeichnet zu werden (NeedAppearances): in einem PDF/A nicht zulässig.
+696|Das Formular ist vom Typ XFA: in einem PDF/A nicht zulässig.
+697|die Erkennungs-Engine fehlt in dieser Seite
+698|Der Browser fragt nach dem Drucker und seinen Einstellungen.
+699|die Stufe «a», die ein Tagging verlangt, das diese Software nicht neu erstellen kann
+700|PDF/A-2b ist das Langzeitarchivierungsformat (Norm ISO 19005-2): in die Datei eingebettete Schriften, kein Passwort, keine Skripte, verflachte Formulare. Das Dokument wird neu aufgebaut und dann geprüft; es wird nur als PDF/A-2b deklariert, wenn nichts dagegen spricht.
+701|Die Zwischenablage ist hier nicht zugänglich: Speichern Sie stattdessen die CSV.
+702|Die Zwischenablage ist hier nicht zugänglich.
+703|Der erkannte Text dient der Suche, dem Ersetzen, der Tabelle nach Excel und der Korrektur im Editor; er geht ins exportierte PDF, unsichtbar, aber markierbar und durchsuchbar. Alles geschieht auf diesem Computer: Es wird nichts gesendet.
+704|Der Titel wird nicht in der Titelleiste des Fensters angezeigt (DisplayDocTitle).
+705|Lesen
+706|Lesen eines Formularfeldes
+707|Seite wird gelesen…
+708|Kommentare werden gelesen…
+709|Lesen der Schriften der Seite
+710|Lesen der CSV
+711|Lesen des Datenstroms
+712|=
+713|Die Ränder werden ignoriert, und die Körnung eines Scanners zählt nicht; ebenso wenig die durchscheinende Rückseite oder die Lochungen: Nur Markierungen, die zusammenhängen und ihre volle Schwärze erreichen, wie Schrift, werden gemessen. Was sich auf den Seiten eines Dokuments identisch wiederholt — Kopfzeile, Fusszeile, Logo, Seitenzahl — zählt ebenfalls nicht: Eine Seite, die nur das trägt, ist leer.
+714|Die Formularfelder werden zu festem Inhalt: Die Werte bleiben sichtbar, sind aber nicht mehr veränderbar.
+715|Die Felder, die Sie bereits von Hand ausgefüllt haben, dienen als Grundlage; die Tabellenzeile ersetzt nur, was sie verbindet. Jede Kopie übernimmt das ganze Dokument, wie es geöffnet ist, mit seinen Seiten, seinem Wasserzeichen, seiner Nummerierung. Die Lesezeichen werden bei «Ein einziges PDF» nicht übernommen.
+716|Die Spalten werden anhand der Leerräume erkannt, die die Tabellenzeilen durchqueren. Über mehrere Seiten folgen die Zeilen aufeinander.
+717|Die bereits in einem empfangenen PDF vorhandenen Kommentare lassen sich auflisten und entfernen (Werkzeug Kommentare oder über den Bereich Dokument).
+718|Die PDF-Komponenten konnten nicht geladen werden. Prüfen Sie Ihre Internetverbindung und versuchen Sie es dann erneut.
+719|Beide Seiten
+720|Die Blätter kommen in der Reihenfolge der Faltung heraus, nicht in der der Seiten: Das erste trägt die letzte Seite neben der ersten. Das ist normal – gedruckt, gestapelt und in der Mitte gefaltet, lesen sich die Seiten der Reihe nach.
+721|Die erhaltenen Dateien werden in einem ZIP-Archiv zusammengefasst.
+722|Links, Anmerkungen und Formularfelder sind nicht mit der Struktur verbunden: Es ist kein PDF/UA.
+723|Lange Vorgänge (OCR, Stapel, Zusammenstellung) lassen sich unterbrechen: Schaltfläche Abbrechen unten oder Esc.
+724|die Metadaten der Datei
+725|Die XMP-Metadaten deklarieren die Stufe PDF/A-2b nicht.
+726|Die in den geöffneten PDFs bereits vorhandenen Notizen, Hervorhebungen, Stempel und anderen Kommentare. Was Sie hier hinzugefügt haben, wird im Seiteneditor eingestellt.
+727|Seiten ohne Text (Scans, Bilder)
+728|Die ausgewählten Seiten
+729|Die Seiten werden nebeneinandergelegt, und entfernte oder hinzugefügte Wörter werden hervorgehoben. Eine gescannte Seite wird nach der Texterkennung verglichen.
+730|Die Beilagen, in der Reihenfolge der Seiten
+731|Die Schriften der Software (lateinisches, griechisches und kyrillisches Alphabet) können diese Zeichen nicht schreiben. In der Datei würden sie durch «?» ersetzt:
+732|die folgenden Signaturen
+733|Hervorhebungen, Rahmen, Zeichnungen, Texte und Stempel werden zu echten PDF-Kommentaren, in Acrobat bearbeitbar (oder wahlweise fixiert).
+734|Die Stempel und Unterschriften, die Sie speichern, bleiben in diesem Browser, unverschlüsselt: Wer Ihre Sitzung öffnet, kann sie auf ein PDF setzen.
+735|Die gespeicherten Stempel bleiben auf diesem Computer (Ordner data/ der Anwendung), nie im PDF. Klicken Sie auf einen Stempel und dann auf die Seite, um ihn anzubringen.
+736|Welche
+737|=
+738|Buchstabe ausserhalb der Schrift
+739|=

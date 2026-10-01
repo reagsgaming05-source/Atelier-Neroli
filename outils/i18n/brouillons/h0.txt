@@ -1,0 +1,99 @@
+0|=
+1|=
+2|+ Klick
+3|Aktionen für die Auswahl
+4|Ansicht
+5|Vergrössern
+6|Vergrössern (Strg +)
+7|Dokument hinzufügen
+8|Lesezeichen hinzufügen
+9|=
+10|=
+11|Rückgängig
+12|Rückgängig (Strg+Z)
+13|Kein Dokument geöffnet.
+14|Keine Lesezeichen. Fügen Sie welche hinzu, um ein Kapitel oder eine Beilage mit einem Klick wiederzufinden; sie werden im exportierten PDF gespeichert und von Acrobat übernommen.
+15|Keine Seite
+16|Werkzeugleiste
+17|Diese Version lädt ihre Komponenten aus dem Internet. Die portable Version lädt nichts: Sie ist diejenige für echte Dokumente.
+18|PDF-Komponenten werden geladen…
+19|Beispiel laden
+20|Werkzeug suchen
+21|Werkzeug suchen…
+22|Dateien auswählen
+23|Auswahl ab dieser Seitenzahl verschieben
+24|Eine Seite oder die Auswahl verschieben
+25|PDF-Dateien hier ablegen
+26|Auswahl aufheben (Esc)
+27|Zwei Seiten nebeneinander
+28|Zwei Seiten nebeneinander, wie ein aufgeschlagenes Buch
+29|Dokument
+30|Geöffnete Dokumente
+31|In diesem Fenster geöffnete Dokumente
+32|Doppelklick
+33|Duplizieren
+34|Auswahl duplizieren
+35|Leeren
+36|Suche leeren
+37|Auswahl in einem neuen PDF speichern
+38|PDF exportieren
+39|PDF exportieren (Strg+S)
+40|Extrahieren
+41|Ziehen
+42|Drucken
+43|Drucken (Strg+P)
+44|Laufenden Vorgang abbrechen (Esc)
+45|Breite
+46|Lesen
+47|Dokument lesen (Strg+1)
+48|Umschalt
+49|Zoomstufe
+50|Dateiname
+51|Name der exportierten Datei
+52|Nummer
+53|Nummer der Zielposition
+54|=
+55|Organisieren
+56|Seiten organisieren (Strg+2)
+57|Öffnen
+58|PDF-Dateien oder Bilder öffnen (Strg+O)
+59|Seiteneditor öffnen
+60|Angezeigte Seite
+61|Ganze Seite
+62|Seiten
+63|Seiten des Dokuments
+64|Seitenleiste
+65|=
+66|Nach rechts drehen (R)
+67|Nach links drehen (Umschalt+R)
+68|Position
+69|Tastenkürzel
+70|Tastenkürzel (?)
+71|Suchen
+72|Text suchen (Strg+F)
+73|Verkleinern
+74|Verkleinern (Strg −)
+75|Erneut versuchen
+76|Ordnen Sie um, entfernen, drehen, kommentieren, führen Sie zusammen, schützen Sie, und exportieren Sie dann das erhaltene Dokument. JPEG- und PNG-Bilder werden zu Seiten.
+77|Seitenleiste einklappen
+78|Seitenleiste einklappen (Strg+Umschalt+B)
+79|Wiederholen
+80|Wiederholen (Strg+Y)
+81|Entfernen
+82|Auswahl entfernen
+83|Ausgewählte Seiten entfernen (Entf)
+84|Gewünschte Position unter der Seite eingeben
+85|Bereich auswählen
+86|Lesezeichen
+87|Lesezeichen: die Gliederung des Dokuments
+88|Entf
+89|Grösse der Vorschaubilder
+90|Helle oder dunkle Darstellung
+91|Alle Tastenkürzel
+92|Alles auswählen
+93|Alles auswählen (Strg+A)
+94|Lokale Verarbeitung: Ihre Dateien verlassen diesen Computer nicht.
+95|Ein Lesezeichen auf die angezeigte Seite (oder die erste ausgewählte)
+96|Online-Testversion · nicht für echte Dokumente
+97|Zoom
+98|Zoom: Strg + Mausrad, Strg + / Strg −, Strg 0 für die ganze Seite

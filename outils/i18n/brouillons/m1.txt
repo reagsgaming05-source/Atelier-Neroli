@@ -1,0 +1,100 @@
+100|{0} von {1} · Strg+Z zum Rückgängigmachen
+101|{0} von {1} für «{2}»
+102|{0} von {1}, bereits angekreuzt{2}.
+103|{0} auf dieser Seite
+104|{0} nach «{1}»
+105|=
+106|{0}-geändert
+107|=
+108|{0}-skaliert.pdf
+109|{0}, {1} von {2}.
+110|{0}«{1}» verlangt zum Öffnen ein Passwort.
+111|{0}«{1}» wird nicht verstanden (ja/nein, x, 1/0): Das Kästchen bleibt wie in der Vorlage.
+112|{0}«{1}» ist keine der Auswahlmöglichkeiten des Feldes: Es bleibt wie in der Vorlage.
+113|=
+114|=
+115|=
+116|=
+117|=
+118|=
+119|=
+120|=
+121|Aktum PDF wurde beendet, ohne dass {0}. Beim Wiederherstellen werden sie so geöffnet, wie sie waren, mit den laufenden Änderungen.
+122|=
+123|Zur Seite {0}{1} gehen · Doppelklick zum Umbenennen
+124|Seiten werden analysiert… {0}{1}/{2}
+125|Schriften werden analysiert… {0}{1}/{2}
+126|Analyse… Seite {0}{1} von {2}
+127|Archivierung von {0}…
+128|Als PDF/A-2b archiviert: {0}
+129|Aussehen: {0}
+130|Aussehen… Seite {0}{1}/{2}
+131|Zusammenstellung von {0}…
+132|Zusammenstellung… {0}{1}/{2}
+133|keine Anzeige in {0},{1}
+134|Kein bearbeitbarer Block enthält «{0}». Starten Sie bei einem Scan zuerst die Texterkennung.
+135|Keine Datei erstellt. {0}
+136|Kein Werkzeug entspricht «{0}».
+137|Kein sichtbares Ergebnis für «{0}», aber die Datei enthält es an anderer Stelle.
+138|Kein sichtbares Ergebnis für «{0}».
+139|Kein Textunterschied zwischen den beiden Versionen ({0}).
+140|Keine vollständig leere Seite unter {0}.
+141|Ende nicht gefunden: {0} in {1}
+142|=
+143|Schwärzung von «{0}»…
+144|Schwärzung… Seite {0}{1}/{2}
+145|Ausserhalb der Seite schwärzen ({0})
+146|Alles schwärzen ({0}{1})
+147|Diese Datei konnte nicht gelesen werden: {0}
+148|Diese Datei existiert nicht mehr: {0}
+149|Diese Datei verwendet eine Verschlüsselung, die diese Software nicht lesen kann ({0}).
+150|Zertifikat von «{0}»{1}, ausgestellt von «{2}», gültig vom {3} bis {4}.
+151|diese {0} Seiten
+152|Diese Signatur konnte nicht geprüft werden: {0} Daraus kann kein Schluss gezogen werden.
+153|Verkettete Zertifikatskette aus {0} Zertifikaten bis zur Stelle «{1}». Diese Software enthält keine Liste anerkannter Stellen: Sie kann nicht sagen, ob diese anerkannt ist. Vergleichen Sie sie mit derjenigen Ihrer Verwaltung.
+154|Formularfeld «{0}»
+155|Verfügbare Codes: {p} Seitenzahl, {n} Anzahl Seiten, {date} heutiges Datum, {file} Dateiname, {bates} Bates-Nummerierung.{0}
+156|Vergleich: {0} → {1}
+157|Vergleich… Seite {0}{1}/{2}
+158|Umwandlung {0}…
+159|Umwandlung der Seite {0}{1}…
+160|In Bilder umwandeln {0} (der Text ist darin nicht mehr markierbar, ausser die Texterkennung hat ihn gelesen)
+161|Kopie {0}{1}/{2}…
+162|Kopie 1/{0}…
+163|Korrigiert: {0}.
+164|Automatische Aktionen ({0}) sind in einem PDF/A nicht erlaubt.
+165|Aufteilung in {0}…
+166|Mit dieser Signatur zertifiziertes Dokument: danach erlaubte Änderungen — {0}.
+167|Dossier zusammengestellt: {0}, {1} · Strg+Z zum Rückgängigmachen
+168|Dossier vom {0}
+169|Duplizieren{0}
+170|Archivierung fehlgeschlagen: {0}
+171|Zusammenstellung fehlgeschlagen: {0}
+172|Speichern fehlgeschlagen: {0}
+173|Export fehlgeschlagen: {0}
+174|Extraktion fehlgeschlagen: {0}
+175|Einfügen fehlgeschlagen: {0}
+176|Aufteilung fehlgeschlagen: {0}
+177|Vorbereitung fehlgeschlagen: {0}
+178|Serie fehlgeschlagen: {0}
+179|Signatur fehlgeschlagen: {0}
+180|Schwärzung fehlgeschlagen: {0}
+181|Laden von {0} fehlgeschlagen
+182|Grössenänderung fehlgeschlagen: {0}
+183|Ersetzen fehlgeschlagen: {0}
+184|Verarbeitung fehlgeschlagen: {0}
+185|Schreiben von {0}…
+186|Gespeichert: {0}
+187|Ohne PDF/A-Deklaration gespeichert: {0}
+188|«{0}» speichern
+189|«{0}» speichern (Strg+S)
+190|Test: {0}
+191|{0} in ein PDF extrahieren…
+192|«{0}» schliessen
+193|{0} schliessen
+194|Blatt {0}{1} von {2}
+195|Blatt {0}{1}, {2} · {3} und {4}
+196|Datei: {0}
+197|Datei {0}{1}/{2}…
+198|Datei fehlt im Repository: {0}
+199|Wasserzeichen «{0}» angewendet
