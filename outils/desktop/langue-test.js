@@ -24,6 +24,13 @@ async function fenetrePrete(app) {
   await win.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });
   return win;
 }
+// Fermer sans jamais bloquer la suite : la fermeture normale, une attente bornée, puis l'arrêt du processus s'il traîne.
+// (Sous macOS, la fermeture de l'application restée sur la fenêtre de connexion ne rendait pas la main.)
+const fermer = async (app) => {
+  const processus = app.process();
+  await Promise.race([app.close().catch(() => {}), dormir(20000)]);
+  try { processus.kill('SIGKILL'); } catch (_) { /* déjà arrêté */ }
+};
 const menu = (app) => app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.map((i) => i.label));
 const attendre = async (cond, quoi, delai) => {
   const fin = Date.now() + (delai || 15000);
@@ -74,7 +81,7 @@ const choisirDansLeMenu = (app, nom) => app.evaluate(({ Menu }, nom) => {
     const l = await win.evaluate(() => window.AktumDesktop.licence());
     assert.ok(l && typeof l.description === 'string' && !/Version non licenciée|Version d’essai/.test(l.description), 'description : ' + (l && l.description));
   });
-  await app.close();
+  await fermer(app);
 
   // 4. Au lancement suivant, sans rien imposer : le réglage mémorisé l'emporte sur la langue du système (anglais ici)
   app = await lancer(env);
@@ -83,7 +90,7 @@ const choisirDansLeMenu = (app, nom) => app.evaluate(({ Menu }, nom) => {
     assert.equal(await win.evaluate(() => document.documentElement.lang), 'de');
     assert.deepEqual(await menu(app), ['Datei', 'Ansicht', 'Werkzeuge', 'Hilfe']);
   });
-  await app.close();
+  await fermer(app);
 
   // 5. Sans réglage, la langue du système : l'allemand pour un système en allemand (LANGUAGE sous Linux), le français sinon
   fs.rmSync(reglages, { force: true });
@@ -94,7 +101,7 @@ const choisirDansLeMenu = (app, nom) => app.evaluate(({ Menu }, nom) => {
     dit('    (locale du système : ' + locale + ')');
     assert.equal(await win.evaluate(() => document.documentElement.lang), /^de/i.test(locale) ? 'de' : 'fr');
   });
-  await app.close();
+  await fermer(app);
 
   // 6. La fenêtre de connexion (comptes) en allemand
   const dossierApp = path.join(base, 'comptes');
@@ -109,7 +116,7 @@ const choisirDansLeMenu = (app, nom) => app.evaluate(({ Menu }, nom) => {
     assert.ok(!/Créer|Choisissez|Mot de passe|Prénom/.test(texte), 'du français est resté : ' + texte.slice(0, 300));
     assert.equal(await win.evaluate(() => document.documentElement.lang), 'de');
   });
-  await app.close();
+  await fermer(app);
 
   fs.rmSync(base, { recursive: true, force: true });
   console.log(echecs ? echecs + ' échec(s)' : 'LANGUE OK');
