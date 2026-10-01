@@ -90,6 +90,10 @@ test('une opération longue s\'interrompt, et rien n\'est écrit', async ({ app,
 
 test('le journal recense ce qui a été contourné', async ({ app, page }) => {
   await app.ouvrir('rapport.pdf', pdfVide(2));
-  // Rien d'anormal : pas de bouton journal.
-  await expect(page.locator('#btn-journal')).toBeHidden();
+  // Rien d'anormal : pas de bouton journal. S'il se montre, le journal dit pourquoi (la cause se lit dans l'échec).
+  if (await page.locator('#btn-journal').isVisible()) {
+    await page.click('#btn-journal');
+    await page.waitForSelector('.dialog', { state: 'visible' });
+    throw new Error('le journal n\'est pas vide :\n' + (await page.locator('.dialog').innerText()).slice(0, 1500));
+  }
 });

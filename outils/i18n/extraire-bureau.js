@@ -9,7 +9,7 @@ const { estUnTexte } = require('./extraire');
 const BUREAU = path.join(__dirname, '..', 'desktop');
 // Les fichiers dont les textes arrivent sous les yeux de l'utilisateur. diagnostic.js (le rapport pour le
 // support) et signature.js (la chaîne de construction) restent en français : ils ne s'adressent pas à lui.
-const FICHIERS = ['main.js', 'licence.js', 'comptes.js', 'verifier-maj.js', 'ou-ranger.js', 'fiche-de-version.js'];
+const FICHIERS = ['main.js', 'licence.js', 'comptes.js', 'verifier-maj.js', 'ou-ranger.js', 'fiche-de-version.js', 'erreurs.js'];
 // Des mots seuls qui s'affichent (menus) : relevés par leur propriété.
 const PROPRIETES_AFFICHEES = ['label', 'sublabel', 'toolTip', 'title', 'message', 'detail', 'name'];
 // Des textes que la forme écarte à tort, ou retient à tort : désignés à la main.

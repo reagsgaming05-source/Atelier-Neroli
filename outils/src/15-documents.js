@@ -20,7 +20,7 @@
     if (rejected) toast(plural(rejected, 'fichier ignoré', 'fichiers ignorés') + ' : seuls les PDF et les images sont acceptés.', 'warn');
     if (!files.length) return;
     noterLesRecents(files);
-    dropSampleIfUntouched();
+    // L'exemple cède sa place une fois le document lu (addPdfSource, remplaceExemple) : un fichier refusé ne le fait pas disparaître.
     const images = files.filter(isImage);
     const pdfs = files.filter(isPdf);
     // Pendant un traitement par lots, le sablier est celui du lot.
@@ -62,8 +62,19 @@
         if (pw === null) { const err = new Error('annulé'); err.cancelled = true; throw err; }
         return openWithPdfjs(name, bytes, pw);
       }
-      throw new Error('« ' + name + ' » n\'a pas pu être lu : le fichier est peut-être abîmé.');
+      throw new Error(refusDOuverture(name, bytes, e));
     }
+  }
+  // Pourquoi un fichier ne s'ouvre pas : trois cas, trois phrases — un fichier vide, un fichier qui n'est pas un PDF (une extension qui
+  // ment), un PDF dont la structure est illisible (tronqué, abîmé) — au lieu d'un « peut-être abîmé » pour tout.
+  function refusDOuverture(name, bytes, e) {
+    const taille = bytes && bytes.byteLength != null ? bytes.byteLength : 0;
+    if (!taille) return tr('« {0} » est vide : il ne contient aucune donnée.').replace('{0}', name);
+    let tete = '';
+    try { tete = String.fromCharCode.apply(null, new Uint8Array(bytes.slice(0, 1024))); } catch (err) { signaler('Ouverture', err, 'info'); }
+    if (tete.indexOf('%PDF-') < 0) return tr('« {0} » n\'est pas un PDF (il n\'en a que l\'extension). Ouvrez-le avec l\'application qui l\'a produit.').replace('{0}', name);
+    signaler('Ouverture de ' + name, e, 'info');
+    return tr('« {0} » est un PDF incomplet ou abîmé : sa structure est illisible (fichier tronqué, téléchargement interrompu ?). Rouvrez-le depuis son origine, ou réparez-le avec l\'application qui l\'a produit.').replace('{0}', name);
   }
 
   // Quelqu'un d'autre a déjà ce document ouvert : le dire tout de suite, avec
@@ -204,13 +215,6 @@
     return out.arrayBuffer();
   }
 
-  function dropSampleIfUntouched() {
-    const sample = state.sources.find(s => s.isSample);
-    if (!sample || state.touched || state.sources.length !== 1) return;
-    state.sources = []; state.pages = []; state.selected.clear();
-    state.history = []; state.redo = [];
-    vue.render();
-  }
 
   // =====================================================================
   //  Thumbnails (rendered lazily, cached per source page)

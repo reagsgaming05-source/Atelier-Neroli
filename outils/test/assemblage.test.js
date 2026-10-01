@@ -146,3 +146,12 @@ test('aucun nom n\'est déclaré deux fois dans la portée commune des modules',
   }
   assert.deepStrictEqual(doubles, []);
 });
+
+// Deux éléments de même `id` défont `label for` et les références ARIA : la barre de sélection et l'outil « Sélectionner par plages »
+// ont porté `sel-plage` tous deux, et le champ visible n'était pas celui qu'on atteignait.
+test('aucun identifiant de la page de départ n\'est porté deux fois', () => {
+  const html = fs.readFileSync(path.join(SRC, 'page.html'), 'utf8');
+  const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
+  const doubles = ids.filter((id, i) => ids.indexOf(id) !== i);
+  assert.deepStrictEqual(doubles, []);
+});

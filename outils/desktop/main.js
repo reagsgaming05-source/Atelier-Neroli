@@ -93,6 +93,7 @@ const PORTABLE_DIR = process.env.AKTUM_DOSSIER_APP
   || require('./ou-ranger').dossierPortable(path.dirname(process.execPath), process.platform);
 
 const SCRIPT_MAJ = require('./ou-ranger').nomDuScriptDeMaj(process.platform);
+const { phraseErreur } = require('./erreurs');
 const { MARQUEUR, COMPTES, trouverReglage, phraseDuFichier, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const comptes = require('./comptes');
 const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = comptes;
@@ -477,22 +478,45 @@ function viderRecents() { try { fs.unlinkSync(fichierRecents()); } catch (e) { /
 const dossierRecup = () => path.join(app.getPath('userData'), 'recuperation');
 const cleValide = (cle) => typeof cle === 'string' && /^[a-z0-9-]{3,64}$/.test(cle);
 let recupProposee = false;
-function recupEcrire(o) {
+// Le travail mis de côté contient des documents : il ne reste pas indéfiniment. Sept jours, dix dépôts au plus (les plus récents) ;
+// celui qu'on est en train d'écrire n'est jamais touché. Dit dans l'aide (« ? »).
+const RECUP_JOURS_MAX = 7, RECUP_DEPOTS_MAX = 10;
+function recupPurger(garde) {
+  let dossiers = [];
+  try {
+    dossiers = fs.readdirSync(dossierRecup()).filter(cleValide).map((cle) => {
+      let t = 0;
+      try { t = fs.statSync(path.join(dossierRecup(), cle, 'manifeste.json')).mtimeMs; } catch (e) { try { t = fs.statSync(path.join(dossierRecup(), cle)).mtimeMs; } catch (e2) { /* disparu */ } }
+      return { cle, t };
+    }).sort((a, b) => b.t - a.t);
+  } catch (e) { return 0; }   // pas de dossier : rien à purger
+  const limite = Date.now() - RECUP_JOURS_MAX * 24 * 3600 * 1000;
+  let n = 0;
+  dossiers.forEach((d, i) => {
+    if (d.cle === garde) return;
+    if (d.t < limite || i >= RECUP_DEPOTS_MAX) { try { fs.rmSync(path.join(dossierRecup(), d.cle), { recursive: true, force: true }); n++; } catch (e) { /* tenu ailleurs : au prochain lancement */ } }
+  });
+  return n;
+}
+// Écrit hors du fil principal : sur un partage lent, la fenêtre ne se fige pas le temps d'un dépôt.
+async function recupEcrire(o) {
   if (!o || !cleValide(o.cle)) return { ok: false, erreur: 'clé invalide' };
   const dir = path.join(dossierRecup(), o.cle);
-  fs.mkdirSync(dir, { recursive: true });
+  await fs.promises.mkdir(dir, { recursive: true });
   for (const f of o.fichiers || []) {
     if (!f || typeof f.nom !== 'string' || !/^[a-z0-9._-]+$/i.test(f.nom)) continue;
-    fs.writeFileSync(path.join(dir, f.nom), Buffer.from(f.octets));
+    await fs.promises.writeFile(path.join(dir, f.nom), Buffer.from(f.octets));
   }
   const tmp = path.join(dir, 'manifeste.json.tmp');
-  fs.writeFileSync(tmp, JSON.stringify(o.manifeste));
-  fs.renameSync(tmp, path.join(dir, 'manifeste.json'));
+  await fs.promises.writeFile(tmp, JSON.stringify(o.manifeste));
+  await fs.promises.rename(tmp, path.join(dir, 'manifeste.json'));
+  recupPurger(o.cle);
   return { ok: true };
 }
 function recupListe() {
   if (recupProposee) return [];
   recupProposee = true;
+  recupPurger(null);
   const out = [];
   try {
     for (const cle of fs.readdirSync(dossierRecup())) {
@@ -653,6 +677,7 @@ function setupIpc() {
   });
   // Enregistrer : réécrire le fichier ouvert, sur place, sans boîte de dialogue.
   ipcMain.handle('aktum:ecrire', (_e, o) => {
+    let tmp = null;
     try {
       // L'essai est fini : on lit tout, on n'écrit plus rien. Le travail en cours reste
       // dans le dossier de récupération.
@@ -665,15 +690,20 @@ function setupIpc() {
         const c = verrou.conflit(o.chemin, o.mtimeAttendu);
         if (c.conflit) return { ok: false, conflit: true, mtimeMs: c.mtimeMs, taille: c.taille };
       }
-      const tmp = o.chemin + '.aktum-tmp';
+      tmp = o.chemin + '.aktum-tmp';
       fs.writeFileSync(tmp, Buffer.from(o.octets));
       fs.renameSync(tmp, o.chemin);
+      tmp = null;
       ajouterRecent(o.chemin);
       let mtimeMs = 0;
       try { mtimeMs = fs.statSync(o.chemin).mtimeMs; } catch (e) { /* tant pis */ }
       try { if (verrou.poser(o.chemin, quiTravaille(), INSTANCE).pose) verrousPoses.add(o.chemin); } catch (e) { /* pas de verrou, pas d'erreur */ }
       return { ok: true, chemin: o.chemin, mtimeMs };
-    } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; }
+    } catch (err) {
+      // Un échec ne laisse rien derrière lui : le fichier temporaire, à moitié écrit, serait un second document dans le dossier.
+      if (tmp) { try { fs.unlinkSync(tmp); } catch (e) { /* jamais écrit, ou déjà parti */ } }
+      return { ok: false, code: err && err.code ? String(err.code) : '', erreur: phraseErreur(err) };
+    }
   });
   // Le document est fermé : son verrou ne doit pas gêner une collègue.
   ipcMain.handle('aktum:liberer', (_e, chemins) => {
@@ -696,7 +726,7 @@ function setupIpc() {
     ajouterRecent(chemin);
     return lire([chemin]);
   });
-  ipcMain.handle('aktum:recup-ecrire', (_e, o) => { try { return recupEcrire(o); } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; } });
+  ipcMain.handle('aktum:recup-ecrire', async (_e, o) => { try { return await recupEcrire(o); } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; } });
   ipcMain.handle('aktum:recup-liste', () => { try { return recupListe(); } catch (err) { return []; } });
   ipcMain.handle('aktum:recup-lire', (_e, cle) => { try { return recupLire(cle); } catch (err) { return null; } });
   ipcMain.handle('aktum:recup-effacer', (_e, cle) => { try { return recupEffacer(cle); } catch (err) { return false; } });

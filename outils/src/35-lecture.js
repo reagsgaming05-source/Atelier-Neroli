@@ -82,6 +82,9 @@
       const src = srcById(p.src);
       if (!src || !src.pdfjs) throw new Error('document indisponible');
       const page = await src.pdfjs.getPage(p.index + 1);
+      // Une peinture plus récente a pris la suite pendant l'attente : elle n'avait rien à annuler, le rendu n'était pas commencé. Deux rendus
+      // sur la même toile, et pdf.js refuse (« Cannot use the same canvas during multiple render() operations ») — le journal en gardait quatre.
+      if (peintes.get(p.id) !== cle) return;
       const vp = page.getViewport({ scale: px, rotation: g.total });
       cv.width = Math.max(1, Math.ceil(vp.width));
       cv.height = Math.max(1, Math.ceil(vp.height));
@@ -91,6 +94,7 @@
       enCours.set(p.id, tache);
       try { await tache.promise; }
       finally { if (enCours.get(p.id) === tache) enCours.delete(p.id); }
+      if (peintes.get(p.id) !== cle) return;
       try { await effacerRetraits(cx, page, vp, p); } catch (e) { signaler('Commentaires', e); }
       try { await lectureCoucheTexte(f, p, page, g); } catch (e) { signaler('Couche de texte', e); }
       page.cleanup();
@@ -98,7 +102,7 @@
       if (att) att.hidden = true;
     } catch (e) {
       if (e && e.name === 'RenderingCancelledException') return;
-      peintes.delete(p.id);
+      if (peintes.get(p.id) === cle) peintes.delete(p.id);
       signaler('Lecture', e);
     }
     const vieux = f.querySelector('.ann-layer');

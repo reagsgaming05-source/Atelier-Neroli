@@ -8,6 +8,7 @@
  *  - quand la première a enregistré, la seconde qui enregistre à son tour se
  *    voit demander quoi faire, au lieu d'écraser en silence ;
  *  - « Annuler » ne touche à rien ; « Écraser quand même » écrase, sciemment ;
+ *  - un enregistrement en place que l'on interrompt (Échap) laisse le fichier octet pour octet tel qu'il était, sans reste ;
  *  - à la fermeture, plus aucun verrou ne traîne dans le dossier partagé.
  *
  *   node ecrasement-test.js                              # source (electron .)
@@ -149,6 +150,34 @@ async function tourner(win, n) {
   verifier(!fs.existsSync(verrou), 'à la fermeture, plus aucun verrou ne traîne dans le dossier partagé');
   const restes = fs.readdirSync(partage).filter((f) => f !== 'decision.pdf');
   verifier(restes.length === 0, 'rien d\'autre que le document dans le dossier partagé (' + JSON.stringify(restes) + ')');
+
+  // Un enregistrement en place que l'on interrompt en route : le fichier reste octet pour octet ce qu'il était, et rien ne traîne.
+  const dossierGros = path.join(racine, 'gros');
+  fs.mkdirSync(dossierGros);
+  const gros = path.join(dossierGros, 'gros.pdf');
+  fs.writeFileSync(gros, fabriquerPdf(900));
+  const avant = fs.readFileSync(gros);
+  const claire = await lancer(exe, path.join(racine, 'poste-claire'), gros);
+  const fClaire = await prete(claire, 900);
+  await tourner(fClaire, 1);
+  await fClaire.click('#btn-export');
+  await fClaire.waitForSelector('#ecr-remplacer', { state: 'visible', timeout: 10000 });
+  // Échap est pressé à l'instant où le bouton « Annuler » de l'opération apparaît : la construction d'un document, même long, peut
+  // finir avant qu'une touche envoyée de l'extérieur n'arrive, et le test n'attendrait plus d'annulation.
+  await fClaire.evaluate(() => {
+    const b = document.querySelector('#btn-annuler-op');
+    new MutationObserver(() => { if (!b.hidden) document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })); })
+      .observe(b, { attributes: true, attributeFilter: ['hidden'] });
+  });
+  await fClaire.click('#ecr-remplacer');
+  await attendre(() => fClaire.evaluate(() => /annulé/i.test(document.querySelector('#toast').textContent + ' ' + document.querySelector('#last').textContent)), 60000, 'l\'annulation de l\'enregistrement est annoncée')
+    .catch(async (e) => { throw new Error(e.message + ' — écran : « ' + await fClaire.evaluate(() => document.querySelector('#toast').textContent + ' | ' + document.querySelector('#last').textContent + ' | ' + (document.querySelector('#btn-annuler-op').hidden ? 'bouton caché' : 'bouton visible')) + ' »'); });
+  await dormir(1500);
+  verifier(Buffer.compare(fs.readFileSync(gros), avant) === 0, 'interrompu en route, le fichier est octet pour octet tel qu\'il était');
+  const restesGros = fs.readdirSync(dossierGros).filter((f) => f !== 'gros.pdf' && !/^\.~verrou/.test(f));
+  verifier(restesGros.length === 0, 'et aucun fichier temporaire ne traîne à côté (' + JSON.stringify(restesGros) + ')');
+  // Le document est resté modifié : la fermeture demanderait si l'on enregistre. On sort sans passer par la question.
+  await claire.evaluate(({ app }) => app.exit(0)).catch(() => {});
 
   await menage(racine);
   console.log(ok ? 'ÉCRASEMENT OK' : 'ÉCRASEMENT ÉCHEC');

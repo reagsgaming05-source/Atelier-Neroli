@@ -162,20 +162,20 @@ test.describe('la barre de sélection', () => {
     await app.vue('organiser');
     await app.selectionner(1);
     const selection = () => page.evaluate(() => Array.from(document.querySelectorAll('#pages .tile.selected')).map((t) => Array.from(t.parentElement.children).indexOf(t) + 1));
-    await page.fill('#sel-plage', '2-4');
-    await page.press('#sel-plage', 'Enter');
+    await page.fill('#sbar-plage', '2-4');
+    await page.press('#sbar-plage', 'Enter');
     expect(await selection()).toEqual([2, 3, 4]);
-    await page.selectOption('#sel-rapide', 'impaires');
+    await page.selectOption('#sbar-rapide', 'impaires');
     expect(await selection()).toEqual([1, 3, 5]);
-    await page.selectOption('#sel-rapide', 'paires');
+    await page.selectOption('#sbar-rapide', 'paires');
     expect(await selection()).toEqual([2, 4, 6]);
-    await page.selectOption('#sel-rapide', 'inverser');
+    await page.selectOption('#sbar-rapide', 'inverser');
     expect(await selection()).toEqual([1, 3, 5]);
-    await page.selectOption('#sel-rapide', 'tout');
+    await page.selectOption('#sbar-rapide', 'tout');
     expect(await selection()).toEqual([1, 2, 3, 4, 5, 6]);
     // une plage incomprise ne change rien et le dit
-    await page.fill('#sel-plage', '2-x');
-    await page.press('#sel-plage', 'Enter');
+    await page.fill('#sbar-plage', '2-x');
+    await page.press('#sbar-plage', 'Enter');
     await expect(page.locator('#toast')).toContainText('Plage de pages non comprise');
     expect(await selection()).toEqual([1, 2, 3, 4, 5, 6]);
   });

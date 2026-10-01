@@ -34,7 +34,7 @@ async function demanderLeBalisage(app, page, { titre, langue } = {}) {
   if (titre) await page.fill('#pr-title', titre);
   if (langue) await page.selectOption('#pr-langue', langue);
   await page.check('#pr-balise');
-  await page.locator('.dialog').getByRole('button', { name: 'Enregistrer' }).click();
+  await page.locator('.dialog .dlg-foot').getByRole('button', { name: 'Enregistrer' }).click();
   await page.waitForSelector('.dialog', { state: 'detached' });
 }
 

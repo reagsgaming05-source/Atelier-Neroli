@@ -307,6 +307,14 @@
       onProgress(0, 'Vérification du caviardage…');
     }
 
+    // Une page convertie en image perd son texte sélectionnable : on le dit, au journal et à l'écran (sauf si la personne l'a demandé —
+    // tout rasteriser, ou l'accord donné à l'archivage —, ou si l'export n'est qu'une vérification).
+    if (rasterSet.size && !rasterAll && !opts.rasterIds && !opts.silencieux) {
+      const msg = plural(rasterSet.size, 'page a été convertie en image', 'pages ont été converties en image') + ' : ' + (rasterSet.size > 1 ? 'leur texte n\'est plus sélectionnable.' : 'son texte n\'est plus sélectionnable.');
+      signaler('Export', msg, 'warn');
+      toast(msg, 'warn');
+    }
+
     // Un document caviardé ne s'écrit JAMAIS « sur place » : le fichier chargé
     // garde son dictionnaire /Info, son XMP, ses mises à jour antérieures, ses
     // objets orphelins — tout ce qui fait qu'un nom noirci sur la page se

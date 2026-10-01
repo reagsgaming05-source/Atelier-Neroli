@@ -362,7 +362,7 @@
     recupStock.set(cle, new Set(Array.from(idsSrc.values())));
     recupSignature.delete(cle);
     vue.render();
-    setLast('Travail récupéré : ' + (m.titre || 'document'));
+    setLast('Travail récupéré : ' + (m.titre || 'document') + ' · l\'historique d\'annulation (Ctrl+Z) n\'est pas conservé');
     return m;
   }
   function proposerRecuperation(liste) {
@@ -371,7 +371,7 @@
     dialog({
       title: 'Travail non enregistré retrouvé', icon: IC.info,
       build: b => {
-        b.append(note('Aktum PDF s\'est arrêté sans que ' + (liste.length > 1 ? 'ces documents soient enregistrés' : 'ce document soit enregistré') + '. Les récupérer les rouvre tels qu\'ils étaient, avec les modifications en cours.'));
+        b.append(note('Aktum PDF s\'est arrêté sans que ' + (liste.length > 1 ? 'ces documents soient enregistrés' : 'ce document soit enregistré') + '. Les récupérer les rouvre tels qu\'ils étaient, avec les modifications en cours ; Ctrl+Z ne pourra pas défaire ce qui a précédé. Fermer cette fenêtre sans répondre garde ce travail sept jours au plus.'));
         const ul = document.createElement('ul'); ul.className = 'recup-liste';
         liste.forEach(r => { const li = document.createElement('li'); li.textContent = (r.titre || 'Document') + ' · ' + plural(r.pages || 0, 'page', 'pages') + ' · ' + quand(r.quand); ul.appendChild(li); });
         b.append(ul);

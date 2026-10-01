@@ -17,6 +17,18 @@ test('deux langues, nommées dans leur propre langue', () => {
   assert.strictEqual(LANGUES.de, 'Deutsch');
 });
 
+// Un motif « Aucune page vide sur {0}. » prenait, dans son morceau variable, « 6 pages. Toutes portent du texte. » : la seconde phrase
+// restait en français dans une interface allemande.
+test('deux phrases collées : le motif de la première n\'avale pas la seconde', () => {
+  const t = fabriquerTraducteur({
+    litteraux: { ' Toutes portent du texte.': ' Alle enthalten Text.', 'pages': 'Seiten' },
+    motifs: { 'Aucune page vide sur {0}.': 'Keine leere Seite unter {0}.' },
+  });
+  assert.strictEqual(t('Aucune page vide sur 6 pages.'), 'Keine leere Seite unter 6 Seiten.');
+  assert.strictEqual(t('Aucune page vide sur 6 pages. Toutes portent du texte.'), 'Keine leere Seite unter 6 Seiten. Alle enthalten Text.');
+  assert.strictEqual(tr('Aucune page entièrement vide sur 6 pages. Toutes portent du texte ou une image.'), 'Keine vollständig leere Seite unter 6 Seiten. Alle enthalten Text oder ein Bild.');
+});
+
 test('un texte connu se traduit, un texte inconnu est rendu intact', () => {
   assert.strictEqual(tr('Imprimer'), 'Drucken');
   assert.strictEqual(tr('Un texte que personne n\'a écrit'), 'Un texte que personne n\'a écrit');

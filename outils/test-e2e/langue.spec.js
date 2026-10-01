@@ -50,6 +50,7 @@ test.describe('interface en allemand', () => {
     expect(outils.length).toBeGreaterThan(25);
     const fuites = [];
     const ouverts = [];
+    const doubles = [];
     for (const id of outils) {
       await page.goto(require('./aide').PAGE);
       await page.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });
@@ -64,7 +65,11 @@ test.describe('interface en allemand', () => {
       await page.waitForTimeout(400);
       const textes = await textesLisibles(page, fenetre ? '.dialog' : null);
       textes.filter(fuite).forEach((t) => fuites.push(id + ' : ' + t.slice(0, 160)));
+      // un identifiant porté par deux éléments défait « label for » et les références ARIA (la barre de sélection et l'outil de plages en portaient un en commun)
+      const dedoubles = await page.evaluate(() => { const vus = new Set(), d = new Set(); document.querySelectorAll('[id]').forEach((e) => { if (vus.has(e.id)) d.add(e.id); vus.add(e.id); }); return [...d]; });
+      dedoubles.forEach((i) => doubles.push(id + ' : #' + i));
     }
+    expect(doubles, 'identifiants en double').toEqual([]);
     expect(ouverts.length, 'la plupart des outils ouvrent une fenêtre').toBeGreaterThan(15);
     expect(fuites, 'textes restés en français').toEqual([]);
   });

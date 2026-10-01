@@ -30,7 +30,7 @@
 
   async function verifierLAccessibilite() {
     // Ce que donnerait l'export, balisage demandé : le contrôleur du balisage lit le document produit.
-    const opts = { balise: true };
+    const opts = { balise: true, silencieux: true };
     await buildPdf(state.pages.slice(), opts);
     const r = opts.rapportBalisage || { balise: false, problemes: ['Le document n\'est pas balisé.'], avis: [], elements: 0 };
     const problemes = r.problemes.slice(), avis = r.avis.slice(), bons = [];

@@ -25,6 +25,8 @@ function fabriquerTraducteur(dico) {
     return { re: new RegExp(re + '$'), ordre, gabarit: dico.motifs[k], fixe };
   }).sort((a, b) => b.fixe - a.fixe);
   const pluriels = dico.pluriels || {};
+  // Une fin de phrase suivie d'une majuscule : « … sur 6 pages. Toutes portent du texte … ».
+  const FIN_DE_PHRASE = /[.!?]\s+[A-ZÀ-ÖØ-Þ]/;
 
   // Dernier recours : un texte assemblé hors de tout motif (« rapport.pdf · modifié ») contient des textes
   // connus, que l'on remplace là où ils se trouvent, en mots entiers, le plus long d'abord.
@@ -47,15 +49,27 @@ function fabriquerTraducteur(dico) {
     if (typeof s !== 'string' || s === '') return s;
     if (exact.has(s)) return exact.get(s);
     if (!profondeur) profondeur = 0;
+    let avale = false;
     for (const m of motifs) {
       const r = m.re.exec(s);
       if (!r) continue;
+      // Le morceau variable d'un motif ne s'étend pas sur une phrase suivante : « Aucune page vide sur {0}. » avalait « 6 pages. Toutes
+      // portent du texte. » en entier, et la seconde phrase restait en français. Le texte est alors traduit phrase par phrase, plus bas.
+      if (r.slice(1).some(a => FIN_DE_PHRASE.test(a))) { avale = true; continue; }
       const args = [];
       for (let i = 0; i < m.ordre.length; i++) if (args[m.ordre[i]] === undefined) args[m.ordre[i]] = r[i + 1];
       return m.gabarit.replace(/\{(\d+)\}/g, (_, n) => {
         const v = args[+n];
         return v === undefined ? '' : (profondeur < 3 ? traduire(v, profondeur + 1) : v);
       });
+    }
+    // Plusieurs phrases collées dont un motif aurait avalé la seconde : chacune se traduit à part (avec ses propres motifs), puis elles se rejoignent.
+    if (avale && profondeur < 3) {
+      const phrases = s.split(/(?<=[.!?])(?=\s+[A-ZÀ-ÖØ-Þ])/);
+      if (phrases.length > 1) {
+        const sortie = phrases.map(p => traduire(p, profondeur + 1)).join('');
+        if (sortie !== s) return sortie;
+      }
     }
     // Espaces de bord et retours à la ligne du HTML : le texte est cherché sans eux, puis rhabillé.
     const bords = /^(\s*)([\s\S]*?)(\s*)$/.exec(s);

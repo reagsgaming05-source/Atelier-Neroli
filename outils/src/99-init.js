@@ -151,7 +151,7 @@
       zoom: $('#zoom'), summary: $('#summary'), last: $('#last'),
       progress: $('#progress'), progressBar: $('#progress-bar'),
       btnAnnulerOp: $('#btn-annuler-op'), btnJournal: $('#btn-journal'),
-      selbar: $('#selbar'), selCount: $('#sel-count'), moveto: $('#moveto'), movetoGo: $('#moveto-go'), selPlage: $('#sel-plage'), selRapide: $('#sel-rapide'),
+      selbar: $('#selbar'), selCount: $('#sel-count'), moveto: $('#moveto'), movetoGo: $('#moveto-go'), selPlage: $('#sbar-plage'), selRapide: $('#sbar-rapide'),
       selRotLeft: $('#sel-rot-left'), selRotRight: $('#sel-rot-right'), selDup: $('#sel-dup'),
       selExtract: $('#sel-extract'), selDelete: $('#sel-delete'), selClear: $('#sel-clear'),
       toast: $('#toast'),

@@ -42,6 +42,7 @@
       "langue-de.json",
       "raccourcis.json",
       "marque.json",
+      "erreurs.js",
       "traducteur.js",
       "ou-ranger.js",
       "version-posee.js",

@@ -225,7 +225,7 @@
           'Vos documents ne quittent jamais cet ordinateur. Ils sont lus, modifiés et réassemblés par le navigateur, dans la mémoire de cette page.',
           'Aucun envoi, aucun compte, aucun cookie, aucune mesure d\'audience, aucun identifiant. Ce que vous réglez — thème, vue et zoom, touches, tampons et signatures, derniers réglages de filigrane ou de recherche — est gardé sur ce poste, en clair, et nulle part ailleurs : Préférences permet de l\'oublier, un réglage à la fois.',
           state.bureau
-            ? 'Ce que vous mémorisez est écrit en clair dans le dossier data/, sans mot de passe : tampons, signatures, fichiers récents, et le travail mis de côté pour la récupération. Quiconque ouvre votre session Windows peut donc reposer votre signature sur un PDF. Verrouillez votre session, et ne mémorisez pas votre signature sur un poste partagé — tracez-la au moment de signer, sans cocher « Mémoriser ».'
+            ? 'Ce que vous mémorisez est écrit en clair dans le dossier data/, sans mot de passe : tampons, signatures, fichiers récents, et le travail mis de côté pour la récupération (effacé au bout de sept jours, ou au-delà de dix dépôts). Quiconque ouvre votre session Windows peut donc reposer votre signature sur un PDF. Verrouillez votre session, et ne mémorisez pas votre signature sur un poste partagé — tracez-la au moment de signer, sans cocher « Mémoriser ».'
             : 'Les tampons et signatures que vous mémorisez restent dans ce navigateur, en clair : quiconque ouvre votre session peut les reposer sur un PDF.',
           'La page ne sait contacter personne : ses règles de sécurité interdisent toute connexion sortante.',
         ].forEach(t => conf.appendChild(note(t)));
