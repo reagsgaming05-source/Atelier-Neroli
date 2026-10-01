@@ -1,6 +1,6 @@
 # PARTIE 7 — Social, gamification, communautés, marketplace de coachs, événements et intégration avec Fit
 
-Cette partie définit tout ce qui relie les personnes entre elles (amis, clubs, défis, événements, coachs humains) et à l'app [NOM_APP_FIT]. Elle s'appuie sur l'identité et les droits de la Partie 2, le moteur d'activité de la Partie 3, les cartes et la sécurité de la Partie 4, le coach de la Partie 5 et les sports collectifs de la Partie 6. Principe directeur : **la vie privée est le réglage par défaut, le partage est un choix explicite, et aucune mécanique sociale ne doit pousser à se blesser**. Stack : [STACK_BACKEND], [STACK_TEMPS_REEL], [STACK_STOCKAGE_MEDIAS], [STACK_PUSH].
+Cette partie définit tout ce qui relie les personnes entre elles (amis, clubs, défis, événements, coachs humains) et à l'app [NOM_APP_FIT]. Elle s'appuie sur l'identité et les droits de la Partie 2, le moteur d'activité de la Partie 3, les cartes et la sécurité de la Partie 4, le coach de la Partie 5 et l'approfondissement par discipline cardio de la Partie 6. Principe directeur : **la vie privée est le réglage par défaut, le partage est un choix explicite, et aucune mécanique sociale ne doit pousser à se blesser**. Stack : [STACK_BACKEND], [STACK_TEMPS_REEL], [STACK_STOCKAGE_MEDIAS], [STACK_PUSH].
 
 ---
 
@@ -64,7 +64,7 @@ Badge « Vérifié » (coche) pour : coachs certifiés (7.9), clubs officiels, o
 | `challenge` | Participation, victoire, classement de défi | Rang, progression |
 | `photo` | Manuelle | 1 à 10 photos/vidéos, légende |
 | `event` | Inscription ou résultat à un événement (7.8) | Fiche, temps officiel |
-| `match` | Fin de match en sport d'équipe/raquette (Partie 6) | Score, équipe, stats |
+| `group_ride` | Sortie collective terminée (7.4.4) | Participants, parcours, photos de groupe |
 | `club_post` | Fil de club (7.4) | Texte, sondage, annonce |
 
 Chaque publication a : `visibility` (`private|friends|clubs|public`), `source_activity_id` optionnel, `app_origin` (`sports|fit`). Les séances de muscu de Fit apparaissent dans le fil Sports si l'utilisateur l'autorise (réglage « Fil unifié »).
@@ -94,7 +94,7 @@ Deux onglets : **Suivis** (chronologique inverse strict, par défaut) et **Pour 
 - Modération avant diffusion hors cercle d'amis : classifieur automatique de nudité, violence, mineurs en situation inappropriée ; seuil haut → blocage immédiat et file humaine (7.13) ; seuil moyen → diffusion limitée aux amis en attendant la revue.
 
 ### 7.2.5 Cartes de partage pour réseaux sociaux
-Formats : story 1080×1920, carré 1080×1080, paysage 1200×630. Templates : « Carte du tracé », « Stats en grand », « Record », « Trophée », « Bilan annuel », « Défi gagné », « Match ». Fond : photo, carte stylisée, ou dégradé.
+Formats : story 1080×1920, carré 1080×1080, paysage 1200×630. Templates : « Carte du tracé », « Stats en grand », « Record », « Trophée », « Bilan annuel », « Défi gagné », « Sortie de groupe ». Fond : photo, carte stylisée, ou dégradé.
 **Confidentialité par défaut** : le tracé est affiché avec **flou de début et de fin de 200 m** (ou la zone masquée de l'utilisateur, 7.3.3), sans fond de carte détaillé permettant de reconnaître une rue ; pas d'heure précise de départ ; pas de nom de lieu de domicile. L'utilisateur peut afficher le tracé complet uniquement pour un parcours qu'il marque « parcours public » ; un avertissement s'affiche. Génération côté appareil (rendu hors ligne), filigrane [NOM_APP_SPORTS] discret, lien profond de parrainage optionnel (7.12).
 
 ### 7.2.6 Vie privée par publication, signalement
@@ -148,7 +148,7 @@ Mesures obligatoires :
 ## 7.4 Clubs et communautés
 
 ### 7.4.1 Création et types
-Tout utilisateur Sports, Fit ou Ultra peut créer jusqu'à 3 clubs (Gratuit : peut rejoindre, pas créer). Types : `running_club`, `hiking_group`, `cycling_club`, `team` (sports collectifs, Partie 6), `company`, `school`, `city`, `other`. Champs : nom unique, description, sports, ville, logo, couverture, langue, règles, `join_policy` (`open`, `approval`, `invite_only`, `paid`).
+Tout utilisateur Sports, Fit ou Ultra peut créer jusqu'à 3 clubs (Gratuit : peut rejoindre, pas créer). Types : `running_club`, `hiking_group`, `cycling_club`, `company`, `school`, `city`, `other`. Champs : nom unique, description, sports, ville, logo, couverture, langue, règles, `join_policy` (`open`, `approval`, `invite_only`, `paid`).
 
 ### 7.4.2 Rôles et permissions
 | Action | Propriétaire | Admin | Modérateur | Coach du club | Membre |
@@ -203,7 +203,7 @@ Tableau de bord : membres actifs 7/30 jours, sorties, participation, croissance,
 
 ### 7.5.2 Métriques croisées entre activités
 Un défi choisit une métrique et un jeu d'activités éligibles :
-- **Km toutes disciplines** avec coefficients d'équivalence : marche ×1, course ×1, randonnée ×1, vélo ×0,25 (4 km de vélo = 1 km), natation ×4, rando raquettes ×1,5. Coefficients publiés dans le règlement et versionnés.
+- **Km toutes disciplines** avec coefficients d'équivalence : marche ×1, course ×1, randonnée ×1, vélo ×0,25 (4 km de vélo = 1 km), trail ×1,2 (effort pondéré par le dénivelé), marche nordique ×1,1. Coefficients publiés dans le règlement et versionnés.
 - **Dénivelé positif total**, **jours actifs** (au moins 20 min d'effort ou 3 000 pas supplémentaires), **régularité** (nombre de semaines consécutives avec ≥ 3 séances), **temps en mouvement**, **points d'expérience** (7.6) hors muscu.
 - Plafonds par défaut pour limiter l'abus : 100 km/jour de course/marche, 300 km/jour de vélo, 5 000 m de D+/jour ; les valeurs au-delà ne comptent pas mais l'activité reste enregistrée.
 - Les séances de muscu de Fit comptent dans « jours actifs » et « régularité » si l'utilisateur est abonné Fit ou Ultra.
@@ -310,8 +310,8 @@ Raretés : commun (C), rare (R), épique (E), légendaire (L). Chaque trophée a
 **Records et progrès (8)**
 89. Premier record (C). 90. Dix records (R). 91. Mieux que la veille (C) : battre sa distance hebdomadaire d'il y a 4 semaines. 92. Progression de 10 % (R) : améliorer son allure moyenne sur 5 km de 10 %. 93. Sous les 30 (R) : 5 km en moins de 30 min. 94. Sous les 25 (E) : 5 km en moins de 25 min. 95. Sub-2 (E) : semi en moins de 2 h. 96. Sub-4 (E) : marathon en moins de 4 h.
 
-**Sports d'équipe (6) (Partie 6)**
-97. Premier match (C). 98. Dix matchs (C). 99. Cent matchs (R). 100. Capitaine de terrain (R) : capitaine sur 10 matchs. 101. Esprit d'équipe (R) : 10 matchs avec la même équipe sur 3 mois. 102. Invaincu (E) : 5 victoires d'affilée en équipe de club.
+**Disciplines cardio (6)**
+97. Foulée régulière (C) : 20 sorties de course de plus de 5 km. 98. Trailer (R) : 10 sorties de trail avec plus de 300 m D+ chacune. 99. Rouleur (R) : 20 sorties vélo de plus de 40 km. 100. Gravel-addict (R) : 500 km cumulés sur chemins en gravel ou VTT. 101. Trekkeur (E) : 3 jours consécutifs de randonnée avec au moins 15 km chacun (itinérance). 102. Sommet (E) : atteindre 5 sommets référencés différents.
 
 **Combiné Fit + Sports (4)**
 103. Complet (R) : muscu et endurance dans la même semaine pendant 4 semaines. 104. Bien nourri (C) : 14 jours de nutrition renseignée autour de séances longues. 105. Ravito réussi (C) : utiliser un plan de ravitaillement sur 3 sorties longues. 106. Athlète complet (E) : 100 séances de renforcement, 100 sorties d'endurance.
@@ -337,4 +337,198 @@ Distances de référence : 1 km, 1 mile, 5 km, 10 km, semi, marathon ; vélo : 2
 - Messages d'encouragement fondés sur l'effort réalisé, jamais sur le poids ou l'apparence.
 
 **Critères d'acceptation 7.6** : le plafond de 400 XP/jour est respecté pour 5 activités le même jour ; une pause santé de 3 semaines conserve la série intacte ; aucun texte ne contient de formulation culpabilisante (liste de motifs interdits testée) ; chaque trophée a au moins un test unitaire de seuil (valeur juste en dessous, valeur exacte).
+
+## 7.7 Classements et segments
+
+### 7.7.1 Classements
+Portées : amis, club, local (ville ou rayon de 25 km, agrégé par cellule géographique, jamais par adresse), et défi. Périodes : semaine, mois, année. Métriques : distance, durée, D+, jours actifs, XP. Les classements ne comptent que les activités `valid` ; les utilisateurs au profil privé n'apparaissent que dans les classements d'amis et de clubs où ils ont adhéré. Mise à jour toutes les 5 minutes (cache), reconstruction nocturne. Départage : valeur, puis date d'atteinte. Affichage par défaut : moi + 3 au-dessus et 3 en dessous, plutôt que le top mondial ; le « local » est affiché par fourchettes (top 10 %, 25 %).
+
+### 7.7.2 Segments (retenus pour l'endurance, activés par feature flag `segments`)
+- **Création** : tronçon de 300 m à 50 km choisi sur une activité par un abonné Sports, Ultra ou Fit ; le tronçon est rejeté s'il passe dans une zone masquée d'un tiers connu, traverse une voie ferrée ou une autoroute, ou a un départ à moins de 150 m d'un domicile détecté. Chaque segment reçoit une classification de risque (7.7.3).
+- **Détection** : appariement géométrique tolérant (tampon 25 m, direction cohérente, début et fin dépassés dans la limite de 40 m), exécuté de manière asynchrone après l'activité ; temps interpolé aux frontières.
+- **Tableaux de temps** : meilleur temps par utilisateur, historique personnel, classement par catégorie. Un temps issu d'une activité `suspect` n'est pas affiché publiquement.
+- **Vie privée** : participation publique désactivable segment par segment ou globalement (« Mes temps de segment sont visibles : Amis par défaut »). Un temps affiché publiquement n'expose jamais le tracé complet. Le tableau public de segments n'est visible que pour les segments situés hors zones masquées.
+- **Retrait volontaire** : un utilisateur peut retirer tous ses temps en un tap ; un propriétaire de terrain, une commune ou un club peut demander le retrait d'un segment via un formulaire (réponse sous 7 jours).
+
+### 7.7.3 Règles de sécurité des segments
+Classification automatique : `route_urbaine`, `chemin`, `descente`. Pour les **descentes** (pente moyenne < −4 % sur plus de 400 m, ou segment vélo avec vitesse > 50 km/h) et les **routes ouvertes à la circulation** : pas de classement public des temps absolus, seulement un temps personnel, un classement « amis » optionnel et un avertissement. Les « KOM/QOM » de descente et de traversées de carrefour sont interdits. Tout segment signalé dangereux (3 signalements indépendants) est suspendu automatiquement pour revue. Message au franchissement d'un segment à risque : « Segment masqué : la sécurité passe avant le chrono. »
+
+### 7.7.4 Catégories et inclusivité
+Catégories optionnelles : âge (tranches de 5 ans à partir de 18 ans, jeunes de 13 à 17 ans séparés et sans classement public), niveau (débutant, intermédiaire, avancé, élite, déduit de l'allure ou de la puissance de référence), **catégorie de compétition** (sexe ou « ouverte »). Traitement inclusif : le champ de sexe propose femme, homme, non-binaire, ne souhaite pas répondre ; les personnes non-binaires ou sans réponse peuvent choisir la catégorie dans laquelle elles se classent (règle auto-déclarée, sans justificatif) ou la catégorie « Ouverte » ; aucune obligation de renseigner la date de naissance exacte pour les classements publics (une tranche suffit). **Option « Ne pas figurer »** : l'utilisateur peut sortir de tous les classements publics et segments sans perdre ses statistiques, trophées ni XP. Pour les défis sponsorisés ou compétitifs avec dotation, le règlement peut définir ses propres catégories.
+
+**Critères d'acceptation 7.7** : un utilisateur ayant choisi « Ne pas figurer » est absent de toute réponse de classement ; aucun classement de temps absolu n'est servi pour un segment classé « descente » ; le retrait d'un segment est effectif en moins de 24 h.
+
+---
+
+## 7.8 Événements et compétitions
+
+### 7.8.1 Découverte
+Catalogue d'événements : courses sur route et trail, randonnées organisées, cyclosportives, trails, ultra-trails, marches nordiques collectives, brevets cyclistes et treks organisés (disciplines de la Partie 6). Sources : importation de partenaires ([API_EVENEMENTS_PARTENAIRES]), soumission par les organisateurs (vérifiés), suggestions de la communauté (modération). Filtres : sport, distance, date, lieu, rayon, difficulté, prix, label « accessible aux débutants ». Carte et liste, favoris, alerte « nouveaux événements proches ».
+
+### 7.8.2 Fiche événement
+Champs : nom, date et heure, lieu et point de départ, parcours(s) téléchargeables (GPX, profil D+), distances, tarifs, délai d'inscription, barrière horaire, limite de places, règlement (certificat médical selon la législation locale), organisateur (badge vérifié), site officiel, météo prévisionnelle à J−7, avis de participants, label d'accessibilité. Inscriptions **externes par lien** vers le site de l'organisateur ; l'app n'encaisse rien sauf partenariat contractuel. Statuts utilisateur : intéressé, inscrit, participé, abandon.
+
+### 7.8.3 Objectifs liés et coach
+Bouton « Préparer cet événement » : le coach (Partie 5) crée un plan à partir de la date, de la distance, du dénivelé, du niveau actuel et de la disponibilité hebdomadaire ; avertit si le délai est trop court (par exemple moins de 8 semaines pour un semi débutant) et propose un objectif alternatif ou plus tardif. Le plan inclut la semaine d'affûtage, la reconnaissance de parcours, le plan de ravitaillement (7.10.5) et le rappel de matériel. Si l'événement est annulé ou reporté, le plan est proposé en réadaptation.
+
+### 7.8.4 Résultats, groupes, souvenirs
+- **Résultats** : saisie manuelle du temps officiel ou rapprochement automatique avec l'activité enregistrée (± 3 % de distance, heure cohérente) ; import de classements ouverts uniquement via partenaires. Statut « officiel » vs « enregistré ».
+- **Groupe d'événement** : créé à l'inscription ; échange de covoiturage, rendez-vous, partage de photos ; fermeture 30 jours après l'événement.
+- **Souvenirs** : carte « Souvenir de course » (temps, tracé flouté, photos, dossard optionnel), album d'événement, ajout au bilan annuel (7.6.6).
+- **Calendrier communautaire** : vue mensuelle des événements favoris, des sorties de club et des défis ; export ICS ; synchronisation avec le planning unifié (7.10.6).
+
+**Critères d'acceptation 7.8** : « Préparer cet événement » produit un plan dont la dernière séance précède la date de l'événement de 1 jour ; un événement annulé notifie tous les inscrits suivis sous 15 minutes.
+
+---
+
+## 7.9 Marketplace de coachs et de plans
+
+### 7.9.1 Coachs humains certifiés
+Rôle `coach` demandé depuis le profil. **Vérification** : identité ([FOURNISSEUR_KYC]), diplôme ou carte professionnelle (en France : BPJEPS, DEJEPS, STAPS, carte professionnelle d'éducateur sportif ; équivalents par pays dans une table paramétrable), assurance responsabilité civile professionnelle en cours de validité, casier judiciaire (extrait du bulletin n°3 ou équivalent) lorsqu'il y a travail avec des mineurs, charte de l'app signée. Revue humaine sous 5 jours ouvrés. Statuts : `pending`, `verified`, `suspended`, `revoked`. Renouvellement annuel des justificatifs ; alerte à J−30. Les coachs affichent leur spécialité (course, trail, vélo, rando, multi-sports), langues, tarifs et disponibilités.
+
+### 7.9.2 Produits vendus
+| Produit | Description | Livraison |
+|---|---|---|
+| Plan d'entraînement | Plan fixe (ex. « 10 km en 8 semaines ») importable dans le planning | Numérique |
+| Abonnement coach | Suivi mensuel : plan adaptatif humain, messages, ajustements | Numérique + service |
+| Séance en visio | 30/60 min planifiée | Service à distance |
+| Séance physique | Coaching présentiel | Service physique |
+
+Un plan vendu est importé dans le planning unifié (7.10.6) ; le coach IA (Partie 5) en respecte la structure, ajuste les charges en cas de fatigue ou de blessure et notifie le coach humain des écarts significatifs (si consentement 7.9.8).
+
+### 7.9.3 Outils du coach
+Tableau de bord : liste des athlètes, statut (conforme, en retard, signal de fatigue), semaine à venir, taux d'adhérence, alertes (3 séances manquées, charge > 1,5, douleur déclarée). Assignation de séances par glisser-déposer, bibliothèque de séances, modèles ; retour de données (activité, ressenti, FC, charge) en lecture ; commentaires sur séance ; **messagerie** coach-athlète (texte, notes vocales, images ; pas de pièces jointes exécutables) ; calendrier de séances en visio ; **facturation** (factures PDF, TVA selon statut du coach, relevés mensuels, export comptable).
+
+### 7.9.4 Commission et paiements
+Commission de plateforme : 20 % sur les ventes numériques réalisées via achat in-app (alignée sur le barème des stores, ajustée à 15 % pour le petit programme de réduction des stores), 12 % sur les abonnements coach facturés hors store si autorisé, 0 % sur les séances physiques. Versement mensuel via [FOURNISSEUR_PAIEMENT_CONNECT] après 14 jours de rétractation, seuil minimal de 30 €.
+
+### 7.9.5 Évaluations, litiges, modération qualité
+Évaluation 1 à 5 étoiles et avis écrit uniquement par les clients ayant acheté ; modération des avis ; réponse du coach possible ; note affichée à partir de 5 avis. Litiges : ouverture dans les 30 jours ; médiation par le support sous 5 jours ouvrés ; remboursement total ou partiel par décision motivée ; blocage des virements du coach pendant l'instruction. Suspension automatique : note < 3,0 sur 10 avis, 2 litiges perdus en 90 jours ou toute plainte pour conduite inappropriée. Audit qualité : échantillonnage trimestriel de plans, vérification de non-promesses de résultats médicaux.
+
+### 7.9.6 Règles des stores : services physiques et numériques
+- **Contenus numériques** (plans, abonnements à contenu, programmes dans l'app) : achat intégré obligatoire sur iOS et Android, avec commission du store.
+- **Services physiques ou en personne** (séance présentielle) et **services entre personnes en temps réel** : paiement externe autorisé par les règles des stores en vigueur ; **vérifier la politique actuelle de chaque store à chaque version** (voir Partie 8) et ne jamais diriger les utilisateurs vers un paiement externe pour un contenu numérique hors des exceptions autorisées.
+- Les séances en visio individuelles sont traitées comme services en temps réel entre personnes, sous réserve de validation juridique.
+- L'app ne doit proposer aucune incitation à contourner les achats intégrés ; les liens externes sont conformes aux règles régionales.
+
+### 7.9.7 Responsabilité, assurances, mentions
+Mentions obligatoires dans les conditions et sur chaque fiche : l'app est une plateforme de mise en relation ; le coach est un professionnel indépendant responsable de ses conseils ; les contenus ne remplacent pas un avis médical ; recommandation de consulter un médecin avant reprise ou effort intense ; le coach doit détenir une RC professionnelle ; la plateforme n'est pas responsable des blessures liées à un conseil de coach, dans la limite permise par la loi ([MENTIONS_LEGALES], validation juridique en Partie 8). L'athlète accepte un questionnaire d'aptitude (PAR-Q) avant le premier plan.
+
+### 7.9.8 Confidentialité athlète-coach
+Aucune donnée n'est visible du coach sans **consentement explicite, granulaire et révocable** : catégories activités, charge, FC, sommeil, poids/nutrition (Fit), blessures, localisation. Écran « Mes coachs » listant exactement ce qui est partagé ; révocation immédiate, le coach perd l'accès en moins de 60 s et conserve seulement ses notes propres pendant 12 mois (les données reçues de l'athlète sont supprimées de sa vue). Journal d'accès consultable. Les données de santé (art. 9 RGPD) exigent un consentement dédié. Un coach ne peut jamais exporter les données en masse.
+
+**Critères d'acceptation 7.9** : un coach non vérifié ne peut rien vendre ; après révocation du consentement « FC », les données de FC sont absentes de l'API coach ; un litige ouvert bloque le versement correspondant.
+
+---
+
+## 7.10 Intégration avec Fit : contrat complet
+
+### 7.10.1 Principes
+Deux apps, un écosystème : **identité unique, profil partagé, droits partagés (Partie 2), événements asynchrones, jamais de dépendance synchrone bloquante**. Les services partagés : `identity`, `entitlements`, `social-graph`, `gamification` (XP, niveaux, trophées), `planning`, `nutrition`. L'app Sports fonctionne seule en mode dégradé (7.10.9). Contrat versionné `v1` ; toute rupture crée `v2` avec coexistence de 6 mois.
+
+### 7.10.2 Identité et profil partagés
+Table `profile` unique ; champs partagés : prénom, avatar, @handle, date de naissance, sexe, taille, poids (historique), objectifs, unités, langue, allergies et régimes alimentaires, FC max/repos, blessures déclarées. Champs spécifiques Sports : FTP, seuils de course, zones. Champs spécifiques Fit : charges, 1RM. Règle de conflit : le dernier écrit gagne champ par champ, avec `updated_at` et `source_app` ; poids : conserver l'historique, jamais d'écrasement silencieux.
+
+### 7.10.3 API interne (v1)
+Authentification service à service : jetons signés à courte durée de vie ([STACK_AUTH_SERVICE]) ; chaque appel porte `user_id` du jeton utilisateur et `X-Idempotency-Key`.
+
+| Méthode | Endpoint | Rôle |
+|---|---|---|
+| GET | `/internal/v1/profile/{userId}` | Profil partagé |
+| PATCH | `/internal/v1/profile/{userId}` | Mise à jour par champ |
+| GET | `/internal/v1/entitlements/{userId}` | Droits : `free,sports,fit,ultra` |
+| POST | `/internal/v1/energy/expenditure` | Publier dépense énergétique |
+| GET | `/internal/v1/nutrition/targets/{userId}?date=` | Cibles du jour (calories, macros, hydratation) |
+| POST | `/internal/v1/nutrition/fueling-plans` | Plan de ravitaillement |
+| GET | `/internal/v1/planning/{userId}?from=&to=` | Séances unifiées |
+| POST | `/internal/v1/planning/{userId}/sessions` | Créer une séance |
+| POST | `/internal/v1/planning/{userId}/conflicts/check` | Vérification de conflit |
+| GET | `/internal/v1/exercises?role=runner` | Exercices de renforcement |
+| POST | `/internal/v1/gamification/events` | Événement de gamification |
+| GET | `/internal/v1/friends/{userId}` | Amis et relations |
+
+Événements (bus [STACK_BUS_EVENEMENTS], at-least-once, schéma versionné) : `activity.completed`, `energy.expenditure.computed`, `nutrition.target.adjusted`, `workout.completed` (Fit), `plan.session.moved`, `trophy.awarded`, `friend.accepted`, `entitlement.changed`, `profile.updated`.
+
+Payload `activity.completed` :
+```json
+{
+  "event_id": "evt_01HZX…", "schema": "activity.completed.v1",
+  "user_id": "usr_123", "occurred_at": "2026-10-04T08:12:00Z",
+  "activity": {"id": "act_998", "sport": "run", "subtype": "trail",
+    "moving_s": 5400, "distance_m": 13200, "elevation_gain_m": 640,
+    "avg_hr": 148, "load": 112, "start_local": "2026-10-04T10:05:00+02:00",
+    "validity": "valid"}
+}
+```
+Payload `energy.expenditure.computed` :
+```json
+{"event_id": "evt_01HZY…", "schema": "energy.expenditure.computed.v1",
+ "user_id": "usr_123", "activity_id": "act_998", "date": "2026-10-04",
+ "kcal_active": 920, "method": "hr_based", "confidence": 0.82,
+ "carbs_used_g_est": 150}
+```
+Payload `nutrition.target.adjusted` :
+```json
+{"event_id": "evt_01HZZ…", "schema": "nutrition.target.adjusted.v1",
+ "user_id": "usr_123", "date": "2026-10-04",
+ "kcal_target": 2780, "delta_kcal": 420,
+ "macros": {"protein_g": 130, "carbs_g": 380, "fat_g": 80},
+ "reason": "long_run_recovery", "guardrails": {"max_delta_pct": 25, "min_kcal": 1500}}
+```
+Payload `trophy.awarded` :
+```json
+{"event_id": "evt_01J00…", "schema": "trophy.awarded.v1", "user_id": "usr_123",
+ "trophy_code": "TR_021", "rarity": "R", "awarded_at": "2026-10-04T12:00:00Z",
+ "source_app": "sports", "dedupe_key": "usr_123:TR_021"}
+```
+
+### 7.10.4 Chaîne activité, dépense, nutrition
+1. `activity.completed` publié par Sports.
+2. Le service énergie calcule la dépense (basée FC si disponible, sinon MET × poids × durée) et publie `energy.expenditure.computed`.
+3. Fit ajuste la cible du jour : `delta_kcal = clamp(0,5 × kcal_active, 0, 25 % de la cible de base)` avec plancher de sécurité (jamais en dessous de 1 500 kcal pour un adulte, ni en dessous du métabolisme de base estimé × 1,1) ; l'ajustement est un **ajustement de récupération, pas une prime à manger moins** ; l'utilisateur peut le désactiver.
+4. L'app affiche « Ta sortie de 13 km : +420 kcal aujourd'hui, de préférence en glucides et protéines. »
+Cas limites : activités multiples le même jour (cumul avec plafond), activité invalide (aucune dépense), objectif de perte de poids (jamais de diminution automatique de la récupération), mineur (pas de cible calorique restrictive ; suggestions qualitatives seulement).
+
+### 7.10.5 Nutrition adaptée à l'effort
+- **Recettes avant/après** : suggestions issues de la base recettes de Fit selon la séance : avant (2-3 h) riche en glucides faciles à digérer ; après (dans les 60 min) rapport glucides:protéines ≈ 3:1 ; filtrage par allergies et régimes (végétarien, sans gluten…).
+- **Plan de ravitaillement** pour sorties de plus de 75 min : 30-60 g de glucides/h (jusqu'à 90 g/h au-delà de 3 h selon tolérance), 400-800 ml de liquide/h ajustés à la météo, sodium 300-600 mg/h par forte chaleur ; plan imprimable et rappels pendant la séance (« Prends un gel dans 5 min »). Avertissements : s'entraîner l'intestin, ne rien essayer de nouveau un jour de course, pas de conseil médical pour diabète ou pathologies (renvoi vers un professionnel).
+- Fit fournit aliments et recettes, Sports fournit contexte d'effort ; la logique de nutrition (écriture de cibles) reste dans Fit.
+
+### 7.10.6 Planning unifié et anti-conflit
+Calendrier commun (`planning`) contenant séances de muscu (Fit), endurance (Sports), repos, événements, séances de coach humain. Règles anti-conflit (évaluées avant chaque insertion et chaque déplacement) :
+| Règle | Seuil | Action |
+|---|---|---|
+| Jambes lourdes avant séance clé | Séance de jambes < 36 h avant sortie longue ou fractionné | Avertissement, proposer haut du corps ou décalage |
+| Sortie longue avant jambes | Sortie > 90 min < 24 h avant séance de jambes lourde | Déplacer ou alléger |
+| Deux séances dures consécutives | Charge ≥ 80 la veille | Remplacer la 2e par récupération |
+| Total hebdomadaire | Ratio charge aigu/chronique > 1,4 | Bloquer l'ajout, proposer un déplacement |
+| Jour de repos | Moins de 1 jour de repos par semaine | Avertissement |
+| Événement | Séance dure < 3 jours avant course | Suppression recommandée |
+Exemples : « Séance jambes mardi 18 h + fractionné mercredi 7 h » : conflit, proposition « fractionné jeudi ou jambes mardi en haut du corps » ; « Sortie longue samedi + Pull dimanche matin » : accepté (haut du corps). Les décisions finales appartiennent à l'utilisateur, une dérogation est enregistrée et le coach s'adapte.
+
+### 7.10.7 Renforcement pour sportifs d'endurance
+Bibliothèque Fit d'exercices étiquetés `runner`, `cyclist`, `hiker` : gainage (planche, planche latérale), fentes, squats bulgares, soulevé de terre roumain, mollets (montées sur pointes excentriques), fessiers (pont fessier, clam shell), tractions, mobilité de hanche, proprioception. Séances types de 20 à 30 min, 2 par semaine, intensité réduite en semaine de course. Les exercices sont démontrés avec vidéo et variantes de blessure (genou, tendon d'Achille, bas du dos). Contre-indications renseignées par blessure déclarée.
+
+### 7.10.8 Trophées et amis communs
+**Source de vérité** : `social-graph` pour les amitiés, `gamification` pour les trophées et XP, hébergés au niveau écosystème et non dans l'une des apps. Synchronisation par événements ; déduplication par `dedupe_key = user_id:trophy_code` et contrainte unique ; si deux événements arrivent en parallèle, le premier horodaté gagne ; réconciliation nocturne comparant comptes de trophées et d'amis. Les trophées multi-apps (7.6.3 n°103-106) sont évalués par `gamification` à partir des deux flux. L'amitié acceptée dans une app est visible dans l'autre en moins de 10 secondes.
+
+### 7.10.9 Mode dégradé selon l'abonnement
+| Plan | Sports | Fit | Passerelle Fit ↔ Sports |
+|---|---|---|---|
+| Gratuit | Enregistrement et historique de base | Fonctions de base | Profil, amis, trophées communs |
+| Sports | Toutes fonctions Sports | Lecture seule des cibles nutrition par défaut | Dépense énergétique et estimation simple affichées, pas d'ajustement automatique |
+| Fit | Basique | Toutes fonctions Fit | Activités importées en lecture pour calcul de dépense ; pas de plan endurance |
+| Ultra | Tout | Tout | Planning unifié, ajustements, coach multi-sports, ravitaillement |
+Les droits sont lus via `/internal/v1/entitlements` et vérifiés côté serveur à chaque appel. Un droit expiré dégrade l'accès sans suppression de données.
+
+### 7.10.10 Découverte croisée
+Invitations contextuelles et non intrusives : après 3 sorties longues, « Ta nutrition peut améliorer tes sorties : essaie [NOM_APP_FIT] » ; après 4 semaines de muscu sans cardio, invitation à essayer Sports ; offres Ultra présentées après un événement de plan ou lorsque le conflit de planning apparaît. Fréquence maximale : 1 invitation par semaine par app, aucune après refus répété (3 refus = silence 90 jours). Lien profond vers la fiche d'installation (Partie 8) avec attribution.
+
+### 7.10.11 Versionnement, pannes, tests de contrat, migration
+- **Versionnement** : schémas JSON Schema dans un dépôt partagé ; politique de compatibilité ascendante ; champ `schema` obligatoire ; consommateurs tolérants aux champs inconnus.
+- **Pannes** : file d'attente locale côté appareil et côté serveur, reprises exponentielles (1 s à 15 min), dead-letter queue après 10 échecs, alertes. Si Fit est indisponible : l'app Sports continue, les événements s'accumulent, la nutrition affiche « calcul en cours ». Idempotence par `event_id`.
+- **Tests de contrat** : consumer-driven contracts ([STACK_TEST_CONTRAT]) exécutés en CI des deux dépôts ; échec bloquant ; tests de compatibilité N-1.
+- **Migration des données existantes de Fit** : migration en tâche de fond avec double lecture : identités et amis fusionnés par e-mail vérifié, trophées existants rapprochés par `trophy_code` ; XP existants conservés (ne jamais baisser), rapport de migration, retour arrière possible 30 jours, aucun doublon d'ami ni de trophée (vérifié par comptage avant/après).
+
+**Critères d'acceptation 7.10** : une activité de 13 km génère un ajustement nutritionnel dans Fit en moins de 60 s ; un trophée gagné simultanément dans les deux apps n'apparaît qu'une fois ; avec Fit indisponible, l'enregistrement et la publication fonctionnent normalement.
 

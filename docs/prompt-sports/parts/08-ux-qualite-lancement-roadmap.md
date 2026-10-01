@@ -77,7 +77,7 @@ Chaque composant a : variantes, états (défaut, pressé, focus, désactivé, ch
 | Spécifiques | Anneau de progression hebdo, puce de zone, bandeau live, curseur RPE, étiquette de droit, indicateur capteurs | C | |
 
 ### 8.1.6 Iconographie et illustrations
-Réutilise le jeu d'icônes de Fit (trait, grille, coins) ; dessine en plus les icônes de sport dans les mêmes règles : marche, randonnée, course (route, trail, piste), vélo (route, gravel, VTT, ville, électrique) et réserves pour la vague 2 (foot, basket, tennis, padel…). Chaque icône existe en trait et rempli. SVG, nom `icon.sport.run`. Une icône n'est jamais seule porteuse de sens. Illustrations : même style que Fit (audit) ; 6 situations au lancement (premier lancement, aucun plan, hors ligne, permission refusée, objectif atteint, erreur serveur).
+Réutilise le jeu d'icônes de Fit (trait, grille, coins) ; dessine en plus les icônes de sport dans les mêmes règles : marche, randonnée, course (route, trail, piste), vélo (route, gravel, VTT, ville, électrique) et réserves pour de futures disciplines cardio (natation, ski de fond, aviron). Chaque icône existe en trait et rempli. SVG, nom `icon.sport.run`. Une icône n'est jamais seule porteuse de sens. Illustrations : même style que Fit (audit) ; 6 situations au lancement (premier lancement, aucun plan, hors ligne, permission refusée, objectif atteint, erreur serveur).
 
 ### 8.1.7 Animations
 Reprends les principes et durées de Fit. Ajouts Sports : incrémentation de métrique à chiffres tabulaires sans saut de largeur, anneau qui se remplit, tracé qui se dessine sur la carte du récapitulatif, célébration d'objectif (≤ 1,5 s). Toute animation est fonctionnelle, interruptible. **Réduction de mouvement** : si le réglage système est actif, tout déplacement devient un fondu bref, sans shimmer, confettis ni parallaxe ; un test automatisé vérifie la lecture du réglage.
@@ -223,5 +223,128 @@ Cible : **WCAG 2.2 niveau AA** sur tous les écrans, AAA sur les métriques d'en
 | Cognitif | Langage simple (niveau B1), pas de limite de temps sur la saisie, confirmation des actions destructives |
 
 **Tests automatisés** : règles d'accessibilité dans les tests de composants et les tests end-to-end (outils : Accessibility Inspector/XCUITest audit, Accessibility Test Framework/Espresso, axe pour le web) ; échec de CI sur toute violation de niveau « critique ». **Tests manuels** : à chaque phase, parcours critiques (onboarding, démarrer/terminer une séance, achat) au VoiceOver et TalkBack, avec texte ×2, thème plein soleil, et par au moins 3 testeurs en situation de handicap (recrutés via une association) avant le lancement. **Critères d'acceptation** : 0 bloquant ouvert pour les parcours critiques ; déclaration d'accessibilité publiée avant le lancement public.
+
+---
+
+## 8.5 Internationalisation et localisation
+
+- **Ordre** : français (lancement), anglais puis espagnol (Phase 8, voir 8.14). L'architecture i18n est complète dès la Phase 0 : zéro chaîne en dur (règle de lint qui échoue sur tout littéral visible).
+- **Architecture** : catalogues par langue (ICU MessageFormat) ; clés sémantiques (`record.pause.confirm`) ; contexte et longueur maximale commentés pour les traducteurs ; plateforme de traduction [STACK_I18N] avec revue ; la langue de repli est le français ; une clé manquante affiche le français, jamais la clé brute, et déclenche un événement de monitoring.
+- **Pluriels et genres** : règles CLDR (français : 0 et 1 au singulier ; espagnol et anglais selon CLDR) ; exemple : `{count, plural, =0 {Aucune séance} one {# séance} other {# séances}}`. Écriture inclusive : privilégier les formulations neutres.
+- **Formats** : utiliser les API natives de formatage selon la locale (dates, heures 24 h/12 h, nombres : virgule décimale en français, espace fine insécable pour milliers) ; jamais de concaténation de chaînes.
+- **Unités** : réglage indépendant de la langue. Distance km/mi ; allure **min/km** ou **min/mi** (conversion exacte : 1 mi = 1,609344 km) ; vitesse km/h ou mph pour le vélo ; altitude m/ft ; température °C/°F ; poids kg/lb. Stockage interne toujours en SI (mètres, secondes, m/s) ; la conversion n'existe qu'à l'affichage. Test : un aller-retour d'unités ne dérive pas de plus de 0,01 %.
+- **Textes longs** : l'allemand n'est pas prévu mais l'espagnol et le français dépassent l'anglais de 20 à 30 % : les composants s'étendent, ne tronquent pas ; tests d'écran avec chaînes ×1,4.
+- **RTL préparé** : propriétés logiques (début/fin au lieu de gauche/droite), icônes directionnelles miroir, cartes et graphiques non miroités (le temps va de gauche à droite pour les courbes, par convention), test avec une pseudo-locale RTL ; aucune langue RTL au lancement.
+- **Localisation de contenu** : numéros d'urgence par pays (France 112 ou 15/17/18, SAMU 15, secours en montagne 112 ; Espagne 112 ; Royaume-Uni 999) stockés dans une table de données versionnée, jamais dans le code ; le pays est déduit de la position pour le bouton SOS (voir Partie 4) et non de la langue ; itinéraires et séances ont une langue et un pays ; noms de lieux dans la langue locale ; avertissements médicaux et mentions légales par juridiction.
+- **Pseudo-localisation** : une locale artificielle (accents, allongement +40 %, crochets `[!! … !!]`) est construite en CI ; des tests visuels l'exécutent sur les écrans clés et échouent sur toute troncature, chevauchement ou texte non entouré de crochets (preuve d'une chaîne en dur).
+- Critères d'acceptation : 0 chaîne en dur ; ajout d'une langue = ajout d'un catalogue sans modification de code ; coach conversationnel : langue de l'utilisateur respectée (voir Partie 5).
+
+---
+
+## 8.6 Intégrations d'appareils et de plateformes
+
+> Vérifie les conditions officielles, quotas et tarifs en vigueur à la date de développement : les informations ci-dessous sont des hypothèses de départ à confirmer (marquer `À VÉRIFIER` dans `docs/decisions/integrations.md`). Ne contourne jamais une condition d'API.
+
+### 8.6.1 Santé de la plateforme
+**Apple Santé (HealthKit)** et **Health Connect (Android)**. 
+- Lecture : fréquence cardiaque, FC au repos, VFC, sommeil, pas, énergie active, VO2max, poids, séances (entraînements) externes, distance. Écriture : séances Sports (type de sport, durée, distance, énergie, itinéraire, FC si captée). 
+- Permissions : demandées par catégorie, au moment du besoin, avec explication préalable en français ; refus = fonctionnalités dégradées expliquées, jamais bloquantes. L'app fonctionne sans Santé.
+- Fréquence : import initial limité aux 90 derniers jours (puis extensible à la demande), puis observation en arrière-plan et rattrapage à l'ouverture ; Health Connect : lecture par jetons de changements.
+- **Fusion et déduplication** : une séance importée est dupliquée si même sport, début ± 2 min et durée ± 10 % qu'une séance existante ; priorité de sources : séance enregistrée par Sports > montre/appareil dédié > téléphone tiers > pas passifs ; on conserve la source dominante pour les métriques et les autres comme annexes ; les séances que Sports a écrites dans Santé ne sont pas relues (étiquette de source). Test : jeu de 30 cas de doublons.
+- Valeur : très élevée. Difficulté : moyenne. Risque : politiques de plateforme sur l'usage des données de santé (finalité limitée, pas de revente, pas de publicité). Plan B : saisie manuelle et import de fichiers.
+
+### 8.6.2 Montres et fabricants
+| Plateforme | Voie officielle (hypothèse) | Valeur | Difficulté | Risques | Plan B | Phase |
+|---|---|---|---|---|---|---|
+| Apple Watch | App watchOS native + HealthKit (séance autonome, GPS, FC) | Très haute | Haute | Cycle de revue, contraintes batterie | Contrôle à distance depuis le téléphone | 5 |
+| Wear OS | App Wear OS + Health Services | Haute | Haute | Fragmentation | Synchronisation via Health Connect | 6 |
+| Garmin | Connect Developer Program (Health API, Activity API, Training API pour pousser des séances) ; app Connect IQ en option | Très haute | Moyenne | Accès sous accord commercial, quotas | Import FIT manuel ; passage par Strava ou Health Connect | 5 |
+| Polar | Polar AccessLink (activités, sommeil) | Moyenne | Faible | Quotas par client | Import FIT | 7 |
+| Suunto | API partenaire sur demande | Moyenne | Moyenne | Accès par partenariat | Import FIT/GPX | 7 |
+| Coros | API partenaire sur demande | Moyenne | Moyenne | Accès restreint | Import FIT | 8 |
+| Wahoo | API Cloud (séances, activités) | Moyenne (vélo) | Faible | Conditions d'usage | Import FIT | 7 |
+| Fitbit | Web API (Google) | Moyenne | Moyenne | Évolution vers Health Connect | Health Connect | 8 |
+Priorisation : couverture par Apple Santé et Health Connect d'abord (couvre indirectement la plupart des montres), puis Garmin (public sportif), puis Watch natives. Chaque fournisseur est derrière une interface `ProviderConnector` (auth OAuth, import, webhooks, révocation, quotas) pour qu'ajouter un fournisseur n'impacte pas le domaine ; stockage des jetons chiffrés ; respect du retrait de consentement (suppression des données du fournisseur sur demande).
+
+### 8.6.3 Strava et autres réseaux
+Import et export via l'API officielle de Strava, selon ses conditions en vigueur à vérifier (restrictions connues sur l'affichage, la mise en cache et la réutilisation des données Strava, y compris pour l'IA ; quotas de requêtes ; processus d'approbation pour dépasser le plafond d'athlètes). Règles : attribution « Powered by Strava » ; ne jamais utiliser les données Strava pour entraîner un modèle sans autorisation écrite ; export vers Strava en un tap avec choix de visibilité ; import du seul compte connecté. Valeur : haute (acquisition). Difficulté : faible. Risque : modification unilatérale des conditions. Plan B : export GPX/FIT manuel, partage d'image, import de fichiers.
+
+### 8.6.4 Autres intégrations
+| Intégration | Choix recommandé | Valeur | Difficulté | Risque et plan B |
+|---|---|---|---|---|
+| Capteurs Bluetooth | Voir Partie 3 | Haute | Moyenne | Compatibilité : liste d'appareils testés |
+| Calendriers | Calendrier système (EventKit, Calendar Provider) en écriture des séances planifiées ; ICS en abonnement | Moyenne | Faible | Permissions ; plan B : fichier ICS |
+| Musique | Contrôle de lecture système (centre de contrôle, MediaSession) ; pas d'intégration profonde au lancement ; ajustement du volume du coach vocal par « ducking » | Moyenne | Faible | Pas de dépendance à un catalogue musical |
+| Météo | Fournisseur [METEO] : comparer Open-Meteo (open data, usage commercial payant), Météo-France (données publiques, qualité France), Apple WeatherKit (inclus avec compte développeur dans une limite), OpenWeather. Recommandation : Open-Meteo ou WeatherKit en principal, cache 30 min par maille 5 km, repli sur une seconde source | Haute | Faible | Coût par appel : plafonner via cache serveur ; plan B : dernière donnée avec horodatage |
+| Altitude | Modèles d'élévation ouverts (Copernicus GLO-30, SRTM, IGN RGE ALTI pour la France) pour corriger l'altitude GPS ; correction barométrique sur appareil si présent | Haute | Moyenne | Précision variable ; héberger soi-même les tuiles |
+| Géocodage | [GEOCODAGE] : Géoplateforme/BAN (France, gratuit) + Nominatim auto-hébergé ou service payant (MapTiler, Mapbox) ; respecter les limites d'usage de Nominatim public (pas de production) | Moyenne | Faible | Coût ; plan B : recherche locale hors ligne |
+| Fonds de carte | OpenStreetMap via fournisseur de tuiles (MapTiler, Stadia…) ou auto-hébergé ; IGN pour la France ; licences et attribution (voir 8.10, Partie 4) | Très haute | Moyenne | Coût au volume : cache et hors ligne |
+| Partenaires de réservation | Réservation d'épreuves, hébergements, refuges, locations via liens d'affiliation ou API partenaires (voir Partie 7) | Moyenne | Moyenne | Dépendance commerciale ; plan B : liens simples |
+Toutes les intégrations tierces : interrupteur de désactivation à distance (feature flag), disjoncteur (circuit breaker), timeout 5 s, métriques de santé, contrat testé (8.8).
+
+---
+
+## 8.7 Analytics et expérimentation
+
+### 8.7.1 Principes et outils
+- Recommandation [STACK_ANALYTICS] : PostHog (auto-hébergeable en UE, funnels, cohortes, flags, expériences) ou Amplitude/Mixpanel hébergés en UE ; entrepôt SQL pour analyses profondes (BigQuery/ClickHouse) ; crash : Sentry ou Firebase Crashlytics. Un seul identifiant pseudonyme (`user_hash`), jamais l'e-mail ni la position dans les événements.
+- **Consentement** : bandeau au premier lancement, refus aussi facile que l'acceptation ; sans consentement, seules les mesures strictement nécessaires (crash anonymisé, sécurité) ; consentement relu à chaque changement de finalité ; le choix est modifiable dans Réglages > Confidentialité.
+- **Minimisation** : pas de coordonnées dans les analytics (seulement pays, pas de ville fine), pas de données de santé brutes ; les propriétés de santé sont des classes (`load_band: high`). Conservation : événements bruts 13 mois maximum, agrégats anonymes ensuite. Aucune donnée vendue ni partagée à des fins publicitaires.
+- Convention : `objet_action` en snake_case, propriétés typées, schéma versionné dans `analytics/schema.yaml`, validé en CI (un événement hors schéma fait échouer le test).
+
+### 8.7.2 Plan de tracking (événements et propriétés)
+Propriétés communes : `app_version`, `platform`, `locale`, `plan_tier` (free/sports/fit/ultra), `days_since_install`, `session_id`.
+| Domaine | Événements (propriétés spécifiques) |
+|---|---|
+| Acquisition | `app_install` (source), `onboarding_started`, `onboarding_step_completed` (step, durée), `onboarding_completed`, `permission_prompted` (type), `permission_result` (type, granted) |
+| Compte | `signup_completed` (method), `login` (method), `fit_account_linked` (via) |
+| Enregistrement | `recording_started` (sport, guided, plan_id présent), `recording_paused`, `recording_resumed`, `recording_finished` (sport, durée_s, distance_m, gps_quality_band), `recording_recovered` (après plantage), `recording_discarded` |
+| Activité | `activity_saved`, `activity_viewed`, `activity_edited`, `activity_exported` (format), `activity_shared` (cible), `activity_deleted` |
+| Plan et coach | `plan_created` (goal_type, weeks), `plan_session_completed`, `plan_session_skipped` (reason), `plan_adjusted` (auto/manuel), `coach_message_viewed`, `coach_question_asked` (catégorie, pas le texte), `coach_feedback` (up/down), `coach_safety_flag_shown` |
+| Cartes | `route_searched`, `route_viewed`, `route_saved`, `map_downloaded` (taille_Mo), `navigation_started`, `off_route_alert` |
+| Santé et appareils | `integration_connected` (provider), `integration_error` (provider, code), `sensor_paired` (type), `import_completed` (nombre) |
+| Social | `friend_invited`, `friend_added`, `challenge_joined`, `kudos_given`, `live_tracking_started`, `live_tracking_viewed` |
+| Monétisation | `paywall_viewed` (trigger_feature), `trial_started`, `purchase_started`, `purchase_completed` (produit, période), `purchase_failed` (code), `subscription_cancelled` (reason), `restore_tapped` |
+| Qualité | `app_crash`, `sync_failed` (code), `gps_lost`, `battery_saver_prompted`, `api_error` (route, status) |
+| Notifications | `push_sent`, `push_opened` (catégorie) |
+
+### 8.7.3 Entonnoirs, cohortes, rétention
+- Entonnoirs : installation > fin d'onboarding > première séance enregistrée (jalon d'activation « A1 » dans les 48 h) > deuxième séance (J7) > plan créé > paywall vu > essai > payant ; entonnoir du coach : plan créé > 3 séances de plan faites en 14 jours.
+- Cohortes : par semaine d'installation, par source, par sport principal, par origine Fit/non-Fit, par palier d'abonnement.
+- Rétention : J1, J7, J30, J90 ; rétention « active » = au moins 1 séance enregistrée par semaine (W1, W4, W12).
+- Métriques par fonctionnalité : adoption (% d'actifs utilisant), fréquence, rétention des utilisateurs de la fonctionnalité vs non-utilisateurs, impact sur la conversion. 
+- **Tableaux de bord** : (1) Santé produit (activation, rétention, WAU, séances/utilisateur) ; (2) Entonnoir de conversion et paywall ; (3) Coach (adoption, satisfaction, drapeaux de sécurité) ; (4) Qualité (crash-free, GPS, synchronisations) ; (5) Intégrations (taux d'erreur par fournisseur) ; (6) Croissance (installations, coût d'acquisition, K-factor) ; (7) Finance (MRR, churn, LTV, remboursements).
+
+### 8.7.4 Expérimentation et drapeaux de fonctionnalités
+- **Feature flags** pour toute fonctionnalité nouvelle, avec propriétaire, date de retrait et valeur par défaut sûre ; les flags de droits ne remplacent JAMAIS le contrôle serveur des abonnements (voir Partie 2).
+- **Infrastructure A/B** : attribution déterministe par `user_hash`, exposition journalisée (`experiment_exposure`), exclusion mutuelle entre expériences sur un même écran ; pas d'expérience sur la sécurité, l'enregistrement en cours ou les messages médicaux.
+- **Règles statistiques** : hypothèse et métrique principale écrites avant le lancement ; puissance 80 %, seuil 5 % bilatéral ; taille d'échantillon calculée d'avance ; pas d'arrêt anticipé sur « regard » (ou méthode séquentielle déclarée) ; une seule métrique principale, garde-fous (crash, désinstallations) ; correction pour comparaisons multiples ; durée minimale de 2 cycles hebdomadaires ; résultats archivés dans `docs/experiments/`.
+- **Objectifs chiffrés par phase** (valeurs de départ, à recalibrer) : bêta fermée : activation A1 ≥ 60 %, W4 ≥ 25 %, crash-free ≥ 99,5 % ; lancement (mois 1) : activation ≥ 55 %, rétention J7 ≥ 30 %, J30 ≥ 15 %, conversion payante des actifs ≥ 3 % ; mois 6 : W12 ≥ 20 %, conversion ≥ 5 %, churn mensuel payant ≤ 6 % ; extension (Phase 11) : 20 % des actifs pratiquent au moins deux disciplines cardio.
+
+---
+
+## 8.8 Qualité logicielle
+
+### 8.8.1 Pyramide de tests
+| Niveau | Part | Contenu | Outils (adapter à [STACK_...]) | Cible |
+|---|---|---|---|---|
+| Unitaires | 70 % | Domaine pur : calcul d'allure, distance, filtres GPS, charge, zones, droits, conversions | Jest/XCTest/JUnit | Couverture du domaine ≥ 90 %, durée < 3 min |
+| Intégration | 20 % | Dépôts, base, file de tâches, ingestion de séance, webhooks, stockage | Conteneurs de test | Exécution < 10 min |
+| Contrat | transversal | API ↔ clients (OpenAPI/Pact), fournisseurs externes simulés | Pact, schémas | Toute rupture échoue la CI |
+| Bout en bout mobile | 10 % | Parcours : onboarding, enregistrement, achat (bac à sable), synchro | Maestro, Detox, XCUITest, Espresso | 15 parcours critiques à chaque PR de release |
+
+### 8.8.2 Tests spécifiques
+- **Domaine** : tests basés sur des propriétés (distance ≥ 0, allure monotone avec vitesse, conversions inverses) et sur des traces réelles anonymisées (≥ 50 : ville, forêt, tunnel, saut GPS, pause, vélo rapide).
+- **Formules du coach (non-régression)** : jeu de référence « golden » (≥ 40 profils sportifs avec séances et résultat attendu de charge, forme, plan, alertes) ; tout changement de formule change le golden dans la même PR avec justification validée par un humain expert ; tests de sécurité du coach : 100 requêtes à risque (douleur thoracique, trouble alimentaire, mineur, surentraînement) doivent déclencher les réponses de prudence (voir Partie 5) ; évaluation du modèle conversationnel par jeu d'évaluation versionné avant chaque changement de modèle ou de prompt.
+- **Charge backend** : outil k6/Gatling ; scénarios : (a) 20 000 utilisateurs simultanés en pic de week-end matin, (b) 600 envois de séance par minute en régime et 6 000 par minute en pointe (dimanche 10 h), (c) 5 000 suivis en direct simultanés avec position toutes les 5 s, (d) 50 000 notifications en 10 min, (e) rafale de reconnexion après panne (thundering herd). Seuils : p95 < 400 ms (lecture), < 800 ms (écriture), erreurs < 0,5 %, aucune perte de séance. Test d'endurance de 4 h ; test de rupture jusqu'à la saturation, avec dégradation progressive documentée.
+- **Sync hors ligne** : simulations de coupure à chaque étape ; deux appareils modifiant la même séance ; horloge décalée ; 7 jours hors ligne puis resynchronisation ; reprise d'envoi interrompu à 50 % ; idempotence (même séance envoyée 3 fois = 1 séance).
+- **Migrations** : migration de base testée en avant et en arrière sur une copie anonymisée de volumétrie réelle ; migration de schéma local mobile testée depuis les 3 dernières versions de l'app ; zéro interruption (migrations en 2 temps, voir 8.11).
+- **Sécurité** : analyse SAST/DAST en CI, tests d'IDOR automatisés pour chaque ressource, analyse des dépendances (voir 8.9).
+- **Batterie** : enregistrement d'1 h en écran verrouillé sur 6 appareils de référence ; budget : ≤ 8 % de batterie/h en course GPS seule, ≤ 12 % avec capteurs ; échec de la release si dépassement de 25 % du budget.
+- **Parc d'appareils** : 12 appareils physiques minimum (iOS : 3 versions majeures, 4 modèles dont un ancien ; Android : Samsung, Pixel, Xiaomi, un modèle d'entrée de gamme, 3 versions) + ferme d'appareils pour la couverture large ; vérifier particulièrement les restrictions d'économie d'énergie constructeurs en arrière-plan.
+- **Bêta fermée** : 150 à 300 testeurs recrutés parmi les utilisateurs de Fit et des clubs, TestFlight et test fermé Play ; 4 semaines minimum ; formulaire de retour dans l'app (capture + journal anonymisé) ; réunion hebdomadaire de tri ; au moins 2 000 séances enregistrées avant le lancement ; enquête de satisfaction (note ≥ 4/5, NPS ≥ 30).
+- **Seuils de sortie (release gates)** : crash-free sessions ≥ 99,5 % et crash-free users ≥ 99 % ; ANR < 0,3 % ; 0 bug bloquant ou majeur ouvert sur enregistrement, sync ou achat ; perte de séance = 0 sur la bêta ; précision de distance ± 2 % sur 20 parcours de référence ; démarrage à froid < 2 s (appareil médian) ; temps d'enregistrement du premier point GPS < 10 s ; tous les tests verts, aucun test désactivé.
+- **Revue de code et analyse statique** : PR de moins de 400 lignes, 1 relecteur obligatoire (2 pour domaine du coach, sécurité, paiements) ; linters, formateur, typage strict, analyse statique (SonarQube ou équivalent), couverture sur le code modifié ≥ 80 % ; interdiction de merger avec test désactivé sans ticket et accord.
+- **Dépendances** : inventaire (SBOM), mise à jour automatisée (Renovate/Dependabot), vérification des licences (pas de GPL dans l'app), audit des vulnérabilités à chaque build, verrouillage des versions, revue manuelle des nouvelles dépendances.
 
 ---

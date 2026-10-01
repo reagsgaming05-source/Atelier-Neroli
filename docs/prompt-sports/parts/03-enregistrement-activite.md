@@ -421,3 +421,133 @@ Tendances : volume hebdomadaire/mensuel (distance, durée, D+), allure moyenne �
 ### 3.9.5 Corrections et export
 
 Édition non destructive (le flux brut reste conservé, les corrections sont des opérations rejouables, annulables 30 jours) : **rognage** début/fin ; **découpe** en deux sorties ; **fusion** de deux sorties proches (écart < 3 h, le trou devient pause) ; **correction d'altitude** par MNE ; suppression de points aberrants ; changement de type d'activité et de matériel ; recalcul automatique des records et de la charge après chaque édition. Suppression : corbeille 30 jours puis suppression définitive, y compris sur le serveur (conformité : voir Partie 8). Export unitaire GPX/TCX/FIT (voir 3.10).
+
+## 3.10 Saisie manuelle et import/export
+
+### 3.10.1 Saisie manuelle
+
+Formulaire : activité, date/heure, durée, distance (ou allure), D+, FC moyenne, RPE, matériel, notes. Calculs croisés : deux champs parmi durée/distance/allure déduisent le troisième. Source `manual`, exclue des records de fenêtres courtes (seuls les records de distance totale et durée sont éligibles), contrôle de plausibilité (allure course < 2:30 /km ou vitesse vélo > 70 km/h : avertir, pas bloquer).
+
+### 3.10.2 Formats
+
+| Format | Import | Export | Champs gérés | Fidélité |
+|---|---|---|---|---|
+| GPX 1.1 | oui | oui | trkpt lat/lon/ele/time ; extensions Garmin TrackPointExtension v1 (hr, cad, atemp) ; wpt | Pas de tours ni puissance natifs : puissance via extension `power` |
+| TCX | oui | oui | Activity, Lap, Trackpoint, DistanceMeters, HeartRateBpm, Cadence, Watts (ActivityExtension TPX) | Tours conservés |
+| FIT | oui | oui | messages file_id, session, lap, record (position en semicircles, altitude, FC, cadence, puissance, vitesse, distance, température), event (start/stop/pause), device_info, sport ; développeur fields ignorés mais préservés au mieux | Référence ; export FIT = format préféré pour Garmin/Wahoo |
+
+Règles : tolérance au format (UTF-8, BOM, fuseaux, horodatages sans `Z` = UTC) ; coordonnées hors plage rejetées ; fichier max 50 Mo ; analyse en flux ; échec d'une ligne n'interrompt pas l'import, rapport final « 3 points ignorés ». Export fidèle : un aller-retour GPX → app → GPX perd < 1 m de position et ne perd aucun point valide. L'export respecte les zones de confidentialité en option (par défaut : non masqué pour ses propres données).
+
+### 3.10.3 Import en masse et autres plateformes
+
+Import de plusieurs fichiers et d'archives ZIP (jusqu'à 2 000 fichiers) en tâche de fond avec progression, annulation, reprise ; déduplication selon 3.7.5 (rapport : importés / doublons ignorés / en erreur). Guides intégrés pour récupérer son historique : Strava (export de compte, dossier `activities`), Garmin Connect, Apple Santé (`export.xml`, entraînements et routes GPX), Google Fit / Health Connect, Komoot, Wahoo, Polar Flow, Suunto. Les activités importées conservent leur `source` et `external_id`. Les trophées et records rétroactifs sont recalculés sans notification en rafale (une seule synthèse).
+
+### 3.10.4 Export des données personnelles
+
+Depuis Réglages : archive ZIP (activités en FIT + GPX, JSON complet avec toutes métriques, matériel, records, photos), générée côté serveur, lien valable 7 jours, disponible sous 24 h (voir Partie 8 pour RGPD).
+
+## 3.11 Spécificités d'enregistrement par activité
+
+Cette section ne détaille que l'enregistrement et les métriques ; l'approfondissement par discipline (entraînement, techniques, plans) relève de la Partie 6.
+
+### 3.11.1 Marche
+
+Pas via podomètre natif en continu (même hors sortie) pour l'objectif quotidien : défaut 7 000 pas, réglable 1 000-30 000, coach adapte (Partie 5). Anneau de progression, historique journalier reconstruit depuis `CMPedometer`/Health Connect (jusqu'à 30 jours rétroactifs), sans GPS. Marche active : démarrée comme sortie, active si cadence ≥ 110 ppm et vitesse ≥ 1,67 m/s (6 km/h) → « minutes actives » ; marche nordique : variante avec facteur MET 4,8-6,8 (3.12), cadence mesurée au poignet non fiable → utiliser GPS. Dédoublonnage : les pas d'une sortie enregistrée ne sont pas comptés deux fois dans le total journalier (soustraire la fenêtre de la sortie du podomètre quotidien puis ajouter celle de la sortie).
+
+### 3.11.2 Randonnée
+
+Métriques : D+, D−, altitude, altitude max, temps en mouvement vs total, pauses longues (arrêt > 3 min = « pause », > 20 min = « pause longue » listée dans le récap avec lieu). Mode économie par défaut proposé si durée prévue > 4 h. Poids du sac (kg, saisi au départ, mémorisé) intégré aux calories (charge portée, formule de Pandolf simplifiée, 3.12). Météo en altitude : en préparation, afficher température à l'altitude du point haut (gradient −6,5 °C / 1 000 m par rapport à la station) et rappel sécurité (Partie 4). Itinérance : une « sortie » par jour liée à un projet multi-jours, rechargement automatique de l'état au matin ; coupure nocturne du GPS avec événement `OVERNIGHT`. Trek : sauvegarde locale prioritaire (aucune synchronisation requise pendant 7 jours).
+
+### 3.11.3 Course
+
+Cadence, longueur de foulée (3.3.8), temps de contact au sol et oscillation verticale si capteur BLE, allure ajustée à la pente (GAP, 3.4.1), tapis (3.6.4 et calibration de distance), piste : mode piste avec couloirs (couloir 1 : 400 m par tour ; couloir n : 400 + 7,04 × (n−1) m pour un tour de 400 m ; correction GPS impossible, tours comptés par bouton ou géorepérage ± 5 m, distance recalée sur multiples de 400 m), fractionné (3.5), parkrun/chrono : mode « course officielle » : départ synchronisé, distance cible 5 000 m avec alerte à l'arrivée, résultat officiel saisissable dans le récap, distinction « effort en course ».
+
+### 3.11.4 Vélo
+
+Puissance, FTP (valeur du profil ou test 3.5.6 ; estimation automatique 95 % du meilleur 20 min des 90 derniers jours, confirmation requise), vitesse, cadence, pente, énergie en kJ (≈ kcal dépensées grâce à rendement 24 % : 1 kJ travail ≈ 1 kcal dépensée). Virages et descentes : détection pour la fréquence d'échantillonnage (1 s imposé) et statistiques « vitesse max en descente », « pente max ». Mode VTT : seuil de rejet précision 40 m, Kalman q = 4, pas d'auto-pause à v < 1,5 m/s dans les montées techniques (seuil 0,8), détection de chute (accéléromètre > 4 g puis immobilité 20 s : alerte d'urgence, voir Partie 4). Vélo électrique : détection si puissance moteur BLE (profil CSC/ANT LEV, 0x1826 variante) ou si vitesse > 25 km/h soutenue avec puissance/FC incompatibles (FC < 60 % FCmax et vitesse > 30 km/h en montée > 4 %) → proposer « Vélo électrique » ; sorties VAE exclues des records de vélo classiques, charge calculée à la FC uniquement, kJ non crédités. Home-trainer : sans GPS, distance virtuelle = ∫v dt avec v issue de la puissance (modèle physique) ou du capteur de vitesse. Entretien : kilométrage ajouté au vélo choisi (3.9.4).
+
+## 3.12 Calories et dépense énergétique
+
+Trois méthodes, choisies par priorité de disponibilité :
+
+1. **Puissance (vélo)** : `kcal = travail(kJ) / 4,184 / 0,24 ≈ travail(kJ)` (rendement 24 %). Marge d'erreur ±5 % avec capteur calibré.
+2. **FC (Keytel et al.)**, si FC fiable ≥ 70 % du temps, âge a, poids m (kg), durée t (min) : hommes `kcal/min = (−55,0969 + 0,6309·FC + 0,1988·m + 0,2017·a)/4,184` ; femmes `(−20,4022 + 0,4472·FC − 0,1263·m + 0,074·a)/4,184` ; valider uniquement si FC ≥ 90 bpm ; en dessous, basculer sur MET. Marge ±15 %.
+3. **MET (Compendium)** : `kcal = MET × m × t(h)` (net : (MET−1) × m × t). Table indicative : marche 3,0 km/h → 2,3 ; 5 km/h → 3,5 ; 6,5 km/h → 5,0 ; nordique 4,8-6,8 ; randonnée sans sac 5,3, avec sac > 10 kg 7,0 ; course 8 km/h → 8,3 ; 10 km/h → 9,8 ; 12 km/h → 11,8 ; 14 km/h → 12,8 ; vélo 16-19 km/h → 6,8, 19-22 → 8,0, 22-26 → 10,0, VTT 8,5. Course : formule ACSM `VO₂ = 0,2·v(m/min) + 0,9·v·pente + 3,5` ; kcal = VO₂ × m × t / 1000 × 5. Marge ±20 %.
+
+Exemple : 70 kg, course 10 km/h, 45 min → 9,8 × 70 × 0,75 = 514 kcal (brut), net ≈ 462 kcal. Affichage : toujours en fourchette dans le récap (« ≈ 510 kcal, ±15 % ») et mention de la méthode ; valeur seule en direct. Si deux méthodes divergent de plus de 25 %, afficher celle de plus faible marge d'erreur. Les calories sont exposées à [NOM_APP_FIT] en net (hors métabolisme de base) pour éviter le double comptage avec le besoin journalier.
+
+## 3.13 Batterie et performance
+
+Budgets (milieu de gamme, mesurés par outils constructeur : Xcode Energy Log, Battery Historian, Perfetto) : enregistrement standard 5 %/h écran éteint ; 12 %/h écran allumé avec carte ; BLE FC + vitesse ajoute ≤ 1 %/h ; annonces vocales ≤ 0,5 %/h ; CPU moyen < 5 % écran éteint ; mémoire résidente < 150 Mo ; démarrage de l'écran d'enregistrement < 1,5 s.
+
+Modes d'économie (3 niveaux) : **Standard** ; **Économie** (3 s d'intervalle, rafraîchissement UI 2 s, carte désactivée, Kalman allégé) ; **Ultra** (10 s, écran noir, capteurs BLE conservés, pas de graphiques). Activation automatique : batterie < 20 % → proposition, < 10 % → Économie ; à 5 % → sauvegarde immédiate du point de contrôle et notification « Il vous reste ~X min d'enregistrement » (estimation = batterie % / taux de décharge des 10 dernières minutes). Pas de calcul lourd en sortie : agrégats incrémentaux O(1) par point ; recalcul complet seulement en SAVING.
+
+Appareils bas de gamme (référence : Android 2 Go RAM, SoC d'entrée de gamme, iPhone SE 2e génération) : tests obligatoires de 2 h et 8 h, rendu 30 ips minimum, aucune perte de point, aucun ANR ; désactiver animations de cartes et graphiques en direct si FPS < 24 sur 10 s.
+
+## 3.14 Tests et critères d'acceptation
+
+### 3.14.1 Plan de tests terrain
+
+Pour chaque version majeure : 12 parcours de référence mesurés (piste de 400 m, boucle urbaine, canyon urbain, forêt dense, tunnel de 800 m, montagne avec D+ 1 000 m, route de campagne, VTT technique, vélo à 40 km/h, tapis, home-trainer, rando 6 h) sur 4 appareils (iPhone récent, iPhone SE, Pixel, Android bas de gamme + Xiaomi/Samsung à gestion batterie agressive) avec montre GPS de référence ; écart de distance toléré ≤ 1 % sur boucle dégagée, ≤ 3 % en forêt/canyon ; écart de D+ ≤ 5 % (baromètre) ou ≤ 10 % (GNSS+MNE).
+
+### 3.14.2 Jeux de rejeu automatisés
+
+Corpus de fichiers GPX/FIT « dorés » versionnés dans `/testdata/replay` (≥ 40 sorties) incluant : saut de 200 m, tunnel de 2 min, dérive à l'arrêt, zigzags de canyon, sprint, descente à 60 km/h, tapis. Un rejeu injecte les points avec horloge simulée dans `ActivityEngine`; sorties attendues stockées (distance, D+, temps en mouvement, records) avec tolérances ; régression bloquante en CI si dépassement. Tests de propriété : distance monotone croissante, `moving ≤ elapsed`, rejeu idempotent, recouvrement identique après crash simulé à n'importe quel point du flux.
+
+### 3.14.3 Cas d'acceptation
+
+1. Démarrer une course : premier fix précis ≤ 20 m en < 15 s à chaud ; compte à rebours puis RECORDING.
+2. Annuler en PREPARING ne laisse aucune activité en base.
+3. Arrêt uniquement par appui long de 2 s ; un appui court ne termine pas.
+4. Pause manuelle : distance et temps en mouvement figés ; temps écoulé continue.
+5. Auto-pause course : déclenchée à v < 0,6 m/s pendant 5 s, reprise à v > 1,0 m/s.
+6. Tuer l'app à 20 min : au relancement, écran de récupération avec ≥ 99,9 % des points.
+7. Batterie vide à 1 h 10 : sortie récupérable, durée = dernier point − pauses.
+8. Mode avion 30 min : enregistrement complet, synchronisation au retour réseau.
+9. Un saut de 200 m en 1 s est rejeté et compté dans `rejected_points`.
+10. Un point avec précision 80 m est rejeté.
+11. Tunnel de 2 min : bandeau signal faible, ligne pointillée, distance non gonflée (écart < 5 %).
+12. Boucle de piste 400 m ×10 : distance 4 000 m ± 1 % en mode piste.
+13. Course 10 km dégagée : distance à ± 1 % de la référence.
+14. Dérive à l'arrêt 5 min : distance ajoutée < 5 m.
+15. D+ d'une montée de 100 m avec bruit ±3 m : 100 m ± 5 % (baromètre).
+16. Profil de test 100 → 103 → 101 → 106 (seuil 5) : D+ = 6.
+17. Allure affichée : stable (variation < 5 s/km sur plat à vitesse constante).
+18. Cadence : ±3 % en course sur tapis de 3 min à 170 ppm.
+19. Podomètre : écart natif/maison > 8 % → valeur native retenue.
+20. Détection marche→course suggérée après 3 min sans changement silencieux.
+21. Trajet voiture à 50 km/h : suggestion de pause en ≤ 60 s.
+22. Permission de localisation refusée : l'app propose saisie manuelle et tapis sans blocage.
+23. Précision approximative : démarrage GPS refusé avec écran explicatif.
+24. Permission révoquée en cours de sortie : événement `GAP` et enregistrement des capteurs restants.
+25. Android : notification persistante avec Pause/Reprendre fonctionne écran verrouillé.
+26. iOS : Live Activity à jour toutes les 5 s écran verrouillé.
+27. Ceinture FC perdue puis retrouvée : reconnexion en < 30 s, « -- » affiché pendant la coupure.
+28. Deux capteurs de FC : un seul actif, bascule signalée.
+29. Puissance : calibration à zéro renvoie un offset et une confirmation.
+30. Home-trainer ERG : cible suivie ±5 W, rampe de 3 s, réduction de 30 % si cadence < 40 rpm.
+31. Séance 6 × 400 m : auto-avancement correct, 18 annonces de bloc, aucun bloc sauté.
+32. Alerte « Ralentis » espacée d'au moins 30 s, max 4 par bloc.
+33. Musique : baisse à 30 % pendant l'annonce puis retour automatique.
+34. Appel entrant : annonces suspendues, reprise après appel.
+35. Record 5 km détecté sur fenêtre glissante dans une sortie de 8 km (hors tours).
+36. Record non attribué à une sortie `estimated` ou `manual`.
+37. Suppression d'une sortie record : record précédent restauré.
+38. Import GPX de 50 000 points : < 5 s, aucune perte.
+39. Import en double du même fichier : détecté, rien de dupliqué.
+40. Aller-retour GPX : écart de position < 1 m.
+41. Export FIT lisible par un lecteur de référence (FitCSVTool) sans erreur.
+42. Rognage d'une sortie : agrégats et records recalculés, annulable.
+43. Fusion de deux sorties à 20 min d'écart : le trou devient pause, total correct.
+44. Zone de confidentialité 500 m : début/fin invisibles dans le partage et la carte-image.
+45. Calories vélo : kcal ≈ kJ à ±5 % ; fourchette affichée avec méthode.
+46. Sortie de 8 h : mémoire < +50 Mo, aucune perte, batterie conforme au mode choisi.
+47. Disque plein : mode agrégats seuls, aucun fichier existant corrompu.
+48. Espace de stockage 8 h : < 400 Ko compressé.
+49. Batterie à 10 % : bascule Économie proposée, sauvegarde de contrôle à 5 %.
+50. Mode plein soleil : contraste ≥ 12:1 et lisibilité vérifiée par audit automatique.
+51. Écran personnalisable : une configuration créée sur un appareil se retrouve après synchronisation, droits vérifiés côté serveur.
+52. Randonnée 6 h : temps en mouvement correct à ±3 min près ; pauses longues listées.
+53. VAE : détection proposée et records vélo non polluée.
+54. Tapis : distance du tapis prioritaire, calibration proposée en fin de séance.
+55. Bas de gamme : 30 ips, aucun ANR pendant 2 h d'enregistrement.

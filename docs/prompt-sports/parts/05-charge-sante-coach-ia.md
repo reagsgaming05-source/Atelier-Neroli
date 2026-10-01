@@ -1,6 +1,6 @@
 # PARTIE 5 — Charge d'entraînement, santé, récupération, coach adaptatif et IA
 
-> Cette partie est le cœur du différenciateur de [NOM_APP_SPORTS] : un coach unique qui adapte entraînement, récupération et nutrition à TOUTE la vie sportive (endurance, sports d'équipe et de duel, musculation venant de [NOM_APP_FIT]). Principe d'architecture impératif : le **moteur de règles déterministe** (module `training-load` + `planning-coach`, domaine pur, sans réseau) est la **source de vérité** des plans, des charges et de la sécurité. Un LLM sert uniquement à expliquer, reformuler et converser (5.9). Aucun chiffre de charge, de zone ou de plan ne doit jamais être produit par le LLM. Droits d'accès par abonnement : voir Partie 2 ; données d'activité : voir Partie 3 ; cartes et sécurité de sortie : voir Partie 4 ; sports d'équipe : voir Partie 6 ; échanges avec Fit et social : voir Partie 7 ; conformité et qualité transverses : voir Partie 8.
+> Cette partie est le cœur du différenciateur de [NOM_APP_SPORTS] : un coach unique qui adapte entraînement, récupération et nutrition à TOUTE la vie sportive (course à pied, vélo, randonnée et marche, plus la musculation venant de [NOM_APP_FIT]). Principe d'architecture impératif : le **moteur de règles déterministe** (module `training-load` + `planning-coach`, domaine pur, sans réseau) est la **source de vérité** des plans, des charges et de la sécurité. Un LLM sert uniquement à expliquer, reformuler et converser (5.9). Aucun chiffre de charge, de zone ou de plan ne doit jamais être produit par le LLM. Droits d'accès par abonnement : voir Partie 2 ; données d'activité : voir Partie 3 ; cartes et sécurité de sortie : voir Partie 4 ; échanges avec Fit et social : voir Partie 7 ; conformité et qualité transverses : voir Partie 8.
 
 ## 5.1 Moteur de charge d'entraînement
 
@@ -43,16 +43,14 @@ Stocke toujours `load_method` (`power|hr|pace|rpe|manual`), `load_confidence` (0
 ### 5.1.3 Normalisation inter-sports et charge neuromusculaire
 Toutes les charges sont exprimées en pTSS sur la même échelle. Chaque séance porte deux composantes :
 - `L_cardio` (pTSS ci-dessus) ;
-- `L_neuro` (charge musculo-squelettique/impacts), en pTSS-équivalents : coefficient d'impact par sport `c_imp` : vélo 0,3 ; natation 0,2 ; marche 0,5 ; rando 0,7 (descentes) ; course route 1,0 ; trail 1,1 ; foot/basket/tennis voir 5.1.4 ; muscu voir 5.1.5. `L_neuro = L_cardio × c_imp + L_excentrique`, avec `L_excentrique = 0,02 × D−_m` pour rando/trail.
+- `L_neuro` (charge musculo-squelettique/impacts), en pTSS-équivalents : coefficient d'impact par sport `c_imp` : vélo 0,3 ; natation 0,2 ; marche 0,5 ; rando 0,7 (descentes) ; course route 1,0 ; trail 1,1 ; musculation voir 5.1.5. `L_neuro = L_cardio × c_imp + L_excentrique`, avec `L_excentrique = 0,02 × D−_m` pour rando/trail.
 
 Le total « systémique » (ATL/CTL) utilise `L_cardio`. Le total « mécanique » (ATL_m/CTL_m) utilise `L_neuro`. Les deux sont affichés en vue avancée ; le ratio de risque (5.1.6) utilise `max` des deux ratios.
 
-### 5.1.4 Sports d'équipe et de duel (interface avec Partie 6)
-Hiérarchie : FC (hrTSS) si disponible ; sinon `sRPE` (RPE de session demandé dans les 30 min, rappel à +4 h). Spécificités :
-- Durée = **temps de jeu réel + 50 % du temps de banc/repos actif** (saisie ou estimation de la Partie 6).
-- Intensité estimée si pas de FC : RPE par défaut selon sport/rôle (foot 6, basket 6, tennis simple 6, tennis double 4, padel 5, badminton 5), modifiable.
-- `L_neuro = L_cardio × c_imp` avec foot 1,3 ; basket 1,4 ; tennis 1,0 ; rugby 1,6 ; plus `+ 0,5 × nb_sprints_>20km/h` et `+ 0,2 × nb_accélérations_fortes` si capteur GPS disponible.
-- Un match compte ×1,10 (stress psychologique/compétition) sur `L_cardio`.
+### 5.1.4 Séances sans capteur et activités manuelles (cardio)
+- Activité saisie à la main (course/vélo/rando sans trace) : durée + distance + RPE CR10 → méthode `rpe` (confiance 0,5). Sans RPE : RPE par défaut selon le sport et le type de séance (footing 4, fractionné 7, sortie longue 5, rando 4, vélo endurance 4).
+- Compétition (course, cyclosportive) : `L_cardio × 1,10` (stress de course, récupération plus longue).
+- Le sport « autre » (natation, aquajogging, ski de fond, elliptique) est accepté en **entraînement croisé** (5.11) avec coefficients d'impact propres.
 
 ### 5.1.5 Musculation (venant de [NOM_APP_FIT], contrat : voir Partie 7)
 Reçois de Fit : séries, répétitions, charge, RPE ou RIR par série, durée. Calcule :
@@ -79,7 +77,7 @@ TSB indicatif : > +15 très frais/perte de forme ; +5 à +15 prêt à performer 
 Affiche un seul badge : **Vert « Tu peux charger »** (ACWR 0,8–1,3 et TSB > −20 et disponibilité ≥ 70), **Orange « Reste raisonnable »** (ACWR 1,3–1,5 ou TSB −20 à −30 ou disponibilité 50–69), **Rouge « Récupère »** (ACWR > 1,5 ou TSB < −30 ou disponibilité < 50 ou signal d'alerte 5.3.8). Le pire des trois critères l'emporte. Un tap ouvre le détail (courbes CTL/ATL/TSB, explication en une phrase).
 
 ### 5.1.8 Données manquantes, démarrage à froid, pauses, transitions, corrections
-- **Séance sans aucune donnée** (ex. match sans capteur) : demande le RPE ; sans réponse sous 48 h, impute `RPE par défaut du sport × durée`, `confidence 0,4`, drapeau `imputed`.
+- **Séance sans aucune donnée** (ex. sortie sans capteur) : demande le RPE ; sans réponse sous 48 h, impute `RPE par défaut du sport × durée`, `confidence 0,4`, drapeau `imputed`.
 - **Démarrage à froid** : sans historique, initialise `CTL₀ = ATL₀ = ` charge hebdomadaire moyenne déclarée à l'onboarding /7 (ex. « je cours 2×30 min » ≈ 2×45/7 = 13). Pendant 28 jours, affiche « calibrage en cours » et n'émets AUCUN état rouge basé sur ACWR (uniquement basé sur disponibilité/douleurs). Importe jusqu'à 90 jours d'historique depuis Health Connect/HealthKit/Strava si autorisé (Partie 3) et recalcule.
 - **Longue pause** : charges = 0 les jours sans séance (la décroissance est naturelle). Si pause > 14 jours, pas de rattrapage : le moteur reprend à `CTL_reprise` et impose un plan de reprise (5.7.6). Pause > 42 jours : recalibrer les zones par un test (5.2.4).
 - **Transition de source** (ex. passage d'une montre FC à un capteur de puissance) : garde les deux calculs 14 jours en parallèle, calcule le ratio médian `r = L_nouvelle / L_ancienne` et, si 0,8 ≤ r ≤ 1,25, ne corrige rien ; sinon recale `FTP`/seuils et recalcule l'historique des 42 derniers jours en marquant `recomputed_at`.
@@ -236,4 +234,167 @@ Max 1 objectif prioritaire 1 (A), 2 secondaires (B, C). Conflit si : deux évén
 
 ### 5.4.4 Suivi et révision
 Barre de progression par objectif, trajectoire attendue vs réelle (écart > 15 % deux semaines → révision proposée). Révision automatique toutes les 4 semaines, après un test ou une pause. Objectif atteint : célébration (voir Partie 7 trophées) et suggestion du suivant. Objectif manqué : message neutre, rapport d'enseignements (5.10), nouveau plan proposé.
+
+## 5.5 Génération de plans
+
+### 5.5.1 Périodisation
+Phases, avec durée proportionnelle au temps disponible `W` (semaines) avant l'événement :
+| Phase | Part de W | But | Intensité dominante |
+|---|---|---|---|
+| Base | 35-40 % | volume aérobie, tendons, habitude | Z1-Z2 (≥ 85 % du temps) |
+| Développement | 25-30 % | seuil, VO2max | pyramidale, 2 séances de qualité |
+| Spécifique | 20-25 % | allure d'objectif, sorties longues spécifiques | allure objectif + seuil |
+| Affûtage (taper) | 1-3 sem. | fraîcheur | volume −20/−30/−50 %, intensité conservée |
+| Transition | 1-2 sem. après événement | récupération | libre, Z1 |
+Si W < 8 : fusionner Base+Développement. Décharge toutes les 3 ou 4 semaines (5.3.5).
+
+### 5.5.2 Distribution d'intensité
+- **Polarisée 80/20** (Z1-Z2 80 %, Z4-Z5 20 %, peu de Z3) : défaut pour intermédiaires/avancés ≥ 4 séances/semaine, vélo et trail long.
+- **Pyramidale** (≈ 75 % Z1-2, 15-20 % Z3, 5-10 % Z4-5) : défaut pour semi/marathon.
+- **Seuil** (blocs Sweet Spot/seuil) : cyclosportive avec peu de temps (< 6 h/sem), et uniquement si disponibilité ≥ 70.
+- Débutants et marche→course : 100 % Z1-Z2 les 4 premières semaines, puis max 1 séance à rythme soutenu.
+
+### 5.5.3 Modèles par objectif (niveau intermédiaire ; débutant/avancé en ajustant les % de volume)
+| Objectif | Durée | Séances/sem | Volume pic | Séance longue max | Spécificités |
+|---|---|---|---|---|---|
+| Marche → course (30 min continues) | 8-10 sem | 3 | 90-100 min total | 30 min continues | alternance marche/course : S1 1' course/2' marche ×8 ; S3 2'/1' ; S5 5'/1' ; S7 10'/1' ; S9 30' continues |
+| 5 km | 8-10 | 3-4 | 25-30 km | 8-9 km | 1 séance de vitesse/sem |
+| 10 km | 10-12 | 3-5 | 35-45 km | 14-16 km | seuil + allure 10 km |
+| Semi | 12-14 | 4-5 | 45-55 km | 18-20 km | allure semi en fin de longue |
+| Marathon | 16-18 | 4-5 | 55-80 km | 30-32 km (3 h max) | longues progressives, 3 longues > 28 km max |
+| Trail court (< 30 km) | 10-12 | 3-4 | 35 km + 1 500 m D+ | 2 h | côtes, descente technique |
+| Trail long (> 50 km) | 16-20 | 4-5 | 60 km + 3 500 m D+/sem | 4-5 h, back-to-back | nutrition à l'entraînement, marche en montée |
+| Rando journée | 6-8 | 2-3 | 1 sortie 15 km + 600 m D+ | 6 h | pas de plan de course ; marches avec sac |
+| Itinérance 3-5 jours | 8-12 | 3 | sorties enchaînées 2×(15 km + sac) | 7 h | week-end consécutif avec sac chargé à 80 % |
+| 100 km vélo | 8-10 | 3 | 5-6 h | 3 h 30 | endurance + 1 séance seuil |
+| Cyclosportive | 12-16 | 4 | 8-10 h | 4-5 h | tempo, montées, travail de force |
+| Forme générale | continu | 3-4 mix | 4-5 h | — | 150 min d'activité modérée (OMS) cible |
+
+### 5.5.4 Types de séances
+Facile/endurance (Z2), sortie longue, tempo/seuil, intervalles VO2max, répétitions de vitesse, côtes, fartlek, allure spécifique, récupération active, sweet spot (vélo), force vélo (basse cadence), marche active, rando avec sac, renforcement, mobilité (bibliothèque en 5.6).
+
+### 5.5.5 Algorithme complet (pseudo-code)
+```
+function generatePlan(user, goal, constraints, profile, loadState):
+  # 1. Vérifications
+  assert goal.feasibility >= 0.3 or user.acceptedRisk
+  W = weeksBetween(today, goal.date) ; if no date: W = template.defaultWeeks
+  phases = splitPhases(W, template)               # 5.5.1
+  # 2. Cibles de charge hebdomadaire
+  L0 = max(loadState.avgWeeklyLoad28d, template.minStartLoad[level])
+  Lpeak = min(template.peakLoad[level] * profile.scale, L0 * growthCap(level)^(nbBuildWeeks))
+  for w in 1..W:
+     target[w] = interpolate(L0, Lpeak, w, phases)   # montée
+     if isDeload(w): target[w] = 0.70 * target[w-1]
+     if phase(w) == TAPER: target[w] = taperFactor(W-w) * Lpeak
+     target[w] = min(target[w], target[w-1] * (1 + weeklyCap(level)))   # 5.3.7
+  # 3. Séances de la semaine
+  for w in 1..W:
+     sessionsCount = min(constraints.maxSessions, template.sessions[level])
+     slots = availableSlots(constraints, calendarEvents(w))        # voir 5.5.7
+     sessions = pickSessionTypes(phase(w), distribution, sessionsCount)
+     sessions = scaleToLoad(sessions, target[w])                   # ajuste durées
+     placed = placeSessions(sessions, slots)                       # règles 5.5.7
+     if not placed.ok: reduce sessions (drop lowest priority) and retry
+  # 4. Garde-fous
+  validate(plan): caps 5.3.7, long run <= 120% prev, hard days not adjacent...
+  return plan with explanation_facts[]
+```
+`scaleToLoad` : pour chaque séance, `durée = L_cible / (IF_type² × 100/60)` avec `IF_type` : facile 0,65 ; long 0,70 ; tempo 0,85 ; intervalles (moyenne bloc) 0,88 ; récup 0,55.
+
+### 5.5.6 Exemple chiffré : plan 10 km de 12 semaines (intermédiaire, 3-4 séances, objectif 55:00, niveau actuel ≈ 58:00)
+Départ : 24 km/semaine, 4 séances (facile, qualité, facile, longue). Progression ≤ +10 %, décharge S4 et S8, affûtage S11-S12.
+| Sem. | Phase | Volume (km) | Séance qualité | Séance longue (km) | Charge cible (pTSS) |
+|---|---|---|---|---|---|
+| 1 | Base | 24 | 6×1' Z4 (fartlek) | 9 | 215 |
+| 2 | Base | 26 | 8×1' Z4 | 10 | 235 |
+| 3 | Base | 28 | côtes 6×45'' | 11 | 255 |
+| 4 | Décharge | 20 | 5×1' Z4 | 8 | 180 |
+| 5 | Dév. | 29 | 4×4' seuil (R 2') | 12 | 270 |
+| 6 | Dév. | 31 | 5×4' seuil | 13 | 290 |
+| 7 | Dév. | 33 | 6×1 000 m Z5 (R 2') | 14 | 310 |
+| 8 | Décharge | 24 | 3×6' seuil | 10 | 215 |
+| 9 | Spéc. | 34 | 3×2 km allure 10 km | 15 | 325 |
+| 10 | Spéc. | 35 | 4×2 km allure 10 km | 16 | 340 |
+| 11 | Affûtage | 27 (−22 %) | 3×1 600 m allure 10 km | 12 | 265 |
+| 12 | Affûtage | 15 (−45 %) | 4×400 m, jour J : 10 km | 6 + course | 170 |
+Contrôle : +8,3 % S1→S2, +7,7 % S2→S3, S5 = 29 vs pic S3 28 (+3,6 %), S7 33 vs S6 31 (+6,5 %), S10 35 ≤ pic S9 34 + 10 %. Allures (VDOT 46) : facile 6:10-6:40/km, seuil 4:50/km, allure 10 km objectif 5:30/km (55:00), allure actuelle prédite 5:48/km. Charge S1 : 24 km à ~8,9 pTSS/km ≈ 215 : cohérent. Chaque semaine : 1 jour repos total minimum, 2 séances de renforcement/mobilité de 15 min (voir 5.5.9).
+
+### 5.5.7 Placement des séances dans la semaine
+Entrées : jours/créneaux disponibles, durée max par jour, événements fixes (course/événement inscrit, sortie de groupe, travail, voyage), séances de Fit.
+**Règles dures** (jamais violées) : (1) pas de séance dure (qualité/longue) dans les 36 h d'une séance de jambes lourdes (muscu) ou d'une compétition ; (2) deux jours durs non consécutifs, sauf avancé en bloc ; (3) au moins 1 jour de repos total (2 si débutant ou ≥ 50 ans) ; (4) respecter le maximum de jours consécutifs d'impact (5.3.7) ; (5) respect de la disponibilité déclarée ; (6) jamais plus d'une séance dure/jour ; (7) séance longue la veille d'un jour libre si possible.
+**Règles souples** (score de pénalité) : séance longue le week-end (−1) ; qualité au milieu de semaine ; veille d'une compétition = séance d'activation courte (20 min facile) ; éviter séance du soir si sommeil < 6 h ; alterner impact/non-impact ; préférence utilisateur du créneau (matin/soir).
+```
+function placeSessions(sessions, slots):
+  sort sessions by priority desc  (longue, qualité, facile, force, mobilité)
+  for each permutation/branch (backtracking, max 2000 nœuds):
+     if violatesHardRules: prune
+     cost = sum(softPenalties)
+  return min-cost assignment ; if none: relax soft rules, else drop lowest priority session
+```
+Événements fixes (courses inscrites, sorties de groupe) : non déplaçables ; leur charge estimée est soustraite du budget hebdomadaire avant de planifier le reste.
+
+### 5.5.8 Séances alternatives et météo
+Chaque séance porte `alt_indoor` (tapis, home-trainer, marche intérieure) et `alt_low_impact`. Règle météo : pluie forte/orage/verglas/canicule ou qualité de l'air > 100 AQI → proposer l'alternative intérieure ou décaler dans la semaine ; rando en montagne : orage = annulation, voir Partie 4. Alternative équivalente = même durée et même charge cible ± 10 %.
+
+### 5.5.9 Intégration muscu et mobilité (Fit)
+Réserver 2 créneaux de force/semaine en base, 1 en spécifique, 0-1 en affûtage ; jambes lourdes ≥ 36 h avant une séance de qualité ; mobilité 10 min après séances longues et 2 blocs de 10-15 min les jours de repos. La séance est référencée par `fit_workout_id` (contrat : voir Partie 7).
+
+### 5.5.10 Tapering
+Réduire le volume de −20 % (J−14), −35 % (J−7), −50 % (J−3 à J−1 en cumulé), en gardant 1-2 touches d'intensité courtes ; semi : 2 semaines ; marathon : 3 semaines ; 5-10 km : 1 semaine ; ultra 2-3 semaines. Charge cible TSB le jour J : +5 à +20.
+
+## 5.6 Bibliothèque de séances (≥ 40)
+Notation : E=échauffement, R=récupération, N=niveau (D débutant, I intermédiaire, A avancé), Z=zone. Intensité en FC/allure/%FTP. Chaque fiche est stockée en JSON (`session_template`) avec blocs, cibles par niveau, `alt_indoor`, `contraindications`.
+
+**Course (16)**
+1. **Footing facile** : développer l'aérobie ; 30-60 min Z2 (D 25 min, I 45, A 60) ; partout, 2-3×/sem.
+2. **Récupération active** : 20-30 min Z1, lendemain d'une séance dure.
+3. **Sortie longue** : endurance, économie ; 60-150 min Z2 (progresser +10 min/sem) ; une fois/sem, jamais après qualité.
+4. **Longue progressive** : dernier tiers à allure marathon ; I/A, spécifique.
+5. **Fartlek libre** : variété ; 40 min dont 8×(1' vite / 1' 30 facile) ; base.
+6. **Tempo continu** : seuil ; E 15' + 20-30' à 88-92 % allure seuil + R 10' ; dév. (I 20', A 30').
+7. **Seuil cruise** : 4×6' seuil, R 90 s.
+8. **Intervalles longs VO2max** : 5×4' Z5, R 3' ; I/A ; dév.
+9. **Intervalles courts 30/30** : 2 séries de 10×(30'' Z5 / 30'' facile), R inter-série 4'.
+10. **Répétitions de vitesse** : 8×200 m à 110 % seuil, R 200 m trot ; neuromusculaire ; A.
+11. **Allure 10 km** : 3×2 km, R 2' ; spécifique 10 km.
+12. **Allure semi/marathon** : 2×5-8 km à allure cible ; spécifique.
+13. **Côtes courtes** : 8×45'' en côte 6-8 % à effort 5 km, descente trot ; force/vitesse.
+14. **Côtes longues** : 5×3' à 5 % ; trail.
+15. **Marche/course (D)** : voir 5.5.3, ex. 8×(1' course/2' marche).
+16. **Strides** : 6×20'' progressifs après footing facile, R 40''.
+
+**Vélo (12)**
+17. **Endurance Z2** : 1-4 h à 56-75 % FTP.
+18. **Sortie longue vélo** : 3-6 h, apport glucidique 60 g/h.
+19. **Sweet spot** : 3×15' à 88-93 % FTP, R 5' ; seuil, temps limité.
+20. **Seuil** : 2×20' à 95-100 % FTP, R 10'.
+21. **VO2max 5×5** : 5×5' à 110-120 % FTP, R 5'.
+22. **30/15 micro-intervalles** : 3 séries ×13×(30'' 120 % / 15'' 50 %).
+23. **Force basse cadence** : 5×6' à 70-80 % FTP, 50-60 tr/min en côte.
+24. **Sprints** : 6×10'' maximal, R 3' ; A.
+25. **Over-under** : 3×(2' à 95 % / 2' à 105 %)×4.
+26. **Tempo** : 2×30' à 76-90 % FTP.
+27. **Montée chronométrée** : simulation cyclosportive, 1×20-40' à 90-95 % FTP.
+28. **Récupération vélo** : 30-45' Z1, cadence 90.
+
+**Marche / Rando (7)**
+29. **Marche active** : 30-45' à 70-80 % FCmax (+ bâtons pour marche nordique).
+30. **Marche longue** : 90-180' Z1-Z2, 8-15 km.
+31. **Marche en côte** : 6×3' de montée soutenue.
+32. **Rando avec sac progressif** : sac 5 % → 10 % du poids de corps, 10-20 km, 400-900 m D+.
+33. **Back-to-back rando** : 2 jours consécutifs 12-18 km chacun (itinérance).
+34. **Descente contrôlée** : travail excentrique (bâtons), 3×(300 m D−) pour prévenir les courbatures.
+35. **Marche intervalle** : alternance 3' rapide / 2' lente ×6 (débutant, reprise).
+
+**Renforcement et mobilité (7)**
+36. **Renfo coureur A** : squats, fentes, pont fessier, mollets, gainage ; 3×10-12 ; 25 min.
+37. **Renfo pliométrie douce** : sauts légers, skipping, 3×8 ; I/A, hors période d'affûtage.
+38. **Gainage** : planche 3×30-60'', gainage latéral, bird-dog.
+39. **Mobilité hanches/chevilles** : 10-12 min.
+40. **Force-vélo hors selle** : squats, fentes, soulevés jambes tendues.
+41. **Équilibre/prévention entorses** : proprioception, 10 min.
+42. **Étirements actifs post-séance** : 8 min.
+
+Chaque séance contient : objectif physiologique, structure, cibles par niveau, durée, charge estimée, quand la placer, contre-indications (douleur ≥ 4 zone concernée, ACWR > 1,5), et une alternative.
 

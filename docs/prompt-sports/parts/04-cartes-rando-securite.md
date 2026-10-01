@@ -339,3 +339,146 @@ Signalements rapides en 2 taps depuis la carte ou la navigation : arbre tombé, 
 ### Détection de tracés frauduleux ou dangereux
 Rejet automatique ou mise en quarantaine pour : vitesse moyenne irréaliste pour l'activité (marche > 9 km/h, course > 25 km/h, vélo > 70 km/h sur plus de 1 km sans descente), téléportation (saut > 500 m en < 5 s), altitude incohérente avec le MNT (> 200 m d'écart), traversée de propriété privée, voies interdites (autoroute, voie ferrée, zone militaire, cœur de réserve interdit), tracé passant par un précipice (pente > 60° sur plus de 30 m sans équipement) ou sur plan d'eau/glacier sans tag adapté. Tout itinéraire public est analysé avant publication ; un itinéraire en quarantaine est invisible dans la découverte jusqu'à revue. Un itinéraire créé par un utilisateur pour autrui qui franchit un seuil de danger reçoit l'avertissement obligatoire « tronçon à risque » avec sa nature.
 
+## 4.6 Navigation
+
+### 4.6.1 Suivi du tracé et déviation
+
+- Projection de la position GNSS sur le tracé par map-matching local (distance au segment le plus proche, avec fenêtre de recherche glissante de ±500 m autour du dernier point connu pour éviter les sauts sur des boucles qui se croisent). Affichage : progression (km restants, D+ restant), prochain virage ou point d'intérêt.
+- **Seuils de sortie d'itinéraire** (distance latérale au tracé, maintenue 10 s avec précision GPS ≤ 30 m) :
+
+| Activité | Alerte « attention » | Alerte « hors itinéraire » |
+|---|---|---|
+| Marche / rando | 25 m | 50 m (100 m en terrain ouvert d'altitude) |
+| Course route | 20 m | 40 m |
+| Trail | 25 m | 50 m |
+| Vélo route / gravel | 30 m | 60 m |
+| VTT | 25 m | 50 m |
+
+- Alerte en trois niveaux : vibration + bandeau, voix (si activée), puis proposition d'action (« Revenir au tracé : 80 m au sud-est », « Recalculer », « Ignorer 10 min »). Hystérésis : l'alerte se désarme quand l'écart repasse sous 60 % du seuil. Ne pas déclencher à l'arrêt (vitesse < 0,5 m/s pendant une pause) ni quand la précision > 50 m (afficher « signal GPS faible » à la place).
+- **Retour au départ** : bouton permanent « Revenir au départ » avec deux modes : par le tracé parcouru (inversé, favorise la sécurité en montagne) ou par le chemin le plus court (routage). Affiche distance, temps, et alerte si le retour dépasse la lumière ou la batterie restante (4.9.8).
+- **Recalcul** : en ligne, automatique après 30 s hors tracé si l'option « recalcul automatique » est active, vers le prochain point du tracé en aval (pas le plus proche, pour ne pas sauter une section). Hors ligne : recalcul avec le plan de routage (4.4.9) sinon guidage en ligne droite avec distance et cap.
+
+### 4.6.2 Instructions selon l'activité
+
+| Activité | Mode par défaut |
+|---|---|
+| Course route / trail | voix courte + flèches ; annonces à 150 m et 30 m, vibration de la montre (voir Partie 8) |
+| Vélo route / gravel / VTT | flèches grande taille + signal sonore bref et vibration ; **pas de texte long, pas de manipulation d'écran en roulant** ; voix possible via écouteurs ouverts |
+| Marche urbaine | voix + flèches |
+| Randonnée | suivi du tracé et alerte de déviation prioritaires, voix minimale (point de décision seulement) |
+
+Instruction générée depuis la géométrie : angle de virage classé (droite, légèrement à droite, demi-tour...), nom de voie, distance ; langue conforme aux réglages. Paramètres : volume, fréquence des annonces, ducking de la musique, sans voix du tout.
+
+### 4.6.3 Vues et informations
+
+- **Vue boussole** : flèche vers le prochain point, cap magnétique avec déclinaison corrigée (modèle WMM), calibration guidée si précision < 2 ; utile hors sentier ; fonctionne sans carte.
+- **Prochains POI** le long du tracé : eau, refuge, col, abri avec distance et temps ; bandeau configurable (3 éléments max).
+- **Temps restant** : recalculé toutes les 30 s à partir de l'allure réelle des 20 dernières minutes mélangée avec le modèle (poids 0,6 réel / 0,4 modèle) ; afficher heure d'arrivée estimée et comparaison à l'heure de coucher du soleil.
+- **Orientation de la carte** : nord en haut, cap en haut, ou verrouillée ; recentrage automatique après 8 s d'inactivité.
+
+### 4.6.4 Mode économie de batterie (écran noir avec alertes)
+
+L'écran s'éteint (ou affichage minimal OLED très sombre) ; le GNSS continue à intervalle adaptatif (1 s en mouvement rapide, 5 s en rando lente, 10-15 s à l'arrêt) ; les alertes de déviation, de point d'eau, de lumière et de sécurité (4.9) restent actives et allument l'écran ou vibrent. Gestes pour réveiller (bouton volume, bouton latéral). Objectif de consommation : ≤ 6 % de batterie par heure en navigation écran éteint sur un téléphone récent, ≤ 12 % par heure écran allumé avec carte vectorielle (voir 4.11). Bannière de seuil à 20 % et 10 % avec proposition automatique d'activer ce mode.
+
+### 4.6.5 Navigation hors ligne complète
+
+Tout ce qui précède fonctionne sans réseau avec le pack téléchargé et l'itinéraire local ; seule la météo et les messages de partage dépendent du réseau. Si l'itinéraire n'est pas encore en local, la navigation refuse le démarrage hors ligne avec un message clair. Au démarrage, vérifier que le pack couvre ≥ 95 % du corridor ; sinon avertir et proposer le téléchargement.
+
+### 4.6.6 Sécurité de la navigation
+
+- Vélo : verrouillage de l'édition d'itinéraire, du clavier et des écrans de choix dès que la vitesse > 8 km/h ; les alertes sont brèves et non interactives.
+- Course : afficher au plus 4 champs.
+- Le message « Garde les yeux sur la route/le sentier » apparaît à la première utilisation de la navigation vélo et à chaque changement majeur de mode. Aucune fonction ludique (classements, notifications sociales) ne s'affiche pendant la navigation.
+- Critère d'acceptation : une alerte de déviation à 60 m en vélo s'affiche en < 5 s, avec vibration et signal sonore, sans action requise de l'utilisateur.
+
+## 4.7 Randonnée avancée
+
+### 4.7.1 Itinérance multi-jours
+
+Modèle de données : `MultiDayPlan {id, name, startDate, stages[], accommodations[], resupplyPoints[], escapes[], gearListId}`. Une `Stage` : `{day, start, end, distance, dPlus, dMinus, estTimeRange, difficulty, hazards[], water[], accommodationId?, weather}`.
+
+- **Découpage en étapes** : à partir d'un tracé long (ex. GR20, 180 km) ; trois modes : par nombre de jours, par distance/dénivelé cibles par jour, par hébergements disponibles (programmation dynamique : minimiser `Σ (effort_jour − effort_cible)²` sous contrainte d'arrivée sur un hébergement). `effort = distance_equivalente = d + D+/100 + D−/300` (km-effort).
+- **Estimation étape par étape** : temps par 4.4.6, charge du sac incluse (poids à jour par jour, car la nourriture s'allège : `poids_jour_n = base + nourriture_restante`), heure d'arrivée, marge avant le coucher du soleil (alerte si arrivée prévue < 90 min avant le coucher).
+- **Hébergements** : refuges, gîtes, campings, bivouacs (réglementation affichée), hôtels ; données issues d'OSM et de partenaires ; pour chaque : altitude, capacité, ouverture saisonnière (date de mise à jour visible), ravitaillement possible (repas, vivres), eau, réseau mobile. Réservation : **lien externe** vers le système de réservation du refuge ou du gestionnaire (aucune réservation dans l'app au lancement) ; ajouter dans le plan un champ « statut » (`à réserver`, `réservé`, `confirmé`) et un rappel 30 jours avant. Disclaimer : disponibilité non garantie.
+- **Ravitaillement** : points d'achat de vivres sur le trajet (épiceries, refuges), ainsi que stratégie de colis ; calcul des jours d'autonomie nécessaires entre deux ravitaillements.
+- **Plan B (échappatoires)** : pour chaque étape, détecter les points de sortie (route carrossable, village, arrêt de transport, refuge) tous les ≤ 5 km ou 1 h, avec distance, temps de repli et coordonnées ; mise en avant dans la fiche étape et téléchargeables hors ligne. Variante « mauvaise météo » (itinéraire bas) proposée si disponible.
+- **Météo par étape et par altitude** : prévision pour le point de départ, le point culminant et l'arrivée de chaque étape, avec corrections d'altitude (gradient −0,65 °C/100 m, vent croissant avec l'altitude, isotherme 0 °C) ; ressenti ; probabilité d'orage entre 12 h et 18 h ; rafraîchie à J-7, J-3, J-1 et chaque matin.
+
+### 4.7.2 Plan de nutrition et d'hydratation (via Fit)
+
+Appel au service nutrition de l'app Fit (voir Partie 5 et Partie 7 pour l'intégration) avec : durée estimée, dépense énergétique, température, altitude, poids, sudation connue, préférences alimentaires et allergies. Cibles par défaut en effort d'endurance (à moduler par le coach) :
+- énergie : `kcal/h ≈ 5 × poids_kg × (allure_facteur)` ; en rando 300-500 kcal/h (poids 70 kg, sac de 10 kg) ; objectif d'apport 60-70 % de la dépense en marche longue ;
+- glucides : 30-60 g/h au-delà de 90 min (60-90 g/h en effort intense de plus de 2,5 h, avec entraînement digestif) ;
+- sodium : 300-600 mg/h (jusqu'à 800 en forte chaleur chez gros sudateurs) ; eau : 400-800 ml/h, +250 ml/h par tranche de 8 °C au-dessus de 25 °C ; **ne jamais recommander plus de 1 L/h** (risque d'hyponatrémie) ;
+- diététique du jour (petit-déjeuner, en-cas, repas du soir) avec recettes de l'app Fit et listes de courses ; poids des aliments intégré au poids du sac.
+Exemple : rando 8 h, 70 kg, 24 °C : ~3 200 kcal dépensées ; apport ~2 000 kcal (≈ 250 kcal/h) ; glucides 45 g/h ; eau 550 ml/h → 4,4 L sur la journée, répartis avec recharges aux points d'eau identifiés ; sodium 450 mg/h. L'app calcule les « kilomètres sans eau » pour dimensionner la réserve. Ce sont des repères généraux, pas un avis médical.
+
+### 4.7.3 Entraînement préparatoire
+
+Depuis un `MultiDayPlan` ou une rando de journée exigeante, le coach (voir Partie 5) génère un plan de préparation jusqu'à la date : volume et D+ hebdomadaires progressifs (+10 % max par semaine, semaine de décharge tous les 4), sorties longues avec sac chargé, travail de descente, renforcement des jambes (liaison avec les séances de l'app Fit), acclimatation en altitude si l'objectif dépasse 3 000 m. Cette partie ne spécifie pas l'algorithme du coach ; elle fournit l'entrée : `{distance, dPlus, dMinus, altitudeMax, durée, charge, niveau_requis}`.
+
+### 4.7.4 Check-list de matériel générée
+
+Génération par règles (jamais par IA seule) : `Gear = base(durée) + saison + altitude + météo + niveau + sécurité`, chaque item avec `quantité`, `poids_g`, `catégorie`, `critique(bool)`, `raison`. L'utilisateur coche, retire, ajoute ; ses objets réels (poids pesés) sont mémorisés dans « Mon matériel ». Poids de sac : somme avec affichage « poids de base », « consommables » et « total départ », avec alerte si le sac dépasse 20 % du poids du corps (rando journée > 10 %).
+
+Règles principales :
+- Durée > 1 jour : tente/hébergement, sac de couchage (température de confort = min prévue − 5 °C), réchaud + combustible (100 g par personne par jour environ), vivres ;
+- Altitude > 2 500 m : lunettes catégorie 3-4, crème solaire indice 50+, couche chaude supplémentaire, protection contre le mal aigu (info) ;
+- Altitude > 3 000 m ou neige annoncée : piolet, crampons, casque (selon cotation ; avertissement sur formation nécessaire) ;
+- Pluie probabilité > 40 % : veste imperméable, sur-pantalon, housse de sac ; chaleur > 28 °C : eau +1 L, casquette, sels ; température min < 5 °C : bonnet, gants, doudoune ;
+- Toujours : trousse de secours, couverture de survie, sifflet, lampe frontale + piles, carte/GPS hors ligne, batterie externe, carte d'identité.
+- Niveau débutant : ajout de conseils (chaussettes de rechange, pansements pour ampoules) ; expert : retrait des items évidents.
+
+**Exemple 1 : rando journée d'été en moyenne montagne (8 h, 1 000 m D+, 22 °C, 1 800-2 400 m)**
+Sac 25 L ; chaussures de randonnée basses/mi-hautes ; chaussettes ; t-shirt respirant ; pantalon/short ; polaire légère ; veste imperméable (300 g) ; casquette ; lunettes de soleil ; crème solaire ; 2 L d'eau + 1 pastille de purification ; 3 en-cas (barres, fruits secs, sandwich) ; trousse de secours (pansements, élastique, antalgique, bande) ; couverture de survie ; sifflet ; frontale ; téléphone avec carte hors ligne + batterie externe ; bâtons optionnels. Poids estimé : 6,5 kg.
+
+**Exemple 2 : trek 3 jours en refuges en été (GR/Alpes, 2 700 m max)**
+Sac 38-45 L ; tout l'exemple 1 plus : sac à viande et boules Quies, vêtements de rechange (1 t-shirt, 1 sous-vêtement, 2 paires de chaussettes), doudoune légère, bonnet/gants fins, serviette microfibre, trousse de toilette minimale, argent liquide pour le refuge, réservation imprimée/hors ligne, protection solaire renforcée, 2 L + filtre. Pas de tente ni réchaud. Poids estimé : 9-11 kg. Alerte : arrivée en refuge avant l'orage, vérifier le jour de fermeture du refuge.
+
+**Exemple 3 : itinérance 5 jours en autonomie, bivouac, hiver doux/automne (1 500 m, -2 °C la nuit)**
+Tente 4 saisons ou 3 saisons renforcée (1,6 kg), sac de couchage confort -5 °C, matelas isolant R≥3, réchaud + gaz (400 g) + popote, 5 jours de nourriture (≈ 600 g/jour, 3 000 kcal), filtre à eau, couche chaude + doudoune, gants + sur-gants, bonnet, guêtres, bâtons, balise de détresse ou communicateur satellite (recommandé), cartes papier + boussole, batterie externe 20 000 mAh, trousse de secours étendue, sacs étanches, lampe frontale + piles de rechange. Poids départ : 15-18 kg (alerte à > 20 % du poids du corps).
+
+Les listes peuvent être imprimées, exportées (PDF), partagées et sauvegardées comme modèles.
+
+### 4.7.5 Journal de rando, sommets et collections
+
+- **Journal** : à la fin ou pendant la sortie, ajout de notes, photos géolocalisées (position issue de l'EXIF, sinon de l'horodatage rapproché du tracé), humeur, conditions, rencontre de faune ; export en carnet PDF avec carte et profil ; confidentialité par entrée (voir 4.10).
+- **Sommets** : base de sommets OSM (`natural=peak`) avec altitude, prominence, massif ; détection automatique d'un sommet atteint (rayon 40 m horizontal, 15 m vertical sur le MNT, maintenu 20 s) ; confirmation manuelle possible ; entrée au **carnet de sommets** (date, météo, photo).
+- **Collections de sommets** : « les 4 000 des Alpes » (82 selon la liste UIAA/2 : définir la liste dans les données et la versionner, car les listes varient), « Plus hauts sommets des départements », « GR20 » (étapes), « Ballons des Vosges » ; avancement en pourcentage, carte des sommets, trophées (liaison avec l'app Fit et gamification, voir Partie 7). Les collections sont éditoriales (comités de revue) ; l'utilisateur peut créer des collections privées.
+
+## 4.8 Vélo et course spécifiques
+
+### 4.8.1 Segments et sections chronométrées
+
+Fonction **optionnelle** (activée par un flag ; décision produit à valider au regard des risques de comportements dangereux). Si retenue :
+- Segment : tronçon défini par début/fin, longueur 300 m à 50 km, `activité`, `géométrie`, `date`, `créateur`, classement par temps pour la période (tout, année, mois), catégories (âge, genre auto-déclaré, poids optionnel).
+- Appariement : un passage compte si la trace passe à ≤ 25 m du début, reste à ≤ 25 m du segment (tolérance 15 % en cas de GPS bruité), et atteint la fin ; temps interpolé entre points. Rejet des passages avec vitesse impossible ou en véhicule motorisé (profil accélération).
+- **Retrait** : option par utilisateur « ne pas participer aux segments » (global), par segment (« masquer mes temps »), et possibilité de demande de retrait d'un segment sur propriété d'une collectivité ou d'un site à risque (route fréquentée, descente dangereuse) via formulaire ; un segment signalé dangereux est retiré du classement après revue. Aucun segment sur voie publique ouverte à la circulation dans les descentes à forte pente par défaut. Pas de notifications compétitives pendant la navigation (4.6.6).
+
+### 4.8.2 Côtes, montées catégorisées
+
+Détection de montées par balayage du profil lissé : une montée commence quand la pente moyenne glissante sur 200 m dépasse 3 % et se termine quand l'altitude descend de plus de 10 m depuis le sommet local. Catégorie via `score = longueur_m × pente_pourcent` (pente moyenne) :
+
+| Catégorie | Score | Exemple |
+|---|---|---|
+| 4 | 8 000 – 16 000 | 2 km à 5 % → 10 000 |
+| 3 | 16 000 – 32 000 | 4 km à 6 % → 24 000 |
+| 2 | 32 000 – 64 000 | 6 km à 7 % → 42 000 |
+| 1 | 64 000 – 80 000 | 8 km à 9 % → 72 000 |
+| HC | > 80 000 | 13,8 km à 7,8 % ≈ 107 600 |
+
+Contraintes : longueur minimale 500 m, pente moyenne minimale 3 %. Chaque côte affiche longueur, D+, pente moyenne et maximale (sur 100 m), kilomètre de début, et alimente les alertes « montée dans 500 m » et l'estimation de temps. Pour la course : « côtes » d'entraînement (30 s à 3 min, 6-10 %) listées pour les séances de côtes du plan (voir Partie 5).
+
+### 4.8.3 Parcours de course et distances
+
+- **Officiels** : parcours de courses (10 km, semi, marathon, trails) fournis par organisateurs avec tracé validé, ravitos, barrières horaires, profil ; badge « Officiel » et date de l'édition ; mise à jour annuelle ; aucune promesse de conformité si l'organisateur change le tracé (afficher « tracé de l'édition 2026 »).
+- **Distances types** : 5 km, 10 km, 10 miles, semi-marathon (21 097,5 m), marathon (42 195 m), ultra (50 km, 100 km, 100 miles) ; tolérance de mesure : une boucle générée « 10 km » doit mesurer 10 000 m ±1 %, avec une marge optionnelle de +0,1 % pour éviter les mesures courtes (règle de mesure de course certifiée).
+- **Parcours d'entraînement standards** : boucle de 5 km et de 10 km générées autour de l'utilisateur (4.4.3), faible trafic, sans traversées majeures, enregistrées comme « mon 5 km habituel » avec historique de temps (progression à comparer) ; piste d'athlétisme (400 m) sur la couche POI.
+- **Parkours** : parcours de parc d'entraînement (parkrun, parcours santé, stations de fitness en plein air) avec équipement ; lien avec la communauté locale.
+
+### 4.8.4 VTT, gravel, électrique
+
+- **VTT** : difficulté `mtb:scale` 0-6 et `mtb:scale:uphill`, couleurs de balisage des stations (vert, bleu, rouge, noir) harmonisées ; catégories **cross-country**, **trail/all-mountain**, **enduro** (liaisons montantes + spéciales descendantes chronométrables, avec marquage des tronçons de descente et temps montée/descente séparés), **descente** (remontées mécaniques en POI, parcs de bike park, sauts signalés). Casque et protections recommandés avant navigation de niveau rouge/noir. Les segments chronométrés VTT descente sont désactivés par défaut.
+- **Gravel** : pourcentage de surface non goudronnée = `longueur(surface ∈ {gravel, dirt, grass, sand, compacted}) / longueur totale`, affiché avec répartition en barre ; recommandation de pneus (section de pneu ≥ 38 mm si > 40 % non goudronné) ; alerte « surface inconnue » si > 15 % du tracé non renseigné.
+- **Vélo électrique** : autonomie estimée `A = capacité_wh × (1 − marge) / (conso_wh_km)` avec `conso = (P_moyenne_requise − assistance)/vitesse` ; modèle simple : conso de base 8-12 Wh/km sur plat, +4 Wh/km par 1 % de pente moyenne, +30 % en mode Turbo ; marge de sécurité 20 % ; froid < 5 °C : −20 % de capacité. L'utilisateur saisit batterie (400-750 Wh) et mode d'assistance ; alerte « autonomie insuffisante » si le trajet dépasse 80 % de l'autonomie estimée, avec bornes de recharge sur la carte. Exemple : 500 Wh, tracé 60 km, 900 m D+ (pente moyenne ≈ 1,5 %) : conso ≈ 10 + 6 = 16 Wh/km → 960 Wh requis → 500 × 0,8 / 16 ≈ 25 km seulement en assistance continue, donc plan : mode Eco ou recharge (ex. Eco 7 Wh/km → 57 km, trop juste).
+

@@ -401,3 +401,351 @@ Le choix est un **placeholder par défaut** ; l'assistant le confirme en 10 lign
 **Hébergement des données** : région UE exclusivement pour les données personnelles ; sous-traitants documentés dans un registre `docs/compliance/subprocessors.md` (Partie 8).
 
 ---
+
+## 1.7 Modèle de données complet
+
+### 1.7.1 Conventions globales (valables pour toutes les tables)
+- Clé primaire `id text` = préfixe + ULID (`act_01J9…`), générée côté client si l'entité est créable hors ligne.
+- Colonnes communes : `created_at timestamptz not null default now()`, `updated_at timestamptz not null`, `deleted_at timestamptz null` (soft delete), `version int not null default 1`, `server_seq bigint` (séquence globale pour la synchronisation).
+- Unités SI en base. Temps en UTC, fuseau stocké à part (`tz text`, nom IANA) pour afficher l'heure locale de l'activité.
+- Données sensibles marquées `[S]` (santé), `[G]` (géolocalisation), `[P]` (identifiant personnel), `[F]` (financier). Les colonnes `[S]` et `[G]` sont chiffrées au repos (chiffrement disque + chiffrement applicatif par enveloppe pour `health_*` et `injuries`), exclues des logs, des exports analytics et des environnements non-prod.
+- Tout `enum` est un `text` avec contrainte `CHECK` (évolution sans migration lourde).
+- Chaque table de données utilisateur a un index `(user_id, updated_at)` pour le pull de synchronisation.
+
+### 1.7.2 Tables centrales en SQL
+
+```sql
+-- IDENTITÉ (partagée avec Fit)
+create table accounts (
+  id text primary key,                         -- acc_
+  email citext unique not null,                -- [P]
+  email_verified_at timestamptz,
+  password_hash text,                          -- argon2id, null si SSO seul
+  status text not null default 'active' check (status in ('active','suspended','pending_deletion','deleted')),
+  birth_date date,                             -- [P] sert à calculer le statut de mineur
+  country text, locale text not null default 'fr-FR',
+  deletion_requested_at timestamptz,
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+
+create table app_memberships (
+  account_id text references accounts(id),
+  app text check (app in ('fit','sports')),
+  joined_at timestamptz not null default now(),
+  primary key (account_id, app)
+);
+
+create table profiles (
+  account_id text primary key references accounts(id),
+  display_name text not null check (char_length(display_name) between 2 and 40),
+  handle citext unique not null,               -- @pseudo
+  avatar_url text,
+  height_cm numeric(5,1), weight_kg numeric(5,1),   -- [S]
+  sex_at_birth text check (sex_at_birth in ('f','m','x','undisclosed')),  -- [S] usage : formules physiologiques
+  max_hr int check (max_hr between 120 and 230),    -- [S]
+  resting_hr int, lthr int, ftp_w int, threshold_pace_s_per_km int,  -- [S] seuils, chacun avec source
+  profile_visibility text not null default 'private' check (profile_visibility in ('private','friends','public')),
+  privacy_zones jsonb not null default '[]',   -- [G] [{lat,lon,radius_m,label}]
+  updated_at timestamptz not null default now(), version int not null default 1
+);
+
+create table preferences (
+  account_id text primary key references accounts(id),
+  units text not null default 'metric', week_start smallint not null default 1,
+  default_activity_visibility text not null default 'private',
+  audio_cues jsonb, notification_prefs jsonb, simplified_mode boolean not null default false,
+  updated_at timestamptz not null default now(), version int not null default 1
+);
+
+create table devices (
+  id text primary key,                         -- dev_
+  account_id text not null references accounts(id),
+  platform text check (platform in ('ios','android','web','garmin','wearos','watchos')),
+  push_token text, app_version text, last_seen_at timestamptz, revoked_at timestamptz
+);
+
+-- ACTIVITÉS
+create table activities (
+  id text primary key,                         -- act_
+  user_id text not null references accounts(id),
+  sport text not null,                         -- run, walk, hike, ride, ... extensible via table sports
+  sub_sport text, source text not null check (source in ('app','import_fit','import_gpx','import_tcx','manual','health_platform','partner')),
+  external_id text,                            -- id chez le partenaire
+  title text, description text, started_at timestamptz not null, tz text not null,
+  elapsed_s int not null, moving_s int not null,
+  distance_m numeric(10,1), elevation_gain_m numeric(7,1), elevation_loss_m numeric(7,1),
+  avg_hr smallint, max_hr smallint, avg_power_w smallint, calories_kcal int,
+  load_au numeric(7,2), load_method text, load_confidence text,   -- dérivés
+  start_point geography(Point,4326),           -- [G]
+  route_simplified geography(LineString,4326), -- [G] tolérance 5 m
+  bbox box2d,
+  visibility text not null default 'private' check (visibility in ('private','friends','public')),
+  perceived_effort smallint check (perceived_effort between 1 and 10),
+  gear_id text references gear(id), route_id text references routes(id), plan_session_id text,
+  dedupe_group text,                           -- regroupe doublons montre/téléphone
+  stream_status text not null default 'pending' check (stream_status in ('pending','ready','archived','missing')),
+  device_id text, client_created_at timestamptz,
+  created_at timestamptz not null default now(), updated_at timestamptz not null,
+  deleted_at timestamptz, version int not null default 1, server_seq bigint,
+  unique (user_id, source, external_id)
+);
+create index activities_user_started on activities (user_id, started_at desc) where deleted_at is null;
+create index activities_user_sync on activities (user_id, server_seq);
+create index activities_route_gix on activities using gist (route_simplified);
+create index activities_dedupe on activities (user_id, dedupe_group);
+
+create table activity_streams (                -- segments compressés
+  activity_id text references activities(id) on delete cascade,
+  segment_index int, point_count int not null, t_start_ms bigint not null,
+  codec text not null default 'delta-zstd-v1', data bytea not null,  -- [G] [S]
+  created_at timestamptz not null default now(),
+  primary key (activity_id, segment_index)
+) partition by range (created_at);
+
+create table laps (
+  id text primary key, activity_id text not null references activities(id) on delete cascade,
+  idx int not null, trigger text check (trigger in ('manual','distance','time','auto_pause','interval')),
+  start_offset_s int, duration_s int, distance_m numeric(9,1), avg_hr smallint, elevation_gain_m numeric(6,1),
+  unique (activity_id, idx)
+);
+```
+
+### 1.7.3 Géographie, plans, charge, équipes, droits
+
+```sql
+create table routes (
+  id text primary key,                         -- rte_
+  owner_id text references accounts(id), title text not null, sport text not null,
+  geometry geography(LineString,4326) not null, -- [G]
+  distance_m numeric(10,1), ascent_m numeric(7,1), descent_m numeric(7,1),
+  difficulty text check (difficulty in ('easy','moderate','hard','expert')),
+  surface_profile jsonb,                       -- part de sentier, route, gravier
+  source text check (source in ('user','generated','import','curated')),
+  visibility text not null default 'private', verified_at timestamptz,
+  created_at timestamptz not null default now(), updated_at timestamptz not null, deleted_at timestamptz, version int default 1
+);
+create index routes_geom on routes using gist (geometry);
+
+create table pois (
+  id text primary key, kind text not null check (kind in ('water','shelter','summit','parking','danger','viewpoint','refuge','custom')),
+  name text, location geography(Point,4326) not null, created_by text references accounts(id),
+  osm_ref text, status text default 'active' check (status in ('active','reported','removed'))
+);
+create index pois_gix on pois using gist (location);
+
+create table training_plans (
+  id text primary key, user_id text not null references accounts(id), goal_id text,
+  origin text check (origin in ('coach_ai','template','marketplace','human_coach')),
+  title text not null, start_date date not null, end_date date,
+  status text not null default 'active' check (status in ('draft','active','paused','completed','abandoned')),
+  generation_params jsonb not null, engine_version text not null,
+  updated_at timestamptz not null, version int not null default 1
+);
+
+create table planned_sessions (
+  id text primary key, plan_id text not null references training_plans(id) on delete cascade,
+  user_id text not null, scheduled_on date not null, sport text not null,
+  kind text check (kind in ('easy','long','tempo','intervals','recovery','strength_ref','match','rest','cross')),
+  blocks jsonb not null,                       -- [{type:'warmup',duration_s:600,target:{zone:2}}, ...]
+  target_load_au numeric(6,1), status text not null default 'planned'
+    check (status in ('planned','done','skipped','moved','adapted')),
+  adapted_from text, adaptation_reason text,   -- traçabilité de chaque ajustement du coach
+  fit_session_ref text,                        -- référence lecture seule vers séance Fit
+  completed_activity_id text references activities(id)
+);
+create index ps_user_date on planned_sessions (user_id, scheduled_on);
+
+create table daily_load (                      -- agrégat recalculable
+  user_id text, day date, load_au numeric(7,2) not null, by_sport jsonb,
+  acute_7d numeric(7,2), chronic_28d numeric(7,2), form numeric(7,2), model_version text not null,
+  primary key (user_id, day)
+);
+
+create table health_signals (                  -- [S] sommeil, FC repos, VFC, poids
+  id text primary key, user_id text not null, kind text not null check (kind in ('sleep_h','rhr','hrv_ms','weight_kg','soreness','mood','steps')),
+  value numeric not null, measured_at timestamptz not null, source text not null
+);
+create table injuries (                        -- [S]
+  id text primary key, user_id text not null, body_part text not null, severity smallint check (severity between 1 and 3),
+  started_on date not null, resolved_on date, notes_encrypted bytea
+);
+
+create table goals (
+  id text primary key, user_id text not null, kind text check (kind in ('race','distance','weekly_volume','weight','event','habit')),
+  sport text, target jsonb not null, due_on date, status text default 'active'
+);
+create table gear (
+  id text primary key, user_id text not null, kind text check (kind in ('shoes','bike','racket','boots','other')),
+  name text not null, retired_at timestamptz, alert_after_m int, offset_m int not null default 0
+);
+
+-- ÉQUIPES, MATCHS
+create table clubs (id text primary key, name text not null, sport text, city text, created_by text, visibility text default 'private');
+create table teams (
+  id text primary key, club_id text references clubs(id), name text not null, sport text not null,
+  owner_id text not null, visibility text default 'private', invite_code text unique
+);
+create table team_members (
+  team_id text references teams(id), user_id text references accounts(id),
+  role text check (role in ('owner','captain','player','guest')), jersey_no smallint, position text,
+  joined_at timestamptz default now(), left_at timestamptz, primary key (team_id, user_id)
+);
+create table players (                         -- joueur non inscrit (invité, adversaire)
+  id text primary key, display_name text not null, linked_user_id text references accounts(id), created_by text not null
+);
+create table competitions (
+  id text primary key, name text not null, sport text not null, format text check (format in ('league','knockout','ladder','friendly')),
+  rules jsonb, starts_on date, ends_on date, created_by text
+);
+create table matches (
+  id text primary key, sport text not null, competition_id text references competitions(id),
+  home_team_id text, away_team_id text, played_at timestamptz not null, venue text, venue_location geography(Point,4326),
+  status text check (status in ('scheduled','live','finished','cancelled')), score jsonb, -- projection du journal
+  activity_id text references activities(id), created_by text not null, updated_at timestamptz not null, version int default 1
+);
+create table match_events (                    -- journal append-only
+  id text primary key, match_id text not null references matches(id) on delete cascade,
+  type text not null, player_id text, team_id text, minute numeric(5,1), occurred_at timestamptz not null,
+  payload jsonb, device_id text, schema_version smallint not null default 1
+);
+create table match_player_stats (
+  match_id text references matches(id), player_id text references players(id),
+  minutes_played numeric(5,1), stats jsonb not null,   -- clés selon sport (voir Partie 6)
+  primary key (match_id, player_id)
+);
+
+-- DROITS ET ACHATS (détail Partie 2)
+create table entitlements (
+  id text primary key, account_id text not null references accounts(id),
+  feature text not null,                       -- ex. 'sports.plans', 'fit.coach'
+  granted_by text not null check (granted_by in ('subscription','trial','promo','gift','admin','grace')),
+  product_id text, source_purchase_id text, starts_at timestamptz not null, expires_at timestamptz,
+  revoked_at timestamptz, created_at timestamptz default now()
+);
+create index ent_active on entitlements (account_id, feature) where revoked_at is null;
+create table purchases (                       -- [F]
+  id text primary key, account_id text not null, store text check (store in ('apple','google','stripe','promo')),
+  store_transaction_id text not null, product_id text not null, status text not null,
+  period_start timestamptz, period_end timestamptz, price_cents int, currency char(3),
+  raw_receipt_ref text, unique (store, store_transaction_id)
+);
+create table consents (
+  id text primary key, account_id text not null, purpose text not null,   -- 'analytics','health_data','fit_bridge:nutrition','coach_share:<coach_id>'
+  granted boolean not null, policy_version text not null, granted_at timestamptz not null default now(),
+  ip_hash text, source text, unique (account_id, purpose, granted_at)
+);
+```
+
+### 1.7.4 Entités complémentaires (champs essentiels, types, contraintes)
+
+| Entité | Champs clés | Contraintes / index | Rétention | Sensibilité |
+|---|---|---|---|---|
+| `challenges` | id, title, kind (`distance|duration|streak|team`), rules jsonb, starts_at, ends_at, visibility, created_by | check `ends_at > starts_at` ; max 365 j | 2 ans après fin | — |
+| `challenge_participants` | challenge_id, user_id, progress jsonb, joined_at | PK composite | idem | — |
+| `trophies` / `user_trophies` | code unique, tier, criteria jsonb / user_id, trophy_code, earned_at, activity_id | unique (user_id, trophy_code, tier) | durée du compte | — |
+| `follows` | follower_id, followee_id, status (`pending|accepted|blocked`) | unique ; index inverse | durée du compte | [P] |
+| `posts` | id, author_id, activity_id?, body (≤ 2000), media_ids, visibility | index (author_id, created_at desc) | soft delete 30 j | [P] [G] |
+| `comments` | id, post_id, author_id, parent_id, body (≤ 1000) | index (post_id, created_at) | suit le post | [P] |
+| `reactions` | post_id, user_id, kind | PK composite | suit le post | — |
+| `messages` / `conversations` | conversation_id, sender_id, body, sent_at, read_at | partition par mois ; participants max 50 | 24 mois, ou suppression à la demande | [P] |
+| `notifications` | id, user_id, type, payload, channel, sent_at, read_at, dedupe_key | unique (user_id, dedupe_key) ; plafond 1 relance/jour | 90 jours | — |
+| `reports` | id, reporter_id, target_type, target_id, reason, status, handled_by, handled_at | index (status, created_at) | 3 ans (obligations légales) | [P] |
+| `blocks` | blocker_id, blocked_id | PK composite ; appliqué à tous les modules sociaux | durée du compte | — |
+| `coaches` | account_id, bio, certifications jsonb, verified_at, stripe_account_id, commission_pct | verified_at requis pour vendre | durée du compte + 5 ans pour pièces comptables | [P] [F] |
+| `coach_clients` | coach_id, client_id, status, consent_id, scopes text[] | accès coupé dès `status != 'active'` | historique des consentements conservé | [S] |
+| `marketplace_products` | id, coach_id, kind (`plan|session_pack|subscription`), price_cents, currency, status, plan_template_id | status `published` après revue | 5 ans (comptabilité) | [F] |
+| `sales` | id, product_id, buyer_id, amount_cents, fee_cents, payout_id, refunded_at | immuable (écritures inverses) | 10 ans | [F] |
+| `audit_log` | id, actor_id, actor_type, action, target_type, target_id, diff jsonb, ip_hash, at | append-only, index (target_type, target_id, at) | 12 mois (13 pour accès support) | [P] |
+| `imports` | id, user_id, source, file_ref, status, error_code, created_at | — | fichier 30 j | [G] |
+| `live_sessions` | id, activity_id, share_token_hash, contacts jsonb, last_position, last_seen_at, expires_at | token haché ; expiration forcée | 7 jours après fin | [G] |
+| `sports` | code pk, family (`endurance|team|racket|water`), load_adapter, stat_schema jsonb, enabled | catalogue extensible | — | — |
+
+### 1.7.5 Règles de rétention et données sensibles
+- **Flux GPS bruts** : conservés tant que le compte existe (principe D7) ; archivés à froid après 24 mois. **Positions du suivi live** : supprimées 7 jours après la fin.
+- **Données de santé** (`health_signals`, `injuries`, FC, poids) : chiffrées, accessibles uniquement par l'utilisateur, le coach avec consentement actif, et le moteur coach ; jamais exportées vers analytics ni vers un modèle externe sans pseudonymisation.
+- **Compte supprimé** : jours 0–30 = `pending_deletion` (restaurable, données inaccessibles aux autres) ; jour 30 = purge dure via `account.purge` ; sauvegardes purgées à J+35 ; conservation légale limitée aux achats et ventes (identifiant remplacé).
+
+### 1.7.6 Soft delete, audit, anonymisation
+- **Soft delete** : `deleted_at` posé, ligne exclue par les index partiels et les vues `active_*`. Purge dure par `retention.sweep` après 7 jours (activités), 30 jours (publications), sauf conservation légale. Un élément supprimé reste dans le flux de pull comme **tombstone** (`id`, `deleted_at`) 90 jours pour que les appareils hors ligne se mettent à jour.
+- **Audit** : toute opération sensible (changement de droits, accès support à des données, export, suppression, changement de consentement, accès d'un coach à un client) écrit dans `audit_log`, dans la même transaction. Aucune modification ni suppression de cette table en applicatif (rôle sans `UPDATE/DELETE`).
+- **Anonymisation** : à la suppression, `anonymize_user(account_id)` remplace `display_name` par « Ancien utilisateur », `handle` par `deleted_<hash>`, vide e-mail et avatar, conserve les contenus agrégés non identifiants (statistiques de match d'une équipe) avec `linked_user_id = null`. Pour l'analytics et les jeux de test : généralisation des positions (arrondi 3 décimales ≈ 100 m), bruit sur la date de naissance (±6 mois), suppression des zones de confidentialité.
+
+### 1.7.7 Migrations et versionnement des schémas
+- **Migrations** : outil unique (`[STACK_MIGRATIONS]` : Drizzle Kit, Prisma Migrate ou Atlas), fichiers SQL versionnés, jamais modifiés après fusion. Règle **expand / migrate / contract** : (1) ajouter colonne nullable, (2) double écriture et backfill par job, (3) basculer la lecture, (4) supprimer dans une release ultérieure. Chaque migration doit être réversible ou accompagnée d'un plan de retour écrit. Test CI : appliquer toutes les migrations sur une base vide **et** sur un dump anonymisé de staging.
+- **Verrous** : interdiction de `ALTER TABLE` bloquant sur tables > 1 M de lignes sans `CONCURRENTLY`/`NOT VALID` puis `VALIDATE`.
+- **Schémas d'événements et de JSON** (`blocks`, `rules`, `score`, `payload`) : champ `schema_version` obligatoire, registre dans `packages/schemas` (JSON Schema), compatibilité **arrière** vérifiée en CI (un nouveau schéma doit valider les anciens exemples enregistrés). Les lecteurs sont tolérants ; une « upcaster » convertit chaque ancienne version vers la courante à la lecture.
+- **Schéma local mobile** : numéro de version SQLite, migrations ordonnées et testées depuis chaque version publiée des 12 derniers mois.
+
+---
+
+## 1.8 Données de test et de seed
+
+### 1.8.1 Fixtures
+Dossier `fixtures/` versionné (fichiers ≤ 2 Mo chacun, sans donnée réelle) :
+- `gpx/` : 12 traces réalistes générées par script reproductible (graine fixe) : course 10 km urbaine, trail 18 km 900 m D+, rando 15 km avec pause de 1 h, vélo 80 km, trace avec tunnel (perte GPS de 90 s), trace avec saut GPS de 400 m, trace avec timestamps non monotones, trace à 0 point d'altitude, trace de 6 h, trace traversant le méridien de changement de date (cas test), trace à l'arrêt total (bruit GPS), trace très courte (< 50 m).
+- `fit/` : 8 fichiers (course avec FC, vélo avec puissance et cadence, natation en bassin, activité multi-sports, fichier tronqué, fichier avec champs développeurs, doublon d'un GPX, fichier d'une version de firmware ancienne).
+- `matches/` : journaux d'événements de 6 matchs (foot avec prolongation, basket 4 quart-temps, tennis 3 sets avec tie-break, match abandonné, match édité hors ligne depuis 2 appareils, match avec joueur invité).
+- `streams/` : flux binaires pour tests de compression (aller-retour sans perte à 1e-7°).
+
+### 1.8.2 Utilisateurs seed
+Un utilisateur par persona (section 1.2), mot de passe local `dev-only`, domaine `@example.test`. Chacun a un historique de 6 mois généré avec une **charge réaliste** (progression, semaine de repos toutes les 4 semaines, 1 blessure pour Camille, 1 coupure de 3 semaines pour Marc). Karim possède un lien Fit actif avec 20 séances de muscu ; Sofia a 25 clients dont 3 avec consentement retiré ; Lucas est mineur avec compte parent.
+
+### 1.8.3 Scénarios de bout en bout (obligatoires en CI nocturne)
+1. Enregistrement 4 h avec 2 coupures réseau et un kill d'app → activité complète, un seul enregistrement serveur.
+2. Doublon montre + téléphone → proposition de fusion, pas de fusion silencieuse.
+3. Achat Ultra sur mobile → droits `fit.*` et `sports.*` actifs en < 10 s ; remboursement → droits retirés au prochain cycle de réconciliation.
+4. Match saisi par deux appareils hors ligne → score identique après sync.
+5. Suppression de compte → aucun enregistrement `[P]` ou `[G]` après J+30 (requête de contrôle automatisée).
+6. Utilisateur Gratuit qui revient de Sports → lecture seule de ses plans, aucune donnée perdue.
+7. Horloge du téléphone décalée de 2 h → dates d'activité cohérentes.
+Un script `pnpm seed:dev` recrée tout en < 60 s ; `pnpm seed:scale` génère 100 000 utilisateurs et 20 M de points pour les tests de performance (requête « mes 30 dernières activités » < 50 ms p95).
+
+---
+
+## 1.9 Standards de code et de travail
+
+### 1.9.1 Structure de dossiers recommandée
+
+```
+/
+├─ apps/
+│  ├─ mobile/            (src/{ui,features,application,infra}, native/{ios,android})
+│  ├─ api/               (src/modules/<module>/{domain,application,infra,http})
+│  └─ web/               (site, pages de suivi live, back-office)
+├─ packages/
+│  ├─ domain/            (pur : load/, zones/, estimates/, plan-rules/, scoring/)
+│  ├─ schemas/           (JSON Schema + types générés, événements)
+│  ├─ api-client/        (généré depuis OpenAPI)
+│  ├─ ui/                (design system, Partie 8)
+│  └─ config/            (eslint, tsconfig, prettier)
+├─ fixtures/  ├─ docs/{adr,personas,runbooks,compliance}  ├─ infra/ (Terraform, docker)  └─ scripts/
+```
+
+### 1.9.2 Règles de code
+- TypeScript `strict`, aucun `any` sans commentaire `// ANY: raison` ; erreurs de lint = échec de build ; formatage automatique (Prettier).
+- Fonctions ≤ 40 lignes recommandées, fichiers ≤ 400 lignes ; pas de logique métier dans les composants d'UI ni dans les contrôleurs HTTP.
+- Horloge, aléatoire, identifiants injectés (testabilité). Pas de singleton global mutable.
+- Toute formule physiologique est dans `packages/domain`, avec **source citée en commentaire** (référence publique), valeurs de référence testées et `model_version`.
+- Textes visibles : fichiers de traduction, jamais de chaîne en dur ; français d'abord, clés prêtes pour d'autres langues.
+- Pas de secret en dépôt (scan en CI) ; dépendances épinglées, audit de vulnérabilités hebdomadaire.
+
+### 1.9.3 Branches, commits, revues
+- **Branches** : trunk-based, branches courtes `feat/<module>-<sujet>`, `fix/…`, `chore/…` (vie ≤ 3 jours), fusion par squash après CI verte.
+- **Commits** : Conventional Commits (`feat(load): ajoute l'adaptateur tennis`), un sujet par commit, corps expliquant le pourquoi.
+- **Revue** : 1 relecteur minimum, 2 pour `entitlements`, `billing`, `identity`, `sync`, migrations et tout code touchant des données `[S]`/`[G]`. Checklist de PR : tests, droits vérifiés côté serveur, aucun log sensible, états offline/erreur, accessibilité, flag si risque, doc mise à jour.
+
+### 1.9.4 Définition de « terminé » (DoD)
+Une tâche n'est terminée que si toutes les cases sont vraies :
+1. Critères d'acceptation de la partie concernée validés par un test automatisé ou une démonstration écrite.
+2. Tests unitaires (domaine ≥ 90 % de branches), test d'intégration pour chaque endpoint, test de contrat OpenAPI à jour.
+3. Fonctionne hors ligne ou dégrade proprement (état `offline` testé).
+4. Droits vérifiés côté serveur avec test « utilisateur sans droit → 402/403 ».
+5. Aucune régression des garde-fous 1.4.4 (mesure ou justification).
+6. Événements analytics nommés dans le plan de tracking, sans donnée sensible.
+7. Accessibilité : labels, contrastes, taille dynamique, lecteur d'écran sur le parcours principal.
+8. Migration testée (vide et dump), plan de retour écrit.
+9. Documentation : ADR si choix structurant, runbook si nouvelle alerte, README du module à jour.
+10. Feature flag créé avec propriétaire et date d'expiration si le déploiement est progressif.
+
+### 1.9.5 Documentation obligatoire
+`docs/adr/NNNN-titre.md` (contexte, décision, alternatives, conséquences) pour chaque choix de 1.6 ; `docs/runbooks/` (panne sync, DLQ pleine, incident paiement, fuite de données, panne fournisseur de cartes) ; `docs/personas/` ; `docs/data-dictionary.md` généré depuis les migrations (champ, type, sensibilité, rétention) ; `docs/compliance/` (registre des traitements, sous-traitants, analyse d'impact santé). Le dictionnaire de données est **vérifié en CI** : une colonne sans classification de sensibilité fait échouer le build.
