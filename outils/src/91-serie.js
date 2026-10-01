@@ -279,7 +279,7 @@
     oublierPertes();
     plan.lignes.forEach(l => Object.keys(l.valeurs).forEach(k => { if (typeof l.valeurs[k] === 'string') releverHorsWinAnsi(l.valeurs[k]); }));
     if (!(await caracteresAcceptes())) { setLast('Série annulée'); return; }
-    const noms = nomsUniques(csv.lignes.map((l, i) => safeBase(nomDeSerie(o.modele, csv.entetes, l, i + 1, n)) || 'formulaire-' + (i + 1)));
+    const noms = nomsUniques(csv.lignes.map((l, i) => safeBase(nomDeSerie(o.modele, csv.entetes, l, i + 1, n)) || tr('formulaire-') + (i + 1)));
     const base = safeBase(baseName(src.name));
     const avant = { flatten: state.flatten, valeurs: src.formValues, securite: state.security };
     const sortieUnique = o.sortie === 'un';

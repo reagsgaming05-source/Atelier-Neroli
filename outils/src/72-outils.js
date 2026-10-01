@@ -44,7 +44,7 @@
           if (where.value !== 'end') movePages(added, at);
           state.touched = true;
           state.selected = new Set(added);
-          render();
+          vue.render();
           setLast(plural(n, 'page vierge insérée', 'pages vierges insérées'));
         } catch (e) { console.error(e); toast('Échec de l\'insertion : ' + e.message, 'error'); }
         finally { setBusy(''); }
@@ -93,7 +93,7 @@
     const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    await rendrePage(page, src, { canvasContext: ctx, viewport: vp }, '#fff').promise;
     page.cleanup();
 
     const mx = Math.round(canvas.width * reglages.marge);
@@ -269,6 +269,7 @@
     }
     const groupeDe = p => { const g = pageGeom(p); return groupes.get(p.src + '|' + Math.round(g.Wd) + '|' + Math.round(g.Hd) + '|' + g.total); };
 
+    const tour = cadence();
     for (let i = 0; i < pages.length; i++) {
       if (stop()) return null;
       const p = pages[i];
@@ -287,7 +288,7 @@
       const mobilier = !!(mob && (mob.masque || mob.meubles.size));
       mesures.push({ p, i, mesure, lettres, mobilier,
         vide: mesure.ratio <= reglages.seuil && lettres <= reglages.lettres });
-      if (i % 3 === 0) await nextFrame();
+      await tour();
     }
     if (stop()) return null;
 
@@ -379,3 +380,73 @@
     analyser();
   }
 
+  // Sélectionner des pages par leurs numéros : « 3-7, 12 ».
+  function toolSelectionPlage() {
+    const n = state.pages.length;
+    if (!n) return;
+    const txt = input('sel-plage', 'text', '');
+    txt.placeholder = 'ex. 3-7, 12';
+    const apercu = note('');
+    const maj = () => {
+      const r = lirePlages(txt.value, n);
+      let t = r.pages.length ? plural(r.pages.length, 'page désignée', 'pages désignées') + ' : ' + formaterPlages(r.pages) + '.' : 'Aucune page désignée.';
+      if (r.hors.length) t += ' Hors du document (' + n + ' pages) : ' + r.hors.join(', ') + '.';
+      if (r.ignores.length) t += ' Non compris : ' + r.ignores.join(', ') + '.';
+      apercu.textContent = t;
+      apercu.classList.toggle('warn', !!(r.hors.length || r.ignores.length));
+    };
+    txt.addEventListener('input', maj);
+    dialog({
+      title: 'Sélectionner des pages par leurs numéros', icon: IC.select,
+      build: b => {
+        b.append(field('Pages', txt, 'Des numéros, des plages (3-7), « 5- » jusqu\'à la fin, « -3 » jusqu\'à la 3, séparés par des virgules.'));
+        b.append(apercu);
+        maj();
+      },
+      actions: [
+        { label: 'Annuler', onClick: c => c() },
+        { label: 'Sélectionner', primary: true, onClick: close => {
+          const r = lirePlages(txt.value, n);
+          if (!r.pages.length) { toast('Cette plage ne désigne aucune page.', 'warn'); return; }
+          state.selected.clear();
+          r.pages.forEach(i => state.selected.add(state.pages[i - 1].id));
+          state.anchor = state.pages[r.pages[0] - 1].id;
+          if (state.vue !== 'organiser') changerVue('organiser');
+          vue.updateSelectionUI();
+          close();
+          setLast(plural(r.pages.length, 'page sélectionnée', 'pages sélectionnées') + ' : ' + formaterPlages(r.pages));
+        } },
+      ],
+    });
+  }
+
+  function toolJournal() {
+    const liste = document.createElement('div'); liste.className = 'list journal';
+    const remplir = () => {
+      liste.replaceChildren();
+      if (!journal.length) { liste.appendChild(note('Rien à signaler.')); return; }
+      journal.slice().reverse().forEach(j => {
+        const d = document.createElement('div'); d.className = 'list-item avis-' + j.niveau;
+        const q = document.createElement('span'); q.className = 'quand'; q.textContent = pad(j.quand.getHours(), 2) + ':' + pad(j.quand.getMinutes(), 2) + ':' + pad(j.quand.getSeconds(), 2);
+        const g = document.createElement('div'); g.className = 'g';
+        const c = document.createElement('div'); c.className = 'n'; c.textContent = j.contexte;
+        const m = document.createElement('div'); m.className = 's'; m.textContent = j.msg + (j.fois > 1 ? ' (×' + j.fois + ')' : '');
+        g.append(c, m);
+        d.append(q, g);
+        liste.appendChild(d);
+      });
+    };
+    remplir();
+    dialog({
+      title: 'Journal de la session', icon: IC.info, wide: true,
+      build: b => {
+        b.append(note('Ce qui n\'a pas marché comme prévu, ou qui a été fait autrement. Rien de tout cela ne quitte cet ordinateur.'));
+        b.append(liste);
+      },
+      actions: [
+        { label: 'Copier', onClick: async () => { const t = journal.map(j => j.quand.toISOString() + ' [' + j.niveau + '] ' + j.contexte + ' : ' + j.msg + (j.fois > 1 ? ' (×' + j.fois + ')' : '')).join('\n'); if (await copierTexte(t)) toast('Journal copié.'); } },
+        { label: 'Vider', onClick: () => { journal.length = 0; majJournal(); remplir(); } },
+        { label: 'Fermer', primary: true, onClick: c => c() },
+      ],
+    });
+  }

@@ -99,9 +99,9 @@
 
 <h2>12. Limites connues, dites franchement</h2>
 <ul>
-  <li>Pas de signature électronique reconnue légalement (SCSE/ZertES) ni de vérification des signatures reçues ; le produit pose une signature dessinée, pas une signature qualifiée.</li>
-  <li>Interface en français seulement. La reconnaissance de texte lit aussi l'allemand.</li>
-  <li>Pas de PDF/A produit à neuf, pas de balisage d'accessibilité des documents créés ; un PDF/A ou un document balisé reçu est reconnu, et l'application dit ce que l'enregistrement détruit.</li>
+  <li>Pas de signature électronique qualifiée (SCSE/ZertES) ni d'horodatage. Le produit pose une signature dessinée ou une signature numérique avec le certificat personnel (.p12, clés RSA) ; il lit les signatures des PDF reçus (contenu intact ou modifié, signataire) sans dire si l'autorité est reconnue ni si le certificat a été révoqué.</li>
+  <li>Interface en français et en allemand (bouton « DE » / « FR » dans la barre, ou Aide ▸ Langue) ; le manuel et le site restent en français. Pas d'italien. La reconnaissance de texte lit français et allemand.</li>
+  <li>PDF/A-2b seulement (« Archiver en PDF/A-2b ») : pas de -1 ni -3, pas de niveau « a » ; les pages dont les polices ne peuvent pas être incorporées ne passent en images qu'avec l'accord de la personne. Le contrôle est celui du logiciel, jugé par veraPDF à chaque construction chez l'éditeur. Le balisage d'accessibilité n'est pas du PDF/UA. Un PDF/A ou un document balisé reçu est reconnu, et l'application dit ce que l'enregistrement détruit.</li>
   <li>Les mots de passe des comptes ne chiffrent pas les fichiers (voir §4).</li>
   <li>La licence n'est pas un dispositif anticopie (voir §6).</li>
 </ul>

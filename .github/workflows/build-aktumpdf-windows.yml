@@ -315,6 +315,14 @@ jobs:
         shell: pwsh
         run: node comptes-test.js dist\AktumPDF\AktumPDF.exe
 
+      # La langue : le menu, la page et la fenêtre de connexion suivent le même choix (réglage mémorisé ou
+      # langue du système), un changement fait d'un côté se voit de l'autre, et il survit au redémarrage.
+      - name: Langue — français et allemand, menu, page et fenêtre de connexion
+        timeout-minutes: 14
+        working-directory: outils/desktop
+        shell: pwsh
+        run: node langue-test.js dist\AktumPDF\AktumPDF.exe
+
       # Deux secrétaires, un fichier sur le lecteur réseau : la seconde à
       # enregistrer écrasait le travail de la première sans un mot, et la
       # fenêtre de la première affichait toujours « Enregistré ». Deux instances
@@ -670,6 +678,11 @@ jobs:
         timeout-minutes: 14
         working-directory: outils/desktop
         run: node comptes-test.js dist/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF
+
+      - name: Langue — français et allemand, menu, page et fenêtre de connexion
+        timeout-minutes: 14
+        working-directory: outils/desktop
+        run: node langue-test.js dist/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF
 
       - name: Écrasement — le travail d'une collègue n'est jamais perdu en silence
         timeout-minutes: 14

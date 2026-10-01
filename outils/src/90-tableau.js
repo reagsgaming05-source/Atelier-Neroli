@@ -80,17 +80,6 @@
     const t = String(c);
     return /[;"\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
   }).join(';')).join('\r\n');
-  async function copierTexte(t) {
-    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(t); return true; } } catch (e) { signaler('Presse-papiers', e, 'info'); }
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.focus(); ta.select();
-      const ok = document.execCommand('copy');
-      ta.remove();
-      return ok;
-    } catch (_) { return false; }
-  }
   async function morceauxDePage(p) {
     const src = srcById(p.src);
     const g = pageGeom(p);
@@ -141,6 +130,7 @@
       const l = sortie();
       if (!l.length) return;
       const t = document.createElement('table');
+      t.setAttribute('translate', 'no');   // le contenu du document ne se traduit pas
       l.slice(0, 60).forEach(row => {
         const tr = document.createElement('tr');
         row.forEach(c => { const td = document.createElement('td'); td.textContent = c; if (/^-?\d+([.,]\d+)?$/.test(String(c))) td.className = 'nombre'; tr.appendChild(td); });
@@ -158,13 +148,14 @@
       apercu.replaceChildren();
       lignes = [];
       let colonnes = 0, vides = 0;
+      const tour = cadence();
       for (let i = 0; i < pages.length; i++) {
         const r = tableauDepuisMorceaux(await morceauxDePage(pages[i]));
         if (my !== jeton) return;
         if (!r.lignes.length) vides++;
         lignes.push(...r.lignes);
         colonnes = Math.max(colonnes, r.colonnes);
-        if (i % 4 === 3) await nextFrame();
+        await tour();
       }
       if (!lignes.length) { info.textContent = (pages.length > 1 ? 'Aucun texte sur ces pages.' : 'Aucun texte sur cette page.') + ' Sur un scan, lancez d\'abord la reconnaissance de texte.'; return; }
       info.textContent = plural(lignes.length, 'ligne', 'lignes') + ' × ' + plural(colonnes, 'colonne', 'colonnes')
@@ -187,7 +178,7 @@
         { label: 'Fermer', onClick: c => c() },
         { label: 'Enregistrer en CSV', onClick: async () => {
           if (!lignes.length) { toast('Rien à enregistrer.', 'warn'); return; }
-          await deliver(tableauCsv(sortie()), safeBase(el.filename.value) + '-tableau.csv', 'text/csv;charset=utf-8');
+          await deliver(tableauCsv(sortie()), safeBase(el.filename.value) + tr('-tableau.csv'), 'text/csv;charset=utf-8');
         } },
         { label: 'Copier pour Excel', primary: true, onClick: async close => {
           if (!lignes.length) { toast('Rien à copier.', 'warn'); return; }

@@ -18,6 +18,7 @@
     const n = String(name || '')
       .replace(/\u0153/g, 'oe').replace(/\u0152/g, 'OE')
       .replace(/\u00E6/g, 'ae').replace(/\u00C6/g, 'AE')
+      .replace(/\u00E4/g, 'ae').replace(/\u00F6/g, 'oe').replace(/\u00FC/g, 'ue').replace(/\u00C4/g, 'Ae').replace(/\u00D6/g, 'Oe').replace(/\u00DC/g, 'Ue').replace(/\u00DF/g, 'ss')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^\x20-\x7E]/g, '-')
       .replace(/[\\/:*?"<>|]+/g, '-')
@@ -127,6 +128,7 @@
     } finally { setBusy(''); }
   }
 
+
   // =====================================================================
   //  Enregistrer : réécrire le fichier ouvert
   //  -------------------------------------------------------------------
@@ -136,16 +138,7 @@
   //  dialogue. Dans le navigateur, qui ne peut pas écrire sur le disque,
   //  Enregistrer reste l'export habituel.
   // =====================================================================
-  const nomDe = chemin => String(chemin || '').replace(/^.*[\\/]/, '');
   const ecritureDispo = () => !!(state.bureau && window.AktumDesktop && typeof window.AktumDesktop.ecrire === 'function');
-  // Le fichier visé : celui du dernier enregistrement, sinon celui d'où vient
-  // le document — s'il vient d'un seul fichier. Un document assemblé à partir
-  // de plusieurs n'a pas de fichier à réécrire : ce sera « Enregistrer sous ».
-  function cheminDocument() {
-    if (state.chemin) return state.chemin;
-    const reels = state.sources.filter(s => !s.isSample && !s.genere);
-    return reels.length === 1 && reels[0].chemin ? reels[0].chemin : '';
-  }
   function confirmerEcrasement(chemin) {
     return new Promise(res => {
       let pref = '';
@@ -253,7 +246,7 @@
     // plus rien de lui. Inconnue, elle vaut -1 (rien à comparer), jamais celle de la source.
     if (chemin) { e.chemin = chemin; e.ecraserOk = false; e.mtimeFichier = mtimeMs > 0 ? mtimeMs : -1; }
     recupOublier(e);
-    if (courant) render(); else renderOnglets();
+    if (courant) vue.render(); else renderOnglets();
   }
 
   // =====================================================================
@@ -368,7 +361,7 @@
     state.cleRecup = cle;
     recupStock.set(cle, new Set(Array.from(idsSrc.values())));
     recupSignature.delete(cle);
-    render();
+    vue.render();
     setLast('Travail récupéré : ' + (m.titre || 'document'));
     return m;
   }

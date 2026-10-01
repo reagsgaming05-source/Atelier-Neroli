@@ -14,6 +14,7 @@
   async function pagesSansPolices() {
     const docs = new Map();
     const sortie = [];
+    const tour = cadence();
     for (let k = 0; k < state.pages.length; k++) {
       const p = state.pages[k];
       const src = srcById(p.src);
@@ -24,7 +25,7 @@
         const abs = policesAbsentesDeLaPage(doc, doc.getPages()[p.index]);
         if (abs.length) sortie.push({ page: p, numero: k + 1, polices: abs });
       } catch (e) { signaler('Analyse des polices', e, 'info'); }
-      if (k % 25 === 24) { setBusy('Analyse des polices… ' + (k + 1) + '/' + state.pages.length, k / state.pages.length); await nextFrame(); }
+      await tour(() => setBusy('Analyse des polices… ' + (k + 1) + '/' + state.pages.length, k / state.pages.length));
     }
     return sortie;
   }
@@ -88,7 +89,7 @@
     if (!(await pertesAcceptees(pages, opts))) { setLast('Archivage annulé'); return; }
     setBusy('Archivage de ' + plural(pages.length, 'page', 'pages') + '…', 0, { annuler: true });
     // « rapport-modifié » est le nom par défaut d'un export : une archive n'est pas « modifiée ».
-    const nom = safeBase(baseName(el.filename.value)).replace(/-modifi[eé]$/i, '') + '-pdfa.pdf';
+    const nom = safeBase(baseName(el.filename.value)).replace(SUFFIXE_MODIFIE, '') + '-pdfa.pdf';
     try {
       const octets = await buildPdf(pages, Object.assign({ onProgress: (r, t) => { verifierAnnulation(); setBusy(t || 'Archivage…', r, { annuler: true }); } }, opts));
       setBusy('');

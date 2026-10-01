@@ -93,7 +93,7 @@ async function tournerPage(win, n) {
   fs.writeFileSync(pdf, fabriquerPdf(3));
   // AKTUM_SMOKE_DIR : les enregistrements y vont sans boîte de dialogue, et les
   // données (récents, récupération) dans son sous-dossier « donnees ».
-  const env = { ...process.env, AKTUM_SMOKE_DIR: dossier };
+  const env = { ...process.env, AKTUM_SMOKE_DIR: dossier, AKTUM_LANGUE: 'fr' };   // le test lit les libellés français, quelle que soit la langue du poste
   const sortie = path.join(dossier, 'essai-modifie.pdf');
   let ok = true;
   const verifier = (cond, quoi) => { if (!cond) { ok = false; console.log('ÉCHEC :', quoi); } };

@@ -47,6 +47,23 @@
       mtimeFichier: 0,
     };
   }
+  let signetActif = null;
+  // L'état de l'éditeur de page : l'onglet qui l'ouvre, les vignettes et les feuilles de lecture le consultent
+  // sans dépendre du module qui le dessine (92-editeur.js et suivants).
+  const ed = {
+    root: null, pageId: null, tool: 'select', zoom: 'fit', scale: 1, sel: null,
+    style: { color: '#E8B04B', textColor: '#D0021B', size: 14, width: 2, opacity: 0.35, font: 'Helvetica', bold: false },
+    gesture: null, snapped: false, lignes: null, lignesCle: null, saisie: null, polices: [],
+  };
+
+  function edPage() { return state.pages.find(p => p.id === ed.pageId); }
+
+  // Le modèle prévient sa vue par un seul chemin. Ces trois gestes — redessiner, rafraîchir les boutons, rafraîchir la
+  // sélection — sont des points d'accroche que 40-tuiles.js (les vignettes) et 99-init.js (la barre) renseignent au
+  // chargement ; n'importe quel module appelle vue.render() sans savoir qui répond. Avant, 99-init.js remplaçait
+  // « render » à chaud, ce qui supposait de savoir dans quel ordre tout se chargeait.
+  const vue = { render() {}, syncButtons() {}, updateSelectionUI() {} };
+
   function prendreEtat() {
     const e = {};
     CHAMPS_DOC.forEach(k => { e[k] = state[k]; });

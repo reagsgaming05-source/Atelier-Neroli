@@ -9,7 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const FICHIER = path.join(__dirname, '..', 'aktum-pdf-hors-ligne.html');
+// AKTUM_PAGE : une autre page construite (pour comparer deux versions : voir perf.spec.js).
+const FICHIER = process.env.AKTUM_PAGE || path.join(__dirname, '..', 'aktum-pdf-hors-ligne.html');
 // La page construite n'est pas dans le dépôt : elle se refait depuis la source.
 if (!fs.existsSync(FICHIER)) {
   throw new Error('outils/aktum-pdf-hors-ligne.html manque.\n'

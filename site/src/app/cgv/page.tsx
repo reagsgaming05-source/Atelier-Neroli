@@ -54,7 +54,7 @@ export default function CgvPage() {
 
       <h2>6. Ce que le logiciel ne fait pas</h2>
       <p>
-        La signature posée par le logiciel est une signature manuscrite dessinée, avec la date saisie : ce n&rsquo;est pas une signature électronique au sens de la loi fédérale sur la signature électronique (SCSE). Les actes qui exigent une signature qualifiée ou un cachet électronique réglementé nécessitent le recours à un prestataire reconnu. Le caviardage retire le texte du flux de la page ; il ne nettoie pas les métadonnées, les commentaires ni les champs de formulaire, et le client contrôle le fichier produit avant de le transmettre. Le logiciel ne produit pas de PDF/A et ne vérifie pas les signatures numériques des documents reçus.
+        La signature posée par le logiciel est une signature manuscrite dessinée, avec la date saisie, ou une signature numérique faite avec le certificat personnel du client : ni l&rsquo;une ni l&rsquo;autre n&rsquo;est une signature électronique qualifiée au sens de la loi fédérale sur la signature électronique (SCSE), et le logiciel ne pose pas d&rsquo;horodatage. Les actes qui exigent une signature qualifiée ou un cachet électronique réglementé nécessitent le recours à un prestataire reconnu. Le caviardage retire le terme du texte de la page et des autres endroits du fichier (métadonnées, notes, champs de formulaire, signets, pièces jointes), et le client contrôle le fichier produit avant de le transmettre. Le logiciel produit du PDF/A-2b, mais ni PDF/A-1 ni -3 ; il lit les signatures numériques des documents reçus sans dire si l&rsquo;autorité est reconnue ni si le certificat est révoqué.
       </p>
 
       <h2>7. Usage acceptable</h2>

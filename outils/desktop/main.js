@@ -16,6 +16,7 @@ const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain } = require('e
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const langue = require('./langue');
 
 // =============================================================================
 //  Réseau fermé — trois barrières, chacune suffisante pour une seule défaillance
@@ -733,6 +734,28 @@ async function ajouterDocuments() {
   if (liste.length) win.webContents.send('aktum:ouvrir', liste);
 }
 
+// La langue : celle du réglage mémorisé, sinon celle du système. Les fenêtres de dialogue et les réponses
+// faites à la page passent par le traducteur ; le menu se refait, et la page est prévenue, quand elle change.
+function initialiserLaLangue() {
+  langue.initialiser(app.getLocale(), lireReglages().langue, {
+    ecrire: (l) => { const r = lireReglages(); r.langue = l; ecrireReglages(r); },
+  });
+  for (const nom of ['showMessageBox', 'showSaveDialog', 'showOpenDialog']) {
+    const original = dialog[nom].bind(dialog);
+    dialog[nom] = (...args) => original(...args.map((a) => (a && typeof a === 'object' && !(a instanceof BrowserWindow)) ? langue.options(a) : a));
+  }
+  const erreur = dialog.showErrorBox.bind(dialog);
+  dialog.showErrorBox = (titre, contenu) => erreur(langue.t(titre), langue.t(contenu));
+  const handle = ipcMain.handle.bind(ipcMain);
+  ipcMain.handle = (canal, f) => handle(canal, async (...a) => langue.resultat(await f(...a)));
+  ipcMain.on('aktum:langue', (e) => { e.returnValue = langue.langue(); });
+  ipcMain.handle('aktum:choisir-langue', (_e, l) => langue.choisir(l));
+  langue.surChangement((l) => {
+    buildMenu();
+    BrowserWindow.getAllWindows().forEach((w) => { if (!w.isDestroyed()) w.webContents.send('aktum:langue', l); });
+  });
+}
+
 function buildMenu() {
   const template = [
     {
@@ -741,7 +764,7 @@ function buildMenu() {
         { label: 'Ouvrir…', accelerator: 'CmdOrCtrl+O', click: ouvrirDocuments },
         {
           label: 'Récents',
-          submenu: (lireRecents().length ? lireRecents().map((c) => ({ label: path.basename(c), sublabel: path.dirname(c), click: () => ouvrirRecent(c) })) : [{ label: 'Aucun fichier récent', enabled: false }])
+          submenu: (lireRecents().length ? lireRecents().map((c) => ({ brut: true, label: path.basename(c), sublabel: path.dirname(c), click: () => ouvrirRecent(c) })) : [{ label: 'Aucun fichier récent', enabled: false }])
             .concat([{ type: 'separator' }, { label: 'Effacer la liste', click: viderRecents }]),
         },
         { label: 'Ajouter au document…', accelerator: 'CmdOrCtrl+Shift+O', click: ajouterDocuments },
@@ -822,6 +845,13 @@ function buildMenu() {
       label: 'Aide',
       submenu: [
         { label: 'Raccourcis clavier', accelerator: 'F1', click: () => envoyer('raccourcis') },
+        {
+          label: 'Langue',
+          submenu: [
+            { brut: true, label: 'Français', type: 'radio', checked: langue.langue() === 'fr', click: () => langue.choisir('fr') },
+            { brut: true, label: 'Deutsch', type: 'radio', checked: langue.langue() === 'de', click: () => langue.choisir('de') },
+          ],
+        },
         { type: 'separator' },
         { label: 'Rechercher une mise à jour', click: () => { chercherUneMiseAJour(true).catch(() => {}); } },
         { label: 'Rapport de diagnostic pour le support…', click: () => { proposerLeDiagnostic().catch(() => {}); } },
@@ -844,7 +874,7 @@ function buildMenu() {
       ],
     },
   ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  Menu.setApplicationMenu(Menu.buildFromTemplate(langue.menu(template)));
 }
 
 // Les deux gestes d'une personne connectée : changer son mot de passe, refaire
@@ -859,6 +889,7 @@ function ouvrirMonCompte(mode) {
   });
   fen.removeMenu();
   fen.once('ready-to-show', () => fen.show());
+  langue.traduireLaPageDeConnexion(fen);
   fen.loadFile(path.join(__dirname, 'choix-profil.html'), { hash: mode });
 }
 
@@ -874,6 +905,7 @@ function demanderLeCompte() {
   });
   fen.removeMenu();
   fen.once('ready-to-show', () => fen.show());
+  langue.traduireLaPageDeConnexion(fen);
   fen.loadFile(path.join(__dirname, 'choix-profil.html'));
   // Refermée sans rien choisir : on ne peut pas travailler sans dossier.
   fen.on('closed', () => { if (!PROFIL) app.exit(0); }); // sans compte, rien à ouvrir
@@ -1089,6 +1121,7 @@ app.on('will-quit', () => {
 });
 
 app.whenReady().then(() => {
+  initialiserLaLangue();
   if (RANGEMENT.ou === 'comptes' && !PROFIL) {
     ipcMain.handle('aktum:comptes', () => comptesConnus().map((nom) => {
       const fiche = lireFiche(nom);

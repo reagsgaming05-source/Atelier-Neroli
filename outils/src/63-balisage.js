@@ -136,7 +136,7 @@
         ctx.lookup(racine.ref).set(nom('P'), struct);
         doc.catalog.set(nom('StructTreeRoot'), struct);
         doc.catalog.set(nom('MarkInfo'), ctx.obj({ Marked: true }));
-        doc.catalog.set(nom('Lang'), PDFString.of(o.langue || 'fr'));
+        doc.catalog.set(nom('Lang'), PDFString.of(o.langue || codeLangue()));
         doc.catalog.set(nom('ViewerPreferences'), ctx.obj({ DisplayDocTitle: true }));
         if (o.titre) doc.setTitle(o.titre);
         // Des métadonnées XMP (titre, langue, producteur) : ce que les outils d'accessibilité et les archives lisent.
@@ -146,7 +146,7 @@
           const xmp = '<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>\n<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
             + '<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:pdf="http://ns.adobe.com/pdf/1.3/">'
             + '<dc:title><rdf:Alt><rdf:li xml:lang="x-default">' + x(o.titre || '') + '</rdf:li></rdf:Alt></dc:title>'
-            + '<dc:language><rdf:Bag><rdf:li>' + x(o.langue || 'fr') + '</rdf:li></rdf:Bag></dc:language>'
+            + '<dc:language><rdf:Bag><rdf:li>' + x(o.langue || codeLangue()) + '</rdf:li></rdf:Bag></dc:language>'
             + '<pdf:Producer>' + x(o.producteur || '') + '</pdf:Producer></rdf:Description></rdf:RDF></x:xmpmeta>\n<?xpacket end="w"?>';
           doc.catalog.set(nom('Metadata'), ctx.register(ctx.stream(new TextEncoder().encode(xmp), { Type: 'Metadata', Subtype: 'XML' })));
         }

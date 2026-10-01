@@ -351,8 +351,9 @@ Si le navigateur ne peut pas être téléchargé sur le poste, `AKTUM_CHROMIUM=/
 indique celui qui est déjà là.
 
 `outils/src/` est la seule source, et **la seule chose versionnée**. L'application y vit en
-morceaux : `page.html` (l'ossature et quatre repères), `style.css`, `marque.svg`, et trente et un modules
-`NN-nom.js` lus dans l'ordre de leurs numéros — `00-socle` et `05-etat` d'abord, puis la
+morceaux : `page.html` (l'ossature et cinq repères), `style.css`, `marque.svg`, et quarante-neuf modules
+`NN-nom.js` lus dans l'ordre de leurs numéros — `00-socle`, `01-langue` et `05-etat` d'abord, puis
+les outils généraux (mesure, couleurs, icônes, fenêtres, opérations sur les pages), la
 lecture et les vignettes, l'écriture dans les flux PDF et l'assemblage, les outils un par un
 (OCR, comparaison, dossier de pièces, lots, recherche, tableau vers Excel), l'éditeur de page,
 et `99-init` qui met tout en marche. `assembler.js` les recolle en une page unique — une
@@ -363,6 +364,32 @@ charger le reste, et deux corrections éloignées se gênaient. Le découpage n'
 octet du livrable — le recollage a été comparé caractère pour caractère au fichier d'avant — et
 `outils/test/assemblage.test.js` garde la couture : repères consommés, page complète, modules
 numérotés sans doublon, script recollé qui s'analyse d'un bloc.
+
+**L'ordre des numéros est un contrat.** Les modules partagent une seule portée : une fonction peut en
+appeler une définie plus loin (elle ne s'exécute qu'une fois tout chargé), mais un `const` lu au
+chargement avant sa déclaration ne casse qu'au démarrage. Trois gardes le tiennent :
+`test/chargement.test.js` joue le chargement du script dans `node:vm` (avec un décor de document
+minimal) et dit quelle ligne casse ; `test/couplage.test.js` mesure, avec acorn, les références à
+contre-courant — de 285 à 78 depuis la remise en ordre — et ne laisse pas ce plafond remonter ;
+`node test/couplage-outil.js` les liste, symbole par symbole. Pour redessiner depuis un module qui
+précède les vignettes, on appelle `vue.render()` (point d'accroche posé dans `05-etat.js`, branché par
+`40-tuiles.js` et `99-init.js`), pas `render()`. Pour rendre la main dans une boucle sur des pages,
+on prend une `cadence()` (`08-outillage.js`) : elle rend la main sur un budget de temps, pas toutes
+les N pages — une page de texte coûte 10 ms, un scan 500.
+
+**Le dessin des pages lourdes se fait hors du fil principal** (`09-rendu.js`) : un scan se dessine dans
+un travailleur, sur un `OffscreenCanvas`, et revient en `ImageBitmap` — pixel pour pixel comme sur le fil
+principal (`test-e2e/rendu.spec.js`), sans figer la fenêtre (63 ms de blocage mesurés au lieu de
+3 s sur trois pages de 8,7 mégapixels). Un document de texte garde le chemin d'avant, et le moindre
+échec du travailleur y ramène aussi.
+
+**Deux langues, un seul code.** Le code est écrit en français ; `src/01-langue.js` et le traducteur
+partagé `desktop/traducteur.js` donnent l'allemand à partir du dictionnaire `i18n/de.json` (page) et
+`desktop/langue-de.json` (menus, fenêtres, connexion). `node i18n/majdico.js` dit ce qui reste à
+traduire — `test/langue.test.js` fait échouer la construction si un texte affiché n'a pas son
+allemand — et `test-e2e/langue.spec.js` ouvre chaque outil en allemand pour traquer le français
+resté. Ce qui est gravé dans un document (sommaire, intercalaires, cartouche de signature,
+tampons) passe par `tr()`.
 
 La marque est dessinée une seule fois, dans `src/marque.svg` : une feuille de papier, son coin
 replié et un signet posé dessus, en rouge. `assembler.js` en pose le tracé dans la page — les
@@ -388,7 +415,13 @@ Ceux de `outils/test-e2e/` pilotent l'application entière dans Chromium, sur la
 et donc sans réseau : ils tiennent les promesses qu'une relecture ne suffit pas à garantir — un
 mot caviardé qui quitte vraiment le fichier, un sommaire de dossier à jour dans le PDF
 enregistré, un lien interne qui suit sa page. Ils tournent sur Linux à chaque poussée, et la
-version Windows n'est empaquetée que s'ils passent.
+version Windows n'est empaquetée que s'ils passent. Trois séries en plus : des **garde-temps**
+(`perf.spec.js` : la recherche sur 300 pages, l'export de 100 pages, un dossier de 10 pièces, avec
+des plafonds qui font échouer la chaîne) ; une **régression visuelle** (`visuel.spec.js` : six
+références dans `test-e2e/references/` — une lettre avec accents, un tableau, un scan, en lecture
+et en vignette ; `AKTUM_REFERENCES=ecrire` les refait quand Playwright change de Chromium) ;
+et des scénarios pour ce que rien ne couvrait (`impression.spec.js`, `comparer.spec.js`,
+`lots.spec.js`).
 
 Le lanceur Go en un seul fichier (`outils/application/lanceur/`, fenêtre WebView2, 4 Mo) reste
 disponible en solution de repli : `sh outils/application/lanceur/construire.sh`.

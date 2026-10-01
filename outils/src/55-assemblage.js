@@ -458,3 +458,9 @@
     return doc;
   }
 
+  async function dessinerMention(doc, page, p, fonts) {
+    if (!p.piece) return;
+    const g = pageGeom(p);
+    const font = await getFont(doc, fonts, 'Helvetica', true, false);
+    drawDisplayText(page, g, { text: p.piece, x: g.Wd - MENTION.marge, y: MENTION.haut, size: MENTION.size, font, color: '#333333', align: 'right' });
+  }

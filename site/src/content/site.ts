@@ -17,7 +17,7 @@ export const site = {
   legalName: editeur.nom || "L'éditeur",
   tagline: "Tout le travail PDF d'un secrétariat, sans qu'un document sorte",
   description:
-    "Aktum PDF est un logiciel PDF complet pour un secrétariat communal ou scolaire suisse. Vingt-six outils : lire, réorganiser, fusionner, corriger le texte dans le PDF, annoter, caviarder, reconnaître le texte d'un scan en français et en allemand, recopier un tableau dans Excel, comparer deux versions, constituer un dossier de pièces avec intercalaires, pagination continue et sommaire, imprimer en livret. Il se décompresse dans un dossier et se lance par double-clic : rien à installer, aucun droit administrateur. Il n'ouvre aucune connexion pour traiter un document.",
+    "Aktum PDF est un logiciel PDF complet pour un secrétariat communal ou scolaire suisse. Trente et un outils : lire, réorganiser, fusionner, corriger le texte dans le PDF, annoter, caviarder, reconnaître le texte d'un scan en français et en allemand, recopier un tableau dans Excel, comparer deux versions, constituer un dossier de pièces avec intercalaires, pagination continue et sommaire, imprimer en livret. Il se décompresse dans un dossier et se lance par double-clic : rien à installer, aucun droit administrateur. Il n'ouvre aucune connexion pour traiter un document.",
   audience: "les communes, les établissements scolaires et les services de l'État",
   /** Vrai seulement quand l'éditeur a renseigné son adresse : sinon, rien à afficher. */
   adresseConnue,
@@ -201,8 +201,8 @@ export const features: Feature[] = [
     category: "Protéger & signer",
     summary: "Recherchez un terme dans tout le document et caviardez toutes ses occurrences après confirmation du nombre.",
     description:
-      "Le caviardage retire du flux de la page les lettres masquées, et refait l'image lorsqu'une image passe sous la zone. Le logiciel annonce le nombre d'occurrences avant d'agir et demande confirmation. Les métadonnées, les commentaires et les champs de formulaire ne sont pas traités : nettoyez-les avant transmission, et relisez le fichier produit.",
-    details: ["Recherche dans tout le document", "Confirmation du nombre d'occurrences", "Texte de la page seulement"],
+      "Le caviardage retire du flux de la page les lettres masquées, et refait l'image lorsqu'une image passe sous la zone. Le terme est aussi cherché, et retiré, dans les métadonnées, les légendes d'images, les notes, les champs de formulaire, les signets, les pièces jointes et le texte posé hors de la page. Le logiciel annonce le nombre d'occurrences avant d'agir et demande confirmation ; un contrôle fait avec des outils qui ne sont pas les nôtres vérifie le résultat sur des documents piégés à chaque construction. Relisez tout de même le fichier produit avant de le publier.",
+    details: ["Recherche dans tout le document", "Confirmation du nombre d'occurrences", "Page, métadonnées, notes, formulaires, signets, pièces jointes"],
     icon: "redact",
     pro: true,
   },
@@ -214,6 +214,68 @@ export const features: Feature[] = [
     description:
       "La signature dessinée est fondue dans la page, avec la date que vous saisissez. Ce n'est pas une signature électronique au sens de la loi fédérale sur la signature électronique (SCSE) : pour une décision notifiée par voie électronique, un cachet électronique réglementé est requis, et nous vous orientons vers un fournisseur reconnu.",
     details: ["Signature tracée", "Date saisie", "Pas de signature qualifiée (SCSE)"],
+    icon: "sign",
+    pro: true,
+  },
+  {
+    slug: "plages",
+    name: "Sélectionner par numéros",
+    category: "Constituer & organiser",
+    summary: "« 3-7, 12 » : une seule écriture pour sélectionner, imprimer ou diviser, et des réglages qui reviennent d'un document à l'autre.",
+    description:
+      "La sélection par numéros accepte des plages (3-7), « 5- » jusqu'à la fin et « -3 » jusqu'à la page 3, séparées par des virgules ; la même écriture sert à l'impression et à la division. Le filigrane, la numérotation, l'en-tête et le pied de page reprennent les réglages du dernier document, qu'on peut revenir aux réglages d'origine.",
+    details: ["Sélection par numéros de pages", "Même écriture à l'impression et à la division", "Réglages mémorisés d'un document à l'autre"],
+    icon: "organize",
+  },
+  {
+    slug: "serie",
+    name: "Remplir des formulaires en série",
+    category: "Corriger & annoter",
+    summary: "Un formulaire PDF et un tableau (CSV) : une copie remplie par ligne du tableau.",
+    description:
+      "Le tableau (CSV, en UTF-8 ou en Windows-1252) donne une ligne par copie ; ses colonnes se relient aux champs du formulaire. Les valeurs que le logiciel ne comprend pas (une case à cocher, un choix qui n'existe pas) sont signalées avant, jamais devinées. Le résultat est un PDF par ligne, réunis dans une archive ZIP, ou un seul PDF.",
+    details: ["Une copie par ligne du tableau", "Valeurs mal comprises signalées avant", "Un PDF par ligne (ZIP) ou un seul PDF"],
+    icon: "forms",
+  },
+  {
+    slug: "accessibilite",
+    name: "Rendre les documents accessibles",
+    category: "Corriger & annoter",
+    summary: "Une langue, un titre et une structure pour les documents que le logiciel produit.",
+    description:
+      "Dans les Propriétés, le balisage d'accessibilité donne au document produit une langue, un titre et une structure que suivent les lecteurs d'écran : un dossier de pièces a de vrais titres, une numérotation est marquée comme décor. Ce n'est pas PDF/UA : les liens, les formulaires et les pages venues d'ailleurs ne reçoivent pas de structure fine, et le logiciel ne devine ni titres, ni listes, ni tableaux dans un document reçu.",
+    details: ["Langue, titre, structure", "Vrais titres pour un dossier de pièces", "Pas de PDF/UA"],
+    icon: "annotate",
+  },
+  {
+    slug: "archiver",
+    name: "Archiver en PDF/A-2b",
+    category: "Protéger & signer",
+    summary: "Un format d'archivage à long terme, contrôlé avant d'être déclaré.",
+    description:
+      "« Archiver en PDF/A-2b » reconstruit le document, le contrôle (polices incorporées, pas de script, pas de chiffrement, annotations imprimables, métadonnées) et ne le déclare PDF/A-2b que si rien ne s'y oppose ; le contrôle est jugé par veraPDF à chaque construction du logiciel. Une page dont les polices ne sont pas incorporées ne se convertit en image qu'avec votre accord. Seul le niveau 2b existe : ni PDF/A-1, ni PDF/A-3, ni niveau a.",
+    details: ["PDF/A-2b, contrôlé avant d'être déclaré", "Jugé par veraPDF à chaque construction", "Pages sans polices incorporées : en images, avec votre accord"],
+    icon: "protect",
+  },
+  {
+    slug: "signatures",
+    name: "Vérifier les signatures reçues",
+    category: "Protéger & signer",
+    summary: "Un document signé reçu : le contenu est-il intact, et qui l'a signé ?",
+    description:
+      "Le logiciel contrôle, sur le poste, que le contenu couvert par chaque signature n'a pas changé, signale ce qui a été ajouté après (un formulaire rempli, une annotation, une version corrigée) et lit le signataire dans son certificat. Il ne dit pas si l'autorité qui a délivré le certificat est reconnue, ni si le certificat a été révoqué : ce contrôle suppose une connexion, que le logiciel n'ouvre jamais. Ce n'est donc pas une validation au sens de la SCSE.",
+    details: ["Contenu signé intact ou modifié", "Signataire, date, certificat", "Ni contrôle d'autorité, ni révocation"],
+    icon: "sign",
+    pro: true,
+  },
+  {
+    slug: "certificat",
+    name: "Signer avec un certificat",
+    category: "Protéger & signer",
+    summary: "Une signature numérique faite avec votre certificat personnel (.p12, .pfx), visible ou non.",
+    description:
+      "Le certificat se lit sur le poste, avec son mot de passe, qui n'est jamais gardé. La signature (clés RSA) se pose dans un coin d'une page ou reste invisible, et elle est relue avant d'être enregistrée ; le PDF signé s'ouvre dans les autres lecteurs. Le logiciel ne pose pas d'horodatage, et la valeur juridique est celle de votre certificat : une signature qualifiée suppose un certificat qualifié, délivré par un prestataire reconnu.",
+    details: ["Fichier .p12 ou .pfx, clés RSA", "Visible ou invisible, relue avant enregistrement", "Pas d'horodatage"],
     icon: "sign",
     pro: true,
   },
@@ -280,15 +342,15 @@ export const faq = [
   },
   {
     q: "Les signatures sont-elles valables juridiquement ?",
-    a: "Le logiciel pose une signature manuscrite dessinée dans la page, avec la date que vous saisissez. Ce n'est pas une signature électronique au sens de la SCSE. Pour une décision notifiée par voie électronique, un cachet électronique réglementé est requis (OCEl-PA, art. 9) ; nous vous orientons vers un fournisseur reconnu.",
+    a: "Le logiciel pose une signature manuscrite dessinée dans la page, avec la date que vous saisissez, ou une signature numérique faite avec votre certificat personnel (.p12, .pfx). Ni l'une ni l'autre n'est une signature électronique qualifiée au sens de la SCSE. Pour une décision notifiée par voie électronique, un cachet électronique réglementé est requis (OCEl-PA, art. 9) ; nous vous orientons vers un fournisseur reconnu.",
   },
   {
     q: "Le caviardage est-il définitif ?",
-    a: "Le caviardage retire du flux de la page les lettres masquées, et refait l'image lorsqu'une image passe sous la zone. Les métadonnées, les commentaires et les champs de formulaire ne sont pas traités : nettoyez-les avant transmission et relisez le fichier produit avant de le publier.",
+    a: "Le caviardage retire du flux de la page les lettres masquées, et refait l'image lorsqu'une image passe sous la zone ; le terme est aussi retiré des métadonnées, des notes, des champs de formulaire, des signets et des pièces jointes. Un contrôle fait avec des outils qui ne sont pas les nôtres le vérifie à chaque construction du logiciel. Relisez tout de même le fichier produit avant de le publier : le logiciel ne peut pas deviner qu'un nom s'écrit autrement ailleurs.",
   },
   {
     q: "Que ne fait pas le logiciel ?",
-    a: "Il ne vérifie pas les signatures numériques des PDF que vous recevez, il ne produit pas de PDF/A, il ne convertit pas depuis ou vers Word, Excel et PowerPoint, et il ne balise pas les documents pour l'accessibilité. Nous le disons avant l'évaluation, pas après.",
+    a: "Il ne délivre pas de signature électronique qualifiée et ne pose pas d'horodatage ; il lit les signatures des PDF reçus sans dire si l'autorité est reconnue ni si le certificat a été révoqué ; il produit du PDF/A-2b mais ni PDF/A-1 ni -3 ; son balisage d'accessibilité donne une langue, un titre et une structure aux documents qu'il produit sans atteindre PDF/UA ; et il ne convertit pas depuis ou vers Word, Excel et PowerPoint. Nous le disons avant l'évaluation, pas après.",
   },
   {
     q: "Que se passe-t-il si vous cessez l'activité ?",
@@ -367,10 +429,10 @@ export const comparison = {
     { label: "Installation sans droits administrateur", values: ["yes", "no", "yes"] },
     { label: "Offre, bon de commande et QR-facture", values: ["yes", "partial", "no"] },
     { label: "Signature électronique qualifiée (SCSE)", values: ["no", "partial", "no"] },
-    { label: "Sortie PDF/A pour l'archivage", values: ["no", "yes", "no"] },
+    { label: "Sortie PDF/A pour l'archivage", values: ["partial", "yes", "no"] },
     { label: "Conversion depuis et vers Word, Excel, PowerPoint", values: ["no", "yes", "partial"] },
   ] as { label: string; values: ("yes" | "no" | "partial")[] }[],
-  note: "Comparatif établi à partir du logiciel livré et des offres publiques des concurrents. Les deux dernières lignes sont des limites du produit, que nous indiquons volontairement.",
+  note: "Comparatif établi à partir du logiciel livré et des offres publiques des concurrents. Les lignes sur la signature qualifiée et la conversion bureautique sont des limites du produit, que nous indiquons volontairement ; en PDF/A, seul le niveau 2b est produit.",
 };
 
 /** Hypothèses du calculateur d'économies. */

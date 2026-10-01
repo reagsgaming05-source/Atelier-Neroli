@@ -535,7 +535,7 @@
       if (quoi === 'proprietes') { imprimerPages(pages, Object.assign({}, o, { dialogue: true })); return; }
       assemblerPourImpression(pages, o).then(octets => {
         if (octets) deliver(octets, safeBase(el.filename.value)
-          + (o.disposition === 'livret' ? '-livret' : o.disposition === 'nup' ? '-' + o.parFeuille + '-par-feuille' : '') + '.pdf');
+          + (o.disposition === 'livret' ? tr('-livret') : o.disposition === 'nup' ? '-' + o.parFeuille + tr('-par-feuille') : '') + '.pdf');
       });
     };
 

@@ -22,6 +22,9 @@ const REPERE_FAVICON = '<!--@favicon@-->\n';
 // si l'interface est en allemand. On n'y met que ce qui change : un texte identique dans les deux langues
 // (un sigle, une mesure) se rend tel quel sans entrée.
 const REPERE_DICO_DE = '<!--@dico-de@-->\n';
+// Le traducteur (desktop/traducteur.js) est écrit une fois, pour la page et pour le processus principal d'Electron :
+// la page le reçoit à l'endroit que src/01-langue.js lui réserve, indenté comme le reste du module.
+const REPERE_TRADUCTEUR = '  /*@traducteur@*/\n';
 
 function lire(f) {
   // Windows convertit les fins de ligne au passage : on travaille en LF.
@@ -53,6 +56,15 @@ function favicon() {
   return '<link rel="icon" href="data:image/svg+xml;base64,' + b64 + '">\n';
 }
 
+function traducteur() {
+  const src = fs.readFileSync(path.join(__dirname, 'desktop', 'traducteur.js'), 'utf8').replace(/\r\n/g, '\n');
+  // Sans l'en-tête d'explication ni la ligne d'export, propre à Node.
+  const a = src.indexOf('// @debut-langue');
+  const b = src.indexOf('\nif (typeof module');
+  if (a < 0 || b < 0) throw new Error('desktop/traducteur.js : repères introuvables');
+  return src.slice(a, b).replace(/\n+$/, '\n').split('\n').map(l => (l ? '  ' + l : l)).join('\n');
+}
+
 function dictionnaireAllemand() {
   const brut = JSON.parse(fs.readFileSync(path.join(__dirname, 'i18n', 'de.json'), 'utf8'));
   const dico = { litteraux: {}, motifs: {}, html: {}, pluriels: brut.pluriels || {} };
@@ -67,7 +79,9 @@ function assembler() {
     [REPERE_MARQUE, 'marque'], [REPERE_FAVICON, 'favicon'], [REPERE_DICO_DE, 'dico-de']]) {
     if (!page.includes(repere)) throw new Error('repère ' + quoi + ' introuvable dans src/page.html');
   }
-  const js = modules().map(lire).join('');
+  let js = modules().map(lire).join('');
+  if (!js.includes(REPERE_TRADUCTEUR)) throw new Error('repère traducteur introuvable dans src/01-langue.js');
+  js = js.replace(REPERE_TRADUCTEUR, () => traducteur());
   // Fonction de remplacement plutôt que chaîne : un « $& » dans le code serait
   // sinon interprété par String.replace.
   page = page.replace(REPERE_STYLE, () => lire('style.css'));

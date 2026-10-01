@@ -6,9 +6,12 @@
  * produit pas, un vendeur inventé. Chacune a été retirée ; ce test empêche
  * qu'elle revienne, par une retouche de texte ou un copier-coller.
  *
- * Si l'une de ces formulations devient vraie un jour — le logiciel produit un
- * jour du PDF/A —, c'est la ligne de ce test qu'on retire, dans le même commit
- * que la fonction, et pas avant.
+ * Si l'une de ces formulations devient vraie un jour, c'est la ligne de ce test
+ * qu'on retire, dans le même commit que la fonction, et pas avant. (C'est ce qui
+ * est arrivé au PDF/A-2b, à la vérification des signatures, à la signature par
+ * certificat et au balisage d'accessibilité : leurs lignes ont quitté ce test
+ * quand les fonctions sont arrivées. Ce qui reste interdit — PDF/UA, signature
+ * qualifiée, horodatage — n'existe toujours pas.)
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -37,14 +40,15 @@ const INTERDITES: [RegExp, string, boolean?][] = [
   [/connexion unique|identité cantonale|authentification à deux facteurs|authentification unique/i, "n'existe pas"],
   [/30 langues|plus de trente langues/i, "deux langues : français et allemand"],
   [/PDF\/UA|PDF\/X/i, "le logiciel ne produit ni l'un ni l'autre"],
-  [/horodat|certificat d'audit|journal d'audit|rappels? automatique|ordre de signature|envoi groupé/i, "aucune signature électronique n'existe dans le logiciel"],
+  [/horodat|certificat d'audit|journal d'audit|rappels? automatique|ordre de signature|envoi groupé/i, "le logiciel ne pose ni horodatage, ni signature qualifiée, ni circuit de signature"],
+  [/signature (électronique )?qualifiée (posée|produite|incluse)|valeur légale de (la|sa) signature|autorité (de certification )?reconnue (par|automatiquement)/i, "la signature du logiciel n'est pas qualifiée et il ne contrôle pas les autorités"],
   [/motifs? prédéfinis|rapport de vérification|numéro AVS caviardé|motif : numéro AVS/i, "aucun motif ni rapport dans le logiciel"],
   [/détection automatique (des|repère)|y compris scannés/i, "le logiciel ne détecte pas les champs d'un scan"],
   [/plus de \d+ langues|word, excel, powerpoint, jpg|conversion par lots|convertir dans les deux sens|documents office/i, "aucune conversion bureautique"],
   [/division par signets|par signets ou par taille|table des matières générée automatiquement/i, "n'existe pas dans la fusion ni la division"],
   [/jusqu'à 90 ?%|polices et le texte restent vectoriels|compresser sans perte|aperçu avant ?\/ ?après/i, "la réduction convertit les pages en images"],
   [/annuler ?\/ ?rétablir illimité/i, "soixante états"],
-  [/douze outils|12 outils|les 12 outils/i, "le panneau compte vingt-six outils"],
+  [/douze outils|12 outils|les 12 outils|vingt-six outils|26 outils/i, "le panneau compte trente et un outils"],
   [/témoignage à recueillir|fondée en 2021|CHE-000|aktumpdf\.ch|route de vevey|\+41 ?21 ?943|linkedin\.com/i, "donnée inventée", true],
   [/\bsàrl\b/i, "aucune société n'est constituée", true],
   [/sous (24|48|deux|2) ?(h|heures|jours)|24 h ouvrées|deux jours ouvrables|48 heures/i, "aucun délai de réponse n'est tenable sans courriel branché", true],

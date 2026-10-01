@@ -34,7 +34,7 @@
             const ids = new Set((r ? r.vides : []).map(m => m.p.id));
             const restantes = state.pages.filter(p => !ids.has(p.id));
             if (!restantes.length) { rapport.push(f.name + ' : toutes les pages sont vides, rien à garder'); continue; }
-            sorties.push({ nom: base + '-sans-vides.pdf', octets: await buildPdf(restantes, { noInPlace: ids.size > 0 }) });
+            sorties.push({ nom: base + tr('-sans-vides.pdf'), octets: await buildPdf(restantes, { noInPlace: ids.size > 0 }) });
             rapport.push(f.name + ' : ' + (ids.size ? plural(ids.size, 'page vide retirée', 'pages vides retirées') : 'aucune page vide'));
           } else if (op === 'compresser') {
             const avant = state.sources.reduce((a, s) => a + s.bytes.byteLength, 0);
@@ -45,16 +45,16 @@
               rapport.push(f.name + ' : non réduit — le résultat aurait fait ' + fmtSize(octets.length) + ' contre ' + fmtSize(avant) + ' (document de texte : la conversion en images l\'alourdirait), laissé tel quel');
               continue;
             }
-            sorties.push({ nom: base + '-leger.pdf', octets });
+            sorties.push({ nom: base + tr('-leger.pdf'), octets });
             rapport.push(f.name + ' : ' + fmtSize(avant) + ' → ' + fmtSize(octets.length));
           } else if (op === 'numeroter') {
             state.stamp = { headerLeft: '', headerCenter: '', headerRight: '', footerLeft: '', footerCenter: '{p} / {n}', footerRight: '',
               font: 'Helvetica', bold: false, size: 9, color: '#444444', margin: 28, start: 1, skipFirst: false, batesPrefix: '', batesDigits: 4 };
-            sorties.push({ nom: base + '-numerote.pdf', octets: await buildPdf(state.pages) });
+            sorties.push({ nom: base + tr('-numerote.pdf'), octets: await buildPdf(state.pages) });
             rapport.push(f.name + ' : ' + plural(state.pages.length, 'page numérotée', 'pages numérotées'));
           } else if (op === 'proteger') {
             state.security = { userPassword: params.pw || '', ownerPassword: params.pwo || params.pw || '', permissions: {} };
-            sorties.push({ nom: base + '-protege.pdf', octets: await buildPdf(state.pages) });
+            sorties.push({ nom: base + tr('-protege.pdf'), octets: await buildPdf(state.pages) });
             rapport.push(f.name + ' : protégé');
           } else if (op === 'images') {
             sorties.push({ nom: base + '.pdf', octets: await buildPdf(state.pages) });
@@ -65,7 +65,7 @@
             rapport.push(f.name + ' : ' + plural(n, 'fichier', 'fichiers'));
           } else if (op === 'texte') {
             const parts = [];
-            for (let k = 0; k < state.pages.length; k++) parts.push('--- Page ' + (k + 1) + ' ---\n' + ((await getPageText(state.pages[k])) || '(aucun texte)'));
+            for (let k = 0; k < state.pages.length; k++) parts.push(tr('--- Page ' + (k + 1) + ' ---\n') + ((await getPageText(state.pages[k])) || tr('(aucun texte)')));
             sorties.push({ nom: base + '.txt', octets: new TextEncoder().encode(parts.join('\n\n')) });
             rapport.push(f.name + ' : texte extrait');
           }
@@ -74,7 +74,7 @@
     } finally {
       poserEtat(sauve);
       state.silencieux = false;
-      render();
+      vue.render();
     }
     return { sorties, rapport };
   }
@@ -143,7 +143,7 @@
             const zip = new JSZip();
             r.sorties.forEach(f => zip.file(f.nom, f.octets));
             const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-            await deliver(blob, 'lot-' + quoi + '-' + jour + '.zip', 'application/zip');
+            await deliver(blob, tr('lot-') + quoi + '-' + jour + '.zip', 'application/zip');
           }
           setLast('Lot traité : ' + plural(r.sorties.length, 'fichier produit', 'fichiers produits'));
           dialog({
@@ -215,7 +215,7 @@
             const zip = new JSZip();
             files.forEach(f => zip.file(f.name, f.bytes));
             const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-            await deliver(blob, base + '-divise.zip', 'application/zip');
+            await deliver(blob, base + tr('-divise.zip'), 'application/zip');
           } else {
             for (const f of files) await deliver(f.bytes, f.name);
           }
@@ -276,7 +276,7 @@
             if (i % 8 === 0) { setBusy('Redimensionnement… ' + (i + 1) + '/' + state.pages.length, i / state.pages.length); await nextFrame(); }
           }
           const bytes = await out.save();
-          await replaceProject(bytes, safeBase(el.filename.value) + '-redimensionné.pdf');
+          await replaceProject(bytes, safeBase(el.filename.value) + tr('-redimensionné.pdf'));
           setLast('Pages redimensionnées');
         } catch (e) { console.error(e); toast('Échec du redimensionnement : ' + e.message, 'error'); }
         finally { setBusy(''); }
@@ -293,11 +293,11 @@
     await addPdfSource(name, buf, { silent: true });
     state.meta = keepMeta; state.security = keepSec;
     state.touched = true;
-    render();
+    vue.render();
   }
 
   function toolWatermark() {
-    const origine = { text: 'CONFIDENTIEL', font: 'Helvetica', bold: true, size: 60, color: '#FF0000', opacity: 0.18, angle: 45, mode: 'center' };
+    const origine = { text: tr('CONFIDENTIEL'), font: 'Helvetica', bold: true, size: 60, color: '#FF0000', opacity: 0.18, angle: 45, mode: 'center' };
     // Sans filigrane posé, on reprend le dernier réglage appliqué : le même
     // texte, la même teinte, d'un document au suivant.
     const memo = !state.watermark && reglageLire('filigrane');
@@ -326,7 +326,7 @@
       },
       actions: [
         memo ? { label: 'Réglages d\'origine', onClick: close => { reglageEcrire('filigrane', null); close(); toolWatermark(); } } : null,
-        state.watermark ? { label: 'Retirer', onClick: close => { snapshot(); state.watermark = null; render(); close(); setLast('Filigrane retiré'); } } : null,
+        state.watermark ? { label: 'Retirer', onClick: close => { snapshot(); state.watermark = null; vue.render(); close(); setLast('Filigrane retiré'); } } : null,
         { label: 'Annuler', onClick: c => c() },
         { label: 'Appliquer', primary: true, onClick: close => {
           if (!text.value.trim()) { toast('Indiquez le texte du filigrane.', 'warn'); return; }
@@ -338,7 +338,7 @@
             angle: clampInt(angle.value, -180, 180) || 0, mode: mode.value,
           };
           reglageEcrire('filigrane', state.watermark);
-          state.touched = true; render(); close();
+          state.touched = true; vue.render(); close();
           setLast('Filigrane « ' + state.watermark.text + ' » appliqué');
         } },
       ].filter(Boolean),
@@ -381,7 +381,7 @@
       },
       actions: [
         memo ? { label: 'Réglages d\'origine', onClick: close => { reglageEcrire(cleMemo, null); close(); toolStamp(preset); } } : null,
-        state.stamp ? { label: 'Retirer', onClick: close => { snapshot(); state.stamp = null; render(); close(); setLast('En-tête et pied de page retirés'); } } : null,
+        state.stamp ? { label: 'Retirer', onClick: close => { snapshot(); state.stamp = null; vue.render(); close(); setLast('En-tête et pied de page retirés'); } } : null,
         { label: 'Annuler', onClick: c => c() },
         { label: 'Appliquer', primary: true, onClick: close => {
           const next = {
@@ -395,7 +395,7 @@
           if (!any) { toast('Renseignez au moins une zone.', 'warn'); return; }
           snapshot();
           reglageEcrire(cleMemo, next);
-          state.stamp = next; state.touched = true; render(); close();
+          state.stamp = next; state.touched = true; vue.render(); close();
           setLast('En-tête et pied de page appliqués');
         } },
       ].filter(Boolean),
@@ -407,7 +407,7 @@
     const a = input('pr-author', 'text', state.meta.author);
     const s = input('pr-subject', 'text', state.meta.subject);
     const k = input('pr-keywords', 'text', state.meta.keywords);
-    const langue = select('pr-langue', BALISAGE_LANGUES, state.meta.langue || 'fr');
+    const langue = select('pr-langue', BALISAGE_LANGUES, state.meta.langue || codeLangue());
     const balise = checkbox('pr-balise', 'Balisage d\'accessibilité (PDF balisé pour les lecteurs d\'écran)', !!state.meta.balise);
     dialog({
       title: 'Propriétés du document', icon: IC.info,
@@ -431,7 +431,7 @@
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Enregistrer', primary: true, onClick: close => {
         snapshot();
         state.meta = { title: t.value.trim(), author: a.value.trim(), subject: s.value.trim(), keywords: k.value.trim(), balise: balise.input.checked, langue: langue.value };
-        state.touched = true; render(); close();
+        state.touched = true; vue.render(); close();
         setLast('Propriétés enregistrées');
       } }],
     });
@@ -464,7 +464,7 @@
         b.append(note('Chiffrement AES-256, appliqué au moment de l\'export. Conservez le mot de passe : il est impossible de le retrouver.'));
       },
       actions: [
-        state.security ? { label: 'Retirer', onClick: close => { snapshot(); state.security = null; render(); close(); setLast('Protection retirée'); } } : null,
+        state.security ? { label: 'Retirer', onClick: close => { snapshot(); state.security = null; vue.render(); close(); setLast('Protection retirée'); } } : null,
         { label: 'Annuler', onClick: c => c() },
         { label: 'Appliquer', primary: true, onClick: close => {
           if (!up.value && !op.value) { toast('Indiquez au moins un mot de passe.', 'warn'); return; }
@@ -476,7 +476,7 @@
           permissions.contentAccessibility = true;
           snapshot();
           state.security = { userPassword: up.value, ownerPassword: op.value || up.value, permissions };
-          state.touched = true; render(); close();
+          state.touched = true; vue.render(); close();
           setLast('Protection par mot de passe activée');
         } },
       ].filter(Boolean),
@@ -495,7 +495,7 @@
         b.append(note('Par défaut, les annotations partent comme de vrais commentaires PDF : dans Acrobat ou un navigateur, le destinataire les voit, peut les déplacer, les modifier ou les retirer. Figées, elles font partie de la page comme de l\'encre. Les corrections de texte, les images, les signatures et les caviardages sont toujours fondus dans la page ; une page caviardée garde son texte net, seules les lettres masquées et, s\'il y a lieu, l\'image sous le rectangle sont refaites.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Appliquer', primary: true, onClick: close => {
-        snapshot(); state.flatten = flat.input.checked; state.figerAnnotations = figer.input.checked; state.touched = true; render(); close();
+        snapshot(); state.flatten = flat.input.checked; state.figerAnnotations = figer.input.checked; state.touched = true; vue.render(); close();
         setLast((state.flatten ? 'Champs aplatis à l\'export' : 'Champs conservés') + ' · annotations ' + (state.figerAnnotations ? 'figées' : 'modifiables'));
       } }],
     });
@@ -552,7 +552,7 @@
         inputs.forEach((get, name) => { vals[name] = get(); });
         current.formValues = vals;
         state.flatten = flat.input.checked;
-        state.touched = true; render(); close();
+        state.touched = true; vue.render(); close();
         setLast('Formulaire rempli : ' + plural(Object.keys(vals).length, 'champ', 'champs'));
       } }],
     });
@@ -589,35 +589,13 @@
             const zip = new JSZip();
             files.forEach(f => zip.file(f.name, f.blob));
             const out = await zip.generateAsync({ type: 'blob' });
-            await deliver(out, base + '-images.zip', 'application/zip');
+            await deliver(out, base + tr('-images.zip'), 'application/zip');
           } else { for (const f of files) await deliver(f.blob, f.name, f.blob.type); }
           setLast(plural(files.length, 'image exportée', 'images exportées'));
         } catch (e) { console.error(e); toast('Échec de l\'export : ' + e.message, 'error'); }
         finally { setBusy(''); }
       } }],
     });
-  }
-
-  async function getPageText(p) {
-    const k = pkey(p);
-    if (textCache.has(k)) return textCache.get(k);
-    const src = srcById(p.src);
-    if (!src) return '';
-    try {
-      const page = await src.pdfjs.getPage(p.index + 1);
-      const tc = await page.getTextContent();
-      let last = null, out = '';
-      tc.items.forEach(it => {
-        if (last && it.transform && last.transform && Math.abs(it.transform[5] - last.transform[5]) > 2) out += '\n';
-        else if (out && !/\s$/.test(out)) out += ' ';
-        out += it.str;
-        last = it;
-      });
-      page.cleanup();
-      const s = out.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-      textCache.set(k, s);
-      return s;
-    } catch (_) { textCache.set(k, ''); return ''; }
   }
 
   async function toolExportText() {
@@ -627,7 +605,7 @@
       for (let i = 0; i < state.pages.length; i++) {
         setBusy('Page ' + (i + 1) + '/' + state.pages.length + '…', i / state.pages.length);
         const t = await getPageText(state.pages[i]);
-        parts.push('--- Page ' + (i + 1) + ' ---\n' + (t || '(aucun texte)'));
+        parts.push(tr('--- Page ' + (i + 1) + ' ---\n') + (t || tr('(aucun texte)')));
       }
       const txt = parts.join('\n\n');
       const empty = parts.every(p => /\(aucun texte\)/.test(p));
@@ -657,7 +635,7 @@
         const refus = bytes => bytes.length >= before
           ? 'La réduction aurait alourdi le fichier : ' + fmtSize(before) + ' → ' + fmtSize(bytes.length) + '. Elle convertit chaque page en image ; elle ne sert qu\'aux documents scannés ou riches en images. Rien n\'a été enregistré.'
           : null;
-        const bytes = await exportPages(state.pages, safeBase(el.filename.value) + '-leger.pdf', { rasterize: true, dpi: +dpi.value, quality: (clampInt(q.value, 30, 95) || 72) / 100, noInPlace: true, refuserSi: refus });
+        const bytes = await exportPages(state.pages, safeBase(el.filename.value) + tr('-leger.pdf'), { rasterize: true, dpi: +dpi.value, quality: (clampInt(q.value, 30, 95) || 72) / 100, noInPlace: true, refuserSi: refus });
         if (bytes) {
           const after = bytes.length;
           const pct = before ? Math.round((1 - after / before) * 100) : 0;

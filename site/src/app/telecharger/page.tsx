@@ -78,7 +78,7 @@ export default function TelechargerPage() {
               <li>
                 Cette version est <strong className="text-ink-900">à l&rsquo;essai</strong> : la signature de l&rsquo;exécutable n&rsquo;est pas encore en place. Windows peut afficher un avertissement au premier lancement (« Informations complémentaires », puis « Exécuter quand même »), et macOS demander un clic droit puis « Ouvrir ». Les fichiers LISEZMOI l&rsquo;expliquent pas à pas.
               </li>
-              <li>Le logiciel ne produit pas de signature électronique qualifiée, ne produit pas de PDF/A et ne convertit pas depuis ou vers Word. La page Fonctionnalités dit, outil par outil, ce qui est fait et ce qui ne l&rsquo;est pas.</li>
+              <li>Le logiciel ne produit pas de signature électronique qualifiée ni d&rsquo;horodatage, ne produit du PDF/A que dans le niveau 2b et ne convertit pas depuis ou vers Word. La page Fonctionnalités dit, outil par outil, ce qui est fait et ce qui ne l&rsquo;est pas.</li>
               <li>Le logiciel n&rsquo;ouvre aucune connexion : vous pouvez le lancer réseau coupé pour le vérifier.</li>
             </ul>
           </div>

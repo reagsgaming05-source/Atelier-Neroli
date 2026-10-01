@@ -88,20 +88,20 @@
     state.history.push(capture());
     if (state.history.length > 60) state.history.shift();
     state.redo = [];
-    syncButtons();
+    vue.syncButtons();
   }
   function undo() {
     const h = state.history.pop();
     if (!h) return;
     state.redo.push(capture());
     restore(h);
-    render(); setLast('Action annulée');
+    vue.render(); setLast('Action annulée');
   }
   function redoAction() {
     const h = state.redo.pop();
     if (!h) return;
     state.history.push(capture());
     restore(h);
-    render(); setLast('Action rétablie');
+    vue.render(); setLast('Action rétablie');
   }
 

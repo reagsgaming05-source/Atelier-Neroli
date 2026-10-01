@@ -27,7 +27,7 @@ export const planCatalog = [
     /** 0 = sans plafond. */
     maxSeats: 1,
     features: [
-      "Les 26 outils du logiciel",
+      "Les 31 outils du logiciel",
       "Signature manuscrite, reconnaissance de texte et caviardage du texte inclus",
       "1 poste",
       "Facture à 30 jours (QR-facture), sans prélèvement",
@@ -70,7 +70,7 @@ export const planCatalog = [
     priceYearlyCents: 199000,
     maxSeats: 0,
     features: [
-      "Les 26 outils du logiciel, sans option payante",
+      "Les 31 outils du logiciel, sans option payante",
       "Postes illimités dans l'entité",
       "Mise à jour centralisée : un dossier à remplacer, une fois",
       "Facture à 30 jours avec QR-facture et votre référence",

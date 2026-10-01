@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 const included = [
-  "Les 26 outils, sans option payante",
+  "Les 31 outils, sans option payante",
   "Windows et macOS avec la même licence",
   "Documents traités sur le poste, sans connexion",
   "Mises à jour incluses pendant toute la durée de l'abonnement",

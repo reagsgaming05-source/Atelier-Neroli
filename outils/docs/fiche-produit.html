@@ -27,6 +27,7 @@
   <li><strong>Remplir des formulaires</strong>, apposer des tampons et une signature dessinée (mémorisés par personne).</li>
   <li><strong>Copier un tableau vers Excel</strong> (CSV propre) ; traiter plusieurs fichiers d'un coup ; imprimer en livret.</li>
   <li><strong>Protéger</strong> par mot de passe, filigrane, numérotation, métadonnées.</li>
+  <li><strong>Archiver et signer</strong> : PDF/A-2b contrôlé, signature avec un certificat personnel (.p12), vérification des signatures reçues, balisage d'accessibilité ; remplir un formulaire en série depuis un CSV.</li>
 </ul>
 </div>
 <div>
@@ -47,9 +48,9 @@
 <div>
 <h2>Ce qu'il ne fait pas — encore</h2>
 <ul>
-  <li><strong>Pas de signature électronique reconnue légalement</strong> (SCSE / ZertES), pas de vérification des signatures reçues : le produit pose une signature dessinée.</li>
-  <li>Pas de PDF/A produit à neuf, pas de balisage d'accessibilité des documents créés.</li>
-  <li>Interface en <strong>français</strong> seulement (la reconnaissance de texte lit aussi l'allemand).</li>
+  <li><strong>Pas de signature électronique qualifiée</strong> (SCSE / ZertES) ni d'horodatage : le produit pose une signature dessinée ou une signature numérique avec votre certificat (.p12, clés RSA) et lit celles des PDF reçus (intacte ou modifiée, signataire), sans dire si l'autorité est reconnue ni si le certificat est révoqué.</li>
+  <li>PDF/A-2b seulement (pas de -1 ni -3, pas de niveau « a ») ; le contrôle est celui du logiciel, jugé par veraPDF à chaque construction. Le balisage d'accessibilité aide la lecture à l'écran mais n'est pas du PDF/UA.</li>
+  <li>Interface en <strong>français et en allemand</strong> (pas d'italien) ; le manuel et le site restent en français.</li>
   <li>Ne lit pas les formats Office (Word, Excel) ; pas de collaboration en ligne, pas d'infonuagique : c'est voulu.</li>
   <li>Les mots de passe de compte ne chiffrent pas les fichiers : les droits d'accès du serveur protègent les dossiers.</li>
   <li>L'exécutable Windows n'est signé par un certificat de code que si l'éditeur en a fourni un : à vérifier avant un déploiement sous AppLocker.</li>

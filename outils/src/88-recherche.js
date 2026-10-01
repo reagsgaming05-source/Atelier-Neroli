@@ -21,10 +21,24 @@
 
   // Le texte d'une page avec, pour chaque morceau, sa place sur la page :
   // de quoi retrouver où se trouve une occurrence pour la caviarder.
-  async function texteAvecPositions(p) {
-    const src = srcById(p.src);
+  // Calculé une fois par page : la recherche suivante, le remplacement et le caviardage qui la suivent le
+  // reprennent tel quel. La clé dit ce dont il dépend — la page, son sens, le texte reconnu par l'OCR — et
+  // les plus anciens s'effacent au-delà de POSITIONS_MAX pages, pour ne pas garder un gros dossier en mémoire.
+  const positionsMemo = new Map();
+  const POSITIONS_MAX = 400;
+  function texteAvecPositions(p) {
     const g = pageGeom(p);
-    let texte = '', last = null;
+    const cle = pkey(p) + '|' + g.total + '|' + (p.ocr ? (p.ocr.quand || 1) + ':' + (p.ocr.mots ? p.ocr.mots.length : 0) : 0);
+    let v = positionsMemo.get(cle);
+    if (v) { positionsMemo.delete(cle); positionsMemo.set(cle, v); return v; }
+    v = texteAvecPositionsBrut(p, g).then(r => { if (r.echec) positionsMemo.delete(cle); return r; });
+    positionsMemo.set(cle, v);
+    if (positionsMemo.size > POSITIONS_MAX) positionsMemo.delete(positionsMemo.keys().next().value);
+    return v;
+  }
+  async function texteAvecPositionsBrut(p, g) {
+    const src = srcById(p.src);
+    let texte = '', last = null, echec = false;
     const morceaux = [];
     if (src) {
       try {
@@ -48,7 +62,7 @@
           last = { base: geo.base, fin: geo.x + geo.w, x: geo.x, vertical: geo.vertical, finY: geo.vertical ? (geo.monte ? geo.y0 : geo.y0 + geo.h) : 0 };
         });
         page.cleanup();
-      } catch (e) { signaler('Texte', e); }
+      } catch (e) { signaler('Texte', e); echec = true; }
     }
     if (!morceaux.length && p.ocr && p.ocr.mots) {
       p.ocr.mots.forEach(m => {
@@ -60,7 +74,7 @@
         last = { base, fin: m.x + m.w };
       });
     }
-    return { texte, morceaux };
+    return { texte, morceaux, echec };
   }
   // Où tombe le caractère k d'un morceau, en part de sa largeur : mesuré
   // avec une police de même famille, bien plus juste qu'un compte de lettres
@@ -105,6 +119,7 @@
     const spec = { terme, casse: !!casse, mot: !!mot, accents: !!accents };
     let occurrences = 0, pages = 0;
     const ajouts = [];
+    const tour = cadence();
     for (let i = 0; i < state.pages.length; i++) {
       const p = state.pages[i];
       verifierAnnulation();
@@ -119,7 +134,7 @@
       if (!n) continue;
       pages++; occurrences += n;
       rects.forEach(r => ajouts.push({ p, a: { id: -1, type: 'redact', x: r.x - 1, y: r.y - 0.5, w: r.w + 2, h: r.h + 1, color: '#000000', opacity: 1, width: 1 } }));
-      if (i % 4 === 0) await nextFrame();
+      await tour();
     }
     // Rien de visible, mais le terme est ailleurs dans le fichier (métadonnées,
     // notes, texte hors de la page) : le caviardage porte alors sur ces
@@ -131,7 +146,7 @@
     // fichier, pas seulement à l'endroit où l'on a vu le mot.
     if (!state.purges.some(x => x.terme === spec.terme && x.casse === spec.casse && x.mot === spec.mot && x.accents === spec.accents)) state.purges.push(spec);
     state.touched = true;
-    render();
+    vue.render();
     return { occurrences, pages };
   }
 
@@ -142,6 +157,7 @@
     const rx = regexDe(terme, casse, mot);
     let occurrences = 0, pages = 0;
     const neufs = [], touchees = [];
+    const tour = cadence();
     const remplacerDans = a => {
       let n = 0;
       const texte = runsTexte(a.runs);
@@ -184,38 +200,49 @@
         } catch (e) { signaler('Remplacement', e); }
       }
       if (n) { pages++; occurrences += n; }
-      await nextFrame();
+      await tour();
     }
     if (!occurrences) return { occurrences: 0, pages: 0 };
     snapshot();
     touchees.forEach(({ p, avant, apres }) => { Object.assign(avant, apres); });
     neufs.forEach(({ p, a }) => { a.id = ++uid; p.ann.push(a); });
     state.touched = true;
-    render();
+    vue.render();
     return { occurrences, pages };
   }
 
   // Le panneau de recherche flotte à côté du document : chaque occurrence
   // est surlignée sur sa page, et l'on va de l'une à l'autre.
-  const recherche = { marques: null, cur: -1 };
+  // `marques` : page → ses occurrences { pid, k, a, b, rects } ; `morceaux` : page → ses morceaux de texte. Les
+  // rectangles ne se calculent qu'à la demande (une feuille qui se peint, un saut à une occurrence) : 8 400
+  // occurrences ne coûtent plus 8 400 mesures et 8 400 éléments avant le premier résultat.
+  const recherche = { marques: null, morceaux: null, cur: -1 };
+  const rectsDeOccurrence = o => o.rects || (o.rects = rectsOccurrence((recherche.morceaux && recherche.morceaux.get(o.pid)) || [], o.a, o.b));
+  // Les marques d'une page de la vue Lecture : seulement pour les pages peintes, et à chaque fois qu'une page se peint.
+  function poserMarquesFeuille(p) {
+    const f = feuilles.get(p.id);
+    if (!f) return;
+    const vieux = f.querySelector('.marques');
+    if (vieux) vieux.remove();
+    const liste = recherche.marques && recherche.marques.get(p.id);
+    if (!liste || !liste.length) return;
+    const g = pageGeom(p);
+    const zone = document.createElement('div'); zone.className = 'marques';
+    liste.forEach(o => rectsDeOccurrence(o).forEach(r => {
+      const i = document.createElement('i');
+      if (o.k === recherche.cur) i.className = 'courante';
+      i.style.left = (r.x / g.Wd * 100).toFixed(3) + '%'; i.style.top = (r.y / g.Hd * 100).toFixed(3) + '%';
+      i.style.width = (r.w / g.Wd * 100).toFixed(3) + '%'; i.style.height = (r.h / g.Hd * 100).toFixed(3) + '%';
+      zone.appendChild(i);
+    }));
+    f.appendChild(zone);
+  }
   function poserMarquesLecture() {
     state.pages.forEach(p => {
       const f = feuilles.get(p.id);
       if (!f) return;
-      const vieux = f.querySelector('.marques');
-      if (vieux) vieux.remove();
-      const liste = recherche.marques && recherche.marques.get(p.id);
-      if (!liste || !liste.length) return;
-      const g = pageGeom(p);
-      const zone = document.createElement('div'); zone.className = 'marques';
-      liste.forEach(o => o.rects.forEach(r => {
-        const i = document.createElement('i');
-        if (o.k === recherche.cur) i.className = 'courante';
-        i.style.left = (r.x / g.Wd * 100).toFixed(3) + '%'; i.style.top = (r.y / g.Hd * 100).toFixed(3) + '%';
-        i.style.width = (r.w / g.Wd * 100).toFixed(3) + '%'; i.style.height = (r.h / g.Hd * 100).toFixed(3) + '%';
-        zone.appendChild(i);
-      }));
-      f.appendChild(zone);
+      if (peintes.has(p.id) || !recherche.marques) poserMarquesFeuille(p);
+      else { const vieux = f.querySelector('.marques'); if (vieux) vieux.remove(); }
     });
   }
   function poserMarquesTuiles() {
@@ -227,7 +254,7 @@
       t.classList.toggle('hit-courante', !!(liste && liste.some(o => o.k === recherche.cur)));
     });
   }
-  function effacerRecherche() { recherche.marques = null; recherche.cur = -1; poserMarquesTuiles(); poserMarquesLecture(); }
+  function effacerRecherche() { recherche.marques = null; recherche.morceaux = null; recherche.cur = -1; poserMarquesTuiles(); poserMarquesLecture(); }
 
   // « 2 textes cachés, 1 note, les métadonnées » : ce que le fichier porte du
   // terme en dehors de ce que l'écran affiche.
@@ -298,7 +325,7 @@
       const o = occ[cur];
       if (state.vue === 'lecture') {
         const f = feuilles.get(o.pid);
-        const r = o.rects[0];
+        const r = rectsDeOccurrence(o)[0];
         if (f && r) el.canvas.scrollTo({ top: Math.max(0, f.offsetTop + r.y * lectureZ - el.canvas.clientHeight * 0.4), behavior: 'smooth' });
         else lectureAller(pageIndex(o.pid) + 1);
       } else allerPage(o.pid);
@@ -316,49 +343,64 @@
       info.textContent = 'Recherche…';
       let found = 0;
       const spec = { terme: term, casse: casse.input.checked, mot: mot.input.checked, accents: accents.input.checked };
+      // Les résultats se montrent au fur et à mesure : le premier est visible dès qu'il est trouvé, sur n'importe
+      // quel document, et la recherche reste fluide parce qu'elle ne garde la main que pendant un budget de temps.
       const marques = new Map();
       const visibles = new Map();
+      recherche.marques = marques;
+      recherche.morceaux = new Map();
+      const tour = cadence();
+      const poser = () => { poserMarquesTuiles(); poserMarquesLecture(); };
+      // La page suivante s'extrait pendant que celle-ci se traite : le travailleur de pdf.js n'attend plus
+      // entre deux demandes.
+      const DEVANT = 4;
+      const file = [];
+      const demander = i => { if (i < state.pages.length) file.push(texteAvecPositions(state.pages[i])); };
+      for (let j = 0; j < DEVANT; j++) demander(j);
       for (let i = 0; i < state.pages.length; i++) {
         if (my !== token) return;
         const p = state.pages[i];
-        const { texte, morceaux } = await texteAvecPositions(p);
+        const { texte, morceaux } = await file.shift();
+        demander(i + DEVANT);
         if (my !== token) return;
         let n = 0, premier = null;
         const surPage = [];
         for (const ab of occurrencesDe(texte, spec).slice(0, 2000)) {
           if (!premier) premier = ab;
-          const k = occ.length;
-          const rects = rectsOccurrence(morceaux, ab[0], ab[1]);
-          occ.push({ pid: p.id, k, rects });
-          surPage.push({ k, rects });
+          const o = { pid: p.id, k: occ.length, a: ab[0], b: ab[1], rects: null };
+          occ.push(o);
+          surPage.push(o);
           n++;
         }
         visibles.set(p.id, n);
-        if (!n) continue;
-        found++; total += n;
-        marques.set(p.id, surPage);
-        const from = Math.max(0, premier[0] - 40);
-        const snippet = (from ? '…' : '') + texte.slice(from, premier[0]) + '§§' + texte.slice(premier[0], premier[1]) + '§§' + texte.slice(premier[1], premier[1] + 60) + '…';
-        const b = document.createElement('button');
-        b.type = 'button'; b.className = 'result';
-        const pn = document.createElement('span'); pn.className = 'p'; pn.textContent = 'p. ' + (i + 1) + (n > 1 ? ' ×' + n : '');
-        const xs = document.createElement('span'); xs.className = 'x';
-        snippet.replace(/\s+/g, ' ').split('§§').forEach((chunk, ci) => {
-          if (ci === 1) { const mk = document.createElement('mark'); mk.textContent = chunk; xs.appendChild(mk); }
-          else xs.appendChild(document.createTextNode(chunk));
-        });
-        b.append(pn, xs);
-        const k0 = surPage[0].k;
-        b.addEventListener('click', () => aller(occ.findIndex(o => o.k === k0)));
-        results.appendChild(b);
-        if (i % 6 === 0) await nextFrame();
+        if (n) {
+          found++; total += n;
+          marques.set(p.id, surPage);
+          recherche.morceaux.set(p.id, morceaux);
+          const from = Math.max(0, premier[0] - 40);
+          const snippet = (from ? '…' : '') + texte.slice(from, premier[0]) + '§§' + texte.slice(premier[0], premier[1]) + '§§' + texte.slice(premier[1], premier[1] + 60) + '…';
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'result';
+          const pn = document.createElement('span'); pn.className = 'p'; pn.textContent = 'p. ' + (i + 1) + (n > 1 ? ' ×' + n : '');
+          const xs = document.createElement('span'); xs.className = 'x'; xs.setAttribute('translate', 'no');
+          snippet.replace(/\s+/g, ' ').split('§§').forEach((chunk, ci) => {
+            if (ci === 1) { const mk = document.createElement('mark'); mk.textContent = chunk; xs.appendChild(mk); }
+            else xs.appendChild(document.createTextNode(chunk));
+          });
+          b.append(pn, xs);
+          const k0 = surPage[0].k;
+          b.addEventListener('click', () => aller(occ.findIndex(o => o.k === k0)));
+          results.appendChild(b);
+          // Le premier résultat : on y va tout de suite ; les suivants ne font que grossir le compte.
+          if (found === 1) { poser(); aller(0); } else if (cur >= 0) compte.textContent = (cur + 1) + ' / ' + occ.length;
+        }
+        await tour(() => { info.textContent = 'Recherche… ' + plural(total, 'occurrence', 'occurrences'); poser(); });
       }
       if (my !== token) return;
-      recherche.marques = marques;
-      poserMarquesTuiles(); poserMarquesLecture();
+      poser();
       info.textContent = found ? plural(total, 'occurrence', 'occurrences') + ' sur ' + plural(found, 'page', 'pages') + ' pour « ' + term + ' »' : 'Aucun résultat visible pour « ' + term + ' ».';
-      compte.textContent = total ? '0 / ' + total : '';
-      if (total) aller(0);
+      compte.textContent = total ? ((cur >= 0 ? cur + 1 : 0) + ' / ' + total) : '';
+      if (total && cur < 0) aller(0);
       majBoutons();
       // Ce que le fichier porte du terme sans l'afficher : métadonnées, notes,
       // pièces jointes, signets, texte hors de la page. Le dire avant de

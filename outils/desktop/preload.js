@@ -27,5 +27,10 @@ contextBridge.exposeInMainWorld('AktumDesktop', {
   recupEffacer: (cle) => ipcRenderer.invoke('aktum:recup-effacer', cle),
   imprimantes: () => ipcRenderer.invoke('aktum:imprimantes'),
   licence: () => ipcRenderer.invoke('aktum:licence'),
+  // La langue de l'application : celle que le processus principal a retenue (réglage, sinon système), et
+  // le moyen d'en changer — le menu et la page restent d'accord.
+  langue: ipcRenderer.sendSync('aktum:langue'),
+  choisirLangue: (l) => ipcRenderer.invoke('aktum:choisir-langue', l),
+  onLangue: (cb) => ipcRenderer.on('aktum:langue', (_e, l) => cb(l)),
   imprimer: (o) => ipcRenderer.invoke('aktum:imprimer', o),
 });

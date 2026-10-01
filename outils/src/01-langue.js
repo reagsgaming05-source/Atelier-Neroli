@@ -13,63 +13,8 @@
   // En français, rien de tout cela ne tourne : le comportement est celui d'avant.
   // ---------------------------------------------------------------------------------------------
 
-  // @debut-langue
-  const LANGUES = { fr: 'Français', de: 'Deutsch' };
-  const REGIONS = { fr: 'fr-CH', de: 'de-CH' };
   let langue = 'fr';
-
-  // Fabrique la fonction de traduction d'un dictionnaire { litteraux, motifs, html, pluriels }.
-  //   - un texte connu se traduit tel quel ;
-  //   - un texte assemblé (« Page 3 sur 12 ») correspond à un motif (« Page {0} sur {1} ») ; ses morceaux
-  //     variables sont à leur tour traduits (un nom de fichier ne l'est pas, faute d'entrée) ;
-  //   - le reste est rendu intact : mieux vaut du français qu'un texte inventé.
-  function fabriquerTraducteur(dico) {
-    const exact = new Map();
-    ['litteraux', 'html'].forEach(s => Object.keys(dico[s] || {}).forEach(k => { if (dico[s][k] !== k) exact.set(k, dico[s][k]); }));
-    const echapper = s => s.replace(/[.*+?^${}()|[\]\\\/-]/g, '\\$&');
-    const motifs = Object.keys(dico.motifs || {}).filter(k => dico.motifs[k] !== k).map(k => {
-      const morceaux = k.split(/\{(\d+)\}/);
-      let re = '^';
-      const ordre = [];
-      let fixe = 0;
-      morceaux.forEach((m, i) => {
-        if (i % 2 === 0) { re += echapper(m); fixe += m.length; } else { re += '([\\s\\S]*?)'; ordre.push(+m); }
-      });
-      return { re: new RegExp(re + '$'), ordre, gabarit: dico.motifs[k], fixe };
-    }).sort((a, b) => b.fixe - a.fixe);
-    const pluriels = dico.pluriels || {};
-
-    function traduire(s, profondeur) {
-      if (typeof s !== 'string' || s === '') return s;
-      if (exact.has(s)) return exact.get(s);
-      if (!profondeur) profondeur = 0;
-      for (const m of motifs) {
-        const r = m.re.exec(s);
-        if (!r) continue;
-        const args = [];
-        for (let i = 0; i < m.ordre.length; i++) if (args[m.ordre[i]] === undefined) args[m.ordre[i]] = r[i + 1];
-        return m.gabarit.replace(/\{(\d+)\}/g, (_, n) => {
-          const v = args[+n];
-          return v === undefined ? '' : (profondeur < 3 ? traduire(v, profondeur + 1) : v);
-        });
-      }
-      // Espaces de bord et retours à la ligne du HTML : le texte est cherché sans eux, puis rhabillé.
-      const bords = /^(\s*)([\s\S]*?)(\s*)$/.exec(s);
-      if (bords[1] || bords[3] || /\s{2,}|\n/.test(bords[2])) {
-        const nu = bords[2].replace(/\s+/g, ' ');
-        if (nu && (nu !== s)) { const t = traduire(nu, profondeur); if (t !== nu) return bords[1] + t + bords[3]; }
-      }
-      return s;
-    }
-    // « 3 pages » : le nombre, puis le nom au singulier ou au pluriel — l'allemand compte « 0 Seiten » (pluriel), le français « 0 page ».
-    traduire.pluriel = (n, un, plusieurs, lang) => {
-      const pl = lang === 'de' ? n !== 1 : n > 1;
-      if (lang === 'de' && pl && un === plusieurs && pluriels[un] !== undefined) return pluriels[un];
-      return traduire(pl ? plusieurs : un);
-    };
-    return traduire;
-  }
-  // @fin-langue
+  /*@traducteur@*/
 
   let traduction = null;
   // Le dictionnaire est posé par build.js dans la page, sous forme de JSON, et lu seulement si l'allemand est demandé.
@@ -158,6 +103,8 @@
     }
   }
   function preferenceDeLangue() {
+    // Dans l'application fenêtrée, le processus principal décide (réglage, sinon langue du système).
+    if (window.AktumDesktop && (window.AktumDesktop.langue === 'fr' || window.AktumDesktop.langue === 'de')) return window.AktumDesktop.langue;
     let v = null;
     try { v = localStorage.getItem('aktum-langue'); } catch (_) { /* stockage refusé : on suit la langue du système */ }
     if (v === 'fr' || v === 'de') return v;
@@ -173,7 +120,11 @@
     const avant = langue;
     langue = l;
     document.documentElement.lang = l;
-    if (memoriser) { try { localStorage.setItem('aktum-langue', l); } catch (e) { signaler('Préférence de langue', e, 'info'); } }
+    if (memoriser) {
+      try { localStorage.setItem('aktum-langue', l); } catch (e) { signaler('Préférence de langue', e, 'info'); }
+      // Le menu de l'application fenêtrée suit : le processus principal retient le choix et refait son menu.
+      if (window.AktumDesktop && window.AktumDesktop.choisirLangue) { try { window.AktumDesktop.choisirLangue(l); } catch (e) { signaler('Langue de l\'application', e, 'info'); } }
+    }
     if (observateur) { observateur.disconnect(); observateur = null; }
     if (l === 'de') {
       traduireArbre(document.documentElement);

@@ -123,7 +123,7 @@
           cases.forEach(x => { if (!x.cb.checked) return; retires++; x.pages.forEach(p => { p.retraits = (p.retraits || []).concat([x.c.id]); }); });
           state.touched = true;
           state.pages.forEach(p => peintes.delete(p.id));
-          render();
+          vue.render();
           close();
           setLast(retires ? plural(retires, 'commentaire retiré', 'commentaires retirés') + ' : ils disparaîtront à l\'export' : 'Aucun commentaire retiré');
         } },
@@ -367,7 +367,9 @@
     const file = safeBase(el.filename.value);
     const bates = state.stamp && state.stamp.batesPrefix != null ? state.stamp : null;
     // Le balisage d'accessibilité : demandé dans les propriétés du document, ou par l'appelant.
-    const balisage = veutBalise ? creerBalisage(out, { langue: (meta0 && meta0.langue) || 'fr', titre: (meta0 && meta0.title) || file, producteur: APP, sansXmp: !!opts.archivage }) : null;
+    const balisage = veutBalise ? creerBalisage(out, { langue: (meta0 && meta0.langue) || codeLangue(), titre: (meta0 && meta0.title) || file, producteur: APP, sansXmp: !!opts.archivage }) : null;
+    // Rendre la main sur un budget de temps : l'avancement se peint, et l'interface ne gèle pas sur un gros dossier.
+    const tour = cadence();
     for (let i = 0; i < mapped.length; i++) {
       const { p, page } = mapped[i];
       const g = pageGeom(p);
@@ -410,7 +412,7 @@
         i, p: num, n: pages.length, date: todayStr(), file,
         bates: bates ? (bates.batesPrefix || '') + pad(num, bates.batesDigits || 4) : String(num),
       }));
-      if (i % 12 === 0) onProgress(i / mapped.length, 'Assemblage… ' + (i + 1) + '/' + mapped.length);
+      await tour(() => onProgress((i + 1) / mapped.length, 'Assemblage… ' + (i + 1) + '/' + mapped.length));
     }
 
     // L'arbre de structure se pose une fois toutes les pages écrites.

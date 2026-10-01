@@ -58,7 +58,7 @@ export default async function DemoPage() {
             <p className="eyebrow text-accent-400">Et dans la version complète</p>
             <h2 className="mt-3 font-display text-[2rem] font-semibold leading-tight">Dossier de pièces, OCR, caviardage, formulaires, commentaires…</h2>
             <p className="mt-3 max-w-xl text-[15px] text-white/75">
-              La démo montre cinq opérations réalisables dans le navigateur. Le logiciel complet en compte vingt-six, et se télécharge sans compte pour être essayé sur vos propres documents.
+              La démo montre cinq opérations réalisables dans le navigateur. Le logiciel complet en compte trente et un, et se télécharge sans compte pour être essayé sur vos propres documents.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
@@ -66,7 +66,7 @@ export default async function DemoPage() {
               Voir les formules
             </ButtonLink>
             <ButtonLink href="/fonctionnalites" variant="outlineLight">
-              Les vingt-six outils
+              Les trente et un outils
             </ButtonLink>
           </div>
         </div>

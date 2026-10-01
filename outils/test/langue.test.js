@@ -36,6 +36,13 @@ test('un texte assemblé retrouve son motif, et ses morceaux sont traduits à le
   assert.strictEqual(tr('Enregistré sans déclaration PDF/A : Imprimer'), 'Ohne PDF/A-Deklaration gespeichert: Drucken');
 });
 
+test('un texte assemblé hors de tout motif garde ses morceaux connus traduits, en mots entiers', () => {
+  assert.strictEqual(tr('rapport.pdf · modifié'), 'rapport.pdf · geändert');
+  // « Imprimer » seul est un mot connu ; « Imprimerie » n'en contient pas
+  assert.strictEqual(tr('Imprimerie nationale'), 'Imprimerie nationale');
+  assert.strictEqual(tr('Aller à Imprimer maintenant'), 'Aller à Drucken maintenant');
+});
+
 test('l\'ordre des morceaux peut changer d\'une langue à l\'autre', () => {
   const t = fabriquerTraducteur({ motifs: { 'Le {0} de {1}': '{1} hat {0}' } });
   assert.strictEqual(t('Le chat de Paul'), 'Paul hat chat');

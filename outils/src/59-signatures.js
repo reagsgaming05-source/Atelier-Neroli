@@ -349,7 +349,7 @@
   function direSignature(s) {
     const lignes = [];
     const sig = s.signataire;
-    const quand = d => d ? d.toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' }) + ' à ' + d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }) : '';
+    const quand = d => d ? d.toLocaleDateString(regionLocale(), { day: 'numeric', month: 'long', year: 'numeric' }) + ' à ' + d.toLocaleTimeString(regionLocale(), { hour: '2-digit', minute: '2-digit' }) : '';
     const qui = sig ? (sig.sujet.champs.CN || sig.sujet.champs.O || sig.sujet.texte) : (s.nom || 'signataire inconnu');
     let verdict, gravite;
     if (s.etat === 'intacte') {
@@ -369,9 +369,9 @@
       if (s.raison) lignes.push({ gravite: 'info', texte: 'Motif indiqué : ' + s.raison + (s.lieu ? ' — lieu : ' + s.lieu : '') + '.' });
       if (s.etat === 'intacte') {
         const dateRef = s.dateSignature || null;
-        if (dateRef && (dateRef < sig.du || dateRef > sig.au)) lignes.push({ gravite: 'error', texte: 'Le certificat n\'était pas valide à la date de la signature (valable du ' + sig.du.toLocaleDateString('fr-CH') + ' au ' + sig.au.toLocaleDateString('fr-CH') + ').' });
+        if (dateRef && (dateRef < sig.du || dateRef > sig.au)) lignes.push({ gravite: 'error', texte: 'Le certificat n\'était pas valide à la date de la signature (valable du ' + sig.du.toLocaleDateString(regionLocale()) + ' au ' + sig.au.toLocaleDateString(regionLocale()) + ').' });
         else if (!dateRef) lignes.push({ gravite: 'warn', texte: 'La date de signature ne figure pas dans la signature elle-même : elle n\'est pas prouvée.' });
-        if (sig.au < new Date()) lignes.push({ gravite: 'info', texte: 'Le certificat a expiré depuis (le ' + sig.au.toLocaleDateString('fr-CH') + ') ; cela ne remet pas en cause une signature faite pendant sa validité.' });
+        if (sig.au < new Date()) lignes.push({ gravite: 'info', texte: 'Le certificat a expiré depuis (le ' + sig.au.toLocaleDateString(regionLocale()) + ') ; cela ne remet pas en cause une signature faite pendant sa validité.' });
         const chaine = s.chaine || [];
         if (sig.autoSigne) lignes.push({ gravite: 'warn', texte: 'Le certificat est « auto-signé » : il n\'a été délivré par aucune autorité. N\'importe qui peut en fabriquer un au nom de n\'importe qui : la signature prouve que le document n\'a pas changé, pas qui l\'a signé.' });
         else if (s.racine) lignes.push({ gravite: 'warn', texte: 'Chaîne jointe de ' + chaine.length + ' certificats, jusqu\'à l\'autorité « ' + (s.racine.sujet.champs.CN || s.racine.sujet.texte) + ' ». Ce logiciel ne contient aucune liste d\'autorités reconnues : il ne peut pas dire si elle l\'est. Comparez-la à celle de votre administration.' });

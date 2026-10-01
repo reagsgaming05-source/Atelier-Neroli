@@ -4,6 +4,7 @@
 // il n'est ni gardé ici ni écrit nulle part (voir comptes.js).
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('comptes', {
+  langue: ipcRenderer.sendSync('aktum:langue'),
   liste: () => ipcRenderer.invoke('aktum:comptes'),
   connexion: (nom, motDePasse) => ipcRenderer.invoke('aktum:connexion', nom, motDePasse),
   creer: (nom, motDePasse) => ipcRenderer.invoke('aktum:creer', nom, motDePasse),

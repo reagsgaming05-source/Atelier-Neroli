@@ -17,9 +17,11 @@
   function fmtSize(bytes) {
     if (bytes < 1024) return bytes + ' o';
     if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko';
-    return (bytes / (1024 * 1024)).toFixed(1).replace('.', ',') + ' Mo';
+    return (bytes / (1024 * 1024)).toFixed(1).replace('.', langue === 'de' ? '.' : ',') + ' Mo';
   }
   const baseName = n => n.replace(/\.[a-z0-9]+$/i, '');
+  // Le suffixe que prennent les documents modifiés (« rapport-modifié »), dans l'une ou l'autre langue.
+  const SUFFIXE_MODIFIE = /-(modifi[eé]|ge(ä|ae)ndert)$/i;
   function safeBase(name) {
     const n = (name || '').trim().replace(/\.pdf$/i, '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
     return n || 'document';
@@ -32,7 +34,8 @@
   function pad(n, w) { return String(n).padStart(w, '0'); }
   function todayStr() {
     const d = new Date();
-    return pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear();
+    const sep = langue === 'de' ? '.' : '/';
+    return pad(d.getDate(), 2) + sep + pad(d.getMonth() + 1, 2) + sep + d.getFullYear();
   }
   function setBusy(text, pct, o) {
     if (text && !state.busy) state.messageBusy = '';
@@ -50,9 +53,29 @@
     }
     el.progress.hidden = !(text && typeof pct === 'number');
     if (text && typeof pct === 'number') el.progressBar.style.width = Math.round(pct * 100) + '%';
-    syncButtons();
+    vue.syncButtons();
   }
   const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+  // @debut-cadence
+  // Rendre la main à l'interface sur un budget de temps, non sur un nombre de pages : une page de texte se traite
+  // en 10 ms, une page scannée en 500, et « toutes les quatre pages » ne protège de rien. On prend une cadence
+  // avant la boucle, on l'appelle à chaque tour : elle ne laisse la main (un rendu d'image) que si le budget est
+  // dépassé, et prévient d'abord l'appelant (`avant`) pour qu'il puisse écrire où il en est — un message écrit
+  // sans que la main soit rendue ne se peint jamais.
+  function cadence(budgetMs, maintenant, rendre) {
+    const max = budgetMs > 0 ? budgetMs : 16;
+    const horloge = maintenant || (() => performance.now());
+    const passer = rendre || nextFrame;
+    let debut = horloge();
+    return async (avant) => {
+      if (horloge() - debut < max) return false;
+      if (avant) avant();
+      await passer();
+      debut = horloge();
+      return true;
+    };
+  }
+  // @fin-cadence
 
   // Le journal de la session : tout ce qui n'a pas marché comme prévu, ou
   // qui a été fait autrement (une correction posée par-dessus plutôt que
@@ -100,36 +123,6 @@
     el.btnJournal.classList.toggle('grave', graves > 0);
     el.btnJournal.title = plural(n, 'avis', 'avis') + ' dans le journal de la session' + (graves ? ', dont ' + plural(graves, 'avertissement', 'avertissements') : '');
   }
-  function toolJournal() {
-    const liste = document.createElement('div'); liste.className = 'list journal';
-    const remplir = () => {
-      liste.replaceChildren();
-      if (!journal.length) { liste.appendChild(note('Rien à signaler.')); return; }
-      journal.slice().reverse().forEach(j => {
-        const d = document.createElement('div'); d.className = 'list-item avis-' + j.niveau;
-        const q = document.createElement('span'); q.className = 'quand'; q.textContent = pad(j.quand.getHours(), 2) + ':' + pad(j.quand.getMinutes(), 2) + ':' + pad(j.quand.getSeconds(), 2);
-        const g = document.createElement('div'); g.className = 'g';
-        const c = document.createElement('div'); c.className = 'n'; c.textContent = j.contexte;
-        const m = document.createElement('div'); m.className = 's'; m.textContent = j.msg + (j.fois > 1 ? ' (×' + j.fois + ')' : '');
-        g.append(c, m);
-        d.append(q, g);
-        liste.appendChild(d);
-      });
-    };
-    remplir();
-    dialog({
-      title: 'Journal de la session', icon: IC.info, wide: true,
-      build: b => {
-        b.append(note('Ce qui n\'a pas marché comme prévu, ou qui a été fait autrement. Rien de tout cela ne quitte cet ordinateur.'));
-        b.append(liste);
-      },
-      actions: [
-        { label: 'Copier', onClick: async () => { const t = journal.map(j => j.quand.toISOString() + ' [' + j.niveau + '] ' + j.contexte + ' : ' + j.msg + (j.fois > 1 ? ' (×' + j.fois + ')' : '')).join('\n'); if (await copierTexte(t)) toast('Journal copié.'); } },
-        { label: 'Vider', onClick: () => { journal.length = 0; majJournal(); remplir(); } },
-        { label: 'Fermer', primary: true, onClick: c => c() },
-      ],
-    });
-  }
 
   // Une opération longue s'interrompt d'un clic : chaque boucle regarde si
   // l'arrêt a été demandé entre deux pages ou deux fichiers.
@@ -168,6 +161,9 @@
   // ponctuation typographique en fait partie : l'apostrophe courbe, les
   // guillemets, le tiret cadratin, les points de suspension. Les remplacer
   // par leur approximation ASCII abîmait le texte pour rien.
+  // Comment le logiciel écrit le texte dans un document : polices standard (WinAnsi), ou polices incorporées
+  // quand la page en demande (voir 49-unicode.js, qui le pilote).
+  const ecriture = { unicode: false, actifs: 0, couverture: null };
   const WINANSI_SUP = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
   const CHAR_MAP = { ' ': ' ', ' ': ' ', ' ': ' ', '‑': '-', '−': '-', '­': '' };
   // Les caractères que les polices standard ne savent pas écrire, relevés au
@@ -207,3 +203,26 @@
     return out;
   }
 
+  async function copierTexte(t) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(t); return true; } } catch (e) { signaler('Presse-papiers', e, 'info'); }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (_) { return false; }
+  }
+
+  // Les chemins : le nom d'un fichier, et le fichier que « Enregistrer » réécrirait (voir 60-livraison.js).
+  const nomDe = chemin => String(chemin || '').replace(/^.*[\\/]/, '');
+
+  // Le fichier visé : celui du dernier enregistrement, sinon celui d'où vient
+  // le document — s'il vient d'un seul fichier. Un document assemblé à partir
+  // de plusieurs n'a pas de fichier à réécrire : ce sera « Enregistrer sous ».
+  function cheminDocument() {
+    if (state.chemin) return state.chemin;
+    const reels = state.sources.filter(s => !s.isSample && !s.genere);
+    return reels.length === 1 && reels[0].chemin ? reels[0].chemin : '';
+  }

@@ -13,7 +13,7 @@
     a.h = a.size * 1.7;
     return a;
   }
-  const tamponTexte = t => String(t || '').replace(/\{date\}/gi, todayStr());
+  const tamponTexte = t => tr(String(t || '')).replace(/\{date\}/gi, todayStr());
   function tamponsMemo() {
     try { const l = JSON.parse(localStorage.getItem('aktum-tampons') || '[]'); return Array.isArray(l) ? l.filter(t => t && typeof t.text === 'string' && t.text.trim()) : []; } catch (_) { return []; }
   }

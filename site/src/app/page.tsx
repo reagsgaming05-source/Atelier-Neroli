@@ -117,7 +117,7 @@ export default async function HomePage() {
       <section className="container-x py-20 lg:py-28">
         <Reveal>
           <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-            <SectionHeading eyebrow="Fonctionnalités" title="Vingt-six outils, une seule interface." text="Préavis, procès-verbaux, dossiers d'enquête, bulletins : les opérations du quotidien d'un secrétariat, sans changer d'application." />
+            <SectionHeading eyebrow="Fonctionnalités" title="Trente et un outils, une seule interface." text="Préavis, procès-verbaux, dossiers d'enquête, bulletins : les opérations du quotidien d'un secrétariat, sans changer d'application." />
             <Link href="/fonctionnalites" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-900">
               Toutes les fonctionnalités
               <ArrowRight className="size-4" aria-hidden />
@@ -184,7 +184,7 @@ export default async function HomePage() {
               <p className="eyebrow text-accent-400">Démo interactive</p>
               <h2 className="mt-3 font-display text-[2.25rem] font-semibold leading-tight sm:text-[2.6rem]">Essayez maintenant, avec vos propres PDF.</h2>
               <p className="mt-4 max-w-xl text-[17px] text-white/75">
-                Fusion, réorganisation, extraction, filigrane et numérotation, directement dans votre navigateur. Aucun compte, aucun envoi de fichier. La démo montre cinq opérations ; le logiciel complet en compte vingt-six.
+                Fusion, réorganisation, extraction, filigrane et numérotation, directement dans votre navigateur. Aucun compte, aucun envoi de fichier. La démo montre cinq opérations ; le logiciel complet en compte trente et un.
               </p>
               <ButtonLink href="/demo" variant="light" className="mt-8">
                 <PlayCircle className="size-4" aria-hidden />

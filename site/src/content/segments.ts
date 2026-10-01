@@ -66,7 +66,7 @@ export const segments: Segment[] = [
       {
         title: "L'enquête publique",
         text:
-          "Un dossier de mise à l'enquête se consulte au guichet et se publie souvent en ligne. On cherche un nom dans trois cents pages et on le caviarde partout d'un coup, après confirmation du nombre d'occurrences : le texte est retiré du flux de la page, pas recouvert d'un rectangle noir. Les métadonnées et les commentaires se nettoient à part, et le fichier produit se relit avant publication.",
+          "Un dossier de mise à l'enquête se consulte au guichet et se publie souvent en ligne. On cherche un nom dans trois cents pages et on le caviarde partout d'un coup, après confirmation du nombre d'occurrences : le texte est retiré du flux de la page, pas recouvert d'un rectangle noir, et aussi des métadonnées, des notes, des champs de formulaire, des signets et des pièces jointes. Le fichier produit se relit tout de même avant publication.",
         tool: "Caviarder",
       },
       {
@@ -78,7 +78,7 @@ export const segments: Segment[] = [
       {
         title: "Les archives du contrôle des habitants",
         text:
-          "Des décennies de fiches scannées, illisibles par une recherche. La reconnaissance de texte, en français et en allemand, les rend consultables, sur le poste et sans rien envoyer. Le logiciel ne produit pas de PDF/A : pour l'archivage légal, nous vous le disons avant, pas après.",
+          "Des décennies de fiches scannées, illisibles par une recherche. La reconnaissance de texte, en français et en allemand, les rend consultables, sur le poste et sans rien envoyer. Le logiciel produit du PDF/A-2b, contrôlé ; il ne remplace pas un système d'archivage, et ce qui s'archive légalement se décide avec votre service des archives.",
         tool: "Reconnaissance de texte",
       },
     ],
@@ -303,7 +303,7 @@ export const segments: Segment[] = [
       {
         title: "Les pièces du dossier d'achat",
         text:
-          "Les pièces dont un dossier d'achat a besoin — fiche technique, conditions générales — se demandent avec l'offre. Ce que le logiciel ne fait pas encore (signature qualifiée, PDF/A, vérification des signatures reçues) est écrit en toutes lettres.",
+          "Les pièces dont un dossier d'achat a besoin — fiche technique, conditions générales — se demandent avec l'offre. Ce que le logiciel ne fait pas encore (signature qualifiée, horodatage, PDF/A-1 et -3, contrôle des autorités de certification) est écrit en toutes lettres.",
         tool: "Dossier d'achat",
       },
       {

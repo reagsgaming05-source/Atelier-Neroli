@@ -103,6 +103,7 @@
           const docA = srcA.pdfjs;
           const n = Math.max(docA.numPages, docB.numPages);
           const pages = [];
+          const tour = cadence();
           for (let i = 0; i < n; i++) {
             verifierAnnulation();
             setBusy('Comparaison… page ' + (i + 1) + '/' + n, i / n, { annuler: true });
@@ -110,7 +111,7 @@
             const tB = i < docB.numPages ? await texteDocPage(docB, i, srcBId) : '';
             const d = motsDiff(tA, tB);
             pages.push({ i, tA, tB, diff: d, differe: d.retires + d.ajoutes > 0 || (i >= docA.numPages) || (i >= docB.numPages) });
-            if (i % 4 === 0) await nextFrame();
+            await tour();
           }
           setBusy('');
           afficherComparaison({ nomA: srcA.name, nomB: nomBTexte, docA, docB, pages, srcA, srcBId });
@@ -249,7 +250,7 @@
           pg.differe = pg.diff.retires + pg.diff.ajoutes > 0 || pg.i >= c.docA.numPages || pg.i >= c.docB.numPages || !!pg.aspectDiffere;
         }
         differentes = c.pages.filter(p => p.differe);
-        if (state.pages.some(p => p.ocr)) { state.touched = true; render(); }
+        if (state.pages.some(p => p.ocr)) { state.touched = true; vue.render(); }
         majResume();
         montrer();
       } catch (e) { signaler('Comparaison', e); toast('La reconnaissance a échoué : ' + (e && e.message ? e.message : e), 'error'); }
@@ -296,7 +297,7 @@
         ? plural(p.diff.retires, 'mot retiré', 'mots retirés') + ', ' + plural(p.diff.ajoutes, 'mot ajouté', 'mots ajoutés')
         : (p.tA || p.tB ? 'Texte identique sur cette page.' : 'Aucun texte sur cette page (scan ? lancez la reconnaissance de texte).');
       diff.appendChild(entete);
-      const corps = document.createElement('p'); corps.className = 'cmp-texte';
+      const corps = document.createElement('p'); corps.className = 'cmp-texte'; corps.setAttribute('translate', 'no');
       p.diff.segments.forEach(sg => {
         const sp = document.createElement('span');
         if (sg.t === '-') sp.className = 'diff-del'; else if (sg.t === '+') sp.className = 'diff-add';

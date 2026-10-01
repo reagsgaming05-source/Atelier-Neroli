@@ -87,7 +87,7 @@
       cv.height = Math.max(1, Math.ceil(vp.height));
       const cx = cv.getContext('2d', { alpha: false });
       cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
-      const tache = page.render({ canvasContext: cx, viewport: vp });
+      const tache = rendrePage(page, src, { canvasContext: cx, viewport: vp }, '#fff');
       enCours.set(p.id, tache);
       try { await tache.promise; }
       finally { if (enCours.get(p.id) === tache) enCours.delete(p.id); }
@@ -104,6 +104,7 @@
     const vieux = f.querySelector('.ann-layer');
     if (vieux) vieux.remove();
     if (p.ann.length || p.piece) f.appendChild(annSvg(p, g, false));
+    if (recherche.marques) poserMarquesFeuille(p);
   }
 
   // Le texte de la page, invisible mais sélectionnable par-dessus l'image :
@@ -113,7 +114,7 @@
     const vieux = f.querySelector('.couche-texte');
     if (vieux) vieux.remove();
     const couche = document.createElement('div');
-    couche.className = 'couche-texte';
+    couche.className = 'couche-texte'; couche.setAttribute('translate', 'no');
     couche.style.setProperty('--scale-factor', String(lectureZ));
     const vp = page.getViewport({ scale: lectureZ, rotation: g.total });
     let pose = false;
@@ -219,7 +220,7 @@
     state.vue = v;
     try { localStorage.setItem('aktum-vue', v); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
     majVue();
-    render();
+    vue.render();
     if (v === 'lecture') el.canvas.scrollTop = 0;
   }
 

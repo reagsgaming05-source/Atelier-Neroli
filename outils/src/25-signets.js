@@ -26,12 +26,13 @@
     // elle joue elle le dit.
     const LIMITE = 50000;
     let compte = 0, tronque = false;
+    const tour = cadence();
     const conv = async (items, prof) => {
       const out = [];
       for (const it of items) {
         if (++compte > LIMITE) { tronque = true; break; }
         // Un grand plan se lit par tranches : l'interface ne gèle pas pendant la lecture.
-        if (compte % 250 === 0) await nextFrame();
+        await tour();
         const i = await indexDe(it.dest);
         const enfants = prof < 30 && it.items && it.items.length ? await conv(it.items, prof + 1) : [];
         const page = i >= 0 && pagesDeSrc[i] ? pagesDeSrc[i].id : null;
@@ -42,7 +43,7 @@
     };
     const arbre = await conv(plan, 0);
     if (tronque) {
-      const msg = 'Le plan de « ' + src.name + ' » compte plus de ' + LIMITE.toLocaleString('fr-CH') + ' signets : seuls les premiers sont gardés. Les autres ne seront pas dans le fichier enregistré.';
+      const msg = 'Le plan de « ' + src.name + ' » compte plus de ' + LIMITE.toLocaleString(regionLocale()) + ' signets : seuls les premiers sont gardés. Les autres ne seront pas dans le fichier enregistré.';
       signaler('Signets', msg);
       toast(msg, 'warn');
     }
@@ -69,7 +70,6 @@
     for (const s of liste || []) { if (s.id === id) return s; const t = trouverSignet(id, s.enfants); if (t) return t; }
     return null;
   }
-  let signetActif = null;
   function renderSignets() {
     if (!el.signets) return;
     el.signets.replaceChildren();
@@ -84,7 +84,7 @@
       b.type = 'button'; b.className = 'sg' + (signetActif === s.id ? ' actif' : '');
       b.dataset.signet = s.id;
       b.title = 'Aller à la page ' + (pageIndex(s.page) + 1) + ' · double-clic pour renommer';
-      const t = document.createElement('span'); t.className = 't'; t.textContent = s.titre;
+      const t = document.createElement('span'); t.className = 't'; t.setAttribute('translate', 'no'); t.textContent = s.titre;
       const pn = document.createElement('span'); pn.className = 'p'; pn.textContent = 'p. ' + (pageIndex(s.page) + 1);
       b.append(t, pn);
       b.addEventListener('click', () => { signetActif = s.id; allerPage(s.page); renderSignets(); });
@@ -103,7 +103,7 @@
     if (i < 0) return;
     if (state.vue === 'lecture') { lectureAller(i + 1); return; }
     state.selected.clear(); state.selected.add(pageId); state.anchor = pageId;
-    updateSelectionUI();
+    vue.updateSelectionUI();
     const t = tiles.get(pageId);
     if (t) t.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
@@ -143,7 +143,7 @@
         defaut = (t.split('\n').map(l => l.trim()).find(l => l.length >= 3) || '').slice(0, 70);
       } catch (e) { signaler('Titre proposé pour le signet', e, 'info'); }
     }
-    const titre = input('sg-titre', 'text', defaut || ('Page ' + (pageIndex(pid) + 1)));
+    const titre = input('sg-titre', 'text', defaut || tr('Page ' + (pageIndex(pid) + 1)));
     const parent = signetActif != null ? trouverSignet(signetActif, state.signets) : null;
     const sous = parent ? checkbox('sg-sous', 'Placer sous « ' + parent.titre.slice(0, 40) + ' »', false) : null;
     dialog({

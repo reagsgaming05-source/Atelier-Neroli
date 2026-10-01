@@ -70,14 +70,14 @@
         const pg = nouvellePage();
         let y = H - 80;
         if (k === 0) {
-          dans(pg, 'H1', null, null, () => pg.drawText('Sommaire', { x: marge, y, size: 24, font: gras, color: noir }));
+          dans(pg, 'H1', null, null, () => pg.drawText(tr('Sommaire'), { x: marge, y, size: 24, font: gras, color: noir }));
           y -= 30;
           dans(pg, 'P', null, null, () => pg.drawText(couperTexte(reg, o.titre, 12, W - 2 * marge), { x: marge, y, size: 12, font: reg, color: gris }));
           y -= 18;
           dans(pg, 'P', null, null, () => pg.drawText(winAnsi(plural(o.pieces.length, 'pièce', 'pièces') + ' · ' + plural(o.totalPages, 'page', 'pages') + ' · ' + todayStr()), { x: marge, y, size: 10, font: reg, color: gris }));
           y -= 14;
         } else {
-          dans(pg, 'H1', null, null, () => pg.drawText('Sommaire (suite)', { x: marge, y, size: 16, font: gras, color: noir }));
+          dans(pg, 'H1', null, null, () => pg.drawText(tr('Sommaire (suite)'), { x: marge, y, size: 16, font: gras, color: noir }));
           y -= 16;
         }
         decor(pg, null, () => pg.drawRectangle({ x: marge, y: y - 6, width: W - 2 * marge, height: 1.2, color: bleu }));
@@ -85,9 +85,9 @@
         pg.__desc.push({ role: 'TOC', id: 'toc' });
         o.pieces.slice(k * PAR_PAGE, (k + 1) * PAR_PAGE).forEach(pc => {
           const ligne = 'toci-' + pc.n;
-          const num = winAnsi('Pièce n° ' + pc.n);
+          const num = winAnsi(tr('Pièce n° ' + pc.n));
           dans(pg, 'TOCI', ligne, 'toc', () => pg.drawText(num, { x: marge, y, size: 11, font: gras, color: noir }));
-          const pageTxt = pc.debut > 0 ? 'p. ' + pc.debut : '—';
+          const pageTxt = pc.debut > 0 ? tr('p. ' + pc.debut) : '—';
           const wp = reg.widthOfTextAtSize(pageTxt, 11);
           const xT = marge + 78;
           const titre = couperTexte(reg, pc.titre, 11, W - marge - wp - 14 - xT);
@@ -104,7 +104,7 @@
     if (o.intercalaires) {
       o.pieces.forEach(pc => {
         const pg = nouvellePage();
-        const sur = winAnsi('PIÈCE N°');
+        const sur = winAnsi(tr('PIÈCE N°'));
         dans(pg, 'H1', 'titre', null, () => pg.drawText(sur, { x: (W - gras.widthOfTextAtSize(sur, 16)) / 2, y: H - 300, size: 16, font: gras, color: bleu }));
         const n = String(pc.n);
         dans(pg, 'H1', 'titre', null, () => pg.drawText(n, { x: (W - gras.widthOfTextAtSize(n, 120)) / 2, y: H - 420, size: 120, font: gras, color: noir }));
@@ -114,8 +114,8 @@
           y -= 28;
         });
         const sous = winAnsi(pc.debut > 0
-          ? plural(pc.pages.length, 'page', 'pages') + (o.numerotation && pc.pages.length ? ' · pages ' + (pc.debut + (o.intercalaires ? 1 : 0)) + ' à ' + (pc.debut + pc.pages.length - (o.intercalaires ? 0 : 1)) : '')
-          : 'pièce retirée du dossier');
+          ? plural(pc.pages.length, 'page', 'pages') + (o.numerotation && pc.pages.length ? tr(' · pages ' + (pc.debut + (o.intercalaires ? 1 : 0)) + ' à ' + (pc.debut + pc.pages.length - (o.intercalaires ? 0 : 1))) : '')
+          : tr('pièce retirée du dossier'));
         dans(pg, 'P', null, null, () => pg.drawText(sous, { x: (W - reg.widthOfTextAtSize(sous, 11)) / 2, y: y - 6, size: 11, font: reg, color: gris }));
         decor(pg, 'Footer', () => pg.drawText(winAnsi(o.titre), { x: marge, y: 40, size: 9, font: reg, color: gris }));
       });
@@ -193,7 +193,7 @@
       state.history.forEach(remapper); state.redo.forEach(remapper);
       d.srcId = neuf.id;
       miennes.forEach(p => peintes.delete(p.id));
-      render();
+      vue.render();
     } catch (e) { signaler('Sommaire', e); }
     finally {
       sommaireEnCours = false;
@@ -204,7 +204,7 @@
   function toolDossier() {
     const pieces = piecesDuDocument();
     if (!pieces.length) { toast('Ouvrez d\'abord les documents qui composent le dossier.', 'warn'); return; }
-    const titre = input('do-titre', 'text', 'Dossier du ' + todayStr());
+    const titre = input('do-titre', 'text', tr('Dossier du ' + todayStr()));
     const inter = checkbox('do-inter', 'Un intercalaire devant chaque pièce (page de titre « Pièce n° »)', true);
     const mention = checkbox('do-mention', 'La mention « Pièce n° … » en haut à droite de chaque page', true);
     const numero = checkbox('do-num', 'Une pagination continue en pied de page', true);
@@ -239,7 +239,7 @@
         setBusy('Constitution du dossier…', 0);
         try {
           const o = {
-            titre: titre.value.trim() || ('Dossier du ' + todayStr()),
+            titre: titre.value.trim() || tr('Dossier du ' + todayStr()),
             intercalaires: inter.input.checked, mention: mention.input.checked, numerotation: numero.input.checked,
             sommaire: sommaire.input.checked, signets: signets.input.checked,
             pieces: pieces.map((pc, k) => ({ n: k + 1, titre: titres[k].value.trim() || pc.titre, pages: pc.pages, src: pc.src })),
@@ -264,7 +264,7 @@
           o.pieces.forEach(pc => {
             if (o.intercalaires) { const inter = gPages[gi++]; inter.intercalaire = pc.n; ordre.push(inter); }
             ordre.push(...pc.pages);
-            pc.pages.forEach(p => { p.pieceN = pc.n; if (o.mention) p.piece = 'Pièce n° ' + pc.n; });
+            pc.pages.forEach(p => { p.pieceN = pc.n; if (o.mention) p.piece = tr('Pièce n° ' + pc.n); });
           });
           // De quoi refaire le sommaire quand les pages bougent.
           state.dossier = (o.sommaire || o.intercalaires) && gPages.length ? {
@@ -282,17 +282,17 @@
             }, state.stamp || {}, { footerCenter: '{p} / {n}' });
           }
           if (o.signets) {
-            if (somPages.length) insererSignet(state.signets, { id: ++uid, titre: 'Sommaire', page: somPages[0].id, enfants: [] });
+            if (somPages.length) insererSignet(state.signets, { id: ++uid, titre: tr('Sommaire'), page: somPages[0].id, enfants: [] });
             o.pieces.forEach((pc, k) => {
               const premiere = o.intercalaires ? gPages[ns + k] : pc.pages[0];
-              if (premiere) insererSignet(state.signets, { id: ++uid, titre: 'Pièce n° ' + pc.n + ' — ' + pc.titre, page: premiere.id, enfants: [] });
+              if (premiere) insererSignet(state.signets, { id: ++uid, titre: tr('Pièce n° ' + pc.n + ' — ') + pc.titre, page: premiere.id, enfants: [] });
             });
           }
           state.filenameDirty = true;
           el.filename.value = safeBase(o.titre);
           state.touched = true;
           state.selected.clear();
-          render();
+          vue.render();
           setLast('Dossier constitué : ' + plural(o.pieces.length, 'pièce', 'pièces') + ', ' + plural(state.pages.length, 'page', 'pages') + ' · Ctrl+Z pour défaire');
         } catch (e) { console.error(e); toast('Le dossier n\'a pas pu être constitué : ' + e.message, 'error'); }
         finally { setBusy(''); }

@@ -135,6 +135,6 @@
       rien.textContent = 'Aucun outil ne correspond à « ' + filtreOutils + ' ».';
       host.appendChild(rien);
     }
-    syncButtons();
+    vue.syncButtons();
   }
 

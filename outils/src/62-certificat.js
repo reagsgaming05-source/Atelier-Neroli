@@ -73,9 +73,9 @@
 
   // Le cartouche d'une signature visible : une phrase par ligne.
   function cartoucheSignature(resume, o) {
-    const jour = o.date.toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' });
-    const heure = o.date.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
-    const lignes = ['Signé numériquement par', resume.sujet + (resume.organisation && resume.organisation !== resume.sujet ? ', ' + resume.organisation : ''), 'le ' + jour + ' à ' + heure];
+    const jour = o.date.toLocaleDateString(regionLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
+    const heure = o.date.toLocaleTimeString(regionLocale(), { hour: '2-digit', minute: '2-digit' });
+    const lignes = [tr('Signé numériquement par'), resume.sujet + (resume.organisation && resume.organisation !== resume.sujet ? ', ' + resume.organisation : ''), tr('le ' + jour + ' à ' + heure)];
     if (o.raison) lignes.push(o.raison);
     if (o.lieu) lignes.push(o.lieu);
     return lignes;
@@ -234,7 +234,7 @@
       try {
         lu = certificatLire(new Uint8Array(await fichier.arrayBuffer()), mdp.value);
         const r = lu.resume;
-        const d = x => x.toLocaleDateString('fr-CH');
+        const d = x => x.toLocaleDateString(regionLocale());
         let t = 'Certificat de « ' + r.sujet + ' »' + (r.organisation ? ' (' + r.organisation + ')' : '') + ', délivré par « ' + r.emetteur + ' », valable du ' + d(r.du) + ' au ' + d(r.au) + '.';
         let avert = false;
         if (r.expire) { t += ' Il a expiré : il ne peut pas servir à signer.'; avert = true; }
@@ -289,7 +289,7 @@
       const dernier = rapport[rapport.length - 1];
       if (!dernier || dernier.etat !== 'intacte') throw new Error('La signature produite ne se vérifie pas (' + (dernier && dernier.raison ? dernier.raison : 'raison inconnue') + ') : le fichier n\'est pas enregistré.');
       setBusy('');
-      const nom = safeBase(baseName(el.filename.value)).replace(/-modifi[eé]$/i, '') + '-signe.pdf';
+      const nom = safeBase(baseName(el.filename.value)).replace(SUFFIXE_MODIFIE, '') + tr('-signe.pdf');
       const parti = await deliver(signe, nom, null, {});
       if (parti) setLast('Signé par ' + options.certificat.resume.sujet + ' : ' + nom);
     } catch (e) {

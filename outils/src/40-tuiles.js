@@ -153,7 +153,7 @@
       row.style.setProperty('--h', src.hue);
       row.title = 'Sélectionner toutes les pages de ' + src.name;
       const g = document.createElement('div');
-      const name = document.createElement('div'); name.className = 'doc-name'; name.textContent = src.name;
+      const name = document.createElement('div'); name.className = 'doc-name'; name.setAttribute('translate', 'no'); name.textContent = src.name;
       if (src.isSample) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'Exemple'; name.appendChild(b); }
       if (src.genere) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'Généré'; name.appendChild(b); }
       if (src.encrypted) { const b = document.createElement('span'); b.className = 'badge lock'; b.textContent = 'Protégé'; name.appendChild(b); }
@@ -178,18 +178,18 @@
 
   function renderChips() {
     const items = [];
-    if (state.watermark) items.push({ label: 'Filigrane', value: state.watermark.text, clear: () => { snapshot(); state.watermark = null; render(); } });
-    if (state.stamp) items.push({ label: 'En-tête / pied de page', value: 'actif', clear: () => { snapshot(); state.stamp = null; render(); } });
-    if (state.security) items.push({ label: 'Mot de passe', value: state.security.userPassword ? 'à l\'ouverture' : 'autorisations', clear: () => { snapshot(); state.security = null; render(); } });
-    if (state.flatten) items.push({ label: 'Aplatir', value: 'à l\'export', clear: () => { snapshot(); state.flatten = false; render(); } });
-    if (state.figerAnnotations) items.push({ label: 'Annotations', value: 'figées', clear: () => { snapshot(); state.figerAnnotations = false; render(); } });
+    if (state.watermark) items.push({ label: 'Filigrane', value: state.watermark.text, clear: () => { snapshot(); state.watermark = null; vue.render(); } });
+    if (state.stamp) items.push({ label: 'En-tête / pied de page', value: 'actif', clear: () => { snapshot(); state.stamp = null; vue.render(); } });
+    if (state.security) items.push({ label: 'Mot de passe', value: state.security.userPassword ? 'à l\'ouverture' : 'autorisations', clear: () => { snapshot(); state.security = null; vue.render(); } });
+    if (state.flatten) items.push({ label: 'Aplatir', value: 'à l\'export', clear: () => { snapshot(); state.flatten = false; vue.render(); } });
+    if (state.figerAnnotations) items.push({ label: 'Annotations', value: 'figées', clear: () => { snapshot(); state.figerAnnotations = false; vue.render(); } });
     const retraits = state.pages.reduce((n, p) => n + ((p.retraits || []).length), 0);
-    if (retraits) items.push({ label: 'Commentaires retirés', value: String(retraits), clear: () => { snapshot(); state.pages.forEach(p => { p.retraits = []; peintes.delete(p.id); }); render(); } });
+    if (retraits) items.push({ label: 'Commentaires retirés', value: String(retraits), clear: () => { snapshot(); state.pages.forEach(p => { p.retraits = []; peintes.delete(p.id); }); vue.render(); } });
     const m = state.meta;
-    if (m.title || m.author || m.subject || m.keywords) items.push({ label: 'Propriétés', value: m.title || m.author || 'définies', clear: () => { snapshot(); state.meta = { title: '', author: '', subject: '', keywords: '', balise: !!state.meta.balise, langue: state.meta.langue || 'fr' }; render(); } });
-    if (m.balise) items.push({ label: 'Balisage', value: 'PDF balisé (' + (m.langue || 'fr') + ')', clear: () => { snapshot(); state.meta = Object.assign({}, state.meta, { balise: false }); render(); } });
+    if (m.title || m.author || m.subject || m.keywords) items.push({ label: 'Propriétés', value: m.title || m.author || 'définies', clear: () => { snapshot(); state.meta = { title: '', author: '', subject: '', keywords: '', balise: !!state.meta.balise, langue: state.meta.langue || 'fr' }; vue.render(); } });
+    if (m.balise) items.push({ label: 'Balisage', value: 'PDF balisé (' + (m.langue || 'fr') + ')', clear: () => { snapshot(); state.meta = Object.assign({}, state.meta, { balise: false }); vue.render(); } });
     const anyForm = state.sources.some(s => s.formValues && Object.keys(s.formValues).length);
-    if (anyForm) items.push({ label: 'Formulaire', value: 'rempli', clear: () => { snapshot(); state.sources.forEach(s => { s.formValues = null; }); render(); } });
+    if (anyForm) items.push({ label: 'Formulaire', value: 'rempli', clear: () => { snapshot(); state.sources.forEach(s => { s.formValues = null; }); vue.render(); } });
 
     el.chips.replaceChildren();
     el.chips.hidden = items.length === 0;
@@ -230,7 +230,7 @@
       const ids = state.pages.filter(p => p.src === src.id);
       row.classList.toggle('active', ids.length > 0 && ids.every(p => state.selected.has(p.id)));
     });
-    syncButtons();
+    vue.syncButtons();
   }
 
   function syncButtons() {
@@ -310,125 +310,9 @@
     renderSignets();
     renderChips();
     renderOnglets();
-    updateSelectionUI();
+    vue.updateSelectionUI();
     if (state.dossier) lancerSommaire();
   }
-
-  function defaultBase() {
-    if (state.chemin) return baseName(nomDe(state.chemin));
-    const real = state.sources.filter(s => !s.isSample);
-    if (real.length === 1) return baseName(real[0].name) + '-modifié';
-    if (real.length > 1) return 'fusion';
-    if (state.sources.length) return 'exemple';
-    return 'document';
-  }
-
-  // =====================================================================
-  //  Mutations
-  // =====================================================================
-  const targetsFor = id => state.selected.has(id) ? selectedInOrder() : [id];
-
-  function rotatePages(ids, delta) {
-    if (!ids.length) return;
-    snapshot();
-    const set = new Set(ids);
-    state.pages.forEach(p => {
-      if (!set.has(p.id)) return;
-      if (p.ann.length) { const g = pageGeom(p); p.ann = rotateAnn(p.ann, delta, g.Wd, g.Hd); }
-      p.rot = (((p.rot + delta) % 360) + 360) % 360;
-    });
-    state.touched = true;
-    render();
-    setLast(plural(ids.length, 'page pivotée', 'pages pivotées') + (delta > 0 ? ' à droite' : ' à gauche'));
-  }
-
-  function deletePages(ids) {
-    if (!ids.length) return;
-    snapshot();
-    const set = new Set(ids);
-    state.pages = state.pages.filter(p => !set.has(p.id));
-    ids.forEach(id => state.selected.delete(id));
-    state.touched = true;
-    render();
-    setLast(plural(ids.length, 'page retirée', 'pages retirées') + ' · Ctrl+Z pour annuler');
-  }
-
-  function duplicatePages(ids) {
-    if (!ids.length) return;
-    snapshot();
-    const set = new Set(ids);
-    const next = [], created = [];
-    state.pages.forEach(p => {
-      next.push(p);
-      if (set.has(p.id)) {
-        const c = { id: ++uid, src: p.src, index: p.index, rot: p.rot, ann: p.ann.map(a => Object.assign({}, a, { id: ++uid })), piece: p.piece || null, ocr: p.ocr || null, pieceN: p.pieceN || 0, retraits: (p.retraits || []).slice() };
-        next.push(c); created.push(c.id);
-      }
-    });
-    state.pages = next;
-    state.selected = new Set(created);
-    state.touched = true;
-    render();
-    setLast(plural(ids.length, 'page dupliquée', 'pages dupliquées'));
-  }
-
-  function applyOrder(next, n, label) {
-    if (next.length === state.pages.length && next.every((p, i) => p === state.pages[i])) return false;
-    snapshot();
-    state.pages = next;
-    state.touched = true;
-    render();
-    if (label) setLast(label);
-    return true;
-  }
-  function movePages(ids, toIndex) {
-    const set = new Set(ids);
-    const moving = state.pages.filter(p => set.has(p.id));
-    if (!moving.length) return false;
-    const before = state.pages.slice(0, toIndex).filter(p => !set.has(p.id));
-    const after = state.pages.slice(toIndex).filter(p => !set.has(p.id));
-    return applyOrder(before.concat(moving, after), moving.length, moving.length > 1 ? moving.length + ' pages déplacées' : 'Page déplacée');
-  }
-  function moveToPosition(ids, position) {
-    const set = new Set(ids);
-    const moving = state.pages.filter(p => set.has(p.id));
-    if (!moving.length) return false;
-    const rest = state.pages.filter(p => !set.has(p.id));
-    const t = Math.min(rest.length, Math.max(0, position - 1));
-    return applyOrder(rest.slice(0, t).concat(moving, rest.slice(t)), moving.length, null);
-  }
-  function nudge(id, dir) {
-    const i = pageIndex(id), j = i + dir;
-    if (i < 0 || j < 0 || j >= state.pages.length) return;
-    movePages([id], dir > 0 ? j + 1 : j);
-    const t = tiles.get(id);
-    if (t) t.focus();
-  }
-  function removeSource(id) {
-    const src = srcById(id);
-    if (!src) return;
-    snapshot();
-    state.sources = state.sources.filter(s => s.id !== id);
-    state.pages = state.pages.filter(p => p.src !== id);
-    if (!src.isSample) state.touched = true;
-    render();
-    setLast(src.name + ' retiré · Ctrl+Z pour annuler');
-  }
-  function reverseOrder() {
-    if (state.pages.length < 2) return;
-    snapshot();
-    state.pages.reverse();
-    state.touched = true;
-    render();
-    setLast('Ordre des pages inversé');
-  }
-  function selectAll() { state.pages.forEach(p => state.selected.add(p.id)); updateSelectionUI(); }
-  function clearSelection() { state.selected.clear(); updateSelectionUI(); }
-  function selectSource(id) {
-    const ids = state.pages.filter(p => p.src === id).map(p => p.id);
-    const all = ids.length && ids.every(x => state.selected.has(x));
-    if (all) ids.forEach(x => state.selected.delete(x));
-    else { state.selected.clear(); ids.forEach(x => state.selected.add(x)); }
-    updateSelectionUI();
-  }
-
+  vue.render = render;
+  vue.syncButtons = syncButtons;
+  vue.updateSelectionUI = updateSelectionUI;

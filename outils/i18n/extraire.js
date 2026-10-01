@@ -15,17 +15,22 @@ const modules = () => fs.readdirSync(SRC).filter(f => f.endsWith('.js')).sort().
 
 // Un texte « pour humain » : pas un sélecteur, une classe, un type MIME, une expression régulière…
 // Des textes que les règles de forme écartent à tort : repérés à la main, ils sont toujours retenus.
-const TEXTES_RETENUS = ['pdf.js indisponible', 'point (1234.50)', '[caviardé]', 'CONFIDENTIEL'];
+const TEXTES_RETENUS = ['pdf.js indisponible', 'point (1234.50)', '[caviardé]', 'CONFIDENTIEL',
+  // les morceaux de noms de fichiers que le logiciel propose : traduits, ils ne ressemblent pas à des phrases
+  '-extrait.pdf', '-signe.pdf', '-livret', '-par-feuille', '-sans-vides.pdf', '-leger.pdf', '-numerote.pdf', '-protege.pdf',
+  'lot-', '-divise.zip', '-images.zip', '-tableau.csv', 'formulaire-', 'images.pdf', '(aucun texte)'];
 
 function estUnTexte(s) {
   const t = s.trim();
   if (TEXTES_RETENUS.indexOf(t) >= 0) return true;
+  if (['Ae', 'Oe', 'Ue'].indexOf(t) >= 0) return false;                                 // le repliement des trémas d'un nom de fichier
   if (t.length < 2 || !/[A-Za-zÀ-ÿ]/.test(t)) return false;
   if (/^(https?:|data:|blob:|file:|#|\.|\/|\[|<)/.test(t)) return false;
   if (/^[a-z][a-zA-Z0-9_\-.:\/+=;,*]*$/.test(t) && !/[À-ÿ]/.test(t)) return false;   // identifiant, classe, type MIME, extension
   if (!/[a-zà-ÿ]/.test(t) && !/\s/.test(t)) return false;                              // SIGLE ou nom technique seul : PNG, CHF, SHA-256, DEFLATE (« PIÈCE N° » compte, « CONFIDENTIEL » est retenu à la main)
   if (/^__[A-Z_]+__$/.test(t)) return false;                                            // repère remplacé à la construction
   if (/^[A-Za-z0-9+\/=]{24,}$/.test(t)) return false;                                  // base 64
+  if (/\bconst \w+ =|=> \{|\bself\.|\bawait\b/.test(t)) return false;                         // du code (le travailleur de rendu)
   if (/\\[dsSwWbB]|\(\?:|\[\^/.test(t)) return false;                                   // morceau d'expression régulière
   if (/^[a-z]+(-[a-z0-9]+)+(\s+[a-z]+(-[a-z0-9]+)+)*$/.test(t)) return false;           // « sr-only », « tb-btn primary »
   if (!/^[A-ZÀ-Ý][a-zà-ÿ]+ /.test(t) && /^[\w.#\-\[\]="':, >+~*()]+$/.test(t) && /[#.\[]/.test(t) && !/\s{2}/.test(t) && !/[À-ÿ]/.test(t) && !/ [a-zà-ÿ]{3,} [a-zà-ÿ]{3,}/.test(t)) return false;   // sélecteurs
@@ -34,11 +39,20 @@ function estUnTexte(s) {
 
 // Quelques mots isolés s'affichent tels quels, bien qu'ils ressemblent à des identifiants : ils sont
 // désignés ici, à la main, après lecture du code (les autres mots isolés sont des clés internes).
-const MOTS_AFFICHES = ['actif', 'autorisations', 'rempli', 'identique', 'blanche', 'clair', 'sombre', 'automatique', 'recto', 'verso'];
+const MOTS_AFFICHES = ['actif', 'autorisations', 'rempli', 'identique', 'blanche', 'clair', 'sombre', 'automatique', 'recto', 'verso', 'fusion', 'exemple'];
 
 // Un texte assemblé : ses morceaux fixes doivent faire un texte, et porter au moins une minuscule
 // (« M{0} 0H{1}A{2} » est un tracé, « A · {0} » une étiquette sans mot).
-const estUnMotif = m => { const fixe = m.replace(/\{\d+\}/g, ''); return estUnTexte(fixe) && /[a-zà-ÿ]/.test(fixe); };
+const MOTIFS_RETENUS = ['p. {0}', 'p. {0}{1}', '{0} annot.', '{0} o', '{0} Ko', '{0} Mo'];
+const estUnMotif = m => {
+  if (MOTIFS_RETENUS.indexOf(m) >= 0) return true;
+  if (/\bconst \w+ =|=> \{|\bself\.|\bawait\b/.test(m)) return false;   // du code (le travailleur de rendu)
+  const fixe = m.replace(/\{\d+\}/g, '');
+  if (/\b(rg|RG|Tf|Tm|Tj|TJ|re|gs|cm|BDC|EMC)\b|^[\s\/]*[A-Za-z]{1,3}[\s\d]*$/.test(fixe) && !/[a-zà-ÿ]{4,}/.test(fixe)) return false;   // opérateurs de PDF
+  // Un mot de liaison entre deux morceaux (« {0} sur {1} », « {0} à {1} ») se traduit, bien qu'il ne soit pas une phrase.
+  if (/\s[A-Za-zÀ-ÿ]{2,}\s/.test(fixe) && /[a-zà-ÿ]/.test(fixe)) return true;
+  return estUnTexte(fixe) && /[a-zà-ÿ]/.test(fixe);
+};
 
 function relever(options) {
   const o = options || {};

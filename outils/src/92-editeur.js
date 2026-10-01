@@ -1,13 +1,6 @@
   // =====================================================================
   //  Page editor
   // =====================================================================
-  const ed = {
-    root: null, pageId: null, tool: 'select', zoom: 'fit', scale: 1, sel: null,
-    style: { color: '#E8B04B', textColor: '#D0021B', size: 14, width: 2, opacity: 0.35, font: 'Helvetica', bold: false },
-    gesture: null, snapped: false, lignes: null, lignesCle: null, saisie: null, polices: [],
-  };
-
-  function edPage() { return state.pages.find(p => p.id === ed.pageId); }
 
   function openEditor(pageId) {
     const p = state.pages.find(x => x.id === pageId);
@@ -19,13 +12,14 @@
     edSyncTools();
     edRenderPage();
   }
+
   function closeEditor() {
     if (!ed.root) return;
     edFermerSaisie();
     ed.root.hidden = true;
     document.body.style.overflow = '';
     ed.pageId = null; ed.sel = null;
-    render();
+    vue.render();
   }
 
   function buildEditor() {

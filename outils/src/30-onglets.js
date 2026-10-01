@@ -30,7 +30,7 @@
       const titre = titreEtat(e);
       const modifie = !!(e.touched && e.pages.length);
       t.title = titre + (modifie ? ' · modifié' : '');
-      const sp = document.createElement('span'); sp.className = 't'; sp.textContent = titre;
+      const sp = document.createElement('span'); sp.className = 't'; sp.setAttribute('translate', 'no'); sp.textContent = titre;
       t.appendChild(sp);
       if (modifie) { const m = document.createElement('span'); m.className = 'mod'; m.textContent = '\u2022'; m.title = 'Modifié'; t.appendChild(m); }
       const x = document.createElement('button');
@@ -82,7 +82,7 @@
     onglets.push(o);
     ongletActif = o.id;
     poserEtat(o.etat);
-    render();
+    vue.render();
     el.canvas.scrollTop = 0;
     if (fichiers && fichiers.length) addFiles(fichiers);
     return o;
@@ -94,7 +94,7 @@
     quitterDocument();
     ongletActif = id;
     poserEtat(cible.etat);
-    render();
+    vue.render();
     el.canvas.scrollTop = 0;
   }
   function ongletVoisin(sens) {
@@ -127,7 +127,7 @@
       const suivant = onglets[Math.min(i, onglets.length - 1)];
       if (suivant) { ongletActif = suivant.id; poserEtat(suivant.etat); }
       else { const n = { id: ++uid, etat: etatVierge() }; onglets.push(n); ongletActif = n.id; poserEtat(n.etat); }
-      render();
+      vue.render();
       el.canvas.scrollTop = 0;
     };
     if (!(e.touched && e.pages.length)) { faire(); return; }
@@ -168,7 +168,7 @@
     e.touched = true;
     state.pages = state.pages.filter(p => !set.has(p.id));
     state.touched = true;
-    render();
+    vue.render();
     setLast(plural(moving.length, 'page déplacée', 'pages déplacées') + ' vers « ' + titreEtat(e) + ' »');
   }
   const modifieQuelquePart = () => onglets.some(o => { const e = o.id === ongletActif ? state : o.etat; return !!(e && e.touched && e.pages.length); });
@@ -233,7 +233,7 @@
   function menuPage(e, id) {
     const p = state.pages.find(x => x.id === id);
     if (!p) return;
-    if (state.vue === 'organiser' && !state.selected.has(id)) { state.selected.clear(); state.selected.add(id); state.anchor = id; updateSelectionUI(); }
+    if (state.vue === 'organiser' && !state.selected.has(id)) { state.selected.clear(); state.selected.add(id); state.anchor = id; vue.updateSelectionUI(); }
     const ids = state.vue === 'organiser' ? targetsFor(id) : [id];
     const n = ids.length, s = n > 1 ? ' (' + n + ' pages)' : '';
     const selection = window.getSelection ? String(window.getSelection()).trim() : '';
@@ -248,7 +248,7 @@
       { label: 'Copier le texte de la page', icon: IC.txt, run: async () => { const t = await getPageText(p); const ok = t.trim() && await copierTexte(t); toast(ok ? 'Texte de la page copié.' : (t.trim() ? 'Le presse-papiers est inaccessible ici.' : 'Cette page n\'a pas de texte (scan sans reconnaissance ?).'), ok ? '' : 'warn'); } },
       { sep: true },
       { label: 'Dupliquer' + s, icon: IC.doc, run: () => duplicatePages(ids) },
-      { label: 'Extraire' + s + ' dans un PDF…', icon: IC.save, run: () => exportPages(state.pages.filter(x => ids.includes(x.id)), safeBase(el.filename.value).replace(/-modifié$/, '') + '-extrait.pdf', { noInPlace: true }) },
+      { label: 'Extraire' + s + ' dans un PDF…', icon: IC.save, run: () => exportPages(state.pages.filter(x => ids.includes(x.id)), safeBase(el.filename.value).replace(SUFFIXE_MODIFIE, '') + tr('-extrait.pdf'), { noInPlace: true }) },
       { sep: true },
       { label: 'Supprimer' + s, icon: IC.trash, touche: 'Suppr', danger: true, run: () => deletePages(ids) },
     ]);

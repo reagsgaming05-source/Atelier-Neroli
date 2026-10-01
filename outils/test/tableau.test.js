@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { extraire } = require('./aide');
 const tableauDepuisMorceaux = extraire('  function tableauDepuisMorceaux(morceaux) {', '  const tableauTsv = ', 'tableauDepuisMorceaux');
-const tableauCsv = extraire('  const tableauCsv = ', '  async function copierTexte(', 'tableauCsv');
+const tableauCsv = extraire('  const tableauCsv = ', '  async function morceauxDePage(', 'tableauCsv');
 const tableauTsv = extraire('  const tableauTsv = ', '  const tableauCsv = ', 'tableauTsv');
 
 // Une facture : un titre pleine largeur, trois colonnes (libellé, quantité, montant).

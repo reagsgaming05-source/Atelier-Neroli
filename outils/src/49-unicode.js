@@ -12,7 +12,6 @@
   //  plus légères.
   // =====================================================================
   const FAMILLES_UNICODE = { Helvetica: 'sans', Times: 'serif', Courier: 'mono' };
-  const ecriture = { unicode: false, actifs: 0, couverture: null };
   const policesDecompressees = new Map();
 
   async function decompresser(b64) {

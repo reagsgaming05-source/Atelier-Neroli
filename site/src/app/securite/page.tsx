@@ -103,8 +103,8 @@ export default function SecuritePage() {
             <li>
               Le dossier de données du logiciel (documents récents, signatures mémorisées, copie de secours du travail en cours) est écrit en clair sur le poste : verrouillez votre session et ne mémorisez pas votre signature sur un poste partagé.
             </li>
-            <li>Le caviardage retire le texte de la page ; il ne nettoie ni les métadonnées, ni les commentaires, ni les champs de formulaire. Relisez le fichier produit avant de le publier.</li>
-            <li>Le logiciel ne produit pas de signature électronique au sens de la SCSE, ne vérifie pas les signatures numériques des PDF reçus, et ne produit pas de PDF/A.</li>
+            <li>Le caviardage retire le terme du texte de la page, des légendes d&rsquo;images, des métadonnées, des notes, des champs de formulaire, des signets et des pièces jointes ; un contrôle fait avec des outils qui ne sont pas les nôtres le vérifie, sur des documents piégés, à chaque construction du logiciel. Relisez tout de même le fichier produit avant de le publier.</li>
+            <li>Le logiciel pose une signature numérique avec votre certificat personnel et lit celles des PDF reçus (contenu intact ou modifié, signataire), mais il n&rsquo;est pas un prestataire de services de certification : sa signature n&rsquo;est pas une signature électronique qualifiée au sens de la SCSE, il ne pose pas d&rsquo;horodatage, et il ne dit pas si l&rsquo;autorité d&rsquo;un certificat est reconnue ni s&rsquo;il a été révoqué (cela supposerait une connexion, que le logiciel n&rsquo;ouvre jamais). Il produit du PDF/A-2b, contrôlé ; pas de PDF/A-1 ni -3.</li>
           </ul>
         </div>
       </section>

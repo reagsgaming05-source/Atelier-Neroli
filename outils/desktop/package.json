@@ -38,6 +38,9 @@
     },
     "files": [
       "main.js",
+      "langue.js",
+      "langue-de.json",
+      "traducteur.js",
       "ou-ranger.js",
       "version-posee.js",
       "verrou.js",

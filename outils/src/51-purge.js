@@ -68,7 +68,7 @@
     let t = String(texte == null ? '' : texte);
     (specs || []).forEach(s => {
       const occ = occurrencesDe(t, s);
-      for (let k = occ.length - 1; k >= 0; k--) t = t.slice(0, occ[k][0]) + PURGE_MARQUE + t.slice(occ[k][1]);
+      for (let k = occ.length - 1; k >= 0; k--) t = t.slice(0, occ[k][0]) + tr(PURGE_MARQUE) + t.slice(occ[k][1]);
     });
     return t;
   }
@@ -233,6 +233,7 @@
     if (purgeTrouve(Object.values(state.meta || {}).join(' \n '), specs)) res.metadonnees++;
     const { PDFName, PDFDict } = PDFLib;
     const docs = new Map(), polices = new Map();
+    const tour = cadence();
     for (let i = 0; i < state.pages.length; i++) {
       if (annule && annule()) return null;
       const p = state.pages[i];
@@ -268,7 +269,7 @@
           res.texteCache += Math.max(0, dansLeFlux - ((visibles && visibles.get(p.id)) || 0));
         }
       } catch (e) { signaler('Purge', e); }
-      if (i % 8 === 7) await nextFrame();
+      await tour();
     }
     res.total = res.metadonnees + res.notes + res.signets + res.texteCache;
     return res;

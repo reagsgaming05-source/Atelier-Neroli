@@ -57,6 +57,24 @@ d'accessibilité » (Propriétés) donne aux documents produits une langue, un t
 structure : vrais titres pour un dossier de pièces, artefacts pour les numérotations. Et les noms
 comme « Milošević » ou du cyrillique s'écrivent enfin au lieu de devenir « ? ».
 
+**En allemand.** L'application existe en français et en allemand : le menu, la page, les fenêtres
+de l'outil, la fenêtre de connexion et les messages. Elle part dans la langue du poste ; un bouton
+« DE » / « FR » dans la barre, ou Aide ▸ Langue, change de langue sans rien perdre, et le choix est
+retenu. Ce que l'application écrit dans les documents suit la langue choisie (sommaire, intercalaires,
+« Beilage Nr. », cartouche de signature, tampons usuels, filigrane « VERTRAULICH »), et la
+reconnaissance de texte propose l'allemand d'office. Le contenu de vos documents n'est jamais
+traduit. Le manuel et le site restent en français.
+
+**Plus fluide sur les gros documents.** La recherche montre son premier résultat tout de suite (sur
+300 pages et 8 400 occurrences : environ un quart de seconde au lieu de deux et demie), « Suivant »
+répond en quelques dizaines de millisecondes, et une deuxième recherche du même mot ne relit rien. Un
+document scanné se dessine à l'arrière-plan : la fenêtre ne se fige plus (3 secondes de blocage sur trois
+pages de 8,7 mégapixels, 63 millisecondes maintenant), et les opérations longues — export, recherche,
+caviardage, comparaison, détection des pages vides — rendent la main assez souvent pour que la barre
+d'avancement se voie et que « Annuler » réponde. Pour un document lourd, le dessin en arrière-plan garde
+une seconde copie du fichier en mémoire (400 Mo au plus) ; au-delà, ou au moindre souci, l'application
+dessine comme avant.
+
 **Et aussi** : les caractères que le PDF ne sait pas écrire dans un champ ou un tampon sont
 signalés (plus de « Miloševi? » silencieux) ; plus de limite de 800 signets ; « Réduire la
 taille » refuse de rendre un fichier plus gros ; Ctrl+Z juste après l'ouverture ne vide plus
@@ -78,4 +96,4 @@ l'espace de travail ; un journal qui dit ce qui s'est mal passé, au lieu de se 
 Pas de PDF/UA (le balisage ne couvre pas les titres, listes et tableaux des pages venues d'ailleurs,
 ni les liens et formulaires), pas de signature qualifiée ni d'horodatage, pas de contrôle de
 révocation ni de liste d'autorités de confiance, pas de PDF/A-1, -3 ni de niveau « a » ; l'application
-est en français seulement (l'OCR lit aussi l'allemand). Voir la feuille de route.
+est en français et en allemand (pas d'italien), et le manuel et le site restent en français. Voir la feuille de route.

@@ -44,16 +44,16 @@
     const doc = await PDFDocument.create();
     const bold = await doc.embedFont(StandardFonts.HelveticaBold);
     const reg = await doc.embedFont(StandardFonts.Helvetica);
-    const titles = ['Couverture', 'Sommaire', 'Présentation', 'Offre', 'Conditions', 'Contact'];
+    const titles = ['Couverture', 'Sommaire', 'Présentation', 'Offre', 'Conditions', 'Contact'].map(t => tr(t));
     const W = 595.28, H = 841.89;
     titles.forEach((t, i) => {
       const p = doc.addPage([W, H]);
       p.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(1, 1, 1) });
       p.drawRectangle({ x: 48, y: H - 72, width: W - 96, height: 3, color: rgb(0.15, 0.39, 0.79) });
-      p.drawText('DOCUMENT D\'EXEMPLE', { x: 48, y: H - 60, size: 9, font: bold, color: rgb(0.15, 0.39, 0.79) });
+      p.drawText(tr('DOCUMENT D\'EXEMPLE'), { x: 48, y: H - 60, size: 9, font: bold, color: rgb(0.15, 0.39, 0.79) });
       p.drawText(String(i + 1), { x: 48, y: H - 300, size: 190, font: bold, color: rgb(0.89, 0.9, 0.92) });
       p.drawText(t, { x: 48, y: H - 360, size: 34, font: bold, color: rgb(0.08, 0.09, 0.11) });
-      p.drawText('Page ' + (i + 1) + ' sur ' + titles.length + ' - remplacez cet exemple par vos propres documents.', { x: 48, y: H - 392, size: 12, font: reg, color: rgb(0.36, 0.39, 0.45) });
+      p.drawText(tr('Page ' + (i + 1) + ' sur ' + titles.length + ' - remplacez cet exemple par vos propres documents.'), { x: 48, y: H - 392, size: 12, font: reg, color: rgb(0.36, 0.39, 0.45) });
       for (let k = 0; k < 9; k++) {
         p.drawRectangle({ x: 48, y: H - 460 - k * 26, width: (k % 3 === 2 ? 0.55 : 0.92) * (W - 96), height: 8, color: rgb(0.91, 0.92, 0.94) });
       }
@@ -69,7 +69,7 @@
       const bytes = await makeSample();
       await addPdfSource('exemple.pdf', bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), { isSample: true, silent: true });
       state.history = []; state.redo = [];
-      render();
+      vue.render();
       setLast('Exemple chargé : déplacez une page, annotez-la, ou ouvrez vos propres documents.');
     } catch (e) { console.error(e); toast('L\'exemple n\'a pas pu être créé.', 'error'); }
     finally { setBusy(''); }
@@ -212,7 +212,7 @@
     };
     afficherLangue();
     window.addEventListener('aktum-langue', afficherLangue);
-    el.btnLangue.addEventListener('click', () => { definirLangue(langue === 'fr' ? 'de' : 'fr', true); render(); });
+    el.btnLangue.addEventListener('click', () => { definirLangue(langue === 'fr' ? 'de' : 'fr', true); vue.render(); });
     el.btnHelp.addEventListener('click', toolHelp);
     el.btnAnnulerOp.addEventListener('click', demanderAnnulation);
     el.btnJournal.addEventListener('click', toolJournal);
@@ -417,7 +417,7 @@
         if (state.selected.has(id)) state.selected.delete(id); else state.selected.add(id);
         state.anchor = id;
       }
-      updateSelectionUI();
+      vue.updateSelectionUI();
     });
     el.pages.addEventListener('dblclick', e => {
       const t = e.target.closest('.tile');
@@ -444,7 +444,7 @@
       if (e.key === ' ') {
         e.preventDefault();
         if (state.selected.has(id)) state.selected.delete(id); else state.selected.add(id);
-        state.anchor = id; updateSelectionUI();
+        state.anchor = id; vue.updateSelectionUI();
       } else if (e.key === 'Enter') { e.preventDefault(); openEditor(id); }
       else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         e.preventDefault();
@@ -466,7 +466,7 @@
       const t = e.target.closest('.tile');
       if (!t) return;
       const id = +t.dataset.id;
-      if (!state.selected.has(id)) { state.selected.clear(); state.selected.add(id); state.anchor = id; updateSelectionUI(); }
+      if (!state.selected.has(id)) { state.selected.clear(); state.selected.add(id); state.anchor = id; vue.updateSelectionUI(); }
       drag.ids = selectedInOrder();
       e.dataTransfer.effectAllowed = 'move';
       try { e.dataTransfer.setData('text/plain', 'aktum-pages'); } catch (e) { signaler('Glisser-déposer', e, 'info'); }
@@ -547,7 +547,7 @@
       if (voulu.size !== state.selected.size || Array.from(voulu).some(i => !state.selected.has(i))) {
         state.selected.clear();
         voulu.forEach(i => state.selected.add(i));
-        updateSelectionUI();
+        vue.updateSelectionUI();
       }
     });
     const finLasso = e => {
@@ -595,7 +595,7 @@
     });
 
     renderTools();
-    render();
+    vue.render();
     // Lancée par l'exécutable, la page imprime directement : le moteur
     // d'affichage n'ouvre pas sa propre fenêtre d'impression.
     state.impressionDirecte = optionLancement('impression') === 'directe';
@@ -662,6 +662,9 @@
         bureau.onOuvrir(liste => { ouvrirListe(liste); });
         if (bureau.onOuvrirOnglet) bureau.onOuvrirOnglet(liste => { ouvrirListe(liste, { onglet: true }); });
         bureau.onCommande(commandeBureau);
+        // Un changement de langue venu du menu : la page suit, et relit l'état de la licence (son texte est rédigé par le processus principal).
+        if (bureau.onLangue) bureau.onLangue(l => { if (l !== codeLangue()) { definirLangue(l, false); vue.render(); } lireLaLicence(); });
+        window.addEventListener('aktum-langue', lireLaLicence);
         bureau.onEnregistre(r => {
           const attente = state.attenteChemin; state.attenteChemin = null;
           if (r && r.chemin) {
@@ -690,10 +693,10 @@
     }
   }
 
-  const origRender = render;
   // La barre est remesurée après chaque rendu : passer en lecture fait
   // apparaître les contrôles de zoom, et c'est précisément là qu'elle débordait.
-  render = function () { origRender(); renderTools(); planifierAjustementBarre(); };
+  const rendreLesVignettes = vue.render;
+  vue.render = function () { rendreLesVignettes(); renderTools(); planifierAjustementBarre(); };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

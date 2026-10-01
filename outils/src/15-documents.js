@@ -75,7 +75,7 @@
     // document disparaissait. Seul ce qu'on AJOUTE à un document déjà là se défait.
     const espaceVide = !state.sources.some(s => !s.isSample);
     if (!opts.silent && !espaceVide) snapshot();
-    else if (espaceVide) { state.history = []; state.redo = []; syncButtons(); }
+    else if (espaceVide) { state.history = []; state.redo = []; vue.syncButtons(); }
     const src = {
       id: ++uid, name, bytes, pdfjs: doc, count: doc.numPages,
       hue: HUES[state.hueIdx++ % HUES.length], isSample: !!opts.isSample,
@@ -99,9 +99,9 @@
         state.pages = state.pages.filter(q => q.src !== exemple.id);
       }
     }
-    render();
+    vue.render();
     await measurePages(src);
-    render();
+    vue.render();
     detectForm(src);
     // Ce que le fichier porte et que la réécriture détruirait (signature, PDF/A,
     // balisage, XFA) : lu sans bloquer l'ouverture, annoncé dès que c'est connu.
@@ -110,6 +110,7 @@
   }
 
   async function measurePages(src) {
+    const tour = cadence();
     for (let i = 0; i < src.count; i++) {
       const k = key(src.id, i);
       if (dims.has(k)) continue;
@@ -118,7 +119,7 @@
         const v = page.view || [0, 0, 595.28, 841.89];
         dims.set(k, { w: Math.abs(v[2] - v[0]), h: Math.abs(v[3] - v[1]), baseRot: page.rotate || 0 });
       } catch (_) { dims.set(k, Object.assign({}, DEFAULT_DIM)); }
-      if (src.count > 40 && i % 25 === 0) { setBusy('Analyse des pages… ' + (i + 1) + '/' + src.count, i / src.count); await nextFrame(); }
+      if (src.count > 40) await tour(() => setBusy('Analyse des pages… ' + (i + 1) + '/' + src.count, i / src.count));
     }
     if (src.count > 40) setBusy('');
   }
@@ -180,7 +181,7 @@
       page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
     }
     const bytes = await doc.save();
-    const name = files.length === 1 ? baseName(files[0].name) + '.pdf' : 'images.pdf';
+    const name = files.length === 1 ? baseName(files[0].name) + '.pdf' : tr('images.pdf');
     return { bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), name };
   }
   async function webpToPng(buf) {
@@ -197,7 +198,7 @@
     if (!sample || state.touched || state.sources.length !== 1) return;
     state.sources = []; state.pages = []; state.selected.clear();
     state.history = []; state.redo = [];
-    render();
+    vue.render();
   }
 
   // =====================================================================
@@ -233,7 +234,7 @@
       canvas.height = Math.max(1, Math.ceil(vp.height));
       const ctx = canvas.getContext('2d', { alpha: false });
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      await rendrePage(page, src, { canvasContext: ctx, viewport: vp }, '#fff').promise;
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.82));
       page.cleanup();
       if (!blob) throw new Error('toBlob');
@@ -256,3 +257,24 @@
       }, { rootMargin: '400px 0px' })
     : null;
 
+  async function getPageText(p) {
+    const k = pkey(p);
+    if (textCache.has(k)) return textCache.get(k);
+    const src = srcById(p.src);
+    if (!src) return '';
+    try {
+      const page = await src.pdfjs.getPage(p.index + 1);
+      const tc = await page.getTextContent();
+      let last = null, out = '';
+      tc.items.forEach(it => {
+        if (last && it.transform && last.transform && Math.abs(it.transform[5] - last.transform[5]) > 2) out += '\n';
+        else if (out && !/\s$/.test(out)) out += ' ';
+        out += it.str;
+        last = it;
+      });
+      page.cleanup();
+      const s = out.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+      textCache.set(k, s);
+      return s;
+    } catch (_) { textCache.set(k, ''); return ''; }
+  }

@@ -50,7 +50,7 @@ async function prendre(fenetre, nom, avant) {
 
 const lancer = (env, args) => electron.launch({
   args: [APP, '--no-sandbox', ...(args || [])],
-  env: { ...process.env, ...env },
+  env: { ...process.env, AKTUM_LANGUE: 'fr', ...env },   // le manuel est en français, quelle que soit la langue du poste
 });
 
 // Agrandir la fenêtre ne suffit pas : le gestionnaire de fenêtres peut prendre

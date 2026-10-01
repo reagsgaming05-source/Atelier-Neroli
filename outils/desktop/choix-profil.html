@@ -259,7 +259,11 @@
     window.comptes.ouvrir(ouvrirApres);
   });
 
-  const quand = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('fr-CH') + ' à ' + d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }); };
+  const quand = (iso) => {
+    const d = new Date(iso);
+    const de = window.comptes.langue === 'de', region = de ? 'de-CH' : 'fr-CH';
+    return isNaN(d) ? '' : d.toLocaleDateString(region) + (de ? ' um ' : ' à ') + d.toLocaleTimeString(region, { hour: '2-digit', minute: '2-digit' });
+  };
 
   function remplirListe() {
     return window.comptes.liste().then((noms) => {

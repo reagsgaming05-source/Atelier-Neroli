@@ -106,7 +106,7 @@ const cspOffline = csp(false, true);
 const inline = [
   '<script id="aktum-worker" type="text/plain">\n' + worker + '\n</script>',
   '<script>window.__aktumWorker = URL.createObjectURL(new Blob([document.getElementById("aktum-worker").textContent], { type: "text/javascript" }));</script>',
-  '<script>' + read('pdfjs-dist-3.11.174/build/pdf.min.js') + '</script>',
+  '<script id="aktum-pdfjs">' + read('pdfjs-dist-3.11.174/build/pdf.min.js') + '</script>',
   '<script>' + read('cantoo-pdf-lib-2.11.0/dist/pdf-lib.min.js') + '</script>',
   '<script>' + read('jszip-3.10.1/dist/jszip.min.js') + '</script>',
   '<!-- tesseract.js 7.0.0 et tesseract.js-core 7.0.0 (Apache-2.0), modèles fra et deu de tessdata_best (Apache-2.0) -->',

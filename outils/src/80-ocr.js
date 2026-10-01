@@ -91,7 +91,7 @@
     const g = pageGeom(p);
     const src = srcById(p.src);
     const page = await src.pdfjs.getPage(p.index + 1);
-    return ocrRendu(page, g.total, moteur);
+    return ocrRendu(page, g.total, moteur, src);
   }
   // La même lecture pour une page d'un document qui n'est pas ouvert dans
   // la table (l'autre version d'une comparaison).
@@ -144,7 +144,7 @@
     V.forEach(([a, b]) => cx.fillRect(Math.max(0, a - 1), 0, b - a + 3, h));
     return H.length + V.length;
   }
-  async function ocrRendu(page, rotation, moteur) {
+  async function ocrRendu(page, rotation, moteur, src) {
     const v1 = page.getViewport({ scale: 1, rotation });
     const echelle = Math.min(4, Math.max(1.5, 2300 / Math.max(v1.width, v1.height)));
     const vp = page.getViewport({ scale: echelle, rotation });
@@ -152,7 +152,8 @@
     cv.width = Math.max(1, Math.ceil(vp.width)); cv.height = Math.max(1, Math.ceil(vp.height));
     const cx = cv.getContext('2d', { alpha: false });
     cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
-    await page.render({ canvasContext: cx, viewport: vp }).promise;
+    // Pour un document lourd, la page se dessine hors du fil principal (09-rendu.js) : 0,7 s de gel en moins par page.
+    await (src ? rendrePage(page, src, { canvasContext: cx, viewport: vp }, '#fff') : page.render({ canvasContext: cx, viewport: vp })).promise;
     page.cleanup();
     // Les filets d'un tableau (horizontaux ET verticaux) font écarter le contenu
     // de ses cellules : un budget scanné perdait la quasi-totalité de ses lignes,
@@ -228,8 +229,9 @@
       return;
     }
     const quoi = select('ocr-quoi', [['sans', 'Les pages sans texte (scans, images)'], ['sel', 'Les pages sélectionnées'], ['toutes', 'Toutes les pages']], state.selected.size ? 'sel' : 'sans');
-    let langueMemo = 'fra';
-    try { langueMemo = localStorage.getItem('aktum-ocr-langue') || 'fra'; } catch (e) { signaler('Préférence de langue', e, 'info'); }
+    // Sans choix mémorisé, la reconnaissance suit la langue de l'interface.
+    let langueMemo = codeLangue() === 'de' ? 'deu' : 'fra';
+    try { langueMemo = localStorage.getItem('aktum-ocr-langue') || langueMemo; } catch (e) { signaler('Préférence de langue', e, 'info'); }
     const langue = select('ocr-langue', [['fra', 'Français'], ['fra+deu', 'Français et allemand'], ['deu', 'Allemand']], langueMemo);
     dialog({
       title: 'Reconnaître le texte (OCR)', icon: IC.ocr,
@@ -271,7 +273,7 @@
             await nextFrame();
           }
           state.touched = true;
-          render();
+          vue.render();
           const bilan = plural(mots, 'mot reconnu', 'mots reconnus') + ' sur ' + plural(faites, 'page', 'pages');
           setLast((interrompu ? 'Reconnaissance interrompue : ' : 'Texte reconnu : ') + bilan);
           toast(bilan + (interrompu ? ' avant l\'arrêt.' : '.') + (faibles ? ' ' + plural(faibles, 'page se lit mal', 'pages se lisent mal') + ' : vérifiez le résultat.' : ''), faibles || interrompu ? 'warn' : null);
