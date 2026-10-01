@@ -1,4 +1,4 @@
-module blonaypdf
+module aktumpdf
 
 go 1.22
 

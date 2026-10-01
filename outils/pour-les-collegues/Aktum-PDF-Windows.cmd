@@ -1,13 +1,13 @@
 @echo off
 rem ============================================================
-rem  Blonay PDF
+rem  Aktum PDF
 rem  Ouvre l'outil dans une fenetre d'application,
 rem  sans onglet ni barre d'adresse.
 rem  Rien n'est installe sur le poste : ce fichier ne fait que
 rem  demarrer le navigateur deja present sur la machine.
 rem ============================================================
 setlocal
-set "PAGE=%~dp0blonay-pdf.html"
+set "PAGE=%~dp0aktum-pdf.html"
 if not exist "%PAGE%" goto introuvable
 set "URL=file:///%PAGE:\=/%"
 
@@ -32,7 +32,7 @@ goto fin
 
 :introuvable
 echo.
-echo   Le fichier blonay-pdf.html est introuvable.
+echo   Le fichier aktum-pdf.html est introuvable.
 echo   Gardez les deux fichiers dans le meme dossier.
 echo.
 pause

@@ -15,9 +15,9 @@
   }
   const tamponTexte = t => String(t || '').replace(/\{date\}/gi, todayStr());
   function tamponsMemo() {
-    try { const l = JSON.parse(localStorage.getItem('blonay-tampons') || '[]'); return Array.isArray(l) ? l.filter(t => t && typeof t.text === 'string' && t.text.trim()) : []; } catch (_) { return []; }
+    try { const l = JSON.parse(localStorage.getItem('aktum-tampons') || '[]'); return Array.isArray(l) ? l.filter(t => t && typeof t.text === 'string' && t.text.trim()) : []; } catch (_) { return []; }
   }
-  function tamponsEcrire(liste) { try { localStorage.setItem('blonay-tampons', JSON.stringify(liste.slice(0, 40))); } catch (e) { signaler('Tampons enregistrés', e); } }
+  function tamponsEcrire(liste) { try { localStorage.setItem('aktum-tampons', JSON.stringify(liste.slice(0, 40))); } catch (e) { signaler('Tampons enregistrés', e); } }
   function tamponMemoriser(t) {
     const liste = tamponsMemo().filter(x => x.text !== t.text);
     liste.unshift({ text: t.text, color: t.color || '#C8102E', size: t.size || 14 });
@@ -107,9 +107,9 @@
 
   // Les signatures mémorisées sur cet ordinateur.
   function signaturesMemo() {
-    try { const l = JSON.parse(localStorage.getItem('blonay-signatures') || '[]'); return Array.isArray(l) ? l.filter(x => x && typeof x.data === 'string' && x.w > 0 && x.h > 0) : []; } catch (_) { return []; }
+    try { const l = JSON.parse(localStorage.getItem('aktum-signatures') || '[]'); return Array.isArray(l) ? l.filter(x => x && typeof x.data === 'string' && x.w > 0 && x.h > 0) : []; } catch (_) { return []; }
   }
-  function signaturesEcrire(liste) { try { localStorage.setItem('blonay-signatures', JSON.stringify(liste.slice(0, 6))); } catch (e) { signaler('Signatures', e); } }
+  function signaturesEcrire(liste) { try { localStorage.setItem('aktum-signatures', JSON.stringify(liste.slice(0, 6))); } catch (e) { signaler('Signatures', e); } }
 
   function edSignature() {
     const wrap = document.createElement('div');

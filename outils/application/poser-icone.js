@@ -19,11 +19,11 @@ vi.lang = 1036;
 vi.setFileVersion(1, 0, 3, 0);
 vi.setProductVersion(1, 0, 3, 0);
 vi.setStringValues({ lang: 1036, codepage: 1200 }, {
-  FileDescription: 'Blonay PDF',
-  ProductName: 'Blonay PDF',
+  FileDescription: 'Aktum PDF',
+  ProductName: 'Aktum PDF',
   CompanyName: 'Atelier Neroli',
-  InternalName: 'Blonay PDF',
-  OriginalFilename: 'Blonay PDF.exe',
+  InternalName: 'Aktum PDF',
+  OriginalFilename: 'Aktum PDF.exe',
   LegalCopyright: 'Outil local, aucun envoi de donnees',
   Comments: 'Organiser, annoter et proteger des PDF, hors ligne',
 });

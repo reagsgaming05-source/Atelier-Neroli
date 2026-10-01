@@ -16,10 +16,10 @@ function paire() {
 function archive(contenu, opts) {
   const o = opts || {};
   const k = o.paire || paire();
-  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-sig-'));
-  const zip = path.join(dossier, 'BlonayPDF-windows.zip');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-sig-'));
+  const zip = path.join(dossier, 'AktumPDF-windows.zip');
   fs.writeFileSync(zip, contenu || crypto.randomBytes(5000));
-  const corps = { v: 1, objet: 'maj', cle: k.cle.id, fichier: 'BlonayPDF-windows.zip', sha256: sg.empreinteFichier(zip), taille: fs.statSync(zip).size,
+  const corps = { v: 1, objet: 'maj', cle: k.cle.id, fichier: 'AktumPDF-windows.zip', sha256: sg.empreinteFichier(zip), taille: fs.statSync(zip).size,
     version: '2.1.0', plateforme: o.plateforme || 'windows', canal: 'stable', critique: false, commit: 'abc1234', date: '2026-10-01T10:00:00.000Z' };
   fs.writeFileSync(zip + sg.SIGNATURE_DU_ZIP, JSON.stringify(sg.signer(corps, k.pem)));
   return { zip, k, dossier };
@@ -94,8 +94,8 @@ test('deux clés publiques : la courante et la suivante, posée d\'avance', () =
 
 test('la liste des clés publiques livrée vient d\'un fichier, et se laisse remplacer pour les essais', () => {
   const k = paire();
-  process.env.BLONAY_CLES_PUBLIQUES_ESSAI = JSON.stringify({ maj: [k.cle] });
-  try { assert.deepEqual(sg.lireCles().maj, [k.cle]); } finally { delete process.env.BLONAY_CLES_PUBLIQUES_ESSAI; }
+  process.env.AKTUM_CLES_PUBLIQUES_ESSAI = JSON.stringify({ maj: [k.cle] });
+  try { assert.deepEqual(sg.lireCles().maj, [k.cle]); } finally { delete process.env.AKTUM_CLES_PUBLIQUES_ESSAI; }
   const livre = sg.lireCles();
   assert.ok(Array.isArray(livre.maj) && Array.isArray(livre.licence));
 });

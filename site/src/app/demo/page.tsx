@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Démo interactive",
-  description: "Essayez Blonay PDF sans compte : fusionnez, réorganisez, extrayez, filigranez et numérotez vos PDF directement dans le navigateur.",
+  description: "Essayez Aktum PDF sans compte : fusionnez, réorganisez, extrayez, filigranez et numérotez vos PDF directement dans le navigateur.",
 };
 
 export default async function DemoPage() {

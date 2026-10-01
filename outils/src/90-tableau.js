@@ -266,7 +266,7 @@
           'La reconnaissance de texte annonce le temps restant.',
         ].forEach(t => suite.appendChild(note(t)));
         b.append(groupOf('Et depuis', [suite]));
-        const bureau = window.BlonayDesktop || null;
+        const bureau = window.AktumDesktop || null;
         b.append(note(APP + ' ' + APP_VERSION
           + (/^__/.test(APP_CONSTRUCTION) ? ' · version de travail' : ' · ' + APP_CONSTRUCTION)
           + (bureau && bureau.construction ? ' · application ' + (bureau.version || '') + ' ' + bureau.construction : '')));

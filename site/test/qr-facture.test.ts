@@ -138,11 +138,11 @@ test("la référence s'imprime groupée comme le veut la norme", () => {
 /* ---------------------------------------------------------- Charge utile -- */
 
 const CREANCIER = {
-  nom: "Blonay PDF Sàrl",
-  rue: "Route de Vevey",
+  nom: "Éditeur Exemple Sàrl",
+  rue: "Rue de l'Exemple",
   numero: "12",
-  npa: "1807",
-  localite: "Blonay",
+  npa: "1000",
+  localite: "Exempleville",
   pays: "CH",
 };
 const DEBITEUR = {
@@ -170,7 +170,7 @@ test("la charge utile place chaque champ à la ligne que la norme lui donne", ()
   assert.equal(l[1], "0200");
   assert.equal(l[2], "1");
   assert.equal(l[3], "CH9300762011623852957");
-  assert.deepEqual(l.slice(4, 11), ["S", "Blonay PDF Sàrl", "Route de Vevey", "12", "1807", "Blonay", "CH"]);
+  assert.deepEqual(l.slice(4, 11), ["S", "Éditeur Exemple Sàrl", "Rue de l'Exemple", "12", "1000", "Exempleville", "CH"]);
   // Créancier final : sept lignes vides, jamais omises.
   assert.deepEqual(l.slice(11, 18), ["", "", "", "", "", "", ""]);
   assert.equal(l[18], "1990.00");

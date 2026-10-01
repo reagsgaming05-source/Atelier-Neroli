@@ -22,7 +22,7 @@ const { _electron: electron } = require(path.join(APP, 'node_modules', 'playwrig
 const { fabriquer } = require('./exemple');
 
 const SORTIE = path.resolve(process.argv[2] || path.join(__dirname, 'captures'));
-const base = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-guide-'));
+const base = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-guide-'));
 const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 const rates = [];
 let faites = 0;
@@ -88,10 +88,10 @@ async function ecransDeConnexion() {
   console.log('Écrans de connexion');
   // Un dossier d'essai ordinaire, sur le disque local : la connexion se demande
   // partout, et les captures montrent ce que voit une collègue.
-  const env = { BLONAY_DOSSIER_APP: base };
+  const env = { AKTUM_DOSSIER_APP: base };
 
   // Premier lancement : aucun compte n'existe, l'écran de création s'ouvre.
-  let app = await lancer({ ...env, BLONAY_PROFIL: path.join(base, 'poste-1') });
+  let app = await lancer({ ...env, AKTUM_PROFIL: path.join(base, 'poste-1') });
   let f = await app.firstWindow();
   await f.waitForSelector('#ecran-creation:not([hidden]), #ecran-liste:not([hidden])', { timeout: 60000 });
   await prendre(f, 'c1-creation', async () => {
@@ -111,7 +111,7 @@ async function ecransDeConnexion() {
   menage();
 
   // Depuis un autre poste : le compte est dans la liste.
-  app = await lancer({ ...env, BLONAY_PROFIL: path.join(base, 'poste-2') });
+  app = await lancer({ ...env, AKTUM_PROFIL: path.join(base, 'poste-2') });
   f = await app.firstWindow();
   await f.waitForSelector('#ecran-liste:not([hidden])', { timeout: 60000 });
   await prendre(f, 'c2-liste');
@@ -130,7 +130,7 @@ async function ecransDeLApplication() {
   fs.mkdirSync(travail, { recursive: true });
   const pdf = path.join(travail, 'reglement-dechets.pdf');
   fs.writeFileSync(pdf, await fabriquer());
-  const env = { BLONAY_SMOKE_DIR: travail };
+  const env = { AKTUM_SMOKE_DIR: travail };
 
   // La page d'accueil, sans document.
   let app = await lancer(env);

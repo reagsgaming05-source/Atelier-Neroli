@@ -10,7 +10,7 @@ const tableauTsv = extraire('  const tableauTsv = ', '  const tableauCsv = ', 't
 // Une facture : un titre pleine largeur, trois colonnes (libellé, quantité, montant).
 const m = (str, x, base, w, size) => ({ str, x, base, w: w == null ? str.length * 5 : w, size: size || 10 });
 const page = [
-  m('Commune de Blonay — décompte des frais scolaires 2026', 60, 60, 380, 14),
+  m('Commune Exemple — décompte des frais scolaires 2026', 60, 60, 380, 14),
   m('Libellé', 60, 120), m('Quantité', 300, 120), m('Montant', 420, 120),
   m('Transport', 60, 140), m('Bus', 110, 140), m('12', 300, 140), m("1'240.00", 420, 140),
   m('Repas', 60, 160), m('45', 300, 160), m('540.50', 420, 160),

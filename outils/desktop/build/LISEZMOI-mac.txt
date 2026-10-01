@@ -1,4 +1,4 @@
-BLONAY PDF — version Mac
+AKTUM PDF — version Mac
 ========================
 
 TOUT EST DANS CE DOSSIER. Rien ne s'installe, rien n'est écrit ailleurs sur le
@@ -15,19 +15,19 @@ d'entreprise, sans demander de mot de passe administrateur.
 Si votre Mac refuse quand même — vous avez une version plus ancienne, ou votre
 informatique applique une règle plus stricte —, une seule fois :
 
-  1. Clic DROIT (ou Contrôle + clic) sur BlonayPDF.app
+  1. Clic DROIT (ou Contrôle + clic) sur AktumPDF.app
   2. « Ouvrir » dans le menu qui apparaît
   3. Une fenêtre prévient que le développeur ne peut pas être vérifié :
      cliquez sur « Ouvrir »
 
 Ensuite, un double-clic ordinaire suffit, pour toujours.
 
-Si le message dit « BlonayPDF est endommagé et ne peut pas être ouvert », c'est
+Si le message dit « AktumPDF est endommagé et ne peut pas être ouvert », c'est
 le sceau de quarantaine posé par le téléchargement. Ouvrez le Terminal
 (Applications > Utilitaires) et collez cette ligne, en remplaçant le chemin par
 celui de votre dossier :
 
-  xattr -dr com.apple.quarantine /chemin/vers/BlonayPDF.app
+  xattr -dr com.apple.quarantine /chemin/vers/AktumPDF.app
 
 Un glisser-déposer du fichier depuis le Finder écrit le chemin à votre place.
 
@@ -62,14 +62,14 @@ ne le remet pas à zéro.
 À la fin de l'essai, l'application se lit encore entièrement (ouvrir, parcourir, chercher),
 mais elle n'enregistre plus de nouveau fichier, et le dit. Le travail en cours est gardé.
 Quand le service achète, l'éditeur remet un fichier « licence.json », signé à son nom : posez-le
-à côté de BlonayPDF.exe (une seule fois pour tout le secrétariat si l'application est sur un
+à côté d’AktumPDF.exe (une seule fois pour tout le secrétariat si l'application est sur un
 lecteur réseau), relancez l'application, c'est tout. « Aide › À propos » affiche le nom du
 client, le nombre de postes et la date jusqu'à laquelle les mises à jour sont comprises. La
 licence n'est liée à aucun matériel : on peut changer de poste, cloner un parc, sans rien redemander.
 
 METTRE À JOUR
 -------------
-Posez le nouveau BlonayPDF-mac.zip ET son fichier BlonayPDF-mac.zip.signature.json
+Posez le nouveau AktumPDF-mac.zip ET son fichier AktumPDF-mac.zip.signature.json
 (les deux, côte à côte) à côté de l'application : au lancement suivant, elle les voit
 et propose de se mettre à jour. La signature prouve que le zip vient de l'éditeur :
 sans elle, ou si le zip a été modifié, l'application l'ignore, et « Aide > Rechercher

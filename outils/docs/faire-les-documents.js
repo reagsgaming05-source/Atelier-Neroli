@@ -31,7 +31,7 @@ const contact = [e.EDITEUR_TELEPHONE, e.EDITEUR_EMAIL].filter(Boolean).join(' ·
 const COORDONNEES = (adresse || contact) ? 'Éditeur : ' + [adresse, contact].filter(Boolean).join(' — ') + '.' : 'Coordonnées de l’éditeur : voir les mentions légales du site.';
 const SUPPORT = e.EDITEUR_EMAIL_SUPPORT || e.EDITEUR_EMAIL || 'l’adresse de support indiquée sur la page Contact du site';
 const version = require('../package.json').version;
-const PRODUIT = 'Blonay PDF';
+const PRODUIT = 'Aktum PDF';
 
 const DOCUMENTS = [
   ['guide-administration.html', 'Guide-d-administration.pdf', 'Guide d’administration et de déploiement'],
@@ -43,7 +43,7 @@ const DOCUMENTS = [
 (async () => {
   const sortie = path.resolve(process.argv[2] || path.join(__dirname, 'sortie'));
   fs.mkdirSync(sortie, { recursive: true });
-  const nav = await chromium.launch(process.env.BLONAY_CHROMIUM ? { executablePath: process.env.BLONAY_CHROMIUM } : {});
+  const nav = await chromium.launch(process.env.AKTUM_CHROMIUM ? { executablePath: process.env.AKTUM_CHROMIUM } : {});
   const remplacements = Object.assign({ VERSION: version, PRODUIT, COORDONNEES, SUPPORT }, DELAIS);
   for (const [source, nom, titre] of DOCUMENTS) {
     let html = fs.readFileSync(path.join(__dirname, source), 'utf8');

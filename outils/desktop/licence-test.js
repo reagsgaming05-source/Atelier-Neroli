@@ -4,7 +4,7 @@
  * — et qui laisse tout lire.
  *
  *   node licence-test.js                       # depuis les sources
- *   node licence-test.js chemin\BlonayPDF.exe  # sur le dossier empaqueté
+ *   node licence-test.js chemin\AktumPDF.exe  # sur le dossier empaqueté
  *
  * Les clés sont des clés d'essai, posées par l'environnement. Le « profil » de chaque
  * poste (où vit l'ancre de l'essai) est un dossier d'essai, comme dans comptes-test.js.
@@ -19,7 +19,7 @@ const sg = require('./signature.js');
 const { MARQUEUR } = require('./ou-ranger.js');
 
 const exe = process.argv[2];
-const base = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-licence-'));
+const base = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-licence-'));
 const dit = (q) => console.log('  ' + q);
 const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 const J = 24 * 3600 * 1000;
@@ -39,8 +39,8 @@ function pdf() {
 
 function menage() {
   try {
-    if (process.platform === 'win32') { require('child_process').execSync('taskkill /F /IM BlonayPDF.exe /T', { stdio: 'ignore' }); return; }
-    require('child_process').execSync('pkill -f ' + JSON.stringify('node_modules/electron/dis[t]/electron') + ' ; pkill -x BlonayPDF ; true', { stdio: 'ignore' });
+    if (process.platform === 'win32') { require('child_process').execSync('taskkill /F /IM AktumPDF.exe /T', { stdio: 'ignore' }); return; }
+    require('child_process').execSync('pkill -f ' + JSON.stringify('node_modules/electron/dis[t]/electron') + ' ; pkill -x AktumPDF ; true', { stdio: 'ignore' });
   } catch (e) { /* rien à tuer */ }
 }
 
@@ -52,13 +52,13 @@ function poste(nom, { licence, debutEssai }) {
   fs.writeFileSync(path.join(dossier, MARQUEUR), '');
   fs.writeFileSync(path.join(dossier, 'decision.pdf'), pdf());
   if (licence) fs.writeFileSync(path.join(dossier, 'licence.json'), typeof licence === 'string' ? licence : JSON.stringify(licence));
-  if (debutEssai) { fs.mkdirSync(path.join(profil, 'Blonay PDF'), { recursive: true }); fs.writeFileSync(path.join(profil, 'Blonay PDF', 'essai.json'), JSON.stringify({ debut: debutEssai })); }
+  if (debutEssai) { fs.mkdirSync(path.join(profil, 'Aktum PDF'), { recursive: true }); fs.writeFileSync(path.join(profil, 'Aktum PDF', 'essai.json'), JSON.stringify({ debut: debutEssai })); }
   return { dossier, profil, smoke: path.join(base, nom + '-smoke') };
 }
 const signee = (corps) => sg.signer(Object.assign({ v: 1, objet: 'licence', cle: editeur.cle.id, id: 'BLP-2026-0042', client: 'Commune d\'Essai', ide: 'CHE-000.000.000', postes: 10, modele: 'site', emise: '2026-10-01', majJusqu: '2027-10-01' }, corps), editeur.pem);
 
 async function ouvrir(p) {
-  const env = { ...process.env, BLONAY_DOSSIER_APP: p.dossier, BLONAY_PROFIL: p.profil, BLONAY_CLES_PUBLIQUES_ESSAI: CLES };
+  const env = { ...process.env, AKTUM_DOSSIER_APP: p.dossier, AKTUM_PROFIL: p.profil, AKTUM_CLES_PUBLIQUES_ESSAI: CLES };
   const app = await electron.launch(exe ? { executablePath: exe, args: [path.join(p.dossier, 'decision.pdf')], env }
     : { args: [path.join(__dirname), path.join(p.dossier, 'decision.pdf'), '--no-sandbox'], env });
   const f = await app.firstWindow();
@@ -87,7 +87,7 @@ const puce = async (f) => (await f.locator('#licence-ligne').isVisible()) ? (awa
   let s = await ouvrir(p);
   await s.f.waitForSelector('#licence-ligne:not([hidden])', { timeout: 20000 });
   assert.match(await puce(s.f), /Essai : 45 jours restants/, 'quarante-cinq jours au premier lancement');
-  assert.ok(fs.existsSync(path.join(p.profil, 'Blonay PDF', 'essai.json')), 'l\'ancre est dans le profil, hors du dossier de l\'application');
+  assert.ok(fs.existsSync(path.join(p.profil, 'Aktum PDF', 'essai.json')), 'l\'ancre est dans le profil, hors du dossier de l\'application');
   // L'enregistrement marche pendant l'essai.
   await s.f.keyboard.press('Control+2'); await s.f.keyboard.press('Escape');
   await s.f.click('#pages .tile:nth-child(1)'); await s.f.click('#sel-rot-right');
@@ -100,12 +100,12 @@ const puce = async (f) => (await f.locator('#licence-ligne').isVisible()) ? (awa
   dit('essai : 45 jours au premier lancement, ancre dans le profil, l\'enregistrement marche');
 
   // 2. Le même dossier recopié ailleurs : l'essai ne repart pas à zéro — même profil, même ancre.
-  const ancre = JSON.parse(fs.readFileSync(path.join(p.profil, 'Blonay PDF', 'essai.json'), 'utf8')).debut;
+  const ancre = JSON.parse(fs.readFileSync(path.join(p.profil, 'Aktum PDF', 'essai.json'), 'utf8')).debut;
   const copie = poste('essai-copie', { debutEssai: ancre });
   s = await ouvrir(copie);
   await s.f.waitForSelector('#licence-ligne:not([hidden])', { timeout: 20000 });
   assert.match(await puce(s.f), /Essai : 45 jours restants/, 'la copie voit la même ancre');
-  assert.equal(JSON.parse(fs.readFileSync(path.join(copie.profil, 'Blonay PDF', 'essai.json'), 'utf8')).debut, ancre, 'et ne la réécrit pas');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(copie.profil, 'Aktum PDF', 'essai.json'), 'utf8')).debut, ancre, 'et ne la réécrit pas');
   await fermer(s);
   dit('dossier recopié : l\'ancre du profil est conservée');
 

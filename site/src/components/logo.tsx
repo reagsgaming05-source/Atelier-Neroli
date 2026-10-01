@@ -14,10 +14,10 @@ export function LogoMark({ className }: { className?: string }) {
 
 export function Logo({ light = false, className }: { light?: boolean; className?: string }) {
   return (
-    <Link href="/" className={cn("group inline-flex items-center gap-2.5", light ? "text-white" : "text-brand-800", className)} aria-label="Blonay PDF — accueil">
+    <Link href="/" className={cn("group inline-flex items-center gap-2.5", light ? "text-white" : "text-brand-800", className)} aria-label="Aktum PDF — accueil">
       <LogoMark className="transition-transform duration-300 group-hover:-rotate-6" />
       <span className="font-display text-[1.4rem] font-bold leading-none tracking-tight">
-        Blonay <span className={light ? "text-accent-400" : "text-brand-600"}>PDF</span>
+        Aktum <span className={light ? "text-accent-400" : "text-brand-600"}>PDF</span>
       </span>
     </Link>
   );

@@ -1,7 +1,7 @@
 {
-  "name": "blonay-pdf-e2e",
+  "name": "aktum-pdf-e2e",
   "version": "2.0.0",
-  "description": "Blonay PDF – suite de bout en bout (Chromium, page hors ligne)",
+  "description": "Aktum PDF – suite de bout en bout (Chromium, page hors ligne)",
   "private": true,
   "scripts": {
     "test": "playwright test",

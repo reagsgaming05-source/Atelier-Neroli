@@ -1,7 +1,7 @@
 /*
  * Signe une archive de mise à jour : écrit « <archive>.signature.json » à côté.
  *
- *   node editeur/signer-maj.js BlonayPDF-windows.zip --plateforme windows \
+ *   node editeur/signer-maj.js AktumPDF-windows.zip --plateforme windows \
  *        --version 2.1.0 --canal stable [--critique] [--commit abc1234] [--date ISO]
  *
  * La clé privée vient de la variable MAJ_CLE_PRIVEE (le contenu du fichier .pem),

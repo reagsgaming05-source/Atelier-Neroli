@@ -16,6 +16,7 @@
         { id: 'blank', name: 'Pages vierges', sub: 'Insérer une ou plusieurs pages', icon: IC.plus, run: toolBlank },
         { id: 'images', name: 'Ajouter des images', sub: 'JPEG, PNG, WebP en pages', icon: IC.image, run: toolImages },
         { id: 'vides', name: 'Détecter les pages vides', sub: 'Nettoyer un document scanné', icon: IC.vide, need: 'pages', run: toolPagesVides },
+        { id: 'select-plage', name: 'Sélectionner par numéros', sub: 'Des pages désignées par « 3-7, 12 »', icon: IC.select, need: 'pages', run: toolSelectionPlage },
         { id: 'split', name: 'Diviser le document', sub: 'Un ou plusieurs fichiers', icon: IC.split, need: 'pages', run: toolSplit },
         { id: 'dossier', name: 'Constituer un dossier', sub: 'Intercalaires, pièces numérotées, sommaire', icon: IC.dossier, need: 'pages', run: toolDossier },
         { id: 'resize', name: 'Redimensionner', sub: 'A4, Letter, marges', icon: IC.resize, need: 'pages', run: toolResize },
@@ -35,6 +36,7 @@
       ] },
       { title: 'Formulaires', items: [
         { id: 'form', name: 'Remplir le formulaire', sub: 'Champs, cases, listes', icon: IC.form, need: 'pages', run: toolForm, active: () => state.sources.some(s => s.formValues && Object.keys(s.formValues).length) },
+        { id: 'serie', name: 'Remplir en série (CSV)', sub: 'Une copie du formulaire par ligne d\'un tableau', icon: IC.form, need: 'pages', run: toolSerie },
       ] },
       { title: 'Exporter', items: [
         { id: 'exp-pdf', name: 'Exporter le PDF', sub: 'Document complet', icon: IC.save, need: 'pages', run: () => exportPages(state.pages, safeBase(el.filename.value) + '.pdf') },

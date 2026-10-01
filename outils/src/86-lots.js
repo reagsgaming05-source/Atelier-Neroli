@@ -168,20 +168,8 @@
     inp.click();
   }
 
-  function parseRanges(text, max) {
-    const out = [];
-    String(text || '').split(/[,;]/).forEach(part => {
-      const t = part.trim();
-      if (!t) return;
-      const m = /^(\d+)\s*(?:-\s*(\d+))?$/.exec(t);
-      if (!m) return;
-      let a = clampInt(m[1], 1, max), b = m[2] ? clampInt(m[2], 1, max) : a;
-      if (a == null || b == null) return;
-      if (a > b) { const s = a; a = b; b = s; }
-      out.push([a, b]);
-    });
-    return out;
-  }
+  // Les plages de la division, une à une (voir lireIntervalles, 07-plages.js).
+  const parseRanges = (text, max) => lireIntervalles(text, max);
 
   function toolSplit() {
     const mode = segmented('sp-mode', [['each', 'Une page par fichier'], ['every', 'Par lots'], ['ranges', 'Par plages']], 'each', v => {
@@ -309,7 +297,11 @@
   }
 
   function toolWatermark() {
-    const wm = state.watermark || { text: 'CONFIDENTIEL', font: 'Helvetica', bold: true, size: 60, color: '#FF0000', opacity: 0.18, angle: 45, mode: 'center' };
+    const origine = { text: 'CONFIDENTIEL', font: 'Helvetica', bold: true, size: 60, color: '#FF0000', opacity: 0.18, angle: 45, mode: 'center' };
+    // Sans filigrane posé, on reprend le dernier réglage appliqué : le même
+    // texte, la même teinte, d'un document au suivant.
+    const memo = !state.watermark && reglageLire('filigrane');
+    const wm = state.watermark || Object.assign({}, origine, memo || {});
     const text = input('wm-text', 'text', wm.text);
     const size = input('wm-size', 'number', wm.size, { min: 6, max: 300 });
     const angle = input('wm-angle', 'number', wm.angle, { min: -180, max: 180 });
@@ -329,9 +321,11 @@
         const ow = field('Opacité', opacity); ow.appendChild(opVal);
         b.append(rowOf([cw, ow, field('Disposition', mode)]));
         b.append(bold);
-        b.append(note('Le filigrane est dessiné par-dessus le contenu, sur toutes les pages, au moment de l\'export.'));
+        b.append(note('Le filigrane est dessiné par-dessus le contenu, sur toutes les pages, au moment de l\'export.'
+          + (memo ? ' Réglage repris du dernier filigrane appliqué.' : '')));
       },
       actions: [
+        memo ? { label: 'Réglages d\'origine', onClick: close => { reglageEcrire('filigrane', null); close(); toolWatermark(); } } : null,
         state.watermark ? { label: 'Retirer', onClick: close => { snapshot(); state.watermark = null; render(); close(); setLast('Filigrane retiré'); } } : null,
         { label: 'Annuler', onClick: c => c() },
         { label: 'Appliquer', primary: true, onClick: close => {
@@ -343,6 +337,7 @@
             opacity: (clampInt(opacity.value, 3, 100) || 18) / 100,
             angle: clampInt(angle.value, -180, 180) || 0, mode: mode.value,
           };
+          reglageEcrire('filigrane', state.watermark);
           state.touched = true; render(); close();
           setLast('Filigrane « ' + state.watermark.text + ' » appliqué');
         } },
@@ -351,11 +346,17 @@
   }
 
   function toolStamp(preset) {
-    const st = state.stamp || {
+    const cleMemo = preset === 'number' ? 'numerotation' : 'entete';
+    const origine = {
       headerLeft: '', headerCenter: '', headerRight: '', footerLeft: '', footerCenter: '', footerRight: '',
       font: 'Helvetica', bold: false, size: 9, color: '#444444', margin: 28, start: 1, skipFirst: false, batesPrefix: '', batesDigits: 4,
     };
-    if (preset === 'number' && !state.stamp) st.footerCenter = '{p} / {n}';
+    if (preset === 'number') origine.footerCenter = '{p} / {n}';
+    // Sans réglage posé sur ce document, on reprend le dernier appliqué (le texte
+    // d'en-tête de la commune, la forme de numérotation), mais jamais le premier
+    // numéro : chaque document recommence à 1.
+    const memo = !state.stamp && reglageLire(cleMemo);
+    const st = state.stamp || Object.assign({}, origine, memo || {}, memo ? { start: 1 } : {});
     const mk = (id, v) => input(id, 'text', v);
     const hl = mk('st-hl', st.headerLeft), hc = mk('st-hc', st.headerCenter), hr = mk('st-hr', st.headerRight);
     const fl = mk('st-fl', st.footerLeft), fc = mk('st-fc', st.footerCenter), fr = mk('st-fr', st.footerRight);
@@ -375,9 +376,11 @@
         b.append(rowOf([field('Police', font), field('Taille', size), field('Couleur', color), field('Marge (pt)', margin)], true));
         b.append(rowOf([field('Premier numéro', start), field('Préfixe Bates', bpre, 'Pour {bates}'), field('Chiffres Bates', bdig)], true));
         b.append(skip);
-        b.append(note('Codes disponibles : {p} numéro de page, {n} nombre de pages, {date} date du jour, {file} nom du fichier, {bates} numérotation Bates.'));
+        b.append(note('Codes disponibles : {p} numéro de page, {n} nombre de pages, {date} date du jour, {file} nom du fichier, {bates} numérotation Bates.'
+          + (memo ? ' Réglage repris du dernier appliqué.' : '')));
       },
       actions: [
+        memo ? { label: 'Réglages d\'origine', onClick: close => { reglageEcrire(cleMemo, null); close(); toolStamp(preset); } } : null,
         state.stamp ? { label: 'Retirer', onClick: close => { snapshot(); state.stamp = null; render(); close(); setLast('En-tête et pied de page retirés'); } } : null,
         { label: 'Annuler', onClick: c => c() },
         { label: 'Appliquer', primary: true, onClick: close => {
@@ -391,6 +394,7 @@
           const any = ['headerLeft', 'headerCenter', 'headerRight', 'footerLeft', 'footerCenter', 'footerRight'].some(k => next[k].trim());
           if (!any) { toast('Renseignez au moins une zone.', 'warn'); return; }
           snapshot();
+          reglageEcrire(cleMemo, next);
           state.stamp = next; state.touched = true; render(); close();
           setLast('En-tête et pied de page appliqués');
         } },

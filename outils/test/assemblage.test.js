@@ -19,7 +19,7 @@ test('les repères sont consommés, rien ne reste en place', () => {
 });
 
 test('la page recollée est complète', () => {
-  assert.match(source, /^<title>Blonay PDF<\/title>\n/);
+  assert.match(source, /^<title>Aktum PDF<\/title>\n/);
   assert.equal(source.split('<svg class="marque-source"').length - 1, 1);
   assert.equal(source.split('<style>').length - 1, 1);
   assert.equal(source.split('</style>').length - 1, 1);
@@ -66,7 +66,7 @@ test('le script recollé se lit d\'un bloc', () => {
   const b = source.lastIndexOf('</script>');
   // Une accolade laissée ouverte par un découpage maladroit se verrait ici :
   // le script entier est analysé, sans être exécuté.
-  new vm.Script(source.slice(a, b), { filename: 'blonay-pdf.js' });
+  new vm.Script(source.slice(a, b), { filename: 'aktum-pdf.js' });
 });
 
 test('les modules sont numérotés, uniques et pris dans l\'ordre', () => {

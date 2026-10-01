@@ -9,7 +9,7 @@ const ID = { utilisateur: 'mdupont', poste: 'GREFFE-PC07' };
 test('les chemins perdent le nom de la personne, du poste et du partage', () => {
   assert.equal(d.anonymiser('C:\\Users\\mdupont\\Documents\\x', ID), 'C:\\Users\\<utilisateur>\\Documents\\x');
   assert.equal(d.anonymiser('/Users/marie/Bureau', {}), '/Users/<utilisateur>/Bureau');
-  assert.equal(d.anonymiser('\\\\SRV-COMMUNE\\greffe\\BlonayPDF\\data', {}), '\\\\<serveur>\\<partage>\\BlonayPDF\\data');
+  assert.equal(d.anonymiser('\\\\SRV-COMMUNE\\greffe\\AktumPDF\\data', {}), '\\\\<serveur>\\<partage>\\AktumPDF\\data');
   assert.equal(d.anonymiser('Poste GREFFE-PC07 : MDupont connecté', ID), 'Poste <poste> : <utilisateur> connecté');
 });
 

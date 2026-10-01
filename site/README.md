@@ -1,6 +1,6 @@
-# Blonay PDF — site et espace client
+# Aktum PDF — site et espace client
 
-Site de vente et espace client pour **Blonay PDF**, l'outil PDF complet (éditer, fusionner, convertir, signer, caviarder, annoter) destiné aux **communes, aux établissements scolaires et aux services de l'État**.
+Site de vente et espace client pour **Aktum PDF**, l'outil PDF complet (éditer, fusionner, convertir, signer, caviarder, annoter) destiné aux **communes, aux établissements scolaires et aux services de l'État**.
 
 Le site suit le vrai chemin d'achat d'une collectivité publique : elle **demande une offre**, la fait valider, **accepte avec son bon de commande**, et reçoit une **facture à 30 jours avec QR-facture suisse**. La carte bancaire reste possible pour qui peut décider seul — mais elle n'est pas le chemin principal, parce qu'une commune n'en a pas.
 
@@ -17,13 +17,13 @@ npm run dev
 
 Puis ouvrir <http://localhost:3000>.
 
-Au premier lancement, la base de données est créée automatiquement (`data/blonay-pdf.db`), les formules sont insérées et deux comptes de démonstration sont créés.
+Au premier lancement, la base de données est créée automatiquement (`data/aktum-pdf.db`), les formules sont insérées et deux comptes de démonstration sont créés.
 
 ### Comptes de démonstration
 
 | Rôle | E-mail | Mot de passe | Accès |
 | --- | --- | --- | --- |
-| Administration | `admin@blonaypdf.ch` | `BlonayPDF-Admin-2026!` | <http://localhost:3000/admin> |
+| Administration | `admin@aktumpdf.ch` | `AktumPDF-Admin-2026!` | <http://localhost:3000/admin> |
 | Client (formule Administration, 2 collaborateurs, historique d'usage) | `marie.demo@exemple.ch` | `Demo-1234!` | <http://localhost:3000/compte> |
 | Collaborateur rattaché au compte | `paul.martin@exemple.ch` | `Demo-1234!` | <http://localhost:3000/compte> |
 
@@ -133,7 +133,7 @@ autonomes, CSS intégré, polices en base64, liens internes réécrits en fichie
 voisins. Aucun serveur, aucun script, aucune requête sortante — le dossier
 s'ouvre par un double-clic, se met sur une clé USB ou se publie tel quel.
 
-Il produit en plus **`Blonay-PDF-site.html`** : les treize pages réunies en un
+Il produit en plus **`Aktum-PDF-site.html`** : les treize pages réunies en un
 seul fichier de 568 Ko, navigation comprise. Un seul fichier à envoyer par
 courriel ou à ouvrir sur un téléphone, là où le dossier complet demande de
 garder les fichiers ensemble.
@@ -181,7 +181,7 @@ les environnements :
 | `DATABASE_URL` | `libsql://votre-base.turso.io` | oui |
 | `DATABASE_AUTH_TOKEN` | le jeton Turso | oui |
 | `ADMIN_PASSWORD` | un mot de passe que vous choisissez | oui |
-| `ADMIN_EMAIL` | votre adresse | non (défaut : `admin@blonaypdf.ch`) |
+| `ADMIN_EMAIL` | votre adresse | non (défaut : `admin@aktumpdf.ch`) |
 | `SITE_URL` | l'adresse publique, une fois connue | non |
 | `SEED_DEMO` | `1` pour créer aussi les comptes de démonstration | non |
 

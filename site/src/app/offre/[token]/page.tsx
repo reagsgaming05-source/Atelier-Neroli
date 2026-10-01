@@ -110,7 +110,7 @@ export default async function OffreLienPage({ params }: { params: Promise<{ toke
           <tbody className="border-t border-line">
             <tr>
               <td className="py-5">
-                <p className="font-semibold text-ink-900">Blonay PDF — formule {quote.plan?.name ?? "à définir"}</p>
+                <p className="font-semibold text-ink-900">Aktum PDF — formule {quote.plan?.name ?? "à définir"}</p>
                 <p className="mt-1 text-ink-500">
                   Abonnement {intervalLabel(quote.interval).toLowerCase()} · {quote.seats}{" "}
                   {quote.seats > 1 ? "postes annoncés" : "poste annoncé"}

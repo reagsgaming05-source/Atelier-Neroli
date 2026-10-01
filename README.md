@@ -1,8 +1,8 @@
 # Atelier-Neroli
 
-## Blonay PDF — un logiciel PDF complet dans le navigateur
+## Aktum PDF — un logiciel PDF complet dans le navigateur
 
-`outils/blonay-pdf.html` est un fichier HTML autonome qui offre les fonctions
+`outils/aktum-pdf.html` est un fichier HTML autonome qui offre les fonctions
 d'un logiciel PDF professionnel. Tout le traitement se fait sur l'ordinateur de
 l'utilisateur : aucun fichier n'est envoyé sur un serveur.
 
@@ -170,8 +170,8 @@ Ce qu'une relecture complète du logiciel a fait ajouter ensuite :
 
 | Fichier | Poids | Internet |
 | --- | --- | --- |
-| `outils/blonay-pdf.html` | 0,5 Mo | requis à l'ouverture, pour charger pdf.js, pdf-lib, JSZip et, à la demande, le moteur OCR |
-| `outils/blonay-pdf-hors-ligne.html` | 9 Mo | aucun : les bibliothèques, le moteur OCR et les modèles français et allemand sont inclus dans le fichier |
+| `outils/aktum-pdf.html` | 0,5 Mo | requis à l'ouverture, pour charger pdf.js, pdf-lib, JSZip et, à la demande, le moteur OCR |
+| `outils/aktum-pdf-hors-ligne.html` | 9 Mo | aucun : les bibliothèques, le moteur OCR et les modèles français et allemand sont inclus dans le fichier |
 
 Les deux fichiers offrent les mêmes fonctions. La version hors ligne convient
 aux postes sans accès internet ou derrière un filtrage strict (c'est elle que
@@ -192,10 +192,10 @@ texte* : elle tourne sur le poste, rien n'est envoyé.
 
 ## Version portable Windows (recommandée) — application fenêtrée, aucune installation
 
-1. Téléchargez **`BlonayPDF-windows.zip`** depuis la page *Releases* du dépôt (version
-   « Blonay PDF — Windows portable (dernière version) »).
+1. Téléchargez **`AktumPDF-windows.zip`** depuis la page *Releases* du dépôt (version
+   « Aktum PDF — Windows portable (dernière version) »).
 2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
-3. Double-cliquez sur **`BlonayPDF.exe`** : l'application demande qui vous êtes, puis s'ouvre.
+3. Double-cliquez sur **`AktumPDF.exe`** : l'application demande qui vous êtes, puis s'ouvre.
 
 Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le registre ni dans
 *Program Files*, aucun navigateur n'est sollicité, aucune donnée ne quitte le PC. Les réglages
@@ -263,27 +263,27 @@ choix à part : *Fichier › Ajouter au document…*, ou le bouton « Ajouter un
 Fermer avec des modifications non enregistrées demande d'abord confirmation.
 
 L'ancienne version (avant les dix ajouts de la version 2) reste disponible telle quelle dans
-la release **« Blonay PDF — version 1 »** (`BlonayPDF-v1-windows.zip`) : si quelque chose
+la release **« Aktum PDF — version 1 »** (`AktumPDF-v1-windows.zip`) : si quelque chose
 ne va pas dans la nouvelle, décompressez celle-là à côté et continuez. Le zip est celui publié
-le 14 septembre 2026, construit depuis le commit `0ed7dac` ; le tag git `blonaypdf-v1` que
+le 14 septembre 2026, construit depuis le commit `0ed7dac` ; le tag git `aktumpdf-v1` que
 l'action de release a créé pointe, lui, sur `main`, et le jeton du workflow n'a pas le droit de
 le déplacer. Pour le remettre d'équerre depuis un poste qui a les droits :
-`git push --force origin 0ed7dac09ea1b2ac101842bb5de278607ef82a0e:refs/tags/blonaypdf-v1`.
+`git push --force origin 0ed7dac09ea1b2ac101842bb5de278607ef82a0e:refs/tags/aktumpdf-v1`.
 
 Au premier lancement, Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (exécutable non signé) : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
 
 L'exécutable est construit automatiquement par GitHub Actions
-(`.github/workflows/build-blonaypdf-windows.yml`) à chaque poussée : suite de bout en bout sur
+(`.github/workflows/build-aktumpdf-windows.yml`) à chaque poussée : suite de bout en bout sur
 Linux (Chromium, page hors ligne), puis tests unitaires,
 construction de la page autonome, empaquetage Electron (`outils/desktop/`), test de fumée de
 l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, Enregistrer sous, Enregistrer sur
 place après confirmation, récupération du travail après un arrêt brutal, seconde instance), puis
-publication du zip dans la pré-release à tag fixe `blonaypdf-windows-latest`.
+publication du zip dans la pré-release à tag fixe `aktumpdf-windows-latest`.
 
 ### Mettre à jour
 
-Posez le zip téléchargé à côté de `BlonayPDF.exe`, ou dans un sous-dossier `maj`. Au
+Posez le zip téléchargé à côté de `AktumPDF.exe`, ou dans un sous-dossier `maj`. Au
 lancement suivant, l'application lit la fiche de version que le zip porte à sa racine
 (`version.json`), la compare à la sienne, et propose de se mettre à jour : elle se ferme,
 `Mettre-a-jour.cmd` remplace ses fichiers sans toucher à `data`, puis la rouvre.
@@ -334,20 +334,20 @@ cd outils
 npm ci                # (aucune dépendance de la page elle-même)
 npm run libs          # pdf.js, pdf-lib, JSZip, tesseract.js et les modèles fra/deu depuis npm, dans outils/libs/
 npm test              # tests unitaires (node --test), sous Windows comme sous Linux
-npm run build         # src/ → blonay-pdf.html, hors-ligne, docs/, lanceur/, pour-les-collegues/
+npm run build         # src/ → aktum-pdf.html, hors-ligne, docs/, lanceur/, pour-les-collegues/
 npm run icones        # src/marque.svg → les PNG et les .ico du site, d'Electron et du lanceur
 cd desktop
 npm ci
 npm start             # la fenêtre, depuis les sources
 npm run smoke         # test de fumée (Playwright pilote Electron)
-npm run dist:win      # dossier portable dist/win-unpacked (BlonayPDF.exe)
+npm run dist:win      # dossier portable dist/win-unpacked (AktumPDF.exe)
 cd ../test-e2e
 npm ci
 npx playwright install chromium
 npm test              # suite de bout en bout (Chromium sur la page hors ligne)
 ```
 
-Si le navigateur ne peut pas être téléchargé sur le poste, `BLONAY_CHROMIUM=/chemin/vers/chromium`
+Si le navigateur ne peut pas être téléchargé sur le poste, `AKTUM_CHROMIUM=/chemin/vers/chromium`
 indique celui qui est déjà là.
 
 `outils/src/` est la seule source, et **la seule chose versionnée**. L'application y vit en
@@ -395,7 +395,7 @@ disponible en solution de repli : `sh outils/application/lanceur/construire.sh`.
 
 ## Le site de vente (`site/`)
 
-Le dossier `site/` contient une application distincte : le **site commercial et l'espace client**, pour vendre Blonay PDF aux communes, aux établissements scolaires et aux services de l'État. Next.js, base SQLite dans un fichier, rien d'externe.
+Le dossier `site/` contient une application distincte : le **site commercial et l'espace client**, pour vendre Aktum PDF aux communes, aux établissements scolaires et aux services de l'État. Next.js, base SQLite dans un fichier, rien d'externe.
 
 Il suit le chemin d'achat réel d'une collectivité — demande d'offre sans compte, devis nominatif à faire valider, acceptation avec bon de commande, **facture à 30 jours avec QR-facture suisse** — la carte bancaire restant possible pour qui peut décider seul.
 
@@ -414,23 +414,23 @@ Voir `site/README.md`, en particulier la section **« À vérifier avant de vend
 Même application, même code : seul l'emballage change. **Binaire universel** — le
 même paquet tourne sur les Mac Intel et sur les Mac à puce Apple.
 
-1. Téléchargez **`BlonayPDF-mac.zip`** depuis la page *Releases* (« Blonay PDF — Mac »).
+1. Téléchargez **`AktumPDF-mac.zip`** depuis la page *Releases* (« Aktum PDF — Mac »).
 2. Décompressez où vous voulez : Bureau, Applications, disque partagé, clé USB.
-3. **Clic droit sur `BlonayPDF.app` › Ouvrir**, puis « Ouvrir » dans la fenêtre d'avertissement.
+3. **Clic droit sur `AktumPDF.app` › Ouvrir**, puis « Ouvrir » dans la fenêtre d'avertissement.
 
 Ce clic droit n'est nécessaire qu'**une seule fois**. macOS bloque par défaut
 les applications qui ne sont pas signées par un développeur inscrit chez Apple —
 une inscription payante que nous n'avons pas prise. L'application est signée
 « ad hoc », ce qui suffit à la faire tourner sur les Mac à puce Apple, mais pas à
 convaincre Gatekeeper tout seul. Si le message dit « endommagé », c'est le sceau
-de quarantaine du téléchargement : `xattr -dr com.apple.quarantine /chemin/vers/BlonayPDF.app`.
+de quarantaine du téléchargement : `xattr -dr com.apple.quarantine /chemin/vers/AktumPDF.app`.
 
 Le reste est identique à la version Windows : rien n'est installé, la connexion
 est demandée au lancement, chacune a son dossier dans `data/`, et une mise à jour
 se fait en posant le nouveau zip à côté de l'application.
 
 Un détail qui n'en est pas un : sous macOS l'exécutable est enfoui dans
-`BlonayPDF.app/Contents/MacOS`. S'y fier écrirait `data/` **à l'intérieur** du
+`AktumPDF.app/Contents/MacOS`. S'y fier écrirait `data/` **à l'intérieur** du
 paquet — invisible dans le Finder, et effacé à la première mise à jour. Le
 dossier retenu est donc celui qui contient le paquet
 (`dossierPortable`, `outils/desktop/ou-ranger.js`, éprouvé dans les tests).
@@ -439,7 +439,7 @@ dossier retenu est donc celui qui contient le paquet
 
 Le dossier `docs/` contient la même application, accompagnée d'un manifeste, de
 ses icônes et d'un cache hors ligne. Servi par une adresse en https, il devient
-installable : le navigateur propose « Installer Blonay PDF », et l'application
+installable : le navigateur propose « Installer Aktum PDF », et l'application
 apparaît dans le menu Démarrer avec son icône, dans sa propre fenêtre, sans
 onglet ni barre d'adresse. Après la première ouverture, elle fonctionne sans
 connexion.
@@ -495,9 +495,9 @@ clé USB, partage réseau ou archive ZIP. Il contient :
 
 | Fichier | Rôle |
 | --- | --- |
-| `blonay-pdf.html` | l'outil complet, hors ligne |
-| `Blonay-PDF-Windows.cmd` | ouvre l'outil dans une fenêtre d'application |
-| `Blonay-PDF-Mac.command` | la même chose sur Mac |
+| `aktum-pdf.html` | l'outil complet, hors ligne |
+| `Aktum-PDF-Windows.cmd` | ouvre l'outil dans une fenêtre d'application |
+| `Aktum-PDF-Mac.command` | la même chose sur Mac |
 | `LISEZ-MOI.txt` | mode d'emploi en trois lignes |
 
 Le destinataire double-clique sur le lanceur de son système : l'outil s'ouvre
@@ -514,18 +514,18 @@ fichier n'est pas signé.
 
 ### Windows, avec un raccourci
 
-1. Enregistrer `blonay-pdf-hors-ligne.html` dans ses documents.
+1. Enregistrer `aktum-pdf-hors-ligne.html` dans ses documents.
 2. Clic droit sur le Bureau, Nouveau, Raccourci.
 3. Saisir cette cible, en remplaçant le chemin par le sien :
 
    ```
-   msedge --app="file:///C:/Users/VOTRE-NOM/Documents/blonay-pdf-hors-ligne.html"
+   msedge --app="file:///C:/Users/VOTRE-NOM/Documents/aktum-pdf-hors-ligne.html"
    ```
 
    Avec Chrome, remplacer `msedge` par `chrome`. Si le nom seul est refusé,
    utiliser le chemin complet du navigateur, par exemple
    `"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"`.
-4. Nommer le raccourci « Blonay PDF ».
+4. Nommer le raccourci « Aktum PDF ».
 
 Le double-clic ouvre une fenêtre sans onglet ni barre d'adresse. Le raccourci
 s'épingle à la barre des tâches. Rien n'est installé sur le poste et aucun
@@ -586,7 +586,7 @@ en images, sans aucune couche de texte.
 Les documents ne quittent pas l'ordinateur. Ils sont lus, modifiés et
 réassemblés par le navigateur, en mémoire. Il n'y a ni envoi, ni compte, ni
 cookie, ni mesure d'audience, ni identifiant. Le seul stockage est celui des
-préférences d'affichage, sous les clés `blonay-theme` et `blonay-zoom`.
+préférences d'affichage, sous les clés `aktum-theme` et `aktum-zoom`.
 
 Ce n'est pas une promesse mais une contrainte : les fichiers livrés portent une
 politique de sécurité qui interdit au navigateur toute connexion sortante.

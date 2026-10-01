@@ -60,7 +60,7 @@ export default async function FactureDetailPage({
             <LogoMark className="size-9" />
             <div>
               <p className="font-display text-2xl font-bold leading-none tracking-tight">
-                Blonay <span className="text-brand-600">PDF</span>
+                Aktum <span className="text-brand-600">PDF</span>
               </p>
               <p className="mt-1 text-xs text-ink-500">
                 {site.legalName} · {site.address.street}, {site.address.zip} {site.address.city}{site.email ? ` · ${site.email}` : ""}

@@ -106,7 +106,7 @@ function cheminReseau(chemin) {
  * duquel vivent « data », le LISEZMOI et le zip d'une mise à jour.
  *
  * Sous Windows et Linux, c'est celui de l'exécutable. Sous macOS, non :
- * l'exécutable est enfoui dans BlonayPDF.app/Contents/MacOS, et s'y fier
+ * l'exécutable est enfoui dans AktumPDF.app/Contents/MacOS, et s'y fier
  * écrirait les dossiers de chacun à l'intérieur du paquet — invisibles dans le
  * Finder, et effacés au premier remplacement de l'application.
  */

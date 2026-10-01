@@ -217,7 +217,7 @@ export default async function HomePage() {
             </div>
           </Reveal>
           <Reveal delay={100}>
-            <SectionHeading eyebrow="Pourquoi Blonay PDF" title="Pensé pour un secrétariat communal ou scolaire." text="Greffes, bourses, directions d'établissement, services de l'État : des utilisateurs pour qui la protection des données et la simplicité ne sont pas négociables." />
+            <SectionHeading eyebrow="Pourquoi Aktum PDF" title="Pensé pour un secrétariat communal ou scolaire." text="Greffes, bourses, directions d'établissement, services de l'État : des utilisateurs pour qui la protection des données et la simplicité ne sont pas négociables." />
             <ul className="mt-10 space-y-6">
               {values.map((v) => (
                 <li key={v.title} className="flex gap-5">

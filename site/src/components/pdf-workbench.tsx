@@ -54,7 +54,7 @@ async function makeSample(): Promise<Uint8Array> {
   sections.forEach((s, i) => {
     const page = doc.addPage(A4);
     page.drawRectangle({ x: 0, y: A4[1] - 44, width: A4[0], height: 44, color: rgb(0.11, 0.23, 0.75) });
-    page.drawText("Etablissement primaire et secondaire de Blonay - Saint-Legier", { x: 40, y: A4[1] - 28, size: 11, font: bold, color: rgb(1, 1, 1) });
+    page.drawText("Etablissement primaire et secondaire - Exemple", { x: 40, y: A4[1] - 28, size: 11, font: bold, color: rgb(1, 1, 1) });
     page.drawText(s.title, { x: 40, y: 740, size: 20, font: bold, color: rgb(0.07, 0.08, 0.1) });
     page.drawLine({ start: { x: 40, y: 726 }, end: { x: 300, y: 726 }, thickness: 2, color: rgb(1, 0.62, 0.31) });
     s.lines.forEach((line, j) => page.drawText(line, { x: 40, y: 696 - j * 18, size: 11, font, color: rgb(0.22, 0.24, 0.27) }));
@@ -163,12 +163,12 @@ export function PdfWorkbench({ isLoggedIn }: { isLoggedIn: boolean }) {
           page.drawText(`${i + 1} / ${all.length}`, { x: width / 2 - 14, y: 22, size: 10, font, color: rgb(0.4, 0.42, 0.46) });
         });
       }
-      out.setProducer("Blonay PDF — démo");
-      out.setCreator("Blonay PDF");
+      out.setProducer("Aktum PDF — démo");
+      out.setCreator("Aktum PDF");
       const bytes = await out.save();
       const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
       if (result) URL.revokeObjectURL(result.url);
-      const name = files.length > 1 ? "Document_fusionne.pdf" : files[0]?.name.replace(/\.pdf$/i, "") + "_Blonay.pdf";
+      const name = files.length > 1 ? "Document_fusionne.pdf" : files[0]?.name.replace(/\.pdf$/i, "") + "_Aktum.pdf";
       setResult({ url: URL.createObjectURL(blob), name, pages: selection.length, size: blob.size });
       if (isLoggedIn) {
         const tool = watermark.trim() ? "protect" : files.length > 1 ? "merge" : "organize";

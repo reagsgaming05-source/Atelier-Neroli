@@ -45,7 +45,7 @@ const INTERDITES: [RegExp, string, boolean?][] = [
   [/jusqu'à 90 ?%|polices et le texte restent vectoriels|compresser sans perte|aperçu avant ?\/ ?après/i, "la réduction convertit les pages en images"],
   [/annuler ?\/ ?rétablir illimité/i, "soixante états"],
   [/douze outils|12 outils|les 12 outils/i, "le panneau compte vingt-six outils"],
-  [/témoignage à recueillir|fondée en 2021|CHE-000|blonaypdf\.ch|route de vevey|\+41 ?21 ?943|linkedin\.com/i, "donnée inventée", true],
+  [/témoignage à recueillir|fondée en 2021|CHE-000|aktumpdf\.ch|route de vevey|\+41 ?21 ?943|linkedin\.com/i, "donnée inventée", true],
   [/\bsàrl\b/i, "aucune société n'est constituée", true],
   [/sous (24|48|deux|2) ?(h|heures|jours)|24 h ouvrées|deux jours ouvrables|48 heures/i, "aucun délai de réponse n'est tenable sans courriel branché", true],
   [/déjà écrites|les pièces sont prêtes|dossier de marché public fourni|clause de réversibilité (et|figurent)|contrat de sous-traitance (LPD|conforme|fourni)|attestation de conformité/i, "ces pièces n'existent pas"],

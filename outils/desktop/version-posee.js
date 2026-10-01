@@ -154,14 +154,14 @@ function plusRecente(installee, posee) {
 //  Où le zip peut avoir été posé
 // =============================================================================
 // À côté de l'exécutable, ou dans un sous-dossier « maj » pour qui préfère ne
-// pas encombrer. Le nom est libre du moment qu'il commence par BlonayPDF et
-// finit par .zip : « BlonayPDF-windows (1).zip » compte aussi.
+// pas encombrer. Le nom est libre du moment qu'il commence par AktumPDF et
+// finit par .zip : « AktumPDF-windows (1).zip » compte aussi.
 function zipsPoses(dossierApp) {
   const trouves = [];
   [dossierApp, path.join(dossierApp, 'maj')].forEach((d) => {
     let noms = [];
     try { noms = fs.readdirSync(d); } catch (e) { return; } // dossier absent
-    noms.filter((n) => /^blonaypdf.*\.zip$/i.test(n)).sort()
+    noms.filter((n) => /^aktumpdf.*\.zip$/i.test(n)).sort()
       .forEach((n) => trouves.push(path.join(d, n)));
   });
   return trouves;

@@ -3,7 +3,7 @@ import "./env";
 import fs from "node:fs";
 import path from "node:path";
 
-const url = process.env.DATABASE_URL ?? "file:./data/blonay-pdf.db";
+const url = process.env.DATABASE_URL ?? "file:./data/aktum-pdf.db";
 const file = url.startsWith("file:") ? path.resolve(url.slice("file:".length)) : null;
 
 async function main() {

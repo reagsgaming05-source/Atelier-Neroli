@@ -3,12 +3,12 @@
 <body>
 <p class="sur-titre">Pour l'informaticien du service</p>
 <h1>Guide d'administration et de déploiement</h1>
-<p class="lede">Poser Blonay PDF une fois, le faire utiliser par tout un secrétariat, le garder à jour, savoir quoi faire quand quelque chose coince. Version {{VERSION}}.</p>
+<p class="lede">Poser Aktum PDF une fois, le faire utiliser par tout un secrétariat, le garder à jour, savoir quoi faire quand quelque chose coince. Version {{VERSION}}.</p>
 
 <h2>1. L'essentiel en une page</h2>
 <ol>
   <li><strong>Décompressez</strong> le zip dans un dossier — de préférence un dossier du serveur de fichiers, lisible et inscriptible par le secrétariat. Rien n'est installé : pas de droits d'administrateur, pas de registre, pas de service.</li>
-  <li><strong>Créez un raccourci</strong> vers <span class="chemin">BlonayPDF.exe</span> (macOS : <span class="chemin">BlonayPDF.app</span>) sur le bureau de chaque poste.</li>
+  <li><strong>Créez un raccourci</strong> vers <span class="chemin">AktumPDF.exe</span> (macOS : <span class="chemin">AktumPDF.app</span>) sur le bureau de chaque poste.</li>
   <li><strong>Chacune crée son compte</strong> au premier lancement (prénom, nom, mot de passe, et un code de récupération à noter). Elle reste ensuite connectée.</li>
   <li>Sans licence, l'application est en <strong>essai de 45 jours</strong>, toutes les fonctions. À l'achat, posez le fichier <span class="chemin">licence.json</span> à côté de l'exécutable : une fois pour tout le service.</li>
 </ol>
@@ -39,7 +39,7 @@
 <h2>4. Où vont les données, et ce qui les protège</h2>
 <p>Dans <span class="chemin">data\&lt;nom de la personne&gt;\</span> : la fiche du compte, les tampons et la signature mémorisés, les documents récents, les réglages d'affichage, et le <strong>travail mis de côté</strong> pour la récupération après un arrêt brutal (une copie des documents ouverts, effacée à l'enregistrement). Tout y est <strong>en clair</strong>.</p>
 <p>Le mot de passe empêche d'ouvrir l'application sous le nom d'une collègue ; il ne chiffre rien et n'empêche pas de lire le dossier depuis l'Explorateur. <strong>Ce sont les droits NTFS du dossier qui protègent</strong> : si chaque personne ne doit voir que le sien, c'est à vous de poser ces droits sur <span class="chemin">data\&lt;nom&gt;</span>. L'application ne le fait pas.</p>
-<p>Hors du dossier de l'application, l'application écrit dans <span class="chemin">%APPDATA%\Blonay PDF\</span> : <span class="chemin">session.json</span> (quel compte est connecté sur ce poste) et <span class="chemin">essai.json</span> (le premier jour de l'essai). Rien d'autre.</p>
+<p>Hors du dossier de l'application, l'application écrit dans <span class="chemin">%APPDATA%\Aktum PDF\</span> : <span class="chemin">session.json</span> (quel compte est connecté sur ce poste) et <span class="chemin">essai.json</span> (le premier jour de l'essai). Rien d'autre.</p>
 
 <h2>5. Les comptes</h2>
 <ul>
@@ -55,7 +55,7 @@
 <ul>
   <li><strong>Essai</strong> : 45 jours à partir du premier lancement sur le poste, toutes les fonctions, aucun filigrane. Bandeau « Essai : N jours restants » en bas de la fenêtre. La date de départ est notée dans le profil de la personne (<span class="chemin">essai.json</span>) : décompresser le zip ailleurs ne la remet pas à zéro ; effacer ce fichier la remet à zéro — c'est assumé, l'essai décourage la prolongation distraite, il n'arrête personne. Si l'écriture échoue (profil en lecture seule), l'essai continue.</li>
   <li><strong>Fin d'essai</strong> : on ouvre, lit et cherche encore ; l'enregistrement et l'export de nouveaux fichiers sont suspendus, et l'application le dit. Le travail en cours est gardé.</li>
-  <li><strong>Licence</strong> : le fichier <span class="chemin">licence.json</span>, signé par l'éditeur, posé <strong>à côté de l'exécutable</strong> (sous macOS : à côté de <span class="chemin">BlonayPDF.app</span>, pas dedans). Il porte le nom du client, le nombre de postes, la date jusqu'à laquelle les <strong>mises à jour</strong> sont comprises. Relancez l'application : « Aide › À propos » le montre. Sur un lecteur réseau, un seul fichier pour tout le service.</li>
+  <li><strong>Licence</strong> : le fichier <span class="chemin">licence.json</span>, signé par l'éditeur, posé <strong>à côté de l'exécutable</strong> (sous macOS : à côté de <span class="chemin">AktumPDF.app</span>, pas dedans). Il porte le nom du client, le nombre de postes, la date jusqu'à laquelle les <strong>mises à jour</strong> sont comprises. Relancez l'application : « Aide › À propos » le montre. Sur un lecteur réseau, un seul fichier pour tout le service.</li>
   <li><strong>Ce que la licence ne fait pas</strong> : elle n'est liée à aucun matériel (un parc se renouvelle par tranches et se clone) ; l'application ne se verrouille pas à la date des mises à jour — seules les versions plus récentes sont hors licence ; le nombre de postes n'est pas contrôlé techniquement. Un fichier modifié (400 postes au lieu de 10) est refusé ; l'application retombe alors sur l'essai et le dit dans « Licence ».</li>
   <li><strong>Fichier perdu</strong> : il se télécharge à tout moment dans l'espace client du site.</li>
 </ul>
@@ -82,12 +82,12 @@
 <ul>
   <li><strong>Aucune connexion sortante.</strong> Trois barrières l'imposent (les noms de domaine ne se résolvent pas, un mandataire fixe et mort sert toutes les sessions, chaque requête non locale est refusée et comptée), et un test de la construction l'observe : l'application est lancée derrière un mandataire d'observation, utilisée pour de vrai (ouvrir, tourner, enregistrer, reconnaître le texte d'une image), et le test échoue à la moindre connexion reçue. Il a déjà trouvé, et fait supprimer, un téléchargement du dictionnaire orthographique.</li>
   <li><strong>Pare-feu</strong> : rien à autoriser. <strong>Proxy</strong> : l'application n'utilise pas celui du système (ni détection automatique).</li>
-  <li><strong>Signature du code Windows</strong> : l'exécutable n'est signé par un certificat de code que si l'éditeur en a fourni un lors de la construction. Contrôlez : clic droit sur <span class="chemin">BlonayPDF.exe</span> › Propriétés › « Signatures numériques ». <em>Sans signature, SmartScreen avertit au premier lancement d'un fichier téléchargé, et une stratégie AppLocker ou WDAC qui n'autorise que le code signé refusera l'exécution.</em> Dans ce cas : autorisez le dossier par une règle de <strong>chemin</strong>, ou par l'<strong>empreinte</strong> (SHA-256, publiée à côté de chaque zip) — et demandez à l'éditeur où en est la signature.</li>
+  <li><strong>Signature du code Windows</strong> : l'exécutable n'est signé par un certificat de code que si l'éditeur en a fourni un lors de la construction. Contrôlez : clic droit sur <span class="chemin">AktumPDF.exe</span> › Propriétés › « Signatures numériques ». <em>Sans signature, SmartScreen avertit au premier lancement d'un fichier téléchargé, et une stratégie AppLocker ou WDAC qui n'autorise que le code signé refusera l'exécution.</em> Dans ce cas : autorisez le dossier par une règle de <strong>chemin</strong>, ou par l'<strong>empreinte</strong> (SHA-256, publiée à côté de chaque zip) — et demandez à l'éditeur où en est la signature.</li>
   <li><strong>Antivirus</strong> : l'éditeur n'a pu tester aucun produit d'entreprise. Un exécutable Electron non signé posé sur un partage est le premier endroit où vous pouvez avoir un blocage ; la règle d'exclusion se fait sur le dossier.</li>
 </ul>
 
 <h2>10. Sauvegarde, désinstallation</h2>
-<p><strong>À sauvegarder</strong> : <span class="chemin">data\</span> (les comptes, tampons, signatures) et <span class="chemin">licence.json</span> ; le reste se re-télécharge. Les copies de récupération (<span class="chemin">data\&lt;nom&gt;\recuperation</span>) sont éphémères : inutile de les sauvegarder, et elles contiennent des documents en clair — à exclure des sauvegardes si cela vous gêne. <strong>Désinstaller</strong> : supprimez le dossier de l'application (et son raccourci) ; <span class="chemin">%APPDATA%\Blonay PDF</span> sur chaque poste si vous voulez aussi effacer la session et le jour de départ de l'essai.</p>
+<p><strong>À sauvegarder</strong> : <span class="chemin">data\</span> (les comptes, tampons, signatures) et <span class="chemin">licence.json</span> ; le reste se re-télécharge. Les copies de récupération (<span class="chemin">data\&lt;nom&gt;\recuperation</span>) sont éphémères : inutile de les sauvegarder, et elles contiennent des documents en clair — à exclure des sauvegardes si cela vous gêne. <strong>Désinstaller</strong> : supprimez le dossier de l'application (et son raccourci) ; <span class="chemin">%APPDATA%\Aktum PDF</span> sur chaque poste si vous voulez aussi effacer la session et le jour de départ de l'essai.</p>
 
 <h2>11. Quand quelque chose coince</h2>
 <ol>
@@ -108,14 +108,14 @@
 <h2>Aide-mémoire : fichiers et dossiers</h2>
 <table>
 <tr><th>Où</th><th>Quoi</th></tr>
-<tr><td><span class="chemin">BlonayPDF.exe</span></td><td>L'application (macOS : <span class="chemin">BlonayPDF.app</span>)</td></tr>
+<tr><td><span class="chemin">AktumPDF.exe</span></td><td>L'application (macOS : <span class="chemin">AktumPDF.app</span>)</td></tr>
 <tr><td><span class="chemin">licence.json</span></td><td>La licence, signée, à côté de l'exécutable</td></tr>
 <tr><td><span class="chemin">comptes.txt</span>, <span class="chemin">donnees-par-utilisateur.txt</span></td><td>Réglages, vides ou une ligne par personne</td></tr>
 <tr><td><span class="chemin">data\&lt;nom&gt;\</span></td><td>Compte, tampons, signature, récents, récupération (en clair)</td></tr>
 <tr><td><span class="chemin">data\.ouvert-*.json</span></td><td>Jetons des postes qui ont l'application ouverte (pour la mise à jour)</td></tr>
 <tr><td><span class="chemin">maj\</span> (facultatif)</td><td>Où poser les zips de mise à jour et leurs signatures</td></tr>
 <tr><td><span class="chemin">version.json</span></td><td>Version, canal, commit et date de cette installation</td></tr>
-<tr><td><span class="chemin">%APPDATA%\Blonay PDF\</span></td><td><span class="chemin">session.json</span>, <span class="chemin">essai.json</span> — par personne et par poste</td></tr>
+<tr><td><span class="chemin">%APPDATA%\Aktum PDF\</span></td><td><span class="chemin">session.json</span>, <span class="chemin">essai.json</span> — par personne et par poste</td></tr>
 <tr><td><span class="chemin">.~verrou.&lt;doc&gt;.json</span></td><td>Verrou d'un document ouvert, à côté du document</td></tr>
 </table>
 </body></html>

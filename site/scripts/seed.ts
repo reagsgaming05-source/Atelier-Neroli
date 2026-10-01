@@ -23,8 +23,8 @@ export async function runSeed() {
   await db.update(plans).set({ active: false }).where(notInArray(plans.slug, slugs));
 
   // 2. Compte administrateur
-  const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@blonaypdf.ch").toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD ?? "BlonayPDF-Admin-2026!";
+  const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@aktumpdf.ch").toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "AktumPDF-Admin-2026!";
   if (!process.env.ADMIN_PASSWORD && SANS_DISQUE) {
     throw new Error(
       "ADMIN_PASSWORD n'est pas défini. Le mot de passe administrateur par défaut est écrit dans le dépôt, " +
@@ -38,7 +38,7 @@ export async function runSeed() {
       email: adminEmail,
       passwordHash: await hashPassword(adminPassword),
       firstName: "Administration",
-      lastName: "Blonay PDF",
+      lastName: "Aktum PDF",
       role: "admin",
     });
     console.log(`✔ Compte administrateur créé : ${adminEmail}`);

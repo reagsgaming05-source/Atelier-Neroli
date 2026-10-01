@@ -1,8 +1,8 @@
 {
-  "name": "blonay-pdf",
+  "name": "aktum-pdf",
   "version": "0.1.0",
   "private": true,
-  "description": "Site et espace client de Blonay PDF — abonnements, licences, facturation, administration.",
+  "description": "Site et espace client d’Aktum PDF — abonnements, licences, facturation, administration.",
   "scripts": {
     "predev": "tsx scripts/ensure-db.ts",
     "dev": "next dev",

@@ -187,8 +187,8 @@
         let r = null;
         try { r = await resoudre(dest); } catch (_) { r = null; }
         if (!r) continue;
-        a.set(N('BlonayCible'), PDFNumber.of(r.index));
-        a.set(N('BlonayReste'), ctx.obj(r.reste));
+        a.set(N('AktumCible'), PDFNumber.of(r.index));
+        a.set(N('AktumReste'), ctx.obj(r.reste));
         a.delete(N('Dest'));
         if (viaAction) a.delete(N('A'));
       }
@@ -211,11 +211,11 @@
       let change = false;
       annots.asArray().forEach(item => {
         const a = ctx.lookup(item);
-        if (!(a instanceof PDFDict) || !a.has(N('BlonayCible'))) { garde.push(item); return; }
+        if (!(a instanceof PDFDict) || !a.has(N('AktumCible'))) { garde.push(item); return; }
         change = true;
-        const idx = a.get(N('BlonayCible')).asNumber();
-        const reste = ctx.lookup(a.get(N('BlonayReste')));
-        a.delete(N('BlonayCible')); a.delete(N('BlonayReste'));
+        const idx = a.get(N('AktumCible')).asNumber();
+        const reste = ctx.lookup(a.get(N('AktumReste')));
+        a.delete(N('AktumCible')); a.delete(N('AktumReste'));
         const ref = cible.get(p.src + ':' + idx);
         if (!ref) { retires++; return; }
         const suite = reste && reste.asArray ? reste.asArray() : [];
@@ -359,7 +359,7 @@
           for (const b of bouts) {
             try {
               const im = await out.embedJpg(b.donnees);
-              const neuf = 'BlonayCav' + (++uidImageCaviardee);
+              const neuf = 'AktumCav' + (++uidImageCaviardee);
               fxPoserImage(out, page, neuf, im.ref);
               renommages.set(b.nom, neuf);
             } catch (e) { signaler('Caviardage', e); }

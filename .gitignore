@@ -4,10 +4,10 @@ outils/libs/
 # produits par outils/build.js à partir de outils/src/ : jamais commités,
 # sinon chaque changement de la source ajoute 28 Mo à l'historique. « npm run
 # build » dans outils/ les remet ; la CI et Vercel les construisent eux-mêmes.
-outils/blonay-pdf.html
-outils/blonay-pdf-hors-ligne.html
-outils/application/lanceur/blonay-pdf.html
-outils/pour-les-collegues/blonay-pdf.html
+outils/aktum-pdf.html
+outils/aktum-pdf-hors-ligne.html
+outils/application/lanceur/aktum-pdf.html
+outils/pour-les-collegues/aktum-pdf.html
 docs/index.html
 
 # recopiées par outils/build.js depuis outils/application/, où les pose
@@ -17,13 +17,13 @@ outils/application/lanceur/icon-48.png
 outils/application/lanceur/icon-256.png
 
 # produit par outils/build.js puis compressé pour être embarqué
-outils/application/lanceur/blonay-pdf.html.gz
-outils/application/lanceur/Blonay PDF.exe
+outils/application/lanceur/aktum-pdf.html.gz
+outils/application/lanceur/Aktum PDF.exe
 
 # produits par outils/application/lanceur/construire.sh et par le workflow
 dist/
-BlonayPDF-windows.zip
-BlonayPDF-leger-windows.zip
+AktumPDF-windows.zip
+AktumPDF-leger-windows.zip
 
 # dépendances et produits de l'application fenêtrée (outils/desktop)
 outils/node_modules/

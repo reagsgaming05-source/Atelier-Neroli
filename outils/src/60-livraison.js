@@ -35,22 +35,22 @@
   }
   async function enregistrerNatif(blob, filename) {
     let debut = null;
-    try { debut = await window.blonayEnregistrerDebut(filename); } catch (e) { signaler('Enregistrer', e); return 'repli'; }
+    try { debut = await window.aktumEnregistrerDebut(filename); } catch (e) { signaler('Enregistrer', e); return 'repli'; }
     if (!debut || debut.erreur) { signaler('Enregistrer', debut && debut.erreur); return 'repli'; }
     if (debut.annule) { toast('Enregistrement annulé.', 'warn'); return 'annule'; }
     const jeton = debut.jeton;
     try {
       const MORCEAU = 4 << 20;
       for (let pos = 0; pos < blob.size; pos += MORCEAU) {
-        await window.blonayEnregistrerBout(jeton, b64Octets(await blob.slice(pos, pos + MORCEAU).arrayBuffer()));
+        await window.aktumEnregistrerBout(jeton, b64Octets(await blob.slice(pos, pos + MORCEAU).arrayBuffer()));
       }
-      const chemin = await window.blonayEnregistrerFin(jeton);
+      const chemin = await window.aktumEnregistrerFin(jeton);
       toast(filename + ' enregistré (' + fmtSize(blob.size) + ')');
       setLast('Enregistré : ' + chemin);
       return 'ok';
     } catch (e) {
       console.error(e);
-      try { await window.blonayEnregistrerAbandon(jeton); } catch (e) { signaler('Abandon de la récupération', e, 'info'); }
+      try { await window.aktumEnregistrerAbandon(jeton); } catch (e) { signaler('Abandon de la récupération', e, 'info'); }
       toast('L\'enregistrement a échoué : ' + (e && e.message ? e.message : e), 'error');
       return 'echec';
     }
@@ -70,7 +70,7 @@
       fallbackDownload(blob, filename);
       return true;
     }
-    if (typeof window.blonayEnregistrerDebut === 'function') {
+    if (typeof window.aktumEnregistrerDebut === 'function') {
       const r = await enregistrerNatif(blob, filename);
       if (r !== 'repli') return r === 'ok';
     }
@@ -90,7 +90,7 @@
         return false;
       }
     }
-    if (hasClaude) { toast('L\'enregistrement n\'est pas disponible dans cette vue. Ouvrez la page dans un nouvel onglet ou depuis le fichier blonay-pdf.html.', 'error'); return false; }
+    if (hasClaude) { toast('L\'enregistrement n\'est pas disponible dans cette vue. Ouvrez la page dans un nouvel onglet ou depuis le fichier aktum-pdf.html.', 'error'); return false; }
     fallbackDownload(blob, filename);
     toast(filename + ' prêt (' + fmtSize(blob.size) + ')');
     setLast(filename + ' exporté');
@@ -137,7 +137,7 @@
   //  Enregistrer reste l'export habituel.
   // =====================================================================
   const nomDe = chemin => String(chemin || '').replace(/^.*[\\/]/, '');
-  const ecritureDispo = () => !!(state.bureau && window.BlonayDesktop && typeof window.BlonayDesktop.ecrire === 'function');
+  const ecritureDispo = () => !!(state.bureau && window.AktumDesktop && typeof window.AktumDesktop.ecrire === 'function');
   // Le fichier visé : celui du dernier enregistrement, sinon celui d'où vient
   // le document — s'il vient d'un seul fichier. Un document assemblé à partir
   // de plusieurs n'a pas de fichier à réécrire : ce sera « Enregistrer sous ».
@@ -149,7 +149,7 @@
   function confirmerEcrasement(chemin) {
     return new Promise(res => {
       let pref = '';
-      try { pref = localStorage.getItem('blonay-ecraser') || ''; } catch (e) { signaler('Préférence d\'écrasement', e, 'info'); }
+      try { pref = localStorage.getItem('aktum-ecraser') || ''; } catch (e) { signaler('Préférence d\'écrasement', e, 'info'); }
       if (pref === 'toujours' || state.ecraserOk) { res('remplacer'); return; }
       let fait = false;
       const plus = checkbox('ecr-plus', 'Ne plus demander : remplacer directement, comme Acrobat', false);
@@ -167,7 +167,7 @@
           { label: 'Enregistrer sous…', id: 'ecr-sous', onClick: c => { fait = true; res('sous'); c(); } },
           { label: 'Remplacer le fichier', id: 'ecr-remplacer', primary: true, onClick: c => {
             fait = true;
-            if (plus.input.checked) { try { localStorage.setItem('blonay-ecraser', 'toujours'); } catch (e) { signaler('Préférence d\'écrasement', e, 'info'); } }
+            if (plus.input.checked) { try { localStorage.setItem('aktum-ecraser', 'toujours'); } catch (e) { signaler('Préférence d\'écrasement', e, 'info'); } }
             state.ecraserOk = true;
             res('remplacer'); c();
           } },
@@ -220,14 +220,14 @@
       setBusy('');
       if (!(await caracteresAcceptes())) { setLast('Enregistrement annulé'); return; }
       setBusy('Écriture de ' + nomDe(chemin) + '…', 1);
-      let r = await window.BlonayDesktop.ecrire(chemin, bytes, { mtimeAttendu: mtimeAttendu() });
+      let r = await window.AktumDesktop.ecrire(chemin, bytes, { mtimeAttendu: mtimeAttendu() });
       if (r && r.conflit) {
         setBusy('');
         const suite = await confirmerConflit(chemin);
         if (suite === 'sous') { exportPages(state.pages, nom); return; }
         if (suite !== 'ecraser') { setLast('Enregistrement annulé : le fichier a changé'); return; }
         setBusy('Écriture de ' + nomDe(chemin) + '…', 1);
-        r = await window.BlonayDesktop.ecrire(chemin, bytes, { forcer: true });
+        r = await window.AktumDesktop.ecrire(chemin, bytes, { forcer: true });
       }
       if (!r || !r.ok) throw new Error((r && r.erreur) || 'le fichier n\'a pas pu être écrit');
       state.mtimeFichier = r.mtimeMs > 0 ? r.mtimeMs : -1;
@@ -269,7 +269,7 @@
   const recupStock = new Map();      // clé -> Set des sources déjà déposées
   const recupSignature = new Map();  // clé -> dernier manifeste déposé
   let recupMinuteur = null, recupEnCours = null;
-  const recupDispo = () => !!(state.bureau && window.BlonayDesktop && typeof window.BlonayDesktop.recupEcrire === 'function');
+  const recupDispo = () => !!(state.bureau && window.AktumDesktop && typeof window.AktumDesktop.recupEcrire === 'function');
   function planifierRecuperation() {
     if (!recupDispo() || recupMinuteur) return;
     recupMinuteur = setTimeout(() => {
@@ -289,7 +289,7 @@
   }
   async function sauvegarderRecuperation() {
     if (!recupDispo()) return;
-    const bureau = window.BlonayDesktop;
+    const bureau = window.AktumDesktop;
     for (const o of onglets) {
       const e = o.id === ongletActif ? prendreEtat() : o.etat;
       if (!e || !e.touched || !e.pages.length || !e.sources.some(s => !s.isSample)) continue;
@@ -317,7 +317,7 @@
     const cle = e.cleRecup;
     e.cleRecup = '';
     recupStock.delete(cle); recupSignature.delete(cle);
-    if (recupDispo()) window.BlonayDesktop.recupEffacer(cle).catch(() => {});
+    if (recupDispo()) window.AktumDesktop.recupEffacer(cle).catch(() => {});
   }
   // Avant de quitter : plus rien à récupérer, et plus rien en route.
   function recupToutOublier() {
@@ -326,11 +326,11 @@
     onglets.forEach(o => { const e = o.id === ongletActif ? state : o.etat; if (e && e.cleRecup) { cles.push(e.cleRecup); e.cleRecup = ''; } });
     recupStock.clear(); recupSignature.clear();
     if (!recupDispo() || !cles.length) return Promise.resolve();
-    const bureau = window.BlonayDesktop;
+    const bureau = window.AktumDesktop;
     return Promise.resolve(recupEnCours).then(() => Promise.all(cles.map(c => bureau.recupEffacer(c).catch(() => {}))));
   }
   async function restaurerRecuperation(cle) {
-    const bureau = window.BlonayDesktop;
+    const bureau = window.AktumDesktop;
     const r = await bureau.recupLire(cle);
     if (!r || !r.manifeste) throw new Error('le dépôt de récupération est illisible');
     const m = r.manifeste;
@@ -373,12 +373,12 @@
     return m;
   }
   function proposerRecuperation(liste) {
-    const bureau = window.BlonayDesktop;
+    const bureau = window.AktumDesktop;
     const quand = t => { const d = new Date(t || 0); return pad(d.getDate(), 2) + '.' + pad(d.getMonth() + 1, 2) + '.' + d.getFullYear() + ' à ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2); };
     dialog({
       title: 'Travail non enregistré retrouvé', icon: IC.info,
       build: b => {
-        b.append(note('Blonay PDF s\'est arrêté sans que ' + (liste.length > 1 ? 'ces documents soient enregistrés' : 'ce document soit enregistré') + '. Les récupérer les rouvre tels qu\'ils étaient, avec les modifications en cours.'));
+        b.append(note('Aktum PDF s\'est arrêté sans que ' + (liste.length > 1 ? 'ces documents soient enregistrés' : 'ce document soit enregistré') + '. Les récupérer les rouvre tels qu\'ils étaient, avec les modifications en cours.'));
         const ul = document.createElement('ul'); ul.className = 'recup-liste';
         liste.forEach(r => { const li = document.createElement('li'); li.textContent = (r.titre || 'Document') + ' · ' + plural(r.pages || 0, 'page', 'pages') + ' · ' + quand(r.quand); ul.appendChild(li); });
         b.append(ul);
@@ -403,7 +403,7 @@
   async function renderRecents() {
     const zone = el.dzRecents;
     if (!zone) return;
-    const bureau = window.BlonayDesktop;
+    const bureau = window.AktumDesktop;
     if (!state.bureau || !bureau || typeof bureau.recents !== 'function' || typeof bureau.lireRecent !== 'function') { zone.hidden = true; return; }
     let liste = [];
     try { liste = await bureau.recents(); } catch (_) { liste = []; }

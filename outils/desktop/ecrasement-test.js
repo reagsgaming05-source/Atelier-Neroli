@@ -11,7 +11,7 @@
  *  - à la fermeture, plus aucun verrou ne traîne dans le dossier partagé.
  *
  *   node ecrasement-test.js                              # source (electron .)
- *   node ecrasement-test.js chemin/vers/BlonayPDF.exe    # exécutable empaqueté
+ *   node ecrasement-test.js chemin/vers/AktumPDF.exe    # exécutable empaqueté
  */
 const path = require('path');
 const fs = require('fs');
@@ -47,8 +47,8 @@ async function menage(dossier) {
   }
 }
 const lancer = (exe, smoke, fichier) => electron.launch(exe
-  ? { executablePath: exe, args: [fichier], env: { ...process.env, BLONAY_SMOKE_DIR: smoke } }
-  : { args: [path.join(__dirname), fichier, '--no-sandbox'], env: { ...process.env, BLONAY_SMOKE_DIR: smoke } });
+  ? { executablePath: exe, args: [fichier], env: { ...process.env, AKTUM_SMOKE_DIR: smoke } }
+  : { args: [path.join(__dirname), fichier, '--no-sandbox'], env: { ...process.env, AKTUM_SMOKE_DIR: smoke } });
 async function prete(app, pages) {
   const win = await app.firstWindow();
   win.on('pageerror', (e) => console.log('[pageerror]', e.message));
@@ -66,7 +66,7 @@ async function tourner(win, n) {
 
 (async () => {
   const exe = process.argv[2];
-  const racine = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-ecrasement-'));
+  const racine = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-ecrasement-'));
   const partage = path.join(racine, 'partage');
   fs.mkdirSync(partage);
   const doc = path.join(partage, 'decision.pdf');

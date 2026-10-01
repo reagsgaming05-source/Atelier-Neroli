@@ -36,7 +36,7 @@ const id = arg('id', 'BLP-' + aujourdhui.getFullYear() + '-' + crypto.randomByte
 // La clé privée : --cle, ou la plus récente « licence-*.pem » du dossier des clés.
 let fichierCle = arg('cle');
 if (!fichierCle) {
-  const dossier = process.env.BLONAY_CLES_DIR || path.join(os.homedir(), 'blonay-cles-privees');
+  const dossier = process.env.AKTUM_CLES_DIR || path.join(os.homedir(), 'aktum-cles-privees');
   try { fichierCle = fs.readdirSync(dossier).filter((f) => /^licence-.*\.pem$/.test(f)).sort().pop(); if (fichierCle) fichierCle = path.join(dossier, fichierCle); } catch (e) { /* dit plus bas */ }
 }
 if (!fichierCle) { console.error('Aucune clé privée « licence » trouvée. Voir : node editeur/generer-cles.js licence'); process.exit(1); }
@@ -50,7 +50,7 @@ const signee = signer(corps, pem);
 const sortie = path.join(process.cwd(), id + '.licence.json');
 fs.writeFileSync(sortie, JSON.stringify(signee, null, 2) + '\n');
 // Relire comme le fera l'application : ce qu'on remet au client doit passer.
-const essai = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-licence-'));
+const essai = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-licence-'));
 fs.copyFileSync(sortie, path.join(essai, 'licence.json'));
 const r = lireLeFichier(essai, lireCles().licence);
 fs.rmSync(essai, { recursive: true, force: true });

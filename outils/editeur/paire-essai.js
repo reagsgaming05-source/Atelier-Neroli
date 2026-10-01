@@ -5,7 +5,7 @@
  *   node editeur/paire-essai.js <fichier-prive.pem>
  *
  * Écrit la clé privée dans le fichier donné, et affiche sur la sortie standard ce
- * qu'il faut mettre dans BLONAY_CLES_PUBLIQUES_ESSAI pour que l'application (et
+ * qu'il faut mettre dans AKTUM_CLES_PUBLIQUES_ESSAI pour que l'application (et
  * signer-maj.js) reconnaissent cette clé.
  */
 const crypto = require('crypto');

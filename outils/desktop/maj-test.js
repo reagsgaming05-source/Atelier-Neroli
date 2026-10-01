@@ -2,7 +2,7 @@
  * La mise à jour proposée toute seule, jouée sur l'application.
  *
  *   node maj-test.js                       # depuis les sources
- *   node maj-test.js chemin\BlonayPDF.exe  # sur le dossier empaqueté
+ *   node maj-test.js chemin\AktumPDF.exe  # sur le dossier empaqueté
  *
  * Huit situations, parce que se tromper ici ne se rattrape pas : une mise à
  * jour proposée à tort réinstalle une version plus ancienne, une mise à jour
@@ -28,14 +28,14 @@ const { poserLeJeton } = require('./version-posee.js');
 const { MARQUEUR, nomDuScriptDeMaj } = require('./ou-ranger.js');
 
 const exe = process.argv[2];
-const base = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-maj-'));
+const base = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-maj-'));
 const dit = (quoi) => console.log('  ' + quoi);
 const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 const DELAI = 9000; // l'application attend ce délai avant de regarder
 
 function menage() {
   try {
-    if (process.platform === 'win32') { require('child_process').execSync('taskkill /F /IM BlonayPDF.exe /T', { stdio: 'ignore' }); return; }
+    if (process.platform === 'win32') { require('child_process').execSync('taskkill /F /IM AktumPDF.exe /T', { stdio: 'ignore' }); return; }
     // Deux façons de lancer, donc deux choses à tuer : l'Electron des sources,
     // et l'application empaquetée. Ne viser que la première laissait survivre
     // l'instance relancée après la connexion ; elle gardait le verrou
@@ -46,7 +46,7 @@ function menage() {
       // -x vise le nom du processus, pas sa ligne de commande : viser la ligne
       // attraperait n'importe quel shell qui mentionne le nom, y compris celui
       // qui lance ce test.
-      + 'pkill -x BlonayPDF ; true',
+      + 'pkill -x AktumPDF ; true',
       { stdio: 'ignore' },
     );
   } catch (e) { /* rien à tuer */ }
@@ -83,22 +83,22 @@ function installation(nom, fiche, opts) {
   const temoin = path.join(d, 'temoin.txt');
   const script = path.join(d, nomDuScriptDeMaj(process.platform));
   if (process.platform === 'win32') {
-    fs.writeFileSync(script, '@echo off\r\necho %BLONAY_MAJ_AUTO% %1> "%~dp0temoin.txt"\r\n');
+    fs.writeFileSync(script, '@echo off\r\necho %AKTUM_MAJ_AUTO% %1> "%~dp0temoin.txt"\r\n');
   } else {
-    fs.writeFileSync(script, '#!/bin/sh\nprintf "%s %s" "$BLONAY_MAJ_AUTO" "$1" > "$(dirname "$0")/temoin.txt"\n');
+    fs.writeFileSync(script, '#!/bin/sh\nprintf "%s %s" "$AKTUM_MAJ_AUTO" "$1" > "$(dirname "$0")/temoin.txt"\n');
     fs.chmodSync(script, 0o755);
   }
-  const zip = path.join(d, 'BlonayPDF-windows.zip');
+  const zip = path.join(d, 'AktumPDF-windows.zip');
   if (fiche) {
-    fs.writeFileSync(zip, zipDe([{ nom: 'BlonayPDF/version.json', contenu: JSON.stringify(fiche) }]));
+    fs.writeFileSync(zip, zipDe([{ nom: 'AktumPDF/version.json', contenu: JSON.stringify(fiche) }]));
     if (!opts || opts.signe !== false) signerLeZip(zip, fiche, opts);
   }
   return { dossier: d, temoin, zip };
 }
 
 const lancer = (dossier) => {
-  const env = { ...process.env, BLONAY_DOSSIER_APP: dossier, BLONAY_MAJ_DELAI: String(DELAI),
-    BLONAY_CLES_PUBLIQUES_ESSAI: JSON.stringify({ maj: [editeur.cle], licence: [] }) };
+  const env = { ...process.env, AKTUM_DOSSIER_APP: dossier, AKTUM_MAJ_DELAI: String(DELAI),
+    AKTUM_CLES_PUBLIQUES_ESSAI: JSON.stringify({ maj: [editeur.cle], licence: [] }) };
   return electron.launch(exe ? { executablePath: exe, args: ['--no-sandbox'], env }
     : { args: [path.join(__dirname), '--no-sandbox'], env });
 };
@@ -176,8 +176,8 @@ async function attendreUneBoite(app, combien) {
   for (let i = 0; i < 60 && !fs.existsSync(poste.temoin); i++) await souffler(250);
   assert.ok(fs.existsSync(poste.temoin), 'le script de mise à jour est lancé');
   const dit_par_le_script = fs.readFileSync(poste.temoin, 'utf8').trim();
-  assert.match(dit_par_le_script, /^1 /, 'lancé en mode automatique (BLONAY_MAJ_AUTO)');
-  assert.ok(dit_par_le_script.includes('BlonayPDF-windows.zip'), 'avec le zip posé : ' + dit_par_le_script);
+  assert.match(dit_par_le_script, /^1 /, 'lancé en mode automatique (AKTUM_MAJ_AUTO)');
+  assert.ok(dit_par_le_script.includes('AktumPDF-windows.zip'), 'avec le zip posé : ' + dit_par_le_script);
   menage();
   dit('seule au bureau : l\'application se ferme et appelle le script — ' + dit_par_le_script);
 
@@ -194,7 +194,7 @@ async function attendreUneBoite(app, combien) {
   assert.ok(installee && installee.date, 'la fiche de version accompagne l\'application : ' + ouEstLaFiche);
   poste = installation('deja-a-jour', null);
   app = await ouvrir(poste.dossier, 1);
-  fs.writeFileSync(poste.zip, zipDe([{ nom: 'BlonayPDF/version.json', contenu: JSON.stringify(installee) }]));
+  fs.writeFileSync(poste.zip, zipDe([{ nom: 'AktumPDF/version.json', contenu: JSON.stringify(installee) }]));
   signerLeZip(poste.zip, Object.assign({ version: '' }, installee, installee.version ? {} : { version: require('./package.json').version }));
   await souffler(DELAI + 6000);
   assert.deepEqual(await boites(app), [], 'la version déjà installée ne se propose pas');
@@ -234,7 +234,19 @@ async function attendreUneBoite(app, combien) {
   }, /modifié/);
   await refusee('autre-cle', (p) => signerLeZip(p.zip, neuve, { cle: Object.assign({}, intrus, { cle: Object.assign({}, intrus.cle, { id: 'essai-a' }) }) }), /invalide/);
   if (PLATEFORME) await refusee('autre-plateforme', (p) => signerLeZip(p.zip, neuve, { plateforme: PLATEFORME === 'windows' ? 'mac' : 'windows' }), /ce poste est sous/);
-  await refusee('candidate', (p) => signerLeZip(p.zip, neuve, { canal: 'candidate' }), /canal stable/);
+  // Une version « candidate » n'est acceptée que par une installation « candidate » : l'installation
+  // de cet essai porte le canal de sa construction (fiche de version lue plus haut).
+  if ((installee.canal || 'stable') === 'stable') {
+    await refusee('candidate', (p) => signerLeZip(p.zip, neuve, { canal: 'candidate' }), /canal stable/);
+  } else {
+    poste = installation('candidate-acceptee', neuve, { canal: 'candidate' });
+    app = await ouvrir(poste.dossier, 1);
+    vues = await attendreUneBoite(app);
+    assert.equal(vues.length, 1, 'une installation candidate accepte une version candidate');
+    await app.close().catch(() => {});
+    menage();
+    dit('candidate-acceptee : une installation candidate propose une version candidate');
+  }
 
   // 6. Une version plus ancienne, signée : jamais proposée seule ; proposée comme
   //    un retour en arrière quand on la demande — et dite comme telle.

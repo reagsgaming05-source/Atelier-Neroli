@@ -7,7 +7,7 @@ import { site } from "@/content/site";
 export const metadata: Metadata = {
   title: "Télécharger",
   description:
-    "Blonay PDF se télécharge sans compte : on décompresse, on double-clique. Aucune installation, aucun droit administrateur. Windows et macOS.",
+    "Aktum PDF se télécharge sans compte : on décompresse, on double-clique. Aucune installation, aucun droit administrateur. Windows et macOS.",
 };
 
 export default function TelechargerPage() {
@@ -39,7 +39,7 @@ export default function TelechargerPage() {
           {[
             { icon: Download, t: "Télécharger le zip", d: "Un seul fichier. Il pèse une centaine de mégaoctets : le moteur d'affichage et la reconnaissance de texte sont inclus." },
             { icon: FolderOpen, t: "Décompresser", d: "Dans un dossier de votre choix : le Bureau, une clé USB, ou un lecteur réseau pour que toute l'équipe l'utilise." },
-            { icon: MousePointerClick, t: "Double-cliquer", d: "BlonayPDF.exe sous Windows, BlonayPDF.app sous macOS. Au premier lancement, chacun crée son compte local." },
+            { icon: MousePointerClick, t: "Double-cliquer", d: "AktumPDF.exe sous Windows, AktumPDF.app sous macOS. Au premier lancement, chacun crée son compte local." },
           ].map((s, i) => (
             <li key={s.t} className="card p-7">
               <span className="font-display text-3xl font-bold text-brand-200">0{i + 1}</span>

@@ -6,7 +6,7 @@
  * et un second double-clic ouvre sa propre fenêtre.
  *
  *   node smoke-test.js                              # source (electron .)
- *   node smoke-test.js chemin/vers/BlonayPDF.exe    # exécutable empaqueté
+ *   node smoke-test.js chemin/vers/AktumPDF.exe    # exécutable empaqueté
  */
 const path = require('path');
 const fs = require('fs');
@@ -88,12 +88,12 @@ async function tournerPage(win, n) {
 
 (async () => {
   const exe = process.argv[2];
-  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-fumee-'));
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-fumee-'));
   const pdf = path.join(dossier, 'essai.pdf');
   fs.writeFileSync(pdf, fabriquerPdf(3));
-  // BLONAY_SMOKE_DIR : les enregistrements y vont sans boîte de dialogue, et les
+  // AKTUM_SMOKE_DIR : les enregistrements y vont sans boîte de dialogue, et les
   // données (récents, récupération) dans son sous-dossier « donnees ».
-  const env = { ...process.env, BLONAY_SMOKE_DIR: dossier };
+  const env = { ...process.env, AKTUM_SMOKE_DIR: dossier };
   const sortie = path.join(dossier, 'essai-modifie.pdf');
   let ok = true;
   const verifier = (cond, quoi) => { if (!cond) { ok = false; console.log('ÉCHEC :', quoi); } };
@@ -105,16 +105,16 @@ async function tournerPage(win, n) {
   const title = await win.title();
   const menu = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.map((i) => i.label));
   const info = await win.evaluate(async () => ({
-    bureau: !!window.BlonayDesktop,
+    bureau: !!window.AktumDesktop,
     docs: Array.from(document.querySelectorAll('#doc-list .doc-name')).map((e) => e.textContent),
     exemple: !!document.querySelector('#doc-list .badge'),
-    imprimantes: Array.isArray(await window.BlonayDesktop.imprimantes()),
+    imprimantes: Array.isArray(await window.AktumDesktop.imprimantes()),
     bouton: document.querySelector('#btn-export .lbl').textContent,
   }));
   const donnees = await app.evaluate(({ app }) => app.getPath('userData'));
   console.log('titre :', title, '| menu :', JSON.stringify(menu), '| données :', donnees);
   console.log(JSON.stringify(info));
-  verifier(title === 'Blonay PDF' && JSON.stringify(menu) === JSON.stringify(['Fichier', 'Affichage', 'Outils', 'Aide']), 'titre ou menu');
+  verifier(title === 'Aktum PDF' && JSON.stringify(menu) === JSON.stringify(['Fichier', 'Affichage', 'Outils', 'Aide']), 'titre ou menu');
   verifier(info.bureau && info.docs.length === 1 && /essai\.pdf/.test(info.docs[0]) && !info.exemple && info.imprimantes, 'document du lancement');
   verifier(info.bouton === 'Enregistrer', 'bouton Enregistrer');
   verifier(donnees === path.join(dossier, 'donnees'), 'dossier de données du test');

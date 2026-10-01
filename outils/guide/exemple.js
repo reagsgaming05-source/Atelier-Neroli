@@ -63,7 +63,7 @@ async function fabriquer() {
   const doc = await PDFDocument.create();
   doc.setTitle('Règlement communal sur la gestion des déchets (exemple)');
   doc.setAuthor('Greffe communal');
-  doc.setSubject("Document d'exemple pour le mode d'emploi de Blonay PDF");
+  doc.setSubject("Document d'exemple pour le mode d'emploi d’Aktum PDF");
   const reg = await doc.embedFont(StandardFonts.Helvetica);
   const gras = await doc.embedFont(StandardFonts.HelveticaBold);
   const W = 595.28, H = 841.89;
@@ -75,7 +75,7 @@ async function fabriquer() {
       x: 92, y: 300, size: 96, font: gras, color: rgb(0.93, 0.94, 0.95),
       rotate: degrees(32),
     });
-    p.drawText('Commune de Blonay — greffe', { x: 56, y: H - 46, size: 9, font: reg, color: GRIS });
+    p.drawText('Commune Exemple — greffe', { x: 56, y: H - 46, size: 9, font: reg, color: GRIS });
     p.drawLine({ start: { x: 56, y: H - 56 }, end: { x: W - 56, y: H - 56 }, thickness: 0.6, color: TRAIT });
     p.drawText('Document d\'exemple — aucune valeur officielle', { x: 56, y: 38, size: 8, font: reg, color: GRIS });
     p.drawText(numero + ' / ' + total, { x: W - 84, y: 38, size: 9, font: reg, color: GRIS });
@@ -90,7 +90,7 @@ async function fabriquer() {
   p1.drawLine({ start: { x: 56, y: H - 262 }, end: { x: 260, y: H - 262 }, thickness: 2.5, color: rgb(0.83, 0.20, 0.16) });
   p1.drawText('Adopté par le Conseil communal le 12 mars', { x: 56, y: H - 300, size: 12, font: reg, color: GRIS });
   p1.drawText('Entrée en vigueur le 1er juillet', { x: 56, y: H - 320, size: 12, font: reg, color: GRIS });
-  p1.drawText('Ce document sert d\'exemple au mode d\'emploi de Blonay PDF.', { x: 56, y: 130, size: 10, font: reg, color: GRIS });
+  p1.drawText('Ce document sert d\'exemple au mode d\'emploi d’Aktum PDF.', { x: 56, y: 130, size: 10, font: reg, color: GRIS });
   p1.drawText('Il ne contient aucune donnée réelle.', { x: 56, y: 114, size: 10, font: reg, color: GRIS });
 
   // Les articles, deux par page.

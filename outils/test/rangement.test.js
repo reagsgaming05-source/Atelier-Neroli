@@ -25,18 +25,18 @@ const sonde = (marqueur, inscriptible) => {
 };
 
 test('un chemin UNC est reconnu comme un partage', () => {
-  assert.equal(cheminReseau('\\\\serveur\\commun\\BlonayPDF'), true);
-  assert.equal(cheminReseau('\\\\SRV-FICHIERS\\greffe\\outils\\BlonayPDF'), true);
+  assert.equal(cheminReseau('\\\\serveur\\commun\\AktumPDF'), true);
+  assert.equal(cheminReseau('\\\\SRV-FICHIERS\\greffe\\outils\\AktumPDF'), true);
   // Barres obliques : certains outils rendent le chemin dans l'autre sens.
-  assert.equal(cheminReseau('//serveur/commun/BlonayPDF'), true);
+  assert.equal(cheminReseau('//serveur/commun/AktumPDF'), true);
 });
 
 test('un disque local n\'est pas un partage, même écrit en forme longue', () => {
-  assert.equal(cheminReseau('C:\\Outils\\BlonayPDF'), false);
-  assert.equal(cheminReseau('D:\\BlonayPDF'), false);
+  assert.equal(cheminReseau('C:\\Outils\\AktumPDF'), false);
+  assert.equal(cheminReseau('D:\\AktumPDF'), false);
   // « \\?\C:\… » est la forme longue d'un chemin local : deux barres au début,
   // et pourtant rien de partagé. C'est le piège de cette détection.
-  assert.equal(cheminReseau('\\\\?\\C:\\Outils\\BlonayPDF'), false);
+  assert.equal(cheminReseau('\\\\?\\C:\\Outils\\AktumPDF'), false);
   // « \\?\UNC\… », en revanche, est bien un partage.
   assert.equal(cheminReseau('\\\\?\\UNC\\serveur\\commun'), true);
   assert.equal(cheminReseau(''), false);
@@ -47,21 +47,21 @@ test('sur un lecteur réseau, les comptes s\'ouvrent d\'eux-mêmes', () => {
   // C'est le cas d'un secrétariat : l'application posée sur le serveur, et
   // personne n'a rien eu à préparer. Chacune choisit son nom au premier
   // lancement et retrouve ensuite ses affaires.
-  assert.deepEqual(ouRanger('\\\\serveur\\commun\\BlonayPDF', sondeComplete({ reseau: true })),
+  assert.deepEqual(ouRanger('\\\\serveur\\commun\\AktumPDF', sondeComplete({ reseau: true })),
     { ou: 'comptes', pourquoi: 'reseau' });
-  assert.deepEqual(ouRanger('P:\\Outils\\BlonayPDF', sondeComplete({ reseau: true })),
+  assert.deepEqual(ouRanger('P:\\Outils\\AktumPDF', sondeComplete({ reseau: true })),
     { ou: 'comptes', pourquoi: 'reseau' });
 });
 
 test('un partage en lecture seule renvoie au profil Windows', () => {
   // Sans pouvoir écrire dans data, il n'y a pas de dossier par personne à
   // créer : chacune retombe sur son profil, et personne n'est bloqué.
-  assert.deepEqual(ouRanger('P:\\Outils\\BlonayPDF', sondeComplete({ reseau: true, ecrit: false })),
+  assert.deepEqual(ouRanger('P:\\Outils\\AktumPDF', sondeComplete({ reseau: true, ecrit: false })),
     { ou: 'profil', pourquoi: 'lecture-seule' });
 });
 
 test('le marqueur l\'emporte sur tout : profil Windows, même sur un partage', () => {
-  assert.deepEqual(ouRanger('P:\\Outils\\BlonayPDF', sondeComplete({ reseau: true, marqueur: true })),
+  assert.deepEqual(ouRanger('P:\\Outils\\AktumPDF', sondeComplete({ reseau: true, marqueur: true })),
     { ou: 'profil', pourquoi: 'marqueur' });
 });
 
@@ -69,16 +69,16 @@ test('le marqueur force le rangement par utilisateur, lettre de lecteur comprise
   // Un partage monté sur S: ne se distingue pas d'un disque local : le fichier
   // posé à côté de l'exécutable est la seule façon de le dire.
   const s = sonde(true, true);
-  assert.deepEqual(ouRanger('S:\\Outils\\BlonayPDF', s), { ou: 'profil', pourquoi: 'marqueur' });
+  assert.deepEqual(ouRanger('S:\\Outils\\AktumPDF', s), { ou: 'profil', pourquoi: 'marqueur' });
   assert.ok(!s.vues.includes('inscriptible'), 'inutile de tâter le dossier, c\'est déjà tranché');
   assert.equal(MARQUEUR, 'donnees-par-utilisateur.txt');
   // Et la liste posée à la main ouvre les comptes, même hors réseau.
-  assert.deepEqual(ouRanger('C:\\Outils\\BlonayPDF', sondeComplete({ comptes: true })),
+  assert.deepEqual(ouRanger('C:\\Outils\\AktumPDF', sondeComplete({ comptes: true })),
     { ou: 'comptes', pourquoi: 'comptes' });
 });
 
 test('un dossier en lecture seule renvoie aussi au profil', () => {
-  assert.deepEqual(ouRanger('C:\\Program Files\\BlonayPDF', sondeComplete({ ecrit: false })),
+  assert.deepEqual(ouRanger('C:\\Program Files\\AktumPDF', sondeComplete({ ecrit: false })),
     { ou: 'profil', pourquoi: 'lecture-seule' });
 });
 
@@ -88,12 +88,12 @@ test('sur un poste ordinaire aussi, la connexion est demandée', () => {
   // le Bureau pour l'essayer, ou posée sur un partage monté sur une lettre que
   // « net use » ne reconnaît pas, elle ouvrait un dossier « data » commun à
   // tout le monde sans que personne ne s'en aperçoive.
-  assert.deepEqual(ouRanger('C:\\Users\\moi\\Bureau\\BlonayPDF', sondeComplete({})),
+  assert.deepEqual(ouRanger('C:\\Users\\moi\\Bureau\\AktumPDF', sondeComplete({})),
     { ou: 'comptes', pourquoi: 'poste' });
-  assert.deepEqual(ouRanger('E:\\BlonayPDF', sondeComplete({})), { ou: 'comptes', pourquoi: 'poste' });
+  assert.deepEqual(ouRanger('E:\\AktumPDF', sondeComplete({})), { ou: 'comptes', pourquoi: 'poste' });
   // Et le partage que rien ne trahit — c'est le cas du secrétariat, un P: que
   // « net use » n'a pas su reconnaître — mène désormais au même endroit.
-  assert.deepEqual(ouRanger('P:\\Outils\\BlonayPDF', sondeComplete({})),
+  assert.deepEqual(ouRanger('P:\\Outils\\AktumPDF', sondeComplete({})),
     { ou: 'comptes', pourquoi: 'poste' });
 });
 
@@ -101,12 +101,12 @@ test('la seule façon de ne pas voir la connexion est de l\'avoir demandé', () 
   // Deux sorties, et deux seulement : le fichier posé exprès, et un dossier
   // où l'on ne peut rien écrire. Tout le reste ouvre les comptes.
   const sorties = [
-    ouRanger('E:\\BlonayPDF', sondeComplete({ marqueur: true })),
-    ouRanger('E:\\BlonayPDF', sondeComplete({ ecrit: false })),
+    ouRanger('E:\\AktumPDF', sondeComplete({ marqueur: true })),
+    ouRanger('E:\\AktumPDF', sondeComplete({ ecrit: false })),
   ];
   sorties.forEach((r) => assert.equal(r.ou, 'profil'));
   const dehors = [{}, { reseau: true }, { comptes: true }, { reseau: true, comptes: true }];
-  dehors.forEach((cas) => assert.equal(ouRanger('E:\\BlonayPDF', sondeComplete(cas)).ou, 'comptes',
+  dehors.forEach((cas) => assert.equal(ouRanger('E:\\AktumPDF', sondeComplete(cas)).ou, 'comptes',
     'cas ' + JSON.stringify(cas)));
 });
 
@@ -199,20 +199,20 @@ test('un mot de passe trop court est refusé, avec une phrase à montrer', () =>
 // qui contient le .app, trois niveaux plus haut.
 test('sous macOS, le dossier de l\'application est celui qui contient le paquet', () => {
   assert.equal(
-    dossierPortable('/Users/marie/Bureau/BlonayPDF/BlonayPDF.app/Contents/MacOS', 'darwin'),
-    '/Users/marie/Bureau/BlonayPDF',
+    dossierPortable('/Users/marie/Bureau/AktumPDF/AktumPDF.app/Contents/MacOS', 'darwin'),
+    '/Users/marie/Bureau/AktumPDF',
   );
   assert.equal(
-    dossierPortable('/Volumes/Partage/Outils/BlonayPDF.app/Contents/MacOS/', 'darwin'),
+    dossierPortable('/Volumes/Partage/Outils/AktumPDF.app/Contents/MacOS/', 'darwin'),
     '/Volumes/Partage/Outils',
   );
   // Un paquet renommé reste un paquet.
-  assert.equal(dossierPortable('/Applications/Blonay PDF.app/Contents/MacOS', 'darwin'), '/Applications');
+  assert.equal(dossierPortable('/Applications/Aktum PDF.app/Contents/MacOS', 'darwin'), '/Applications');
 });
 
 test('ailleurs, et hors paquet, le dossier de l\'exécutable suffit', () => {
-  assert.equal(dossierPortable('C:\\Outils\\BlonayPDF', 'win32'), 'C:\\Outils\\BlonayPDF');
-  assert.equal(dossierPortable('/opt/blonaypdf', 'linux'), '/opt/blonaypdf');
+  assert.equal(dossierPortable('C:\\Outils\\AktumPDF', 'win32'), 'C:\\Outils\\AktumPDF');
+  assert.equal(dossierPortable('/opt/aktumpdf', 'linux'), '/opt/aktumpdf');
   // Sous macOS mais lancé depuis les sources : aucun paquet à remonter.
   assert.equal(dossierPortable('/home/marie/projet/desktop', 'darwin'), '/home/marie/projet/desktop');
   // Un chemin qui contient « .app » sans être un paquet ne doit pas tromper.

@@ -41,6 +41,11 @@ colonnes se lisent l'une après l'autre ; « Arrêter » arrête vraiment.
 observateur réseau et échoue à la moindre connexion. Il a déjà trouvé et fait supprimer un
 téléchargement du dictionnaire orthographique.
 
+**Moins de saisie répétée.** « Sélectionner par numéros » (« 3-7, 12 »), avec la même écriture
+à l'impression et à la division ; le filigrane, la numérotation et l'en-tête reviennent d'un
+document à l'autre ; « Remplir en série (CSV) » fait une copie d'un formulaire par ligne d'un
+tableau, avec les valeurs mal comprises signalées avant, jamais devinées.
+
 **Et aussi** : les caractères que le PDF ne sait pas écrire dans un champ ou un tampon sont
 signalés (plus de « Miloševi? » silencieux) ; plus de limite de 800 signets ; « Réduire la
 taille » refuse de rendre un fichier plus gros ; Ctrl+Z juste après l'ouverture ne vide plus

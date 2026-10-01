@@ -3,7 +3,7 @@
  * ici, hors ligne, avec une clé publique que l'application porte avec elle.
  *
  * L'application est posée sur un partage où tout le secrétariat écrit. Sans
- * preuve d'origine, quiconque y dépose un « BlonayPDF-windows.zip » obtient que
+ * preuve d'origine, quiconque y dépose un « AktumPDF-windows.zip » obtient que
  * la prochaine personne qui ouvre l'application l'exécute — avec ses droits, sur
  * les décisions du conseil et les dossiers du personnel. Il n'y a ni réseau ni
  * serveur ici : seulement une clé qui ne signe que chez l'éditeur, et une qui
@@ -69,7 +69,7 @@ function verifier(piece, cles) {
 
 // Les clés publiques de cette application : un petit fichier à côté du code.
 function lireCles(dossier) {
-  const essai = process.env.BLONAY_CLES_PUBLIQUES_ESSAI; // les tests posent leurs propres clés
+  const essai = process.env.AKTUM_CLES_PUBLIQUES_ESSAI; // les tests posent leurs propres clés
   try {
     const j = JSON.parse(essai || fs.readFileSync(path.join(dossier || __dirname, 'cles-publiques.json'), 'utf8'));
     return { maj: Array.isArray(j.maj) ? j.maj : [], licence: Array.isArray(j.licence) ? j.licence : [] };

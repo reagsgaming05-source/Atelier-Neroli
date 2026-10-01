@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <SpaceShell
       eyebrow="Administration"
-      title="Blonay PDF"
+      title="Aktum PDF"
       subtitle="Offres, clients, abonnements, factures et messages reçus."
       items={[
         { href: "/admin", label: "Vue d'ensemble", icon: "dashboard", exact: true },

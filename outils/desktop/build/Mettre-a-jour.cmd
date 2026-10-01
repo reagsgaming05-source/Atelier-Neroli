@@ -1,6 +1,6 @@
 @echo off
 rem ===========================================================================
-rem  Blonay PDF - mise a jour de la version portable.
+rem  Aktum PDF - mise a jour de la version portable.
 rem
 rem  Posez le zip telecharge sur ce fichier, ou double-cliquez simplement :
 rem  le zip est cherche a cote, puis dans vos telechargements.
@@ -22,9 +22,9 @@ setlocal EnableExtensions
 rem Le script se recopie dans un dossier temporaire et se relance de la :
 rem sinon il se ferait remplacer par sa propre nouvelle version pendant que
 rem cmd.exe le lit encore, ligne par ligne, et l'execution partirait en vrille.
-if defined BLONAY_MAJ goto :travail
-set "BLONAY_MAJ=1"
-set "COPIE=%TEMP%\blonay-maj-%RANDOM%%RANDOM%.cmd"
+if defined AKTUM_MAJ goto :travail
+set "AKTUM_MAJ=1"
+set "COPIE=%TEMP%\aktum-maj-%RANDOM%%RANDOM%.cmd"
 copy /y "%~f0" "%COPIE%" >nul
 if errorlevel 1 (
   echo Impossible de se copier dans le dossier temporaire.
@@ -40,7 +40,7 @@ exit /b %SORTIE%
 set "DOSSIER=%~1"
 set "ZIP=%~2"
 echo.
-echo   Blonay PDF — mise à jour
+echo   Aktum PDF — mise à jour
 echo   ════════════════════════
 echo.
 echo   Dossier de l'application : %DOSSIER%
@@ -48,18 +48,18 @@ echo.
 
 rem --- 1. Retrouver le zip ---------------------------------------------------
 if not "%ZIP%"=="" goto :zip_trouve
-if exist "%DOSSIER%BlonayPDF-windows.zip" (
-  set "ZIP=%DOSSIER%BlonayPDF-windows.zip"
+if exist "%DOSSIER%AktumPDF-windows.zip" (
+  set "ZIP=%DOSSIER%AktumPDF-windows.zip"
   goto :zip_trouve
 )
-if exist "%USERPROFILE%\Downloads\BlonayPDF-windows.zip" (
-  set "ZIP=%USERPROFILE%\Downloads\BlonayPDF-windows.zip"
+if exist "%USERPROFILE%\Downloads\AktumPDF-windows.zip" (
+  set "ZIP=%USERPROFILE%\Downloads\AktumPDF-windows.zip"
   goto :zip_trouve
 )
 echo   Le zip de la nouvelle version est introuvable.
 echo.
-echo   Téléchargez « BlonayPDF-windows.zip », puis posez-le sur ce fichier
-echo   ou déposez-le à côté de BlonayPDF.exe avant de relancer.
+echo   Téléchargez « AktumPDF-windows.zip », puis posez-le sur ce fichier
+echo   ou déposez-le à côté d’AktumPDF.exe avant de relancer.
 goto :echec
 
 :zip_trouve
@@ -72,18 +72,18 @@ echo.
 
 rem --- 2. L'application doit etre fermee -------------------------------------
 rem Windows verrouille un executable en cours : la copie echouerait a moitie.
-rem Lancee par l'application elle-meme (BLONAY_MAJ_AUTO), la mise a jour attend
+rem Lancee par l'application elle-meme (AKTUM_MAJ_AUTO), la mise a jour attend
 rem qu'elle finisse de se fermer : refuser une seconde trop tot obligerait a
 rem tout recommencer a la main.
 set "ESSAIS=0"
 set "ANNONCE="
 :attente
-tasklist /FI "IMAGENAME eq BlonayPDF.exe" 2>nul | find /I "BlonayPDF.exe" >nul
+tasklist /FI "IMAGENAME eq AktumPDF.exe" 2>nul | find /I "AktumPDF.exe" >nul
 if errorlevel 1 goto :fermee
-if not defined BLONAY_MAJ_AUTO goto :ouverte
+if not defined AKTUM_MAJ_AUTO goto :ouverte
 if not defined ANNONCE (
   set "ANNONCE=1"
-  echo   Attente de la fermeture de Blonay PDF…
+  echo   Attente de la fermeture d’Aktum PDF…
 )
 set /a ESSAIS+=1
 if %ESSAIS% GEQ 30 goto :ouverte
@@ -94,7 +94,7 @@ ping -n 3 127.0.0.1 >nul
 goto :attente
 
 :ouverte
-echo   Blonay PDF est ouvert. Fermez la fenêtre, puis relancez cette mise à jour.
+echo   Aktum PDF est ouvert. Fermez la fenêtre, puis relancez cette mise à jour.
 goto :echec
 
 :fermee
@@ -106,7 +106,7 @@ rem soi, qui est verifiee puis ouverte : un zip remplace entre la verification
 rem et l'ouverture ne passerait pas. La verification est faite par l'application
 rem DEJA installee (en mode Node), qui porte la cle publique de l'editeur ; la
 rem nouvelle version n'a pas voix au chapitre.
-set "ATELIER=%TEMP%\blonay-maj-%RANDOM%%RANDOM%"
+set "ATELIER=%TEMP%\aktum-maj-%RANDOM%%RANDOM%"
 mkdir "%ATELIER%" 2>nul
 echo   Copie de l'archive…
 copy /y "%ZIP%" "%ATELIER%\maj.zip" >nul
@@ -117,14 +117,14 @@ if errorlevel 1 (
 copy /y "%ZIP%.signature.json" "%ATELIER%\maj.zip.signature.json" >nul 2>&1
 echo   Vérification de la signature de l'éditeur…
 set "ELECTRON_RUN_AS_NODE=1"
-"%DOSSIER%BlonayPDF.exe" "%DOSSIER%resources\app.asar\verifier-maj.js" "%ATELIER%\maj.zip"
+"%DOSSIER%AktumPDF.exe" "%DOSSIER%resources\app.asar\verifier-maj.js" "%ATELIER%\maj.zip"
 set "VERIF=%ERRORLEVEL%"
 set "ELECTRON_RUN_AS_NODE="
 if not "%VERIF%"=="0" (
   echo.
   echo   Cette archive n'est pas signée par l'éditeur, ou a été modifiée :
   echo   elle n'est PAS installée, et rien n'a été touché. Pour une vraie mise à jour,
-  echo   reprenez « BlonayPDF-windows.zip » ET son fichier « .signature.json » depuis
+  echo   reprenez « AktumPDF-windows.zip » ET son fichier « .signature.json » depuis
   echo   la page de téléchargement de l'éditeur.
   goto :echec
 )
@@ -138,10 +138,10 @@ if errorlevel 1 (
 )
 
 rem --- 4. Verifier avant de toucher a quoi que ce soit ------------------------
-set "SOURCE=%ATELIER%\BlonayPDF"
-if not exist "%SOURCE%\BlonayPDF.exe" set "SOURCE=%ATELIER%"
-if not exist "%SOURCE%\BlonayPDF.exe" (
-  echo   Ce zip ne contient pas BlonayPDF.exe : rien n'a été touché.
+set "SOURCE=%ATELIER%\AktumPDF"
+if not exist "%SOURCE%\AktumPDF.exe" set "SOURCE=%ATELIER%"
+if not exist "%SOURCE%\AktumPDF.exe" (
+  echo   Ce zip ne contient pas AktumPDF.exe : rien n'a été touché.
   goto :echec
 )
 
@@ -161,16 +161,16 @@ rd /s /q "%ATELIER%" >nul 2>&1
 echo.
 echo   Mise à jour terminée. Vos tampons, signatures et récents sont conservés.
 rem Repere en ASCII pur : lisible par un script quel que soit l'encodage.
-echo BLONAY-MAJ: OK
-if defined BLONAY_MAJ_AUTO (
+echo AKTUM-MAJ: OK
+if defined AKTUM_MAJ_AUTO (
   echo   Redémarrage de l'application…
   rem Les flux sont detournes vers nul : sans cela l'application heriterait de
   rem la sortie du script, et le programme qui l'a lance attendrait la fermeture
   rem du tuyau — donc celle de l'application, qui vient a peine de s'ouvrir.
-  start "" "%DOSSIER%BlonayPDF.exe" >nul 2>&1
+  start "" "%DOSSIER%AktumPDF.exe" >nul 2>&1
   exit /b 0
 )
-echo   Lancez BlonayPDF.exe ; « Aide › À propos » indique la version installée.
+echo   Lancez AktumPDF.exe ; « Aide › À propos » indique la version installée.
 echo.
 pause
 exit /b 0

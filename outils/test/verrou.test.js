@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 const V = require('../desktop/verrou');
 
-const dossier = () => fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-verrou-'));
+const dossier = () => fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-verrou-'));
 const doc = (d) => { const f = path.join(d, 'decision.pdf'); fs.writeFileSync(f, 'x'); return f; };
 
 test('un document libre se verrouille', () => {

@@ -123,7 +123,7 @@
       const r = rectToUser(bb, g);
       Object.assign(dict, {
         Type: 'Annot', Rect: [n(r.x), n(r.y), n(r.x + r.w), n(r.y + r.h)], F: 4, P: page.ref, M: quand,
-        NM: PDFString.of('blonay-' + an.id), AP: { N: ap },
+        NM: PDFString.of('aktum-' + an.id), AP: { N: ap },
       });
       page.node.addAnnot(ctx.register(ctx.obj(dict)));
     };
@@ -174,7 +174,7 @@
           const contenu = c.join(' ') + ' RG ' + n(lw) + ' w q 1 0 0 1 ' + n(lw / 2) + ' ' + n(lw / 2) + ' cm ' + opsArrondi(an.w - lw, an.h - lw, an.size * 0.25) + ' S Q'
             + (t ? ' BT /F1 ' + n(an.size) + ' Tf ' + c.join(' ') + ' rg 1 0 0 1 ' + n((an.w - tw) / 2) + ' ' + n(an.h / 2 - an.size * 0.35) + ' Tm ' + font.encodeText(t).toString() + ' Tj ET' : '');
           const ap = apparence(contenu, an.w, an.h, { Font: { F1: font.ref } });
-          poser(an, { Subtype: 'Stamp', Name: 'BlonayTampon', Contents: PDFHexString.fromText(an.text || ''), C: c, CA: 1 }, ap, an);
+          poser(an, { Subtype: 'Stamp', Name: 'AktumTampon', Contents: PDFHexString.fromText(an.text || ''), C: c, CA: 1 }, ap, an);
         }
         compte++;
       } catch (e) { signaler('Commentaire PDF', e); }

@@ -1,10 +1,10 @@
 #!/bin/sh
-# Blonay PDF - ouvre l'outil dans une fenetre d'application.
+# Aktum PDF - ouvre l'outil dans une fenetre d'application.
 # Rien n'est installe : ce fichier demarre le navigateur deja present.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PAGE="$DIR/blonay-pdf.html"
+PAGE="$DIR/aktum-pdf.html"
 if [ ! -f "$PAGE" ]; then
-  echo "blonay-pdf.html est introuvable a cote de ce fichier."
+  echo "aktum-pdf.html est introuvable a cote de ce fichier."
   exit 1
 fi
 URL="file://$PAGE"

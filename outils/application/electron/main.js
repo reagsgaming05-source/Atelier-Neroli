@@ -1,9 +1,9 @@
-// Blonay PDF — fenêtre d'application.
+// Aktum PDF — fenêtre d'application.
 // Le traitement des documents se fait entièrement dans la page, hors ligne.
 const { app, BrowserWindow, Menu, session, dialog } = require('electron');
 const path = require('path');
 
-app.setAppUserModelId('ch.atelier-neroli.blonay-pdf');
+app.setAppUserModelId('ch.atelier-neroli.aktum-pdf');
 Menu.setApplicationMenu(null);
 
 // Une seule fenêtre : un second lancement réveille celle qui est ouverte.
@@ -21,7 +21,7 @@ if (!app.requestSingleInstanceLock()) {
       height: 950,
       minWidth: 880,
       minHeight: 560,
-      title: 'Blonay PDF',
+      title: 'Aktum PDF',
       backgroundColor: '#2A2E35',
       icon: path.join(__dirname, 'icon.png'),
       autoHideMenuBar: true,
@@ -54,7 +54,7 @@ if (!app.requestSingleInstanceLock()) {
           buttons: ['Revenir au document', 'Quitter sans exporter'],
           defaultId: 0,
           cancelId: 0,
-          title: 'Blonay PDF',
+          title: 'Aktum PDF',
           message: 'Des modifications n\'ont pas été exportées.',
           detail: 'En quittant maintenant, vous les perdez.',
           noLink: true,

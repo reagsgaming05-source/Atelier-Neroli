@@ -1,8 +1,8 @@
-BLONAY PDF — version portable Windows
+AKTUM PDF — version portable Windows
 =====================================
 
 1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau, Documents…).
-2. Double-cliquez sur BlonayPDF.exe : la fenêtre de l'application s'ouvre.
+2. Double-cliquez sur AktumPDF.exe : la fenêtre de l'application s'ouvre.
 3. Ouvrez vos PDF (Fichier › Ouvrir, ou glissez-les dans la fenêtre), travaillez, puis
    Fichier › Enregistrer (Ctrl+S) : le fichier ouvert est réécrit, après confirmation la
    première fois. Fichier › Enregistrer sous… (Ctrl+Maj+S) crée un nouveau fichier.
@@ -39,14 +39,14 @@ ne le remet pas à zéro.
 À la fin de l'essai, l'application se lit encore entièrement (ouvrir, parcourir, chercher),
 mais elle n'enregistre plus de nouveau fichier, et le dit. Le travail en cours est gardé.
 Quand le service achète, l'éditeur remet un fichier « licence.json », signé à son nom : posez-le
-à côté de BlonayPDF.exe (une seule fois pour tout le secrétariat si l'application est sur un
+à côté d’AktumPDF.exe (une seule fois pour tout le secrétariat si l'application est sur un
 lecteur réseau), relancez l'application, c'est tout. « Aide › À propos » affiche le nom du
 client, le nombre de postes et la date jusqu'à laquelle les mises à jour sont comprises. La
 licence n'est liée à aucun matériel : on peut changer de poste, cloner un parc, sans rien redemander.
 
 METTRE À JOUR
-Posez le zip téléchargé ET son fichier « BlonayPDF-windows.zip.signature.json » (les deux,
-côte à côte, sous leur nom d'origine) à côté de BlonayPDF.exe, ou dans un sous-dossier
+Posez le zip téléchargé ET son fichier « AktumPDF-windows.zip.signature.json » (les deux,
+côte à côte, sous leur nom d'origine) à côté d’AktumPDF.exe, ou dans un sous-dossier
 « maj ». La signature prouve que le zip vient de l'éditeur : sans elle, ou si le zip a été
 modifié, l'application l'ignore — et « Aide › Rechercher une mise à jour » dit pourquoi.
 C'est ce qui empêche quelqu'un d'autre qui écrit sur le partage d'y déposer un programme
@@ -134,7 +134,7 @@ concernée : Windows sait le faire, l'application non.
 
 L'AUTRE FAÇON : LE PROFIL WINDOWS, SANS COMPTE NI MOT DE PASSE
 Si vous préférez vous appuyer seulement sur les sessions Windows, posez à côté de
-BlonayPDF.exe un fichier vide nommé « donnees-par-utilisateur.txt » : chacune aura ses
+AktumPDF.exe un fichier vide nommé « donnees-par-utilisateur.txt » : chacune aura ses
 données dans son profil Windows, que le système protège déjà des autres comptes, et
 l'application ne demandera jamais de mot de passe. C'est la seule façon de ne pas voir la
 fenêtre de connexion. Plus sûr pour les fichiers, mais les données ne suivent pas d'un
@@ -145,8 +145,8 @@ aucune fiche de compte ne peut y être écrite. L'application ne demande alors p
 connexion et range les données dans le profil Windows de chacun, plutôt que de laisser
 quelqu'un devant une connexion impossible. « Aide › À propos » le dit.
 
-Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un PDF, « Ouvrir avec »,
-« Choisir une autre application », puis désignez BlonayPDF.exe et cochez « Toujours ».
+Pour que tous les PDF s'ouvrent avec Aktum PDF : clic droit sur un PDF, « Ouvrir avec »,
+« Choisir une autre application », puis désignez AktumPDF.exe et cochez « Toujours ».
 Chaque PDF double-cliqué s'ouvre dans sa propre fenêtre ; pour combiner plusieurs
 documents, Fichier › Ajouter au document… ou le bouton « Ajouter un document ».
 

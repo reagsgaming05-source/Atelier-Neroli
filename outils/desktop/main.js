@@ -1,5 +1,5 @@
 /*
- * Blonay PDF – application fenêtrée (Electron).
+ * Aktum PDF – application fenêtrée (Electron).
  *
  * Chaque fenêtre charge la page autonome (app/index.html, produite par `npm run build`
  * dans le dossier parent). Rien n'est installé, rien n'est écrit dans le registre :
@@ -35,14 +35,14 @@ const os = require('os');
 // Les services d'arrière-plan de Chromium (mises à jour de composants, mesures,
 // pings) sont arrêtés à la source : ils n'ont rien à faire dans cette application.
 //
-// BLONAY_OBSERVATEUR (tests seulement) : l'adresse d'un mandataire d'observation
+// AKTUM_OBSERVATEUR (tests seulement) : l'adresse d'un mandataire d'observation
 // qui prend la place du mandataire mort. Il note tout ce qui lui parvient ; le
 // test échoue si la moindre connexion y arrive pendant un usage normal.
-// BLONAY_OBSERVATEUR_OUVERT (tests seulement, avec le précédent) : lève la
+// AKTUM_OBSERVATEUR_OUVERT (tests seulement, avec le précédent) : lève la
 // barrière 3 et la barrière 1, pour prouver que l'observateur voit bien ce qui
 // s'échapperait.
-const MANDATAIRE = process.env.BLONAY_OBSERVATEUR || '127.0.0.1:1';
-const BARRIERES_LEVEES = !!process.env.BLONAY_OBSERVATEUR && process.env.BLONAY_OBSERVATEUR_OUVERT === '1';
+const MANDATAIRE = process.env.AKTUM_OBSERVATEUR || '127.0.0.1:1';
+const BARRIERES_LEVEES = !!process.env.AKTUM_OBSERVATEUR && process.env.AKTUM_OBSERVATEUR_OUVERT === '1';
 app.commandLine.appendSwitch('proxy-server', MANDATAIRE);
 app.commandLine.appendSwitch('proxy-bypass-list', '<-loopback>');
 if (!BARRIERES_LEVEES) app.commandLine.appendSwitch('host-resolver-rules', 'MAP * ~NOTFOUND , EXCLUDE ' + MANDATAIRE.split(':')[0]);
@@ -54,7 +54,7 @@ app.commandLine.appendSwitch('disable-features', 'OptimizationHints,MediaRouter,
 
 // Ce que les barrières ont refusé : { url, quand }. Vide, en usage normal.
 const reseauRefuse = [];
-global.__blonayReseau = reseauRefuse;
+global.__aktumReseau = reseauRefuse;
 const sessionsFermees = new WeakSet();
 function fermerLaSession(s) {
   if (!s || sessionsFermees.has(s)) return;
@@ -79,16 +79,16 @@ function fermerLaSession(s) {
 // Toute session créée, y compris celles qu'une version future ouvrirait sans y penser.
 app.on('session-created', fermerLaSession);
 
-const APP_TITLE = 'Blonay PDF';
+const APP_TITLE = 'Aktum PDF';
 // Date, commit et horodatage de construction, posés par build.js puis
 // prepare-app.js. La date sert à « À propos », et à reconnaître un zip plus
 // récent posé à côté de l'application (voir version-posee.js).
 let VERSION = {};
 try { VERSION = JSON.parse(fs.readFileSync(path.join(__dirname, 'app', 'construction.json'), 'utf8')) || {}; } catch (e) { /* version de travail */ }
 const CONSTRUCTION = String(VERSION.construction || '');
-// BLONAY_DOSSIER_APP : le test de fumée fait passer un dossier d'essai pour le
+// AKTUM_DOSSIER_APP : le test de fumée fait passer un dossier d'essai pour le
 // dossier de l'application, afin que le choix du rangement se joue pour de vrai.
-const PORTABLE_DIR = process.env.BLONAY_DOSSIER_APP
+const PORTABLE_DIR = process.env.AKTUM_DOSSIER_APP
   || require('./ou-ranger').dossierPortable(path.dirname(process.execPath), process.platform);
 
 const SCRIPT_MAJ = require('./ou-ranger').nomDuScriptDeMaj(process.platform);
@@ -119,12 +119,12 @@ const DOSSIER_DATA = () => path.join(PORTABLE_DIR, 'data');
 // Qui utilise ce poste. Le choix est retenu ici, dans le profil Windows de la
 // personne — surtout pas sur le partage, où il serait celui de tout le monde.
 // Une entrée par installation : la même personne peut ouvrir deux dossiers.
-// BLONAY_PROFIL : le test des comptes joue plusieurs postes sur une seule
+// AKTUM_PROFIL : le test des comptes joue plusieurs postes sur une seule
 // machine et doit donner à chacun son profil. Changer APPDATA n'y suffit pas —
 // sous Windows, Electron ne lit pas cette variable, il demande le dossier au
 // système, et les faux postes se retrouveraient à partager une seule session.
-const profilLocal = () => process.env.BLONAY_PROFIL || app.getPath('appData');
-const fichierChoix = () => path.join(profilLocal(), 'Blonay PDF', 'session.json');
+const profilLocal = () => process.env.AKTUM_PROFIL || app.getPath('appData');
+const fichierChoix = () => path.join(profilLocal(), 'Aktum PDF', 'session.json');
 function lireChoix() {
   try {
     const tout = JSON.parse(fs.readFileSync(fichierChoix(), 'utf8'));
@@ -163,10 +163,10 @@ function ecrireFiche(nom, fiche) {
 // session ; ou rien du tout quand c'est bon.
 //
 // Le code n'est montré qu'une fois, et la session ne s'ouvre qu'après que la
-// personne a dit l'avoir noté (blonay:ouvrir) : ouvrir tout de suite
+// personne a dit l'avoir noté (aktum:ouvrir) : ouvrir tout de suite
 // redémarrerait l'application avant qu'elle ait pu le recopier.
 const POSTE = () => { try { return os.hostname(); } catch (e) { return ''; } };
-let pretAOuvrir = null; // le seul compte que blonay:ouvrir peut ouvrir, une fois
+let pretAOuvrir = null; // le seul compte que aktum:ouvrir peut ouvrir, une fois
 
 // Le frein, après un échec : le message dit aussi combien de temps patienter.
 function apresEchec(propre, fiche, base) {
@@ -321,9 +321,9 @@ function comptesConnus() {
 // pour un lecteur mappé et échoue pour un disque. La fenêtre de la commande est
 // masquée — sinon une console noire clignoterait à chaque lancement — et le
 // temps est borné : un serveur qui ne répond pas ne doit pas retenir l'ouverture.
-// BLONAY_RESEAU : pour éprouver ce chemin ailleurs que sur un vrai partage.
+// AKTUM_RESEAU : pour éprouver ce chemin ailleurs que sur un vrai partage.
 function surLeReseau() {
-  if (process.env.BLONAY_RESEAU) return process.env.BLONAY_RESEAU !== '0';
+  if (process.env.AKTUM_RESEAU) return process.env.AKTUM_RESEAU !== '0';
   if (cheminReseau(PORTABLE_DIR)) return true;
   if (process.platform !== 'win32') return false;
   const lettre = /^([A-Za-z]):[\\/]/.exec(PORTABLE_DIR || '');
@@ -338,11 +338,11 @@ function surLeReseau() {
 function setupUserData() {
   // Test de fumée : un dossier de données à part, pour ne toucher ni aux
   // récents ni à la récupération de l'utilisateur.
-  if (!process.env.BLONAY_DOSSIER_APP && process.env.BLONAY_SMOKE_DIR) {
-    try { app.setPath('userData', path.join(process.env.BLONAY_SMOKE_DIR, 'donnees')); } catch (e) { /* tant pis */ }
+  if (!process.env.AKTUM_DOSSIER_APP && process.env.AKTUM_SMOKE_DIR) {
+    try { app.setPath('userData', path.join(process.env.AKTUM_SMOKE_DIR, 'donnees')); } catch (e) { /* tant pis */ }
     return;
   }
-  if (!app.isPackaged && !process.env.BLONAY_DOSSIER_APP) return;
+  if (!app.isPackaged && !process.env.AKTUM_DOSSIER_APP) return;
   const dir = DOSSIER_DATA();
   RANGEMENT = ouRanger(PORTABLE_DIR, {
     comptesOuverts: () => { try { return fs.existsSync(path.join(PORTABLE_DIR, COMPTES)); } catch (e) { return false; } },
@@ -372,6 +372,21 @@ function setupUserData() {
   // ouvert — que le système protège déjà des autres comptes.
   if (RANGEMENT.ou === 'cote') { try { app.setPath('userData', dir); } catch (e) { /* tant pis */ } }
 }
+// Le produit a changé de nom. Ce que l'ancien nom avait posé dans le profil de la personne — la
+// session retenue, le jour de départ de l'essai, et, hors dossier portable, les données par défaut —
+// est repris sous le nouveau, une fois, avant que quoi que ce soit ne s'ouvre. // @garder-ancien-nom
+function reprendreLesDossiersDAvant() {
+  if (!app.isPackaged) return;
+  let appData;
+  try { appData = app.getPath('appData'); } catch (e) { return; }
+  [['Blonay PDF', 'Aktum PDF'], ['blonay-pdf-desktop', 'aktum-pdf-desktop']].forEach(([avant, apres]) => { // @garder-ancien-nom
+    try {
+      const a = path.join(appData, avant), n = path.join(appData, apres);
+      if (fs.existsSync(a) && !fs.existsSync(n)) fs.renameSync(a, n);
+    } catch (e) { /* tant pis : on se reconnectera, et l'essai repartira */ }
+  });
+}
+reprendreLesDossiersDAvant();
 setupUserData();
 
 /** Les documents passés sur la ligne de commande (double-clic sur un PDF, dépôt sur l'icône). */
@@ -508,7 +523,7 @@ app.on('second-instance', (_e, argv) => {
     if (toujoursEnOnglet() && w) {
       if (w.isMinimized()) w.restore();
       w.focus();
-      w.webContents.send('blonay:ouvrir-onglet', liste);
+      w.webContents.send('aktum:ouvrir-onglet', liste);
     } else createWindow(liste);
     return;
   }
@@ -531,10 +546,10 @@ function createWindow(fichiers) {
       nodeIntegration: false,
       sandbox: true,
       spellcheck: false,
-      additionalArguments: ['--blonay-version=' + app.getVersion(), '--blonay-construction=' + CONSTRUCTION],
+      additionalArguments: ['--aktum-version=' + app.getVersion(), '--aktum-construction=' + CONSTRUCTION],
     },
   });
-  win.blonayFichiers = fichiers || [];
+  win.aktumFichiers = fichiers || [];
   fenetres.add(win);
   win.once('ready-to-show', () => win.show());
   win.on('page-title-updated', (ev) => ev.preventDefault());
@@ -572,13 +587,13 @@ function createWindow(fichiers) {
 }
 
 // Enregistrer : toujours la boîte « Enregistrer sous » de Windows, jamais en silence
-// dans « Téléchargements ». (En test de fumée, BLONAY_SMOKE_DIR fixe le dossier.)
+// dans « Téléchargements ». (En test de fumée, AKTUM_SMOKE_DIR fixe le dossier.)
 function setupDownloads() {
   session.defaultSession.on('will-download', (_ev, item, contents) => {
     const nom = item.getFilename();
     const ext = path.extname(nom).toLowerCase().replace('.', '');
     const filtres = { pdf: 'Document PDF', zip: 'Archive ZIP', png: 'Image PNG', jpg: 'Image JPEG', txt: 'Texte' };
-    if (process.env.BLONAY_SMOKE_DIR) item.setSavePath(path.join(process.env.BLONAY_SMOKE_DIR, nom));
+    if (process.env.AKTUM_SMOKE_DIR) item.setSavePath(path.join(process.env.AKTUM_SMOKE_DIR, nom));
     else item.setSaveDialogOptions({
       title: 'Enregistrer sous',
       defaultPath: path.join(app.getPath('documents'), nom),
@@ -590,7 +605,7 @@ function setupDownloads() {
       // Sa date de modification, pour que l'enregistrement suivant sache de quel fichier il parle.
       let mtimeMs = 0;
       if (etat === 'completed') { try { mtimeMs = fs.statSync(item.getSavePath()).mtimeMs; } catch (e) { /* le fichier a déjà bougé */ } }
-      contents.send('blonay:enregistre', etat === 'completed' ? { chemin: item.getSavePath(), mtimeMs } : { annule: true });
+      contents.send('aktum:enregistre', etat === 'completed' ? { chemin: item.getSavePath(), mtimeMs } : { annule: true });
     });
   });
 }
@@ -603,21 +618,21 @@ function setupNetwork() {
 }
 
 function setupIpc() {
-  ipcMain.handle('blonay:licence', () => etatLicence());
+  ipcMain.handle('aktum:licence', () => etatLicence());
   if (RANGEMENT.ou === 'comptes' && PROFIL) {
-    ipcMain.handle('blonay:mon-compte', () => ({ nom: PROFIL }));
-    ipcMain.handle('blonay:changer', (_e, ancien, nouveau) => changerMonMotDePasse(ancien, nouveau));
-    ipcMain.handle('blonay:refaire-code', (_e, motDePasse) => refaireMonCode(motDePasse));
+    ipcMain.handle('aktum:mon-compte', () => ({ nom: PROFIL }));
+    ipcMain.handle('aktum:changer', (_e, ancien, nouveau) => changerMonMotDePasse(ancien, nouveau));
+    ipcMain.handle('aktum:refaire-code', (_e, motDePasse) => refaireMonCode(motDePasse));
   }
   // Les documents de cette fenêtre-là, remis une fois.
-  ipcMain.handle('blonay:fichiers-initiaux', (e) => {
+  ipcMain.handle('aktum:fichiers-initiaux', (e) => {
     const w = fenetreDe(e.sender);
-    const l = (w && w.blonayFichiers) || [];
-    if (w) w.blonayFichiers = [];
+    const l = (w && w.aktumFichiers) || [];
+    if (w) w.aktumFichiers = [];
     return l;
   });
   // Enregistrer : réécrire le fichier ouvert, sur place, sans boîte de dialogue.
-  ipcMain.handle('blonay:ecrire', (_e, o) => {
+  ipcMain.handle('aktum:ecrire', (_e, o) => {
     try {
       // L'essai est fini : on lit tout, on n'écrit plus rien. Le travail en cours reste
       // dans le dossier de récupération.
@@ -630,7 +645,7 @@ function setupIpc() {
         const c = verrou.conflit(o.chemin, o.mtimeAttendu);
         if (c.conflit) return { ok: false, conflit: true, mtimeMs: c.mtimeMs, taille: c.taille };
       }
-      const tmp = o.chemin + '.blonay-tmp';
+      const tmp = o.chemin + '.aktum-tmp';
       fs.writeFileSync(tmp, Buffer.from(o.octets));
       fs.renameSync(tmp, o.chemin);
       ajouterRecent(o.chemin);
@@ -641,29 +656,29 @@ function setupIpc() {
     } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; }
   });
   // Le document est fermé : son verrou ne doit pas gêner une collègue.
-  ipcMain.handle('blonay:liberer', (_e, chemins) => {
+  ipcMain.handle('aktum:liberer', (_e, chemins) => {
     if (!Array.isArray(chemins)) return false;
     libererLesVerrous(chemins.filter((c) => typeof c === 'string' && path.isAbsolute(c)));
     return true;
   });
-  ipcMain.handle('blonay:recents', () => lireRecents().filter((c) => fs.existsSync(c)));
+  ipcMain.handle('aktum:recents', () => lireRecents().filter((c) => fs.existsSync(c)));
   // La page d'accueil rouvre un récent : seulement un chemin de la liste, jamais un autre.
-  ipcMain.handle('blonay:lire-recent', (_e, chemin) => {
+  ipcMain.handle('aktum:lire-recent', (_e, chemin) => {
     if (typeof chemin !== 'string' || !lireRecents().includes(chemin) || !fs.existsSync(chemin)) return [];
     ajouterRecent(chemin);
     return lire([chemin]);
   });
-  ipcMain.handle('blonay:recup-ecrire', (_e, o) => { try { return recupEcrire(o); } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; } });
-  ipcMain.handle('blonay:recup-liste', () => { try { return recupListe(); } catch (err) { return []; } });
-  ipcMain.handle('blonay:recup-lire', (_e, cle) => { try { return recupLire(cle); } catch (err) { return null; } });
-  ipcMain.handle('blonay:recup-effacer', (_e, cle) => { try { return recupEffacer(cle); } catch (err) { return false; } });
-  ipcMain.handle('blonay:imprimantes', async (e) => {
+  ipcMain.handle('aktum:recup-ecrire', (_e, o) => { try { return recupEcrire(o); } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; } });
+  ipcMain.handle('aktum:recup-liste', () => { try { return recupListe(); } catch (err) { return []; } });
+  ipcMain.handle('aktum:recup-lire', (_e, cle) => { try { return recupLire(cle); } catch (err) { return null; } });
+  ipcMain.handle('aktum:recup-effacer', (_e, cle) => { try { return recupEffacer(cle); } catch (err) { return false; } });
+  ipcMain.handle('aktum:imprimantes', async (e) => {
     const liste = await e.sender.getPrintersAsync();
     return liste.map((p) => ({ name: p.name, displayName: p.displayName || p.name, isDefault: !!p.isDefault }));
   });
   // Impression directe (imprimante choisie, recto verso, copies, taille de feuille) —
   // ou, avec « dialogue », la fenêtre d'impression de Windows et ses Propriétés.
-  ipcMain.handle('blonay:imprimer', (e, o) => new Promise((resolve) => {
+  ipcMain.handle('aktum:imprimer', (e, o) => new Promise((resolve) => {
     const opts = {
       silent: !(o && o.dialogue), printBackground: true, color: true,
       copies: Math.max(1, Math.min(99, parseInt(o && o.copies, 10) || 1)),
@@ -679,7 +694,7 @@ function setupIpc() {
   }));
 }
 
-const envoyer = (nom) => { const w = fenetreActive(); if (w) w.webContents.send('blonay:commande', nom); };
+const envoyer = (nom) => { const w = fenetreActive(); if (w) w.webContents.send('aktum:commande', nom); };
 
 async function choisirDocuments(win) {
   const r = await dialog.showOpenDialog(win, {
@@ -697,7 +712,7 @@ function ouvrirRecent(chemin) {
   if (!liste.length) return;
   ajouterRecent(chemin);
   const win = fenetreActive();
-  if (win) win.webContents.send('blonay:ouvrir-onglet', liste); else createWindow(liste);
+  if (win) win.webContents.send('aktum:ouvrir-onglet', liste); else createWindow(liste);
 }
 
 // Ouvrir… : un document à part, dans un nouvel onglet de la fenêtre courante
@@ -706,7 +721,7 @@ async function ouvrirDocuments() {
   const win = fenetreActive();
   const liste = await choisirDocuments(win);
   if (!liste.length) return;
-  if (win) win.webContents.send('blonay:ouvrir-onglet', liste);
+  if (win) win.webContents.send('aktum:ouvrir-onglet', liste);
   else createWindow(liste);
 }
 
@@ -715,7 +730,7 @@ async function ajouterDocuments() {
   const win = fenetreActive();
   if (!win) return;
   const liste = await choisirDocuments(win);
-  if (liste.length) win.webContents.send('blonay:ouvrir', liste);
+  if (liste.length) win.webContents.send('aktum:ouvrir', liste);
 }
 
 function buildMenu() {
@@ -754,7 +769,7 @@ function buildMenu() {
           click: async () => {
             const r = await dialog.showMessageBox({
               type: 'question', buttons: ['Se déconnecter', 'Annuler'], defaultId: 1, cancelId: 1,
-              message: 'Se déconnecter de Blonay PDF ?',
+              message: 'Se déconnecter d’Aktum PDF ?',
               detail: 'L\u2019application redémarre et redemandera le mot de passe. Rien n\u2019est effacé : '
                 + 'le dossier de ' + (PROFIL || 'chacun') + ' reste tel quel.',
             });
@@ -911,7 +926,7 @@ function etatLicence() {
   try { editeur = JSON.parse(fs.readFileSync(path.join(__dirname, 'editeur.json'), 'utf8')) || {}; } catch (e) { /* pas de coordonnées renseignées */ }
   const e = licence.etatDeLaLicence({
     dossier: PORTABLE_DIR, cles: signature.lireCles().licence,
-    essai: licence.ancreDansLeProfil(path.join(profilLocal(), 'Blonay PDF')),
+    essai: licence.ancreDansLeProfil(path.join(profilLocal(), 'Aktum PDF')),
   });
   return Object.assign({}, e, { description: licence.description(e), editeur: { nom: String(editeur.nom || ''), contact: String(editeur.contact || '') } });
 }
@@ -921,7 +936,7 @@ function etatLicence() {
 async function rapportDeDiagnostic() {
   let journal = [];
   const fen = fenetreActive();
-  try { if (fen && !fen.isDestroyed()) journal = (await fen.webContents.executeJavaScript('window.blonayDiagnostic ? window.blonayDiagnostic() : []', true)) || []; } catch (e) { /* page absente : journal vide */ }
+  try { if (fen && !fen.isDestroyed()) journal = (await fen.webContents.executeJavaScript('window.aktumDiagnostic ? window.aktumDiagnostic() : []', true)) || []; } catch (e) { /* page absente : journal vide */ }
   let utilisateur = '', poste = '';
   try { utilisateur = os.userInfo().username; } catch (e) { /* inconnu */ }
   try { poste = os.hostname(); } catch (e) { /* inconnu */ }
@@ -949,9 +964,9 @@ async function proposerLeDiagnostic() {
   });
   if (response === 1) { require('electron').clipboard.writeText(texte); return; }
   if (response !== 0) return;
-  const nom = 'Diagnostic-Blonay-PDF-' + new Date().toISOString().slice(0, 10) + '.txt';
-  const r = process.env.BLONAY_SMOKE_DIR
-    ? { filePath: path.join(process.env.BLONAY_SMOKE_DIR, nom) }
+  const nom = 'Diagnostic-Aktum-PDF-' + new Date().toISOString().slice(0, 10) + '.txt';
+  const r = process.env.AKTUM_SMOKE_DIR
+    ? { filePath: path.join(process.env.AKTUM_SMOKE_DIR, nom) }
     : await dialog.showSaveDialog(fenetreActive(), { title: 'Enregistrer le rapport de diagnostic', defaultPath: path.join(app.getPath('documents'), nom), filters: [{ name: 'Texte', extensions: ['txt'] }] });
   if (r.canceled || !r.filePath) return;
   try { fs.writeFileSync(r.filePath, texte, 'utf8'); shell.showItemInFolder(r.filePath); }
@@ -987,7 +1002,7 @@ async function chercherUneMiseAJour(demandee) {
         type: refusees.length ? 'warning' : 'info', title: APP_TITLE, noLink: true,
         message: refusees.length ? 'Aucune mise à jour valable n’est posée.' : 'Vous avez la version la plus récente.',
         detail: descriptionInstallee() + '\n\n'
-          + 'Pour mettre à jour : posez « BlonayPDF-windows.zip » et son fichier « .signature.json » à côté de l\'application '
+          + 'Pour mettre à jour : posez « AktumPDF-windows.zip » et son fichier « .signature.json » à côté de l\'application '
           + '(ou dans un sous-dossier « maj »), et relancez-la.' + pourquoi,
       });
     }
@@ -1067,7 +1082,7 @@ app.on('will-quit', () => {
   try {
     const parti = require('child_process').spawn(quoi.fichier, quoi.args, {
       cwd: PORTABLE_DIR, detached: true, stdio: 'ignore', windowsHide: false,
-      env: Object.assign({}, process.env, { BLONAY_MAJ_AUTO: '1' }),
+      env: Object.assign({}, process.env, { AKTUM_MAJ_AUTO: '1' }),
     });
     parti.unref(); // il doit nous survivre : c'est lui qui nous remplace
   } catch (e) { /* rien à faire de plus : l'application part quand même */ }
@@ -1075,18 +1090,18 @@ app.on('will-quit', () => {
 
 app.whenReady().then(() => {
   if (RANGEMENT.ou === 'comptes' && !PROFIL) {
-    ipcMain.handle('blonay:comptes', () => comptesConnus().map((nom) => {
+    ipcMain.handle('aktum:comptes', () => comptesConnus().map((nom) => {
       const fiche = lireFiche(nom);
       const d = comptes.dernierChangement(fiche);
       return { nom, protege: protege(fiche), recuperation: !!fiche.recuperation, dernierChangement: d };
     }));
-    ipcMain.handle('blonay:connexion', (_e, nom, motDePasse) => connexion(nom, motDePasse));
-    ipcMain.handle('blonay:creer', (_e, nom, motDePasse) => creerLeCompte(nom, motDePasse));
-    ipcMain.handle('blonay:recuperer', (_e, nom, code, nouveau) => recuperer(nom, code, nouveau));
-    ipcMain.handle('blonay:supprimer', (_e, nom, secret) => supprimerCompte(nom, secret));
+    ipcMain.handle('aktum:connexion', (_e, nom, motDePasse) => connexion(nom, motDePasse));
+    ipcMain.handle('aktum:creer', (_e, nom, motDePasse) => creerLeCompte(nom, motDePasse));
+    ipcMain.handle('aktum:recuperer', (_e, nom, code, nouveau) => recuperer(nom, code, nouveau));
+    ipcMain.handle('aktum:supprimer', (_e, nom, secret) => supprimerCompte(nom, secret));
     // La session ne s'ouvre qu'une fois le code noté, et seulement pour le compte
     // qui vient de le recevoir : sans cela, ce canal ouvrirait n'importe quel compte.
-    ipcMain.handle('blonay:ouvrir', (_e, nom) => {
+    ipcMain.handle('aktum:ouvrir', (_e, nom) => {
       if (!pretAOuvrir || nomDeDossier(nom) !== pretAOuvrir) return 'Rien à ouvrir.';
       const propre = pretAOuvrir; pretAOuvrir = null;
       return ouvrirLaSession(propre);
@@ -1103,12 +1118,12 @@ app.whenReady().then(() => {
   createWindow(initiaux);
   // Seulement là où il y a une installation à mettre à jour : empaquetée, ou
   // le dossier d'essai que les tests font passer pour telle.
-  if (app.isPackaged || process.env.BLONAY_DOSSIER_APP) {
+  if (app.isPackaged || process.env.AKTUM_DOSSIER_APP) {
     annoncerCePoste();
     // Quelques secondes après : le partage peut prendre son temps, et une
     // fenêtre qui tarde à s'afficher se remarque tout de suite.
-    // BLONAY_MAJ_DELAI : le test a besoin d'avoir posé ses guetteurs avant.
-    const delai = Number(process.env.BLONAY_MAJ_DELAI) || 4000;
+    // AKTUM_MAJ_DELAI : le test a besoin d'avoir posé ses guetteurs avant.
+    const delai = Number(process.env.AKTUM_MAJ_DELAI) || 4000;
     const plusTard = setTimeout(() => { chercherUneMiseAJour(false).catch(() => {}); }, delai);
     if (plusTard.unref) plusTard.unref();
   }

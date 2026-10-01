@@ -3,10 +3,10 @@
 const { test, expect, pdfTexte, pdfVide } = require('./aide');
 
 test('la couche de texte se pose par-dessus la page', async ({ app, page }) => {
-  await app.ouvrir('lettre.pdf', pdfTexte(['Commune de Blonay', 'Décompte des frais 2026']));
+  await app.ouvrir('lettre.pdf', pdfTexte(['Commune Exemple', 'Décompte des frais 2026']));
   const couche = page.locator('#lecture .feuille-vue .couche-texte');
   await expect(couche).toHaveCount(1);
-  await expect(couche).toContainText('Commune de Blonay');
+  await expect(couche).toContainText('Commune Exemple');
   await expect(couche).toContainText('Décompte des frais 2026');
   // Invisible mais sélectionnable : c'est la page dessous qu'on voit.
   const lisible = await couche.locator('span').first().evaluate((e) => getComputedStyle(e).color);
@@ -14,7 +14,7 @@ test('la couche de texte se pose par-dessus la page', async ({ app, page }) => {
 });
 
 test('un double-clic sélectionne le mot, et n\'ouvre pas l\'éditeur', async ({ app, page }) => {
-  await app.ouvrir('lettre.pdf', pdfTexte(['Commune de Blonay']));
+  await app.ouvrir('lettre.pdf', pdfTexte(['Commune Exemple']));
   const mot = page.locator('#lecture .couche-texte span').first();
   // La couche de texte étire ses boîtes pour coller à la largeur du PDF : les
   // glyphes se serrent à gauche, et le centre de la boîte tombe après le mot.
@@ -82,7 +82,7 @@ test('le numéro de la page affichée suit le défilement', async ({ app, page }
 // paragraphe. Le rendre non sélectionnable ne suffit pas : le navigateur le
 // ramasse quand même dès que la sélection l'enjambe.
 const denseDeux = () => require('./aide').pdfDe([
-  [{ x: 70, y: 760, taille: 12, texte: 'Commune de Blonay' },
+  [{ x: 70, y: 760, taille: 12, texte: 'Commune Exemple' },
    { x: 70, y: 735, taille: 12, texte: 'Decompte des frais' },
    { x: 70, y: 710, taille: 12, texte: 'Transport scolaire' }],
   [{ x: 70, y: 760, taille: 12, texte: 'Seconde page du document' }],
@@ -104,7 +104,7 @@ test('une sélection qui déborde d\'une page ne ramasse pas l\'interface', asyn
   await page.mouse.up();
 
   const pris = await selection(page);
-  expect(pris, 'le texte des deux pages est bien pris').toContain('Commune de Blonay');
+  expect(pris, 'le texte des deux pages est bien pris').toContain('Commune Exemple');
   expect(pris).toContain('Seconde page du document');
   expect(pris, 'la légende de la page ne part pas avec').not.toMatch(/\d+ \/ \d+/);
   expect(pris, 'le bouton de retouche ne part pas avec').not.toContain('Modifier');
@@ -147,7 +147,7 @@ test('l\'interface hors du document ne se sélectionne pas', async ({ app, page 
 // elle, doit le rester — sans quoi on ne peut plus ni corriger un mot ni
 // choisir ce qu'on remplace.
 test('la zone de saisie de l\'éditeur reste sélectionnable', async ({ app, page }) => {
-  await app.ouvrir('lettre.pdf', pdfTexte(['Commune de Blonay']));
+  await app.ouvrir('lettre.pdf', pdfTexte(['Commune Exemple']));
   await app.vue('organiser');
   await page.dblclick('#pages .tile:nth-child(1)');
   await expect(page.locator('.editor')).toBeVisible();

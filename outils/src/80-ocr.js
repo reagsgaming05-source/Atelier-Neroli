@@ -229,7 +229,7 @@
     }
     const quoi = select('ocr-quoi', [['sans', 'Les pages sans texte (scans, images)'], ['sel', 'Les pages sélectionnées'], ['toutes', 'Toutes les pages']], state.selected.size ? 'sel' : 'sans');
     let langueMemo = 'fra';
-    try { langueMemo = localStorage.getItem('blonay-ocr-langue') || 'fra'; } catch (e) { signaler('Préférence de langue', e, 'info'); }
+    try { langueMemo = localStorage.getItem('aktum-ocr-langue') || 'fra'; } catch (e) { signaler('Préférence de langue', e, 'info'); }
     const langue = select('ocr-langue', [['fra', 'Français'], ['fra+deu', 'Français et allemand'], ['deu', 'Allemand']], langueMemo);
     dialog({
       title: 'Reconnaître le texte (OCR)', icon: IC.ocr,
@@ -240,7 +240,7 @@
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Reconnaître', primary: true, onClick: async close => {
         close();
-        try { localStorage.setItem('blonay-ocr-langue', langue.value); } catch (e) { signaler('Préférence de langue', e, 'info'); }
+        try { localStorage.setItem('aktum-ocr-langue', langue.value); } catch (e) { signaler('Préférence de langue', e, 'info'); }
         const langues = langue.value.split('+');
         setBusy('Repérage des pages…', 0);
         let pages = quoi.value === 'sel' ? selectedPages() : state.pages.slice();

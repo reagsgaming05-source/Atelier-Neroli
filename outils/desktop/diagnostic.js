@@ -65,7 +65,7 @@ function rapport(o) {
   const nettoyer = (s) => anonymiser(s, id);
   const l = [];
   const p = o.produit || {}, sy = o.systeme || {}, d = o.donnees || {}, li = o.licence || {};
-  l.push('RAPPORT DE DIAGNOSTIC — Blonay PDF');
+  l.push('RAPPORT DE DIAGNOSTIC — Aktum PDF');
   l.push('Établi le ' + new Date(o.maintenant == null ? Date.now() : o.maintenant).toISOString().replace('T', ' ').slice(0, 19) + ' (UTC)');
   l.push('');
   l.push('Ce rapport ne contient aucun nom de document, aucun contenu de document, aucun nom de personne.');

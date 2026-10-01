@@ -1,6 +1,6 @@
   'use strict';
 
-  const APP = 'Blonay PDF';
+  const APP = 'Aktum PDF';
   // Renseigné par build.js, depuis le numéro de version de outils/package.json.
   const APP_VERSION = '__VERSION__';
   // Renseigné par build.js : date de construction et commit.
@@ -19,6 +19,16 @@
   };
   let pdfjs = null, PDFLib = null, JSZip = null;
   const FEAT = { encrypt: false, zip: false };
+
+  // Le produit a changé de nom : ses réglages (tampons, thème, zoom…), enregistrés sous l'ancien
+  // préfixe, sont repris sous le nouveau, une fois. // @garder-ancien-nom
+  (function reprendreLesReglagesDAvant() {
+    try {
+      const anciens = [];
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('blonay-') === 0) anciens.push(k); } // @garder-ancien-nom
+      anciens.forEach(k => { const neuf = 'aktum-' + k.slice(7); if (localStorage.getItem(neuf) === null) localStorage.setItem(neuf, localStorage.getItem(k)); }); // @garder-ancien-nom
+    } catch (_) { /* stockage refusé : les réglages repartent de zéro */ }
+  })();
 
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -50,7 +60,7 @@
     // Version hors ligne : les composants sont déjà dans la page.
     if (window.pdfjsLib && window.PDFLib) {
       pdfjs = window.pdfjsLib;
-      pdfjs.GlobalWorkerOptions.workerSrc = window.__blonayWorker || CDN.worker;
+      pdfjs.GlobalWorkerOptions.workerSrc = window.__aktumWorker || CDN.worker;
       PDFLib = window.PDFLib;
       FEAT.encrypt = typeof PDFLib.PDFDocument.prototype.encrypt === 'function';
       JSZip = window.JSZip || null;

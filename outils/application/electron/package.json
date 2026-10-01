@@ -1,6 +1,6 @@
 {
-  "name": "blonay-pdf",
-  "productName": "Blonay PDF",
+  "name": "aktum-pdf",
+  "productName": "Aktum PDF",
   "version": "1.0.0",
   "description": "Organiser, annoter et protéger des PDF, sans rien envoyer sur internet",
   "main": "main.js",

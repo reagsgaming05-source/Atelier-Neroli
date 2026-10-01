@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const DOSSIER = process.env.VITRINE ?? path.join(process.cwd(), "vitrine");
-const SORTIE = process.env.FICHIER ?? path.join(process.cwd(), "vitrine", "Blonay-PDF-site.html");
+const SORTIE = process.env.FICHIER ?? path.join(process.cwd(), "vitrine", "Aktum-PDF-site.html");
 
 const PAGES = [
   ["index", "accueil"], ["communes", "communes"], ["ecoles", "ecoles"], ["etat", "etat"],
@@ -43,7 +43,7 @@ const vues = PAGES.map(([fichier, ancre]) => {
   let corps = /<body[^>]*>([\s\S]*?)<\/body>/.exec(s)[1];
   // Les liens entre pages deviennent des ancres dans le même document.
   corps = corps.replace(/href="([a-z0-9-]+\.html)"/g, (t, f) => (ANCRE[f] ? `href="#${ANCRE[f]}"` : t));
-  const titre = (/<title[^>]*>([\s\S]*?)<\/title>/.exec(s)?.[1] ?? "Blonay PDF").trim();
+  const titre = (/<title[^>]*>([\s\S]*?)<\/title>/.exec(s)?.[1] ?? "Aktum PDF").trim();
   return `<div class="vue" id="${ancre}" data-titre="${titre.replace(/"/g, "&quot;")}" hidden>${corps}</div>`;
 }).join("\n");
 
@@ -52,7 +52,7 @@ const doc = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blonay PDF — tout le travail PDF d'un secrétariat, sans qu'un document sorte</title>
+<title>Aktum PDF — tout le travail PDF d'un secrétariat, sans qu'un document sorte</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
 ${css}
@@ -78,7 +78,7 @@ ${vues}
     for (var j = 0; j < vues.length; j++) if (vues[j].id === id) cible = vues[j];
     if (!cible) cible = document.getElementById("accueil");
     for (var i = 0; i < vues.length; i++) vues[i].hidden = vues[i] !== cible;
-    document.title = cible.dataset.titre || "Blonay PDF";
+    document.title = cible.dataset.titre || "Aktum PDF";
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", montrer);

@@ -69,7 +69,7 @@ func fenetreNative(page, url string, pieces []piece) bool {
 	// aucune copie sur le disque.
 	if len(pieces) > 0 {
 		if js, err := json.Marshal(pieces); err == nil {
-			w.Init("window.__blonayOuvrir=" + string(js) + ";")
+			w.Init("window.__aktumOuvrir=" + string(js) + ";")
 		}
 	}
 	poserEnregistrement(w)
@@ -98,7 +98,7 @@ func poserEnregistrement(w webview2.WebView) {
 	// La page demande d'abord où enregistrer, puis envoie le contenu par
 	// morceaux, puis termine. En cas d'échec de la boîte, elle se rabat sur
 	// le téléchargement du moteur.
-	w.Bind("blonayEnregistrerDebut", func(nomPropose string) (map[string]interface{}, error) {
+	w.Bind("aktumEnregistrerDebut", func(nomPropose string) (map[string]interface{}, error) {
 		chemin, annule, err := dialogueEnregistrer(uintptr(w.Window()), nomPropose)
 		if err != nil {
 			log.Printf("enregistrer : %v", err)
@@ -118,7 +118,7 @@ func poserEnregistrement(w webview2.WebView) {
 		enregMu.Unlock()
 		return map[string]interface{}{"jeton": jeton, "chemin": chemin}, nil
 	})
-	w.Bind("blonayEnregistrerBout", func(jeton int, b64 string) error {
+	w.Bind("aktumEnregistrerBout", func(jeton int, b64 string) error {
 		enregMu.Lock()
 		e := enregistrements[jeton]
 		enregMu.Unlock()
@@ -132,7 +132,7 @@ func poserEnregistrement(w webview2.WebView) {
 		_, err = e.f.Write(octets)
 		return err
 	})
-	w.Bind("blonayEnregistrerFin", func(jeton int) (string, error) {
+	w.Bind("aktumEnregistrerFin", func(jeton int) (string, error) {
 		enregMu.Lock()
 		e := enregistrements[jeton]
 		delete(enregistrements, jeton)
@@ -149,7 +149,7 @@ func poserEnregistrement(w webview2.WebView) {
 		}
 		return e.chemin, nil
 	})
-	w.Bind("blonayEnregistrerAbandon", func(jeton int) error {
+	w.Bind("aktumEnregistrerAbandon", func(jeton int) error {
 		enregMu.Lock()
 		e := enregistrements[jeton]
 		delete(enregistrements, jeton)
@@ -285,7 +285,7 @@ const (
 
 // La fenêtre ne se ferme pas d'un coup : la page vérifie d'abord si des
 // modifications n'ont pas été exportées et, le cas échéant, demande. Elle
-// répond par blonayQuitter(true) pour partir, (false) pour rester. Sans
+// répond par aktumQuitter(true) pour partir, (false) pour rester. Sans
 // réponse en deux secondes (page figée), on part quand même.
 func poserFermeture(w webview2.WebView) {
 	hwnd := uintptr(w.Window())
@@ -297,7 +297,7 @@ func poserFermeture(w webview2.WebView) {
 	fermer := func() {
 		w.Dispatch(func() { procDestroyWindow.Call(hwnd) })
 	}
-	w.Bind("blonayQuitter", func(oui bool) error {
+	w.Bind("aktumQuitter", func(oui bool) error {
 		mu.Lock()
 		enAttente := attente
 		attente = false
@@ -314,7 +314,7 @@ func poserFermeture(w webview2.WebView) {
 			attente = true
 			mu.Unlock()
 			if !deja {
-				w.Eval("(window.__blonayFermer ? window.__blonayFermer() : window.blonayQuitter(true))")
+				w.Eval("(window.__aktumFermer ? window.__aktumFermer() : window.aktumQuitter(true))")
 				go func() {
 					time.Sleep(2 * time.Second)
 					mu.Lock()

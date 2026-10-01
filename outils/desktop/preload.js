@@ -1,31 +1,31 @@
 /*
  * Exécuté avant les scripts de la page, dans un bac à sable. Fournit à
- * l'application window.BlonayDesktop : les documents reçus au lancement ou
+ * l'application window.AktumDesktop : les documents reçus au lancement ou
  * plus tard, les commandes du menu, le résultat d'un enregistrement, la liste
  * des imprimantes et l'impression directe.
  */
 const { contextBridge, ipcRenderer } = require('electron');
 const arg = (nom) => { const a = process.argv.find((x) => x.startsWith('--' + nom + '=')); return a ? a.slice(nom.length + 3) : ''; };
-contextBridge.exposeInMainWorld('BlonayDesktop', {
-  version: arg('blonay-version'),
-  construction: arg('blonay-construction'),
+contextBridge.exposeInMainWorld('AktumDesktop', {
+  version: arg('aktum-version'),
+  construction: arg('aktum-construction'),
   electron: process.versions.electron,
   chrome: process.versions.chrome,
-  fichiersInitiaux: () => ipcRenderer.invoke('blonay:fichiers-initiaux'),
-  onOuvrir: (cb) => ipcRenderer.on('blonay:ouvrir', (_e, liste) => cb(liste)),
-  onOuvrirOnglet: (cb) => ipcRenderer.on('blonay:ouvrir-onglet', (_e, liste) => cb(liste)),
-  onCommande: (cb) => ipcRenderer.on('blonay:commande', (_e, nom) => cb(nom)),
-  onEnregistre: (cb) => ipcRenderer.on('blonay:enregistre', (_e, r) => cb(r)),
+  fichiersInitiaux: () => ipcRenderer.invoke('aktum:fichiers-initiaux'),
+  onOuvrir: (cb) => ipcRenderer.on('aktum:ouvrir', (_e, liste) => cb(liste)),
+  onOuvrirOnglet: (cb) => ipcRenderer.on('aktum:ouvrir-onglet', (_e, liste) => cb(liste)),
+  onCommande: (cb) => ipcRenderer.on('aktum:commande', (_e, nom) => cb(nom)),
+  onEnregistre: (cb) => ipcRenderer.on('aktum:enregistre', (_e, r) => cb(r)),
   // mtimeAttendu : la date du fichier quand on l'a lu ; forcer : écraser malgré un conflit confirmé.
-  ecrire: (chemin, octets, opts) => ipcRenderer.invoke('blonay:ecrire', Object.assign({ chemin, octets }, opts || {})),
-  liberer: (chemins) => ipcRenderer.invoke('blonay:liberer', chemins),
-  recents: () => ipcRenderer.invoke('blonay:recents'),
-  lireRecent: (chemin) => ipcRenderer.invoke('blonay:lire-recent', chemin),
-  recupEcrire: (o) => ipcRenderer.invoke('blonay:recup-ecrire', o),
-  recupListe: () => ipcRenderer.invoke('blonay:recup-liste'),
-  recupLire: (cle) => ipcRenderer.invoke('blonay:recup-lire', cle),
-  recupEffacer: (cle) => ipcRenderer.invoke('blonay:recup-effacer', cle),
-  imprimantes: () => ipcRenderer.invoke('blonay:imprimantes'),
-  licence: () => ipcRenderer.invoke('blonay:licence'),
-  imprimer: (o) => ipcRenderer.invoke('blonay:imprimer', o),
+  ecrire: (chemin, octets, opts) => ipcRenderer.invoke('aktum:ecrire', Object.assign({ chemin, octets }, opts || {})),
+  liberer: (chemins) => ipcRenderer.invoke('aktum:liberer', chemins),
+  recents: () => ipcRenderer.invoke('aktum:recents'),
+  lireRecent: (chemin) => ipcRenderer.invoke('aktum:lire-recent', chemin),
+  recupEcrire: (o) => ipcRenderer.invoke('aktum:recup-ecrire', o),
+  recupListe: () => ipcRenderer.invoke('aktum:recup-liste'),
+  recupLire: (cle) => ipcRenderer.invoke('aktum:recup-lire', cle),
+  recupEffacer: (cle) => ipcRenderer.invoke('aktum:recup-effacer', cle),
+  imprimantes: () => ipcRenderer.invoke('aktum:imprimantes'),
+  licence: () => ipcRenderer.invoke('aktum:licence'),
+  imprimer: (o) => ipcRenderer.invoke('aktum:imprimer', o),
 });

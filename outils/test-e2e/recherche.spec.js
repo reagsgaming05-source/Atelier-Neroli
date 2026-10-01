@@ -63,8 +63,8 @@ test('Suivant, Précédent et Entrée passent d\'une occurrence à l\'autre', as
 });
 
 test('la casse se respecte à la demande', async ({ app, page }) => {
-  await app.ouvrir('casse.pdf', pdfTexte(['Blonay et blonay', 'BLONAY aussi']));
-  await chercher(page, 'Blonay');
+  await app.ouvrir('casse.pdf', pdfTexte(['Exemple et exemple', 'EXEMPLE aussi']));
+  await chercher(page, 'Exemple');
   await expect(page.locator('#se-compte')).toHaveText('1 / 3');
   await page.check('#se-casse');
   await expect(page.locator('#se-compte')).toHaveText('1 / 1');

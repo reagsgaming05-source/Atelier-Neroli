@@ -1,4 +1,4 @@
-// Blonay PDF — application de bureau en un seul fichier.
+// Aktum PDF — application de bureau en un seul fichier.
 //
 // L'outil complet est contenu dans cet exécutable. Au lancement, il est déposé
 // dans le dossier de l'utilisateur, puis affiché dans une fenêtre d'application :
@@ -36,7 +36,7 @@ import (
 	"time"
 )
 
-//go:embed blonay-pdf.html.gz
+//go:embed aktum-pdf.html.gz
 var compresse []byte
 
 // L'icône de la fenêtre doit être un vrai fichier posé à côté de la page :
@@ -52,7 +52,7 @@ var icone48 []byte
 //go:embed icon-256.png
 var icone256 []byte
 
-const nom = "Blonay PDF"
+const nom = "Aktum PDF"
 
 // Au-delà, le navigateur peinerait à avaler le document d'un bloc.
 const tailleMax = 200 << 20
@@ -102,7 +102,7 @@ func deposer() (string, error) {
 	// continuer de fonctionner après une mise à jour de l'application.
 	somme := sha256.Sum256(compresse)
 	version := hex.EncodeToString(somme[:8])
-	cible := filepath.Join(dossier, "blonay-pdf.html")
+	cible := filepath.Join(dossier, "aktum-pdf.html")
 	marque := filepath.Join(dossier, "version.txt")
 	if existe(cible) {
 		if connue, err := os.ReadFile(marque); err == nil && string(connue) == version {
@@ -136,7 +136,7 @@ func deposer() (string, error) {
 	// ménage des fichiers laissés par les versions précédentes
 	if entrees, err := os.ReadDir(dossier); err == nil {
 		for _, e := range entrees {
-			if strings.HasPrefix(e.Name(), "blonay-pdf-") && strings.HasSuffix(e.Name(), ".html") {
+			if strings.HasPrefix(e.Name(), "aktum-pdf-") && strings.HasSuffix(e.Name(), ".html") {
 				os.Remove(filepath.Join(dossier, e.Name()))
 			}
 		}
@@ -210,7 +210,7 @@ func deposerOuverture(dossier string, pieces []piece) (string, error) {
 		return "", err
 	}
 	nomFichier := "ouverture-" + hex.EncodeToString(aleatoire) + ".js"
-	contenu := append(append([]byte("window.__blonayOuvrir="), js...), ';')
+	contenu := append(append([]byte("window.__aktumOuvrir="), js...), ';')
 	if err := os.WriteFile(filepath.Join(dossier, nomFichier), contenu, 0o600); err != nil {
 		return "", err
 	}

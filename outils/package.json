@@ -1,7 +1,7 @@
 {
-  "name": "blonay-pdf",
+  "name": "aktum-pdf",
   "version": "2.1.0",
-  "description": "Blonay PDF – logiciel PDF complet, entièrement local (organiser, corriger, annoter, imprimer)",
+  "description": "Aktum PDF – logiciel PDF complet, entièrement local (organiser, corriger, annoter, imprimer)",
   "private": true,
   "author": "Atelier Neroli",
   "license": "UNLICENSED",

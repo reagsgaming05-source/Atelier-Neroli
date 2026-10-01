@@ -20,7 +20,7 @@ import { createRequire } from "node:module";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const EXE = process.env.CHROMIUM ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
-const ADMIN = { email: process.env.ADMIN_EMAIL ?? "admin@blonaypdf.ch", password: process.env.ADMIN_PASSWORD ?? "BlonayPDF-Admin-2026!" };
+const ADMIN = { email: process.env.ADMIN_EMAIL ?? "admin@aktumpdf.ch", password: process.env.ADMIN_PASSWORD ?? "AktumPDF-Admin-2026!" };
 
 const marque = Date.now().toString(36);
 const COMMUNE = `Commune d'essai ${marque}`;

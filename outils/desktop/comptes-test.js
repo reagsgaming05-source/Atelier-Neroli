@@ -3,7 +3,7 @@
  * et reste connectée jusqu'à ce qu'elle se déconnecte.
  *
  *   node comptes-test.js                       # depuis les sources
- *   node comptes-test.js chemin\BlonayPDF.exe  # sur le dossier empaqueté
+ *   node comptes-test.js chemin\AktumPDF.exe  # sur le dossier empaqueté
  *
  * Deux choses qu'une relecture ne garantit pas, et qu'on vérifie ici. D'abord
  * qu'une personne ne peut pas ouvrir le compte d'une autre : c'est toute la
@@ -20,7 +20,7 @@ const path = require('path');
 const os = require('os');
 
 const exe = process.argv[2];
-const base = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-comptes-'));
+const base = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-comptes-'));
 const dit = (quoi) => console.log('  ' + quoi);
 const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -31,18 +31,18 @@ const souffler = (ms) => new Promise((r) => setTimeout(r, ms));
 // Chaque « poste » a son propre profil Windows, pour que la connexion retenue
 // ne soit pas commune.
 //
-// Ce profil se donne par BLONAY_PROFIL et non par APPDATA : sous Windows,
+// Ce profil se donne par AKTUM_PROFIL et non par APPDATA : sous Windows,
 // Electron ne lit pas cette variable, il demande le dossier au système. Les
 // postes partageaient donc une seule session, Sophie ouvrait celle de Marie et
 // la fenêtre de connexion n'apparaissait jamais. Rien de tel sur un vrai
 // secrétariat, où chacune a son profil Windows — mais le test ne prouvait plus
 // ce qu'il annonçait.
 const profilDe = (poste) => path.join(base, 'poste-' + poste);
-const sessionDe = (poste) => path.join(profilDe(poste), 'Blonay PDF', 'session.json');
+const sessionDe = (poste) => path.join(profilDe(poste), 'Aktum PDF', 'session.json');
 const lancer = (poste) => {
   const profil = profilDe(poste);
-  const env = { ...process.env, BLONAY_DOSSIER_APP: base,
-    BLONAY_PROFIL: profil, XDG_CONFIG_HOME: profil };
+  const env = { ...process.env, AKTUM_DOSSIER_APP: base,
+    AKTUM_PROFIL: profil, XDG_CONFIG_HOME: profil };
   return electron.launch(exe ? { executablePath: exe, args: ['--no-sandbox'], env }
     : { args: [path.join(__dirname), '--no-sandbox'], env });
 };
@@ -51,7 +51,7 @@ const lancer = (poste) => {
 // pilote et garderait le verrou d'instance unique.
 function menage() {
   try {
-    if (process.platform === 'win32') { require('child_process').execSync('taskkill /F /IM BlonayPDF.exe /T', { stdio: 'ignore' }); return; }
+    if (process.platform === 'win32') { require('child_process').execSync('taskkill /F /IM AktumPDF.exe /T', { stdio: 'ignore' }); return; }
     // Deux façons de lancer, donc deux choses à tuer : l'Electron des sources,
     // et l'application empaquetée. Ne viser que la première laissait survivre
     // l'instance relancée après la connexion ; elle gardait le verrou
@@ -70,7 +70,7 @@ function menage() {
       // qui lance ce test.
       + 'propre=0; n=0; '
       + 'while [ $n -lt 30 ]; do '
-      + '  if pgrep -x BlonayPDF >/dev/null 2>&1; then pkill -x BlonayPDF 2>/dev/null; propre=0; '
+      + '  if pgrep -x AktumPDF >/dev/null 2>&1; then pkill -x AktumPDF 2>/dev/null; propre=0; '
       + '  else propre=$((propre+1)); [ $propre -ge 2 ] && break; fi; '
       + '  sleep 0.4; n=$((n+1)); '
       + 'done; true',
@@ -165,13 +165,13 @@ const refermer = async (s) => { await s.e.close().catch(() => {}); await souffle
   assert.ok(!fs.existsSync(sessionDe('bureau-2')), 'et le poste 2 n\'en a pas hérité');
   let s = await ouvrir('bureau-1');
   assert.equal(s.dossier, path.join(base, 'data', 'Marie'), 'Marie travaille dans son dossier');
-  await s.f.evaluate(() => localStorage.setItem('blonay-tampons', JSON.stringify([{ text: 'REÇU LE' }])));
+  await s.f.evaluate(() => localStorage.setItem('aktum-tampons', JSON.stringify([{ text: 'REÇU LE' }])));
   await refermer(s);
   dit('Marie : compte créé, ' + s.dossier + ', un tampon mémorisé');
 
   // La connexion tient : on rouvre sans rien redemander.
   s = await ouvrir('bureau-1');
-  assert.notEqual(await s.f.evaluate(() => localStorage.getItem('blonay-tampons')), null,
+  assert.notEqual(await s.f.evaluate(() => localStorage.getItem('aktum-tampons')), null,
     'Marie reste connectée et retrouve son tampon');
   await refermer(s);
   dit('Marie : toujours connectée, sans remettre son mot de passe');
@@ -179,7 +179,7 @@ const refermer = async (s) => { await s.e.close().catch(() => {}); await souffle
   await creer('bureau-2', 'Sophie', 'archives!7');
   s = await ouvrir('bureau-2');
   assert.equal(s.dossier, path.join(base, 'data', 'Sophie'), 'Sophie a son propre dossier');
-  assert.equal(await s.f.evaluate(() => localStorage.getItem('blonay-tampons')), null,
+  assert.equal(await s.f.evaluate(() => localStorage.getItem('aktum-tampons')), null,
     'Sophie ne voit pas le tampon de Marie');
   await refermer(s);
   dit('Sophie : compte créé, ' + s.dossier + ', et aucun tampon de Marie');

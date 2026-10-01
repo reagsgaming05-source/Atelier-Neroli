@@ -13,7 +13,7 @@ try { require('child_process').execFileSync(process.execPath, [path.join(__dirna
 // Date et commit de construction, affichés dans l'aide : on sait quelle
 // version on a sous la main.
 function commitCourt() {
-  const env = process.env.GITHUB_SHA || process.env.BLONAY_COMMIT || '';
+  const env = process.env.GITHUB_SHA || process.env.AKTUM_COMMIT || '';
   if (env) return env.slice(0, 7);
   try { return require('child_process').execSync('git rev-parse --short HEAD', { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch (e) { return ''; }
 }
@@ -30,7 +30,7 @@ src = src.replace("'__VERSION__'", () => JSON.stringify(VERSION));
 // Le canal : « stable » pour ce qui est livré aux postes, « candidate » pour ce qui sort d'une branche
 // de travail et doit d'abord être essayé. La construction qui publie le pose ; sans rien, c'est une
 // version de travail, donc candidate.
-const CANAL = process.env.BLONAY_CANAL === 'stable' ? 'stable' : 'candidate';
+const CANAL = process.env.AKTUM_CANAL === 'stable' ? 'stable' : 'candidate';
 // Les mentions des composants tiers : produites ici, depuis les licences des
 // paquets réellement embarqués, pour que le fichier livré ne vieillisse pas.
 fs.writeFileSync(path.join(__dirname, 'desktop', 'build', 'MENTIONS-TIERCES.txt'),
@@ -59,7 +59,7 @@ const csp = (extra, voisin) => '<meta http-equiv="Content-Security-Policy" conte
   + '">\n';
 
 // 1. version en ligne (composants chargés depuis les CDN)
-fs.writeFileSync(path.join(OUT, 'blonay-pdf.html'), HEAD + src + TAIL);
+fs.writeFileSync(path.join(OUT, 'aktum-pdf.html'), HEAD + src + TAIL);
 
 // 2. version hors ligne : les trois bibliothèques sont incluses dans le fichier
 // Une séquence <!-- ou </script dans le code fait dérailler l'analyseur HTML.
@@ -83,8 +83,8 @@ const tessCore = read('tesseract.js-core-7.0.0/tesseract-core-simd-lstm.wasm.js'
 const langue = code => fs.readFileSync(path.join(LIB, 'tesseract.js-data-' + code + '-1.0.0/4.0.0_best_int/' + code + '.traineddata.gz')).toString('base64');
 const cspOffline = csp(false, true);
 const inline = [
-  '<script id="blonay-worker" type="text/plain">\n' + worker + '\n</script>',
-  '<script>window.__blonayWorker = URL.createObjectURL(new Blob([document.getElementById("blonay-worker").textContent], { type: "text/javascript" }));</script>',
+  '<script id="aktum-worker" type="text/plain">\n' + worker + '\n</script>',
+  '<script>window.__aktumWorker = URL.createObjectURL(new Blob([document.getElementById("aktum-worker").textContent], { type: "text/javascript" }));</script>',
   '<script>' + read('pdfjs-dist-3.11.174/build/pdf.min.js') + '</script>',
   '<script>' + read('cantoo-pdf-lib-2.11.0/dist/pdf-lib.min.js') + '</script>',
   '<script>' + read('jszip-3.10.1/dist/jszip.min.js') + '</script>',
@@ -117,7 +117,7 @@ const adresses = (noFonts.match(/https?:\/\/[^\s"'<>)\\]+/g) || []).filter(u => 
 if (adresses.length) throw new Error('adresse réseau dans le code de l\'application livrée : ' + [...new Set(adresses)].join(', '));
 const offline = noFonts.replace('<script>\n(() => {', () => inline + '\n<script>\n(() => {');
 if (offline === src) throw new Error("point d'insertion introuvable");
-fs.writeFileSync(path.join(OUT, 'blonay-pdf-hors-ligne.html'),
+fs.writeFileSync(path.join(OUT, 'aktum-pdf-hors-ligne.html'),
   HEAD.replace('<meta charset="utf-8">\n', '<meta charset="utf-8">\n' + cspOffline) + offline + TAIL);
 
 // 3. version « installable » : même page, plus le manifeste et le cache hors
@@ -130,12 +130,12 @@ const SITE_HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n'
   + csp(true)
   + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
   + '<meta name="color-scheme" content="dark light">\n'
-  + '<title>Blonay PDF</title>\n'
+  + '<title>Aktum PDF</title>\n'
   + '<link rel="manifest" href="manifest.webmanifest">\n'
   + '<meta name="theme-color" content="#1B1E23">\n'
   + '<meta name="description" content="Organiser, annoter et protéger des PDF, directement sur votre ordinateur.">\n'
   + '<meta name="apple-mobile-web-app-capable" content="yes">\n'
-  + '<meta name="apple-mobile-web-app-title" content="Blonay PDF">\n'
+  + '<meta name="apple-mobile-web-app-title" content="Aktum PDF">\n'
   + '<link rel="apple-touch-icon" href="icon-192.png">\n'
   + '<link rel="icon" href="icon.svg">\n'
   + '</head>\n<body>\n';
@@ -146,7 +146,7 @@ const pwaTail = '\n<script>\n'
   + '</scr' + 'ipt>\n';
 // le titre et l'icône intégrée sont déjà dans l'en-tête ci-dessus
 const siteBody = offline
-  .replace('<title>Blonay PDF</title>\n', () => '')
+  .replace('<title>Aktum PDF</title>\n', () => '')
   .replace(/<link rel="icon" href="data:image\/svg\+xml;base64,[^"]*">\n/, '');
 fs.writeFileSync(path.join(SITE, 'index.html'), SITE_HEAD + siteBody + pwaTail + TAIL);
 
@@ -159,12 +159,12 @@ const APP_HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n'
   + csp(true, true)
   + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
   + '<meta name="color-scheme" content="dark light">\n'
-  + '<title>Blonay PDF</title>\n'
+  + '<title>Aktum PDF</title>\n'
   + '<link rel="icon" type="image/png" sizes="256x256" href="icon-256.png">\n'
   + '<link rel="icon" type="image/png" sizes="48x48" href="icon-48.png">\n'
   + '<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">\n'
   + '</head>\n<body>\n';
-fs.writeFileSync(path.join(APPDIR, 'blonay-pdf.html'), APP_HEAD + siteBody + TAIL);
+fs.writeFileSync(path.join(APPDIR, 'aktum-pdf.html'), APP_HEAD + siteBody + TAIL);
 for (const ic of ['icon-32.png', 'icon-48.png', 'icon-256.png']) {
   fs.copyFileSync(path.join(OUT, 'application', ic), path.join(APPDIR, ic));
 }
@@ -173,10 +173,10 @@ for (const ic of ['icon-32.png', 'icon-48.png', 'icon-256.png']) {
 //    hors ligne, à côté de ses deux lanceurs et de son mode d'emploi. Elle est
 //    produite ici et non recopiée à la main : une copie faite à la main reste
 //    à la version du jour où on l'a faite, et personne ne s'en aperçoit.
-fs.copyFileSync(path.join(OUT, 'blonay-pdf-hors-ligne.html'),
-  path.join(OUT, 'pour-les-collegues', 'blonay-pdf.html'));
+fs.copyFileSync(path.join(OUT, 'aktum-pdf-hors-ligne.html'),
+  path.join(OUT, 'pour-les-collegues', 'aktum-pdf.html'));
 
-for (const f of ['blonay-pdf.html', 'blonay-pdf-hors-ligne.html', '../docs/index.html',
-  'application/lanceur/blonay-pdf.html', 'pour-les-collegues/blonay-pdf.html']) {
+for (const f of ['aktum-pdf.html', 'aktum-pdf-hors-ligne.html', '../docs/index.html',
+  'application/lanceur/aktum-pdf.html', 'pour-les-collegues/aktum-pdf.html']) {
   console.log(f.replace('../', '').padEnd(34), (fs.statSync(path.join(OUT, f)).size / 1024 / 1024).toFixed(2) + ' Mo');
 }

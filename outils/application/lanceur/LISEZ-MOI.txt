@@ -1,15 +1,15 @@
-BLONAY PDF — version portable Windows
+AKTUM PDF — version portable Windows
 =====================================
 
 1. Décompressez le zip dans un dossier de votre choix (clé USB, Bureau,
    Documents…).
-2. Double-cliquez sur  Blonay PDF.exe  : la fenêtre de l'application s'ouvre.
+2. Double-cliquez sur  Aktum PDF.exe  : la fenêtre de l'application s'ouvre.
 3. Ouvrez vos PDF, travaillez, puis « Exporter le PDF ».
 
 Aucune installation : l'application tient dans ce dossier, rien n'est écrit
 dans le registre ni dans Program Files, aucun navigateur n'est sollicité.
-Ses réglages vont dans le dossier de l'utilisateur (AppData\Local\Blonay PDF)
-— jamais dans un dossier synchronisé — et le journal blonay.log s'écrit à
+Ses réglages vont dans le dossier de l'utilisateur (AppData\Local\Aktum PDF)
+— jamais dans un dossier synchronisé — et le journal aktum.log s'écrit à
 côté de l'exécutable, en cas de problème. Il ne note que ce que fait
 l'application, jamais le nom ni le contenu d'un document.
 
@@ -18,7 +18,7 @@ POUR QUE TOUT S'OUVRE SANS AVERTISSEMENT
 1. Avant de décompresser : clic droit sur le fichier ZIP, Propriétés,
    cochez « Débloquer » en bas, puis OK.
 2. Décompressez le dossier où vous voulez.
-3. Double-cliquez sur  Blonay PDF.exe
+3. Double-cliquez sur  Aktum PDF.exe
 
 L'étape 1 retire la marque « fichier venu d'internet ». Sans elle, Windows
 affiche « Windows a protégé votre ordinateur » au premier lancement : ce n'est
@@ -28,7 +28,7 @@ quand même. Il ne revient plus ensuite.
 
 UNE VRAIE FENÊTRE D'APPLICATION
 -------------------------------
-Blonay PDF.exe ouvre sa propre fenêtre Windows — son icône, son nom, sans
+Aktum PDF.exe ouvre sa propre fenêtre Windows — son icône, son nom, sans
 onglet, sans barre d'adresse, sans navigateur dans la barre des tâches. Rien
 n'est installé : l'application utilise le moteur d'affichage WebView2 livré
 avec Windows 10 et 11.
@@ -54,14 +54,14 @@ la fenêtre déjà ouverte, comme n'importe quelle application.
 Si vous aviez déjà épinglé le .exe : clic droit dessus, « Détacher de la barre
 des tâches ».
 
-Un second double-clic sur Blonay PDF.exe ne crée pas non plus de seconde
+Un second double-clic sur Aktum PDF.exe ne crée pas non plus de seconde
 fenêtre : il ramène celle qui est ouverte.
 
 OUVRIR LES PDF EN DOUBLE-CLIQUANT DESSUS
 -----------------------------------------
-Pour que tous les PDF s'ouvrent avec Blonay PDF : clic droit sur un fichier
+Pour que tous les PDF s'ouvrent avec Aktum PDF : clic droit sur un fichier
 PDF, « Ouvrir avec », « Choisir une autre application », puis « Rechercher une
-autre application sur ce PC » et désignez  Blonay PDF.exe . Cochez « Toujours »
+autre application sur ce PC » et désignez  Aktum PDF.exe . Cochez « Toujours »
 pour en faire le programme par défaut.
 
 Un double-clic sur un PDF ouvre alors ce document, directement et dans sa

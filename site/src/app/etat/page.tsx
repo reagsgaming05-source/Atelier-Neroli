@@ -7,7 +7,7 @@ import { getPlanBySlug } from "@/lib/subscriptions";
 const segment = segmentBySlug("etat")!;
 
 export const metadata: Metadata = {
-  title: "Blonay PDF pour l'État et les cantons",
+  title: "Aktum PDF pour l'État et les cantons",
   description: segment.lede,
 };
 

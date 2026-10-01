@@ -72,7 +72,22 @@
   }
   // Le journal de la session pour le rapport de diagnostic de l'application de bureau : des
   // copies, jamais l'objet vivant. Le rapport le nettoie avant de le montrer (desktop/diagnostic.js).
-  window.blonayDiagnostic = () => journal.map(j => ({ quand: j.quand.getTime(), niveau: j.niveau, contexte: j.contexte, msg: j.msg, fois: j.fois || 1 }));
+  window.aktumDiagnostic = () => journal.map(j => ({ quand: j.quand.getTime(), niveau: j.niveau, contexte: j.contexte, msg: j.msg, fois: j.fois || 1 }));
+  // Les réglages que l'on refait à chaque document (le texte d'un filigrane, la
+  // forme d'une numérotation) : gardés dans ce poste, jamais envoyés ailleurs.
+  // Une valeur illisible ou d'une autre forme est ignorée, jamais fatale.
+  function reglageLire(nom) {
+    try {
+      const v = JSON.parse(localStorage.getItem('aktum-reglage-' + nom) || 'null');
+      return v && typeof v === 'object' && !Array.isArray(v) ? v : null;
+    } catch (e) { signaler('Réglage mémorisé (' + nom + ')', e, 'info'); return null; }
+  }
+  function reglageEcrire(nom, valeur) {
+    try {
+      if (valeur == null) localStorage.removeItem('aktum-reglage-' + nom);
+      else localStorage.setItem('aktum-reglage-' + nom, JSON.stringify(valeur));
+    } catch (e) { signaler('Réglage mémorisé (' + nom + ')', e, 'info'); }
+  }
   // Le nombre d'avis qui comptent (hors information), répétitions comprises : de
   // quoi savoir si une opération en a ajouté, même un avis déjà vu.
   const avisGraves = () => journal.reduce((t, j) => (j.niveau !== 'info' ? t + (j.fois || 1) : t), 0);

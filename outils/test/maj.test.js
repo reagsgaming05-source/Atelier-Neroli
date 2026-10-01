@@ -18,7 +18,7 @@ const {
   poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons, FRAICHEUR,
 } = require('../desktop/version-posee.js');
 
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-maj-'));
+const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-maj-'));
 const VERSION = { construction: 'construite le 22.09.2026, commit abc1234', commit: 'abc1234', date: '2026-09-22T08:00:00.000Z' };
 const poser = (dossier, nom, octets) => {
   const c = path.join(dossier, nom);
@@ -30,20 +30,20 @@ const poser = (dossier, nom, octets) => {
 // ---------------------------------------------------------------- lire le zip
 test('la fiche de version se lit à la racine du zip', () => {
   const d = tmp();
-  const z = poser(d, 'BlonayPDF-windows.zip', zipDe([
-    { nom: 'BlonayPDF.exe', contenu: 'MZ...' },
+  const z = poser(d, 'AktumPDF-windows.zip', zipDe([
+    { nom: 'AktumPDF.exe', contenu: 'MZ...' },
     { nom: 'version.json', contenu: JSON.stringify(VERSION) },
   ]));
   assert.deepEqual(ficheDuZip(z), VERSION);
 });
 
 test('elle se lit aussi dans le dossier que porte le zip', () => {
-  // C'est la forme que produit Windows : « Compress-Archive -Path dist\BlonayPDF »
+  // C'est la forme que produit Windows : « Compress-Archive -Path dist\AktumPDF »
   // range tout sous un dossier du même nom.
   const d = tmp();
   const z = poser(d, 'a.zip', zipDe([
-    { nom: 'BlonayPDF/LISEZMOI.md', contenu: '# titre' },
-    { nom: 'BlonayPDF/version.json', contenu: JSON.stringify(VERSION) },
+    { nom: 'AktumPDF/LISEZMOI.md', contenu: '# titre' },
+    { nom: 'AktumPDF/version.json', contenu: JSON.stringify(VERSION) },
   ]));
   assert.deepEqual(ficheDuZip(z), VERSION);
 });
@@ -70,7 +70,7 @@ test('une archive qui range ses tailles après les données se lit quand même',
 
 test('un zip sans fiche, un fichier qui n\'est pas un zip, un zip tronqué : rien, sans lever', () => {
   const d = tmp();
-  assert.equal(ficheDuZip(poser(d, 'sans.zip', zipDe([{ nom: 'BlonayPDF.exe', contenu: 'MZ' }]))), null);
+  assert.equal(ficheDuZip(poser(d, 'sans.zip', zipDe([{ nom: 'AktumPDF.exe', contenu: 'MZ' }]))), null);
   assert.equal(ficheDuZip(poser(d, 'faux.zip', Buffer.from('ceci n\'est pas une archive'))), null);
   const entier = zipDe([{ nom: 'version.json', contenu: JSON.stringify(VERSION) }]);
   assert.equal(ficheDuZip(poser(d, 'coupe.zip', entier.subarray(0, entier.length - 40))), null);
@@ -105,13 +105,13 @@ test('le même commit reconstruit ne se propose pas', () => {
 // ---------------------------------------------------------------- chercher
 test('le zip est cherché à côté de l\'exécutable et dans « maj »', () => {
   const d = tmp();
-  poser(d, 'BlonayPDF-windows.zip', Buffer.alloc(4));
-  poser(d, 'BlonayPDF-windows (1).ZIP', Buffer.alloc(4));
+  poser(d, 'AktumPDF-windows.zip', Buffer.alloc(4));
+  poser(d, 'AktumPDF-windows (1).ZIP', Buffer.alloc(4));
   poser(d, 'autre-chose.zip', Buffer.alloc(4));
-  poser(d, 'BlonayPDF.exe', Buffer.alloc(4));
-  poser(d, path.join('maj', 'BlonayPDF-windows.zip'), Buffer.alloc(4));
+  poser(d, 'AktumPDF.exe', Buffer.alloc(4));
+  poser(d, path.join('maj', 'AktumPDF-windows.zip'), Buffer.alloc(4));
   const trouves = zipsPoses(d).map((c) => path.basename(c)).sort();
-  assert.deepEqual(trouves, ['BlonayPDF-windows (1).ZIP', 'BlonayPDF-windows.zip', 'BlonayPDF-windows.zip']);
+  assert.deepEqual(trouves, ['AktumPDF-windows (1).ZIP', 'AktumPDF-windows.zip', 'AktumPDF-windows.zip']);
   assert.deepEqual(zipsPoses(path.join(d, 'nulle-part')), [], 'un dossier absent ne fait pas tomber');
 });
 
@@ -119,12 +119,12 @@ test('entre plusieurs zips posés, c\'est la version la plus récente qui est re
   const d = tmp();
   const installee = { commit: 'aaa1111', date: '2026-09-01T10:00:00.000Z' };
   const fiche = (commit, date) => JSON.stringify({ construction: 'commit ' + commit, commit, date });
-  poser(d, 'BlonayPDF-aout.zip', zipDe([{ nom: 'version.json', contenu: fiche('bbb2222', '2026-08-01T10:00:00.000Z') }]));
-  poser(d, 'BlonayPDF-sept.zip', zipDe([{ nom: 'version.json', contenu: fiche('ccc3333', '2026-09-10T10:00:00.000Z') }]));
-  poser(d, 'BlonayPDF-oct.zip', zipDe([{ nom: 'version.json', contenu: fiche('ddd4444', '2026-10-05T10:00:00.000Z') }]));
+  poser(d, 'AktumPDF-aout.zip', zipDe([{ nom: 'version.json', contenu: fiche('bbb2222', '2026-08-01T10:00:00.000Z') }]));
+  poser(d, 'AktumPDF-sept.zip', zipDe([{ nom: 'version.json', contenu: fiche('ccc3333', '2026-09-10T10:00:00.000Z') }]));
+  poser(d, 'AktumPDF-oct.zip', zipDe([{ nom: 'version.json', contenu: fiche('ddd4444', '2026-10-05T10:00:00.000Z') }]));
   const trouvee = miseAJourPosee(d, installee);
   assert.equal(trouvee.version.commit, 'ddd4444');
-  assert.equal(path.basename(trouvee.zip), 'BlonayPDF-oct.zip');
+  assert.equal(path.basename(trouvee.zip), 'AktumPDF-oct.zip');
   assert.equal(miseAJourPosee(d, { commit: 'zzz9999', date: '2026-12-01T10:00:00.000Z' }), null,
     'rien à proposer quand ce qui tourne est plus récent que tout ce qui traîne');
 });

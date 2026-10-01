@@ -17,12 +17,12 @@ import * as schema from "./schema";
  * `@libsql/client` parle le même langage aux deux : une URL en « libsql:// »
  * avec un jeton, et tout le reste du code est identique.
  *
- *   DATABASE_URL=file:./data/blonay-pdf.db        (local, par défaut)
+ *   DATABASE_URL=file:./data/aktum-pdf.db        (local, par défaut)
  *   DATABASE_URL=libsql://xxx.turso.io            (en ligne)
  *   DATABASE_AUTH_TOKEN=…                         (en ligne)
  */
 
-export const DATABASE_URL = process.env.DATABASE_URL ?? "file:./data/blonay-pdf.db";
+export const DATABASE_URL = process.env.DATABASE_URL ?? "file:./data/aktum-pdf.db";
 const AUTH_TOKEN = process.env.DATABASE_AUTH_TOKEN || undefined;
 
 const estUnFichier = DATABASE_URL.startsWith("file:");
@@ -47,12 +47,12 @@ if (estUnFichier && SANS_DISQUE) {
       "DATABASE_AUTH_TOKEN sur une base libsql distante — voir README, « Mettre en ligne sur Vercel ».",
   );
 }
-if (estUnFichier && process.env.NODE_ENV === "production" && !process.env.BLONAY_FICHIER_EN_PROD) {
+if (estUnFichier && process.env.NODE_ENV === "production" && !process.env.AKTUM_FICHIER_EN_PROD) {
   // Hébergement sur une machine à soi : c'est légitime, mais autant que ce
   // soit un choix et non un oubli.
   console.warn(
     "⚠ Base de données dans un fichier avec NODE_ENV=production. Correct si vous hébergez sur une machine " +
-      "à disque ; posez BLONAY_FICHIER_EN_PROD=1 pour ne plus voir cet avertissement.",
+      "à disque ; posez AKTUM_FICHIER_EN_PROD=1 pour ne plus voir cet avertissement.",
   );
 }
 

@@ -100,7 +100,7 @@
     // La fenêtre de l'application remet le document directement, avant le
     // premier script de la page : rien à charger.
     let liste = null;
-    if (Array.isArray(window.__blonayOuvrir)) { liste = window.__blonayOuvrir; delete window.__blonayOuvrir; }
+    if (Array.isArray(window.__aktumOuvrir)) { liste = window.__aktumOuvrir; delete window.__aktumOuvrir; }
     const nom = fichierDemande();
     if (!liste && !nom) return false;
     if (nom) {
@@ -112,7 +112,7 @@
     if (!liste) liste = await new Promise(resolve => {
       const s = document.createElement('script');
       s.src = nom;
-      s.onload = () => { const l = window.__blonayOuvrir; delete window.__blonayOuvrir; s.remove(); resolve(Array.isArray(l) ? l : null); };
+      s.onload = () => { const l = window.__aktumOuvrir; delete window.__aktumOuvrir; s.remove(); resolve(Array.isArray(l) ? l : null); };
       s.onerror = () => { s.remove(); resolve(null); };
       document.head.appendChild(s);
     });
@@ -162,7 +162,7 @@
     el.btnTheme.replaceChildren(icon(mode === 'light' ? IC.sun : mode === 'dark' ? IC.moon : IC.auto));
     el.btnTheme.title = 'Thème : ' + (mode === 'light' ? 'clair' : mode === 'dark' ? 'sombre' : 'automatique');
     el.btnTheme.setAttribute('aria-label', el.btnTheme.title);
-    try { localStorage.setItem('blonay-theme', mode); } catch (e) { signaler('Préférence de thème', e, 'info'); }
+    try { localStorage.setItem('aktum-theme', mode); } catch (e) { signaler('Préférence de thème', e, 'info'); }
   }
 
   // =====================================================================
@@ -197,7 +197,7 @@
     ongletActif = onglets[0].id;
 
     let theme = 'light';
-    try { theme = localStorage.getItem('blonay-theme') || 'light'; } catch (e) { signaler('Préférence de thème', e, 'info'); }
+    try { theme = localStorage.getItem('aktum-theme') || 'light'; } catch (e) { signaler('Préférence de thème', e, 'info'); }
     applyTheme(theme);
     el.btnTheme.addEventListener('click', () => {
       theme = theme === 'light' ? 'dark' : theme === 'dark' ? 'auto' : 'light';
@@ -228,10 +228,10 @@
       btnReplier.setAttribute('aria-expanded', replie ? 'false' : 'true');
       btnReplier.title = (replie ? 'Déplier' : 'Replier') + ' le panneau (Ctrl+Maj+B)';
       btnReplier.setAttribute('aria-label', btnReplier.title);
-      try { localStorage.setItem('blonay-panneau-replie', replie ? '1' : ''); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
+      try { localStorage.setItem('aktum-panneau-replie', replie ? '1' : ''); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
       planifierAjustementBarre();
     };
-    try { if (localStorage.getItem('blonay-panneau-replie')) poserLeRepli(true); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
+    try { if (localStorage.getItem('aktum-panneau-replie')) poserLeRepli(true); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
     btnReplier.addEventListener('click', () => poserLeRepli(!espace.classList.contains('replie')));
     window.addEventListener('keydown', e => {
       if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || (e.key || '').toLowerCase() !== 'b') return;
@@ -271,16 +271,16 @@
     el.btnPrint.addEventListener('click', dialogImprimer);
 
     // --- lecture ou table de montage
-    try { const v = localStorage.getItem('blonay-vue'); if (v === 'organiser' || v === 'lecture') state.vue = v; } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
+    try { const v = localStorage.getItem('aktum-vue'); if (v === 'organiser' || v === 'lecture') state.vue = v; } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
     $$('.vue-mode').forEach(b => b.addEventListener('click', () => changerVue(b.dataset.vue)));
     const NIVEAUX = ['page', 'largeur', '0.5', '0.75', '1', '1.25', '1.5', '2', '3', '4'];
     const poserZoom = v => {
       state.zoomLecture = v;
       el.zoomNiveau.value = v;
-      try { localStorage.setItem('blonay-zoom-lecture', v); } catch (e) { signaler('Préférence de zoom', e, 'info'); }
+      try { localStorage.setItem('aktum-zoom-lecture', v); } catch (e) { signaler('Préférence de zoom', e, 'info'); }
       if (state.vue === 'lecture') lectureRendu();
     };
-    try { const z = localStorage.getItem('blonay-zoom-lecture'); if (z && NIVEAUX.indexOf(z) >= 0) state.zoomLecture = z; } catch (e) { signaler('Préférence de zoom', e, 'info'); }
+    try { const z = localStorage.getItem('aktum-zoom-lecture'); if (z && NIVEAUX.indexOf(z) >= 0) state.zoomLecture = z; } catch (e) { signaler('Préférence de zoom', e, 'info'); }
     el.zoomNiveau.value = state.zoomLecture;
     el.zoomNiveau.addEventListener('change', () => poserZoom(el.zoomNiveau.value));
     // Les deux boutons parcourent la liste, en partant du niveau réellement
@@ -300,10 +300,10 @@
     const poserDispo = v => {
       state.dispo = v === 'deux' ? 'deux' : 'une';
       el.vueDeux.setAttribute('aria-pressed', state.dispo === 'deux' ? 'true' : 'false');
-      try { localStorage.setItem('blonay-dispo', state.dispo); } catch (e) { signaler('Préférence de disposition', e, 'info'); }
+      try { localStorage.setItem('aktum-dispo', state.dispo); } catch (e) { signaler('Préférence de disposition', e, 'info'); }
       if (state.vue === 'lecture' && state.pages.length) lectureRendu();
     };
-    try { if (localStorage.getItem('blonay-dispo') === 'deux') { state.dispo = 'deux'; el.vueDeux.setAttribute('aria-pressed', 'true'); } } catch (e) { signaler('Préférence de disposition', e, 'info'); }
+    try { if (localStorage.getItem('aktum-dispo') === 'deux') { state.dispo = 'deux'; el.vueDeux.setAttribute('aria-pressed', 'true'); } } catch (e) { signaler('Préférence de disposition', e, 'info'); }
     el.vueDeux.addEventListener('click', () => poserDispo(state.dispo === 'deux' ? 'une' : 'deux'));
     el.btnSignet.addEventListener('click', () => ajouterSignet());
     // Ctrl + molette zoome le document, pas la page entière du navigateur.
@@ -357,7 +357,7 @@
 
     el.zoom.addEventListener('input', () => {
       document.documentElement.style.setProperty('--tuile', el.zoom.value + 'px');
-      try { localStorage.setItem('blonay-zoom', el.zoom.value); } catch (e) { signaler('Préférence de zoom', e, 'info'); }
+      try { localStorage.setItem('aktum-zoom', el.zoom.value); } catch (e) { signaler('Préférence de zoom', e, 'info'); }
     });
     // Sans réglage retenu, la taille des vignettes se déduit de la place : sur
     // un grand écran, quatre pages occupaient le coin supérieur gauche d'une
@@ -372,7 +372,7 @@
       return Math.max(120, Math.min(300, large));
     }
     try {
-      const z = localStorage.getItem('blonay-zoom');
+      const z = localStorage.getItem('aktum-zoom');
       if (z && +z >= 120 && +z <= 300) { el.zoom.value = z; document.documentElement.style.setProperty('--tuile', z + 'px'); }
       else {
         const t = tuilesALaPlace();
@@ -459,7 +459,7 @@
       if (!state.selected.has(id)) { state.selected.clear(); state.selected.add(id); state.anchor = id; updateSelectionUI(); }
       drag.ids = selectedInOrder();
       e.dataTransfer.effectAllowed = 'move';
-      try { e.dataTransfer.setData('text/plain', 'blonay-pages'); } catch (e) { signaler('Glisser-déposer', e, 'info'); }
+      try { e.dataTransfer.setData('text/plain', 'aktum-pages'); } catch (e) { signaler('Glisser-déposer', e, 'info'); }
       requestAnimationFrame(() => drag.ids.forEach(i => { const x = tiles.get(i); if (x) x.classList.add('dragging'); }));
     });
     el.canvas.addEventListener('dragover', e => {
@@ -591,16 +591,16 @@
     state.impressionDirecte = optionLancement('impression') === 'directe';
     // La fenêtre de l'application ne se ferme pas d'un coup : elle demande
     // ici. Rien à défendre, on part ; sinon, la question, et la réponse
-    // repart par blonayQuitter(true) pour partir, (false) pour rester.
-    window.__blonayFermer = () => {
-      const quitter = oui => { try { if (typeof window.blonayQuitter === 'function') window.blonayQuitter(!!oui); } catch (e) { signaler('Fermeture de l\'application', e); } };
+    // repart par aktumQuitter(true) pour partir, (false) pour rester.
+    window.__aktumFermer = () => {
+      const quitter = oui => { try { if (typeof window.aktumQuitter === 'function') window.aktumQuitter(!!oui); } catch (e) { signaler('Fermeture de l\'application', e); } };
       // Partir pour de bon : le travail mis de côté pour la récupération
       // n'a plus lieu d'être — sans attendre plus d'une seconde et demie.
       const partir = () => { const fin = () => quitter(true); Promise.race([recupToutOublier(), new Promise(r => setTimeout(r, 1500))]).then(fin, fin); };
       if (!modifieQuelquePart()) { partir(); return; }
       let decide = false;
       dialog({
-        title: 'Quitter Blonay PDF', icon: IC.info,
+        title: 'Quitter Aktum PDF', icon: IC.info,
         build: b => { b.append(note('Des modifications n\'ont pas été enregistrées. En quittant maintenant, vous les perdez.', 'warn')); },
         onClose: () => { if (!decide) quitter(false); },
         actions: [
@@ -610,9 +610,9 @@
       });
     };
     // La fenêtre de l'application (Electron) parle à la page par
-    // window.BlonayDesktop : les documents reçus, les commandes de son menu,
+    // window.AktumDesktop : les documents reçus, les commandes de son menu,
     // le résultat d'un enregistrement.
-    const bureau = window.BlonayDesktop || null;
+    const bureau = window.AktumDesktop || null;
     state.bureau = !!bureau;
     if (bureau) {
       const commandeBureau = nom => {

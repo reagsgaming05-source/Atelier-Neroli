@@ -7,7 +7,7 @@ import { securityPoints, site } from "@/content/site";
 export const metadata: Metadata = {
   title: "Sécurité et confidentialité",
   description:
-    "Blonay PDF traite les documents sur le poste, sans connexion : rien n'est envoyé, rien n'est hébergé. Ce que cela garantit, ce que cela ne garantit pas, et comment le vérifier.",
+    "Aktum PDF traite les documents sur le poste, sans connexion : rien n'est envoyé, rien n'est hébergé. Ce que cela garantit, ce que cela ne garantit pas, et comment le vérifier.",
 };
 
 const icons = { server: Server, lock: Lock, key: KeyRound, monitor: Monitor } as const;

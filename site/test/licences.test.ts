@@ -24,7 +24,7 @@ function emettre(args: string[], dossierCles: string) {
   const sortie = fs.mkdtempSync(path.join(os.tmpdir(), "licence-site-"));
   execFileSync(process.execPath, [path.join(outils, "editeur", "emettre-licence.js"), ...args, "--cle", path.join(dossierCles, "licence-essai.pem")], {
     cwd: sortie,
-    env: { ...process.env, BLONAY_CLES_PUBLIQUES_ESSAI: fs.readFileSync(path.join(dossierCles, "publiques.json"), "utf8") },
+    env: { ...process.env, AKTUM_CLES_PUBLIQUES_ESSAI: fs.readFileSync(path.join(dossierCles, "publiques.json"), "utf8") },
     stdio: "pipe",
   });
   const f = fs.readdirSync(sortie).find((n) => n.endsWith(".licence.json"))!;

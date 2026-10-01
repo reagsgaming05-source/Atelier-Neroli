@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<title>Blonay PDF — mode d'emploi</title>
+<title>Aktum PDF — mode d'emploi</title>
 <style>
   /* Un document qui s'imprime : A4, marges généreuses, rien de décoratif qui
      coûte de l'encre. Les polices sont celles du poste — aucune n'est allée
@@ -120,14 +120,14 @@
 
 <!-- =================================================== couverture -->
 <section class="couverture">
-  <svg class="marque" viewBox="0 0 26 26" role="img" aria-label="Blonay PDF">
+  <svg class="marque" viewBox="0 0 26 26" role="img" aria-label="Aktum PDF">
     <rect width="26" height="26" rx="7" fill="#D4322A"/>
     <path d="M7.2 4.4h7l4.6 4.6v13H7.2z" fill="#FBFAF7"/>
     <path d="M14.2 4.4v4.6h4.6z" fill="#F2705C"/>
     <path d="M9.4 4.4h3.6v9.6l-1.8-1.7-1.8 1.7z" fill="#AF1C14"/>
     <path d="M9.4 16.8h7M9.4 19.2h4.4" stroke="#AF1C14" stroke-width="1.45" stroke-linecap="round"/>
   </svg>
-  <h1>Blonay PDF</h1>
+  <h1>Aktum PDF</h1>
   <p class="sous">Mode d'emploi du greffe</p>
   <div class="barre"></div>
   <p class="quoi">
@@ -170,7 +170,7 @@
 
 <h3>Créer son compte</h3>
 <ol class="etapes">
-  <li>Double-cliquez sur le raccourci <strong>Blonay PDF</strong>.</li>
+  <li>Double-cliquez sur le raccourci <strong>Aktum PDF</strong>.</li>
   <li>La fenêtre de connexion s'ouvre. Écrivez votre <strong>prénom et nom</strong>, puis choisissez un <strong>mot de passe</strong> — huit caractères au minimum, et pas l'un de ceux qu'on essaie en premier, comme « 12345678 » — et répétez-le.</li>
   <li>Cliquez sur <strong>Créer mon compte</strong>. L'application montre alors, <strong>une seule fois</strong>, votre <strong>code de récupération</strong> : notez-le sur papier, ailleurs que sur ce poste, cochez « J'ai noté ce code », puis continuez.</li>
   <li>L'application redémarre une fois, toute seule, puis s'ouvre sur votre espace.</li>
@@ -354,6 +354,7 @@
   <li><strong>Cliquez</strong> pour sélectionner, <kbd>Maj</kbd> + clic pour une plage, <kbd>Ctrl</kbd> + <kbd>A</kbd> pour tout.</li>
   <li><kbd>R</kbd> pivote à droite, <kbd>Maj</kbd> + <kbd>R</kbd> à gauche, <kbd>Suppr</kbd> retire.</li>
   <li><strong>Clic droit</strong> sur une page : pivoter, modifier, poser un signet, copier le texte, dupliquer, extraire, supprimer.</li>
+  <li><strong>Par leurs numéros</strong> : l'outil <em>Sélectionner par numéros</em> (famille <em>Pages</em>) comprend « 3-7, 12 », « 5- » (de la 5 à la fin), « -3 » (jusqu'à la 3) et « fin ». Il dit, avant de sélectionner, ce qu'il a compris, ce qui est hors du document et ce qu'il n'a pas compris. La même écriture vaut pour l'impression et pour la division.</li>
 </ul>
 
 <figure>
@@ -439,7 +440,10 @@
 </ul>
 
 <h3>Imprimer</h3>
-<p><strong>Imprimer</strong> (<kbd>Ctrl</kbd> + <kbd>P</kbd>) envoie directement à l'imprimante, sans passer par une autre fenêtre. La qualité se choisit : fine (300 ppp), normale (200) ou rapide (150). L'impression en livret est disponible.</p>
+<p><strong>Imprimer</strong> (<kbd>Ctrl</kbd> + <kbd>P</kbd>) envoie directement à l'imprimante, sans passer par une autre fenêtre. La qualité se choisit : fine (300 ppp), normale (200) ou rapide (150). L'impression en livret est disponible. Pour n'imprimer que certaines pages, choisissez <em>Pages</em> et écrivez « 2-3, 5 » : un numéro qui n'existe pas dans le document ne désigne rien, et l'application le dit plutôt que d'imprimer une autre page.</p>
+
+<h3>Filigrane, en-tête, numérotation : on ne les retape pas</h3>
+<p>Le dernier filigrane appliqué, la dernière numérotation et le dernier en-tête sont gardés sur ce poste, et reviennent tels quels dans le document suivant — le même « CONFIDENTIEL », la même forme « Page 1 sur 8 », la même police de l'en-tête de la commune. Seul le premier numéro repart toujours de 1. Le bouton <em>Réglages d'origine</em> de chaque fenêtre les oublie. Ces réglages ne quittent pas le poste.</p>
 </section>
 
 <!-- =================================================== 10 -->
@@ -465,6 +469,15 @@
 
 <h3>Formulaires</h3>
 <p>Les champs d'un PDF de formulaire — texte, cases à cocher, listes, boutons — sont détectés et remplissables dans l'application. Les valeurs peuvent rester modifiables, ou être figées. Si les pages sont réorganisées ou fusionnées, elles sont figées automatiquement, faute de quoi la saisie serait perdue.</p>
+
+<h3>Remplir en série, depuis un tableau</h3>
+<p>Convocations, attestations, bulletins d'inscription : l'outil <strong>Remplir en série (CSV)</strong> (famille <em>Formulaires</em>) fait une copie du formulaire par ligne d'un tableau. Enregistrez le tableau d'Excel en <em>CSV</em>, avec une première ligne d'en-têtes ; choisissez-le ; l'application relie d'elle-même chaque champ à la colonne de même nom, et vous corrigez ce qui ne l'est pas. Les copies sortent en <strong>un fichier par ligne</strong> (réunis dans une archive ZIP, nommés par exemple « {Nom}-{Prénom} ») ou en <strong>un seul PDF</strong>.</p>
+<ul class="points">
+  <li>Une case se coche avec « oui », « x », « 1 », « vrai » ; elle se décoche avec « non », « 0 », « faux » ou une cellule vide.</li>
+  <li>Une valeur que l'application ne comprend pas (une case à « peut-être », un choix de liste qui n'existe pas) est <strong>signalée avant la production</strong>, avec le numéro de ligne, la colonne et le champ : le champ reste alors comme dans le modèle, il n'est jamais inventé.</li>
+  <li>Les champs que vous avez déjà remplis à la main servent de base à chaque copie ; la ligne du tableau ne remplace que ce qu'elle relie.</li>
+  <li>Le tableau est lu sur le poste, comme tout le reste : rien ne part ailleurs. Un fichier CSV ancien, en Windows-1252, garde ses accents.</li>
+</ul>
 </section>
 
 <!-- =================================================== 11 -->

@@ -9,10 +9,10 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const FICHIER = path.join(__dirname, '..', 'blonay-pdf-hors-ligne.html');
+const FICHIER = path.join(__dirname, '..', 'aktum-pdf-hors-ligne.html');
 // La page construite n'est pas dans le dépôt : elle se refait depuis la source.
 if (!fs.existsSync(FICHIER)) {
-  throw new Error('outils/blonay-pdf-hors-ligne.html manque.\n'
+  throw new Error('outils/aktum-pdf-hors-ligne.html manque.\n'
     + 'La suite teste la page construite, qui n\'est pas versionnée : lancez\n'
     + '  cd outils && npm ci && npm run libs && npm run build');
 }

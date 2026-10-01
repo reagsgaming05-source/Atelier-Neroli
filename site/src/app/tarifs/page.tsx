@@ -14,7 +14,7 @@ import { listActivePlans } from "@/lib/subscriptions";
 
 export const metadata: Metadata = {
   title: "Tarifs",
-  description: "Formules Blonay PDF pour une personne, un secrétariat, une administration ou plusieurs entités. Mensuel ou annuel, sans engagement, facturation sur bon de commande.",
+  description: "Formules Aktum PDF pour une personne, un secrétariat, une administration ou plusieurs entités. Mensuel ou annuel, sans engagement, facturation sur bon de commande.",
 };
 
 const included = [

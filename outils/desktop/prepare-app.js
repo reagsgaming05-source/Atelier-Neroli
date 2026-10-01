@@ -1,14 +1,14 @@
-// Copie la page autonome hors ligne (../blonay-pdf-hors-ligne.html, produite par
+// Copie la page autonome hors ligne (../aktum-pdf-hors-ligne.html, produite par
 // `npm run build` dans outils/) dans desktop/app/, d'où Electron la charge.
 const fs = require('fs');
 const path = require('path');
-const src = path.join(__dirname, '..', 'blonay-pdf-hors-ligne.html');
+const src = path.join(__dirname, '..', 'aktum-pdf-hors-ligne.html');
 if (!fs.existsSync(src)) {
-  console.error('blonay-pdf-hors-ligne.html introuvable : lancez d\'abord `npm run build` dans outils/');
+  console.error('aktum-pdf-hors-ligne.html introuvable : lancez d\'abord `npm run build` dans outils/');
   process.exit(1);
 }
 const html = fs.readFileSync(src, 'utf8');
-for (const attendu of ['BlonayDesktop', 'ouvrirListe', 'pdfjsLib']) {
+for (const attendu of ['AktumDesktop', 'ouvrirListe', 'pdfjsLib']) {
   if (!html.includes(attendu)) { console.error('page incomplète : « ' + attendu + ' » manque'); process.exit(1); }
 }
 fs.mkdirSync(path.join(__dirname, 'app'), { recursive: true });

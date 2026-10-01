@@ -8,7 +8,7 @@ import { formatCHF } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Fonctionnalités",
-  description: "Constituer un dossier de pièces, réorganiser, fusionner, corriger, annoter, reconnaître le texte, caviarder, protéger : les vingt-six outils de Blonay PDF, et ce qu'ils ne font pas.",
+  description: "Constituer un dossier de pièces, réorganiser, fusionner, corriger, annoter, reconnaître le texte, caviarder, protéger : les vingt-six outils d’Aktum PDF, et ce qu'ils ne font pas.",
 };
 
 export default function FonctionnalitesPage() {

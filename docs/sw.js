@@ -1,5 +1,5 @@
 // Met l'application en cache pour qu'elle fonctionne sans connexion.
-const CACHE = 'blonay-pdf-v1';
+const CACHE = 'aktum-pdf-v1';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon.svg'];
 
 self.addEventListener('install', e => {

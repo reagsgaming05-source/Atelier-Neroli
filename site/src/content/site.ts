@@ -1,5 +1,5 @@
 /**
- * Contenu éditorial du site Blonay PDF.
+ * Contenu éditorial du site Aktum PDF.
  *
  * Règle de rédaction : une phrase n'entre ici que si elle se vérifie dans le
  * logiciel livré. Le test `test/affirmations.test.ts` garde une liste de
@@ -12,12 +12,12 @@
 import { adresseConnue, editeur } from "@/content/editeur";
 
 export const site = {
-  name: "Blonay PDF",
+  name: "Aktum PDF",
   /** Tant que l'éditeur n'est pas renseigné, on ne lui invente aucun nom. */
   legalName: editeur.nom || "L'éditeur",
   tagline: "Tout le travail PDF d'un secrétariat, sans qu'un document sorte",
   description:
-    "Blonay PDF est un logiciel PDF complet pour un secrétariat communal ou scolaire suisse. Vingt-six outils : lire, réorganiser, fusionner, corriger le texte dans le PDF, annoter, caviarder, reconnaître le texte d'un scan en français et en allemand, recopier un tableau dans Excel, comparer deux versions, constituer un dossier de pièces avec intercalaires, pagination continue et sommaire, imprimer en livret. Il se décompresse dans un dossier et se lance par double-clic : rien à installer, aucun droit administrateur. Il n'ouvre aucune connexion pour traiter un document.",
+    "Aktum PDF est un logiciel PDF complet pour un secrétariat communal ou scolaire suisse. Vingt-six outils : lire, réorganiser, fusionner, corriger le texte dans le PDF, annoter, caviarder, reconnaître le texte d'un scan en français et en allemand, recopier un tableau dans Excel, comparer deux versions, constituer un dossier de pièces avec intercalaires, pagination continue et sommaire, imprimer en livret. Il se décompresse dans un dossier et se lance par double-clic : rien à installer, aucun droit administrateur. Il n'ouvre aucune connexion pour traiter un document.",
   audience: "les communes, les établissements scolaires et les services de l'État",
   /** Vrai seulement quand l'éditeur a renseigné son adresse : sinon, rien à afficher. */
   adresseConnue,
@@ -37,8 +37,8 @@ export const site = {
   platforms: ["Windows", "macOS"],
   /** Les archives publiées par le dépôt, reconstruites à chaque modification. */
   downloads: {
-    windows: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/download/blonaypdf-windows-latest/BlonayPDF-windows.zip",
-    mac: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/download/blonaypdf-mac-latest/BlonayPDF-mac.zip",
+    windows: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/download/aktumpdf-windows-latest/AktumPDF-windows.zip",
+    mac: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/download/aktumpdf-mac-latest/AktumPDF-mac.zip",
   },
 };
 
@@ -357,7 +357,7 @@ export const deployment = [
  * chaque révision du site.
  */
 export const comparison = {
-  columns: ["Blonay PDF", "Acrobat Pro", "Outils en ligne gratuits"],
+  columns: ["Aktum PDF", "Acrobat Pro", "Outils en ligne gratuits"],
   rows: [
     { label: "Documents traités sur le poste, sans envoi", values: ["yes", "partial", "no"] },
     { label: "Licence par entité, sans plafond de postes", values: ["yes", "no", "no"] },

@@ -1,7 +1,7 @@
 {
-  "name": "blonay-pdf-desktop",
+  "name": "aktum-pdf-desktop",
   "version": "2.1.0",
-  "description": "Blonay PDF – application fenêtrée (version portable, sans installation)",
+  "description": "Aktum PDF – application fenêtrée (version portable, sans installation)",
   "main": "main.js",
   "private": true,
   "author": "Atelier Neroli",
@@ -24,13 +24,13 @@
     "dist:mac": "npm run prepare-app && electron-builder --mac dir --universal"
   },
   "devDependencies": {
-    "electron": "33.4.11",
-    "electron-builder": "25.1.8",
+    "electron": "44.5.1",
+    "electron-builder": "26.17.0",
     "playwright-core": "^1.49.1"
   },
   "build": {
-    "appId": "ch.atelier-neroli.blonay-pdf",
-    "productName": "BlonayPDF",
+    "appId": "ch.atelier-neroli.aktum-pdf",
+    "productName": "AktumPDF",
     "artifactName": "${productName}-${version}.${ext}",
     "directories": {
       "output": "dist",

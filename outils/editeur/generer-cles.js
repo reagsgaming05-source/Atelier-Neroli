@@ -6,7 +6,7 @@
  *
  * À faire UNE FOIS, sur VOTRE poste, pas dans le dépôt et pas dans une
  * conversation. La clé PRIVÉE est écrite dans un dossier à vous (par défaut
- * ~/blonay-cles-privees, ou BLONAY_CLES_DIR) ; la clé PUBLIQUE est ajoutée à
+ * ~/aktum-cles-privees, ou AKTUM_CLES_DIR) ; la clé PUBLIQUE est ajoutée à
  * desktop/cles-publiques.json, qui part dans l'application — commitez ce fichier.
  *
  * Où va la clé privée :
@@ -28,7 +28,7 @@ const { brute } = require('../desktop/signature');
 
 const quoi = process.argv[2];
 if (quoi !== 'maj' && quoi !== 'licence') { console.error('usage : node editeur/generer-cles.js maj|licence'); process.exit(1); }
-const dossierPrive = process.env.BLONAY_CLES_DIR || path.join(os.homedir(), 'blonay-cles-privees');
+const dossierPrive = process.env.AKTUM_CLES_DIR || path.join(os.homedir(), 'aktum-cles-privees');
 const fichierPublic = path.join(__dirname, '..', 'desktop', 'cles-publiques.json');
 
 let j = { maj: [], licence: [] };

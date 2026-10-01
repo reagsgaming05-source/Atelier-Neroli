@@ -1,4 +1,4 @@
-BLONAY PDF
+AKTUM PDF
 ==========
 
 Un outil pour organiser, annoter et protéger des PDF.
@@ -7,13 +7,13 @@ et rien n'est installé sur le poste.
 
 DEMARRER
 --------
-Windows : double-cliquez sur  Blonay-PDF-Windows.cmd
-Mac     : double-cliquez sur  Blonay-PDF-Mac.command
+Windows : double-cliquez sur  Aktum-PDF-Windows.cmd
+Mac     : double-cliquez sur  Aktum-PDF-Mac.command
           (au premier lancement : clic droit, Ouvrir, puis Ouvrir)
 
 L'outil s'ouvre dans une fenêtre d'application, sans onglet ni barre d'adresse.
 
-Vous pouvez aussi simplement double-cliquer sur blonay-pdf.html :
+Vous pouvez aussi simplement double-cliquer sur aktum-pdf.html :
 l'outil s'ouvre alors dans un onglet du navigateur et fonctionne pareil.
 
 CONFIDENTIALITE

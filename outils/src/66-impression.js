@@ -233,7 +233,7 @@
       // La fenêtre de l'application imprime elle-même : l'imprimante
       // choisie, le recto verso, les copies, la taille de la feuille.
       const [wmm, hmm] = (formats.keys().next().value || '210mm 297mm').split(' ').map(parseFloat);
-      window.BlonayDesktop.imprimer({
+      window.AktumDesktop.imprimer({
         imprimante: (o && o.imprimante) || '', duplex: (o && o.duplex) || 'simplex', copies: (o && o.copies) || 1,
         dialogue: !!(o && o.dialogue),
         paysage: wmm > hmm, largeurMicrons: Math.round(Math.min(wmm, hmm) * 1000), hauteurMicrons: Math.round(Math.max(wmm, hmm) * 1000),
@@ -323,7 +323,7 @@
     // Où part l'impression : l'application l'envoie directement à
     // l'imprimante par défaut de Windows ; la version navigateur passe par
     // la fenêtre du navigateur, qui demande l'imprimante.
-    const bureau = state.bureau ? window.BlonayDesktop : null;
+    const bureau = state.bureau ? window.AktumDesktop : null;
     const imprimante = select('imp-imprimante', [['', 'Imprimante par défaut de Windows']], '');
     const duplex = select('imp-duplex', [['simplex', 'Recto seulement'], ['longEdge', 'Recto verso, bords longs'], ['shortEdge', 'Recto verso, bords courts']], 'simplex');
     const copies = input('imp-copies', 'number', 1, { min: 1, max: 99 });
@@ -479,18 +479,8 @@
       if (o.quoi === 'selection') liste = selectedPages();
       else if (o.quoi !== 'plage') liste = state.pages.slice();
       else {
-        const vues = new Set();
-        String(plage.value).split(',').forEach(bout => {
-          const m = /^\s*(\d+)\s*(?:[-–]\s*(\d+))?\s*$/.exec(bout);
-          if (!m) return;
-          // On ne ramène pas un numéro hors du document sur la première page :
-          // « 9-12 » dans un document de 5 pages ne désigne rien.
-          const a = parseInt(m[1], 10), b = m[2] ? parseInt(m[2], 10) : a;
-          if (!(a > 0) || !(b > 0)) return;
-          const d = Math.max(1, Math.min(a, b)), f = Math.min(state.pages.length, Math.max(a, b));
-          for (let i = d; i <= f; i++) vues.add(i - 1);
-        });
-        liste = Array.from(vues).sort((x, y) => x - y).map(i => state.pages[i]);
+        // Un numéro hors du document ne désigne rien : « 9-12 » dans un document de 5 pages ne ramène rien.
+        liste = lirePlages(plage.value, state.pages.length).pages.map(i => state.pages[i - 1]);
       }
       if (o.disposition !== 'livret') {
         if (o.faces === 'impaires') liste = liste.filter((_, i) => i % 2 === 0);

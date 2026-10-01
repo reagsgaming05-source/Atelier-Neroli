@@ -72,7 +72,7 @@ function ico(images) {
   // Le site sert le dessin tel quel, sans les commentaires qui l'expliquent.
   const nu = dessin.replace(/<!--[\s\S]*?-->\n?\s*/g, '');
   fs.writeFileSync(path.join(RACINE, 'docs', 'icon.svg'), nu);
-  const nav = await chromium.launch({ executablePath: process.env.BLONAY_CHROMIUM || undefined });
+  const nav = await chromium.launch({ executablePath: process.env.AKTUM_CHROMIUM || undefined });
   const page = await nav.newPage();
 
   async function rendre(taille) {

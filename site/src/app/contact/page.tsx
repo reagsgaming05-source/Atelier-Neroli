@@ -5,7 +5,7 @@ import { site } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Une question sur les tarifs, une démonstration, une offre pour votre équipe ou une demande de support : contactez Blonay PDF.",
+  description: "Une question sur les tarifs, une démonstration, une offre pour votre équipe ou une demande de support : contactez Aktum PDF.",
 };
 
 export default async function ContactPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

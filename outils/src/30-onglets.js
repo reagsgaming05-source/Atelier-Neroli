@@ -105,7 +105,7 @@
   // Le document fermé ne doit plus gêner une collègue : son verrou est levé.
   function libererVerrous(e) {
     try {
-      const b = window.BlonayDesktop;
+      const b = window.AktumDesktop;
       if (!b || typeof b.liberer !== 'function' || !e) return;
       const chemins = new Set((e.sources || []).filter(s => !s.isSample && s.chemin).map(s => s.chemin));
       if (e.chemin) chemins.add(e.chemin);

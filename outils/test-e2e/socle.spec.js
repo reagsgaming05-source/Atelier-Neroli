@@ -99,10 +99,10 @@ test('extraire la sélection donne un PDF à part, sans toucher au document', as
 });
 
 test('le texte de la page part dans le PDF tel qu\'il était', async ({ app }) => {
-  await app.ouvrir('lettre.pdf', pdfTexte(['Commune de Blonay', 'Décompte 2026', 'Montant : 1240.00']));
+  await app.ouvrir('lettre.pdf', pdfTexte(['Commune Exemple', 'Décompte 2026', 'Montant : 1240.00']));
   const { octets } = await app.exporter();
   const texte = texteDuFlux(octets);
-  expect(texte).toContain('Commune de Blonay');
+  expect(texte).toContain('Commune Exemple');
   expect(texte).toContain('Montant : 1240.00');
 });
 

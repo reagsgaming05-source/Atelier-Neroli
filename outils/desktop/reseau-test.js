@@ -12,7 +12,7 @@
  * exécution, barrières levées, vérifie qu'il voit bien ce qui s'échappe.
  *
  *   node reseau-test.js                              # source (electron .)
- *   node reseau-test.js chemin/vers/BlonayPDF.exe    # exécutable empaqueté
+ *   node reseau-test.js chemin/vers/AktumPDF.exe    # exécutable empaqueté
  */
 const path = require('path');
 const fs = require('fs');
@@ -67,11 +67,11 @@ async function arreter(app) {
 }
 
 const lancer = (exe, smoke, fichier, env) => electron.launch(exe
-  ? { executablePath: exe, args: fichier ? [fichier] : [], env: { ...process.env, BLONAY_SMOKE_DIR: smoke, ...env } }
-  : { args: [path.join(__dirname), ...(fichier ? [fichier] : []), '--no-sandbox'], env: { ...process.env, BLONAY_SMOKE_DIR: smoke, ...env } });
+  ? { executablePath: exe, args: fichier ? [fichier] : [], env: { ...process.env, AKTUM_SMOKE_DIR: smoke, ...env } }
+  : { args: [path.join(__dirname), ...(fichier ? [fichier] : []), '--no-sandbox'], env: { ...process.env, AKTUM_SMOKE_DIR: smoke, ...env } });
 
 // Ce que l'application a refusé, et la tentative d'un faux appel de sa part.
-const refuses = (app) => app.evaluate(() => global.__blonayReseau.map((r) => r.url));
+const refuses = (app) => app.evaluate(() => global.__aktumReseau.map((r) => r.url));
 async function tenter(app, adresses) {
   await app.evaluate(async ({ session }, liste) => {
     for (const u of liste) { try { await session.defaultSession.fetch(u); } catch (e) { /* attendu : c'est le but */ } }
@@ -80,7 +80,7 @@ async function tenter(app, adresses) {
 
 (async () => {
   const exe = process.argv[2];
-  const racine = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-reseau-'));
+  const racine = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-reseau-'));
   let ok = true;
   const verifier = (cond, quoi) => { console.log((cond ? '  ok - ' : 'ÉCHEC : ') + quoi); if (!cond) ok = false; };
   const doc = path.join(racine, 'decision.pdf');
@@ -94,7 +94,7 @@ async function tenter(app, adresses) {
   {
     const obs = await observateur();
     note('lancement, barrières levées');
-    const app = await lancer(exe, path.join(racine, 'poste-1'), doc, { BLONAY_OBSERVATEUR: obs.adresse, BLONAY_OBSERVATEUR_OUVERT: '1' });
+    const app = await lancer(exe, path.join(racine, 'poste-1'), doc, { AKTUM_OBSERVATEUR: obs.adresse, AKTUM_OBSERVATEUR_OUVERT: '1' });
     const win = await app.firstWindow();
     await win.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });
     note('appels d\'essai, barrières levées');
@@ -115,7 +115,7 @@ async function tenter(app, adresses) {
     const obs = await observateur();
     const smoke = path.join(racine, 'poste-2');
     note('lancement, barrières en place');
-    const app = await lancer(exe, smoke, doc, { BLONAY_OBSERVATEUR: obs.adresse });
+    const app = await lancer(exe, smoke, doc, { AKTUM_OBSERVATEUR: obs.adresse });
     const win = await app.firstWindow();
     win.on('pageerror', (e) => console.log('[pageerror]', e.message));
     await win.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });

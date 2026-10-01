@@ -1,5 +1,5 @@
 /**
- * Les trois publics auxquels Blonay PDF se vend : une commune, un établissement
+ * Les trois publics auxquels Aktum PDF se vend : une commune, un établissement
  * scolaire, un service de l'État.
  *
  * Ils ont le même besoin — des documents officiels à préparer, signer, caviarder
@@ -50,7 +50,7 @@ export const segments: Segment[] = [
     title: ["Les documents de la commune,", "sans licence Acrobat."],
     kicker: "Greffe · Contrôle des habitants · Urbanisme · Bourse communale",
     lede:
-      "Un préavis à assembler, un permis de construire à caviarder avant consultation publique, un procès-verbal à signer, un dossier à archiver : tout passe par le PDF. Blonay PDF réunit ces gestes dans un seul outil, facturé une fois pour toute l'administration, sans compter les postes, et sans qu'un document quitte le poste.",
+      "Un préavis à assembler, un permis de construire à caviarder avant consultation publique, un procès-verbal à signer, un dossier à archiver : tout passe par le PDF. Aktum PDF réunit ces gestes dans un seul outil, facturé une fois pour toute l'administration, sans compter les postes, et sans qu'un document quitte le poste.",
     buyer: {
       role: "Secrétaire municipal·e ou boursier·ère",
       text:
@@ -112,7 +112,7 @@ export const segments: Segment[] = [
       {
         title: "Aucune donnée ne quitte la commune",
         text:
-          "L'application de bureau travaille sur le poste, ou sur le lecteur réseau de l'administration. Un dossier d'enquête ouvert dans Blonay PDF ne part sur aucun serveur, pas même les nôtres : le logiciel n'ouvre aucune connexion pour traiter un document.",
+          "L'application de bureau travaille sur le poste, ou sur le lecteur réseau de l'administration. Un dossier d'enquête ouvert dans Aktum PDF ne part sur aucun serveur, pas même les nôtres : le logiciel n'ouvre aucune connexion pour traiter un document.",
       },
       {
         title: "Une facture, pas un abonnement à la carte",
@@ -309,7 +309,7 @@ export const segments: Segment[] = [
       {
         title: "La réversibilité",
         text:
-          "Aucun format propriétaire : ce que produit Blonay PDF est du PDF standard, lisible par n'importe quel autre outil. Vous n'êtes captif de rien.",
+          "Aucun format propriétaire : ce que produit Aktum PDF est du PDF standard, lisible par n'importe quel autre outil. Vous n'êtes captif de rien.",
         tool: "Formats ouverts",
       },
       {

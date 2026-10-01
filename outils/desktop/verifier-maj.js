@@ -4,7 +4,7 @@
  * faire de cryptographie. Il appelle l'application elle-même, en mode « Node »,
  * qui porte les clés publiques de l'éditeur :
  *
- *   ELECTRON_RUN_AS_NODE=1 BlonayPDF.exe resources\app.asar\verifier-maj.js <zip>
+ *   ELECTRON_RUN_AS_NODE=1 AktumPDF.exe resources\app.asar\verifier-maj.js <zip>
  *
  * Code de sortie : 0 = signée par l'éditeur ; 2 = refusée (la raison est écrite).
  */

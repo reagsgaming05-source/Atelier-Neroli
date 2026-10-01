@@ -1,7 +1,7 @@
-BLONAY PDF — CONDITIONS D'UTILISATION DU LOGICIEL
+AKTUM PDF — CONDITIONS D'UTILISATION DU LOGICIEL
 =================================================
 
-Ce texte accompagne chaque copie de Blonay PDF. Il est le modèle de licence de
+Ce texte accompagne chaque copie d’Aktum PDF. Il est le modèle de licence de
 l'éditeur ; l'offre acceptée ou la facture qui l'accompagne désigne l'éditeur, le
 licencié, la formule et la durée, et prévaut sur ce modèle en cas de différence.
 Les composants libres que le logiciel embarque restent sous leurs propres

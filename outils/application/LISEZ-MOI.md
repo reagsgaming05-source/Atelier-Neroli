@@ -1,9 +1,9 @@
 # Application de bureau
 
 L'application livrée aux collègues est la version portable Electron de
-`outils/desktop/` (`BlonayPDF.exe`, menu Fichier / Affichage / Aide, données
+`outils/desktop/` (`AktumPDF.exe`, menu Fichier / Affichage / Aide, données
 dans `data/` à côté de l'exécutable, construite et publiée par GitHub Actions
-sur la pré-release `blonaypdf-windows-latest`) : voir le README à la racine.
+sur la pré-release `aktumpdf-windows-latest`) : voir le README à la racine.
 Ce dossier décrit les deux autres façons d'obtenir une fenêtre d'application.
 
 ## Lanceur en un seul fichier (repli, 4 Mo)
@@ -15,23 +15,23 @@ dans sa propre fenêtre Windows.
 ### La fenêtre de l'application
 
 `fenetre.go` ouvre une fenêtre Windows ordinaire (classe `webview`, icône de
-l'exécutable, titre « Blonay PDF ») avec le moteur WebView2 dedans — celui
+l'exécutable, titre « Aktum PDF ») avec le moteur WebView2 dedans — celui
 que Windows 10 et 11 embarquent — grâce à `github.com/jchv/go-webview2`, en
 Go pur, compilé depuis Linux. Aucun navigateur n'apparaît, ni dans la
 fenêtre ni dans la barre des tâches.
 
 - Un document reçu (double-clic sur un PDF) est remis à la page avant son
-  premier script (`Init` → `window.__blonayOuvrir`), sans copie sur le disque,
+  premier script (`Init` → `window.__aktumOuvrir`), sans copie sur le disque,
   jusqu'à 48 Mo encodés ; au-delà, par le fichier d'ouverture décrit plus bas.
 - « Exporter » appelle la boîte « Enregistrer sous » de Windows
-  (`GetSaveFileNameW`) via les fonctions liées `blonayEnregistrerDebut`,
+  (`GetSaveFileNameW`) via les fonctions liées `aktumEnregistrerDebut`,
   `…Bout` (4 Mo par morceau), `…Fin` et `…Abandon` ; la page écrit dans un
   `.part` renommé à la fin. Si la boîte fait défaut, la page se rabat sur le
   téléchargement du moteur.
 - Fermer la fenêtre passe par la page (`WM_CLOSE` intercepté par une
-  sous-classe de la procédure de fenêtre) : `window.__blonayFermer()` laisse
+  sous-classe de la procédure de fenêtre) : `window.__aktumFermer()` laisse
   partir tout de suite s'il n'y a rien à défendre, sinon demande, et répond
-  par `blonayQuitter(true|false)`. Sans réponse en deux secondes, la fenêtre
+  par `aktumQuitter(true|false)`. Sans réponse en deux secondes, la fenêtre
   se ferme quand même.
 - Le moteur reçoit ses réglages par `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`
   (`--kiosk-printing` pour l'impression directe, découverte réseau coupée),
@@ -45,10 +45,10 @@ tests sous Linux.
 L'exécutable pèse 3,9 Mo. Construction :
 
 ```sh
-gzip -9 -c ../blonay-pdf-hors-ligne.html > lanceur/blonay-pdf.html.gz
+gzip -9 -c ../aktum-pdf-hors-ligne.html > lanceur/aktum-pdf.html.gz
 cd lanceur
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
-  -ldflags="-s -w -H windowsgui" -o "Blonay PDF.exe" .
+  -ldflags="-s -w -H windowsgui" -o "Aktum PDF.exe" .
 ```
 
 L'icône et les informations du fichier sont ensuite posées avec `resedit`
@@ -122,8 +122,8 @@ curl -LO https://github.com/electron/electron/releases/download/v33.4.11/electro
 unzip -q electron-v33.4.11-win32-x64.zip -d win
 rm win/resources/default_app.asar
 mkdir -p win/resources/app
-cp electron/main.js electron/package.json ../blonay-pdf-hors-ligne.html win/resources/app/
-mv win/resources/app/blonay-pdf-hors-ligne.html win/resources/app/index.html
+cp electron/main.js electron/package.json ../aktum-pdf-hors-ligne.html win/resources/app/
+mv win/resources/app/aktum-pdf-hors-ligne.html win/resources/app/index.html
 # icône et nom du fichier posés avec resedit, puis electron.exe renommé
 ```
 

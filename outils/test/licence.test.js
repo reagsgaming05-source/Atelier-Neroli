@@ -14,7 +14,7 @@ const J = 24 * 3600 * 1000;
 const T0 = Date.parse('2026-10-01T10:00:00Z');
 function paire() { const k = crypto.generateKeyPairSync('ed25519'); return { pem: k.privateKey.export({ format: 'pem', type: 'pkcs8' }), cle: { id: 'lic-essai', cle: sg.brute(k.publicKey) } }; }
 function dossierAvec(corps, k) {
-  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-lic-'));
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-lic-'));
   if (corps) fs.writeFileSync(path.join(d, 'licence.json'), JSON.stringify(sg.signer(Object.assign({ v: 1, objet: 'licence', cle: k.cle.id, id: 'BLP-2026-0001', client: 'Commune d\'Essai', ide: 'CHE-000.000.000', postes: 10, modele: 'site', emise: '2026-10-01', majJusqu: '2027-10-01' }, corps), k.pem)));
   return d;
 }
@@ -106,11 +106,11 @@ test('une horloge reculée ou une ancre dans le futur ne rallonge pas l\'essai',
 });
 
 test('l\'ancre dans le profil : un fichier, indépendant du dossier de l\'application', () => {
-  const profil = fs.mkdtempSync(path.join(os.tmpdir(), 'blonay-profil-'));
-  const a = lic.ancreDansLeProfil(path.join(profil, 'Blonay PDF'));
+  const profil = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-profil-'));
+  const a = lic.ancreDansLeProfil(path.join(profil, 'Aktum PDF'));
   assert.equal(a.lire(), null);
   a.ecrire('2026-10-01T10:00:00.000Z');
-  assert.equal(lic.ancreDansLeProfil(path.join(profil, 'Blonay PDF')).lire(), '2026-10-01T10:00:00.000Z');
+  assert.equal(lic.ancreDansLeProfil(path.join(profil, 'Aktum PDF')).lire(), '2026-10-01T10:00:00.000Z');
 });
 
 test('les mises à jour sont comprises jusqu\'à la date de la licence ; au-delà, refusées', () => {

@@ -7,7 +7,7 @@ import { getPlanBySlug } from "@/lib/subscriptions";
 const segment = segmentBySlug("ecoles")!;
 
 export const metadata: Metadata = {
-  title: "Blonay PDF pour les établissements scolaires",
+  title: "Aktum PDF pour les établissements scolaires",
   description: segment.lede,
 };
 

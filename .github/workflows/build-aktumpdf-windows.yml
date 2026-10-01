@@ -1,4 +1,4 @@
-name: Blonay PDF – Windows et Mac
+name: Aktum PDF – Windows et Mac
 
 # Une construction qui sort d'une branche de travail n'est JAMAIS « la dernière
 # version » que les postes téléchargent : elle est publiée en version CANDIDATE, à
@@ -10,7 +10,7 @@ on:
   push:
     branches: ["main", "claude/**"]
     tags: ["v*"]
-    paths: ["outils/**", ".github/workflows/build-blonaypdf-windows.yml"]
+    paths: ["outils/**", ".github/workflows/build-aktumpdf-windows.yml"]
   workflow_dispatch:
     inputs:
       publier:
@@ -37,7 +37,7 @@ env:
   # Tout le reste est candidate. Le build le grave dans la fiche de version et dans
   # l'application ; la suite de tests n'y refait pas de nouvelle tentative (un test
   # instable qui passe au deuxième essai ne doit pas laisser partir une version stable).
-  BLONAY_CANAL: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publier == 'stable')) && 'stable' || 'candidate' }}
+  AKTUM_CANAL: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publier == 'stable')) && 'stable' || 'candidate' }}
 
 jobs:
   # De bout en bout, sur Linux : l'application entière pilotée dans Chromium,
@@ -113,14 +113,14 @@ jobs:
         run: |
           set -euo pipefail
           (cd ../desktop && node prepare-app.js)
-          export BLONAY_CHROMIUM="$(cd ../test-e2e && node -p "require('@playwright/test').chromium.executablePath()")"
-          xvfb-run -a node faire-le-guide.js "$GITHUB_WORKSPACE/Blonay-PDF-mode-d-emploi.pdf"
-          test -s "$GITHUB_WORKSPACE/Blonay-PDF-mode-d-emploi.pdf"
+          export AKTUM_CHROMIUM="$(cd ../test-e2e && node -p "require('@playwright/test').chromium.executablePath()")"
+          xvfb-run -a node faire-le-guide.js "$GITHUB_WORKSPACE/Aktum-PDF-mode-d-emploi.pdf"
+          test -s "$GITHUB_WORKSPACE/Aktum-PDF-mode-d-emploi.pdf"
 
       - uses: actions/upload-artifact@v4
         with:
           name: mode-d-emploi
-          path: Blonay-PDF-mode-d-emploi.pdf
+          path: Aktum-PDF-mode-d-emploi.pdf
           retention-days: 7
 
       # Les quatre autres documents du dossier livré : guide d'administration, fiche de
@@ -140,7 +140,7 @@ jobs:
           EDITEUR_EMAIL_SUPPORT: ${{ vars.EDITEUR_EMAIL_SUPPORT }}
         run: |
           set -euo pipefail
-          export BLONAY_CHROMIUM="$(cd ../test-e2e && node -p "require('@playwright/test').chromium.executablePath()")"
+          export AKTUM_CHROMIUM="$(cd ../test-e2e && node -p "require('@playwright/test').chromium.executablePath()")"
           node faire-les-documents.js "$GITHUB_WORKSPACE/documents"
           test "$(ls "$GITHUB_WORKSPACE/documents"/*.pdf | wc -l)" -eq 4
 
@@ -195,6 +195,40 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run dist:win
 
+      # La signature de code : sans elle, SmartScreen avertit au premier lancement et une
+      # stratégie AppLocker ou WDAC qui n'autorise que le code signé refuse d'exécuter un
+      # programme posé sur un partage. Le certificat s'achète (un certificat de signature de
+      # code, ou un service de signature dans le nuage) ; il n'est JAMAIS dans le dépôt :
+      # WIN_CERTIFICAT_PFX (le .pfx encodé en base64) et WIN_CERTIFICAT_MOT_DE_PASSE sont des
+      # secrets du dépôt. Sans eux, la construction avertit et continue : l'exécutable n'est
+      # alors pas signé, et le dit (guide d'administration, §9).
+      - name: Signer l'exécutable Windows (si un certificat est fourni)
+        id: signature-windows
+        shell: pwsh
+        env:
+          PFX: ${{ secrets.WIN_CERTIFICAT_PFX }}
+          MOT_DE_PASSE: ${{ secrets.WIN_CERTIFICAT_MOT_DE_PASSE }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:PFX) {
+            Write-Host "::warning::Aucun certificat de signature de code (WIN_CERTIFICAT_PFX) : l'exécutable n'est PAS signé. SmartScreen avertira, et AppLocker/WDAC en mode « code signé » le refusera."
+            "signe=non" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP 'signature.pfx'
+          try { [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:PFX)) }
+          catch { throw "WIN_CERTIFICAT_PFX n'est pas du base64 : [Convert]::ToBase64String([IO.File]::ReadAllBytes('certificat.pfx')) | Set-Clipboard" }
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw "signtool.exe introuvable sur ce runner." }
+          $exe = Join-Path $env:GITHUB_WORKSPACE 'outils\desktop\dist\win-unpacked\AktumPDF.exe'
+          & $signtool.FullName sign /f $pfx /p $env:MOT_DE_PASSE /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /d "Aktum PDF" $exe
+          if ($LASTEXITCODE -ne 0) { throw "La signature a échoué." }
+          & $signtool.FullName verify /pa /v $exe
+          if ($LASTEXITCODE -ne 0) { throw "La signature ne se vérifie pas." }
+          Remove-Item $pfx -Force
+          "signe=oui" >> $env:GITHUB_OUTPUT
+          Write-Host "Exécutable signé et vérifié."
+
       - uses: actions/download-artifact@v4
         with:
           name: mode-d-emploi
@@ -209,32 +243,32 @@ jobs:
         working-directory: outils/desktop
         shell: pwsh
         run: |
-          Rename-Item dist\win-unpacked BlonayPDF
+          Rename-Item dist\win-unpacked AktumPDF
           # Ce que lit un client : le mode d'emploi, la licence, les composants
           # tiers. Le README du dépôt est une page de développeur, pas un
           # LISEZMOI : il n'a rien à faire dans un dossier livré.
-          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'guide\Blonay-PDF-mode-d-emploi.pdf') dist\BlonayPDF\Mode-d-emploi.pdf
-          New-Item -ItemType Directory -Force -Path dist\BlonayPDF\Documents | Out-Null
-          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'documents\*.pdf') dist\BlonayPDF\Documents\
-          Copy-Item build\LICENCE.txt dist\BlonayPDF\LICENCE.txt
-          Copy-Item build\MENTIONS-TIERCES.txt dist\BlonayPDF\MENTIONS-TIERCES.txt
-          Copy-Item build\LISEZMOI-portable.txt dist\BlonayPDF\LISEZMOI-portable.txt
-          Copy-Item build\Mettre-a-jour.cmd dist\BlonayPDF\Mettre-a-jour.cmd
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'guide\Aktum-PDF-mode-d-emploi.pdf') dist\AktumPDF\Mode-d-emploi.pdf
+          New-Item -ItemType Directory -Force -Path dist\AktumPDF\Documents | Out-Null
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'documents\*.pdf') dist\AktumPDF\Documents\
+          Copy-Item build\LICENCE.txt dist\AktumPDF\LICENCE.txt
+          Copy-Item build\MENTIONS-TIERCES.txt dist\AktumPDF\MENTIONS-TIERCES.txt
+          Copy-Item build\LISEZMOI-portable.txt dist\AktumPDF\LISEZMOI-portable.txt
+          Copy-Item build\Mettre-a-jour.cmd dist\AktumPDF\Mettre-a-jour.cmd
           # La fiche de version voyage a la racine du dossier : c'est elle que
           # l'application lit dans un zip pose a cote d'elle pour savoir s'il
           # est plus recent que ce qui tourne. Sans elle, la mise a jour ne se
           # proposerait jamais (maj-test.js tombe alors).
-          node fiche-de-version.js windows dist\BlonayPDF\version.json
-          Copy-Item ..\NOTES-DE-VERSION.md dist\BlonayPDF\Notes-de-version.txt
-          Get-ChildItem dist\BlonayPDF | Select-Object Name, Length
+          node fiche-de-version.js windows dist\AktumPDF\version.json
+          Copy-Item ..\NOTES-DE-VERSION.md dist\AktumPDF\Notes-de-version.txt
+          Get-ChildItem dist\AktumPDF | Select-Object Name, Length
 
       - name: Test de fumée de l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, export)
         timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
         run: |
-          node smoke-test.js dist\BlonayPDF\BlonayPDF.exe
-          Remove-Item dist\BlonayPDF\data -Recurse -Force -ErrorAction SilentlyContinue
+          node smoke-test.js dist\AktumPDF\AktumPDF.exe
+          Remove-Item dist\AktumPDF\data -Recurse -Force -ErrorAction SilentlyContinue
 
       # Les comptes : deux personnes sur la meme installation, chacune ses
       # tampons. Joue sur l'executable empaquete, parce que le dossier de
@@ -249,7 +283,7 @@ jobs:
         timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
-        run: node comptes-test.js dist\BlonayPDF\BlonayPDF.exe
+        run: node comptes-test.js dist\AktumPDF\AktumPDF.exe
 
       # Deux secrétaires, un fichier sur le lecteur réseau : la seconde à
       # enregistrer écrasait le travail de la première sans un mot, et la
@@ -260,7 +294,7 @@ jobs:
         timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
-        run: node ecrasement-test.js dist\BlonayPDF\BlonayPDF.exe
+        run: node ecrasement-test.js dist\AktumPDF\AktumPDF.exe
 
       # « Aucune donnée ne quitte le poste » se prouve en regardant, pas en
       # relisant le code. Un mandataire d'observation est posé sur la machine,
@@ -272,7 +306,7 @@ jobs:
         timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
-        run: node reseau-test.js dist\BlonayPDF\BlonayPDF.exe
+        run: node reseau-test.js dist\AktumPDF\AktumPDF.exe
 
       # La licence est un fichier signé posé à côté de l'exécutable, et un essai qui
       # court depuis le premier lancement : joués sur l'exécutable empaqueté, avec des
@@ -282,7 +316,7 @@ jobs:
         timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
-        run: node licence-test.js dist\BlonayPDF\BlonayPDF.exe
+        run: node licence-test.js dist\AktumPDF\AktumPDF.exe
 
       # Une mise a jour qui se propose a tort reinstalle une version plus
       # ancienne ; lancee pendant qu'une collegue travaille, elle laisse une
@@ -293,13 +327,13 @@ jobs:
         working-directory: outils/desktop
         shell: pwsh
         run: |
-          node maj-test.js dist\BlonayPDF\BlonayPDF.exe
-          Remove-Item dist\BlonayPDF\data -Recurse -Force -ErrorAction SilentlyContinue
+          node maj-test.js dist\AktumPDF\AktumPDF.exe
+          Remove-Item dist\AktumPDF\data -Recurse -Force -ErrorAction SilentlyContinue
 
       - name: Archive zip
         working-directory: outils/desktop
         shell: pwsh
-        run: Compress-Archive -Path dist\BlonayPDF -DestinationPath ..\..\BlonayPDF-windows.zip
+        run: Compress-Archive -Path dist\AktumPDF -DestinationPath ..\..\AktumPDF-windows.zip
 
       # Les zips des tests sont ecrits a la main. Celui-ci vient de
       # Compress-Archive : c'est la seule preuve que le lecteur de zip tient
@@ -310,7 +344,7 @@ jobs:
       - name: La fiche de version se lit dans l'archive
         shell: pwsh
         run: |
-          $zip = Join-Path $env:GITHUB_WORKSPACE 'BlonayPDF-windows.zip'
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'AktumPDF-windows.zip'
           $mod = Join-Path $env:GITHUB_WORKSPACE 'outils\desktop\version-posee.js'
           $lu = node -e "const v = require(process.argv[1]).ficheDuZip(process.argv[2]); if (!v || !v.commit || !v.date) { console.error('fiche de version illisible dans le zip'); process.exit(1); } console.log(v.commit + ' du ' + v.date);" $mod $zip
           if ($LASTEXITCODE -ne 0) { throw "La fiche de version ne se lit pas dans l'archive." }
@@ -337,16 +371,16 @@ jobs:
 
           # La paire d'essai : l'application et la signature la connaissent par l'environnement.
           $pem = Join-Path $env:RUNNER_TEMP 'essai.pem'
-          $env:BLONAY_CLES_PUBLIQUES_ESSAI = node (Join-Path $ws 'outils\editeur\paire-essai.js') $pem
-          $zip = Join-Path $env:RUNNER_TEMP 'maj\BlonayPDF-windows.zip'
+          $env:AKTUM_CLES_PUBLIQUES_ESSAI = node (Join-Path $ws 'outils\editeur\paire-essai.js') $pem
+          $zip = Join-Path $env:RUNNER_TEMP 'maj\AktumPDF-windows.zip'
           New-Item -ItemType Directory -Force -Path (Split-Path $zip) | Out-Null
-          Copy-Item (Join-Path $ws 'BlonayPDF-windows.zip') $zip
+          Copy-Item (Join-Path $ws 'AktumPDF-windows.zip') $zip
           node (Join-Path $ws 'outils\editeur\signer-maj.js') $zip --cle $pem --plateforme windows --version 99.0.0 --canal stable --commit essai --date 2099-01-01T00:00:00Z
           if ($LASTEXITCODE -ne 0) { throw "La signature d'essai a échoué." }
 
           # Un faux dossier installé : la vraie application, une ancienne fiche de version, des données.
           $poste = Join-Path $env:RUNNER_TEMP 'poste'
-          Copy-Item -Recurse (Join-Path $ws 'outils\desktop\dist\BlonayPDF') $poste
+          Copy-Item -Recurse (Join-Path $ws 'outils\desktop\dist\AktumPDF') $poste
           Remove-Item (Join-Path $poste 'data') -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path (Join-Path $poste 'data\recuperation') | Out-Null
           Set-Content (Join-Path $poste 'data\tampons.json') 'MES TAMPONS'
@@ -357,7 +391,7 @@ jobs:
           Copy-Item (Join-Path $ws 'outils\desktop\build\Mettre-a-jour.cmd') $poste -Force
 
           # 1. Une archive NON signée est refusée, et rien n'est touché.
-          $nue = Join-Path $env:RUNNER_TEMP 'nue\BlonayPDF-windows.zip'
+          $nue = Join-Path $env:RUNNER_TEMP 'nue\AktumPDF-windows.zip'
           New-Item -ItemType Directory -Force -Path (Split-Path $nue) | Out-Null
           Copy-Item $zip $nue
           $sortie = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$nue`" < NUL" 2>&1 | Out-String
@@ -367,7 +401,7 @@ jobs:
           & $dit 'la fiche de version est restée l''ancienne' ((Get-Content (Join-Path $poste 'version.json') -Raw) -match '0\.0\.1')
 
           # 2. Une archive signée, puis modifiée d'un octet, est refusée.
-          $falsifiee = Join-Path $env:RUNNER_TEMP 'falsifiee\BlonayPDF-windows.zip'
+          $falsifiee = Join-Path $env:RUNNER_TEMP 'falsifiee\AktumPDF-windows.zip'
           New-Item -ItemType Directory -Force -Path (Split-Path $falsifiee) | Out-Null
           Copy-Item $zip $falsifiee; Copy-Item "$zip.signature.json" "$falsifiee.signature.json"
           $o = [System.IO.File]::ReadAllBytes($falsifiee); $o[$o.Length - 40] = $o[$o.Length - 40] -bxor 1; [System.IO.File]::WriteAllBytes($falsifiee, $o)
@@ -379,7 +413,7 @@ jobs:
           $sortie = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$zip`" < NUL" 2>&1 | Out-String
           Write-Host $sortie
           & $dit 'la signature de l''éditeur est vérifiée par l''application déjà installée' ($sortie -match 'Signature vérifiée')
-          & $dit 'le script est allé au bout' ($sortie -match 'BLONAY-MAJ: OK')
+          & $dit 'le script est allé au bout' ($sortie -match 'AKTUM-MAJ: OK')
           & $dit 'les accents ressortent intacts' ($sortie -match 'Mise à jour terminée')
           & $dit 'les tampons sont conservés' ((Get-Content (Join-Path $poste 'data\tampons.json')) -eq 'MES TAMPONS')
           & $dit 'le travail mis de côté est conservé' ((Get-Content (Join-Path $poste 'data\recuperation\a.json')) -eq 'MON TRAVAIL')
@@ -395,23 +429,23 @@ jobs:
           # Dans un fichier, pas dans un tuyau : l'application que la mise à jour
           # rouvre hériterait de la sortie, et PowerShell attendrait la fermeture
           # du tuyau — donc celle de l'application. Le premier essai y est resté.
-          $env:BLONAY_MAJ_AUTO = '1'
+          $env:AKTUM_MAJ_AUTO = '1'
           $journal = Join-Path $env:RUNNER_TEMP 'maj-auto.txt'
           cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$zip`" > `"$journal`" 2>&1 < NUL"
-          Remove-Item Env:\BLONAY_MAJ_AUTO
+          Remove-Item Env:\AKTUM_MAJ_AUTO
           $auto = Get-Content $journal -Raw -Encoding utf8
           Write-Host $auto
-          & $dit 'la mise à jour automatique va au bout' ($auto -match 'BLONAY-MAJ: OK')
+          & $dit 'la mise à jour automatique va au bout' ($auto -match 'AKTUM-MAJ: OK')
           & $dit 'elle rouvre l''application au lieu d''attendre une touche' ($auto -match 'Redémarrage de l''application')
           # Elle vient d'ouvrir une fenêtre sur le runner : on la referme.
           Start-Sleep -Seconds 5
-          taskkill /F /IM BlonayPDF.exe /T 2>$null | Out-Null
+          taskkill /F /IM AktumPDF.exe /T 2>$null | Out-Null
           Start-Sleep -Seconds 2
-          Remove-Item Env:\BLONAY_CLES_PUBLIQUES_ESSAI
+          Remove-Item Env:\AKTUM_CLES_PUBLIQUES_ESSAI
           Remove-Item -Recurse -Force $poste -ErrorAction SilentlyContinue
 
       # La preuve d'origine de l'archive : une signature Ed25519, posée à côté
-      # (BlonayPDF-windows.zip.signature.json). Les postes n'acceptent une mise à
+      # (AktumPDF-windows.zip.signature.json). Les postes n'acceptent une mise à
       # jour posée sur le partage que si elle est signée. Sans la clé privée
       # (secret MAJ_CLE_PRIVEE, voir outils/editeur/generer-cles.js), la
       # construction avertit et continue : l'archive s'installe à la main, mais aucun
@@ -422,10 +456,10 @@ jobs:
           MAJ_CLE_PRIVEE: ${{ secrets.MAJ_CLE_PRIVEE }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $zip = Join-Path $env:GITHUB_WORKSPACE 'BlonayPDF-windows.zip'
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'AktumPDF-windows.zip'
           $fiche = Get-Content (Join-Path $env:GITHUB_WORKSPACE 'outils\desktop\construction.json') -Raw | ConvertFrom-Json
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-          "$hash  BlonayPDF-windows.zip" | Set-Content -Encoding ascii "$zip.sha256"
+          "$hash  AktumPDF-windows.zip" | Set-Content -Encoding ascii "$zip.sha256"
           $critique = @(); if ('${{ inputs.critique }}' -eq 'true') { $critique = @('--critique') }
           node (Join-Path $env:GITHUB_WORKSPACE 'outils\editeur\signer-maj.js') $zip --plateforme windows --version $fiche.version --canal $fiche.canal --commit $fiche.commit --date $fiche.date @critique
           if ($LASTEXITCODE -ne 0) { throw "La signature a échoué." }
@@ -435,11 +469,11 @@ jobs:
       # à passer au majeur suivant dès qu'il sort.
       - uses: actions/upload-artifact@v4
         with:
-          name: BlonayPDF-windows
+          name: AktumPDF-windows
           path: |
-            BlonayPDF-windows.zip
-            BlonayPDF-windows.zip.sha256
-            BlonayPDF-windows.zip.signature.json
+            AktumPDF-windows.zip
+            AktumPDF-windows.zip.sha256
+            AktumPDF-windows.zip.signature.json
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
@@ -546,34 +580,34 @@ jobs:
           set -euo pipefail
           # Le dossier de sortie s'appelle mac-universal, mac-arm64 ou mac selon
           # l'architecture : on prend celui qui porte le paquet.
-          paquet=$(find dist -maxdepth 2 -name "BlonayPDF.app" -print -quit)
-          test -n "$paquet" || { echo "::error::BlonayPDF.app introuvable dans dist/"; exit 1; }
+          paquet=$(find dist -maxdepth 2 -name "AktumPDF.app" -print -quit)
+          test -n "$paquet" || { echo "::error::AktumPDF.app introuvable dans dist/"; exit 1; }
           echo "paquet : $paquet"
-          rm -rf dist/BlonayPDF && mkdir -p dist/BlonayPDF
-          ditto "$paquet" dist/BlonayPDF/BlonayPDF.app
+          rm -rf dist/AktumPDF && mkdir -p dist/AktumPDF
+          ditto "$paquet" dist/AktumPDF/AktumPDF.app
           # Ce que lit un client : le mode d'emploi, la licence, les composants
           # tiers. Le README du dépôt est une page de développeur.
-          cp "$GITHUB_WORKSPACE/guide/Blonay-PDF-mode-d-emploi.pdf" dist/BlonayPDF/Mode-d-emploi.pdf
-          mkdir -p dist/BlonayPDF/Documents
-          cp "$GITHUB_WORKSPACE"/documents/*.pdf dist/BlonayPDF/Documents/
-          cp build/LICENCE.txt dist/BlonayPDF/LICENCE.txt
-          cp build/MENTIONS-TIERCES.txt dist/BlonayPDF/MENTIONS-TIERCES.txt
-          cp build/LISEZMOI-mac.txt dist/BlonayPDF/LISEZMOI-mac.txt
-          cp build/Mettre-a-jour.command dist/BlonayPDF/Mettre-a-jour.command
-          chmod +x dist/BlonayPDF/Mettre-a-jour.command
+          cp "$GITHUB_WORKSPACE/guide/Aktum-PDF-mode-d-emploi.pdf" dist/AktumPDF/Mode-d-emploi.pdf
+          mkdir -p dist/AktumPDF/Documents
+          cp "$GITHUB_WORKSPACE"/documents/*.pdf dist/AktumPDF/Documents/
+          cp build/LICENCE.txt dist/AktumPDF/LICENCE.txt
+          cp build/MENTIONS-TIERCES.txt dist/AktumPDF/MENTIONS-TIERCES.txt
+          cp build/LISEZMOI-mac.txt dist/AktumPDF/LISEZMOI-mac.txt
+          cp build/Mettre-a-jour.command dist/AktumPDF/Mettre-a-jour.command
+          chmod +x dist/AktumPDF/Mettre-a-jour.command
           # La fiche de version voyage à la racine du dossier : c'est elle que
           # l'application lit dans un zip posé à côté d'elle pour savoir s'il est
           # plus récent. Sans elle, la mise à jour ne se proposerait jamais.
-          node fiche-de-version.js mac dist/BlonayPDF/version.json
-          cp ../NOTES-DE-VERSION.md dist/BlonayPDF/Notes-de-version.txt
-          ls -la dist/BlonayPDF
+          node fiche-de-version.js mac dist/AktumPDF/version.json
+          cp ../NOTES-DE-VERSION.md dist/AktumPDF/Notes-de-version.txt
+          ls -la dist/AktumPDF
 
       - name: L'application est bien universelle, et signée
         working-directory: outils/desktop
         run: |
           set -euo pipefail
-          paquet=dist/BlonayPDF/BlonayPDF.app
-          binaire=$paquet/Contents/MacOS/BlonayPDF
+          paquet=dist/AktumPDF/AktumPDF.app
+          binaire=$paquet/Contents/MacOS/AktumPDF
           file "$binaire"
           for arch in x86_64 arm64; do
             lipo -archs "$binaire" | grep -qw "$arch" || { echo "::error::$arch manque : les Mac correspondants ne pourront pas l'ouvrir"; exit 1; }
@@ -596,8 +630,8 @@ jobs:
         working-directory: outils/desktop
         run: |
           set -euo pipefail
-          node smoke-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
-          rm -rf dist/BlonayPDF/data
+          node smoke-test.js dist/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF
+          rm -rf dist/AktumPDF/data
 
       # La remontée du chemin hors du paquet .app est éprouvée à part, dans les
       # tests unitaires (dossierPortable). Ici, c'est le parcours des comptes
@@ -605,22 +639,22 @@ jobs:
       - name: Comptes — la connexion d'abord, sur l'application empaquetée
         timeout-minutes: 14
         working-directory: outils/desktop
-        run: node comptes-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
+        run: node comptes-test.js dist/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF
 
       - name: Écrasement — le travail d'une collègue n'est jamais perdu en silence
         timeout-minutes: 14
         working-directory: outils/desktop
-        run: node ecrasement-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
+        run: node ecrasement-test.js dist/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF
 
       - name: Réseau — rien ne sort du poste, observé derrière un mandataire
         timeout-minutes: 14
         working-directory: outils/desktop
-        run: node reseau-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
+        run: node reseau-test.js dist/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF
 
       - name: Licence — essai, licence signée, fichier falsifié, essai terminé
         timeout-minutes: 14
         working-directory: outils/desktop
-        run: node licence-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
+        run: node licence-test.js dist/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF
 
       # Notariser, c'est soumettre le paquet à Apple, qui l'analyse et rend un
       # « ticket ». Agrafé au paquet, ce ticket permet à n'importe quel Mac de
@@ -638,7 +672,7 @@ jobs:
           CLE_EMETTEUR: ${{ secrets.MAC_API_EMETTEUR }}
         run: |
           set -euo pipefail
-          paquet=dist/BlonayPDF/BlonayPDF.app
+          paquet=dist/AktumPDF/AktumPDF.app
           cle="$RUNNER_TEMP/cle-api.p8"
           printf '%s' "$CLE_API" | base64 --decode > "$cle"
           trap 'rm -f "$cle"' EXIT
@@ -662,32 +696,32 @@ jobs:
           # ditto, et non zip : lui seul préserve les liens symboliques des
           # frameworks et les droits d'exécution. Un zip ordinaire produit une
           # application qui ne s'ouvre pas.
-          ditto -c -k --sequesterRsrc --keepParent dist/BlonayPDF "$GITHUB_WORKSPACE/BlonayPDF-mac.zip"
-          ls -la "$GITHUB_WORKSPACE/BlonayPDF-mac.zip"
+          ditto -c -k --sequesterRsrc --keepParent dist/AktumPDF "$GITHUB_WORKSPACE/AktumPDF-mac.zip"
+          ls -la "$GITHUB_WORKSPACE/AktumPDF-mac.zip"
 
       - name: Le zip se décompresse en une application qui s'ouvre
         run: |
           set -euo pipefail
           essai=$(mktemp -d)
-          ditto -x -k "$GITHUB_WORKSPACE/BlonayPDF-mac.zip" "$essai"
-          test -x "$essai/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF" || { echo "::error::le binaire a perdu son droit d'exécution dans le zip"; exit 1; }
-          test -f "$essai/BlonayPDF/version.json" || { echo "::error::la fiche de version manque dans l'archive"; exit 1; }
-          test -f "$essai/BlonayPDF/LISEZMOI-mac.txt" || { echo "::error::le LISEZMOI manque"; exit 1; }
-          test "$(ls "$essai/BlonayPDF/Documents"/*.pdf | wc -l | tr -d ' ')" -eq 4 || { echo "::error::les quatre documents manquent dans l'archive"; exit 1; }
-          test -f "$essai/BlonayPDF/Notes-de-version.txt" || { echo "::error::les notes de version manquent dans l'archive"; exit 1; }
-          test -x "$essai/BlonayPDF/Mettre-a-jour.command" || { echo "::error::le script de mise à jour n'est pas exécutable"; exit 1; }
+          ditto -x -k "$GITHUB_WORKSPACE/AktumPDF-mac.zip" "$essai"
+          test -x "$essai/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF" || { echo "::error::le binaire a perdu son droit d'exécution dans le zip"; exit 1; }
+          test -f "$essai/AktumPDF/version.json" || { echo "::error::la fiche de version manque dans l'archive"; exit 1; }
+          test -f "$essai/AktumPDF/LISEZMOI-mac.txt" || { echo "::error::le LISEZMOI manque"; exit 1; }
+          test "$(ls "$essai/AktumPDF/Documents"/*.pdf | wc -l | tr -d ' ')" -eq 4 || { echo "::error::les quatre documents manquent dans l'archive"; exit 1; }
+          test -f "$essai/AktumPDF/Notes-de-version.txt" || { echo "::error::les notes de version manquent dans l'archive"; exit 1; }
+          test -x "$essai/AktumPDF/Mettre-a-jour.command" || { echo "::error::le script de mise à jour n'est pas exécutable"; exit 1; }
           # Les frameworks d'Electron sont pleins de liens symboliques ; s'ils
           # arrivent en copies, l'application pèse le triple et ne démarre pas.
-          liens=$(find "$essai/BlonayPDF/BlonayPDF.app" -type l | wc -l | tr -d " ")
+          liens=$(find "$essai/AktumPDF/AktumPDF.app" -type l | wc -l | tr -d " ")
           echo "liens symboliques préservés : $liens"
           test "$liens" -gt 0 || { echo "::error::aucun lien symbolique : le paquet est cassé"; exit 1; }
-          codesign --verify --deep "$essai/BlonayPDF/BlonayPDF.app" || { echo "::error::la signature n'a pas survécu au zip"; exit 1; }
+          codesign --verify --deep "$essai/AktumPDF/AktumPDF.app" || { echo "::error::la signature n'a pas survécu au zip"; exit 1; }
           if [ "${{ steps.certificat.outputs.signe }}" = "oui" ]; then
             # C'est ici que se joue la promesse faite à l'utilisateur : une
             # application qui s'ouvre d'un double-clic. On la vérifie sur le zip
             # décompressé, c'est-à-dire sur ce qu'il recevra vraiment.
-            xcrun stapler validate "$essai/BlonayPDF/BlonayPDF.app" || { echo "::error::le ticket de notarisation n'a pas survécu au zip"; exit 1; }
-            spctl -a -vvv -t exec "$essai/BlonayPDF/BlonayPDF.app" || { echo "::error::macOS refuserait d'ouvrir cette application"; exit 1; }
+            xcrun stapler validate "$essai/AktumPDF/AktumPDF.app" || { echo "::error::le ticket de notarisation n'a pas survécu au zip"; exit 1; }
+            spctl -a -vvv -t exec "$essai/AktumPDF/AktumPDF.app" || { echo "::error::macOS refuserait d'ouvrir cette application"; exit 1; }
             echo "Notarisation vérifiée sur l'archive livrée."
           fi
           rm -rf "$essai"
@@ -701,14 +735,14 @@ jobs:
           set -euo pipefail
           ws="$GITHUB_WORKSPACE"
           pem="$RUNNER_TEMP/essai.pem"
-          export BLONAY_CLES_PUBLIQUES_ESSAI=$(node "$ws/outils/editeur/paire-essai.js" "$pem")
+          export AKTUM_CLES_PUBLIQUES_ESSAI=$(node "$ws/outils/editeur/paire-essai.js" "$pem")
           mkdir -p "$RUNNER_TEMP/maj"
-          zip="$RUNNER_TEMP/maj/BlonayPDF-mac.zip"
-          cp "$ws/BlonayPDF-mac.zip" "$zip"
+          zip="$RUNNER_TEMP/maj/AktumPDF-mac.zip"
+          cp "$ws/AktumPDF-mac.zip" "$zip"
           node "$ws/outils/editeur/signer-maj.js" "$zip" --cle "$pem" --plateforme mac --version 99.0.0 --canal stable --commit essai --date 2099-01-01T00:00:00Z
 
           poste="$RUNNER_TEMP/poste"
-          ditto "$ws/outils/desktop/dist/BlonayPDF" "$poste"
+          ditto "$ws/outils/desktop/dist/AktumPDF" "$poste"
           rm -rf "$poste/data"; mkdir -p "$poste/data/recuperation"
           echo "MES TAMPONS" > "$poste/data/tampons.json"
           echo "MON TRAVAIL" > "$poste/data/recuperation/a.json"
@@ -720,17 +754,17 @@ jobs:
           rate() { echo "::error::RATÉ : $1"; exit 1; }
 
           # Sans signature : refusée, rien n'est touché.
-          mkdir -p "$RUNNER_TEMP/nue"; cp "$zip" "$RUNNER_TEMP/nue/BlonayPDF-mac.zip"
-          if sortie=$("$poste/Mettre-a-jour.command" "$RUNNER_TEMP/nue/BlonayPDF-mac.zip" < /dev/null 2>&1); then rate "une archive sans signature a été acceptée"; fi
+          mkdir -p "$RUNNER_TEMP/nue"; cp "$zip" "$RUNNER_TEMP/nue/AktumPDF-mac.zip"
+          if sortie=$("$poste/Mettre-a-jour.command" "$RUNNER_TEMP/nue/AktumPDF-mac.zip" < /dev/null 2>&1); then rate "une archive sans signature a été acceptée"; fi
           echo "$sortie"
           echo "$sortie" | grep -q "n'est pas signée" || rate "le refus n'est pas expliqué"
           test ! -f "$poste/LISEZMOI-mac.txt" || rate "une archive refusée a quand même touché au dossier"
           ok "une archive sans signature est refusée, et rien n'est touché"
 
           # Signée, puis modifiée d'un octet : refusée.
-          mkdir -p "$RUNNER_TEMP/falsifiee"; cp "$zip" "$RUNNER_TEMP/falsifiee/BlonayPDF-mac.zip"; cp "$zip.signature.json" "$RUNNER_TEMP/falsifiee/BlonayPDF-mac.zip.signature.json"
-          printf 'X' | dd of="$RUNNER_TEMP/falsifiee/BlonayPDF-mac.zip" bs=1 seek=100 conv=notrunc 2>/dev/null
-          if "$poste/Mettre-a-jour.command" "$RUNNER_TEMP/falsifiee/BlonayPDF-mac.zip" < /dev/null >/dev/null 2>&1; then rate "une archive modifiée a été acceptée"; fi
+          mkdir -p "$RUNNER_TEMP/falsifiee"; cp "$zip" "$RUNNER_TEMP/falsifiee/AktumPDF-mac.zip"; cp "$zip.signature.json" "$RUNNER_TEMP/falsifiee/AktumPDF-mac.zip.signature.json"
+          printf 'X' | dd of="$RUNNER_TEMP/falsifiee/AktumPDF-mac.zip" bs=1 seek=100 conv=notrunc 2>/dev/null
+          if "$poste/Mettre-a-jour.command" "$RUNNER_TEMP/falsifiee/AktumPDF-mac.zip" < /dev/null >/dev/null 2>&1; then rate "une archive modifiée a été acceptée"; fi
           test ! -f "$poste/LISEZMOI-mac.txt" || rate "une archive modifiée a quand même touché au dossier"
           ok "une archive modifiée après sa signature est refusée"
 
@@ -738,7 +772,7 @@ jobs:
           sortie=$("$poste/Mettre-a-jour.command" "$zip" < /dev/null 2>&1) || { echo "$sortie"; rate "la mise à jour d'une archive signée a échoué"; }
           echo "$sortie"
           echo "$sortie" | grep -q "Signature vérifiée" || rate "la signature n'a pas été vérifiée"
-          echo "$sortie" | grep -q "BLONAY-MAJ: OK" || rate "le script n'est pas allé au bout"
+          echo "$sortie" | grep -q "AKTUM-MAJ: OK" || rate "le script n'est pas allé au bout"
           test "$(cat "$poste/data/tampons.json")" = "MES TAMPONS" || rate "les tampons ont disparu"
           test "$(cat "$poste/data/recuperation/a.json")" = "MON TRAVAIL" || rate "le travail mis de côté a disparu"
           test "$(cat "$poste/notes-du-service.txt")" = "A MOI" || rate "un fichier personnel a disparu"
@@ -753,9 +787,9 @@ jobs:
           MAJ_CLE_PRIVEE: ${{ secrets.MAJ_CLE_PRIVEE }}
         run: |
           set -euo pipefail
-          zip="$GITHUB_WORKSPACE/BlonayPDF-mac.zip"
+          zip="$GITHUB_WORKSPACE/AktumPDF-mac.zip"
           cd "$GITHUB_WORKSPACE"
-          shasum -a 256 BlonayPDF-mac.zip | sed 's|  .*|  BlonayPDF-mac.zip|' > BlonayPDF-mac.zip.sha256
+          shasum -a 256 AktumPDF-mac.zip | sed 's|  .*|  AktumPDF-mac.zip|' > AktumPDF-mac.zip.sha256
           version=$(node -p "require('./outils/desktop/construction.json').version")
           canal=$(node -p "require('./outils/desktop/construction.json').canal")
           commit=$(node -p "require('./outils/desktop/construction.json').commit")
@@ -765,11 +799,11 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BlonayPDF-mac
+          name: AktumPDF-mac
           path: |
-            BlonayPDF-mac.zip
-            BlonayPDF-mac.zip.sha256
-            BlonayPDF-mac.zip.signature.json
+            AktumPDF-mac.zip
+            AktumPDF-mac.zip.sha256
+            AktumPDF-mac.zip.signature.json
           if-no-files-found: error
           retention-days: 14
 
@@ -808,7 +842,7 @@ jobs:
           cp outils/NOTES-DE-VERSION.md notes-completes.md
           version=$(node -p "require('./outils/package.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "canal=$BLONAY_CANAL" >> "$GITHUB_OUTPUT"
+          echo "canal=$AKTUM_CANAL" >> "$GITHUB_OUTPUT"
           # Les notes de CETTE version : de « ## <version> » au « ## » suivant.
           awk -v v="$version" '$0 ~ "^## " v " " {on=1; next} /^## / {on=0} on' outils/NOTES-DE-VERSION.md > notes-version.md
           if [ ! -s notes-version.md ]; then
@@ -869,10 +903,10 @@ jobs:
             echo
             cat notes-version.md
           } > notes-candidate.md
-          preparer blonaypdf-windows-candidate "Blonay PDF $v — Windows (CANDIDATE, à essayer)" notes-candidate.md candidate
-          poser blonaypdf-windows-candidate pose/BlonayPDF-windows/BlonayPDF-windows.zip pose/BlonayPDF-windows/BlonayPDF-windows.zip.sha256 pose/BlonayPDF-windows/BlonayPDF-windows.zip.signature.json
-          preparer blonaypdf-mac-candidate "Blonay PDF $v — Mac (CANDIDATE, à essayer)" notes-candidate.md candidate
-          poser blonaypdf-mac-candidate pose/BlonayPDF-mac/BlonayPDF-mac.zip pose/BlonayPDF-mac/BlonayPDF-mac.zip.sha256 pose/BlonayPDF-mac/BlonayPDF-mac.zip.signature.json
+          preparer aktumpdf-windows-candidate "Aktum PDF $v — Windows (CANDIDATE, à essayer)" notes-candidate.md candidate
+          poser aktumpdf-windows-candidate pose/AktumPDF-windows/AktumPDF-windows.zip pose/AktumPDF-windows/AktumPDF-windows.zip.sha256 pose/AktumPDF-windows/AktumPDF-windows.zip.signature.json
+          preparer aktumpdf-mac-candidate "Aktum PDF $v — Mac (CANDIDATE, à essayer)" notes-candidate.md candidate
+          poser aktumpdf-mac-candidate pose/AktumPDF-mac/AktumPDF-mac.zip pose/AktumPDF-mac/AktumPDF-mac.zip.sha256 pose/AktumPDF-mac/AktumPDF-mac.zip.signature.json
 
       - name: Publier la version stable (numérotée, conservée)
         if: steps.fiche.outputs.canal == 'stable'
@@ -891,13 +925,13 @@ jobs:
             cat notes-version.md
             echo
             echo "---"
-            echo "Archives : \`BlonayPDF-windows.zip\` et \`BlonayPDF-mac.zip\`, chacune avec son \`.sha256\` et sa \`.signature.json\` — à poser ensemble. Construite depuis le commit ${GITHUB_SHA}."
+            echo "Archives : \`AktumPDF-windows.zip\` et \`AktumPDF-mac.zip\`, chacune avec son \`.sha256\` et sa \`.signature.json\` — à poser ensemble. Construite depuis le commit ${GITHUB_SHA}."
           } > notes-stable.md
-          preparer "$tag" "Blonay PDF $v" notes-stable.md stable
-          poser "$tag" pose/BlonayPDF-windows/* pose/BlonayPDF-mac/*
+          preparer "$tag" "Aktum PDF $v" notes-stable.md stable
+          poser "$tag" pose/AktumPDF-windows/* pose/AktumPDF-mac/*
           # Les liens que les postes connaissent déjà.
-          preparer blonaypdf-windows-latest "Blonay PDF — Windows portable (version $v)" notes-stable.md stable
-          poser blonaypdf-windows-latest pose/BlonayPDF-windows/*
-          preparer blonaypdf-mac-latest "Blonay PDF — Mac (version $v)" notes-stable.md stable
-          poser blonaypdf-mac-latest pose/BlonayPDF-mac/*
-          echo "Version $v publiée en stable : $tag, blonaypdf-windows-latest, blonaypdf-mac-latest."
+          preparer aktumpdf-windows-latest "Aktum PDF — Windows portable (version $v)" notes-stable.md stable
+          poser aktumpdf-windows-latest pose/AktumPDF-windows/*
+          preparer aktumpdf-mac-latest "Aktum PDF — Mac (version $v)" notes-stable.md stable
+          poser aktumpdf-mac-latest pose/AktumPDF-mac/*
+          echo "Version $v publiée en stable : $tag, aktumpdf-windows-latest, aktumpdf-mac-latest."

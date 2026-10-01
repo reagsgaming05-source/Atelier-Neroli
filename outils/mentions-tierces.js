@@ -18,7 +18,7 @@ const lire = (...parties) => {
 };
 
 // Les composants de la page, tels que build.js les soude dans le fichier livré.
-// « licence » est celle sous laquelle Blonay PDF les utilise ; JSZip est offert
+// « licence » est celle sous laquelle Aktum PDF les utilise ; JSZip est offert
 // en MIT ou en GPLv3 au choix, et c'est la MIT qui est retenue.
 const COMPOSANTS = [
   { nom: 'pdf.js', version: '3.11.174', licence: 'Apache-2.0', auteur: 'Mozilla Foundation',
@@ -45,10 +45,10 @@ function mentions({ version = '', construction = '' } = {}) {
   const trait = '='.repeat(78);
   const sous = '-'.repeat(78);
   const sortie = [];
-  sortie.push('BLONAY PDF — COMPOSANTS TIERS ET LEURS LICENCES');
+  sortie.push('AKTUM PDF — COMPOSANTS TIERS ET LEURS LICENCES');
   sortie.push(trait);
   sortie.push('');
-  sortie.push('Blonay PDF est un logiciel propriétaire : ses conditions d\'utilisation sont dans LICENCE.txt.');
+  sortie.push('Aktum PDF est un logiciel propriétaire : ses conditions d\'utilisation sont dans LICENCE.txt.');
   sortie.push('Il embarque les composants libres ci-dessous. Chacun reste sous sa licence, dont le texte est');
   sortie.push('reproduit ici comme elle l\'exige.' + (version ? '  Version ' + version + (construction ? ', ' + construction : '') + '.' : ''));
   sortie.push('');
@@ -79,7 +79,7 @@ function mentions({ version = '', construction = '' } = {}) {
   sortie.push(trait);
   sortie.push((COMPOSANTS.length + 2) + '. Electron et Chromium');
   sortie.push(sous);
-  sortie.push('L\'application fenêtrée (BlonayPDF.exe, BlonayPDF.app) est construite sur Electron (licence MIT,');
+  sortie.push('L\'application fenêtrée (AktumPDF.exe, AktumPDF.app) est construite sur Electron (licence MIT,');
   sortie.push('https://github.com/electron/electron), qui embarque Chromium. Le texte complet des licences de');
   sortie.push('Chromium et de ses composants figure dans le fichier LICENSES.chromium.html, posé à côté de');
   sortie.push('l\'application dans le même dossier, et le texte de la licence d\'Electron dans le fichier LICENSE.');
@@ -87,7 +87,7 @@ function mentions({ version = '', construction = '' } = {}) {
   sortie.push('Offre de source (LGPL) : Chromium inclut FFmpeg et d\'autres bibliothèques sous licence LGPL, utilisées');
   sortie.push('sous forme de bibliothèques partagées que l\'utilisateur peut remplacer. Leur code source est publié');
   sortie.push('par leurs auteurs (https://chromium.googlesource.com/chromium/third_party/ffmpeg et');
-  sortie.push('https://ffmpeg.org/download.html). L\'éditeur de Blonay PDF s\'engage en outre à en fournir une copie sur');
+  sortie.push('https://ffmpeg.org/download.html). L\'éditeur d’Aktum PDF s\'engage en outre à en fournir une copie sur');
   sortie.push('demande écrite, pendant trois ans à compter de la livraison de la version concernée.');
   sortie.push('');
   sortie.push(trait);

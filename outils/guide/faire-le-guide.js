@@ -19,7 +19,7 @@ const { chromium } = require(path.join(APP, 'node_modules', 'playwright-core'));
 
 const args = process.argv.slice(2);
 const garder = args.includes('--garder');
-const sortie = path.resolve(args.find((a) => !a.startsWith('--')) || path.join(__dirname, 'Blonay-PDF-mode-d-emploi.pdf'));
+const sortie = path.resolve(args.find((a) => !a.startsWith('--')) || path.join(__dirname, 'Aktum-PDF-mode-d-emploi.pdf'));
 const CAPTURES = path.join(__dirname, 'captures');
 
 (async () => {
@@ -28,10 +28,10 @@ const CAPTURES = path.join(__dirname, 'captures');
     execFileSync(process.execPath, [path.join(__dirname, 'captures.js'), CAPTURES], { stdio: 'inherit' });
   }
 
-  // Le navigateur : celui de Playwright, ou celui que BLONAY_CHROMIUM désigne
+  // Le navigateur : celui de Playwright, ou celui que AKTUM_CHROMIUM désigne
   // sur un poste où le téléchargement est coupé.
-  const nav = await chromium.launch(process.env.BLONAY_CHROMIUM
-    ? { executablePath: process.env.BLONAY_CHROMIUM } : {});
+  const nav = await chromium.launch(process.env.AKTUM_CHROMIUM
+    ? { executablePath: process.env.AKTUM_CHROMIUM } : {});
   const page = await nav.newPage();
   const erreurs = [];
   page.on('requestfailed', (r) => erreurs.push(r.url()));
@@ -43,7 +43,7 @@ const CAPTURES = path.join(__dirname, 'captures');
   if (manquantes.length) throw new Error('Images absentes : ' + manquantes.join(', '));
 
   const pied = `<div style="width:100%;padding:0 16mm;font:8pt 'Liberation Sans',Arial,sans-serif;color:#8892a0;display:flex;justify-content:space-between">
-    <span>Blonay PDF — mode d'emploi</span><span class="pageNumber"></span></div>`;
+    <span>Aktum PDF — mode d'emploi</span><span class="pageNumber"></span></div>`;
   await page.pdf({
     path: sortie, format: 'A4', printBackground: true,
     displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: pied,
