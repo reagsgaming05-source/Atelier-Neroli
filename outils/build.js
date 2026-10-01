@@ -81,6 +81,26 @@ if (!tessWorker.includes(tessBug)) throw new Error('Motif du correctif tesseract
 tessWorker = tessWorker.replace(tessBug, () => 'return"string"==typeof t?t:t.code})).join("+")');
 const tessCore = read('tesseract.js-core-7.0.0/tesseract-core-simd-lstm.wasm.js');
 const langue = code => fs.readFileSync(path.join(LIB, 'tesseract.js-data-' + code + '-1.0.0/4.0.0_best_int/' + code + '.traineddata.gz')).toString('base64');
+// Les polices Unicode et fontkit : de quoi écrire « Milošević » ou du cyrillique dans un
+// document, et poser des polices incorporées pour le PDF/A. Les polices sont comprimées
+// (gzip) puis codées en base 64 ; l'application ne les décomprime qu'au moment d'en avoir besoin.
+const zlib = require('zlib');
+const fontkit = read('cantoo-fontkit-2.0.12/dist/fontkit.umd.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
+const POLICES_UNICODE = [
+  ['sans-r', 'expo-google-fonts-arimo-0.4.3', '400Regular/Arimo_400Regular.ttf'],
+  ['sans-b', 'expo-google-fonts-arimo-0.4.3', '700Bold/Arimo_700Bold.ttf'],
+  ['sans-i', 'expo-google-fonts-arimo-0.4.3', '400Regular_Italic/Arimo_400Regular_Italic.ttf'],
+  ['sans-bi', 'expo-google-fonts-arimo-0.4.3', '700Bold_Italic/Arimo_700Bold_Italic.ttf'],
+  ['serif-r', 'expo-google-fonts-tinos-0.4.2', '400Regular/Tinos_400Regular.ttf'],
+  ['serif-b', 'expo-google-fonts-tinos-0.4.2', '700Bold/Tinos_700Bold.ttf'],
+  ['serif-i', 'expo-google-fonts-tinos-0.4.2', '400Regular_Italic/Tinos_400Regular_Italic.ttf'],
+  ['serif-bi', 'expo-google-fonts-tinos-0.4.2', '700Bold_Italic/Tinos_700Bold_Italic.ttf'],
+  ['mono-r', 'expo-google-fonts-cousine-0.4.3', '400Regular/Cousine_400Regular.ttf'],
+  ['mono-b', 'expo-google-fonts-cousine-0.4.3', '700Bold/Cousine_700Bold.ttf'],
+  ['mono-i', 'expo-google-fonts-cousine-0.4.3', '400Regular_Italic/Cousine_400Regular_Italic.ttf'],
+  ['mono-bi', 'expo-google-fonts-cousine-0.4.3', '700Bold_Italic/Cousine_700Bold_Italic.ttf'],
+].map(([id, dossier, fichier]) => '<script id="police-' + id + '" type="text/plain">'
+  + zlib.gzipSync(fs.readFileSync(path.join(LIB, dossier, fichier)), { level: 9 }).toString('base64') + '</script>').join('\n');
 const cspOffline = csp(false, true);
 const inline = [
   '<script id="aktum-worker" type="text/plain">\n' + worker + '\n</script>',
@@ -94,6 +114,9 @@ const inline = [
   '<script id="tess-core-src" type="text/plain">\n' + tessCore + '\n</script>',
   '<script id="tess-lang-fra" type="text/plain">' + langue('fra') + '</script>',
   '<script id="tess-lang-deu" type="text/plain">' + langue('deu') + '</script>',
+  '<!-- fontkit 2.0.12 (MIT) ; polices Arimo, Tinos et Cousine (SIL OFL 1.1) -->',
+  '<script>' + fontkit + '</script>',
+  POLICES_UNICODE,
 ].join('\n');
 // Remplacement par fonction : sinon les $& ou $` du code des bibliothèques
 // seraient interprétés comme des motifs et injecteraient le reste de la page.

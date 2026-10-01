@@ -94,6 +94,36 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install --quiet pikepdf
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
 
+      # L'archivage en PDF/A-2b n'est pas une déclaration : chaque document que le
+      # logiciel archive est jugé par veraPDF, le validateur de référence (le même
+      # que celui des archives nationales), dans une version figée. Sans lui, les
+      # scénarios d'archivage ÉCHOUENT en CI au lieu de passer sur le seul contrôle
+      # interne du logiciel.
+      - name: veraPDF 1.28.2 (validateur de référence du PDF/A)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/vera" && cd "$RUNNER_TEMP/vera"
+          cat > pom.xml <<'POM'
+          <project xmlns="http://maven.apache.org/POM/4.0.0">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>aktum</groupId><artifactId>vera</artifactId><version>1</version>
+            <dependencies>
+              <dependency><groupId>org.verapdf.apps</groupId><artifactId>greenfield-apps</artifactId><version>1.28.2</version></dependency>
+            </dependencies>
+          </project>
+          POM
+          mvn -B -q -ntp dependency:copy-dependencies -DoutputDirectory=lib
+          printf '#!/bin/sh\nexec java -cp "%s/lib/*" org.verapdf.apps.GreenfieldCliWrapper "$@"\n' "$PWD" > verapdf
+          chmod +x verapdf
+          ./verapdf --version | head -1
+          echo "VERAPDF=$PWD/verapdf" >> "$GITHUB_ENV"
+
+      # Les tests unitaires tournent aussi ici, où poppler est installé : la
+      # vérification des signatures y est confrontée à pdfsig, qui n'est pas notre code.
+      - name: Tests unitaires (avec pdfsig)
+        working-directory: outils
+        run: npm test
+
       - name: Suite de bout en bout
         working-directory: outils/test-e2e
         run: npm test

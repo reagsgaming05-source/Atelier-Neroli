@@ -235,7 +235,21 @@
   }
 
   let uidImageCaviardee = 0;
+  // Les polices standard du PDF ne savent écrire que le jeu Windows. Quand le document
+  // porte des caractères hors de ce jeu (« ć » de Milošević), il est refait une seconde
+  // fois avec des polices incorporées plutôt que d'écrire « ? ». L'archivage en PDF/A
+  // (opts.archivage) écrit toujours avec des polices incorporées.
   async function buildPdf(pages, opts) {
+    opts = opts || {};
+    const veut = !!(opts.archivage || opts.unicode);
+    const octets = await avecEcritureUnicode(veut, () => construirePdf(pages, opts));
+    if (!veut && FEAT.unicode && caracteresPerdus().length) {
+      signaler('Caractères', 'Des caractères hors du jeu Windows sont écrits avec une police incorporée.', 'info');
+      return avecEcritureUnicode(true, () => construirePdf(pages, opts));
+    }
+    return octets;
+  }
+  async function construirePdf(pages, opts) {
     opts = opts || {};
     // Un dossier de pièces porte un sommaire et des intercalaires qui suivent
     // les pages. S'ils sont en train d'être refaits, on les attend : ce qui
@@ -265,7 +279,8 @@
     const docsVerif = new Map(), policesVerif = new Map();
     const imagesCaviardees = new Map();   // pageId -> [{ nom, donnees }]
     for (const p of pages) {
-      if (rasterAll) { rasterSet.add(p.id); continue; }
+      // Archivage : les pages dont les polices ne sont pas incorporées (accord donné) sont converties en image.
+      if (rasterAll || (opts.rasterIds && opts.rasterIds.has(p.id))) { rasterSet.add(p.id); continue; }
       if (!specs.length && !p.ann.some(a => a.type === 'redact' || (a.type === 'edit' && a.efface))) continue;
       let bilan = { propre: false, images: [] };
       try {
@@ -294,7 +309,7 @@
     // objets orphelins — tout ce qui fait qu'un nom noirci sur la page se
     // retrouve encore dans le fichier. On rebâtit un document neuf, qui ne
     // reprend que ce que les pages atteignent.
-    const inPlace = !rasterSet.size && !opts.noInPlace && !caviarde && canExportInPlace(pages);
+    const inPlace = !rasterSet.size && !opts.noInPlace && !opts.archivage && !caviarde && canExportInPlace(pages);
     let out, mapped;
     if (inPlace) {
       out = await sourceDoc(state.sources[0], false);
@@ -313,7 +328,7 @@
       for (const [sid, items] of bySource) {
         const src = srcById(sid);
         if (!src) throw new Error('Document source introuvable.');
-        const doc = await sourceDoc(src, !!(src.formValues && Object.keys(src.formValues).length));
+        const doc = await sourceDoc(src, !!opts.archivage || !!(src.formValues && Object.keys(src.formValues).length));
         try { await marquerLiens(doc, src); } catch (e) { signaler('Liens', e); }
         const pagesDoc = doc.getPages();
         items.forEach(it => { try { retirerCommentaires(doc, pagesDoc[it.p.index], it.p); } catch (e) { signaler('Commentaires', e); } });

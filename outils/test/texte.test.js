@@ -2,7 +2,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { extraire } = require('./aide');
-const { winAnsi } = extraire('  const WINANSI_SUP = ', '  // =====', '{ winAnsi }');
+// L'état d'écriture (polices incorporées ou standard) vit dans 49-unicode.js ; le bloc testé le lit.
+global.ecriture = { unicode: false, actifs: 0, couverture: null };
+const { winAnsi, releverHorsWinAnsi, oublierPertes, pertesCaracteres } = extraire('  const WINANSI_SUP = ', '  // =====', '{ winAnsi, releverHorsWinAnsi, oublierPertes, pertesCaracteres }');
 const { plural, fmtSize } = extraire('  const plural = ', '  const baseName = ', '{ plural, fmtSize }');
 
 test('l\'apostrophe typographique et les guillemets français passent tels quels', () => {
@@ -16,6 +18,25 @@ test('une espace insécable devient une espace, un trait d\'union insécable un 
 });
 test('ce que WinAnsi ne porte pas devient un point d\'interrogation', () => {
   assert.equal(winAnsi('Ω'), '?');
+});
+test('avec des polices incorporées, ce qu\'elles couvrent s\'écrit tel quel, le reste est signalé', () => {
+  oublierPertes();
+  global.ecriture.unicode = true;
+  global.ecriture.couverture = new Set(['Ω', 'ć', 'š', 'Ж'].map(c => c.codePointAt(0)));
+  try {
+    assert.equal(winAnsi('Milošević Ω Ж'), 'Milošević Ω Ж');
+    assert.equal(winAnsi('Wang 漢'), 'Wang ?');
+    assert.deepEqual(Array.from(pertesCaracteres.keys()), ['漢']);
+    // les remplacements d'espaces et de tirets restent ceux de toujours
+    assert.equal(winAnsi('12 000 anti‑gel'), '12 000 anti-gel');
+    oublierPertes();
+    releverHorsWinAnsi('Zoé 漢 Ω');
+    assert.deepEqual(Array.from(pertesCaracteres.keys()), ['漢']);
+  } finally { global.ecriture.unicode = false; global.ecriture.couverture = null; oublierPertes(); }
+  oublierPertes();
+  releverHorsWinAnsi('Ω');
+  assert.deepEqual(Array.from(pertesCaracteres.keys()), ['Ω'], 'sans polices incorporées, Ω est hors WinAnsi');
+  oublierPertes();
 });
 test('pluriel et tailles', () => {
   assert.equal(plural(1, 'page', 'pages'), '1 page');

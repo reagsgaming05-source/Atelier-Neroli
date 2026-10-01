@@ -87,7 +87,7 @@
     const dits = [];
     if (p.signatures) dits.push(p.certifie
       ? '« ' + src.name + ' » est un document certifié : toute modification — même un numéro de page — détruit sa signature.'
-      : '« ' + src.name + ' » est signé : l\'enregistrer détruit sa signature. La copie ne sera plus signée.');
+      : '« ' + src.name + ' » est signé : l\'enregistrer détruit sa signature. La copie ne sera plus signée. L\'outil « Vérifier les signatures » dit si le contenu signé est intact.');
     if (p.xfa) dits.push('« ' + src.name + ' » est un formulaire XFA, un format que ce logiciel ne sait pas remplir ni modifier. Ouvrez-le dans Adobe Reader pour le remplir ; l\'enregistrer ici peut lui faire perdre son formulaire.');
     if (p.pdfa) dits.push('« ' + src.name + ' » déclare le format d\'archivage PDF/A-' + p.pdfa.toLowerCase() + '. Un filigrane, une numérotation, des annotations, la reconnaissance de texte ou un mot de passe lui feront perdre cette conformité : vous serez prévenu avant l\'enregistrement.');
     if (p.balise) dits.push('« ' + src.name + ' » est balisé pour l\'accessibilité (lecteurs d\'écran). Supprimer, déplacer ou extraire des pages détruit ce balisage.');
@@ -141,7 +141,7 @@
       if (p.xfa) pertes.push(proprReconstruit(pages, opts)
         ? '« ' + s.name + ' » est un formulaire XFA : il ne sera pas conservé comme formulaire.'
         : '« ' + s.name + ' » est un formulaire XFA : il est conservé tel quel, mais ce logiciel ne le modifie pas, et ce que vous y ajoutez peut ne pas s\'afficher dans Adobe Reader.');
-      if (p.pdfa && !proprPdfaGardable(pages, srcs)) pertes.push('« ' + s.name + ' » perd sa conformité PDF/A-' + p.pdfa.toLowerCase() + ' (' + proprRaisonsPdfa(pages, srcs).join(', ') + '). La copie ne se déclarera plus PDF/A.');
+      if (p.pdfa && !(opts && opts.archivage) && !proprPdfaGardable(pages, srcs)) pertes.push('« ' + s.name + ' » perd sa conformité PDF/A-' + p.pdfa.toLowerCase() + ' (' + proprRaisonsPdfa(pages, srcs).join(', ') + '). La copie ne se déclarera plus PDF/A.');
       if (p.balise && proprReconstruit(pages, opts)) pertes.push('« ' + s.name + ' » perd son balisage d\'accessibilité : le texte ne sera plus lisible comme tel par un lecteur d\'écran.');
     });
     return pertes;
@@ -225,6 +225,9 @@
       if (proprReconstruit(pages, opts)) { ote(out.catalog, 'StructTreeRoot'); ote(out.catalog, 'MarkInfo'); }
     } catch (e) { signaler('Balisage non retiré', e); }
 
+    // L'archivage demandé en PDF/A-2b : contrôlé, corrigé, puis déclaré ou non (voir 53-conformite.js).
+    if (opts && opts.archivage) return archiverEnPdfa(out, opts.archivage, retire);
+
     // 2. PDF/A : refait au même niveau quand rien ne l'empêche — la mécanique
     //    existe dans la bibliothèque embarquée —, sinon la déclaration disparaît.
     if (sauve && PDFA_NIVEAUX.indexOf(sauve) >= 0) {
@@ -243,10 +246,39 @@
     return { pdfa: '' };
   }
 
+  // Le document est contrôlé ; ce qui se corrige sans perte d'information l'est ; il n'est
+  // déclaré « PDF/A-2b » que si plus rien ne s'y oppose. `rapport` est rempli pour l'appelant :
+  // { corrections, problemes, regles, conforme }.
+  function archiverEnPdfa(out, rapport, retire) {
+    const { PDFName } = PDFLib;
+    try {
+      const fait = corrigerPourPdfa(out);
+      rapport.corrections = direCorrections(fait);
+      if (retire || fait.joints || fait.actions) ramasserLesObjets(out);
+      let ctrl = controlerPdfa(out);
+      rapport.regles = ctrl.regles;
+      rapport.problemes = ctrl.problemes;
+      if (!ctrl.problemes.length) {
+        out.convertToPDFA({ conformance: '2B' });
+        ctrl = controlerPdfa(out, { declaration: true });
+        rapport.regles = ctrl.regles;
+        rapport.problemes = ctrl.problemes;
+      }
+    } catch (e) { signaler('Archivage PDF/A', e, 'erreur'); rapport.problemes = (rapport.problemes || []).concat([{ code: 'erreur', page: 0, texte: 'Le contrôle a échoué : ' + (e && e.message ? e.message : e), corrigeable: false }]); }
+    rapport.conforme = !(rapport.problemes && rapport.problemes.length);
+    if (!rapport.conforme) {
+      // Jamais de fausse déclaration : ni XMP « pdfaid », ni intention de sortie.
+      try { out.catalog.delete(PDFName.of('Metadata')); out.catalog.delete(PDFName.of('OutputIntents')); } catch (e) { signaler('Déclaration PDF/A non retirée', e); }
+      try { ramasserLesObjets(out); } catch (e) { signaler('Archivage PDF/A', e, 'info'); }
+    }
+    return { pdfa: rapport.conforme ? '2B' : '' };
+  }
+
   // Des caractères que les polices du logiciel ne savent pas écrire : le dire
   // avant d'écrire le fichier, avec le mot où ils figurent, plutôt que de laisser
-  // sortir « Miloševi? » sans un mot. Les polices incorporées (Unicode) suppriment
-  // cet avertissement ; en attendant, il évite d'envoyer un document faux.
+  // sortir « Wang ? » sans un mot. Les polices incorporées (alphabets latin, grec et
+  // cyrillique) ont supprimé l'avertissement pour la plupart des noms ; il reste pour
+  // les autres écritures, afin de ne jamais envoyer un document faux sans le dire.
   function caracteresPerdus() { return Array.from(pertesCaracteres.entries()).map(([ch, mot]) => ({ ch, mot })); }
   async function caracteresAcceptes() {
     const l = caracteresPerdus();
@@ -257,10 +289,10 @@
       dialog({
         title: 'Des caractères ne peuvent pas être écrits', icon: IC.info,
         build: b => {
-          b.append(note('Les polices du logiciel ne savent pas écrire ces caractères. Dans le fichier, ils seraient remplacés par « ? » :', 'warn'));
+          b.append(note('Les polices du logiciel (alphabets latin, grec et cyrillique) ne savent pas écrire ces caractères. Dans le fichier, ils seraient remplacés par « ? » :', 'warn'));
           l.slice(0, 8).forEach(x => b.append(note('« ' + x.ch + ' »' + (x.mot ? ' dans « ' + x.mot + ' »' : ''))));
           if (l.length > 8) b.append(note('… et ' + plural(l.length - 8, 'autre', 'autres') + '.'));
-          b.append(note('Un nom écrit « Miloševi? » est un document qu\'on ne peut pas envoyer. Corrigez le texte (par exemple « c » pour « ć »), ou exportez en connaissance de cause.'));
+          b.append(note('Un nom écrit « Wang ? » est un document qu\'on ne peut pas envoyer. Remplacez ces caractères par des lettres de l\'alphabet latin, ou exportez en connaissance de cause.'));
         },
         onClose: () => { if (!repondu) res(false); },
         actions: [

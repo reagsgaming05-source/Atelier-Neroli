@@ -8,8 +8,12 @@ const fs = require('fs');
 const path = require('path');
 // La reconnaissance de texte (OCR) : tesseract.js, son moteur wasm et les
 // modèles de langue français et allemand (tessdata_best, entiers).
+// Les polices Unicode (Arimo, Tinos, Cousine : sous licence SIL OFL 1.1, de mêmes
+// largeurs que Helvetica, Times et Courier) et fontkit, qui permet à pdf-lib de les
+// incorporer : c'est ce qui rend possibles les caractères hors WinAnsi et le PDF/A.
 const PAQUETS = [['pdfjs-dist', '3.11.174'], ['@cantoo/pdf-lib', '2.11.0'], ['jszip', '3.10.1'],
-  ['tesseract.js', '7.0.0'], ['tesseract.js-core', '7.0.0'], ['@tesseract.js-data/fra', '1.0.0'], ['@tesseract.js-data/deu', '1.0.0']];
+  ['tesseract.js', '7.0.0'], ['tesseract.js-core', '7.0.0'], ['@tesseract.js-data/fra', '1.0.0'], ['@tesseract.js-data/deu', '1.0.0'],
+  ['@cantoo/fontkit', '2.0.12'], ['@expo-google-fonts/arimo', '0.4.3'], ['@expo-google-fonts/tinos', '0.4.2'], ['@expo-google-fonts/cousine', '0.4.3']];
 const LIBS = path.join(__dirname, 'libs');
 fs.mkdirSync(LIBS, { recursive: true });
 for (const [nom, version] of PAQUETS) {

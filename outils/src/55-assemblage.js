@@ -3,6 +3,7 @@
   // =====================================================================
   function fontKey(name, bold, italic) { return (name || 'Helvetica') + (bold ? '-B' : '') + (italic ? '-I' : ''); }
   async function getFont(doc, cache, name, bold, italic) {
+    if (ecriture.unicode) return policeUnicode(doc, cache, name, bold, italic);
     const k = fontKey(name, bold, italic);
     if (cache.has(k)) return cache.get(k);
     const S = PDFLib.StandardFonts;
@@ -434,6 +435,20 @@
           } catch (e) { signaler('Champ de formulaire « ' + name + ' »', e); }
         });
       } catch (e) { signaler('Champs de formulaire', e); }
+    }
+    // Polices incorporées : les champs sont redessinés avec une police Unicode (sinon
+    // pdf-lib dessine avec Helvetica, qui n'est pas incorporée et ne sait pas écrire « ć »).
+    if (ecriture.unicode && ((values && Object.keys(values).length) || forceFlatten || state.flatten)) {
+      try {
+        const form = doc.getForm();
+        const champs = form.getFields();
+        if (champs.length) {
+          // Toutes les apparences sont refaites, y compris celles que le fichier avait déjà :
+          // elles citent la police de leur auteur, qui n'est pas forcément incorporée.
+          champs.forEach(c => { try { c.markAsDirty(); } catch (e) { signaler('Apparence d\'un champ', e, 'info'); } });
+          form.updateFieldAppearances(await policeUnicode(doc, new Map(), 'Helvetica', false, false));
+        }
+      } catch (e) { signaler('Apparence des champs de formulaire', e); }
     }
     if (forceFlatten || state.flatten) { try { doc.getForm().flatten(); } catch (e) { signaler('Aplatissement du formulaire', e); } }
     return doc;

@@ -180,7 +180,11 @@
     const mot = (String(texte).split(/[\s\n]+/).find(m => m.indexOf(ch) >= 0) || '').slice(0, 40);
     pertesCaracteres.set(ch, mot);
   }
-  const hors = ch => { const c = ch.codePointAt(0); return c > 255 && WINANSI_SUP.indexOf(ch) < 0 && CHAR_MAP[ch] === undefined; };
+  const hors = ch => {
+    const c = ch.codePointAt(0);
+    if (ecriture.unicode && ecriture.couverture) return c > 255 && !ecriture.couverture.has(c) && CHAR_MAP[ch] === undefined;
+    return c > 255 && WINANSI_SUP.indexOf(ch) < 0 && CHAR_MAP[ch] === undefined;
+  };
   // Pour les valeurs que pdf-lib écrit lui-même (champs de formulaire).
   function releverHorsWinAnsi(texte) { for (const ch of String(texte == null ? '' : texte)) if (hors(ch)) noterPerte(ch, texte); }
   function winAnsi(s) {
@@ -192,6 +196,11 @@
       if (c < 32) { out += ch === '\n' ? '\n' : ' '; continue; }
       // 0x7F à 0x9F : des codes de commande, que WinAnsi ne porte pas.
       if (c >= 0x7f && c <= 0x9f) { out += ' '; continue; }
+      // Polices incorporées : tout ce qu'elles couvrent s'écrit tel quel.
+      if (ecriture.unicode && ecriture.couverture) {
+        if (c > 255 && !ecriture.couverture.has(c)) { noterPerte(ch, s); out += '?'; } else out += ch;
+        continue;
+      }
       if (c > 255 && WINANSI_SUP.indexOf(ch) < 0) noterPerte(ch, s);
       out += (c <= 255 || WINANSI_SUP.indexOf(ch) >= 0) ? ch : '?';
     }

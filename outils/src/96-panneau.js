@@ -40,12 +40,14 @@
       ] },
       { title: 'Exporter', items: [
         { id: 'exp-pdf', name: 'Exporter le PDF', sub: 'Document complet', icon: IC.save, need: 'pages', run: () => exportPages(state.pages, safeBase(el.filename.value) + '.pdf') },
+        { id: 'archiver', name: 'Archiver en PDF/A-2b', sub: 'Format d\'archivage à long terme, contrôlé', icon: IC.save, need: 'pages', run: toolArchiver },
         { id: 'exp-img', name: 'Exporter en images', sub: 'PNG ou JPEG', icon: IC.image, need: 'pages', run: toolExportImages },
         { id: 'exp-txt', name: 'Extraire le texte', sub: 'Fichier .txt', icon: IC.txt, need: 'pages', run: toolExportText },
         { id: 'compress', name: 'Réduire la taille', sub: 'Compression des pages', icon: IC.zap, need: 'pages', run: toolCompress },
       ] },
       { title: 'Protéger', items: [
         { id: 'password', name: 'Mot de passe', sub: 'Chiffrement et autorisations', icon: IC.lock, need: 'pages', run: toolPassword, active: () => !!state.security },
+        { id: 'signatures', name: 'Vérifier les signatures', sub: 'Un document signé reçu : intact, modifié, signé par qui', icon: IC.lock, run: toolSignatures, active: () => state.sources.some(s => s.proprietes && s.proprietes.signatures) },
         { id: 'flatten', name: 'Aplatir', sub: 'Figer les champs et les annotations', icon: IC.flat, need: 'pages', run: toolFlatten, active: () => state.flatten || state.figerAnnotations },
       ] },
       { title: 'Document', items: [

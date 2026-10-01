@@ -32,7 +32,7 @@ if [ ! -f "$ZIP" ]; then
   echo "  Aucun zip trouvé."
   echo "  Posez AktumPDF-mac.zip à côté de ce fichier, ou glissez-le sur cette fenêtre."
   echo
-  [ -z "$AKTUM_MAJ_AUTO" ] && { printf "  Appuyez sur Entrée pour fermer… "; read -r _; }
+  [ -z "$AKTUM_MAJ_AUTO" ] && { printf "  Appuyez sur Entrée pour fermer… "; read -r _ || true; }
   exit 1
 fi
 echo "  Archive : $(basename "$ZIP")"
@@ -47,7 +47,7 @@ while pgrep -x "AktumPDF" >/dev/null 2>&1; do
     echo
     echo "  Aktum PDF est encore ouverte. Fermez-la, puis relancez cette mise à jour."
     echo
-    printf "  Appuyez sur Entrée pour fermer… "; read -r _
+    printf "  Appuyez sur Entrée pour fermer… "; read -r _ || true
     exit 1
   fi
   ESSAIS=$((ESSAIS + 1))
@@ -78,7 +78,7 @@ if ! ELECTRON_RUN_AS_NODE=1 "$APPLI/MacOS/AktumPDF" "$APPLI/Resources/app.asar/v
   echo "  reprenez « AktumPDF-mac.zip » ET son fichier « .signature.json » depuis la"
   echo "  page de téléchargement de l'éditeur."
   echo
-  [ -z "$AKTUM_MAJ_AUTO" ] && { printf "  Appuyez sur Entrée pour fermer… "; read -r _; }
+  [ -z "$AKTUM_MAJ_AUTO" ] && { printf "  Appuyez sur Entrée pour fermer… "; read -r _ || true; }
   exit 1
 fi
 ZIP="$TEMP/maj.zip"
@@ -136,5 +136,5 @@ if [ -n "$AKTUM_MAJ_AUTO" ]; then
   open "$DOSSIER/AktumPDF.app" >/dev/null 2>&1 || true
   exit 0
 fi
-printf "  Appuyez sur Entrée pour fermer… "; read -r _
+printf "  Appuyez sur Entrée pour fermer… "; read -r _ || true
 exit 0

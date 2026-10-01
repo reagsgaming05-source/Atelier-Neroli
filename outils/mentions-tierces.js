@@ -34,6 +34,18 @@ const COMPOSANTS = [
   { nom: 'tesseract.js-core (moteur Tesseract compilé en WebAssembly)', version: '7.0.0', licence: 'Apache-2.0',
     auteur: 'Jerome Wu et contributeurs ; Tesseract OCR : Google et contributeurs',
     role: 'moteur de reconnaissance de texte', fichier: ['tesseract.js-core-7.0.0', 'LICENSE'] },
+  { nom: 'fontkit (fork @cantoo/fontkit)', version: '2.0.12', licence: 'MIT', auteur: 'Devon Govett et contributeurs',
+    role: 'lecture et découpe des polices incorporées dans les PDF produits', fichier: ['cantoo-fontkit-2.0.12', 'LICENSE'],
+    dependances: 'Inclut restructure, brotli, dfa, fflate, unicode-properties et unicode-trie (MIT), '
+      + 'https://github.com/foliojs/restructure, https://github.com/foliojs/brotli.js, https://github.com/foliojs/dfa, '
+      + 'https://github.com/101arrowz/fflate, https://github.com/foliojs/unicode-properties, https://github.com/foliojs/unicode-trie' },
+  { nom: 'Arimo (police sans empattement, de mêmes largeurs que Helvetica et Arial)', version: '0.4.3', licence: 'SIL Open Font License 1.1',
+    auteur: 'The Arimo Project Authors', role: 'écriture des textes ajoutés aux PDF avec des caractères hors du jeu Windows, et PDF/A',
+    fichier: ['expo-google-fonts-arimo-0.4.3', 'LICENSE_FONT'] },
+  { nom: 'Tinos (police à empattements, de mêmes largeurs que Times New Roman)', version: '0.4.2', licence: 'SIL Open Font License 1.1',
+    auteur: 'The Tinos Project Authors', role: 'idem, famille à empattements', fichier: ['expo-google-fonts-tinos-0.4.2', 'LICENSE_FONT'] },
+  { nom: 'Cousine (police à chasse fixe, de mêmes largeurs que Courier New)', version: '0.4.3', licence: 'SIL Open Font License 1.1',
+    auteur: 'The Cousine Project Authors', role: 'idem, famille à chasse fixe', fichier: ['expo-google-fonts-cousine-0.4.3', 'LICENSE_FONT'] },
 ];
 
 const MODELES = 'Modèles de langue français et allemand « tessdata_best » du projet Tesseract OCR (https://github.com/tesseract-ocr/tessdata_best), '
@@ -91,8 +103,12 @@ function mentions({ version = '', construction = '' } = {}) {
   sortie.push('demande écrite, pendant trois ans à compter de la livraison de la version concernée.');
   sortie.push('');
   sortie.push(trait);
-  sortie.push('Ce que ce logiciel n\'embarque pas : aucune police (celles du système sont utilisées), aucun module');
-  sortie.push('de statistiques, aucun code d\'un service en ligne. Aucun composant sous GPL ou AGPL.');
+  sortie.push('Les polices Arimo, Tinos et Cousine sont embarquées telles quelles, sans modification. Les');
+  sortie.push('documents produits n\'en contiennent que les lettres utilisées (sous-ensemble), ce que la licence');
+  sortie.push('OFL 1.1 permet ; le nom des polices reste celui de leurs auteurs.');
+  sortie.push('');
+  sortie.push('Ce que ce logiciel n\'embarque pas : aucun module de statistiques, aucun code d\'un service en ligne.');
+  sortie.push('Aucun composant sous GPL ou AGPL.');
   sortie.push('');
   return sortie.join('\n');
 }

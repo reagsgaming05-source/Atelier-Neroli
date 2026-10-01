@@ -18,7 +18,7 @@
     jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   };
   let pdfjs = null, PDFLib = null, JSZip = null;
-  const FEAT = { encrypt: false, zip: false };
+  const FEAT = { encrypt: false, zip: false, unicode: false };
 
   // Le produit a changé de nom : ses réglages (tampons, thème, zoom…), enregistrés sous l'ancien
   // préfixe, sont repris sous le nouveau, une fois. // @garder-ancien-nom
@@ -65,6 +65,8 @@
       FEAT.encrypt = typeof PDFLib.PDFDocument.prototype.encrypt === 'function';
       JSZip = window.JSZip || null;
       FEAT.zip = !!JSZip;
+      // Les polices Unicode et fontkit sont dans la page hors ligne ; la page d'essai en ligne n'en a pas.
+      FEAT.unicode = !!(window.fontkit && typeof window.fontkit.create === 'function' && document.getElementById('police-sans-r') && typeof DecompressionStream === 'function');
       started();
       return;
     }

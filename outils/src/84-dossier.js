@@ -34,11 +34,14 @@
     return out;
   };
   // Le sommaire et les intercalaires : un petit PDF fabriqué sur place.
-  async function fabriquerPagesDossier(o) {
-    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  // Écrit avec des polices incorporées quand le logiciel les a : les noms de pièces
+  // gardent leurs accents, et ces pages sont conformes au PDF/A comme le reste.
+  function fabriquerPagesDossier(o) { return avecEcritureUnicode(true, () => fabriquerPagesDossierEnPolices(o)); }
+  async function fabriquerPagesDossierEnPolices(o) {
+    const { PDFDocument, rgb } = PDFLib;
     const doc = await PDFDocument.create();
-    const reg = await doc.embedFont(StandardFonts.Helvetica);
-    const gras = await doc.embedFont(StandardFonts.HelveticaBold);
+    const reg = await policeDeBase(doc, false);
+    const gras = await policeDeBase(doc, true);
     const W = 595.28, H = 841.89, marge = 60;
     const gris = rgb(0.42, 0.45, 0.5), noir = rgb(0.08, 0.09, 0.11), bleu = rgb(0.15, 0.39, 0.79);
     const PAR_PAGE = 32;
