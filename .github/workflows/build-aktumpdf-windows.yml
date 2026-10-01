@@ -154,10 +154,10 @@ jobs:
           retention-days: 7
 
       # Les quatre autres documents du dossier livré : guide d'administration, fiche de
-      # protection des données, fiche produit, procédure de support. Les coordonnées de
+      # protection des données, fiche produit, procédure de support, déclaration d'accessibilité. Les coordonnées de
       # l'éditeur viennent des variables du dépôt (EDITEUR_*), jamais du code : le dépôt est
       # public. Sans elles, les documents renvoient aux mentions légales du site.
-      - name: Documents (administration, protection des données, fiche produit, support)
+      - name: Documents (administration, protection des données, fiche produit, support, accessibilité)
         working-directory: outils/docs
         env:
           EDITEUR_NOM: ${{ vars.EDITEUR_NOM }}
@@ -172,7 +172,8 @@ jobs:
           set -euo pipefail
           export AKTUM_CHROMIUM="$(cd ../test-e2e && node -p "require('@playwright/test').chromium.executablePath()")"
           node faire-les-documents.js "$GITHUB_WORKSPACE/documents"
-          test "$(ls "$GITHUB_WORKSPACE/documents"/*.pdf | wc -l)" -eq 4
+          test "$(ls "$GITHUB_WORKSPACE/documents"/*.pdf | wc -l)" -eq 5
+          test -s "$GITHUB_WORKSPACE/documents/Declaration-d-accessibilite.pdf"
           # la page de référence des composants : un fichier HTML autonome, lisible hors ligne, tiré de la feuille de style
           node faire-reference-composants.js "$GITHUB_WORKSPACE/documents"
           test -s "$GITHUB_WORKSPACE/documents/Reference-des-composants.html"
@@ -775,7 +776,7 @@ jobs:
           test -x "$essai/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF" || { echo "::error::le binaire a perdu son droit d'exécution dans le zip"; exit 1; }
           test -f "$essai/AktumPDF/version.json" || { echo "::error::la fiche de version manque dans l'archive"; exit 1; }
           test -f "$essai/AktumPDF/LISEZMOI-mac.txt" || { echo "::error::le LISEZMOI manque"; exit 1; }
-          test "$(ls "$essai/AktumPDF/Documents"/*.pdf | wc -l | tr -d ' ')" -eq 4 || { echo "::error::les quatre documents manquent dans l'archive"; exit 1; }
+          test "$(ls "$essai/AktumPDF/Documents"/*.pdf | wc -l | tr -d ' ')" -eq 5 || { echo "::error::les cinq documents manquent dans l'archive"; exit 1; }
           test -f "$essai/AktumPDF/Notes-de-version.txt" || { echo "::error::les notes de version manquent dans l'archive"; exit 1; }
           test -x "$essai/AktumPDF/Mettre-a-jour.command" || { echo "::error::le script de mise à jour n'est pas exécutable"; exit 1; }
           # Les frameworks d'Electron sont pleins de liens symboliques ; s'ils
