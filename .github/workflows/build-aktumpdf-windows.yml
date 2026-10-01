@@ -933,23 +933,36 @@ jobs:
           }
           FONCTIONS
 
+      # Sans la clé de signature (secret MAJ_CLE_PRIVEE, voir outils/editeur/generer-cles.js),
+      # la construction n'a pas produit de .signature.json : la candidate se publie quand même,
+      # pour être essayée, mais ses notes le disent et aucun poste ne la prendra pour une mise
+      # à jour. La version stable, elle, exige la signature (voir plus bas).
       - name: Publier la version candidate
         if: steps.fiche.outputs.canal == 'candidate'
         run: |
           set -euo pipefail
           . ./publier.sh
           v="${{ steps.fiche.outputs.version }}"
+          signee=oui
+          for p in windows mac; do
+            [ -f "pose/AktumPDF-$p/AktumPDF-$p.zip.signature.json" ] || signee=non
+          done
           {
             echo "**CANDIDATE — à essayer avant tout, pas la version des postes.** Construite depuis une branche de travail (${GITHUB_REF_NAME}), commit ${GITHUB_SHA}."
             echo
-            echo "Pour installer : l'archive ET son fichier \`.signature.json\`, posés ensemble."
+            if [ "$signee" = oui ]; then
+              echo "Pour installer : l'archive ET son fichier \`.signature.json\`, posés ensemble."
+            else
+              echo "**Archive NON SIGNÉE** (la clé de signature de l'éditeur n'est pas encore installée dans la construction) : elle s'installe à la main pour être essayée, mais aucun poste ne l'acceptera comme mise à jour."
+            fi
             echo
             cat notes-version.md
           } > notes-candidate.md
+          [ "$signee" = oui ] || echo "::warning::Archives non signées (secret MAJ_CLE_PRIVEE absent) : candidate publiée sans .signature.json."
           preparer aktumpdf-windows-candidate "Aktum PDF $v — Windows (CANDIDATE, à essayer)" notes-candidate.md candidate
-          poser aktumpdf-windows-candidate pose/AktumPDF-windows/AktumPDF-windows.zip pose/AktumPDF-windows/AktumPDF-windows.zip.sha256 pose/AktumPDF-windows/AktumPDF-windows.zip.signature.json
+          poser aktumpdf-windows-candidate pose/AktumPDF-windows/AktumPDF-windows.zip*
           preparer aktumpdf-mac-candidate "Aktum PDF $v — Mac (CANDIDATE, à essayer)" notes-candidate.md candidate
-          poser aktumpdf-mac-candidate pose/AktumPDF-mac/AktumPDF-mac.zip pose/AktumPDF-mac/AktumPDF-mac.zip.sha256 pose/AktumPDF-mac/AktumPDF-mac.zip.signature.json
+          poser aktumpdf-mac-candidate pose/AktumPDF-mac/AktumPDF-mac.zip*
 
       - name: Publier la version stable (numérotée, conservée)
         if: steps.fiche.outputs.canal == 'stable'
@@ -958,6 +971,14 @@ jobs:
           . ./publier.sh
           v="${{ steps.fiche.outputs.version }}"
           tag="v$v"
+          # Une version stable est celle que les postes installent : sans signature de
+          # l'éditeur, ils la refuseraient tous. On s'arrête avant de la publier.
+          for p in windows mac; do
+            if [ ! -f "pose/AktumPDF-$p/AktumPDF-$p.zip.signature.json" ]; then
+              echo "::error::AktumPDF-$p.zip n'est pas signée : installez le secret MAJ_CLE_PRIVEE (node outils/editeur/generer-cles.js maj) avant de publier une version stable."
+              exit 1
+            fi
+          done
           # Une version publiée ne change plus : si cette étiquette existe déjà avec
           # des archives, on s'arrête plutôt que d'écraser ce que des postes ont déjà.
           if gh release view "$tag" --json assets --jq '.assets | length' 2>/dev/null | grep -qv '^0$'; then
