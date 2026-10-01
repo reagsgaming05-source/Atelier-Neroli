@@ -15,6 +15,7 @@
  {"id": "filtre-outils", "touches": ["Ctrl+K"], "libelle": "Chercher un outil", "groupe": "Document"},
  {"id": "preferences", "touches": ["Ctrl+,"], "libelle": "Préférences", "groupe": "Document", "menu": true},
  {"id": "raccourcis", "touches": ["?", "F1"], "libelle": "Raccourcis et aide", "groupe": "Document", "menu": true},
+ {"id": "decouverte", "touches": [], "libelle": "Découvrir Aktum PDF en 5 minutes", "groupe": "Document", "menu": true},
  {"id": "nouvel-onglet", "touches": ["Ctrl+T"], "libelle": "Nouvel onglet", "groupe": "Onglets", "menu": true},
  {"id": "fermer-onglet", "touches": ["Ctrl+W"], "libelle": "Fermer l'onglet", "groupe": "Onglets", "menu": true},
  {"id": "onglet-suivant", "touches": ["Ctrl+Tab"], "libelle": "Onglet suivant", "groupe": "Onglets", "menu": true},

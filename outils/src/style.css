@@ -789,6 +789,20 @@
   .toast.error { border-left-color: var(--rouge); }
 
   /* ---------- fenêtres ---------- */
+  /* ---------- la visite guidée : une petite carte qui ne bloque rien (au-dessus de l'éditeur et des fenêtres : on la lit pendant qu'on essaie) ---------- */
+  .decouverte {
+    position: fixed; left: var(--e-4); bottom: calc(var(--h-3) + var(--e-6)); z-index: 88; width: min(340px, calc(100vw - 2 * var(--e-4)));
+    display: flex; flex-direction: column; gap: var(--e-2); padding: var(--e-4);
+    background: var(--feutre); border: 1px solid var(--trait); border-radius: var(--r-3); box-shadow: var(--ombre-flottante);
+  }
+  .dec-tete { display: flex; align-items: center; gap: var(--e-2); }
+  .dec-titre { margin: 0; font: 400 var(--t-5) var(--titre); flex: 1 1 auto; min-width: 0; }
+  .dec-compte { color: var(--texte-3); font-size: var(--t-1); font-family: var(--chiffre); flex: none; }
+  .dec-x { flex: none; width: var(--h-1); height: var(--h-1); border: 0; border-radius: var(--r-1); background: transparent; color: var(--texte-3); display: grid; place-items: center; }
+  .dec-x:hover { background: var(--survol); color: var(--texte); }
+  .dec-x svg { width: 12px; height: 12px; }
+  .dec-texte { margin: 0; color: var(--texte-2); font-size: var(--t-2); line-height: 1.5; }
+  .dec-actions { display: flex; flex-wrap: wrap; gap: var(--e-2); margin-top: var(--e-1); }
   .scrim {
     position: fixed; inset: 0; z-index: 85; background: var(--voile); display: grid; place-items: center; padding: var(--e-6);
     backdrop-filter: blur(6px); animation: fondu .16s var(--elan);

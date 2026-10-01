@@ -154,7 +154,12 @@
   function toolHelp() {
     dialog({
       title: 'Raccourcis et aide', icon: IC.info, wide: true,
-      build: b => {
+      build: (b, api) => {
+        // La visite en quatre gestes, sur le document d'exemple : la première chose qu'on propose à qui ouvre l'aide.
+        const visite = document.createElement('button'); visite.type = 'button'; visite.className = 'tb-btn primary'; visite.id = 'btn-visite';
+        visite.textContent = 'Découvrir Aktum PDF en 5 minutes';
+        visite.addEventListener('click', () => { api.close(); decouvrir().catch(e => signaler('Visite guidée', e)); });
+        b.appendChild(visite);
         const mk = rows => {
           const dl = document.createElement('dl'); dl.className = 'kv';
           rows.forEach(r => {

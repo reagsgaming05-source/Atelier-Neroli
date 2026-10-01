@@ -252,6 +252,27 @@ async function tournerPage(win, n) {
   console.log('toujours en onglet : fenêtres', fenetresAvant, '->', fenetresApres, '| documents :', JSON.stringify(await docsPartout()));
   verifier(fenetresApres === fenetresAvant, 'aucune fenêtre de plus quand le réglage est actif');
 
+  // 6. « Aide › Découvrir Aktum PDF en 5 minutes » : le menu ouvre l'exemple (dans un nouvel onglet, le travail n'est pas touché)
+  //    et la carte de la visite guidée.
+  const aide = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.find((i) => i.label === 'Aide').submenu.items.map((i) => i.label));
+  console.log('menu Aide :', JSON.stringify(aide));
+  verifier(aide.includes('Découvrir Aktum PDF en 5 minutes'), 'le menu Aide propose la visite');
+  await menuClic(app, 'decouverte');
+  // la commande va à la fenêtre qui a le focus : on cherche la carte dans celle qui l'a reçue
+  let fenetreVisite = null;
+  await attendre(async () => {
+    for (const w of app.windows()) { try { if (await w.locator('.decouverte').count()) { fenetreVisite = w; return true; } } catch (e) { /* fenêtre en cours de fermeture */ } }
+    return false;
+  }, 30000, 'la carte de la visite');
+  await fenetreVisite.waitForSelector('.decouverte', { state: 'visible', timeout: 10000 });
+  const carte = (await fenetreVisite.locator('.decouverte').innerText()).replace(/\s+/g, ' ');
+  console.log('visite :', carte.slice(0, 80));
+  verifier(/Étape 1 sur 4/.test(carte), 'la carte de la visite s\'affiche');
+  await fenetreVisite.waitForTimeout(1500);
+  const nbOnglets = await fenetreVisite.locator('#onglets .onglet').count();
+  console.log('onglets :', nbOnglets, '| documents :', JSON.stringify(await fenetreVisite.evaluate(() => Array.from(document.querySelectorAll('#doc-list .doc-name')).map((e) => e.textContent))));
+  verifier(nbOnglets >= 2 && (await fenetreVisite.evaluate(() => /exemple\.pdf/.test(document.querySelector('#doc-list').textContent))), 'l\'exemple s\'ouvre dans un onglet de plus, le travail n\'est pas touché');
+
   await app.close();
   await menage(dossier);
   console.log(ok ? 'SMOKE OK' : 'SMOKE ÉCHEC');

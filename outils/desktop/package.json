@@ -62,6 +62,7 @@
       "build/icon-1024.png",
       "build/entitlements.mac.plist"
     ],
+    "electronLanguages": ["fr", "de", "en-US"],
     "asar": true,
     "win": {
       "executableName": "AktumPDF",

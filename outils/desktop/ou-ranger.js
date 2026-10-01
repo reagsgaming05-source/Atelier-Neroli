@@ -33,6 +33,19 @@ const MARQUEUR = 'donnees-par-utilisateur.txt';
 // demande au premier lancement qui l'ouvre.
 const COMPTES = 'comptes.txt';
 
+// L'Explorateur de Windows masque les extensions connues : quelqu'un qui crée « donnees-par-utilisateur.txt » au Bloc-notes, ou qui
+// renomme un fichier en y retapant « .txt », obtient « donnees-par-utilisateur.txt.txt » sans le voir, et le réglage ne fait rien.
+// On reconnaît donc les trois façons de l'avoir écrit — le nom exact, avec « .txt » en double, sans extension — et « À propos » dit
+// lequel a été lu.
+function variantesDuNom(nom) {
+  return [nom, nom + '.txt', nom.replace(/\.txt$/i, '')];
+}
+// Le nom sous lequel le fichier existe, ou null. `existe(nomDeFichier)` est la question posée au disque.
+function trouverReglage(nom, existe) {
+  for (const v of variantesDuNom(nom)) { if (existe(v)) return v; }
+  return null;
+}
+
 // Un nom saisi devient un nom de dossier. Windows refuse \ / : * ? " < > | et
 // quelques noms reserves (CON, PRN, AUX, NUL, COM1...), et se moque des
 // espaces et des points en fin de nom.
@@ -138,7 +151,8 @@ function ouRanger(dossierExe, sonde) {
   // decide que les donnees vivraient dans le profil Windows de chacun, et
   // qu'on n'ouvrirait pas de comptes. C'est la seule facon de ne pas voir la
   // fenetre de connexion.
-  if (sonde.marqueurPose()) return { ou: 'profil', pourquoi: 'marqueur' };
+  const marqueur = sonde.marqueurPose();
+  if (marqueur) return { ou: 'profil', pourquoi: 'marqueur', fichier: typeof marqueur === 'string' ? marqueur : MARQUEUR };
   // Sans pouvoir ecrire a cote de l'executable, il n'y a ni fiche de compte a
   // poser ni dossier a creer : chacun retombe sur son profil Windows, et
   // personne n'est bloque devant une connexion impossible.
@@ -146,7 +160,8 @@ function ouRanger(dossierExe, sonde) {
   // Partout ailleurs, on demande qui ouvre l'application. Une liste de comptes
   // posee a cote de l'executable, ou un lecteur reseau, ne changent plus la
   // decision : seulement ce qu'on en dit dans « A propos ».
-  if (sonde.comptesOuverts && sonde.comptesOuverts()) return { ou: 'comptes', pourquoi: 'comptes' };
+  const liste = sonde.comptesOuverts && sonde.comptesOuverts();
+  if (liste) return { ou: 'comptes', pourquoi: 'comptes', fichier: typeof liste === 'string' ? liste : COMPTES };
   if (sonde.surLeReseau && sonde.surLeReseau()) return { ou: 'comptes', pourquoi: 'reseau' };
   return { ou: 'comptes', pourquoi: 'poste' };
 }
@@ -161,4 +176,11 @@ const POURQUOI = {
   'lecture-seule': 'Le dossier de l\u2019application est en lecture seule : vos données sont dans votre profil Windows.',
 };
 
-module.exports = { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, lireTexte, dossierPortable, nomDuScriptDeMaj, POURQUOI };
+// Ce que « À propos » dit du fichier de réglage lu : son nom tel qu'il est sur le disque, et le nom exact s'il en diffère.
+function phraseDuFichier(fichier, exact) {
+  if (!fichier) return 'Aucun fichier de réglage n\u2019est posé à côté de l\u2019application (donnees-par-utilisateur.txt, comptes.txt).';
+  if (fichier === exact) return 'Fichier de réglage lu : ' + fichier + '.';
+  return 'Fichier de réglage lu : ' + fichier + ' \u2014 nom exact attendu : ' + exact + ' (Windows cache les extensions : renommez le fichier).';
+}
+
+module.exports = { MARQUEUR, COMPTES, variantesDuNom, trouverReglage, phraseDuFichier, cheminReseau, ouRanger, nomDeDossier, listerComptes, lireTexte, dossierPortable, nomDuScriptDeMaj, POURQUOI };

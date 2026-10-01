@@ -9,12 +9,12 @@
     color-scheme: dark;
     --encre: #10151A; --table: #191F25; --relief: #2C353E; --trait: #2E3841;
     --texte: #E7ECF1; --texte-2: #98A6B4; --texte-3: #64727F;
-    --marque: #D4322A; --survol: rgba(255,255,255,.055);
+    --action: #2F6AE0; --survol: rgba(255,255,255,.055);
   }
   @media (prefers-color-scheme: light) {
     :root {
       color-scheme: light;
-      --encre: #FFFFFF; --table: #F1F2F4; --relief: #FFFFFF; --trait: #E2E5E9;
+      --encre: #FFFFFF; --table: #EDEFF2; --relief: #FFFFFF; --trait: #E2E5E9;
       --texte: #22262C; --texte-2: #5B636E; --texte-3: #8A929D;
       --survol: rgba(22,26,32,.06);
     }
@@ -35,11 +35,11 @@
     border: 1px solid var(--trait); border-radius: 9px; background: var(--relief);
     color: inherit; font: inherit; text-align: left; cursor: pointer;
   }
-  .compte:hover { border-color: var(--marque); }
-  .compte:focus-visible { outline: 2px solid var(--marque); outline-offset: 2px; }
+  .compte:hover { border-color: var(--action); }
+  .compte:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
   .pastille, .compte .pastille {
     width: 26px; height: 26px; border-radius: 50%; flex: none; display: grid; place-items: center;
-    background: var(--marque); color: #fff; font-weight: 600; font-size: 12px;
+    background: var(--action); color: #fff; font-weight: 600; font-size: 12px;
   }
   .vide { color: var(--texte-3); font-size: 12.5px; padding: 6px 2px; }
   .ecran { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -59,22 +59,28 @@
     border: 1px solid var(--trait); background: var(--encre); color: var(--texte);
     font: inherit; user-select: text;
   }
-  input:focus { outline: none; border-color: var(--marque); }
+  input:focus { outline: none; border-color: var(--action); }
   button.ajout {
     height: 34px; padding: 0 15px; border-radius: 8px; border: 0;
-    background: var(--marque); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+    background: var(--action); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
   }
   button.ajout:disabled { opacity: .4; cursor: not-allowed; }
   .note { flex: none; color: var(--texte-3); font-size: 11.5px; margin: 0; }
   .avis { margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 12px; background: rgba(224,163,60,.14); color: #E0A33C; }
   .avis[hidden] { display: none; }
   .compte .etat { margin-left: auto; font-size: 11px; color: #E0A33C; }
-  .code { margin: 6px 0; padding: 14px; border-radius: 10px; border: 1px dashed var(--marque); background: var(--encre);
+  .code { margin: 6px 0; padding: 14px; border-radius: 10px; border: 1px dashed var(--action); background: var(--encre);
     font: 600 19px/1.2 ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .06em; text-align: center; user-select: text; }
   .case { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--texte); margin-top: 6px; }
   .case input { width: 16px; height: 16px; margin-top: 2px; flex: none; }
   button.danger { background: #B3261E; }
   .lien.danger { color: #E4574C; }
+  .attente { align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 40px 0; }
+  .attente[hidden] { display: none; }
+  .attente .gros { margin: 0; font-size: 15px; font-weight: 600; }
+  .attente .rond { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--trait); border-top-color: var(--action); animation: tourne .8s linear infinite; }
+  @keyframes tourne { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .attente .rond { animation: none; border-top-color: var(--trait); border-left-color: var(--action); } }
 </style>
 </head>
 <body>
@@ -138,6 +144,7 @@
     <div class="code" id="le-code"></div>
     <p class="note">Notez-le sur papier, ailleurs que sur ce poste. Il ne sera plus jamais affiché : c'est lui qui vous rend l'accès si vous oubliez votre mot de passe.</p>
     <label class="case"><input type="checkbox" id="code-note"> <span>J'ai noté ce code.</span></label>
+    <p class="erreur" id="erreur-code" hidden></p>
     <div class="rangee">
       <button type="submit" class="ajout" id="code-ouvrir" disabled>Continuer</button>
     </div>
@@ -204,12 +211,18 @@
     </div>
   </form>
 
+  <section id="ecran-attente" class="ecran attente" hidden role="status" aria-live="polite">
+    <div class="rond" aria-hidden="true"></div>
+    <p class="gros">Ouverture de votre dossier…</p>
+    <p class="note">L’application se relance : une seconde.</p>
+  </section>
+
   <p class="note" id="note-redemarrage">L'application redémarre une fois pour ouvrir votre dossier.</p>
 
 <script>
   const $ = (id) => document.getElementById(id);
   const ecrans = { liste: $('ecran-liste'), connexion: $('ecran-connexion'), creation: $('ecran-creation'), code: $('ecran-code'),
-    oubli: $('ecran-oubli'), suppression: $('ecran-suppression'), changer: $('ecran-changer'), refaire: $('ecran-refaire') };
+    oubli: $('ecran-oubli'), suppression: $('ecran-suppression'), changer: $('ecran-changer'), refaire: $('ecran-refaire'), attente: $('ecran-attente') };
   const SOUS = {
     liste: 'Choisissez votre compte pour continuer.',
     connexion: 'Votre mot de passe, une fois. La connexion tient jusqu’à la déconnexion.',
@@ -219,6 +232,7 @@
     suppression: 'Effacer ce compte de ce poste.',
     changer: 'Choisissez-en un que vous n’utilisez pas ailleurs.',
     refaire: 'À refaire si le code est perdu ou a été vu par quelqu’un d’autre.',
+    attente: 'Un instant.',
   };
   let choisi = '', ouvrirApres = '';
   let comptesListe = [];
@@ -226,7 +240,7 @@
   function montrer(quoi) {
     Object.keys(ecrans).forEach((k) => { ecrans[k].hidden = k !== quoi; });
     $('sous-titre').textContent = SOUS[quoi];
-    $('note-redemarrage').hidden = (quoi === 'changer' || quoi === 'refaire');
+    $('note-redemarrage').hidden = (quoi === 'changer' || quoi === 'refaire' || quoi === 'attente');
     if (quoi === 'connexion') { $('mdp').value = ''; $('mdp-confirm').value = ''; $('erreur-c').hidden = true; $('mdp').focus(); }
     if (quoi === 'creation') { $('erreur-n').hidden = true; $('nom').focus(); }
     if (quoi === 'oubli') { ['oubli-code', 'oubli-1', 'oubli-2'].forEach((i) => { $(i).value = ''; }); $('erreur-o').hidden = true; $('oubli-code').focus(); }
@@ -241,7 +255,9 @@
   function suite(ou, promesse) {
     return promesse.then((r) => {
       if (r && typeof r === 'object' && r.code) return montrerCode(r.nom, r.code);
-      if (r) dire(ou, r);
+      if (r) { dire(ou, r); return; }
+      // C'est bon : l'application se relance dans une seconde. Plutôt qu'une fenêtre qui disparaît sans rien dire, on dit ce qui se passe.
+      montrer('attente');
     });
   }
   function montrerCode(nom, code) {
@@ -256,7 +272,7 @@
     e.preventDefault();
     if (!$('code-note').checked) return;
     $('code-ouvrir').disabled = true;
-    window.comptes.ouvrir(ouvrirApres);
+    window.comptes.ouvrir(ouvrirApres).then((r) => { if (r) { $('code-ouvrir').disabled = false; return dire('erreur-code', r); } montrer('attente'); });
   });
 
   const quand = (iso) => {

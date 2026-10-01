@@ -4,7 +4,7 @@
 // décision testée ici — celle du dossier de données.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ouRanger, cheminReseau, POURQUOI, MARQUEUR, nomDeDossier, listerComptes, dossierPortable } = require('../desktop/ou-ranger');
+const { ouRanger, cheminReseau, POURQUOI, MARQUEUR, COMPTES, nomDeDossier, listerComptes, dossierPortable, variantesDuNom, trouverReglage, phraseDuFichier } = require('../desktop/ou-ranger');
 
 // Une sonde qui répond ce qu'on lui dit, et qui note ce qu'on lui a demandé :
 // sur un partage, on ne veut même pas qu'un dossier « data » soit créé.
@@ -62,19 +62,19 @@ test('un partage en lecture seule renvoie au profil Windows', () => {
 
 test('le marqueur l\'emporte sur tout : profil Windows, même sur un partage', () => {
   assert.deepEqual(ouRanger('P:\\Outils\\AktumPDF', sondeComplete({ reseau: true, marqueur: true })),
-    { ou: 'profil', pourquoi: 'marqueur' });
+    { ou: 'profil', pourquoi: 'marqueur', fichier: 'donnees-par-utilisateur.txt' });
 });
 
 test('le marqueur force le rangement par utilisateur, lettre de lecteur comprise', () => {
   // Un partage monté sur S: ne se distingue pas d'un disque local : le fichier
   // posé à côté de l'exécutable est la seule façon de le dire.
   const s = sonde(true, true);
-  assert.deepEqual(ouRanger('S:\\Outils\\AktumPDF', s), { ou: 'profil', pourquoi: 'marqueur' });
+  assert.deepEqual(ouRanger('S:\\Outils\\AktumPDF', s), { ou: 'profil', pourquoi: 'marqueur', fichier: 'donnees-par-utilisateur.txt' });
   assert.ok(!s.vues.includes('inscriptible'), 'inutile de tâter le dossier, c\'est déjà tranché');
   assert.equal(MARQUEUR, 'donnees-par-utilisateur.txt');
   // Et la liste posée à la main ouvre les comptes, même hors réseau.
   assert.deepEqual(ouRanger('C:\\Outils\\AktumPDF', sondeComplete({ comptes: true })),
-    { ou: 'comptes', pourquoi: 'comptes' });
+    { ou: 'comptes', pourquoi: 'comptes', fichier: 'comptes.txt' });
 });
 
 test('un dossier en lecture seule renvoie aussi au profil', () => {
@@ -218,4 +218,31 @@ test('ailleurs, et hors paquet, le dossier de l\'exécutable suffit', () => {
   // Un chemin qui contient « .app » sans être un paquet ne doit pas tromper.
   assert.equal(dossierPortable('/Users/marie/mes.app.sauvegardes/bin', 'darwin'), '/Users/marie/mes.app.sauvegardes/bin');
   assert.equal(dossierPortable('', 'darwin'), '');
+});
+
+// L'Explorateur masque les extensions connues : « donnees-par-utilisateur.txt » créé au Bloc-notes devient « …txt.txt ». Le réglage
+// doit marcher quand même, et « À propos » doit dire quel fichier a été lu.
+test('un fichier de réglage se reconnaît sous son nom exact, avec « .txt » en double, ou sans extension', () => {
+  assert.deepEqual(variantesDuNom('donnees-par-utilisateur.txt'), ['donnees-par-utilisateur.txt', 'donnees-par-utilisateur.txt.txt', 'donnees-par-utilisateur']);
+  for (const present of ['donnees-par-utilisateur.txt', 'donnees-par-utilisateur.txt.txt', 'donnees-par-utilisateur']) {
+    assert.equal(trouverReglage(MARQUEUR, (f) => f === present), present);
+  }
+  assert.equal(trouverReglage(MARQUEUR, () => false), null);
+  assert.equal(trouverReglage(COMPTES, (f) => f === 'comptes.txt.txt'), 'comptes.txt.txt');
+});
+
+test('la décision porte le nom du fichier lu, tel qu\'il est sur le disque', () => {
+  const r = ouRanger('E:\\AktumPDF', { marqueurPose: () => 'donnees-par-utilisateur.txt.txt', dossierInscriptible: () => true });
+  assert.deepEqual(r, { ou: 'profil', pourquoi: 'marqueur', fichier: 'donnees-par-utilisateur.txt.txt' });
+  const c = ouRanger('E:\\AktumPDF', { marqueurPose: () => null, dossierInscriptible: () => true, comptesOuverts: () => 'comptes.txt.txt' });
+  assert.deepEqual(c, { ou: 'comptes', pourquoi: 'comptes', fichier: 'comptes.txt.txt' });
+});
+
+test('« À propos » dit le fichier lu, et le nom exact quand il diffère', () => {
+  assert.match(phraseDuFichier('donnees-par-utilisateur.txt', MARQUEUR), /Fichier de réglage lu : donnees-par-utilisateur\.txt\./);
+  const double = phraseDuFichier('donnees-par-utilisateur.txt.txt', MARQUEUR);
+  assert.match(double, /donnees-par-utilisateur\.txt\.txt/);
+  assert.match(double, /nom exact attendu : donnees-par-utilisateur\.txt \(Windows cache les extensions/);
+  assert.match(phraseDuFichier(undefined, MARQUEUR), /Aucun fichier de réglage/);
+  assert.ok(phraseDuFichier(undefined, MARQUEUR).includes(MARQUEUR) && phraseDuFichier(undefined, MARQUEUR).includes(COMPTES), 'les deux noms attendus sont cités');
 });

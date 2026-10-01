@@ -297,6 +297,11 @@ jobs:
           node fiche-de-version.js windows dist\AktumPDF\version.json
           Copy-Item ..\NOTES-DE-VERSION.md dist\AktumPDF\Notes-de-version.txt
           Get-ChildItem dist\AktumPDF | Select-Object Name, Length
+          # Les langues de Chromium dont l'application n'a que faire (une cinquantaine de fichiers, près de 40 Mo) ne sont pas livrées :
+          # français, allemand, et l'anglais de repli.
+          $paks = @(Get-ChildItem dist\AktumPDF\locales -Filter *.pak -ErrorAction SilentlyContinue)
+          Write-Host "locales : $($paks.Count) fichier(s)"
+          if ($paks.Count -gt 3) { Write-Host "::error::trop de fichiers de langue dans l'archive ($($paks.Count))"; exit 1 }
 
       - name: Test de fumée de l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, export)
         timeout-minutes: 14

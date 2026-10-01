@@ -102,3 +102,11 @@ test('« Aktum PDF » : le nom du produit s\'écrit avec son espace, le fichier 
   assert.equal(b.mac.executableName, 'AktumPDF');
   assert.ok(!/\$\{productName\}/.test(b.artifactName), 'un nom de fichier sans espace');
 });
+
+test('la fenêtre de connexion : le même bleu d\'action, les mêmes fonds que l\'application', () => {
+  const page = lire('outils', 'desktop', 'choix-profil.html');
+  assert.equal(maj((/--action:\s*(#[0-9A-Fa-f]{6})/.exec(page) || [])[1]), marque.action);
+  assert.ok(page.includes('--table: ' + marque['fond-fenetre'].sombre), 'fond sombre');
+  assert.ok(maj(page).includes('--TABLE: ' + marque['fond-fenetre'].clair), 'fond clair');
+  assert.doesNotMatch(page, /--marque:/, 'le rouge de la marque n\'est plus la couleur des boutons');
+});

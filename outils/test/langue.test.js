@@ -29,7 +29,7 @@ test('les espaces et retours à la ligne du HTML ne gênent pas', () => {
 });
 
 test('un texte assemblé retrouve son motif, et ses morceaux sont traduits à leur tour', () => {
-  assert.strictEqual(tr('Page 3 sur 12 - remplacez cet exemple par vos propres documents.'), 'Seite 3 von 12 – ersetzen Sie dieses Beispiel durch Ihre eigenen Dokumente.');
+  assert.strictEqual(tr(' Hors du document (12 pages) : 3, 5.'), ' Ausserhalb des Dokuments (12 Seiten): 3, 5.');
   // « Fichier : x » : le nom du fichier reste tel quel
   assert.strictEqual(tr('Fichier : convocation.pdf'), 'Datei: convocation.pdf');
   // le morceau variable est lui-même un texte connu

@@ -111,6 +111,7 @@ async function fenetreConnexion(poste, nom) {
 const messageDe = async (f, id) => ((await f.locator(id).textContent({ timeout: 5000 })) || '').trim();
 
 // Rend le message d'erreur affiché, ou '' quand la connexion est passée.
+let ATTENTE_VUE = false;
 async function seConnecter(poste, nom, mdp) {
   const e = await lancer(poste);
   const f = await e.firstWindow();
@@ -118,6 +119,8 @@ async function seConnecter(poste, nom, mdp) {
   await f.locator('.compte', { hasText: nom }).click();
   await f.fill('#mdp', mdp);
   await f.click('#entrer');
+  // Une connexion qui passe montre « Ouverture de votre dossier… » avant que l'application ne se relance : plus de fenêtre qui disparaît.
+  try { await f.waitForSelector('#ecran-attente:not([hidden])', { timeout: 1200 }); ATTENTE_VUE = true; } catch (e2) { /* refusée : pas d'attente */ }
   await souffler(2500);
   let erreur = '';
   try { erreur = (await f.locator('#erreur-c').textContent({ timeout: 800 })) || ''; } catch (e2) { /* fenêtre partie */ }
@@ -323,5 +326,6 @@ const refermer = async (s) => { await s.e.close().catch(() => {}); await souffle
   }
 
   try { fs.rmSync(base, { recursive: true, force: true }); } catch (e) { /* ménage sans importance */ }
+  assert.ok(ATTENTE_VUE, 'une connexion réussie montre l\'écran d\'attente avant la relance');
   console.log('COMPTES OK');
 })().catch((e) => { menage(); console.error(e); process.exit(1); });

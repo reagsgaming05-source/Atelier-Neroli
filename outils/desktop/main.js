@@ -93,7 +93,7 @@ const PORTABLE_DIR = process.env.AKTUM_DOSSIER_APP
   || require('./ou-ranger').dossierPortable(path.dirname(process.execPath), process.platform);
 
 const SCRIPT_MAJ = require('./ou-ranger').nomDuScriptDeMaj(process.platform);
-const { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
+const { MARQUEUR, COMPTES, trouverReglage, phraseDuFichier, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const comptes = require('./comptes');
 const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = comptes;
 const { examinerLesZips, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons } = require('./version-posee');
@@ -304,10 +304,14 @@ function refaireMonCode(motDePasse) {
 // n'y avait pas encore de mot de passe, n'est pas proposé non plus — mais son
 // nom réécrit à l'identique dans « Créer un compte » y repose une fiche, et
 // ses affaires sont là, intactes.
+// Un fichier de réglage posé à côté de l'application, sous son nom exact ou sous l'un de ceux que Windows lui fait prendre (voir ou-ranger.js).
+function reglagePose(nom) {
+  return trouverReglage(nom, (f) => { try { return fs.existsSync(path.join(PORTABLE_DIR, f)); } catch (e) { return false; } });
+}
 function comptesConnus() {
   // Lu en octets : listerComptes reconnaît le codage (voir lireTexte).
   let lignes = Buffer.alloc(0);
-  try { lignes = fs.readFileSync(path.join(PORTABLE_DIR, COMPTES)); } catch (e) { /* fichier vide ou absent */ }
+  try { lignes = fs.readFileSync(path.join(PORTABLE_DIR, reglagePose(COMPTES) || COMPTES)); } catch (e) { /* fichier vide ou absent */ }
   let dossiers = [];
   try {
     dossiers = fs.readdirSync(DOSSIER_DATA(), { withFileTypes: true })
@@ -346,9 +350,9 @@ function setupUserData() {
   if (!app.isPackaged && !process.env.AKTUM_DOSSIER_APP) return;
   const dir = DOSSIER_DATA();
   RANGEMENT = ouRanger(PORTABLE_DIR, {
-    comptesOuverts: () => { try { return fs.existsSync(path.join(PORTABLE_DIR, COMPTES)); } catch (e) { return false; } },
+    comptesOuverts: () => reglagePose(COMPTES),
     surLeReseau,
-    marqueurPose: () => { try { return fs.existsSync(path.join(PORTABLE_DIR, MARQUEUR)); } catch (e) { return false; } },
+    marqueurPose: () => reglagePose(MARQUEUR),
     dossierInscriptible: () => {
       try { fs.mkdirSync(dir, { recursive: true }); fs.accessSync(dir, fs.constants.W_OK); return true; }
       catch (e) { return false; }
@@ -937,7 +941,9 @@ function buildMenu() {
     {
       label: 'Aide',
       submenu: [
+        { id: 'decouverte', label: 'Découvrir Aktum PDF en 5 minutes', accelerator: accel('decouverte'), click: () => envoyer('decouverte') },
         { id: 'raccourcis', label: 'Raccourcis clavier', accelerator: accel('raccourcis'), click: () => envoyer('raccourcis') },
+        { type: 'separator' },
         {
           label: 'Langue',
           submenu: [
@@ -960,7 +966,8 @@ function buildMenu() {
               etatLicence().description + '\n' +
               (PROFIL ? 'Compte : ' + PROFIL + '\n' : '') +
               'Dossier des données : ' + app.getPath('userData') + '\n' +
-              (POURQUOI[RANGEMENT.pourquoi] || '') + '\n\n' +
+              (POURQUOI[RANGEMENT.pourquoi] || '') + '\n' +
+              phraseDuFichier(RANGEMENT.fichier, RANGEMENT.pourquoi === 'marqueur' ? MARQUEUR : COMPTES) + '\n\n' +
               'Electron ' + process.versions.electron + ' – Chromium ' + process.versions.chrome,
           }),
         },
@@ -1013,10 +1020,14 @@ function ouvrirLaSession(nom) {
   catch (e) { return 'Impossible de créer le dossier de ce compte.'; }
   if (!ecrireChoix(nom)) return 'Impossible de retenir la connexion sur ce poste.';
   PROFIL = nom;
-  app.relaunch();
-  app.exit(0);
+  // La fenêtre de connexion montre « Ouverture de votre dossier… » : elle reste là le temps qu'on la lise, puis l'application se
+  // relance. Sans cela, la fenêtre disparaissait sans un mot et l'application revenait seule une ou deux secondes plus tard.
+  // (Les essais automatiques n'attendent pas.)
+  const relancer = () => { app.relaunch(); app.exit(0); };
+  if (process.env.AKTUM_SANS_ATTENTE) relancer(); else setTimeout(relancer, ATTENTE_RELANCE_MS);
   return '';
 }
+const ATTENTE_RELANCE_MS = 1000;
 
 // =============================================================================
 //  La mise à jour qui se propose toute seule
@@ -1070,7 +1081,7 @@ async function rapportDeDiagnostic() {
     produit: { version: VERSION.version || app.getVersion(), canal: VERSION.canal || '', construction: CONSTRUCTION, commit: VERSION.commit || '' },
     systeme: { plateforme: process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : process.platform, version: os.release(), arch: process.arch,
       electron: process.versions.electron, chrome: process.versions.chrome, locale: app.getLocale() },
-    donnees: { mode: RANGEMENT.ou, pourquoi: POURQUOI[RANGEMENT.pourquoi] || RANGEMENT.pourquoi || '' },
+    donnees: { mode: RANGEMENT.ou, pourquoi: POURQUOI[RANGEMENT.pourquoi] || RANGEMENT.pourquoi || '', fichier: RANGEMENT.fichier || '' },
     licence: { etat: l.etat, id: l.id, postes: l.postes, majJusqu: l.majJusqu, joursRestants: l.joursRestants, invalide: l.invalide },
     postes: autresPostes(DOSSIER_DATA(), MON_JETON, Date.now()).length,
     journal, reseau: reseauRefuse.slice(), ident: { utilisateur, poste },
