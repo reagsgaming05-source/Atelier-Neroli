@@ -80,22 +80,23 @@ test('un tableau à filets horizontaux et verticaux se lit en entier, pas seulem
 });
 
 test('un arrêt demandé en cours de reconnaissance arrête vraiment, et rien n\'est perdu', async ({ app, page }) => {
-  test.setTimeout(240000);
-  const pages = Array.from({ length: 10 }, (_, i) => ({ lignes: ['Page numero ' + (i + 1), 'Le Conseil communal siege ce soir', 'Ordre du jour : budget et comptes'] }));
+  test.setTimeout(300000);
+  // Assez de pages pour que, même sur une machine rapide, la reconnaissance ne soit pas finie
+  // quand on demande l'arrêt : on le demande dès que la deuxième page est entamée.
+  const N = 40;
+  const pages = Array.from({ length: N }, (_, i) => ({ lignes: ['Page numero ' + (i + 1), 'Le Conseil communal siege ce soir', 'Ordre du jour : budget et comptes'] }));
   await app.ouvrir('dossier.pdf', await scan(page, pages));
   await app.outil('ocr');
   await page.locator('#ocr-quoi').selectOption('toutes');
   await page.locator('.dialog').getByRole('button', { name: 'Reconnaître' }).click();
   const annuler = page.locator('#btn-annuler-op');
   await expect(annuler).toBeVisible({ timeout: 60000 });
-  // Laisser le moteur démarrer sa première page, puis demander l'arrêt.
-  await page.waitForFunction(() => /Reconnaissance… page/.test(document.querySelector('#busy-text, #last, .busy') ? document.body.innerText : ''), null, { timeout: 120000 }).catch(() => {});
-  await page.waitForTimeout(3000);
+  await page.waitForFunction((n) => new RegExp('\\([2-9]/' + n + '\\)').test(document.body.innerText), N, { timeout: 120000 });
   await annuler.click();
   await expect.poll(() => app.dernier(), { timeout: 120000 }).toMatch(/interrompue/);
   const dit = await app.dernier();
   const faites = Number((/sur (\d+) page/.exec(dit) || [])[1] || 0);
-  expect(faites, 'moins de pages que demandé : l\'arrêt a eu lieu (« ' + dit + ' »)').toBeLessThan(10);
+  expect(faites, 'moins de pages que demandé : l\'arrêt a eu lieu (« ' + dit + ' »)').toBeLessThan(N);
   expect(faites, 'ce qui était fait est gardé').toBeGreaterThanOrEqual(1);
 });
 
