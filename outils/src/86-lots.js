@@ -5,16 +5,47 @@
   //  un : chacun passe par un document de travail à part, le document en
   //  cours n'est pas touché, et les résultats partent dans une archive.
   // =====================================================================
+  // Jusqu'à trois opérations se suivent sur chaque fichier. Celles qui transforment le document (pages vides retirées, en-tête, filigrane,
+  // propriétés, protection) s'enchaînent dans l'ordre choisi ; celle qui produit les fichiers à sa façon (réduire, séparer, extraire le
+  // texte) vient en dernier. Les trois dernières se règlent avec une configuration nommée, enregistrée depuis leur fenêtre.
   const LOTS = [
     ['vides', 'Supprimer les pages vides'],
-    ['compresser', 'Réduire la taille (150 ppp)'],
     ['numeroter', 'Numéroter les pages (pied de page)'],
+    ['entete', 'En-tête et pied de page (configuration enregistrée)'],
+    ['filigrane', 'Filigrane (configuration enregistrée)'],
+    ['proprietes', 'Propriétés du document (configuration enregistrée)'],
     ['proteger', 'Protéger par mot de passe'],
+    ['compresser', 'Réduire la taille (150 ppp)'],
     ['images', 'Convertir les images en PDF'],
     ['separer', 'Séparer : une page par fichier'],
     ['texte', 'Extraire le texte (.txt)'],
   ];
-  async function traiterLots(fichiers, op, params, avancement) {
+  const LOTS_FINALES = ['compresser', 'separer', 'texte'];
+  const LOTS_A_CONFIG = { entete: 'entete', filigrane: 'filigrane', proprietes: 'proprietes' };
+  const LOTS_SUFFIXES = { vides: '-sans-vides', numeroter: '-numerote', entete: '-entete', filigrane: '-filigrane', proprietes: '-proprietes', proteger: '-protege', compresser: '-leger' };
+  const LOTS_MAX = 3;
+  // Les réglages d'une configuration nommée, posés sur le document de travail (voir les fenêtres d'en-tête, de filigrane, de propriétés).
+  function lotPoserConfig(op, c) {
+    if (op === 'entete') {
+      state.stamp = {
+        headerLeft: c.hl || '', headerCenter: c.hc || '', headerRight: c.hr || '', footerLeft: c.fl || '', footerCenter: c.fc || '', footerRight: c.fr || '',
+        font: c.font || 'Helvetica', bold: false, size: clampInt(c.size, 5, 40) || 9, color: c.color || '#444444', margin: clampInt(c.margin, 6, 120) || 28,
+        start: 1, skipFirst: !!c.skip, batesPrefix: c.bpre || '', batesDigits: clampInt(c.bdig, 1, 10) || 4, pages: '',
+      };
+    } else if (op === 'filigrane') {
+      state.watermark = {
+        text: c.text || '', font: c.font || 'Helvetica', bold: !!c.bold, size: clampInt(c.size, 6, 300) || 60, color: c.color || '#888888',
+        opacity: (clampInt(c.opacity, 3, 100) || 18) / 100, angle: clampInt(c.angle, -180, 180) || 0, mode: c.mode || 'center', pages: '',
+      };
+    } else if (op === 'proprietes') {
+      state.meta = Object.assign({}, state.meta, { author: c.auteur || '', subject: c.sujet || '', keywords: c.mots || '', balise: !!c.balise, langue: c.langue || state.meta.langue });
+    }
+  }
+  // `etapes` : une opération, ou une suite d'opérations — « vides » ou { op: 'entete', config: 'Courrier officiel' }.
+  async function traiterLots(fichiers, etapes, params, avancement) {
+    etapes = [].concat(etapes).map(e => (typeof e === 'string' ? { op: e } : e));
+    const finale = etapes.length && LOTS_FINALES.includes(etapes[etapes.length - 1].op) ? etapes[etapes.length - 1].op : '';
+    const avant = finale ? etapes.slice(0, -1) : etapes;
     const sorties = [], rapport = [];
     const sauve = prendreEtat();
     state.silencieux = true;
@@ -26,49 +57,63 @@
         if (avancement) avancement(f.name, i, fichiers.length);
         poserEtat(etatVierge());
         try {
-          if (op === 'images' && !isImage(f)) { rapport.push(f.name + ' : pas une image, laissé de côté'); continue; }
+          if (etapes.some(e => e.op === 'images') && !isImage(f)) { rapport.push(f.name + ' : pas une image, laissé de côté'); continue; }
           await addFiles([f]);
           if (!state.pages.length) { rapport.push(f.name + ' : illisible'); continue; }
-          if (op === 'vides') {
-            const r = await detecterPagesVides(state.pages, SENSIBILITE.normal, null, null);
-            const ids = new Set((r ? r.vides : []).map(m => m.p.id));
-            const restantes = state.pages.filter(p => !ids.has(p.id));
-            if (!restantes.length) { rapport.push(f.name + ' : toutes les pages sont vides, rien à garder'); continue; }
-            sorties.push({ nom: base + tr('-sans-vides.pdf'), octets: await buildPdf(restantes, { noInPlace: ids.size > 0 }) });
-            rapport.push(f.name + ' : ' + (ids.size ? plural(ids.size, 'page vide supprimée', 'pages vides supprimées') : 'aucune page vide'));
-          } else if (op === 'compresser') {
-            const avant = state.sources.reduce((a, s) => a + s.bytes.byteLength, 0);
+          const poidsSources = state.sources.reduce((a, s) => a + s.bytes.byteLength, 0);
+          const suffixes = [], notes = [];
+          let retirees = 0, abandon = false;
+          for (const e of avant) {
+            if (e.op === 'vides') {
+              const r = await detecterPagesVides(state.pages, SENSIBILITE.normal, null, null);
+              const ids = new Set((r ? r.vides : []).map(m => m.p.id));
+              const restantes = state.pages.filter(p => !ids.has(p.id));
+              if (!restantes.length) { rapport.push(f.name + ' : toutes les pages sont vides, rien à garder'); abandon = true; break; }
+              state.pages = restantes; retirees += ids.size;
+              notes.push(ids.size ? plural(ids.size, 'page vide supprimée', 'pages vides supprimées') : 'aucune page vide');
+            } else if (e.op === 'numeroter') {
+              state.stamp = { headerLeft: '', headerCenter: '', headerRight: '', footerLeft: '', footerCenter: '{p} / {n}', footerRight: '',
+                font: 'Helvetica', bold: false, size: 9, color: '#444444', margin: 28, start: 1, skipFirst: false, batesPrefix: '', batesDigits: 4 };
+              notes.push(plural(state.pages.length, 'page numérotée', 'pages numérotées'));
+            } else if (LOTS_A_CONFIG[e.op]) {
+              const c = configsLire(LOTS_A_CONFIG[e.op]).find(x => x.nom === e.config);
+              if (!c) { rapport.push(f.name + ' : la configuration « ' + (e.config || '') + ' » n\'existe plus sur ce poste, laissé de côté'); abandon = true; break; }
+              lotPoserConfig(e.op, c.valeurs);
+              notes.push(e.op === 'entete' ? 'en-tête et pied de page « ' + c.nom + ' »' : e.op === 'filigrane' ? 'filigrane « ' + c.nom + ' »' : 'propriétés « ' + c.nom + ' »');
+            } else if (e.op === 'proteger') {
+              state.security = { userPassword: params.pw || '', ownerPassword: params.pwo || params.pw || '', permissions: {} };
+              notes.push('protégé');
+            } else if (e.op === 'images') {
+              notes.push('converti en PDF');
+            }
+            if (LOTS_SUFFIXES[e.op]) suffixes.push(tr(LOTS_SUFFIXES[e.op]));
+          }
+          if (abandon) continue;
+          const suffixe = suffixes.join('');
+          const optsBase = { noInPlace: retirees > 0 };
+          if (finale === 'compresser') {
             const octets = await buildPdf(state.pages, { rasterize: true, dpi: 150, quality: 0.72, noInPlace: true });
             // Réduire ne doit jamais alourdir : sur un document de texte, convertir
             // les pages en images multiplie la taille par dix ou plus.
-            if (octets.length >= avant) {
-              rapport.push(f.name + ' : non réduit — le résultat aurait fait ' + fmtSize(octets.length) + ' contre ' + fmtSize(avant) + ' (document de texte : la conversion en images l\'alourdirait), laissé tel quel');
+            if (octets.length >= poidsSources) {
+              rapport.push(f.name + ' : non réduit — le résultat aurait fait ' + fmtSize(octets.length) + ' contre ' + fmtSize(poidsSources) + ' (document de texte : la conversion en images l\'alourdirait), laissé tel quel');
               continue;
             }
-            sorties.push({ nom: base + tr('-leger.pdf'), octets });
-            rapport.push(f.name + ' : ' + fmtSize(avant) + ' → ' + fmtSize(octets.length));
-          } else if (op === 'numeroter') {
-            state.stamp = { headerLeft: '', headerCenter: '', headerRight: '', footerLeft: '', footerCenter: '{p} / {n}', footerRight: '',
-              font: 'Helvetica', bold: false, size: 9, color: '#444444', margin: 28, start: 1, skipFirst: false, batesPrefix: '', batesDigits: 4 };
-            sorties.push({ nom: base + tr('-numerote.pdf'), octets: await buildPdf(state.pages) });
-            rapport.push(f.name + ' : ' + plural(state.pages.length, 'page numérotée', 'pages numérotées'));
-          } else if (op === 'proteger') {
-            state.security = { userPassword: params.pw || '', ownerPassword: params.pwo || params.pw || '', permissions: {} };
-            sorties.push({ nom: base + tr('-protege.pdf'), octets: await buildPdf(state.pages) });
-            rapport.push(f.name + ' : protégé');
-          } else if (op === 'images') {
-            sorties.push({ nom: base + '.pdf', octets: await buildPdf(state.pages) });
-            rapport.push(f.name + ' : converti en PDF');
-          } else if (op === 'separer') {
+            sorties.push({ nom: base + suffixe + tr(LOTS_SUFFIXES.compresser) + '.pdf', octets });
+            notes.push(fmtSize(poidsSources) + ' → ' + fmtSize(octets.length));
+          } else if (finale === 'separer') {
             const n = state.pages.length;
-            for (let k = 0; k < n; k++) sorties.push({ nom: base + '-' + pad(k + 1, String(n).length) + '.pdf', octets: await buildPdf([state.pages[k]], { noInPlace: true }) });
-            rapport.push(f.name + ' : ' + plural(n, 'fichier', 'fichiers'));
-          } else if (op === 'texte') {
+            for (let k = 0; k < n; k++) sorties.push({ nom: base + suffixe + '-' + pad(k + 1, String(n).length) + '.pdf', octets: await buildPdf([state.pages[k]], { noInPlace: true }) });
+            notes.push(plural(n, 'fichier', 'fichiers'));
+          } else if (finale === 'texte') {
             const parts = [];
             for (let k = 0; k < state.pages.length; k++) parts.push(tr('--- Page ' + (k + 1) + ' ---\n') + ((await getPageText(state.pages[k])) || tr('(aucun texte)')));
             sorties.push({ nom: base + '.txt', octets: new TextEncoder().encode(parts.join('\n\n')) });
-            rapport.push(f.name + ' : texte extrait');
+            notes.push('texte extrait');
+          } else {
+            sorties.push({ nom: base + suffixe + '.pdf', octets: await buildPdf(state.pages, optsBase) });
           }
+          rapport.push(f.name + ' : ' + notes.join(' · '));
         } catch (e) { console.error(e); rapport.push(f.name + ' : échec (' + (e && e.message ? e.message : e) + ')'); }
       }
     } finally {
@@ -111,30 +156,69 @@
       Array.from(inp.files || []).forEach(f => { if ((isPdf(f) || isImage(f)) && !fichiers.some(x => x.name === f.name && x.size === f.size)) fichiers.push(f); });
       remplir();
     });
-    const op = select('lots-op', LOTS, LOTS.some(l => l[0] === opVoulue) ? opVoulue : 'vides');
+    // Trois emplacements d'opération : le premier est celui d'avant (`lots-op`), les deux suivants se laissent vides pour n'en faire qu'une.
+    const aucune = [['', 'Aucune autre opération']];
+    const etapes = Array.from({ length: LOTS_MAX }, (_, k) => {
+      const choix = select(k ? 'lots-op' + (k + 1) : 'lots-op', k ? aucune.concat(LOTS) : LOTS, k ? '' : (LOTS.some(l => l[0] === opVoulue) ? opVoulue : 'vides'));
+      const cfg = select('lots-cfg' + (k + 1), [], '');
+      cfg.setAttribute('aria-label', tr('Configuration à appliquer'));
+      return { choix, cfg };
+    });
     const pw = input('lots-pw', 'password', ''), pwo = input('lots-pwo', 'password', '');
     const pwWrap = rowOf([field('Mot de passe d\'ouverture', pw), field('Mot de passe propriétaire', pwo, 'Facultatif')]);
     pwWrap.hidden = true;
-    op.addEventListener('change', () => { pwWrap.hidden = op.value !== 'proteger'; });
+    // La configuration à appliquer : celles qu'on a enregistrées sur ce poste depuis la fenêtre de l'opération.
+    const remplirConfig = (e) => {
+      const type = LOTS_A_CONFIG[e.choix.value];
+      e.cfg.hidden = !type;
+      if (!type) return;
+      const gardee = e.cfg.value;
+      e.cfg.replaceChildren();
+      const l = configsLire(type);
+      const o0 = document.createElement('option'); o0.value = ''; o0.textContent = l.length ? tr('Choisir une configuration…') : tr('Aucune configuration enregistrée : créez-en une depuis la fenêtre de l\'opération');
+      e.cfg.appendChild(o0);
+      l.forEach(c => { const o = document.createElement('option'); o.value = c.nom; o.textContent = c.nom; e.cfg.appendChild(o); });
+      e.cfg.value = l.some(c => c.nom === gardee) ? gardee : '';
+    };
+    // Une opération qui produit les fichiers termine la suite ; « images » ne vient qu'en premier.
+    const majEtapes = () => {
+      let fini = false;
+      etapes.forEach((e, k) => {
+        if (fini) { e.choix.value = ''; }
+        e.choix.disabled = fini;
+        [...e.choix.options].forEach(o => { o.disabled = (o.value === 'images' && k > 0) || (k > 0 && !!o.value && etapes.slice(0, k).some(x => x.choix.value === o.value)); });
+        if (e.choix.selectedOptions[0] && e.choix.selectedOptions[0].disabled) e.choix.value = '';
+        remplirConfig(e);
+        if (LOTS_FINALES.includes(e.choix.value)) fini = true;
+      });
+      pwWrap.hidden = !etapes.some(e => e.choix.value === 'proteger');
+    };
+    etapes.forEach(e => e.choix.addEventListener('change', majEtapes));
+    majEtapes();
+    const suite = () => etapes.map(e => ({ op: e.choix.value, config: e.cfg.value })).filter(e => e.op);
     dialog({
       title: 'Traiter plusieurs fichiers', icon: IC.grille, wide: true, submitOnEnter: false,
       build: b => {
         b.append(rowOf([choisir, info], true));
         b.append(inp);
         b.append(liste);
-        b.append(field('Traitement', op));
+        etapes.forEach((e, k) => b.append(field(k ? 'Puis' : 'Traitement', e.choix), e.cfg));
         b.append(pwWrap);
+        b.append(note('Jusqu\'à trois opérations se suivent sur chaque fichier, dans l\'ordre choisi ; celle qui produit les fichiers (réduire, séparer, extraire le texte) vient en dernier.'));
         b.append(note('Chaque fichier est traité à part, le document ouvert n\'est pas touché. Les résultats sont réunis dans une archive ZIP (un seul fichier : enregistré tel quel).'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Lancer', primary: true, onClick: async close => {
         if (!fichiers.length) { toast('Choisissez d\'abord les fichiers à traiter.', 'warn'); return; }
-        if (op.value === 'proteger' && !FEAT.encrypt) { toast('Le chiffrement n\'est pas disponible ici.', 'error'); return; }
-        if (op.value === 'proteger' && !pw.value && !pwo.value) { toast('Indiquez au moins un mot de passe.', 'warn'); return; }
+        const quoiSuit = suite();
+        if (quoiSuit.some(e => e.op === 'proteger') && !FEAT.encrypt) { toast('Le chiffrement n\'est pas disponible ici.', 'error'); return; }
+        if (quoiSuit.some(e => e.op === 'proteger') && !pw.value && !pwo.value) { toast('Indiquez au moins un mot de passe.', 'warn'); return; }
+        const sansConfig = quoiSuit.find(e => LOTS_A_CONFIG[e.op] && !e.config);
+        if (sansConfig) { toast('Choisissez la configuration à appliquer.', 'warn'); return; }
         close();
-        const quoi = op.value;
+        const quoi = quoiSuit.map(e => e.op).join('-');
         setBusy('Traitement du lot…', 0, { annuler: true });
         try {
-          const r = await traiterLots(fichiers.slice(), quoi, { pw: pw.value, pwo: pwo.value }, (nom, i, n) => setBusy('Lot : ' + nom + ' (' + (i + 1) + '/' + n + ')', i / n, { annuler: true }));
+          const r = await traiterLots(fichiers.slice(), quoiSuit, { pw: pw.value, pwo: pwo.value }, (nom, i, n) => setBusy('Lot : ' + nom + ' (' + (i + 1) + '/' + n + ')', i / n, { annuler: true }));
           const jour = new Date().toISOString().slice(0, 10);
           if (!r.sorties.length) toast('Aucun fichier produit. ' + r.rapport.join(' · '), 'warn');
           else if (r.sorties.length === 1 || !FEAT.zip) {
@@ -489,6 +573,8 @@
           reglageEcrire('filigrane', state.watermark);
           state.touched = true; vue.render(); close();
           setLast('Filigrane « ' + state.watermark.text + ' » appliqué');
+          const pose = Object.assign({}, state.watermark);
+          retenirOperation(tr('Filigrane') + ' « ' + pose.text + ' »', () => { snapshot(); state.watermark = Object.assign({}, pose); state.touched = true; vue.render(); setLast('Filigrane « ' + pose.text + ' » appliqué'); });
         } },
       ].filter(Boolean),
     });
@@ -573,6 +659,8 @@
           reglageEcrire(cleMemo, next);
           state.stamp = next; state.touched = true; vue.render(); close();
           setLast('En-tête et pied de page appliqués');
+          const pose = Object.assign({}, next);
+          retenirOperation(tr(preset === 'number' ? 'Numéroter les pages' : 'En-tête et pied de page'), () => { snapshot(); state.stamp = Object.assign({}, pose); state.touched = true; vue.render(); setLast('En-tête et pied de page appliqués'); });
         } },
       ].filter(Boolean),
     });

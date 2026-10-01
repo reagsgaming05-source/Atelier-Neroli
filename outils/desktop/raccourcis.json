@@ -8,6 +8,7 @@
  {"id": "imprimer", "touches": ["Ctrl+P"], "libelle": "Imprimer", "groupe": "Document", "menu": true},
  {"id": "annuler", "touches": ["Ctrl+Z"], "libelle": "Annuler", "groupe": "Document", "menu": true},
  {"id": "retablir", "touches": ["Ctrl+Y", "Ctrl+Shift+Z"], "libelle": "Rétablir", "groupe": "Document", "menu": true},
+ {"id": "repeter", "touches": ["Ctrl+Shift+Y"], "libelle": "Répéter la dernière opération", "groupe": "Document", "menu": true},
  {"id": "rechercher", "touches": ["Ctrl+F"], "libelle": "Rechercher, remplacer, caviarder", "groupe": "Document", "menu": true},
  {"id": "occurrence-suivante", "touches": ["F3", "Ctrl+G"], "libelle": "Occurrence suivante", "groupe": "Document"},
  {"id": "occurrence-precedente", "touches": ["Shift+F3", "Ctrl+Shift+G"], "libelle": "Occurrence précédente", "groupe": "Document"},

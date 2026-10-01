@@ -96,3 +96,47 @@ test('caviarder à la main dans l\'éditeur retire aussi le texte dessous', asyn
   expect(lu, 'la ligne masquée a disparu').not.toContain('Vasilakis');
   expect(lu, 'les autres lignes sont là').toContain('Conseil communal');
 });
+
+// Caviarder tout ou rien : le panneau permet aussi de ne masquer que des occurrences choisies.
+const docDeuxPages = () => pdfDe([
+  [{ x: 70, y: 760, texte: 'Requérant : Kalliope Vasilakis' }, { x: 70, y: 730, texte: 'Conjoint : Marie Vasilakis' }],
+  [{ x: 70, y: 760, texte: 'Témoin : Pierre Vasilakis' }],
+]);
+
+test('caviarder des occurrences choisies : les autres restent lisibles, et la confirmation le dit', async ({ app, page }) => {
+  await app.ouvrir('decision.pdf', docDeuxPages());
+  await page.click('#btn-search');
+  await page.fill('#se-q', 'Vasilakis');
+  await expect.poll(() => page.locator('#se-compte').textContent(), { timeout: 30000 }).not.toBe('');
+  await expect(page.locator('#se-caviarder')).toContainText('Caviarder tout (3');
+  // la page 2 se décoche d'un clic ; sur la page 1, on détaille et on décoche la seconde occurrence
+  await page.getByLabel('Caviarder les occurrences de la page 2').uncheck();
+  await expect(page.locator('#se-caviarder')).toContainText('cochées (2 sur 3)');
+  await page.locator('.result-detail-btn').click();
+  await expect(page.locator('.result-detail .result-ligne')).toHaveCount(2);
+  await page.locator('.result-detail .result-case').nth(1).uncheck();
+  await expect(page.locator('#se-caviarder')).toContainText('cochées (1 sur 3)');
+  // la case de la page 1 est mixte : une occurrence cochée, une non
+  expect(await page.getByLabel('Caviarder les occurrences de la page 1').evaluate(c => c.indeterminate)).toBe(true);
+  await page.click('#se-caviarder');
+  await expect(page.locator('.dialog')).toContainText('2 occurrences restent lisibles');
+  await page.click('#se-caviarder-oui');
+  await expect.poll(() => app.dernier(), { timeout: 60000 }).toMatch(/1 occurrence caviardée/);
+  const { octets } = await app.exporter();
+  const lu = await texteDuPdf(page, octets);
+  expect(lu, 'l\'occurrence choisie est partie').not.toContain('Kalliope Vasilakis');
+  expect(lu, 'celle de la page 1 laissée cochée-décochée reste').toContain('Marie Vasilakis');
+  expect(lu, 'celle de la page 2 aussi').toContain('Pierre Vasilakis');
+});
+
+test('décocher puis recocher une page redonne « Caviarder tout »', async ({ app, page }) => {
+  await app.ouvrir('decision.pdf', docDeuxPages());
+  await page.click('#btn-search');
+  await page.fill('#se-q', 'Vasilakis');
+  await expect.poll(() => page.locator('#se-compte').textContent(), { timeout: 30000 }).not.toBe('');
+  const case2 = page.getByLabel('Caviarder les occurrences de la page 2');
+  await case2.uncheck();
+  await expect(page.locator('#se-caviarder')).toContainText('cochées');
+  await case2.check();
+  await expect(page.locator('#se-caviarder')).toContainText('Caviarder tout (3');
+});

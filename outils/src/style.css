@@ -258,7 +258,7 @@
   }
   .filename:hover { border-color: var(--texte-3); }
   .filename input {
-    width: 172px; min-width: 0; border: 0; background: transparent; padding: 0;
+    width: 172px; min-width: 0; height: 100%; border: 0; background: transparent; padding: 0;
     font-family: var(--chiffre); font-size: var(--t-3); text-align: right; letter-spacing: -.01em;
   }
   .filename input:focus { outline: none; }
@@ -543,6 +543,7 @@
     opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto;
   }
   @media (hover: none) { .tile-tools { opacity: 1; transform: translateX(-50%); pointer-events: auto; } }
+  .tile.outils-ecartes .tile-tools { opacity: 0; pointer-events: none; }
   .tile-tools button {
     width: var(--h-1); height: var(--h-1); border-radius: var(--r-2); border: 0; background: transparent; color: var(--texte-2);
     display: grid; place-items: center; transition: background .12s, color .12s;
@@ -873,7 +874,7 @@
   .dlg-head .x:hover { background: var(--survol); color: var(--texte); }
   .dlg-head .x svg { width: 14px; height: 14px; }
   .dlg-body { padding: var(--e-5); overflow-y: auto; display: flex; flex-direction: column; gap: var(--e-4); }
-  .dlg-foot { display: flex; align-items: center; gap: var(--e-2); padding: var(--e-4) var(--e-5); border-top: 1px solid var(--trait-fin); flex: none; background: var(--encre); }
+  .dlg-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); padding: var(--e-4) var(--e-5); border-top: 1px solid var(--trait-fin); flex: none; background: var(--encre); }
   .dlg-foot .grow { flex: 1; }
   .dlg-foot .tb-btn { height: var(--h-3); border-color: var(--trait); background: var(--relief); }
   .dlg-foot .tb-btn:hover { border-color: var(--texte-3); }
@@ -932,6 +933,13 @@
   .result .p { font-family: var(--chiffre); font-size: var(--t-2); color: var(--bleu-vif); flex: none; }
   .result .x { font-size: var(--t-3); color: var(--texte-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .result mark { background: color-mix(in srgb, var(--ambre) 30%, transparent); color: inherit; border-radius: var(--r-1); padding: 0 1px; }
+  /* un résultat peut se décocher (caviarder seulement certaines occurrences) et se détailler occurrence par occurrence */
+  .result-ligne { display: flex; align-items: center; gap: var(--e-2); }
+  .result-ligne .result { flex: 1; min-width: 0; }
+  .result-case { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--bleu); }
+  .result-detail-btn { flex: none; }
+  .result-detail { display: flex; flex-direction: column; gap: var(--e-2); margin: 0 0 var(--e-2) var(--e-5); }
+  .result-detail[hidden] { display: none; }
 
   /* ---------- éditeur de page ---------- */
   .editor { position: fixed; inset: 0; z-index: 80; background: var(--table); display: flex; flex-direction: column; animation: fondu .18s var(--elan); }
@@ -1154,11 +1162,17 @@
     /* Sur un téléphone, la barre d'actions doit tenir dans la largeur d'une
        page : on la resserre et on retire le bouton de numéro, que le champ
        sous la page fait déjà. */
-    .tile-tools { gap: 0; padding: var(--e-0); border-radius: var(--r-2); }
-    .tile-tools button { width: 21px; height: var(--h-1); border-radius: var(--r-1); }
+    .tile-tools { gap: 0; padding: var(--e-0); border-radius: var(--r-2); flex-wrap: wrap; justify-content: center; width: calc(100% - var(--e-3)); }
+    /* Chaque bouton garde 24 px au moins (WCAG 2.5.8) : la barre passe sur deux lignes plutôt que de les rétrécir. */
+    .tile-tools button { flex: none; width: var(--h-1); height: var(--h-1); border-radius: var(--r-1); }
     .tile-tools button svg { width: 12px; height: 12px; }
     .tile-tools .sep, .tile-tools button[data-act="pos"] { display: none; }
     .zoom { display: none; }
+    /* L'en-tête de l'éditeur passe à la ligne : titre, navigation, zoom et « Terminer » ne tiennent pas sur une seule. */
+    .ed-head { flex-wrap: wrap; height: auto; min-height: var(--h-barre); padding-top: var(--e-1); padding-bottom: var(--e-1); row-gap: var(--e-1); }
+    /* À 320 px (WCAG 1.4.10) la barre d'état passe à la ligne plutôt que de déborder. */
+    .statusbar .last { flex-basis: 100%; white-space: normal; overflow: visible; }
+    .statusbar { flex-wrap: wrap; height: auto; min-height: var(--h-3); row-gap: var(--e-1); padding-top: var(--e-1); padding-bottom: var(--e-1); gap: var(--e-1) var(--e-3); }
     .dialog { max-height: 92vh; }
     .dlg-body { padding: var(--e-4); }
     .dz-title { font-size: var(--t-6); }

@@ -4,7 +4,7 @@
 //  - une touche se change, un conflit se refuse, une touche réservée se refuse, et on peut tout rétablir ;
 //  - les touches à une lettre se coupent (WCAG 2.1.4), et ne répondent plus ensuite ;
 //  - « Oublier » vide la mémoire de l'application, un élément à la fois.
-const { test, expect } = require('./aide');
+const { test, expect, pdfVide, compterTournees } = require('./aide');
 const table = require('../desktop/raccourcis.json');
 
 test.use({ viewport: { width: 1100, height: 800 } });
@@ -226,5 +226,38 @@ test.describe('en allemand', () => {
     expect(lu).toContain('Umschalt');
     expect(lu).toContain('Seite mit dem Fokus auswählen');
     expect(lu).not.toMatch(/Sélectionner|Ouvrir/);
+  });
+});
+
+// « Répéter la dernière opération » (Ctrl+Maj+Y) : la dernière opération sur des pages se rejoue sur la sélection du moment.
+test.describe('répéter la dernière opération', () => {
+  test('sans rien à répéter, il le dit', async ({ app, page }) => {
+    await app.pretAvecExemple();
+    await page.keyboard.press('Control+Shift+Y');
+    await expect(page.locator('#toast')).toContainText('Aucune opération à répéter');
+  });
+
+  test('un pivotement se répète sur une autre page, et sans sélection rien ne bouge', async ({ app, page }) => {
+    await app.ouvrir('cinq.pdf', pdfVide(5));
+    await app.vue('organiser');
+    await app.selectionner(2);
+    await page.click('#sel-rot-right');
+    await expect(page.locator('#toast')).not.toContainText('Répété');
+    await app.selectionner(4);
+    await page.keyboard.press('Control+Shift+Y');
+    await expect(page.locator('#toast')).toContainText('Répété : Pivoter à droite');
+    // sans sélection, la répétition le dit et ne touche à rien
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.querySelector('#selbar').hidden);
+    await page.keyboard.press('Control+Shift+Y');
+    await expect(page.locator('#toast')).toContainText('Sélectionnez d\'abord des pages');
+    const { octets } = await app.exporter();
+    expect(compterTournees(octets, 90), 'deux pages tournées : celle d\'origine et celle de la répétition').toBe(2);
+  });
+
+  test('la touche est dans la table, et rangée avec Annuler et Rétablir', async () => {
+    const c = table.commandes.find((x) => x.id === 'repeter');
+    expect(c.touches).toEqual(['Ctrl+Shift+Y']);
+    expect(c.menu).toBe(true);
   });
 });

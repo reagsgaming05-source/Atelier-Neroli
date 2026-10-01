@@ -1,6 +1,6 @@
 /*
  * Les documents du dossier livré, en PDF : guide d'administration et de déploiement, fiche de
- * protection des données, fiche produit, procédure de support.
+ * protection des données, fiche produit, procédure de support, déclaration d’accessibilité.
  *
  *   node faire-les-documents.js [dossier-de-sortie]
  *
@@ -25,6 +25,9 @@ const DELAIS = {
   D4A: '2 jours ouvrables', D4R: '5 jours ouvrables',
 };
 
+// La date à laquelle la déclaration d'accessibilité a été relevée : à changer à chaque nouvelle évaluation, pas à chaque construction.
+const DATE_EVALUATION = '1er octobre 2026';
+
 const e = process.env;
 const adresse = [e.EDITEUR_NOM, [e.EDITEUR_RUE, e.EDITEUR_NUMERO].filter(Boolean).join(' '), [e.EDITEUR_NPA, e.EDITEUR_LOCALITE].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 const contact = [e.EDITEUR_TELEPHONE, e.EDITEUR_EMAIL].filter(Boolean).join(' · ');
@@ -38,13 +41,14 @@ const DOCUMENTS = [
   ['protection-des-donnees.html', 'Fiche-protection-des-donnees.pdf', 'Fiche de protection des données'],
   ['fiche-produit.html', 'Fiche-produit.pdf', 'Fiche produit'],
   ['support.html', 'Procedure-de-support.pdf', 'Procédure de support'],
+  ['declaration-accessibilite.html', 'Declaration-d-accessibilite.pdf', 'Déclaration d’accessibilité'],
 ];
 
 (async () => {
   const sortie = path.resolve(process.argv[2] || path.join(__dirname, 'sortie'));
   fs.mkdirSync(sortie, { recursive: true });
   const nav = await chromium.launch(process.env.AKTUM_CHROMIUM ? { executablePath: process.env.AKTUM_CHROMIUM } : {});
-  const remplacements = Object.assign({ VERSION: version, PRODUIT, COORDONNEES, SUPPORT }, DELAIS);
+  const remplacements = Object.assign({ VERSION: version, PRODUIT, COORDONNEES, SUPPORT, DATE_EVALUATION }, DELAIS);
   for (const [source, nom, titre] of DOCUMENTS) {
     let html = fs.readFileSync(path.join(__dirname, source), 'utf8');
     html = html.replace(/\{\{([A-Z0-9_]+)\}\}/g, (m, k) => { if (!(k in remplacements)) throw new Error(source + ' : « ' + m + ' » n’a pas de valeur'); return remplacements[k]; });
@@ -56,7 +60,7 @@ const DOCUMENTS = [
     page.on('requestfailed', (r) => refusees.push(r.url()));
     await page.goto('file://' + tmp, { waitUntil: 'load' });
     const pied = `<div style="width:100%;padding:0 16mm;font:8pt 'Liberation Sans',Arial,sans-serif;color:#8892a0;display:flex;justify-content:space-between"><span>${PRODUIT} ${version} — ${titre}</span><span class="pageNumber"></span></div>`;
-    await page.pdf({ path: path.join(sortie, nom), format: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: pied, margin: { top: '16mm', bottom: '16mm', left: '16mm', right: '16mm' } });
+    await page.pdf({ path: path.join(sortie, nom), format: 'A4', printBackground: true, tagged: true, outline: true, displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: pied, margin: { top: '16mm', bottom: '16mm', left: '16mm', right: '16mm' } });
     await page.close();
     fs.unlinkSync(tmp);
     if (refusees.length) throw new Error(source + ' : ressources non chargées : ' + refusees.join(', '));

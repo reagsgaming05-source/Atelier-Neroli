@@ -44,3 +44,5 @@ outils/test-e2e/playwright-report/
 # n'a rien à faire dans l'historique.
 outils/guide/captures/
 outils/guide/*.pdf
+outils/guide/.guide-imprime.html
+outils/docs/.*.html

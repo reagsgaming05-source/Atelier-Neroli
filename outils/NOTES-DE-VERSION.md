@@ -112,6 +112,27 @@ s'annoncent ; les pages de la vue Lire sont des régions nommées. « Vérifier 
 le poste, ce qu'un lecteur d'écran ne pourrait pas lire dans le document tel qu'il serait exporté (langue,
 titre, figures sans texte, pages qui ne sont qu'une image) — sans remplacer un contrôle PDF/UA complet.
 
+**Des lots qui enchaînent, un caviardage qu'on choisit.** « Traiter plusieurs fichiers » enchaîne jusqu'à
+trois opérations sur chaque fichier (pages vides, en-tête, filigrane, propriétés, protection, puis réduire,
+séparer ou extraire le texte), l'en-tête, le filigrane et les propriétés se prenant dans les configurations
+enregistrées. Dans « Rechercher, remplacer, caviarder », chaque page et chaque occurrence se coche : on masque
+celles que l'on veut, les autres restent lisibles — et la confirmation dit combien. Ctrl+Maj+Y répète la
+dernière opération (pivoter, supprimer, dupliquer des pages, filigrane, en-tête) sur la sélection ou le
+document du moment. Dans l'application, une page se glisse de la vue Organiser vers le Bureau ou un dossier :
+elle devient un PDF d'une page, préparé sur le poste et effacé à la fermeture.
+
+**Quand ça se passe mal.** Un fichier vide, un fichier qui n'est pas un PDF et un PDF tronqué ne sont plus
+confondus : chacun dit ce qu'il est, et le document d'exemple reste ouvert. Un enregistrement qui échoue ne laisse
+plus de fichier temporaire et dit la cause en une phrase (disque plein, fichier tenu par un autre programme,
+droits). Le travail mis de côté pour la récupération ne se garde que sept jours et dix dépôts, et le dit ;
+l'historique d'annulation, lui, ne se récupère pas, et la boîte de récupération l'annonce. Une page convertie en
+image à l'export est signalée. Échap interrompt une opération longue sans rien écrire.
+
+**Réaffichage et cibles.** À 320 px de large (un écran à 400 %), plus rien ne déborde, les boîtes et l'éditeur
+comptent ; toutes les commandes font 24 × 24 px au moins ; Échap écarte la barre d'actions d'une vignette. Une
+**déclaration d'accessibilité** (critère par critère, WCAG 2.2 et EN 301 549) est livrée avec les documents, avec
+ses limites : l'éditeur de page ne se manie pas entièrement au clavier, et le balisage d'un PDF reçu n'est pas conservé.
+
 **Et aussi** : les caractères que le PDF ne sait pas écrire dans un champ ou un tampon sont
 signalés (plus de « Miloševi? » silencieux) ; plus de limite de 800 signets ; « Réduire la
 taille » refuse de rendre un fichier plus gros ; Ctrl+Z juste après l'ouverture ne vide plus
@@ -134,7 +155,7 @@ l'espace de travail ; un journal qui dit ce qui s'est mal passé, au lieu de se 
 
 ### Ce qui n'existe pas encore
 
-Pas de PDF/UA (le balisage ne couvre pas les titres, listes et tableaux des pages venues d'ailleurs,
+Pas d'équivalent clavier pour poser une annotation dans l'éditeur de page, pas de balisage conservé d'un PDF reçu quand ses pages sont réassemblées (l'application prévient), pas de PDF/UA (le balisage ne couvre pas les titres, listes et tableaux des pages venues d'ailleurs,
 ni les liens et formulaires), pas de signature qualifiée ni d'horodatage, pas de contrôle de
 révocation ni de liste d'autorités de confiance, pas de PDF/A-1, -3 ni de niveau « a » ; l'application
 est en français et en allemand (pas d'italien), et le manuel et le site restent en français. Voir la feuille de route.

@@ -31,3 +31,9 @@ th { background: var(--fond-doux); font-family: var(--sans); font-size: 9pt; }
 .deux { columns: 2; column-gap: 14pt; }
 .deux > * { break-inside: avoid; }
 .pas { color: var(--gris); }
+/* Les longs tableaux se coupent entre deux lignes, jamais au milieu d'une ; l'état se lit au mot, la couleur ne fait que l'appuyer. */
+table.long { break-inside: auto; }
+table.long tr { break-inside: avoid; }
+table.long thead { display: table-header-group; }
+.s { font-family: var(--sans); font-weight: 700; white-space: nowrap; }
+.s-ok { color: #1b6b3a; } .s-part { color: #8a5a00; } .s-non { color: var(--rouge); } .s-na { color: var(--gris); font-weight: 400; }

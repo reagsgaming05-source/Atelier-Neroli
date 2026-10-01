@@ -103,6 +103,7 @@
   th, td { text-align: left; padding: 4.5pt 6pt; border-bottom: .6pt solid var(--trait); vertical-align: top; }
   th { font-family: var(--sans); font-size: 8.5pt; text-transform: uppercase; letter-spacing: .05em; color: var(--gris); border-bottom-width: 1.2pt; }
   td.touche { white-space: nowrap; width: 44mm; }
+  tr.groupe th { background: var(--fond-doux, #f4f6f8); text-transform: none; letter-spacing: 0; font-size: 9.4pt; color: var(--encre, #16181d); }
   kbd {
     font-family: var(--sans); font-size: 8.6pt; padding: 1pt 4pt;
     border: .6pt solid var(--trait); border-bottom-width: 1.6pt; border-radius: 3pt; background: #fbfcfd;
@@ -336,6 +337,7 @@
   <li><strong>Mot entier</strong> évite qu'« aire » trouve « affaire ».</li>
   <li><strong>Remplacer tout</strong> corrige chaque passage dans le fichier lui-même, en gardant la police, la taille et la mise en page d'origine.</li>
   <li><strong>Caviarder tout</strong> masque chaque occurrence d'un rectangle noir <em>et retire le texte du fichier</em>. Ce n'est pas un trait de feutre : le mot ne se retrouve pas par copier-coller dans le document exporté.</li>
+  <li>Chaque page et chaque occurrence a sa case (« Détailler » les ouvre une à une) : décochez celles qui doivent rester lisibles, et le bouton devient <strong>Caviarder les occurrences cochées</strong>. Dans ce cas seules celles-là sont masquées ; le mot n'est pas retiré du reste du fichier, et la confirmation le dit.</li>
 </ul>
 
 <div class="attention">
@@ -361,6 +363,8 @@
   <li><strong>Cliquez</strong> pour sélectionner, <kbd>Maj</kbd> + clic pour une plage, <kbd>Ctrl</kbd> + <kbd>A</kbd> pour tout.</li>
   <li><kbd>R</kbd> pivote à droite, <kbd>Maj</kbd> + <kbd>R</kbd> à gauche, <kbd>Suppr</kbd> retire.</li>
   <li><strong>Clic droit</strong> sur une page : pivoter, modifier, poser un signet, copier le texte, dupliquer, extraire, supprimer.</li>
+  <li><kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>Y</kbd> <strong>répète la dernière opération</strong> — pivoter, supprimer, dupliquer des pages, ou le dernier filigrane ou en-tête posé — sur la sélection du moment, ou sur le document ouvert.</li>
+  <li>Dans l'application, la petite barre de la vignette a une poignée <strong>« glisser vers le Bureau »</strong> : tirez-la hors de la fenêtre, vers le Bureau ou un dossier, pour en faire un PDF d'une page. Un clic dessus l'enregistre par la boîte habituelle. La copie est préparée sur votre poste et effacée à la fermeture.</li>
   <li><strong>Par leurs numéros</strong> : l'outil <em>Sélectionner par numéros</em> (famille <em>Pages</em>) comprend « 3-7, 12 », « 5- » (de la 5 à la fin), « -3 » (jusqu'à la 3) et « fin ». Il dit, avant de sélectionner, ce qu'il a compris, ce qui est hors du document et ce qu'il n'a pas compris. La même écriture vaut pour l'impression et pour la division.</li>
 </ul>
 
@@ -559,7 +563,7 @@
 <p>Les deux documents sont posés côte à côte, page par page, les mots retirés et ajoutés en couleur. Si l'une des versions est un scan, la reconnaissance se lance à la demande. Une vue « aspect » marque en rouge ce qui change à l'image.</p>
 
 <h3>Traiter plusieurs fichiers</h3>
-<p>Pages vides, compression, numérotation, protection, images en PDF, séparation, extraction du texte — en série sur plusieurs fichiers, sans toucher au document ouvert. Les résultats arrivent dans une archive ZIP.</p>
+<p>Pages vides, numérotation, en-tête, filigrane, propriétés, protection, compression, images en PDF, séparation, extraction du texte — en série sur plusieurs fichiers, sans toucher au document ouvert. <strong>Jusqu'à trois opérations</strong> s'enchaînent sur chaque fichier, dans l'ordre choisi ; celle qui produit les fichiers (réduire, séparer, extraire le texte) vient en dernier. L'en-tête, le filigrane et les propriétés se prennent dans les <em>configurations</em> que vous avez enregistrées depuis leur fenêtre. Les résultats arrivent dans une archive ZIP.</p>
 
 <h3>Le journal, et le rapport pour le support</h3>
 <p>Quand une opération a dû contourner quelque chose — une police illisible, un lien perdu, un commentaire ignoré, un caractère que le PDF ne sait pas écrire —, elle ne le tait pas : le bouton en bas de la fenêtre ouvre le journal, et un export ou un enregistrement qui a produit des avis le dit avant de finir.</p>
@@ -570,7 +574,7 @@
 <section>
 <h2><span class="num">12</span>Si l'application s'arrête brutalement</h2>
 
-<p>Le travail en cours est mis de côté quelques secondes après chaque changement, et effacé dès que vous enregistrez. Si l'ordinateur s'éteint, si Windows redémarre pour une mise à jour, si l'application se ferme d'elle-même, il ne se perd rien : au lancement suivant, elle propose de reprendre là où vous en étiez, modifications comprises.</p>
+<p>Le travail en cours est mis de côté quelques secondes après chaque changement, et effacé dès que vous enregistrez. Si l'ordinateur s'éteint, si Windows redémarre pour une mise à jour, si l'application se ferme d'elle-même, il ne se perd rien : au lancement suivant, elle propose de reprendre là où vous en étiez, modifications comprises. Ce qui est repris, c'est le document, pas l'historique : <strong>Ctrl+Z</strong> ne remonte pas avant la reprise. Ce travail mis de côté ne se garde que <strong>sept jours</strong>, et les <strong>dix derniers dépôts</strong> au plus : une boîte laissée sans réponse n'efface rien tout de suite, mais ne le garde pas indéfiniment.</p>
 
 <div class="note">
   <div class="titre">Ce qui est mis de côté</div>
@@ -632,32 +636,9 @@
 
 <p><kbd>F1</kbd>, ou <strong>Aide&nbsp;› Raccourcis clavier</strong>, affiche cette liste dans l'application.</p>
 
-<table>
-  <tr><th>Touche</th><th>Action</th></tr>
-  <tr><td class="touche">Clic</td><td>Sélectionner ou désélectionner une page</td></tr>
-  <tr><td class="touche"><kbd>Maj</kbd> + clic</td><td>Sélectionner une plage de pages</td></tr>
-  <tr><td class="touche">Double-clic</td><td>Ouvrir l'éditeur de page</td></tr>
-  <tr><td class="touche">Un chiffre</td><td>Déplacer la page vers ce numéro</td></tr>
-  <tr><td class="touche">Clic droit</td><td>Menu de la page, ou de l'onglet</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>A</kbd></td><td>Tout sélectionner</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>O</kbd></td><td>Ouvrir des fichiers</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>O</kbd></td><td>Ajouter au document ouvert</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>Enregistrer (réécrit le fichier ouvert)</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>S</kbd></td><td>Enregistrer sous…</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>P</kbd></td><td>Imprimer</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>F</kbd></td><td>Rechercher, remplacer, caviarder</td></tr>
-  <tr><td class="touche"><kbd>Entrée</kbd> / <kbd>Maj</kbd> + <kbd>Entrée</kbd></td><td>Occurrence suivante / précédente</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>B</kbd></td><td>Ajouter un signet</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td>Annuler / Rétablir</td></tr>
-  <tr><td class="touche"><kbd>Suppr</kbd></td><td>Retirer les pages sélectionnées</td></tr>
-  <tr><td class="touche"><kbd>R</kbd> / <kbd>Maj</kbd> + <kbd>R</kbd></td><td>Pivoter à droite / à gauche</td></tr>
-  <tr><td class="touche"><kbd>Alt</kbd> + <kbd>←</kbd> / <kbd>→</kbd></td><td>Décaler la page d'une position</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>1</kbd> / <kbd>Ctrl</kbd> + <kbd>2</kbd></td><td>Vue Lire / Organiser</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>T</kbd> / <kbd>Ctrl</kbd> + <kbd>W</kbd></td><td>Nouvel onglet / Fermer l'onglet</td></tr>
-  <tr><td class="touche"><kbd>Ctrl</kbd> + <kbd>Tab</kbd></td><td>Onglet suivant</td></tr>
-  <tr><td class="touche"><kbd>Échap</kbd></td><td>Fermer une fenêtre, ou interrompre une opération longue</td></tr>
-  <tr><td class="touche"><kbd>F1</kbd></td><td>Afficher tous les raccourcis</td></tr>
-</table>
+<!--@raccourcis-->
+<table><tr><td>(remplacé à l’impression)</td></tr></table>
+<!--@fin-raccourcis-->
 </section>
 
 </body>

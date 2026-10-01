@@ -12,7 +12,7 @@
  * PDF ouverts depuis le bureau sont deux documents indépendants. Les combiner est
  * un choix explicite (« Ajouter au document… », ou le bouton Ouvrir dans la page).
  */
-const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain, nativeTheme } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain, nativeTheme, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -543,6 +543,34 @@ function recupEffacer(cle) {
   return true;
 }
 
+// Glisser une page vers le Bureau : le système exige un fichier qui existe déjà quand le geste commence. La page se prépare donc à
+// l'avance (la page la demande dès que la souris touche la poignée) dans le dossier de données, sous un nom lisible ; tout ce
+// dossier est effacé au démarrage et à la fermeture, et ne garde jamais plus de vingt pages.
+const dossierGlisser = () => path.join(app.getPath('userData'), 'glisser');
+const GLISSER_MAX = 20;
+function glisserNettoyer() { try { fs.rmSync(dossierGlisser(), { recursive: true, force: true }); } catch (e) { /* tenu ailleurs : au prochain lancement */ } }
+async function glisserPreparer(o) {
+  if (!o || typeof o.nom !== 'string' || !o.octets) return { ok: false, erreur: 'page invalide' };
+  const nom = path.basename(o.nom).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').slice(0, 120) || 'page.pdf';
+  const dir = path.join(dossierGlisser(), require('crypto').randomBytes(6).toString('hex'));
+  await fs.promises.mkdir(dir, { recursive: true });
+  const chemin = path.join(dir, /\.pdf$/i.test(nom) ? nom : nom + '.pdf');
+  await fs.promises.writeFile(chemin, Buffer.from(o.octets));
+  try {
+    const dossiers = fs.readdirSync(dossierGlisser()).map((d) => ({ d, t: fs.statSync(path.join(dossierGlisser(), d)).mtimeMs })).sort((a, b) => b.t - a.t);
+    dossiers.slice(GLISSER_MAX).forEach(({ d }) => fs.rmSync(path.join(dossierGlisser(), d), { recursive: true, force: true }));
+  } catch (e) { /* le ménage se refera */ }
+  return { ok: true, chemin };
+}
+let iconeDeGlisser = null;
+function glisser(sender, chemin) {
+  // Seul ce que cette fonction a préparé peut partir : jamais un chemin quelconque fourni par la page.
+  if (typeof chemin !== 'string' || !path.resolve(chemin).startsWith(path.resolve(dossierGlisser()) + path.sep) || !fs.existsSync(chemin)) return false;
+  if (!iconeDeGlisser) iconeDeGlisser = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png')).resize({ width: 48, height: 48 });
+  sender.startDrag({ file: chemin, icon: iconeDeGlisser });
+  return true;
+}
+
 const fenetres = new Set();
 const fenetreActive = () => BrowserWindow.getFocusedWindow() || Array.from(fenetres).pop() || null;
 // La boîte s'accroche à une fenêtre quand il y en a une, et se pose seule
@@ -727,6 +755,8 @@ function setupIpc() {
     return lire([chemin]);
   });
   ipcMain.handle('aktum:recup-ecrire', async (_e, o) => { try { return await recupEcrire(o); } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; } });
+  ipcMain.handle('aktum:glisser-preparer', async (_e, o) => { try { return await glisserPreparer(o); } catch (err) { return { ok: false, erreur: phraseErreur(err) }; } });
+  ipcMain.on('aktum:glisser', (e, chemin) => { try { glisser(e.sender, chemin); } catch (err) { /* le geste n'a pas pu partir : rien d'autre à faire */ } });
   ipcMain.handle('aktum:recup-liste', () => { try { return recupListe(); } catch (err) { return []; } });
   ipcMain.handle('aktum:recup-lire', (_e, cle) => { try { return recupLire(cle); } catch (err) { return null; } });
   ipcMain.handle('aktum:recup-effacer', (_e, cle) => { try { return recupEffacer(cle); } catch (err) { return false; } });
@@ -938,6 +968,7 @@ function buildMenu() {
       submenu: [
         { id: 'annuler', label: 'Annuler l\'action', accelerator: accel('annuler'), click: () => envoyer('annuler') },
         { id: 'retablir', label: 'Rétablir l\'action', accelerator: accel('retablir'), click: () => envoyer('retablir') },
+        { id: 'repeter', label: 'Répéter la dernière opération', accelerator: accel('repeter'), click: () => envoyer('repeter') },
         { type: 'separator' },
         { label: 'Couper', role: 'cut' },
         { label: 'Copier', role: 'copy' },
@@ -1242,6 +1273,7 @@ function lancerLaMiseAJour(trouvee) {
 }
 
 app.on('will-quit', () => {
+  glisserNettoyer();
   libererLesVerrous();
   if (BATTEMENT) clearInterval(BATTEMENT);
   retirerLeJeton(MON_JETON);
@@ -1264,6 +1296,7 @@ app.on('will-quit', () => {
 
 app.whenReady().then(() => {
   initialiserLaLangue();
+  glisserNettoyer();
   if (RANGEMENT.ou === 'comptes' && !PROFIL) {
     ipcMain.handle('aktum:comptes', () => comptesConnus().map((nom) => {
       const fiche = lireFiche(nom);

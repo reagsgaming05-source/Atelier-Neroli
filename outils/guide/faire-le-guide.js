@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+const { guideAvecRaccourcis } = require('./tableau-raccourcis');
 const APP = path.join(__dirname, '..', 'desktop');
 process.chdir(__dirname);
 const { chromium } = require(path.join(APP, 'node_modules', 'playwright-core'));
@@ -35,7 +36,10 @@ const CAPTURES = path.join(__dirname, 'captures');
   const page = await nav.newPage();
   const erreurs = [];
   page.on('requestfailed', (r) => erreurs.push(r.url()));
-  await page.goto('file://' + path.join(__dirname, 'guide.html'), { waitUntil: 'load' });
+  // Le tableau des raccourcis est celui de desktop/raccourcis.json, écrit dans une copie voisine le temps d'imprimer.
+  const copie = path.join(__dirname, '.guide-imprime.html');
+  fs.writeFileSync(copie, guideAvecRaccourcis(fs.readFileSync(path.join(__dirname, 'guide.html'), 'utf8')));
+  await page.goto('file://' + copie, { waitUntil: 'load' });
 
   // Une image manquante ne se voit pas dans un PDF : on la fait dire.
   const manquantes = await page.evaluate(() => Array.from(document.images)
@@ -45,11 +49,12 @@ const CAPTURES = path.join(__dirname, 'captures');
   const pied = `<div style="width:100%;padding:0 16mm;font:8pt 'Liberation Sans',Arial,sans-serif;color:#8892a0;display:flex;justify-content:space-between">
     <span>Aktum PDF — mode d'emploi</span><span class="pageNumber"></span></div>`;
   await page.pdf({
-    path: sortie, format: 'A4', printBackground: true,
+    path: sortie, format: 'A4', printBackground: true, tagged: true, outline: true,
     displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: pied,
     margin: { top: '16mm', bottom: '16mm', left: '16mm', right: '16mm' },
   });
   await nav.close();
+  try { fs.unlinkSync(copie); } catch (e) { /* déjà parti */ }
 
   const ko = Math.round(fs.statSync(sortie).size / 1024);
   console.log(sortie + ' — ' + ko + ' Ko');

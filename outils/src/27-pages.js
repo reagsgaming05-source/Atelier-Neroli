@@ -21,8 +21,16 @@
   // =====================================================================
   const targetsFor = id => state.selected.has(id) ? selectedInOrder() : [id];
 
+  // Rejouer sur les pages sélectionnées au moment de la répétition, pas sur celles de la première fois.
+  function surLaSelection(faire) {
+    const ids = selectedInOrder();
+    if (!ids.length) { toast('Sélectionnez d\'abord des pages : l\'opération se répète sur la sélection.', 'warn'); return false; }
+    faire(ids);
+  }
+
   function rotatePages(ids, delta) {
     if (!ids.length) return;
+    retenirOperation(tr(delta > 0 ? 'Pivoter à droite' : 'Pivoter à gauche'), () => surLaSelection(i => rotatePages(i, delta)));
     snapshot();
     const set = new Set(ids);
     state.pages.forEach(p => {
@@ -37,6 +45,7 @@
 
   function deletePages(ids) {
     if (!ids.length) return;
+    retenirOperation(tr('Supprimer les pages sélectionnées'), () => surLaSelection(deletePages));
     snapshot();
     const set = new Set(ids);
     state.pages = state.pages.filter(p => !set.has(p.id));
@@ -48,6 +57,7 @@
 
   function duplicatePages(ids) {
     if (!ids.length) return;
+    retenirOperation(tr('Dupliquer les pages'), () => surLaSelection(duplicatePages));
     snapshot();
     const set = new Set(ids);
     const next = [], created = [];

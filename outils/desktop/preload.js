@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld('AktumDesktop', {
   cheminDe: (fichier) => { try { return webUtils.getPathForFile(fichier); } catch (e) { return ''; } },
   noterRecents: (chemins) => ipcRenderer.send('aktum:noter-recents', chemins),
   lireRecent: (chemin) => ipcRenderer.invoke('aktum:lire-recent', chemin),
+  // Glisser une page vers le Bureau : la page est écrite d'avance dans le dossier de données, puis le geste part du système.
+  glisserPreparer: (o) => ipcRenderer.invoke('aktum:glisser-preparer', o),
+  glisser: (chemin) => ipcRenderer.send('aktum:glisser', chemin),
   recupEcrire: (o) => ipcRenderer.invoke('aktum:recup-ecrire', o),
   recupListe: () => ipcRenderer.invoke('aktum:recup-liste'),
   recupLire: (cle) => ipcRenderer.invoke('aktum:recup-lire', cle),

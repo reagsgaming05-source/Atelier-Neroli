@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Déclaration d’accessibilité — {{PRODUIT}}</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<p class="sur-titre">Pour les services qui doivent justifier l’accessibilité de leurs outils</p>
+<h1>Déclaration d’accessibilité</h1>
+<p class="lede">{{PRODUIT}} version {{VERSION}} — état de conformité de l’application, clause par clause, avec ses limites connues. Évaluation du {{DATE_EVALUATION}}.</p>
+
+<h2>1. Ce que ce document déclare</h2>
+<p>{{PRODUIT}} est un logiciel de bureau (Windows, macOS) qui lit, réorganise, annote, caviarde et enregistre des PDF <strong>sur le poste, sans connexion</strong>. Cette déclaration porte sur <strong>l’application elle-même</strong> (son interface) et sur <strong>les documents qu’elle produit</strong>. Elle ne porte pas sur le contenu des documents que vous ouvrez.</p>
+<p><strong>État de conformité : partiellement conforme.</strong> L’interface satisfait la grande majorité des critères WCAG&nbsp;2.2 de niveau A et AA ; quatre points ne les satisfont pas encore, ils sont nommés au §2 et justifiés. Le détail critère par critère est au §3.</p>
+<p>Référentiel : <strong>WCAG&nbsp;2.2, niveau AA</strong>, appliqué à un logiciel selon la lecture « WCAG2ICT » de la norme européenne <strong>EN&nbsp;301&nbsp;549</strong> (clause&nbsp;11) ; les critères de WCAG&nbsp;2.1 AA, sur lesquels reposent EN&nbsp;301&nbsp;549 V3.2.1 et la norme suisse eCH-0059 v3.0, y sont tous contenus. Les critères propres à WCAG&nbsp;2.2 sont marqués d’un <strong>†</strong>.</p>
+
+<h2>2. Ce qui ne satisfait pas encore, et pourquoi</h2>
+<table class="long">
+<tr><th>Point</th><th>Ce qui est constaté</th><th>Ce qu’on peut faire en attendant</th></tr>
+<tr><td><strong>2.1.1 Clavier</strong><br>éditeur de page</td><td>Dans l’éditeur de page, <strong>poser et dimensionner</strong> une annotation (zone, surlignage, dessin, zone à caviarder, tampon, signature, image) se fait à la souris. Il n’existe pas, à ce jour, d’équivalent au clavier pour le geste de placement lui-même. L’édition d’un texte, le déplacement entre pages, la suppression et le retour arrière se font au clavier.</td><td>Le <strong>caviardage par recherche</strong> (Rechercher, remplacer, caviarder), la <strong>numérotation</strong>, l’<strong>en-tête et pied de page</strong>, le <strong>filigrane</strong>, la rotation, la suppression et la réorganisation de pages, les <strong>propriétés</strong> et la <strong>signature par certificat</strong> se font entièrement au clavier, par des boîtes de dialogue.</td></tr>
+<tr><td><strong>11.8.3 Conservation du balisage</strong><br>(EN 301 549, outils de création)</td><td>Quand des pages d’un PDF <strong>déjà balisé</strong> sont réassemblées (réorganisées, extraites, fusionnées), l’arbre de structure du fichier d’origine <strong>n’est pas conservé</strong> dans le fichier produit. L’application détecte le balisage à l’ouverture et <strong>prévient avant</strong> de le perdre ; elle ne le perd pas en silence.</td><td>Pour un document balisé, n’utiliser que des opérations qui ne reconstruisent pas le fichier (propriétés, annotations), ou rebaliser avec l’outil d’origine. L’application peut produire un balisage nouveau (voir §4).</td></tr>
+<tr><td><strong>2.4.2 Titre de page</strong></td><td>Le titre de la fenêtre est toujours « {{PRODUIT}} » : il ne reprend pas le nom du document ouvert. Le nom du document est exposé par l’onglet actif et par la barre d’état.</td><td>—</td></tr>
+<tr><td><strong>Documentation</strong><br>(clauses 10 et 12.1)</td><td>Les documents livrés avec l’application (mode d’emploi, guide d’administration, fiches, procédure de support, ce document) sont des PDF <strong>balisés</strong> — titres, listes, tableaux, signets — mais <strong>pas conformes PDF/UA-1</strong> : un contrôle veraPDF relève l’absence de métadonnées XMP et un pied de page non marqué comme artefact.</td><td>Les mêmes contenus existent en HTML sémantique (dossier du guide) et sont lus tels quels par un lecteur d’écran.</td></tr>
+</table>
+
+<h2>3. Critères WCAG&nbsp;2.2, niveaux A et AA</h2>
+<p class="petit">« Conforme » : le critère est satisfait et vérifié (par un test automatique du dépôt, nommé, ou par un relevé à la main décrit). « Partiel » : satisfait pour l’essentiel, avec la limite indiquée. « N/A » : le critère vise un contenu que l’application n’a pas. Pour un logiciel, les critères qui visent un <em>ensemble de pages web</em> (2.4.1, 2.4.5, 3.2.3) sont sans objet.</p>
+<table class="long">
+<thead><tr><th>Critère</th><th>État</th><th>Remarques et preuve</th></tr></thead>
+<tr><td colspan="3"><strong>Niveau A</strong></td></tr>
+<tr><td>1.1.1 Contenu non textuel</td><td class="s s-ok">Conforme</td><td>Chaque bouton à icône seule porte un nom accessible ; les décors sont masqués aux lecteurs d’écran ; les vignettes ont un texte de remplacement vide car la page est nommée par sa ligne. Test : <span class="chemin">accessibilite-structure.spec.js</span> (« boutons sans nom »).</td></tr>
+<tr><td>1.2.1 – 1.2.3 Média temporel</td><td class="s s-na">N/A</td><td>Aucun contenu audio ou vidéo.</td></tr>
+<tr><td>1.3.1 Information et relations</td><td class="s s-ok">Conforme</td><td>Onglets : listes d’onglets nommées, qui ne contiennent que des onglets, liées à leur panneau. La grille de pages est une liste à choix (un seul arrêt de tabulation, flèches dans deux dimensions). La barre d’avancement porte son rôle et sa valeur. Titres et repères nommés sur l’écran principal ; chaque feuille de la vue Lecture est une région nommée. Tests : <span class="chemin">accessibilite-structure.spec.js</span>. <em>Réserve :</em> les titres exposés dans la vue Lecture sont devinés d’après la taille du texte, pas lus dans la structure du document source.</td></tr>
+<tr><td>1.3.2 Ordre séquentiel</td><td class="s s-ok">Conforme</td><td>L’ordre du DOM suit l’ordre visuel (barre d’outils, onglets, panneau, grille, pied).</td></tr>
+<tr><td>1.3.3 Caractéristiques sensorielles</td><td class="s s-ok">Conforme</td><td>Les consignes qui nomment un geste (« glissez ») ont toutes une alternative : champ de position, boutons, flèches, ou plage de pages saisie.</td></tr>
+<tr><td>1.4.1 Utilisation de la couleur</td><td class="s s-ok">Conforme</td><td>Les teintes d’outils sont décoratives ; les états portent un libellé ou une forme en plus de la couleur.</td></tr>
+<tr><td>1.4.2 Contrôle du son</td><td class="s s-na">N/A</td><td>Aucun son.</td></tr>
+<tr><td>2.1.1 Clavier</td><td class="s s-part">Partiel</td><td>Tout le reste de l’application se manie au clavier (grille, onglets, panneaux, boîtes de dialogue, raccourcis). <strong>Limite : le placement des annotations dans l’éditeur de page</strong> (§2).</td></tr>
+<tr><td>2.1.2 Pas de piège au clavier</td><td class="s s-ok">Conforme</td><td>Échap libère les boîtes et l’éditeur ; une boîte modale retient le focus et le rend où il était. Tests : <span class="chemin">accessibilite.spec.js</span>.</td></tr>
+<tr><td>2.1.4 Raccourcis à une touche</td><td class="s s-ok">Conforme</td><td>Les touches à une lettre se coupent ou se réaffectent dans Préférences ; aucune ne répond dans un champ de saisie. Test : <span class="chemin">raccourcis.spec.js</span>.</td></tr>
+<tr><td>2.2.1, 2.2.2 Temps, animations</td><td class="s s-na">N/A</td><td>Aucune limite de temps ; aucune animation automatique qui dure. Les mouvements se coupent avec la préférence « réduire les animations » du système.</td></tr>
+<tr><td>2.3.1 Trois flashs</td><td class="s s-ok">Conforme</td><td>Aucun clignotement.</td></tr>
+<tr><td>2.4.1 Contournement de blocs</td><td class="s s-na">N/A</td><td>Logiciel : critère propre aux ensembles de pages web.</td></tr>
+<tr><td>2.4.2 Titre de page</td><td class="s s-part">Partiel</td><td>Titre de fenêtre fixe (§2).</td></tr>
+<tr><td>2.4.3 Ordre du focus</td><td class="s s-ok">Conforme</td><td>L’éditeur de page est une boîte modale : focus déplacé à l’ouverture, fond rendu inerte, focus rendu à la vignette d’origine à la fermeture. Test : <span class="chemin">accessibilite-structure.spec.js</span>.</td></tr>
+<tr><td>2.4.4 Fonction du lien</td><td class="s s-na">N/A</td><td>Aucun lien dans l’interface.</td></tr>
+<tr><td>2.5.1, 2.5.2 Gestes et annulation du pointeur</td><td class="s s-ok">Conforme</td><td>Aucun geste multipoint ou tracé requis pour les fonctions de l’interface ; les actions partent au relâchement.</td></tr>
+<tr><td>2.5.3 Étiquette dans le nom</td><td class="s s-ok">Conforme</td><td>Le nom accessible contient le texte visible.</td></tr>
+<tr><td>2.5.4 Activation par le mouvement</td><td class="s s-na">N/A</td><td>Aucun capteur.</td></tr>
+<tr><td>3.1.1 Langue de la page</td><td class="s s-ok">Conforme</td><td>La langue de l’interface (français ou allemand) est posée sur le document, et change avec elle.</td></tr>
+<tr><td>3.2.1, 3.2.2 Au focus, à la saisie</td><td class="s s-ok">Conforme</td><td>Aucun changement de contexte sans action explicite.</td></tr>
+<tr><td>3.2.6 Aide cohérente †</td><td class="s s-ok">Conforme</td><td>Le bouton d’aide est au même rang sur tous les écrans.</td></tr>
+<tr><td>3.3.1 Identification des erreurs</td><td class="s s-ok">Conforme</td><td>Les erreurs s’affichent en texte et s’annoncent aux lecteurs d’écran comme alertes ; le journal de la session les garde. Test : <span class="chemin">accessibilite-structure.spec.js</span>.</td></tr>
+<tr><td>3.3.2 Étiquettes ou instructions</td><td class="s s-ok">Conforme</td><td>Tous les champs ont un nom accessible.</td></tr>
+<tr><td>3.3.7 Saisie redondante †</td><td class="s s-ok">Conforme</td><td>Aucune ressaisie imposée, hors la confirmation d’un nouveau mot de passe à la création d’un compte local (exception « essentiel »).</td></tr>
+<tr><td>4.1.2 Nom, rôle, valeur</td><td class="s s-ok">Conforme</td><td>Aucun contrôle sans nom ; plus de contrôle imbriqué dans un élément de liste ou dans un bouton. Tests : <span class="chemin">accessibilite-structure.spec.js</span>.</td></tr>
+<tr><td colspan="3"><strong>Niveau AA</strong></td></tr>
+<tr><td>1.3.4 Orientation</td><td class="s s-na">N/A</td><td>Logiciel de bureau, aucun verrouillage.</td></tr>
+<tr><td>1.3.5 Identifier la saisie</td><td class="s s-ok">Conforme</td><td>Les champs de connexion portent leurs attributs de saisie (<span class="chemin">autocomplete</span>) ; les autres champs ne portent pas sur la personne.</td></tr>
+<tr><td>1.4.3 Contraste minimum</td><td class="s s-ok">Conforme</td><td>4,5:1 au moins pour le texte courant et pour le libellé du bouton principal, dans les thèmes clair et sombre. Calculé depuis les jetons de la feuille de style par un test (<span class="chemin">contraste.test.js</span>), à chaque modification. Le contenu des documents affichés n’est pas concerné.</td></tr>
+<tr><td>1.4.4 Redimensionnement du texte</td><td class="s s-ok">Conforme</td><td>La taille du texte de l’interface suit l’échelle d’affichage du système ; aucun défilement horizontal ni perte de contenu relevés jusqu’à 400 % (voir 1.4.10). L’application n’a pas de zoom propre de l’interface (le zoom de la vue Lecture est celui du document).</td></tr>
+<tr><td>1.4.5 Images de texte</td><td class="s s-ok">Conforme</td><td>Tout le texte de l’interface est du texte ; les aperçus de pages sont le contenu lui-même.</td></tr>
+<tr><td>1.4.10 Réaffichage</td><td class="s s-ok">Conforme</td><td>À 320 px de large (un écran de 1280 px à 400 %) : aucun défilement horizontal de la page, des boîtes de dialogue ni de l’éditeur ; la barre d’état et le pied des boîtes passent à la ligne. La page d’un document, elle, garde sa mise en page (exception admise). Test : <span class="chemin">reflux.spec.js</span>.</td></tr>
+<tr><td>1.4.11 Contraste non textuel</td><td class="s s-ok">Conforme</td><td>Bordures de champs et anneau de focus à 3:1 au moins, dans les deux thèmes. Test : <span class="chemin">contraste.test.js</span>.</td></tr>
+<tr><td>1.4.12 Espacement du texte</td><td class="s s-ok">Conforme</td><td>Aucune perte avec les espacements du critère appliqués (relevé à la main).</td></tr>
+<tr><td>1.4.13 Contenu au survol ou au focus</td><td class="s s-ok">Conforme</td><td>La barre d’actions d’une vignette reste visible tant qu’on la survole ; <strong>Échap l’écarte</strong> sans bouger le pointeur ni le focus. Test : <span class="chemin">accessibilite.spec.js</span>.</td></tr>
+<tr><td>2.4.5 Accès multiples</td><td class="s s-na">N/A</td><td>Propre aux ensembles de pages web.</td></tr>
+<tr><td>2.4.6 En-têtes et étiquettes</td><td class="s s-ok">Conforme</td><td>Titres et repères nommés sur l’écran principal ; étiquettes descriptives. Test : <span class="chemin">accessibilite-structure.spec.js</span>.</td></tr>
+<tr><td>2.4.7 Focus visible</td><td class="s s-ok">Conforme</td><td>Anneau de focus de 2&nbsp;px, visible sur tous les contrôles, y compris en contraste forcé.</td></tr>
+<tr><td>2.4.11 Focus non masqué (minimum) †</td><td class="s s-ok">Conforme</td><td>La barre de sélection fixe ne recouvre jamais entièrement un élément qui a le focus (relevé à la main).</td></tr>
+<tr><td>2.5.7 Mouvements de glissement †</td><td class="s s-ok">Conforme</td><td>Tout déplacement de page par glissement a trois solutions de rechange : champ de position, boutons, flèches avec Alt.</td></tr>
+<tr><td>2.5.8 Taille de cible (minimum) †</td><td class="s s-ok">Conforme</td><td>Aucune commande de moins de 24 × 24 px, à toutes les largeurs, barre d’actions des vignettes comprise. Test : <span class="chemin">reflux.spec.js</span>.</td></tr>
+<tr><td>3.1.2 Langue des parties</td><td class="s s-ok">Conforme</td><td>Le champ de choix de fichier, qui exposait le texte du système, est masqué aux lecteurs d’écran ; le bouton « Ouvrir » le remplace.</td></tr>
+<tr><td>3.2.3 Navigation cohérente</td><td class="s s-na">N/A</td><td>Propre aux ensembles de pages web.</td></tr>
+<tr><td>3.2.4 Identification cohérente</td><td class="s s-ok">Conforme</td><td>Mêmes icônes et mêmes noms pour les mêmes fonctions partout.</td></tr>
+<tr><td>3.3.3 Suggestion après erreur</td><td class="s s-part">Partiel</td><td>Les messages disent ce qui s’est passé et, le plus souvent, quoi faire (fichier vide, qui n’est pas un PDF, abîmé ; refus d’écriture). Pas de correction proposée automatiquement.</td></tr>
+<tr><td>3.3.4 Prévention des erreurs</td><td class="s s-ok">Conforme</td><td>Confirmation chiffrée du caviardage ; annulation (Ctrl+Z) ; avertissements avant écrasement d’un fichier modifié ailleurs ou signé.</td></tr>
+<tr><td>3.3.8 Authentification accessible (minimum) †</td><td class="s s-ok">Conforme</td><td>L’écran de connexion locale (si le service a activé des comptes) a des champs étiquetés, des attributs de saisie, et ne bloque pas le collage. Relevé à la main, sans lecteur d’écran.</td></tr>
+<tr><td>4.1.3 Messages d’état</td><td class="s s-ok">Conforme</td><td>La barre d’état est une région vive ; la progression d’une opération est une barre de progression avec sa valeur ; une erreur s’annonce comme alerte. Test : <span class="chemin">accessibilite-structure.spec.js</span>.</td></tr>
+</table>
+
+<h2 class="page">4. Les autres clauses d’EN&nbsp;301&nbsp;549</h2>
+<table class="long">
+<thead><tr><th>Clause</th><th>État</th><th>Remarques</th></tr></thead>
+<tr><td>5.2 Activation des fonctions d’accessibilité</td><td class="s s-ok">Conforme</td><td>L’application ne désactive aucune fonction d’accessibilité du système et suit ses préférences (thème clair ou sombre, contraste forcé, réduction des animations, échelle d’affichage).</td></tr>
+<tr><td>5.3 Biométrie</td><td class="s s-na">N/A</td><td>—</td></tr>
+<tr><td>5.4 Conservation des informations d’accessibilité lors d’une conversion</td><td class="s s-part">Partiel</td><td>Voir 11.8.3 ci-dessous.</td></tr>
+<tr><td>6, 7, 8, 13 : communication vocale, vidéo, matériel, relais</td><td class="s s-na">N/A</td><td>Le produit est un logiciel autonome, sans voix, sans vidéo, sans matériel, sans service de relais.</td></tr>
+<tr><td>9 Web</td><td class="s s-na">N/A</td><td>L’application ne porte pas de pages web. La version d’essai en ligne, servie par le site, présente les mêmes constats que la clause 11.</td></tr>
+<tr><td>10 Documents hors web</td><td class="s s-part">Partiel</td><td>Les PDF livrés avec l’application sont balisés, sans être conformes PDF/UA-1 (§2). Les PDF <em>produits par l’application</em> à partir de vos documents ne sont balisés que si vous le demandez (11.8.2).</td></tr>
+<tr><td>11.1 – 11.2 Critères WCAG, fonctions fermées</td><td class="s s-part">Partiel</td><td>Voir §3. Le produit n’est pas une application « fermée » : il se pilote avec les technologies d’assistance du système.</td></tr>
+<tr><td>11.3 Interopérabilité avec les technologies d’assistance</td><td class="s s-part">Partiel</td><td>L’interface expose rôles, noms et états par l’arbre d’accessibilité de Chromium, que lisent NVDA, JAWS et VoiceOver. <strong>Aucun de ces lecteurs d’écran n’a été exécuté</strong> pour cette déclaration : les constats de structure sont solides, ce que chaque lecteur choisit d’annoncer n’a pas été éprouvé.</td></tr>
+<tr><td>11.4 Fonctions d’accessibilité documentées</td><td class="s s-ok">Conforme</td><td>Les raccourcis (fenêtre « ? », Préférences, mode d’emploi) et ce document.</td></tr>
+<tr><td>11.5 Préférences de l’utilisateur</td><td class="s s-ok">Conforme</td><td>Thème, langue et touches se règlent ; l’application suit celles du système par défaut.</td></tr>
+<tr><td>11.8.1 Technologie de contenu</td><td class="s s-ok">Conforme</td><td>PDF.</td></tr>
+<tr><td>11.8.2 Création de contenu accessible</td><td class="s s-part">Partiel</td><td>Propriétés du document : titre, langue, <strong>balisage d’accessibilité</strong>. Un dossier de pièces assemblé par l’application reçoit de vrais titres, une vraie table des matières, ses numérotations et filigranes marqués comme artefacts, un texte de remplacement pour les pages sans texte ; un contrôleur le vérifie à l’export (jugé par veraPDF PDF/UA-1 : seule la déclaration d’identité PDF/UA manque, volontairement). <strong>L’application ne devine pas la structure d’un document quelconque</strong> (titres, listes, tableaux) : ce n’est pas un PDF/UA.</td></tr>
+<tr><td>11.8.3 Conservation lors d’une transformation</td><td class="s s-non">Non conforme</td><td>Voir §2.</td></tr>
+<tr><td>11.8.4 Aide à la réparation</td><td class="s s-part">Partiel</td><td><em>Outils › Vérifier l’accessibilité</em> donne le verdict et la liste des manques du document ouvert, sur ce poste, avec, pour la plupart, la façon d’y remédier (reconnaître le texte d’une page scannée, ajouter des signets, poser langue, titre et balisage). Il ne répare pas automatiquement et ne remplace pas un contrôle PDF/UA complet ni un lecteur d’écran.</td></tr>
+<tr><td>11.8.5 Modèles</td><td class="s s-na">N/A</td><td>Pas de modèles de documents.</td></tr>
+<tr><td>12.1.1 Documentation accessible</td><td class="s s-part">Partiel</td><td>Voir §2 (« Documentation »).</td></tr>
+<tr><td>12.1.2 Fonctions d’accessibilité documentées</td><td class="s s-ok">Conforme</td><td>Dans le mode d’emploi, l’aide intégrée et ce document.</td></tr>
+<tr><td>12.2.2 Information sur les fonctions d’accessibilité</td><td class="s s-ok">Conforme</td><td>Ce document ; les questions se posent à {{SUPPORT}}.</td></tr>
+<tr><td>12.2.3 Communication efficace</td><td class="s s-part">Partiel</td><td>Le support se fait par écrit ; pas de support téléphonique sans rendez-vous (procédure de support).</td></tr>
+</table>
+
+<h2>5. Comment cette évaluation a été faite, et ce qu’elle n’établit pas</h2>
+<ul>
+  <li><strong>Auto-évaluation</strong> par l’éditeur, sur la version {{VERSION}}, le {{DATE_EVALUATION}}. Ce n’est pas l’avis d’un évaluateur indépendant.</li>
+  <li><strong>Ce qui est mesuré à chaque modification</strong> (suite de tests du dépôt) : noms, rôles et structure de l’interface (<span class="chemin">accessibilite-structure.spec.js</span>), pièges de focus et contenu au survol (<span class="chemin">accessibilite.spec.js</span>), contrastes calculés des deux thèmes (<span class="chemin">contraste.test.js</span>), réaffichage à 320 px et taille des cibles (<span class="chemin">reflux.spec.js</span>), raccourcis (<span class="chemin">raccourcis.spec.js</span>).</li>
+  <li><strong>Ce qui n’a pas été fait</strong> : aucun essai avec un lecteur d’écran réel (NVDA, JAWS, VoiceOver) ; aucun contrôle PDF/UA par PAC ; l’écran de connexion locale n’a été relevé qu’à la main.</li>
+  <li>Les références réglementaires citées (EN&nbsp;301&nbsp;549, eCH-0059, LHand et son ordonnance) sont données comme repères : cette déclaration <strong>n’est pas un avis juridique</strong> et ne dit pas ce que votre collectivité doit déclarer.</li>
+</ul>
+
+<h2>6. Signaler un défaut d’accessibilité</h2>
+<p>Écrivez à <strong>{{SUPPORT}}</strong> : dites ce que vous essayiez de faire, avec quelle technologie d’assistance, et ce qui l’a empêché. Un défaut d’accessibilité est traité comme les autres, selon la <em>procédure de support</em> livrée avec l’application ; le niveau est fixé avec vous au premier échange.</p>
+<p class="petit">{{COORDONNEES}}</p>
+</body></html>

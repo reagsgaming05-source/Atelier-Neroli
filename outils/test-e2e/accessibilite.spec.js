@@ -94,3 +94,18 @@ test('un seul onglet est atteignable par Tab, les flèches font le reste', async
   expect(indices.filter((i) => i === 0), 'un seul onglet dans l\'ordre de tabulation').toHaveLength(1);
   expect(indices.filter((i) => i === -1)).toHaveLength(1);
 });
+
+// WCAG 1.4.13 : le contenu qui apparaît au survol ou au focus se rejette sans bouger le pointeur ni le focus.
+test('Échap écarte la barre d\'actions d\'une vignette, qui revient quand on la quitte puis la retrouve', async ({ app, page }) => {
+  await app.ouvrir('quatre.pdf', pdfVide(4));
+  await app.vue('organiser');
+  const opacite = () => page.evaluate(() => getComputedStyle(document.querySelector('#pages .tile:nth-child(2) .tile-tools')).opacity);
+  await page.locator('#pages .tile:nth-child(2)').hover();
+  await expect.poll(opacite).toBe('1');
+  await page.keyboard.press('Escape');
+  await expect.poll(opacite, 'la barre est écartée, le pointeur n\'a pas bougé').toBe('0');
+  // le pointeur quitte la vignette puis y revient : la barre est de retour
+  await page.locator('#pages .tile:nth-child(3)').hover();
+  await page.locator('#pages .tile:nth-child(2)').hover();
+  await expect.poll(opacite).toBe('1');
+});

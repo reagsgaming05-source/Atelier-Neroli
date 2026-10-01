@@ -14,7 +14,7 @@ const FICHIERS = ['main.js', 'licence.js', 'comptes.js', 'verifier-maj.js', 'ou-
 const PROPRIETES_AFFICHEES = ['label', 'sublabel', 'toolTip', 'title', 'message', 'detail', 'name'];
 // Des textes que la forme écarte à tort, ou retient à tort : désignés à la main.
 const RETENUS = [' secondes', ' minutes'];   // la durée d'attente des comptes : « 30 secondes », « 4 minutes »
-const IGNORES = ['Deutsch', 'Français', 'MAP * ~NOTFOUND , EXCLUDE ', 'Aktum PDF', 'Blonay PDF', 'AktumPDF-windows.zip', 'illisible :', 'clé invalide', 'chemin invalide', 'Texte', 'Nom du fichier',
+const IGNORES = ['Deutsch', 'Français', 'MAP * ~NOTFOUND , EXCLUDE ', 'Aktum PDF', 'Blonay PDF', 'AktumPDF-windows.zip', 'illisible :', 'clé invalide', 'chemin invalide', 'page invalide', 'Texte', 'Nom du fichier',
   // le journal des événements d'un compte et les sorties de commande restent en français : ils servent à l'informaticien
   'compte créé', 'code de récupération créé', 'code de récupération refait', 'mot de passe changé', 'mot de passe changé avec le code de récupération', 'mot de passe posé après réinitialisation',
   'SIGNATURE-REFUSEE : ', 'fiche de version : ', 'usage : node fiche-de-version.js windows|mac <destination>', 'usage : verifier-maj.js <archive.zip>',

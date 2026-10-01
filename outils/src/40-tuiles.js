@@ -31,13 +31,17 @@
     tools.setAttribute('role', 'group');
     [['rotl', IC.rotL, 'Pivoter à gauche'], ['rotr', IC.rotR, 'Pivoter à droite'], ['|'],
      ['left', IC.left, 'Déplacer d\'une position vers la gauche'], ['pos', IC.hash, 'Déplacer vers un numéro de page précis'], ['right', IC.right, 'Déplacer d\'une position vers la droite'], ['|'],
-     ['edit', IC.pencil, 'Ouvrir l\'éditeur de page'], ['del', IC.trash, 'Supprimer cette page']].forEach(spec => {
+     ['edit', IC.pencil, 'Ouvrir l\'éditeur de page']]
+      // Dans l'application fenêtrée seulement : la page se glisse vers le Bureau ou un dossier, en fichier PDF d'une page (voir 61-glisser.js).
+      .concat(window.AktumDesktop && window.AktumDesktop.glisserPreparer ? [['glisser', IC.doc, 'Glisser cette page vers le Bureau ou un dossier (PDF d\'une page) ; un clic l\'enregistre']] : [])
+      .concat([['del', IC.trash, 'Supprimer cette page']]).forEach(spec => {
       if (spec[0] === '|') { const s = document.createElement('span'); s.className = 'sep'; tools.appendChild(s); return; }
       const b = document.createElement('button');
       b.type = 'button'; b.dataset.act = spec[0]; b.title = spec[2];
       b.tabIndex = -1; // à la souris ; au clavier, chaque geste a sa touche (Entrée, R, Suppr, Alt+flèches)
       b.setAttribute('aria-label', spec[2]);
       if (spec[0] === 'del') b.className = 'danger';
+      if (spec[0] === 'glisser') b.draggable = true;
       b.appendChild(icon(spec[1]));
       tools.appendChild(b);
     });

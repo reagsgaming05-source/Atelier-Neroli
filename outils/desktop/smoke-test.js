@@ -130,7 +130,7 @@ async function tournerPage(win, n) {
   verifier(toutes.length >= 31 && toutes.includes('Pages vierges') && toutes.includes('Caviarder une zone') && toutes.includes('Vérifier les signatures'), 'les trente et un outils sont dans le menu Outils (' + toutes.length + ')');
   const edition = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.find((i) => i.label === 'Édition').submenu.items.filter((i) => i.label).map((i) => i.label + (i.accelerator ? ' [' + i.accelerator + ']' : '')));
   console.log('menu Édition :', JSON.stringify(edition));
-  verifier(edition.length === 6 && edition.some((l) => /Couper/.test(l)) && edition.some((l) => /Coller/.test(l)) && edition.some((l) => /Tout sélectionner \[CmdOrCtrl\+A\]/.test(l)), 'le menu Édition a ses touches');
+  verifier(edition.length === 7 && edition.some((l) => /Répéter la dernière opération \[CmdOrCtrl\+Shift\+Y\]/.test(l)) && edition.some((l) => /Couper/.test(l)) && edition.some((l) => /Coller/.test(l)) && edition.some((l) => /Tout sélectionner \[CmdOrCtrl\+A\]/.test(l)), 'le menu Édition a ses touches');
   // Les touches du menu sont celles de la table des raccourcis ; une touche changée dans les préférences passe au menu.
   const accelerateurs = () => app.evaluate(({ Menu }) => {
     const r = {};

@@ -169,6 +169,19 @@
     if (el.btnAnnulerOp) { el.btnAnnulerOp.disabled = true; el.btnAnnulerOp.textContent = 'Arrêt…'; }
   }
   const annulationDemandee = () => annulation.actif && annulation.demande;
+
+  // « Répéter la dernière opération » (Ctrl+Maj+Y) : la dernière opération faite sur des pages (pivoter, supprimer, dupliquer) ou le
+  // dernier réglage posé (filigrane, en-tête et pied de page) se rejoue — sur la sélection du moment pour les pages, sur le document
+  // ouvert pour un réglage, qui peut être un autre document que celui où l'on vient de le poser.
+  const derniereOperation = { libelle: '', rejouer: null };
+  function retenirOperation(libelle, rejouer) { derniereOperation.libelle = libelle; derniereOperation.rejouer = rejouer; }
+  function repeterOperation() {
+    if (!derniereOperation.rejouer) { toast('Aucune opération à répéter : faites d\'abord une opération sur des pages, ou posez un filigrane ou un en-tête.', 'warn'); return; }
+    if (state.busy || !state.pages.length) return;
+    const libelle = derniereOperation.libelle;
+    if (derniereOperation.rejouer() === false) return;
+    toast(tr('Répété : {0}').replace('{0}', libelle));
+  }
   function verifierAnnulation() { if (annulationDemandee()) { annulation.demande = false; throw new Annule(); } }
 
   // Colors ------------------------------------------------------------

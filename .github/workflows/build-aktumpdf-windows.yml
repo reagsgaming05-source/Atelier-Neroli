@@ -345,6 +345,12 @@ jobs:
         shell: pwsh
         run: node ecrasement-test.js dist\AktumPDF\AktumPDF.exe
 
+      - name: Glisser une page vers le Bureau — le fichier préparé part, rien d'autre
+        timeout-minutes: 10
+        working-directory: outils/desktop
+        shell: pwsh
+        run: node glisser-test.js dist\AktumPDF\AktumPDF.exe
+
       # « Aucune donnée ne quitte le poste » se prouve en regardant, pas en
       # relisant le code. Un mandataire d'observation est posé sur la machine,
       # l'exécutable empaqueté est utilisé pour de bon (ouvrir, tourner,
@@ -702,6 +708,11 @@ jobs:
         timeout-minutes: 14
         working-directory: outils/desktop
         run: node ecrasement-test.js dist/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF
+
+      - name: Glisser une page vers le Bureau — le fichier préparé part, rien d'autre
+        timeout-minutes: 10
+        working-directory: outils/desktop
+        run: node glisser-test.js dist/AktumPDF/AktumPDF.app/Contents/MacOS/AktumPDF
 
       - name: Réseau — rien ne sort du poste, observé derrière un mandataire
         timeout-minutes: 14

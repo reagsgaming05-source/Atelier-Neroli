@@ -407,6 +407,7 @@
         else if (act === 'pos') { const inp = t.querySelector('.pos'); inp.focus(); inp.select(); }
         else if (act === 'edit') openEditor(id);
         else if (act === 'del') deletePages(targetsFor(id));
+        else if (act === 'glisser') enregistrerLaPage(id);
         return;
       }
       if (e.shiftKey && state.anchor != null && pageIndex(state.anchor) >= 0) {
@@ -483,7 +484,12 @@
       }
     });
 
+    // La barre d'actions écartée par Échap revient quand on quitte la vignette.
+    const rendreLesOutils = e => { const t = e.target.closest ? e.target.closest('.tile') : null; if (t && !t.contains(e.relatedTarget)) t.classList.remove('outils-ecartes'); };
+    el.pages.addEventListener('pointerout', rendreLesOutils);
+    el.pages.addEventListener('focusout', rendreLesOutils);
     // --- drag & drop
+    brancherLeGlisser();
     el.pages.addEventListener('dragstart', e => {
       const t = e.target.closest('.tile');
       if (!t) return;
@@ -591,6 +597,7 @@
     Object.assign(ACTIONS, {
       annuler: { agit: () => undo() },
       retablir: { agit: () => redoAction() },
+      repeter: { quand: () => state.pages.length > 0, agit: () => repeterOperation() },
       'tout-selectionner': { quand: () => state.pages.length > 0, agit: () => selectAll() },
       ouvrir: { agit: () => openPicker('onglet') },
       ajouter: { agit: () => openPicker('') },
@@ -628,7 +635,14 @@
       'supprimer-pages': { quand: e => pagesSel() && sansTuile(e), agit: () => deletePages(selectedInOrder()) },
       'pivoter-droite': { quand: e => pagesSel() && sansTuile(e), agit: () => rotatePages(selectedInOrder(), 90) },
       'pivoter-gauche': { quand: e => pagesSel() && sansTuile(e), agit: () => rotatePages(selectedInOrder(), -90) },
-      deselectionner: { agit: () => { if (annulation.actif) demanderAnnulation(); else clearSelection(); } },
+      // Échap écarte aussi la barre d'actions qui s'affiche au survol ou au focus d'une vignette (WCAG 1.4.13) : elle revient quand le
+      // pointeur ou le focus quitte la vignette puis y revient.
+      deselectionner: { agit: () => {
+        if (annulation.actif) { demanderAnnulation(); return; }
+        const ouvert = el.pages.querySelector('.tile:hover, .tile:focus-within');
+        if (ouvert) ouvert.classList.add('outils-ecartes');
+        clearSelection();
+      } },
     });
     // L'éditeur de page : un outil par touche, et ses deux pages voisines
     ['select', 'edittext', 'text', 'highlight', 'box', 'draw', 'redact', 'champ', 'tampon', 'sign', 'image'].forEach(outil => {
