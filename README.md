@@ -418,8 +418,11 @@ enregistré, un lien interne qui suit sa page. Ils tournent sur Linux à chaque 
 version Windows n'est empaquetée que s'ils passent. Trois séries en plus : des **garde-temps**
 (`perf.spec.js` : la recherche sur 300 pages, l'export de 100 pages, un dossier de 10 pièces, avec
 des plafonds qui font échouer la chaîne) ; une **régression visuelle** (`visuel.spec.js` : six
-références dans `test-e2e/references/` — une lettre avec accents, un tableau, un scan, en lecture
-et en vignette ; `AKTUM_REFERENCES=ecrire` les refait quand Playwright change de Chromium) ;
+références — une lettre avec accents, un tableau, un scan, en lecture et en vignette — dans
+`test-e2e/references/` pour le poste de développement et `test-e2e/references-ci/` pour la chaîne,
+parce que chaque Chromium lisse les lettres à sa façon ; `AKTUM_REFERENCES=ecrire` les refait quand
+Playwright change de Chromium, et sur la chaîne l'image obtenue est écrite dans le journal, d'où
+`node test-e2e/references-du-journal.js` la tire) ;
 et des scénarios pour ce que rien ne couvrait (`impression.spec.js`, `comparer.spec.js`,
 `lots.spec.js`).
 

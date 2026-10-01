@@ -4,15 +4,22 @@
 // bruit de rendu fait échouer la chaîne, et se regarde à l'œil dans le rapport.
 //
 // Les documents sont fabriqués avec les polices du logiciel (incorporées) et des formes dessinées, jamais avec
-// une police du système : le rendu ne dépend donc pas du poste. Les références restent liées à la version de
-// Chromium (à refaire quand Playwright en change) : AKTUM_REFERENCES=ecrire les réécrit.
+// une police du système : le rendu ne dépend donc pas du poste. Mais le lissage des lettres, lui, est celui du
+// Chromium qui les dessine : deux machines n'en donnent pas le même contour (un à deux pour cent des pixels, au
+// bord des lettres). Les références du poste de développement sont donc dans references/, et celles de la chaîne
+// d'intégration (variable CI) dans references-ci/, chacune écrite par le Chromium qui s'en sert. À refaire quand
+// Playwright change de Chromium : AKTUM_REFERENCES=ecrire les réécrit.
+//
+// Sur la chaîne, rien ne se récupère facilement d'un fichier : quand une référence manque ou diffère, l'image
+// obtenue est écrite dans le journal (entre REFERENCE-OBTENUE et FIN-REFERENCE, en base64) pour être relue à
+// l'œil puis versionnée dans references-ci/. `node test-e2e/references-du-journal.js journal.txt` les en extrait.
 //
 //   AKTUM_REFERENCES=ecrire npx playwright test visuel.spec.js
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('./aide');
 
-const DOSSIER = path.join(__dirname, 'references');
+const DOSSIER = path.join(__dirname, process.env.CI ? 'references-ci' : 'references');
 const ECRIRE = process.env.AKTUM_REFERENCES === 'ecrire';
 
 // Un document témoin, fabriqué dans la page avec pdf-lib et les polices du logiciel.
@@ -67,6 +74,15 @@ async function fabriquer(page, quoi) {
   return Buffer.from(b64, 'base64');
 }
 
+// L'image obtenue, dans le journal de la chaîne : on n'a pas toujours le moyen de récupérer un fichier de son disque.
+const journaliser = (nom, dataUrl) => {
+  const b64 = dataUrl.split(',')[1];
+  const lignes = ['REFERENCE-OBTENUE ' + nom];
+  for (let i = 0; i < b64.length; i += 160) lignes.push(b64.slice(i, i + 160));
+  lignes.push('FIN-REFERENCE');
+  console.log(lignes.join('\n'));
+};
+
 // Ce que l'application montre : le canvas de la feuille (lecture) ou l'image de la vignette (organisation), en PNG.
 const capturer = (page, vue) => page.evaluate(async (vue) => {
   if (vue === 'lecture') {
@@ -106,6 +122,8 @@ for (const quoi of ['lettre', 'tableau', 'scan']) {
       const actuel = await capturer(page, vue);
       const fichier = path.join(DOSSIER, quoi + '-' + vue + '.png');
       if (ECRIRE || !fs.existsSync(fichier)) {
+        if (process.env.CI) journaliser(path.basename(fichier), actuel);
+        fs.mkdirSync(DOSSIER, { recursive: true });
         fs.writeFileSync(fichier, Buffer.from(actuel.split(',')[1], 'base64'));
         test.info().annotations.push({ type: 'référence', description: 'écrite : ' + path.basename(fichier) });
         if (!ECRIRE) throw new Error('la référence ' + path.basename(fichier) + ' n\'existait pas : elle vient d\'être écrite, relisez-la à l\'œil et versionnez-la');
@@ -118,6 +136,7 @@ for (const quoi of ['lettre', 'tableau', 'scan']) {
       const part = r.diff / r.total;
       console.log(quoi + ' / ' + vue + ' : ' + r.diff + ' pixels sur ' + r.total + ' diffèrent (' + (part * 100).toFixed(3) + ' %)');
       if (part > (vue === 'lecture' ? 0.0015 : 0.01)) {
+        if (process.env.CI) journaliser(path.basename(fichier), actuel);
         fs.writeFileSync(test.info().outputPath(quoi + '-' + vue + '-obtenu.png'), Buffer.from(actuel.split(',')[1], 'base64'));
       }
       expect(part, 'part des pixels qui diffèrent de la référence ' + path.basename(fichier)).toBeLessThan(vue === 'lecture' ? 0.0015 : 0.01);
