@@ -55,6 +55,7 @@
       flatten: state.flatten,
       touched: state.touched,
       signets: JSON.parse(JSON.stringify(state.signets || [])),
+      purges: (state.purges || []).map(x => Object.assign({}, x)),
       figerAnnotations: state.figerAnnotations,
       dossier: state.dossier ? JSON.parse(JSON.stringify(state.dossier)) : null,
     };
@@ -70,6 +71,7 @@
     state.flatten = h.flatten;
     state.touched = h.touched;
     state.signets = h.signets || [];
+    state.purges = h.purges || [];
     state.figerAnnotations = !!h.figerAnnotations;
     state.dossier = h.dossier || null;
     // Le sommaire se revérifie : les pages viennent de changer d'un coup.

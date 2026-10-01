@@ -101,8 +101,8 @@
 
   // Caviarder partout : chaque occurrence est couverte d'un rectangle noir,
   // et la page convertie en image à l'export — le texte disparaît vraiment.
-  async function caviarderPartout(terme, casse, avancement, mot) {
-    const rx = regexDe(terme, casse, mot);
+  async function caviarderPartout(terme, casse, avancement, mot, accents, ailleurs) {
+    const spec = { terme, casse: !!casse, mot: !!mot, accents: !!accents };
     let occurrences = 0, pages = 0;
     const ajouts = [];
     for (let i = 0; i < state.pages.length; i++) {
@@ -110,12 +110,10 @@
       verifierAnnulation();
       if (avancement) avancement(i, state.pages.length);
       const { texte, morceaux } = await texteAvecPositions(p);
-      rx.lastIndex = 0;
-      let m, n = 0;
+      let n = 0;
       const rects = [];
-      while ((m = rx.exec(texte)) && n < 2000) {
-        if (!m[0].length) { rx.lastIndex++; continue; }
-        rectsOccurrence(morceaux, m.index, m.index + m[0].length).forEach(r => rects.push(r));
+      for (const [a, b] of occurrencesDe(texte, spec).slice(0, 2000)) {
+        rectsOccurrence(morceaux, a, b).forEach(r => rects.push(r));
         n++;
       }
       if (!n) continue;
@@ -123,9 +121,15 @@
       rects.forEach(r => ajouts.push({ p, a: { id: -1, type: 'redact', x: r.x - 1, y: r.y - 0.5, w: r.w + 2, h: r.h + 1, color: '#000000', opacity: 1, width: 1 } }));
       if (i % 4 === 0) await nextFrame();
     }
-    if (!occurrences) return { occurrences: 0, pages: 0 };
+    // Rien de visible, mais le terme est ailleurs dans le fichier (métadonnées,
+    // notes, texte hors de la page) : le caviardage porte alors sur ces
+    // surfaces-là, sans rectangle à poser.
+    if (!occurrences && !ailleurs) return { occurrences: 0, pages: 0 };
     snapshot();
     ajouts.forEach(({ p, a }) => { a.id = ++uid; p.ann.push(a); });
+    // Le terme est retenu : l'export le cherchera sur toutes les surfaces du
+    // fichier, pas seulement à l'endroit où l'on a vu le mot.
+    if (!state.purges.some(x => x.terme === spec.terme && x.casse === spec.casse && x.mot === spec.mot && x.accents === spec.accents)) state.purges.push(spec);
     state.touched = true;
     render();
     return { occurrences, pages };
@@ -225,18 +229,35 @@
   }
   function effacerRecherche() { recherche.marques = null; recherche.cur = -1; poserMarquesTuiles(); poserMarquesLecture(); }
 
+  // « 2 textes cachés, 1 note, les métadonnées » : ce que le fichier porte du
+  // terme en dehors de ce que l'écran affiche.
+  function decrireAilleurs(a) {
+    const parts = [];
+    if (a.texteCache) parts.push(plural(a.texteCache, 'texte invisible ou hors page', 'textes invisibles ou hors page'));
+    if (a.notes) parts.push(plural(a.notes, 'note, champ ou pièce jointe', 'notes, champs ou pièces jointes'));
+    if (a.metadonnees) parts.push('les métadonnées du fichier');
+    if (a.signets) parts.push(plural(a.signets, 'signet', 'signets'));
+    return parts.join(', ');
+  }
+
   // Une confirmation qui dit ce qui va se passer, et à combien d'endroits.
   // « Êtes-vous sûr ? » ne renseigne personne ; le nombre, si.
-  function confirmerLeCaviardage(terme, occurrences) {
+  function confirmerLeCaviardage(terme, occurrences, ailleurs) {
     return new Promise(res => {
       let repondu = false;
       dialog({
         title: 'Caviarder dans tout le document',
         icon: IC.search,
         build: b => {
-          b.append(note(plural(occurrences, 'occurrence', 'occurrences') + ' de « ' + terme + ' »'
-            + (occurrences > 1 ? ' seront masquées' : ' sera masquée') + ' d\'un rectangle noir, et le texte'
-            + ' correspondant sera retiré du fichier à l\'enregistrement.', 'warn'));
+          if (occurrences) {
+            b.append(note(plural(occurrences, 'occurrence', 'occurrences') + ' de « ' + terme + ' »'
+              + (occurrences > 1 ? ' seront masquées' : ' sera masquée') + ' d\'un rectangle noir, et le texte'
+              + ' correspondant sera retiré du fichier à l\'enregistrement.', 'warn'));
+          }
+          if (ailleurs && ailleurs.total) {
+            b.append(note('« ' + terme + ' » figure aussi hors de la page affichée : ' + decrireAilleurs(ailleurs)
+              + '. Ces emplacements seront nettoyés à l\'enregistrement ; une note, un champ ou une pièce jointe qui le porte sera retiré.', 'warn'));
+          }
           b.append(note('C\'est ce qu\'il faut avant de publier un document : le texte ne se retrouve pas en le'
             + ' sélectionnant. Ctrl+Z défait l\'opération tant que le document n\'est pas enregistré.'));
         },
@@ -256,14 +277,18 @@
     rempl.placeholder = 'Texte de remplacement';
     const casse = checkbox('se-casse', 'Respecter la casse', false);
     const mot = checkbox('se-mot', 'Mot entier', false);
+    // Par défaut « Muller » trouve « Müller » : pour caviarder, manquer un nom
+    // parce qu'on a oublié le tréma est pire que d'en noircir un de trop.
+    const accents = checkbox('se-accents', 'Respecter les accents', false);
     const results = document.createElement('div'); results.className = 'list';
     const info = note('');
+    const infoCache = note('', 'warn'); infoCache.id = 'se-ailleurs'; infoCache.hidden = true;
     const nav = document.createElement('div'); nav.className = 'se-nav';
     const prec = document.createElement('button'); prec.type = 'button'; prec.id = 'se-prec'; prec.className = 'tb-btn'; prec.textContent = '‹ Précédent'; prec.title = 'Occurrence précédente (Maj+Entrée)';
     const suiv = document.createElement('button'); suiv.type = 'button'; suiv.id = 'se-suiv'; suiv.className = 'tb-btn'; suiv.textContent = 'Suivant ›'; suiv.title = 'Occurrence suivante (Entrée)';
     const compte = document.createElement('span'); compte.id = 'se-compte'; compte.className = 'compte';
     nav.append(prec, suiv, compte);
-    let token = 0, total = 0, occ = [], cur = -1;
+    let token = 0, total = 0, occ = [], cur = -1, ailleurs = null;
     const aller = k => {
       if (!occ.length) return;
       cur = ((k % occ.length) + occ.length) % occ.length;
@@ -282,36 +307,38 @@
       const term = q.value.trim();
       const my = ++token;
       results.replaceChildren();
-      total = 0; occ = []; cur = -1;
+      total = 0; occ = []; cur = -1; ailleurs = null;
+      results.dataset.fini = '0';
+      infoCache.hidden = true;
       effacerRecherche();
       compte.textContent = '';
       if (term.length < 2) { info.textContent = 'Saisissez au moins deux caractères.'; majBoutons(); return; }
       info.textContent = 'Recherche…';
       let found = 0;
-      const rx = regexDe(term, casse.input.checked, mot.input.checked);
+      const spec = { terme: term, casse: casse.input.checked, mot: mot.input.checked, accents: accents.input.checked };
       const marques = new Map();
+      const visibles = new Map();
       for (let i = 0; i < state.pages.length; i++) {
         if (my !== token) return;
         const p = state.pages[i];
         const { texte, morceaux } = await texteAvecPositions(p);
         if (my !== token) return;
-        rx.lastIndex = 0;
-        let m, n = 0, premier = null;
+        let n = 0, premier = null;
         const surPage = [];
-        while ((m = rx.exec(texte)) && n < 2000) {
-          if (!m[0].length) { rx.lastIndex++; continue; }
-          if (!premier) premier = m;
+        for (const ab of occurrencesDe(texte, spec).slice(0, 2000)) {
+          if (!premier) premier = ab;
           const k = occ.length;
-          const rects = rectsOccurrence(morceaux, m.index, m.index + m[0].length);
+          const rects = rectsOccurrence(morceaux, ab[0], ab[1]);
           occ.push({ pid: p.id, k, rects });
           surPage.push({ k, rects });
           n++;
         }
+        visibles.set(p.id, n);
         if (!n) continue;
         found++; total += n;
         marques.set(p.id, surPage);
-        const from = Math.max(0, premier.index - 40);
-        const snippet = (from ? '…' : '') + texte.slice(from, premier.index) + '§§' + premier[0] + '§§' + texte.slice(premier.index + premier[0].length, premier.index + premier[0].length + 60) + '…';
+        const from = Math.max(0, premier[0] - 40);
+        const snippet = (from ? '…' : '') + texte.slice(from, premier[0]) + '§§' + texte.slice(premier[0], premier[1]) + '§§' + texte.slice(premier[1], premier[1] + 60) + '…';
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'result';
         const pn = document.createElement('span'); pn.className = 'p'; pn.textContent = 'p. ' + (i + 1) + (n > 1 ? ' ×' + n : '');
@@ -329,32 +356,52 @@
       if (my !== token) return;
       recherche.marques = marques;
       poserMarquesTuiles(); poserMarquesLecture();
-      info.textContent = found ? plural(total, 'occurrence', 'occurrences') + ' sur ' + plural(found, 'page', 'pages') + ' pour « ' + term + ' »' : 'Aucun résultat pour « ' + term + ' ».';
+      info.textContent = found ? plural(total, 'occurrence', 'occurrences') + ' sur ' + plural(found, 'page', 'pages') + ' pour « ' + term + ' »' : 'Aucun résultat visible pour « ' + term + ' ».';
       compte.textContent = total ? '0 / ' + total : '';
       if (total) aller(0);
       majBoutons();
+      // Ce que le fichier porte du terme sans l'afficher : métadonnées, notes,
+      // pièces jointes, signets, texte hors de la page. Le dire avant de
+      // caviarder, sinon « Aucun résultat » laisse croire qu'il n'y a rien.
+      try {
+        const inv = await purgeInventaire(spec, visibles, () => my !== token);
+        if (my !== token || !inv) return;
+        ailleurs = inv;
+        if (inv.total) {
+          infoCache.textContent = 'Hors de la page affichée : ' + decrireAilleurs(inv) + '. « Caviarder tout » les retire aussi.';
+          infoCache.hidden = false;
+          if (!total) info.textContent = 'Aucun résultat visible pour « ' + term + ' », mais le fichier le porte ailleurs.';
+        }
+      } catch (e) { signaler('Recherche', e); }
+      majBoutons();
+      // La recherche est complète, inventaire compris : les scénarios de test
+      // et les gestes rapides peuvent agir sans deviner.
+      results.dataset.fini = '1';
     }
     let deb = null;
     q.addEventListener('input', () => { clearTimeout(deb); deb = setTimeout(run, 260); });
     q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (occ.length) aller(cur + (e.shiftKey ? -1 : 1)); } });
     casse.input.addEventListener('change', run);
     mot.input.addEventListener('change', run);
+    accents.input.addEventListener('change', run);
     prec.addEventListener('click', () => aller(cur - 1));
     suiv.addEventListener('click', () => aller(cur + 1));
     let api = null;
     const majBoutons = () => {
       if (!api) return;
       const bR = api.foot.querySelector('#se-remplacer'), bC = api.foot.querySelector('#se-caviarder');
+      const dehors = ailleurs ? ailleurs.total : 0;
       if (bR) { bR.disabled = !total; bR.textContent = total ? 'Remplacer tout (' + total + ')' : 'Remplacer tout'; }
-      if (bC) { bC.disabled = !total; bC.textContent = total ? 'Caviarder tout (' + total + ')' : 'Caviarder tout'; }
+      if (bC) { bC.disabled = !(total || dehors); bC.textContent = total ? 'Caviarder tout (' + total + (dehors ? ' + ' + dehors : '') + ')' : (dehors ? 'Caviarder hors page (' + dehors + ')' : 'Caviarder tout'); }
     };
     api = dialog({
       title: 'Rechercher, remplacer, caviarder', icon: IC.search, libre: true, submitOnEnter: false,
       build: b => {
         b.append(field('Recherche', q));
-        b.append(rowOf([casse, mot], true));
+        b.append(rowOf([casse, mot, accents], true));
         b.append(nav);
         b.append(info);
+        b.append(infoCache);
         b.append(results);
         b.append(field('Remplacer par', rempl));
         b.append(note('Remplacer tout corrige chaque bloc concerné comme dans l\'éditeur : mêmes polices, même mise en page. Caviarder tout masque chaque occurrence d\'un rectangle noir et retire le texte du fichier à l\'export.'));
@@ -364,20 +411,22 @@
         { label: 'Fermer', onClick: c => c() },
         { id: 'se-caviarder', label: 'Caviarder tout', peril: true, onClick: async close => {
           const term = q.value.trim();
-          if (term.length < 2 || !total) return;
+          if (term.length < 2 || !(total || (ailleurs && ailleurs.total))) return;
           const entier = mot.input.checked;
           // Caviarder retire le texte du fichier : c'est le geste qu'une
           // commune fait avant de publier un dossier d'enquête, et celui qu'on
           // ne rattrape pas une fois le PDF parti. Il se confirme, en disant
           // combien d'occurrences et ce qui leur arrive.
           const combien = total;
-          if (!(await confirmerLeCaviardage(term, combien))) return;
+          const dehors = ailleurs;
+          if (!(await confirmerLeCaviardage(term, combien, dehors))) return;
           token++; close();
           setBusy('Caviardage de « ' + term + ' »…', 0, { annuler: true });
           try {
-            const r = await caviarderPartout(term, casse.input.checked, (i, n) => setBusy('Caviardage… page ' + (i + 1) + '/' + n, i / n, { annuler: true }), entier);
-            setLast(r.occurrences ? plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + ' sur ' + plural(r.pages, 'page', 'pages') + ' · Ctrl+Z pour annuler' : 'Aucune occurrence trouvée sur la page.');
-            if (r.occurrences) toast(plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + '. Le texte masqué est retiré du fichier à l\'export ; la page reste nette.');
+            const r = await caviarderPartout(term, casse.input.checked, (i, n) => setBusy('Caviardage… page ' + (i + 1) + '/' + n, i / n, { annuler: true }), entier, accents.input.checked, !!(dehors && dehors.total));
+            const dit = r.occurrences ? plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + ' sur ' + plural(r.pages, 'page', 'pages') : (dehors && dehors.total ? '« ' + term + ' » caviardé hors de la page affichée (' + decrireAilleurs(dehors) + ')' : '');
+            setLast(dit ? dit + ' · Ctrl+Z pour annuler' : 'Aucune occurrence trouvée sur la page.');
+            if (dit) toast(dit + '. Le texte masqué est retiré du fichier à l\'export ; la page reste nette.');
           } catch (e) { if (e && e.annule) { toast('Caviardage annulé : rien n\'a été changé.', 'warn'); return; } console.error(e); toast('Échec du caviardage : ' + e.message, 'error'); }
           finally { setBusy(''); }
         } },

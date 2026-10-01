@@ -1,0 +1,74 @@
+%PDF-1.7
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [9 0 R] /DA (/Helv 0 Tf 0 g) /DR << /Font << /Helv 3 0 R >> >> >> >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /Helv 3 0 R >> >> /Contents 5 0 R /Annots [6 0 R 7 0 R 9 0 R 10 0 R] >>
+endobj
+5 0 obj
+<<  /Length 137 >>
+stream
+BT /F1 12 Tf 1 0 0 1 70 760 Tm (Decision du Conseil communal) Tj ET
+BT /F1 12 Tf 1 0 0 1 70 720 Tm (Requerant : Kalliope Vasilakis) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Annot /Subtype /Text /Rect [400 740 420 760] /Contents (Voir dossier Vasilakis NOTECOLLANTE) /T (Secretariat) /F 4 >>
+endobj
+7 0 obj
+<< /Type /Annot /Subtype /FreeText /Rect [70 640 400 670] /Contents (Remarque : Vasilakis FREETEXT) /DA (/Helv 11 Tf 0 g) /AP << /N 8 0 R >> /F 4 >>
+endobj
+8 0 obj
+<< /Type /XObject /Subtype /Form /BBox [0 0 330 30] /Resources << /Font << /Helv 3 0 R >> >> /Length 68 >>
+stream
+BT /Helv 11 Tf 1 0 0 1 2 8 Tm (Remarque : Vasilakis APPARENCE) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Annot /Subtype /Widget /FT /Tx /Rect [70 580 400 605] /T (nom_requerant) /TU (Nom du requerant Vasilakis INFOBULLE) /V (Vasilakis CHAMP) /DA (/Helv 11 Tf 0 g) /AP << /N 11 0 R >> /F 4 >>
+endobj
+10 0 obj
+<< /Type /Annot /Subtype /FileAttachment /Rect [500 740 515 755] /FS 12 0 R /Contents (piece) /F 4 >>
+endobj
+11 0 obj
+<< /Type /XObject /Subtype /Form /BBox [0 0 330 25] /Resources << /Font << /Helv 3 0 R >> >> /Length 53 >>
+stream
+BT /Helv 11 Tf 1 0 0 1 2 7 Tm (Vasilakis CHAMP) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Filespec /F (note.txt) /UF (note.txt) /EF << /F 13 0 R >> >>
+endobj
+13 0 obj
+<< /Type /EmbeddedFile /Subtype /text#2Fplain /Length 36 >>
+stream
+Note interne : Vasilakis PIECEJOINTE
+endstream
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000009 00000 n 
+0000000145 00000 n 
+0000000202 00000 n 
+0000000299 00000 n 
+0000000472 00000 n 
+0000000661 00000 n 
+0000000804 00000 n 
+0000000968 00000 n 
+0000001176 00000 n 
+0000001388 00000 n 
+0000001506 00000 n 
+0000001700 00000 n 
+0000001787 00000 n 
+trailer
+<< /Size 14 /Root 1 0 R >>
+startxref
+1917
+%%EOF

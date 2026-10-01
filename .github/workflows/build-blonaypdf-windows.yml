@@ -50,6 +50,19 @@ jobs:
         working-directory: outils/test-e2e
         run: npx playwright install --with-deps chromium
 
+      # La suite de caviardage regarde le fichier produit avec des outils qui ne
+      # sont pas les nôtres : poppler (pdftotext), qpdf et pikepdf. Un verdict
+      # rendu par le code qu'on teste ne prouve rien. Sans eux elle ÉCHOUE en CI
+      # au lieu de se taire.
+      - name: Outils de vérification du caviardage (poppler, qpdf, pikepdf)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qpdf poppler-utils
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet pikepdf
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+
       - name: Suite de bout en bout
         working-directory: outils/test-e2e
         run: npm test

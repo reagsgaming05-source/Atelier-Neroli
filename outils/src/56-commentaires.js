@@ -251,6 +251,10 @@
     const { PDFDocument, degrees } = PDFLib;
     const onProgress = opts.onProgress || (() => {});
     const rasterAll = !!opts.rasterize;
+    // Les termes caviardés partout : à retirer de tout le fichier, pas
+    // seulement des endroits où le mot s'est vu.
+    const specs = (state.purges || []).filter(x => x && x.terme);
+    const caviarde = specs.length > 0 || pages.some(p => (p.ann || []).some(a => a.type === 'redact' || (a.type === 'edit' && a.efface)));
     const rasterSet = new Set();
     // Une page caviardée reste vectorielle quand ses lettres peuvent être
     // vidées du flux ; sinon (image dessous, police illisible) elle est
@@ -259,14 +263,14 @@
     const imagesCaviardees = new Map();   // pageId -> [{ nom, donnees }]
     for (const p of pages) {
       if (rasterAll) { rasterSet.add(p.id); continue; }
-      if (!p.ann.some(a => a.type === 'redact' || (a.type === 'edit' && a.efface))) continue;
+      if (!specs.length && !p.ann.some(a => a.type === 'redact' || (a.type === 'edit' && a.efface))) continue;
       let bilan = { propre: false, images: [] };
       try {
         const src = srcById(p.src);
         if (src) {
           if (!docsVerif.has(src.id)) docsVerif.set(src.id, await loadLib(src));
           const dv = docsVerif.get(src.id);
-          bilan = fxCaviardageBilan(dv, dv.getPages()[p.index], p, policesVerif);
+          bilan = fxCaviardageBilan(dv, dv.getPages()[p.index], p, policesVerif, specs);
         }
       } catch (e) { signaler('Caviardage', e); bilan = { propre: false, images: [] }; }
       // Les images concernées sont refaites tout de suite : si cela échoue,
@@ -282,7 +286,12 @@
       onProgress(0, 'Vérification du caviardage…');
     }
 
-    const inPlace = !rasterSet.size && !opts.noInPlace && canExportInPlace(pages);
+    // Un document caviardé ne s'écrit JAMAIS « sur place » : le fichier chargé
+    // garde son dictionnaire /Info, son XMP, ses mises à jour antérieures, ses
+    // objets orphelins — tout ce qui fait qu'un nom noirci sur la page se
+    // retrouve encore dans le fichier. On rebâtit un document neuf, qui ne
+    // reprend que ce que les pages atteignent.
+    const inPlace = !rasterSet.size && !opts.noInPlace && !caviarde && canExportInPlace(pages);
     let out, mapped;
     if (inPlace) {
       out = await sourceDoc(state.sources[0], false);
@@ -355,7 +364,7 @@
         }
         // D'abord ce qui peut être réécrit dans le flux de la page : ni
         // rectangle, ni fond relevé, rien d'autre ne bouge.
-        const enPlace = fxRetoucher(out, page, p, fonts, renommages);
+        const enPlace = fxRetoucher(out, page, p, fonts, renommages, specs);
         await drawAnnotations(out, page, p, fonts, images, enPlace);
       }
       await poserChamps(out, page, p, fonts, nomsPris);
@@ -371,9 +380,9 @@
       if (i % 12 === 0) onProgress(i / mapped.length, 'Assemblage… ' + (i + 1) + '/' + mapped.length);
     }
 
-    poserSignets(out, mapped, state.signets);
+    poserSignets(out, mapped, specs.length ? purgeSignets(state.signets, specs) : state.signets);
 
-    const m = state.meta;
+    const m = specs.length ? purgeMeta(state.meta, specs) : state.meta;
     out.setCreator(APP);
     if (m.title) out.setTitle(m.title); if (m.author) out.setAuthor(m.author);
     if (m.subject) out.setSubject(m.subject);
@@ -386,6 +395,15 @@
       if (s.userPassword) o.userPassword = s.userPassword;
       if (s.ownerPassword) o.ownerPassword = s.ownerPassword;
       if (o.userPassword || o.ownerPassword) out.encrypt(o);
+    }
+    // Pour finir, ce que le fichier garde sans le dire : notes, champs et
+    // pièces jointes qui portent le terme, métadonnées de page, objets que
+    // plus rien n'atteint (l'ancien flux, l'image d'origine).
+    if (caviarde) {
+      try {
+        const r = purgerLeDocument(out, mapped.map(x => x.page), specs);
+        if (r.notes) signaler('Caviardage', plural(r.notes, 'note, champ ou pièce jointe a été retiré', 'notes, champs ou pièces jointes ont été retirés') + ' parce qu\'ils portaient le texte caviardé.', 'info');
+      } catch (e) { signaler('Caviardage', e, 'erreur'); throw e; }
     }
     onProgress(1, 'Finalisation…');
     return out.save();

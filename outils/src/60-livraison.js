@@ -230,7 +230,7 @@
       version: 1, quand: 0, titre: titreEtat(e), nomFichier: e.nomFichier || '', filenameDirty: !!e.filenameDirty, chemin: e.chemin || '',
       sources: e.sources.filter(s => !s.isSample).map(s => ({ id: s.id, name: s.name, chemin: s.chemin || '', genere: !!s.genere, fichier: recupNomFichier(s), formValues: s.formValues || null })),
       pages: e.pages.map(p => ({ id: p.id, src: p.src, index: p.index, rot: p.rot || 0, ann: p.ann || [], piece: p.piece || null, ocr: p.ocr || null, pieceN: p.pieceN || 0, intercalaire: p.intercalaire || 0, sommaire: p.sommaire || 0, retraits: p.retraits || [] })),
-      signets: e.signets || [], meta: e.meta || null, watermark: e.watermark || null, stamp: e.stamp || null, security: e.security || null,
+      signets: e.signets || [], purges: e.purges || [], meta: e.meta || null, watermark: e.watermark || null, stamp: e.stamp || null, security: e.security || null,
       flatten: !!e.flatten, figerAnnotations: !!e.figerAnnotations, dossier: e.dossier || null,
     };
   }
@@ -301,6 +301,7 @@
     });
     const remap = liste => (liste || []).map(sg => ({ id: ++uid, titre: sg.titre, page: idsPage.get(sg.page), enfants: remap(sg.enfants) }));
     state.signets = remap(m.signets);
+    state.purges = (m.purges || []).map(x => Object.assign({}, x));
     if (m.meta) state.meta = m.meta;
     state.watermark = m.watermark || null; state.stamp = m.stamp || null; state.security = m.security || null;
     state.flatten = !!m.flatten; state.figerAnnotations = !!m.figerAnnotations;

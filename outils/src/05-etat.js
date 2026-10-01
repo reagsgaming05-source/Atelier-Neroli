@@ -18,6 +18,9 @@
     vue: 'lecture', zoomLecture: 'page', impressionDirecte: false, bureau: false, messageBusy: '',
     // Le plan du document : des signets, chacun vers une page, avec ses sous-signets.
     signets: [],
+    // Les termes caviardés partout : ce qui doit disparaître de tout le
+    // fichier à l'export, pas seulement des endroits où l'on a vu le mot.
+    purges: [],
     // Lecture : une page après l'autre, ou deux côte à côte comme un livre ouvert.
     dispo: 'une',
     // Les annotations partent comme de vrais commentaires PDF (modifiables
@@ -29,12 +32,12 @@
   // Ce qui fait un document ouvert — le reste de l'état (vue, zoom, thème)
   // est commun. Un traitement par lots, un onglet : chacun a le sien.
   const CHAMPS_DOC = ['sources', 'pages', 'selected', 'anchor', 'history', 'redo', 'touched', 'hueIdx', 'filenameDirty',
-    'meta', 'watermark', 'stamp', 'security', 'flatten', 'signets', 'figerAnnotations', 'dossier', 'chemin', 'ecraserOk', 'cleRecup'];
+    'meta', 'watermark', 'stamp', 'security', 'flatten', 'signets', 'purges', 'figerAnnotations', 'dossier', 'chemin', 'ecraserOk', 'cleRecup'];
   function etatVierge() {
     return {
       sources: [], pages: [], selected: new Set(), anchor: null, history: [], redo: [], touched: false, hueIdx: 0, filenameDirty: false,
       meta: { title: '', author: '', subject: '', keywords: '' }, watermark: null, stamp: null, security: null, flatten: false,
-      signets: [], figerAnnotations: false, dossier: null, nomFichier: '',
+      signets: [], purges: [], figerAnnotations: false, dossier: null, nomFichier: '',
       // Le fichier que « Enregistrer » réécrit (application), la confirmation
       // déjà donnée pour ce fichier, et la clé du dépôt de récupération.
       chemin: '', ecraserOk: false, cleRecup: '',

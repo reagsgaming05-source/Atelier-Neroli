@@ -217,7 +217,7 @@
   // Les XObjets (images, formulaires) posés par le flux, avec leur boîte en
   // espace utilisateur : sous une zone caviardée, une image garde ses pixels,
   // et la page doit alors être convertie en image.
-  function fxXObjets(o) {
+  function fxXObjets(o, infoForme) {
     const jetons = fxJetons(o);
     const out = [];
     let ctm = [1, 0, 0, 1, 0, 0];
@@ -231,13 +231,25 @@
       else if (j.v === 'Q') { const e = pile.pop(); if (e) ctm = e; }
       else if (j.v === 'cm') ctm = fxMat([nb(-6), nb(-5), nb(-4), nb(-3), nb(-2), nb(-1)], ctm);
       else if (j.v === 'Do' || j.v === 'BI' || j.v === 'sh') {
-        const pts = [[0, 0], [1, 0], [0, 1], [1, 1]].map(q => [ctm[0] * q[0] + ctm[2] * q[1] + ctm[4], ctm[1] * q[0] + ctm[3] * q[1] + ctm[5]]);
         // Le nom de l'objet posé et l'endroit exact où il est écrit : c'est
         // par là qu'on remplacera l'image par sa version caviardée.
         const dernier = args[args.length - 1];
         const nom = j.v === 'Do' && dernier && dernier.t === 'nom' ? dernier.v : null;
+        // Une image occupe le carré unité de la matrice courante ; un objet
+        // de formulaire, lui, occupe sa /BBox, passée par sa propre matrice.
+        // Projeter le carré unité pour un formulaire le faisait tenir pour un
+        // objet d'un point collé dans le coin de la page : le texte qu'il
+        // porte n'était jamais vu, ni retiré, ni signalé.
+        const forme = nom && infoForme ? infoForme(nom) : null;
+        let base = [[0, 0], [1, 0], [0, 1], [1, 1]], m = ctm;
+        if (forme && forme.bbox) {
+          const b = forme.bbox;
+          base = [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]];
+          m = fxMat(forme.matrix || [1, 0, 0, 1, 0, 0], ctm);
+        }
+        const pts = base.map(q => [m[0] * q[0] + m[2] * q[1] + m[4], m[1] * q[0] + m[3] * q[1] + m[5]]);
         out.push({
-          quoi: j.v, nom, nomA: nom ? dernier.a : 0, nomB: nom ? dernier.b : 0, ctm: ctm.slice(),
+          quoi: j.v, nom, forme: !!forme, nomA: nom ? dernier.a : 0, nomB: nom ? dernier.b : 0, ctm: ctm.slice(),
           x0: Math.min.apply(null, pts.map(q => q[0])), y0: Math.min.apply(null, pts.map(q => q[1])),
           x1: Math.max.apply(null, pts.map(q => q[0])), y1: Math.max.apply(null, pts.map(q => q[1])),
         });
@@ -277,6 +289,58 @@
     });
     return plages;
   }
+  // Les lettres des affichages du flux qui forment un des termes caviardés,
+  // où qu'elles soient sur la page — hors de la feuille, en taille nulle, en
+  // blanc sur blanc, sous une zone rognée, dans un calque masqué. La recherche
+  // de l'écran ne voit que ce qui s'affiche ; le fichier, lui, garde tout.
+  // Le texte des affichages est recollé dans l'ordre du flux, avec une coupure
+  // de ligne quand la ligne change : un nom coupé en fin de ligne par un tiret
+  // se retrouve alors.
+  function fxTexteRecolle(shows) {
+    let tout = '';
+    const prop = [];
+    let prec = null;
+    shows.forEach((sh, si) => {
+      if (prec && Math.abs(sh.y - prec.y) > Math.max(1, (sh.taille || 10) * 0.5)) { tout += '\n'; prop.push(null); }
+      for (let k = 0; k < sh.texte.length; k++) prop.push([si, k]);
+      tout += sh.texte;
+      prec = sh;
+    });
+    return { tout, prop };
+  }
+  // Combien de fois les termes se trouvent dans le flux de la page.
+  function fxCompterTermes(shows, specs) {
+    if (!specs || !specs.length || !shows.length) return 0;
+    const { tout } = fxTexteRecolle(shows);
+    return specs.reduce((n, spec) => n + occurrencesDe(tout, spec).length, 0);
+  }
+  function fxPlagesDeTermes(shows, specs) {
+    const out = new Map();
+    if (!specs || !specs.length || !shows.length) return out;
+    const { tout, prop } = fxTexteRecolle(shows);
+    specs.forEach(spec => {
+      occurrencesDe(tout, spec).forEach(([a, b]) => {
+        const parShow = new Map();
+        for (let i = a; i < b; i++) {
+          const q = prop[i];
+          if (!q) continue;
+          const c = parShow.get(q[0]);
+          if (c) { c[0] = Math.min(c[0], q[1]); c[1] = Math.max(c[1], q[1] + 1); } else parShow.set(q[0], [q[1], q[1] + 1]);
+        }
+        parShow.forEach((pl, si) => { const sh = shows[si]; if (!out.has(sh)) out.set(sh, []); out.get(sh).push(pl); });
+      });
+    });
+    return out;
+  }
+  // Un affichage dont la taille est nulle : on le vide au lieu de le réécrire.
+  function fxVider(sh) {
+    if (!sh.crochets) return null;
+    const morceau = '[] TJ';
+    const octets = [];
+    for (let i = 0; i < morceau.length; i++) octets.push(morceau.charCodeAt(i));
+    return { a: sh.crochets[0], b: sh.crochets[1], octets };
+  }
+
   // Réécrit un affichage en remplaçant les plages données par des blancs de
   // même largeur : le reste de la ligne ne bouge pas.
   function fxRecrire(sh, plages) {
@@ -335,15 +399,66 @@
     const nb = cle => { const v = dict.lookup(PDFName.of(cle)); return v && v.asNumber ? v.asNumber() : 0; };
     return { largeur: nb('Width'), hauteur: nb('Height') };
   }
+  // Le XObjet posé sous ce nom, s'il est de type formulaire : sa boîte et sa
+  // matrice. null pour une image, ou si on ne sait pas le lire.
+  function fxInfoForme(page, nom) {
+    const { PDFName } = PDFLib;
+    try {
+      const res = page.node.Resources();
+      const xod = res && res.lookup(PDFName.of('XObject'));
+      const xo = xod && xod.lookup(PDFName.of(nom));
+      const dict = xo && xo.dict ? xo.dict : xo;
+      if (!dict || typeof dict.lookup !== 'function') return null;
+      const sub = dict.lookup(PDFName.of('Subtype'));
+      if ((sub && sub.asString ? sub.asString() : String(sub || '')) !== '/Form') return null;
+      const nombres = cle => {
+        const a = dict.lookup(PDFName.of(cle));
+        if (!a || typeof a.size !== 'function') return null;
+        const v = [];
+        for (let i = 0; i < a.size(); i++) { const n = a.lookup(i); v.push(n && n.asNumber ? n.asNumber() : 0); }
+        return v;
+      };
+      const bbox = nombres('BBox');
+      const matrix = nombres('Matrix');
+      // Sans /BBox lisible, on suppose le pire : toute la page.
+      return { bbox: bbox && bbox.length === 4 ? [Math.min(bbox[0], bbox[2]), Math.min(bbox[1], bbox[3]), Math.max(bbox[0], bbox[2]), Math.max(bbox[1], bbox[3])] : [-1e5, -1e5, 1e5, 1e5], matrix: matrix && matrix.length === 6 ? matrix : null };
+    } catch (e) { signaler('Objet de formulaire', e); return { bbox: [-1e5, -1e5, 1e5, 1e5], matrix: null }; }
+  }
+  // Le XObjet posé sous ce nom, tel que le document le tient.
+  function fxXObjetBrut(page, nom) {
+    const { PDFName } = PDFLib;
+    const res = page.node.Resources();
+    const xod = res && res.lookup(PDFName.of('XObject'));
+    return xod && xod.lookup(PDFName.of(nom));
+  }
+
   // Ajoute une image à la page sous un nom neuf (les autres pages qui
   // partagent ces ressources ne perdent rien : on n'écrase aucun nom).
   function fxPoserImage(doc, page, nom, ref) {
     const { PDFName } = PDFLib;
+    // Les ressources de la page deviennent les siennes : des pages qui les
+    // partageaient gardent les leurs, et retirer l'ancienne image d'ici ne
+    // casse pas leurs images.
     let res = page.node.Resources();
-    if (!res) { res = doc.context.obj({}); page.node.set(PDFName.of('Resources'), res); }
+    if (!res) res = doc.context.obj({});
+    else res = res.clone();
+    page.node.set(PDFName.of('Resources'), res);
     let xod = res.lookup(PDFName.of('XObject'));
-    if (!xod || typeof xod.set !== 'function') { xod = doc.context.obj({}); res.set(PDFName.of('XObject'), xod); }
+    if (!xod || typeof xod.set !== 'function') xod = doc.context.obj({});
+    else xod = xod.clone();
+    res.set(PDFName.of('XObject'), xod);
     xod.set(PDFName.of(nom), ref);
+  }
+  // L'image d'origine ne doit plus être dans les ressources de la page : sans
+  // quoi elle resterait dans le fichier, pixels intacts, sans qu'aucune page
+  // ne la dessine. L'objet lui-même sera ramassé à l'export.
+  function fxRetirerXObjet(page, nom) {
+    const { PDFName } = PDFLib;
+    try {
+      const res = page.node.Resources();
+      const xod = res && res.lookup(PDFName.of('XObject'));
+      if (xod && typeof xod.delete === 'function') xod.delete(PDFName.of(nom));
+    } catch (e) { signaler('Caviardage', e); }
   }
 
   // Peut-on vider ces zones en gardant la page vectorielle ? Le texte s'y
@@ -351,15 +466,28 @@
   // refaite — seule cette image-là devient du pixel, pas la page entière.
   // Rend { propre, images } : les images à refaire, ou propre à faux quand
   // il faut convertir toute la page, comme avant.
-  function fxCaviardageBilan(doc, page, p, cache) {
+  function fxCaviardageBilan(doc, page, p, cache, specs) {
     const rien = { propre: false, images: [] };
     const zones = fxZonesAVider(p);
-    if (!zones.length) return { propre: true, images: [] };
+    if (!zones.length && !(specs && specs.length)) return { propre: true, images: [] };
     let flux = null;
     try { flux = fxFluxPage(doc, page); } catch (e) { signaler('Caviardage', e); return rien; }
     if (!flux) return rien;
     let objets = [];
-    try { objets = fxXObjets(flux.octets); } catch (e) { signaler('Caviardage', e); return rien; }
+    try { objets = fxXObjets(flux.octets, nom => fxInfoForme(page, nom)); } catch (e) { signaler('Caviardage', e); return rien; }
+    // Un objet de formulaire porte son propre flux, que ce moteur ne sait pas
+    // encore réécrire. Sous une zone, ou porteur d'un terme caviardé où que ce
+    // soit, il oblige à convertir la page en image : on préfère perdre le texte
+    // de la page que d'en laisser fuir.
+    for (const o of objets) {
+      if (!o.forme) continue;
+      if (zones.some(z => zonesSeCroisent(o, z))) { signaler('Caviardage', 'un objet de formulaire passe sous la zone : la page est convertie en image', 'info'); return rien; }
+      if (specs && specs.length) {
+        let porte = true;
+        try { const xo = fxXObjetBrut(page, o.nom); porte = !xo || purgePorteTerme(doc, xo, specs); } catch (e) { signaler('Caviardage', e); }
+        if (porte) { signaler('Caviardage', 'un objet de formulaire porte le texte caviardé : la page est convertie en image', 'info'); return rien; }
+      }
+    }
     const images = [];
     for (const o of objets) {
       if (!zones.some(z => zonesSeCroisent(o, z))) continue;
@@ -374,9 +502,12 @@
     }
     let shows = [];
     try { shows = fxAffichages(flux.octets, nom => fxPolice(doc, page, nom, cache)); } catch (e) { signaler('Caviardage', e); return rien; }
+    const parTermes = fxPlagesDeTermes(shows, specs);
     for (const sh of shows) {
-      const pl = fxGlyphesDans(sh, zones);
+      const pl = fxGlyphesDans(sh, zones).concat(parTermes.get(sh) || []);
       if (!pl.length) continue;
+      // Un texte en taille nulle ne se réécrit pas, il se vide : rien à perdre.
+      if (!(sh.Tfs * sh.Th) && sh.crochets) continue;
       if (!sh.pol || !sh.pol.codes || !sh.crochets || fxRecrire(sh, pl) == null) { signaler('Caviardage', 'une police du flux ne se laisse pas réécrire : la page est convertie en image', 'info'); return rien; }
     }
     return { propre: true, images };
@@ -738,10 +869,10 @@
     return parShow;
   }
 
-  function fxRetoucher(doc, page, p, cache, renommages) {
+  function fxRetoucher(doc, page, p, cache, renommages, specs) {
     const faits = new Set();
     const cibles = (p.ann || []).filter(a => a.type === 'edit' && !a.efface && a.origine);
-    if (!cibles.length && !fxZonesAVider(p).length && !(renommages && renommages.size)) return faits;
+    if (!cibles.length && !fxZonesAVider(p).length && !(renommages && renommages.size) && !(specs && specs.length)) return faits;
     let flux = null, shows = null;
     try {
       flux = fxFluxPage(doc, page);
@@ -754,6 +885,8 @@
     const parShow = new Map();
     const zones = fxZonesAVider(p);
     if (zones.length) shows.forEach(sh => { const pl = fxGlyphesDans(sh, zones); if (pl.length) parShow.set(sh, pl); });
+    // Puis, partout ailleurs sur la page, les lettres des termes caviardés.
+    fxPlagesDeTermes(shows, specs).forEach((pl, sh) => { parShow.set(sh, (parShow.get(sh) || []).concat(pl)); });
     const remplacements = [];
     const recouvertes = [];
     cibles.forEach(a => {
@@ -779,7 +912,7 @@
       try { fxEffacerTous(recouvertes, shows, g, pris, parShow); } catch (e) { signaler('Effacement dans le flux', e); }
     }
     for (const [sh, plages] of parShow) {
-      const r = fxRecrire(sh, plages);
+      const r = !(sh.Tfs * sh.Th) ? fxVider(sh) : fxRecrire(sh, plages);
       if (r) remplacements.push(r);
       else signaler('Effacement dans le flux', 'un affichage n\'a pas pu être réécrit ; son texte reste sous le recouvrement');
     }
@@ -788,7 +921,7 @@
       try {
         fxXObjets(flux.octets).forEach(o => {
           const neuf = o.nom && renommages.get(o.nom);
-          if (neuf && o.nomB > o.nomA) remplacements.push({ a: o.nomA, b: o.nomB, octets: new TextEncoder().encode('/' + neuf) });
+          if (neuf && o.nomB > o.nomA) { remplacements.push({ a: o.nomA, b: o.nomB, octets: new TextEncoder().encode('/' + neuf) }); fxRetirerXObjet(page, o.nom); }
         });
       } catch (e) { signaler('Caviardage', e); }
     }
