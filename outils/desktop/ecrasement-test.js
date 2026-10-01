@@ -160,6 +160,11 @@ async function tourner(win, n) {
   const claire = await lancer(exe, path.join(racine, 'poste-claire'), gros);
   const fClaire = await prete(claire, 900);
   await tourner(fClaire, 1);
+  // Sur un poste lent, l'ouverture d'un gros fichier finit après le premier dépôt de récupération : la proposition de reprise de
+  // l'arrêt brutal ne doit pas retrouver le travail de cette session (« Ignorer et supprimer » l'aurait effacé).
+  await fClaire.waitForFunction(() => !document.querySelector('#btn-export').disabled, null, { timeout: 120000 });
+  await dormir(2500);
+  verifier((await fClaire.locator('#recup-ok').count()) === 0, 'la session n\'est pas invitée à « récupérer » son propre travail');
   await fClaire.click('#btn-export');
   await fClaire.waitForSelector('#ecr-remplacer', { state: 'visible', timeout: 10000 });
   // Échap est pressé à l'instant où le bouton « Annuler » de l'opération apparaît : la construction d'un document, même long, peut

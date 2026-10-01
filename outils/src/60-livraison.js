@@ -305,6 +305,14 @@
       recupSignature.set(cle, signature);
     }
   }
+  // Les dépôts que cette session a elle-même écrits : un document modifié avant la fin de l'ouverture initiale (gros fichier, poste lent)
+  // déposait son travail, et la proposition de reprise de l'arrêt brutal le retrouvait — « Ignorer et supprimer » l'aurait effacé.
+  function recupClesDeLaSession() {
+    const cles = new Set(recupStock.keys());
+    if (state.cleRecup) cles.add(state.cleRecup);
+    onglets.forEach(o => { const e = o.id === ongletActif ? state : o.etat; if (e && e.cleRecup) cles.add(e.cleRecup); });
+    return cles;
+  }
   function recupOublier(e) {
     if (!e || !e.cleRecup) return;
     const cle = e.cleRecup;

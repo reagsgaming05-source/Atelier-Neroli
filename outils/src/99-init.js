@@ -755,7 +755,7 @@
       // laissé par un arrêt brutal, pour qu'il rouvre dans son propre onglet.
       bureau.fichiersInitiaux().then(l => (l && l.length) ? ouvrirListe(l) : null).catch(() => {})
         .then(() => (typeof bureau.recupListe === 'function' ? bureau.recupListe() : []))
-        .then(liste => { if (Array.isArray(liste) && liste.length) proposerRecuperation(liste); })
+        .then(liste => { const arret = Array.isArray(liste) ? liste.filter(r => !recupClesDeLaSession().has(r.cle)) : []; if (arret.length) proposerRecuperation(arret); })
         .catch(e => signaler('Récupération', e));
       // Dans l'application, Enregistrer réécrit le fichier ouvert (Ctrl+S) ;
       // « Enregistrer sous… » (Ctrl+Maj+S) est dans le menu Fichier.
