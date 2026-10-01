@@ -233,3 +233,187 @@ Check-list modifiable (dossard, épingles, chaussures testées, nutrition, vête
 - Ajouter un semi dans 12 semaines génère un plan daté de 12 semaines avec affûtage.
 - Un lien d'inscription externe s'ouvre dans le navigateur sans transmettre de données personnelles.
 - Un résultat saisi manuellement porte la mention « non vérifié ».
+
+---
+
+## 6.6 Matériel
+
+### 6.6.1 Inventaire
+Types : chaussures (route, trail, piste, rando), vélos (par type), composants, sacs, vêtements techniques, capteurs. Champ `equipment { id, user_id, type, name, brand?, model?, purchase_date, initial_km, retire_km_threshold, status:'active'|'retired', specs{}, notes }`. Gratuit : 3 équipements actifs ; Sports : illimité.
+
+### 6.6.2 Kilométrage et cycle de vie
+- Affectation d'un équipement à chaque activité : défaut = dernier équipement utilisé pour la discipline ; modifiable ; une activité peut affecter des composants multiples (vélo et ses composants montés).
+- `km_total = initial_km + Σ distance des activités affectées`. Réaffectation rétroactive recalcule les totaux (job asynchrone).
+- Cycle de vie : `neuf -> actif -> proche de la limite (≥ 85 %) -> à remplacer (≥ 100 %) -> retiré`. Retrait = archivage en conservant l'historique.
+- Aucune revente dans l'app (hors périmètre). Aucune suggestion de marque sponsorisée.
+
+### 6.6.3 Alertes et rappels d'entretien
+| Élément | Déclencheur par défaut | Notes |
+|---|---|---|
+| Chaussures | 600 km (douce), 800 km (forte) | ajustable par modèle |
+| Chaîne vélo | 2 000 km route (1 000 km boue) | mesure d'usure manuelle (0,5 % : à changer) |
+| Pneus | 4 000 km | alerte supplémentaire après crevaison répétée |
+| Plaquettes | 1 500 km ou 3 mois pluie | |
+| Révision | 12 mois ou 5 000 km | |
+| Sac / bâtons | contrôle annuel | |
+Rappel : 1 notification à 85 %, 1 à 100 %, snooze 7 jours, **jamais plus de 1 rappel par jour tous équipements confondus**. Historique d'entretien : date, action, coût, kilométrage.
+
+### 6.6.4 Critères d'acceptation 6.6
+- Une chaussure à 598 km reçoit une activité de 5 km : alerte douce 600 km émise une seule fois.
+- Réaffecter une sortie de 40 km d'un vélo à un autre met à jour les deux totaux.
+- Le 4e équipement d'un compte Gratuit est refusé côté serveur (`402`/`403 quota_exceeded`).
+
+---
+
+## 6.7 Entraînement croisé et renforcement spécifique
+
+L'entraînement croisé est proposé par le coach (voir Partie 5) pour réduire le risque de blessure et améliorer la performance. Le renforcement musculaire est exécuté dans l'app Fit (voir Partie 7 pour l'intégration) ; cette partie ne définit que les **prescriptions** et les liens.
+
+| Discipline | Renforcement prioritaire | Fréquence | Entraînement croisé conseillé |
+|---|---|---|---|
+| Course | fessiers, mollets, gainage, fentes, montées de marches, travail du pied | 2 x/sem. 20-30 min | vélo, natation, aquajogging (en cas de blessure) |
+| Trail | quadriceps excentriques (descentes), proprioception, haut du corps léger (bâtons) | 2 x/sem. | randonnée avec dénivelé, escaliers |
+| Vélo | gainage, hanches, tirage, squats | 1-2 x/sem., hors veille de séance clé | course douce, natation |
+| Rando | fentes, step-ups chargés, mollets, tronc | 1-2 x/sem. | course légère, vélo |
+Règles : pas de séance de renforcement lourde dans les 24 h avant une séance qualité ; en période d'affûtage, volume −50 % mais intensité maintenue ; la charge de la séance Fit est ajoutée à la charge globale (voir Partie 5). Un utilisateur sans l'app Fit reçoit une séance de renforcement au poids du corps de 4 exercices (squat, fente, planche, pont fessier) en texte et illustration ; l'accès aux programmes complets est un renvoi vers [NOM_APP_FIT] (voir Partie 7).
+
+Échauffements par discipline (3 modèles intégrés, 8-10 min) : course (marche 2 min, trot 3 min, gammes : talons-fesses, montées de genoux, 2 lignes droites) ; vélo (10 min de progression 50 → 75 % FTP avec 2 x 15 s à cadence haute) ; rando (5 min de marche lente, mobilité chevilles/hanches).
+
+### 6.7.1 Critères d'acceptation 6.7
+- Une séance de renforcement lourd planifiée la veille d'une séance de fractionné est déplacée en suggestion ou signalée par le coach.
+- La charge d'une séance Fit synchronisée apparaît dans le tableau de charge global.
+
+---
+
+## 6.8 Spécificités saisonnières et météo par discipline
+
+Données [STACK_METEO] : température ressentie, pluie, vent (vitesse et direction), humidité, indice UV, qualité de l'air, neige/gel. Chaque séance planifiée est réévaluée à J-1 et H-3.
+
+| Condition | Règle d'adaptation |
+|---|---|
+| Chaleur (température ressentie > 25 °C) | course : allure cible augmentée de **1,5 % par tranche de 2 °C au-delà de 15 °C** (borne : 12 %) ; recommander tôt le matin, eau 500 ml/h minimum ; > 32 °C : proposer déplacer ou réduire de 30 % ; > 35 °C ou indice de chaleur dangereux : proposer de remplacer par du tapis/home-trainer |
+| Froid | < 0 °C : échauffement allongé de 5 min, vêtements en couches, avertissement verglas (suggérer route dégagée ou salle) ; < −10 °C ressentis : réduire durée de 30 % |
+| Pluie | vélo : pression de pneus −10 %, freinage prolongé, alerte visibilité ; course : avertissement surfaces glissantes ; rando : sentiers argileux plus lents (+15 % de temps) |
+| Vent | vélo : vent de face > 30 km/h : cible de puissance, pas de vitesse ; plan de boucle avec vent de face à l'aller ; course : effort constant plutôt qu'allure fixe |
+| Neige/glace | course : proposer tapis ou marche ; vélo : home-trainer ; rando : matériel obligatoire (6.4.4) et durée augmentée de 25-50 % |
+| Orage | arrêt de séance recommandé, abri, message de sécurité (voir Partie 4) |
+| Qualité de l'air dégradée (indice > seuil local) | proposer séance en intérieur |
+| Nuit/crépuscule | alerte visibilité, lampe, tenues réfléchissantes |
+Règles de produit : toute adaptation est une **proposition** que l'utilisateur accepte ou refuse ; l'adaptation est tracée (`adjustment_log`) ; la séance reportée ne se cumule pas (pas de rattrapage de plus de 50 % du volume manqué). Acclimatation à la chaleur : les 10-14 premiers jours, volume réduit de 20 %.
+
+### 6.8.1 Critères d'acceptation 6.8
+- Séance d'allure 5:00/km prévue à 31 °C : cible suggérée 5:00 × (1 + 0,015 × 8) = 5:06/km.
+- Prévision d'orage pendant une sortie vélo : notification à H-3 avec option de report.
+- Un refus de la proposition conserve la séance d'origine et n'affiche plus le même avertissement pour cette séance.
+
+---
+
+## 6.9 Modèle de données et API de cette partie
+
+### 6.9.1 Tables
+```
+discipline_definition (id PK, version, family, parent_id FK null, config jsonb, status, created_at)  -- UNIQUE(id,version)
+session_template (id, discipline_id, name, level, blocks jsonb, owner_id null, is_public)   -- INDEX(discipline_id, level)
+equipment (id, user_id FK, type, discipline_id, name, brand, model, purchase_date, initial_km, retire_km_threshold, status, specs jsonb)  -- INDEX(user_id,status)
+equipment_assignment (id, activity_id FK, equipment_id FK, created_at)  -- UNIQUE(activity_id,equipment_id); INDEX(equipment_id)
+maintenance_task (id, equipment_id FK, kind, due_km, due_date, snoozed_until, done_at, cost_cents, notes)  -- INDEX(equipment_id,done_at)
+event_catalog (id, discipline_id, name, date, geo point, city, distances jsonb, elevation_gain, gpx_asset_id, cutoffs jsonb, registration_url, mandatory_gear jsonb, status)  -- GiST(geo), INDEX(date,discipline_id)
+user_event (id, user_id, event_id, goal, bib, status:'planned'|'done'|'dns'|'dnf', plan_id null)  -- UNIQUE(user_id,event_id)
+event_result (id, user_event_id, official_time_s, rank_overall, rank_category, source:'manual'|'import', verified bool)
+power_curve_cache (user_id, window_days, duration_s, best_watts, activity_id)  -- PK(user_id,window_days,duration_s)
+performance_prediction (id, user_id, source_activity_id, target_distance_m, predicted_s, low_s, high_s, model, exponent, created_at)
+adjustment_log (id, user_id, planned_session_id, reason, original jsonb, proposed jsonb, accepted bool null, created_at)
+```
+Contraintes : toutes les tables utilisateur portent `user_id` et sont filtrées côté serveur par le jeton ; suppression de compte = effacement en cascade (voir Partie 2 et Partie 8).
+
+### 6.9.2 API
+| Méthode et chemin | Rôle | Droit |
+|---|---|---|
+| `GET /disciplines` | liste des configurations actives | Gratuit |
+| `GET /disciplines/{id}?version=` | une configuration | Gratuit |
+| `GET /session-templates?discipline=&level=` | modèles de séances | Gratuit (liste limitée), Sports (complet) |
+| `POST /predictions` | prédiction de temps (Riegel/VDOT) | Sports |
+| `GET /activities/{id}/power-analysis` | NP, IF, TSS, VI, courbes | Sports |
+| `GET /users/me/power-curve?days=90` | courbe de puissance | Sports |
+| `POST /ftp/estimate` | estimation (confirmation requise) | Sports |
+| `POST /equipment` ; `GET /equipment` ; `PATCH /equipment/{id}` | inventaire | quota Gratuit : 3 |
+| `POST /activities/{id}/equipment` | affecter un équipement | Gratuit |
+| `GET /equipment/{id}/maintenance` ; `POST` | entretien | Gratuit/Sports |
+| `GET /events?discipline=&near=&radius=&from=` | catalogue | Gratuit |
+| `POST /me/events` | ajouter un objectif et générer un plan | Gratuit (1 actif), Sports (illimité) |
+| `POST /me/events/{id}/result` | saisir un résultat | Gratuit |
+| `POST /trail/{eventId}/eta` | ETA et marges de cut-off | Sports |
+| `POST /weather/adjust` | proposition d'adaptation de séance | Gratuit (alertes), Sports (adaptation chiffrée) |
+
+Exemple :
+```json
+POST /predictions
+{ "source_activity_id":"a_123", "target_distance_m":21097.5 }
+→ 200 { "predicted_s":6686, "low_s":6485, "high_s":6887, "model":"riegel", "exponent":1.06, "source_date":"2026-09-12", "expires_at":"2026-11-07" }
+POST /trail/ev_9/eta { "planned_pace_s_per_km":420, "start":"2026-10-17T06:00:00Z" }
+→ 200 { "checkpoints":[{"name":"Col Rouge","km":18.4,"eta":"2026-10-17T09:41:00Z","cutoff":"2026-10-17T10:00:00Z","margin_min":19,"level":"orange"}] }
+```
+Erreurs standard : `401`, `403 plan_required` (avec `required_plan`), `404`, `409 conflict`, `422 validation_failed`.
+
+---
+
+## 6.10 Tests et critères d'acceptation
+
+### 6.10.1 Scénarios de bout en bout
+1. **Préparation d'un semi-marathon** : créer l'objectif, accepter le plan 12 semaines, enregistrer 3 sorties, obtenir une prédiction, subir une alerte chaleur, reprogrammer une séance, saisir le résultat final.
+2. **Trail avec cut-offs** : importer le GPX, calculer l'ETA, simuler une marge de 8 min, vérifier l'alerte rouge hors ligne.
+3. **Sortie vélo avec capteur de puissance** : calculer NP/IF/TSS, détecter un record sur 20 min, proposer la mise à jour FTP avec confirmation.
+4. **Randonnée itinérante de 3 jours** : étapes, hors ligne, check-list, partage de sécurité.
+
+### 6.10.2 Cas limites
+Activité à 0 m D+ (tapis), GPS perdu 10 min dans un tunnel, FC aberrante (> 230 bpm : ignorée), puissance à 0 en roue libre (comptée dans la moyenne mobile, pas dans la puissance moyenne en mouvement selon réglage), changement d'heure (DST) pendant une sortie, équipement supprimé après affectation, événement annulé par l'organisateur.
+
+### 6.10.3 Critères d'acceptation numérotés
+1. Une configuration de discipline invalide est refusée avec un message précis.
+2. Une activité ancienne conserve sa `discipline_version`.
+3. Ajouter une nouvelle discipline par JSON ne nécessite aucune modification de code d'écran.
+4. Les zones d'allure se calculent depuis l'allure seuil (Z4 = 0,99-1,05 × Ts).
+5. Le VDOT calculé pour 5 km en 20:00 est ≈ 49,8 (tolérance ± 0,3).
+6. Riegel 10 km en 50:00 → semi 1:51:26 (± 1 s).
+7. Aucune prédiction marathon n'est produite à partir d'une course < 3 km.
+8. Une prédiction de plus de 8 semaines est marquée « périmée ».
+9. Un fractionné 8 x 400 émet 8 alertes de départ et 8 de récupération.
+10. Une FC hors zone cible > 20 s déclenche une alerte.
+11. L'allure sur piste est calculée depuis les tours, pas depuis le GPS.
+12. Une activité sur tapis applique le facteur de calibration mémorisé.
+13. Le km-effort de 45 km et 2 800 m D+ vaut 73.
+14. Une marge de cut-off < 30 min déclenche une alerte orange, < 10 min une rouge, y compris sans réseau.
+15. Sortir du tracé GPX de plus de 30 m déclenche l'alerte hors-parcours.
+16. Le D+ est corrigé par MNT si l'écart baromètre/MNT > 10 %.
+17. NP = FTP pendant 1 h → TSS = 100.
+18. Aucune mise à jour de FTP n'est appliquée sans confirmation.
+19. Une estimation de puissance sans capteur est étiquetée « estimée » et exclue de la FTP.
+20. Une perte FTMS n'interrompt pas l'enregistrement.
+21. En ERG, la cible change en rampe de 5 s à chaque bloc.
+22. L'assistance e-bike niveau 2 réduit la charge selon le facteur défini.
+23. Une chaîne à 2 000 km déclenche son rappel une seule fois puis respecte le snooze.
+24. Pas plus d'un rappel d'entretien par jour toutes catégories confondues.
+25. Le 4e équipement d'un compte Gratuit est refusé côté serveur.
+26. Réaffecter une activité met à jour les kilométrages des deux équipements.
+27. Aucune recommandation de matériel n'est sponsorisée ni classée par annonceur.
+28. Rando 12 km / 900 m D+ → ≈ 4 h 17 avec pauses.
+29. La cotation affichée garde sa source et sa date, sans conversion silencieuse.
+30. T4 et plus : avertissement renforcé avant démarrage.
+31. Le filtre accessibilité respecte la pente maximale choisie.
+32. Une alerte de demi-tour s'affiche si la marge de jour est < 1 h pour le retour.
+33. Altitude ≥ 2 500 m : avertissement de mal des montagnes, sans diagnostic.
+34. Un objectif d'événement génère un plan daté avec affûtage.
+35. Un lien d'inscription s'ouvre en externe sans transmettre de données personnelles.
+36. Un résultat manuel est marqué « non vérifié ».
+37. 5:00/km à 31 °C → cible suggérée 5:06/km.
+38. Une adaptation météo est une proposition ; son refus conserve la séance.
+39. Une séance de renforcement lourd la veille d'une séance qualité est signalée.
+40. La charge d'une séance Fit synchronisée apparaît dans la charge globale.
+41. Les droits (quota, prédictions, courbes) sont vérifiés côté serveur même si l'UI est contournée.
+42. Un utilisateur Gratuit voit le paywall (et non une erreur) sur `/predictions`.
+43. La suppression d'un compte efface équipements, résultats et prédictions.
+44. Les activités enregistrées hors ligne se synchronisent sans duplication (voir Partie 3).
+45. Toute chaîne visible est présente en français dans les fichiers i18n.
+
+### 6.10.4 Définition de terminé
+Tests unitaires verts (formules avec exemples ci-dessus), tests d'intégration des endpoints, lint/typecheck verts, revue d'accessibilité (voir Partie 8), résumé des risques, commits petits et clairs.
