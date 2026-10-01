@@ -50,7 +50,7 @@ export const segments: Segment[] = [
     title: ["Les documents de la commune,", "sans licence Acrobat."],
     kicker: "Greffe · Contrôle des habitants · Urbanisme · Bourse communale",
     lede:
-      "Un préavis à assembler, un permis de construire à caviarder avant consultation publique, un procès-verbal à signer, un dossier à archiver : tout passe par le PDF. Blonay PDF réunit ces gestes dans un seul outil, facturé une fois pour toute l'administration, sans compter les postes.",
+      "Un préavis à assembler, un permis de construire à caviarder avant consultation publique, un procès-verbal à signer, un dossier à archiver : tout passe par le PDF. Blonay PDF réunit ces gestes dans un seul outil, facturé une fois pour toute l'administration, sans compter les postes, et sans qu'un document quitte le poste.",
     buyer: {
       role: "Secrétaire municipal·e ou boursier·ère",
       text:
@@ -60,25 +60,25 @@ export const segments: Segment[] = [
       {
         title: "Le préavis au Conseil communal",
         text:
-          "Le rapport, les annexes techniques, le plan et le tableau financier arrivent de quatre services en quatre formats. Ils partent en un seul PDF paginé, avec sa table des matières et le sceau de la commune en en-tête.",
-        tool: "Fusionner et organiser",
+          "Le rapport, les annexes techniques, le plan et le tableau financier arrivent de quatre services en quatre formats. Chacun devient une pièce numérotée : le dossier part en un seul PDF paginé, avec ses intercalaires, son sommaire et un en-tête à votre convenance. Quand une pièce bouge, le sommaire se refait.",
+        tool: "Constituer un dossier",
       },
       {
         title: "L'enquête publique",
         text:
-          "Un dossier de mise à l'enquête se consulte au guichet et se publie souvent en ligne. Les données personnelles des opposants et des voisins en sortent définitivement — le texte est retiré du fichier, pas recouvert d'un rectangle noir.",
+          "Un dossier de mise à l'enquête se consulte au guichet et se publie souvent en ligne. On cherche un nom dans trois cents pages et on le caviarde partout d'un coup, après confirmation du nombre d'occurrences : le texte est retiré du flux de la page, pas recouvert d'un rectangle noir. Les métadonnées et les commentaires se nettoient à part, et le fichier produit se relit avant publication.",
         tool: "Caviarder",
       },
       {
         title: "Le procès-verbal signé",
         text:
-          "Le PV de la séance de Municipalité se signe par le syndic et le secrétaire. La signature se pose dans le document, avec sa date et son horodatage, sans imprimer puis scanner.",
+          "Le PV de la séance de Municipalité se signe par le syndic et le secrétaire. La signature manuscrite se pose dans le document, avec sa date, sans imprimer puis scanner. Ce n'est pas une signature qualifiée au sens de la SCSE : pour un acte qui l'exige, un cachet électronique réglementé reste nécessaire.",
         tool: "Signer",
       },
       {
         title: "Les archives du contrôle des habitants",
         text:
-          "Des décennies de fiches scannées, illisibles par une recherche. La reconnaissance de texte les rend consultables, et le format d'archivage les rend conformes aux exigences de conservation.",
+          "Des décennies de fiches scannées, illisibles par une recherche. La reconnaissance de texte, en français et en allemand, les rend consultables, sur le poste et sans rien envoyer. Le logiciel ne produit pas de PDF/A : pour l'archivage légal, nous vous le disons avant, pas après.",
         tool: "Reconnaissance de texte",
       },
     ],
@@ -112,7 +112,7 @@ export const segments: Segment[] = [
       {
         title: "Aucune donnée ne quitte la commune",
         text:
-          "L'application de bureau travaille sur le poste, ou sur le lecteur réseau de l'administration. Un dossier d'enquête ouvert dans Blonay PDF ne part sur aucun serveur, pas même les nôtres.",
+          "L'application de bureau travaille sur le poste, ou sur le lecteur réseau de l'administration. Un dossier d'enquête ouvert dans Blonay PDF ne part sur aucun serveur, pas même les nôtres : le logiciel n'ouvre aucune connexion pour traiter un document.",
       },
       {
         title: "Une facture, pas un abonnement à la carte",
@@ -122,7 +122,7 @@ export const segments: Segment[] = [
       {
         title: "Sous le seuil du gré à gré",
         text:
-          "Le montant annuel reste, dans la plupart des cantons, sous le seuil qui impose une procédure de marché public. Nous fournissons la fiche technique, les références et l'attestation de conformité si votre secrétariat en a besoin.",
+          "Le montant annuel reste, dans la plupart des cantons, sous le seuil qui impose une procédure de marché public. C'est à votre secrétariat de le vérifier au regard de votre règlement communal et du droit cantonal des marchés publics.",
       },
       {
         title: "Rien à installer",
@@ -138,7 +138,7 @@ export const segments: Segment[] = [
         text: "Le formulaire prend deux minutes : la commune, le nombre de postes, la personne à facturer. Aucun compte à créer.",
       },
       {
-        step: "48 heures",
+        step: "Sur chiffrage",
         title: "Vous recevez le devis",
         text: "Un PDF chiffré, nominatif, valable 90 jours, avec l'IDE et les conditions. Prêt à joindre à une décision de Municipalité.",
       },
@@ -156,7 +156,7 @@ export const segments: Segment[] = [
     faq: [
       {
         q: "Faut-il passer par un appel d'offres ?",
-        a: "Dans la plupart des cantons, un abonnement annuel de cet ordre reste sous le seuil du gré à gré pour les services. C'est à votre secrétariat de le vérifier au regard de votre règlement communal et du droit cantonal des marchés publics : nous fournissons la fiche technique, le descriptif des prestations et les références nécessaires au dossier.",
+        a: "Dans la plupart des cantons, un abonnement annuel de cet ordre reste sous le seuil du gré à gré pour les services. C'est à votre secrétariat de le vérifier au regard de votre règlement communal et du droit cantonal des marchés publics.",
       },
       {
         q: "Combien de postes sont compris ?",
@@ -179,7 +179,7 @@ export const segments: Segment[] = [
     title: ["Tous les PDF de l'école,", "un seul outil."],
     kicker: "Secrétariat · Direction · Doyens · Corps enseignant",
     lede:
-      "Bulletins, convocations, autorisations de sortie, dossiers d'élèves : le secrétariat d'un établissement produit plus de PDF qu'il n'en lit. Une licence par établissement, sans plafond de collaborateurs, réglée sur bon de commande.",
+      "Bulletins, convocations, autorisations de sortie, dossiers d'élèves : le secrétariat d'un établissement produit plus de PDF qu'il n'en lit. Une licence par établissement, sans plafond de collaborateurs, réglée sur bon de commande, et des documents qui restent sur le poste.",
     buyer: {
       role: "Direction d'établissement",
       text:
@@ -189,25 +189,25 @@ export const segments: Segment[] = [
       {
         title: "Le dossier d'un élève",
         text:
-          "Bulletins, décisions, rapports et correspondance s'assemblent en un seul document paginé, avec ses signets, prêt à transmettre ou à archiver.",
-        tool: "Fusionner et organiser",
+          "Bulletins, décisions, rapports et correspondance s'assemblent en un seul document paginé, avec ses signets et son sommaire, prêt à transmettre.",
+        tool: "Constituer un dossier",
       },
       {
         title: "L'autorisation de sortie",
         text:
-          "Un formulaire à remplir et à signer par les parents, qui revient rempli au lieu de revenir froissé. Les réponses s'exportent en tableau.",
-        tool: "Formulaires et signature",
+          "Un formulaire PDF à remplir, qu'on remplit sur le poste au lieu de le photocopier : les champs se complètent directement, puis le formulaire s'aplatit à l'export. La signature manuscrite de la direction s'y pose sans imprimer.",
+        tool: "Formulaires",
       },
       {
         title: "Le rapport transmis à un service externe",
         text:
-          "Avant d'envoyer un dossier au SPJ ou à un office, les noms et les données sensibles qui ne concernent pas le destinataire sortent définitivement du fichier.",
+          "Avant d'envoyer un dossier au SPJ ou à un office, on retire du flux de la page les noms et les données sensibles qui ne concernent pas le destinataire, après confirmation du nombre d'occurrences. Le fichier produit se relit avant l'envoi.",
         tool: "Caviarder",
       },
       {
         title: "Les convocations d'une classe",
         text:
-          "Un modèle, une liste, un lot : vingt-quatre convocations personnalisées en un passage, prêtes à imprimer ou à envoyer.",
+          "Une même opération — pagination, en-tête, réduction, détection des pages vides — appliquée à tout un dossier de fichiers en un seul passage.",
         tool: "Traitement par lots",
       },
     ],
@@ -261,7 +261,7 @@ export const segments: Segment[] = [
     recommendedPlan: "administration",
     path: [
       { step: "Jour 1", title: "Vous demandez une offre", text: "L'établissement, le nombre de postes, la personne à facturer. Aucun compte à créer." },
-      { step: "48 heures", title: "Vous recevez le devis", text: "Un PDF chiffré au nom de l'établissement, valable 90 jours, transmissible tel quel au service cantonal." },
+      { step: "Sur chiffrage", title: "Vous recevez le devis", text: "Un PDF chiffré au nom de l'établissement, valable 90 jours, transmissible tel quel au service cantonal." },
       { step: "À votre rythme", title: "Vous acceptez avec votre bon de commande", text: "L'abonnement démarre, la facture part avec sa QR-facture, payable à 30 jours." },
       { step: "Le jour même", title: "Le secrétariat travaille", text: "Le dossier se pose sur le serveur, chacun ouvre son raccourci et crée son compte au premier lancement." },
     ],
@@ -278,10 +278,6 @@ export const segments: Segment[] = [
         q: "Que deviennent les documents traités ?",
         a: "Ils restent là où ils sont. L'application de bureau lit et réécrit les fichiers sur le poste ou le serveur de l'école, sans aucun envoi.",
       },
-      {
-        q: "Et pendant les vacances scolaires ?",
-        a: "L'abonnement est annuel et ne se suspend pas. Le support passe en horaires réduits pendant les vacances, ce qui est indiqué sur la page Contact.",
-      },
     ],
   },
   {
@@ -291,11 +287,11 @@ export const segments: Segment[] = [
     title: ["Un outil PDF pour l'État,", "déployé une fois."],
     kicker: "Services cantonaux · Directions générales · Établissements de droit public",
     lede:
-      "Quand plusieurs services ou plusieurs dizaines d'entités ont le même besoin, l'achat par entité n'a plus de sens. Un déploiement centralisé, un tarif dégressif, un interlocuteur, et les pièces attendues par un dossier de marché public.",
+      "Quand plusieurs services ou plusieurs dizaines d'entités ont le même besoin, l'achat par entité n'a plus de sens. Un déploiement centralisé, un tarif dégressif, un interlocuteur et une facture annuelle unique.",
     buyer: {
       role: "Direction générale ou service d'achat",
       text:
-        "Ici, l'acheteur n'est pas l'utilisateur. Le dossier doit tenir devant un service juridique et un service d'achat : descriptif des prestations, conformité à la protection des données, réversibilité, pérennité. C'est ce que contient notre dossier technique.",
+        "Ici, l'acheteur n'est pas l'utilisateur. Le dossier doit tenir devant un service juridique et un service d'achat. Ce que nous pouvons dire dès aujourd'hui, et que vous pouvez vérifier : le logiciel n'ouvre aucune connexion pour traiter un document, il produit des PDF standard, et son code source est public.",
     },
     situations: [
       {
@@ -307,20 +303,20 @@ export const segments: Segment[] = [
       {
         title: "Les pièces du dossier d'achat",
         text:
-          "Fiche technique, descriptif des prestations, conditions générales, contrat de sous-traitance et attestations : fournis en un seul envoi, au format attendu.",
-        tool: "Dossier de marché public",
+          "Les pièces dont un dossier d'achat a besoin — fiche technique, conditions générales — se demandent avec l'offre. Ce que le logiciel ne fait pas encore (signature qualifiée, PDF/A, vérification des signatures reçues) est écrit en toutes lettres.",
+        tool: "Dossier d'achat",
       },
       {
         title: "La réversibilité",
         text:
-          "Aucun format propriétaire : ce que produit Blonay PDF est du PDF standard, lisible par n'importe quel autre outil. Vous n'êtes captif de rien, et cela s'écrit dans le contrat.",
+          "Aucun format propriétaire : ce que produit Blonay PDF est du PDF standard, lisible par n'importe quel autre outil. Vous n'êtes captif de rien.",
         tool: "Formats ouverts",
       },
       {
         title: "La formation des référents",
         text:
-          "Nous formons les référent·e·s de chaque entité, qui forment ensuite leurs collègues. Le support de formation vous appartient.",
-        tool: "Accompagnement",
+          "Un mode d'emploi illustré accompagne le logiciel, et les référent·e·s de chaque entité forment leurs collègues. Une prise en main en visioconférence se convient avec l'offre.",
+        tool: "Prise en main",
       },
     ],
     friction: [
@@ -337,7 +333,7 @@ export const segments: Segment[] = [
       {
         title: "Des dossiers d'achat qui traînent",
         text:
-          "Un fournisseur qui ne sait pas produire les pièces attendues fait perdre des mois. Nous les avons déjà écrites.",
+          "Un fournisseur qui ne sait pas dire clairement ce que fait son logiciel, et ce qu'il ne fait pas, fait perdre des mois. Nous écrivons les deux.",
       },
     ],
     units: [
@@ -352,7 +348,7 @@ export const segments: Segment[] = [
       {
         title: "Traitement local, par construction",
         text:
-          "L'application de bureau n'ouvre aucune connexion pour traiter un document. Ce n'est pas une promesse contractuelle, c'est une propriété du logiciel, vérifiable réseau coupé.",
+          "Le logiciel n'ouvre aucune connexion pour traiter un document. Ce n'est pas une promesse contractuelle, c'est une propriété du logiciel, vérifiable réseau coupé.",
       },
       {
         title: "Tarif dégressif au nombre d'entités",
@@ -360,9 +356,9 @@ export const segments: Segment[] = [
           "Le prix par entité diminue avec le volume. L'offre est établie sur mesure et reste valable 90 jours.",
       },
       {
-        title: "Dossier de marché public fourni",
+        title: "Un logiciel dont on peut relire le code",
         text:
-          "Fiche technique, descriptif des prestations, conformité LPD et LPrD, contrat de sous-traitance, réversibilité et pérennité : les pièces sont prêtes.",
+          "Le code source est public : un informaticien cantonal peut lire ce qu'il déploie. La consultation ne confère pas le droit de le copier ou de le revendre — voir la licence.",
       },
       {
         title: "Un interlocuteur, une facture",
@@ -373,22 +369,22 @@ export const segments: Segment[] = [
     recommendedPlan: "collectivite",
     path: [
       { step: "Premier contact", title: "Vous décrivez le périmètre", text: "Nombre d'entités, nombre de postes, calendrier souhaité, contraintes d'achat." },
-      { step: "Une semaine", title: "Vous recevez l'offre et le dossier technique", text: "Offre chiffrée sur mesure, plus toutes les pièces attendues par un service d'achat." },
+      { step: "Sur chiffrage", title: "Vous recevez l'offre", text: "Offre chiffrée sur mesure, valable 90 jours, avec les conditions générales." },
       { step: "Votre procédure", title: "Vous menez la décision", text: "Nous restons disponibles pour les questions du service juridique et du service d'achat, sans relance commerciale." },
-      { step: "Déploiement", title: "Entité par entité", text: "Mise en service progressive, formation des référent·e·s, support dédié." },
+      { step: "Déploiement", title: "Entité par entité", text: "Mise en service progressive : un dossier à poser, un raccourci par poste." },
     ],
     faq: [
       {
         q: "Répondez-vous aux appels d'offres ?",
-        a: "Oui. Nous fournissons les pièces habituelles d'un dossier de marché public et répondons aux questions du service juridique et du service d'achat. Écrivez-nous avec le calendrier de la procédure.",
+        a: "Nous répondons aux questions du service juridique et du service d'achat. Écrivez-nous avec le calendrier de la procédure. Au-delà du seuil du gré à gré, le produit n'a pas encore de dossier de marché public type : nous le disons plutôt que de le promettre.",
       },
       {
         q: "Un hébergement dédié est-il possible ?",
-        a: "L'application de bureau ne nécessite aucun hébergement : elle travaille sur vos postes et vos serveurs. Pour les fonctions de gestion des licences, un hébergement dédié en Suisse ou chez vous est possible et se discute à l'offre.",
+        a: "Le logiciel ne nécessite aucun hébergement : il travaille sur vos postes et vos serveurs, sans connexion. Il n'y a donc rien à héberger.",
       },
       {
         q: "Que se passe-t-il si vous cessez l'activité ?",
-        a: "Ce que produit le logiciel est du PDF standard : vos documents restent lisibles par n'importe quel autre outil, sans conversion. La clause de réversibilité et le dépôt du code source figurent au contrat pour les déploiements de cette taille.",
+        a: "Ce que produit le logiciel est du PDF standard : vos documents restent lisibles par n'importe quel autre outil, sans conversion. Un séquestre du code source peut être convenu pour un déploiement de cette taille.",
       },
       {
         q: "Comment se fait la facturation ?",

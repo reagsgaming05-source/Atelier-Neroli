@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 
 /** Aperçu de l'éditeur avec onglets, qui alterne les scénarios tant que l'utilisateur n'interagit pas. */
 export function HeroShowcase() {
-  const [scenario, setScenario] = useState<MockScenario>("sign");
+  const [scenario, setScenario] = useState<MockScenario>("dossier");
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {

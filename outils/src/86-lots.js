@@ -422,7 +422,9 @@
 
   function toolPassword() {
     if (!FEAT.encrypt) {
-      dialog({ title: 'Protection par mot de passe', icon: IC.lock, build: b => b.append(note('Le composant de chiffrement n\'a pas pu être chargé. Rechargez la page avec une connexion internet active pour activer cette fonction.', 'warn')) });
+      dialog({ title: 'Protection par mot de passe', icon: IC.lock, build: b => b.append(note(EN_LIGNE
+        ? 'Le composant de chiffrement n\'a pas pu être chargé. Rechargez la page avec une connexion internet active pour activer cette fonction.'
+        : 'Le composant de chiffrement est absent de cette copie du logiciel, qui est incomplète. Retéléchargez-la depuis l\'adresse où vous l\'avez obtenue.', 'warn')) });
       return;
     }
     const sec = state.security || { userPassword: '', ownerPassword: '', permissions: { printing: 'highResolution', copying: true, modifying: false, annotating: true, fillingForms: true, documentAssembly: false, contentAccessibility: true } };

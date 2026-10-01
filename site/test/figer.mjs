@@ -31,6 +31,7 @@ const PAGES = [
   ["/fonctionnalites", "fonctionnalites"],
   ["/tarifs", "tarifs"],
   ["/securite", "securite"],
+  ["/telecharger", "telecharger"],
   ["/offre", "offre"],
   ["/contact", "contact"],
   ["/cgv", "cgv"],
@@ -81,14 +82,41 @@ for (const [url, nom] of PAGES) {
       ico.rel = "icon";
       ico.href = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
       d.head.appendChild(ico);
+      // Un lien vers une page que la vitrine ne contient pas (la démo, la
+      // connexion, l'espace client) ne doit pas renvoyer à l'accueil en
+      // faisant croire qu'il marche : il devient un élément inerte qui le dit.
       d.querySelectorAll("a[href]").forEach((a) => {
         const h = a.getAttribute("href");
         if (!h || !h.startsWith("/")) return;
         const cible = carte[h.split("?")[0].split("#")[0]];
-        a.setAttribute("href", cible ? (cible === "index" ? "index.html" : cible + ".html") : "index.html");
+        if (cible) {
+          a.setAttribute("href", (cible === "index" ? "index.html" : cible + ".html") + (h.includes("#") ? "#" + h.split("#")[1] : ""));
+          return;
+        }
+        a.removeAttribute("href");
+        a.setAttribute("aria-disabled", "true");
+        a.setAttribute("title", "Disponible sur le site en ligne, pas dans cette présentation");
+        a.classList.add("lien-vitrine-inerte");
+        a.style.opacity = "0.55";
+        a.style.cursor = "not-allowed";
+        a.style.pointerEvents = "auto";
       });
-      // Les formulaires restent visibles, mais n'envoient nulle part.
-      d.querySelectorAll("form").forEach((f) => f.removeAttribute("action"));
+      // Les formulaires restent visibles, mais n'envoient nulle part : on le
+      // dit au-dessus, et le bouton d'envoi est désactivé. Un formulaire qui
+      // accepte la saisie puis ne fait rien est la pire des impasses.
+      d.querySelectorAll("form").forEach((f) => {
+        f.removeAttribute("action");
+        f.querySelectorAll('button[type="submit"], button:not([type]), input[type="submit"]').forEach((b) => {
+          b.setAttribute("disabled", "");
+          b.style.opacity = "0.55";
+          b.style.cursor = "not-allowed";
+        });
+        const note = d.createElement("p");
+        note.setAttribute("role", "note");
+        note.setAttribute("style", "margin:0 0 16px;padding:12px 16px;border-radius:12px;background:#fff6dd;color:#5a4300;font-size:14px;line-height:1.5");
+        note.textContent = "Cette présentation n'envoie rien : le formulaire fonctionne sur le site en ligne, pas ici.";
+        f.parentNode.insertBefore(note, f);
+      });
       return "<!doctype html>\n" + d.documentElement.outerHTML;
     },
     [css, NOMS, icone],

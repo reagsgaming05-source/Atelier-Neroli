@@ -75,7 +75,7 @@ export async function quoteRequestAction(_prev: ActionState, formData: FormData)
   return {
     success:
       `Votre demande est enregistrée sous le numéro ${quote.number}. ` +
-      "Vous recevez l'offre chiffrée par courriel sous deux jours ouvrables, à l'adresse indiquée.",
+      "L'offre chiffrée sera adressée à l'adresse indiquée.",
   };
 }
 

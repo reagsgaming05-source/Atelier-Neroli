@@ -13,6 +13,14 @@ export function RoiCalculator() {
   const savings = currentCents - roi.establishmentYearlyCents;
   const pct = currentCents > 0 ? Math.round((savings / currentCents) * 100) : 0;
   const perPerson = staff > 0 ? Math.round(roi.establishmentYearlyCents / staff) : 0;
+  // En dessous de ce nombre de personnes, des licences individuelles coûtent moins cher.
+  const seuil = licenceCost > 0 ? Math.ceil(roi.establishmentYearlyCents / (licenceCost * 100)) : 0;
+  const message =
+    currentCents === 0
+      ? "Saisissez le prix que vous payez réellement aujourd'hui par licence."
+      : savings > 0
+        ? `soit ${pct} % de moins qu'aujourd'hui`
+        : `En dessous de ${seuil} personnes, vos licences actuelles coûtent moins cher que la formule Administration. La formule Secrétariat (${formatCHF(roi.secretariatYearlyCents)} par an, jusqu'à dix postes) peut mieux convenir.`;
 
   return (
     <div className="card grid gap-8 p-8 lg:grid-cols-[1fr_1fr] lg:p-10">
@@ -20,7 +28,7 @@ export function RoiCalculator() {
         <div>
           <div className="flex items-baseline justify-between">
             <label htmlFor="roi-staff" className="label mb-0">
-              Collaborateur·trice·s de l'établissement
+              Collaborateur·trice·s de l'entité
             </label>
             <span className="font-display text-2xl font-semibold tabular-nums text-ink-900">{staff}</span>
           </div>
@@ -55,7 +63,7 @@ export function RoiCalculator() {
               className="input pl-14 tabular-nums"
             />
           </div>
-          <p className="mt-1.5 text-xs text-ink-500">Par exemple le prix public d'une licence Acrobat Pro par personne et par an.</p>
+          <p className="mt-1.5 text-xs text-ink-500">Relevez le prix de votre licence actuelle, par personne et par an : nous ne le présumons pas.</p>
         </div>
       </div>
 
@@ -63,7 +71,7 @@ export function RoiCalculator() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-400">Économie annuelle estimée</p>
           <p className="mt-3 font-display text-[2.75rem] font-semibold leading-none tabular-nums">{savings > 0 ? formatCHF(savings) : "CHF 0.–"}</p>
-          <p className="mt-2 text-sm text-white/70">{savings > 0 ? `soit ${pct} % de moins qu'aujourd'hui` : "Une licence Établissement revient au même prix ou moins dès quelques collaborateur·trice·s."}</p>
+          <p className="mt-2 text-sm text-white/70">{message}</p>
         </div>
         <dl className="mt-8 grid grid-cols-2 gap-4 border-t border-white/15 pt-5 text-sm">
           <div>
@@ -71,7 +79,7 @@ export function RoiCalculator() {
             <dd className="mt-0.5 font-semibold tabular-nums">{formatCHF(currentCents)} / an</dd>
           </div>
           <div>
-            <dt className="text-white/60">Avec Blonay PDF</dt>
+            <dt className="text-white/60">Avec la formule Administration</dt>
             <dd className="mt-0.5 font-semibold tabular-nums">{formatCHF(roi.establishmentYearlyCents)} / an</dd>
           </div>
           <div className="col-span-2">

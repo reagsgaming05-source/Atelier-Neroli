@@ -63,7 +63,7 @@ export default async function FactureDetailPage({
                 Blonay <span className="text-brand-600">PDF</span>
               </p>
               <p className="mt-1 text-xs text-ink-500">
-                {site.address.street}, {site.address.zip} {site.address.city} · {site.email}
+                {site.legalName} · {site.address.street}, {site.address.zip} {site.address.city}{site.email ? ` · ${site.email}` : ""}
               </p>
             </div>
           </div>
@@ -154,7 +154,8 @@ export default async function FactureDetailPage({
 
         <footer className="mt-12 border-t border-line pt-6 text-xs text-ink-400">
           {site.legalName} · {facturation.creancier.rue} {facturation.creancier.numero}, {facturation.creancier.npa}{" "}
-          {facturation.creancier.localite} · {site.phone} · IDE {facturation.ide} · {site.vatNote}
+          {facturation.creancier.localite}{site.phone ? ` · ${site.phone}` : ""} · IDE {facturation.ide}
+          {facturation.tvaNumero ? ` · TVA ${facturation.tvaNumero}` : ""} · {site.vatNote}
         </footer>
       </article>
 

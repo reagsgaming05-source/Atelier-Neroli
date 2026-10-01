@@ -18,63 +18,65 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
         <p className="eyebrow">Contact</p>
         <h1 className="mt-4 font-display text-[2.75rem] font-bold leading-[1.02] tracking-tight text-ink-900 sm:text-[3.5rem]">Parlons de vos documents.</h1>
         <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink-500">
-          Démonstration, offre pour une équipe ou question technique : nous répondons sous 24 heures ouvrées, en français, allemand ou anglais.
+          Démonstration, offre pour une équipe ou question technique : écrivez-nous, nous répondons en français.
         </p>
 
+        {/* Seules les coordonnées que l'éditeur a renseignées s'affichent : le formulaire suffit. */}
         <dl className="mt-10 space-y-6 text-[15px] text-ink-700">
-          <div className="flex gap-4">
-            <Mail className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
-            <div>
-              <dt className="font-semibold text-ink-900">E-mail</dt>
-              <dd>
-                <a href={`mailto:${site.email}`} className="hover:text-brand-700">
-                  {site.email}
-                </a>
-                <span className="block text-ink-500">
-                  Support :{" "}
-                  <a href={`mailto:${site.supportEmail}`} className="hover:text-brand-700">
-                    {site.supportEmail}
+          {site.email ? (
+            <div className="flex gap-4">
+              <Mail className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
+              <div>
+                <dt className="font-semibold text-ink-900">E-mail</dt>
+                <dd>
+                  <a href={`mailto:${site.email}`} className="hover:text-brand-700">
+                    {site.email}
                   </a>
-                </span>
-              </dd>
+                  {site.supportEmail && site.supportEmail !== site.email ? (
+                    <span className="block text-ink-500">
+                      Support :{" "}
+                      <a href={`mailto:${site.supportEmail}`} className="hover:text-brand-700">
+                        {site.supportEmail}
+                      </a>
+                    </span>
+                  ) : null}
+                </dd>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-4">
-            <Phone className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
-            <div>
-              <dt className="font-semibold text-ink-900">Téléphone</dt>
-              <dd>
-                <a href={site.phoneHref} className="hover:text-brand-700">
-                  {site.phone}
-                </a>
-              </dd>
+          ) : null}
+          {site.phone ? (
+            <div className="flex gap-4">
+              <Phone className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
+              <div>
+                <dt className="font-semibold text-ink-900">Téléphone</dt>
+                <dd>
+                  <a href={site.phoneHref} className="hover:text-brand-700">
+                    {site.phone}
+                  </a>
+                </dd>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-4">
-            <Clock className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
-            <div className="flex-1">
-              <dt className="font-semibold text-ink-900">Support</dt>
-              <dd className="mt-1">
-                <ul className="space-y-1">
-                  {site.supportHours.map((h) => (
-                    <li key={h.days} className="flex justify-between gap-6 sm:max-w-xs">
-                      <span>{h.days}</span>
-                      <span className="text-ink-900">{h.value}</span>
-                    </li>
-                  ))}
-                </ul>
-              </dd>
+          ) : null}
+          {site.adresseConnue ? (
+            <div className="flex gap-4">
+              <MapPin className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
+              <div>
+                <dt className="font-semibold text-ink-900">Siège</dt>
+                <dd>
+                  {site.legalName}, {site.address.street}, {site.address.zip} {site.address.city}
+                  {site.address.canton ? ` (${site.address.canton})` : ""}
+                </dd>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-4">
-            <MapPin className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
-            <div>
-              <dt className="font-semibold text-ink-900">Siège</dt>
-              <dd>
-                {site.legalName}, {site.address.street}, {site.address.zip} {site.address.city} ({site.address.canton})
-              </dd>
+          ) : (
+            <div className="flex gap-4">
+              <Clock className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
+              <div>
+                <dt className="font-semibold text-ink-900">Par écrit</dt>
+                <dd className="text-ink-500">Le formulaire ci-contre est le moyen de nous joindre.</dd>
+              </div>
             </div>
-          </div>
+          )}
         </dl>
       </div>
 

@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 const repères = [
   {
     icon: Clock,
-    title: "Réponse sous deux jours ouvrables",
-    text: "Une offre chiffrée, nominative, envoyée par courriel à l'adresse que vous indiquez.",
+    title: "Une offre écrite et nominative",
+    text: "Chiffrée à votre mesure, avec l'IDE du vendeur et les conditions, à l'adresse que vous indiquez.",
   },
   {
     icon: FileText,

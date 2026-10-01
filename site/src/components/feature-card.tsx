@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowLeftRight,
   ArrowUpRight,
+  BookOpen,
   EyeOff,
   FilePen,
   GitCompare,
@@ -30,6 +31,7 @@ export const featureIcons = {
   forms: TextCursorInput,
   annotate: Highlighter,
   compare: GitCompare,
+  dossier: BookOpen,
 } as const;
 
 export function FeatureCard({ feature }: { feature: Feature }) {

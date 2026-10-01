@@ -14,7 +14,7 @@ import {
   type Quote,
   type QuoteStatus,
 } from "@/lib/db/schema";
-import { facturation } from "@/content/facturation";
+import { exigerIdentiteFacturation, facturation } from "@/content/facturation";
 import { referencePourIban } from "@/lib/qr-facture";
 import { addInterval, planPrice } from "@/lib/subscriptions";
 import { hashPassword } from "@/lib/password";
@@ -37,6 +37,15 @@ import { intervalLabel } from "@/lib/format";
  */
 
 export class QuoteError extends Error {}
+
+/** Pas d'offre ni de facture au nom d'un vendeur dont l'identité n'est pas renseignée. */
+function identiteOuRefus() {
+  try {
+    exigerIdentiteFacturation();
+  } catch (e) {
+    throw new QuoteError(e instanceof Error ? e.message : "Identité de l'éditeur non configurée.");
+  }
+}
 
 export type QuoteWithPlan = Quote & { plan: Plan | null };
 
@@ -181,6 +190,7 @@ export async function sendQuote(input: {
   conditions?: string | null;
   internalNote?: string | null;
 }) {
+  identiteOuRefus();
   const quote = await getQuoteById(input.id);
   if (!quote) throw new QuoteError("Offre introuvable.");
   if (quote.status === "accepte") throw new QuoteError("Cette offre a déjà été acceptée : elle ne se modifie plus.");
@@ -246,6 +256,7 @@ export async function acceptQuote(input: AcceptQuoteInput): Promise<{
   plan: Plan;
   compteCree: boolean;
 }> {
+  identiteOuRefus();
   const quote = await getQuoteByToken(input.token);
   if (!quote) throw new QuoteError("Offre introuvable.");
   if (quote.status === "accepte") throw new QuoteError("Cette offre a déjà été acceptée.");

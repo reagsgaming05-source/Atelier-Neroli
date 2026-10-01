@@ -37,11 +37,11 @@ export function SegmentPage({ segment, plan }: { segment: Segment; plan: Plan | 
               <ArrowRight className="size-5" aria-hidden />
             </ButtonLink>
             <ButtonLink href="/demo" variant="secondary" size="lg">
-              Essayer sans rien installer
+              Essayer la démo
             </ButtonLink>
           </div>
           <p className="mt-5 text-sm text-ink-500">
-            Sans engagement, sans compte à créer. Réponse sous deux jours ouvrables.
+            Sans engagement, sans compte à créer.
           </p>
         </div>
       </section>

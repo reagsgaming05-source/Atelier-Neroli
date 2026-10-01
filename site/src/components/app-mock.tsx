@@ -1,22 +1,29 @@
-import { ArrowLeftRight, Check, EyeOff, FilePen, FileText, Highlighter, Loader2, Merge, ScanText, Search, Share2, Signature } from "lucide-react";
+import { BookOpen, Check, EyeOff, FilePen, GitCompare, Highlighter, Merge, ScanText, Search, Signature } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-export type MockScenario = "sign" | "redact" | "convert" | "edit";
+/*
+ * Aperçu de l'éditeur, en HTML/CSS pur. C'est une illustration, pas une
+ * capture : elle ne montre donc que des gestes que le logiciel fait
+ * aujourd'hui, sur des données entièrement fictives (le dépôt est public).
+ */
+
+export type MockScenario = "dossier" | "redact" | "ocr" | "edit";
 
 export const scenarios: { key: MockScenario; label: string; file: string; chip: string }[] = [
-  { key: "sign", label: "Signer", file: "Autorisation_camp_ski_8P_2026.pdf · 3 pages", chip: "2 signatures sur 3" },
-  { key: "redact", label: "Caviarder", file: "Dossier_eleve_transmission_SPJ.pdf · 14 pages", chip: "3 numéros AVS caviardés" },
-  { key: "convert", label: "Convertir", file: "Bulletins_9VP_semestre_1.docx → PDF/A", chip: "27 documents convertis" },
-  { key: "edit", label: "Éditer", file: "Convocation_reunion_parents_2026.pdf · 1 page", chip: "Texte modifié, mise en page conservée" },
+  { key: "dossier", label: "Dossier de pièces", file: "Preavis_12_dossier.pdf · 33 pages", chip: "Sommaire refait automatiquement" },
+  { key: "redact", label: "Caviarder", file: "Dossier_enquete_publique.pdf · 14 pages", chip: "3 occurrences, confirmées avant d'agir" },
+  { key: "ocr", label: "Reconnaître le texte", file: "Fiches_scannees_1980.pdf · 14 pages", chip: "Texte reconnu : français et allemand" },
+  { key: "edit", label: "Corriger", file: "Convocation_reunion_2026.pdf · 1 page", chip: "Texte modifié, mise en page conservée" },
 ];
 
-const tools: { label: string; icon: typeof FilePen; key: MockScenario | "annotate" | "merge" | "ocr" }[] = [
-  { label: "Éditer", icon: FilePen, key: "edit" },
+const tools: { label: string; icon: typeof FilePen; key: MockScenario | "annotate" | "sign" | "merge" | "compare" }[] = [
+  { label: "Corriger", icon: FilePen, key: "edit" },
   { label: "Annoter", icon: Highlighter, key: "annotate" },
   { label: "Signer", icon: Signature, key: "sign" },
   { label: "Caviarder", icon: EyeOff, key: "redact" },
   { label: "Fusionner", icon: Merge, key: "merge" },
-  { label: "Convertir", icon: ArrowLeftRight, key: "convert" },
+  { label: "Dossier", icon: BookOpen, key: "dossier" },
+  { label: "Comparer", icon: GitCompare, key: "compare" },
   { label: "OCR", icon: ScanText, key: "ocr" },
 ];
 
@@ -24,8 +31,7 @@ function Line({ w, className }: { w: string; className?: string }) {
   return <div className={cn("h-2 rounded-full bg-canvas-300", className)} style={{ width: w }} />;
 }
 
-/** Aperçu de l'éditeur Blonay PDF, en HTML/CSS pur, selon le scénario affiché. */
-export function AppMock({ scenario = "sign", className }: { scenario?: MockScenario; className?: string }) {
+export function AppMock({ scenario = "dossier", className }: { scenario?: MockScenario; className?: string }) {
   const meta = scenarios.find((s) => s.key === scenario) ?? scenarios[0];
   return (
     <div className={cn("relative", className)}>
@@ -37,10 +43,7 @@ export function AppMock({ scenario = "sign", className }: { scenario?: MockScena
             <span className="size-2.5 rounded-full bg-canvas-300" />
           </div>
           <p className="flex-1 truncate text-center text-xs font-medium text-ink-500">{meta.file}</p>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-700 px-2.5 py-1 text-[0.68rem] font-semibold text-white">
-            <Share2 className="size-3" aria-hidden />
-            Partager
-          </span>
+          <span className="w-12" aria-hidden />
         </div>
 
         <div className="flex items-center gap-1 overflow-x-auto border-b border-line px-3 py-2">
@@ -64,26 +67,22 @@ export function AppMock({ scenario = "sign", className }: { scenario?: MockScena
           <div className="relative overflow-hidden bg-canvas-200 p-4 sm:p-6">
             <div className="mx-auto h-full max-w-[300px] rounded-sm bg-white p-5 shadow-card">
               <Line w="55%" className="h-3 bg-ink-700" />
-              {scenario === "sign" && <SignBody />}
+              {scenario === "dossier" && <DossierBody />}
               {scenario === "redact" && <RedactBody />}
-              {scenario === "convert" && <ConvertBody />}
+              {scenario === "ocr" && <OcrBody />}
               {scenario === "edit" && <EditBody />}
             </div>
           </div>
 
           <div className="hidden flex-col border-l border-line bg-white p-4 sm:flex">
-            {scenario === "sign" && <SignPanel />}
+            {scenario === "dossier" && <DossierPanel />}
             {scenario === "redact" && <RedactPanel />}
-            {scenario === "convert" && <ConvertPanel />}
+            {scenario === "ocr" && <OcrPanel />}
             {scenario === "edit" && <EditPanel />}
           </div>
         </div>
       </div>
 
-      <div className="float-slow absolute -left-3 top-24 hidden items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink-900 shadow-card ring-1 ring-line md:flex">
-        <ScanText className="size-3.5 text-brand-600" aria-hidden />
-        OCR terminé · 14 pages
-      </div>
       <div className="float-slower absolute -right-3 bottom-16 hidden items-center gap-2 rounded-full bg-brand-900 px-3 py-1.5 text-xs font-semibold text-white shadow-soft md:flex">
         <Check className="size-3.5 text-accent-400" strokeWidth={3} aria-hidden />
         {meta.chip}
@@ -94,33 +93,26 @@ export function AppMock({ scenario = "sign", className }: { scenario?: MockScena
 
 /* ---------- Corps de page par scénario ---------- */
 
-function SignBody() {
+function DossierBody() {
   return (
     <>
-      <div className="mt-4 space-y-2">
-        <Line w="100%" />
-        <Line w="92%" />
-        <Line w="97%" />
-        <Line w="60%" />
-      </div>
-      <div className="mt-4 rounded bg-accent-100 p-2 ring-1 ring-accent-200">
-        <div className="space-y-2">
-          <Line w="95%" className="bg-accent-200" />
-          <Line w="70%" className="bg-accent-200" />
-        </div>
-      </div>
-      <div className="mt-4 space-y-2">
-        <Line w="98%" />
-        <Line w="88%" />
-      </div>
-      <div className="mt-5 flex items-end justify-between rounded-md border-2 border-dashed border-brand-500 bg-brand-50/60 px-3 py-2">
-        <div>
-          <p className="text-[0.55rem] font-semibold uppercase tracking-wider text-brand-700">Signature du parent</p>
-          <svg viewBox="0 0 120 32" className="mt-1 h-7 w-24 text-ink-900" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
-            <path d="M4 24c10-18 16-18 20-6s8 10 14-4 10-8 16 2 10 6 18-6 12-8 20 0 12 10 22 4" />
-          </svg>
-        </div>
-        <span className="rounded-full bg-success-50 px-2 py-0.5 text-[0.55rem] font-semibold text-success">Signé</span>
+      <p className="mt-4 text-[0.62rem] font-semibold uppercase tracking-wider text-ink-400">Sommaire</p>
+      <ol className="mt-3 space-y-2.5">
+        {[
+          ["1", "Rapport de la Municipalité", "3"],
+          ["2", "Annexe technique", "11"],
+          ["3", "Plan de situation", "26"],
+          ["4", "Tableau financier", "29"],
+        ].map(([n, t, p]) => (
+          <li key={n} className="flex items-center gap-2 text-[0.62rem] text-ink-700">
+            <span className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-brand-50 font-semibold text-brand-700">{n}</span>
+            <span className="flex-1 truncate">{t}</span>
+            <span className="tabular-nums text-ink-400">{p}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-5 rounded-md border-2 border-dashed border-brand-500 bg-brand-50/60 px-3 py-2 text-[0.58rem] font-semibold uppercase tracking-wider text-brand-700">
+        Pièce n° 3 · page 26 / 33
       </div>
     </>
   );
@@ -150,29 +142,25 @@ function RedactBody() {
         <Line w="70%" />
       </div>
       <div className="mt-5 rounded-md bg-canvas-100 p-2.5 text-[0.6rem] text-ink-500">
-        <span className="font-semibold text-ink-900">Rapport de vérification</span> · 3 occurrences supprimées du fichier, métadonnées nettoyées.
+        <span className="font-semibold text-ink-900">Avant d&rsquo;agir</span> · 3 occurrences trouvées. Les métadonnées et les commentaires se nettoient à part.
       </div>
     </>
   );
 }
 
-function ConvertBody() {
+function OcrBody() {
   return (
-    <div className="mt-5 flex h-[80%] flex-col items-center justify-center gap-3 text-center">
-      <div className="flex items-center gap-3">
-        <span className="flex size-12 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-          <FileText className="size-6" aria-hidden />
-        </span>
-        <ArrowLeftRight className="size-4 text-ink-400" aria-hidden />
-        <span className="flex size-12 items-center justify-center rounded-xl bg-accent-100 text-accent-600">
-          <FileText className="size-6" aria-hidden />
-        </span>
+    <div className="mt-5 flex h-[80%] flex-col justify-center gap-3 text-center">
+      <div className="space-y-2" aria-hidden>
+        {["96%", "82%", "90%", "70%"].map((w, i) => (
+          <div key={i} className="mx-auto h-2 rounded-full bg-ink-500/30" style={{ width: w }} />
+        ))}
       </div>
-      <p className="text-[0.7rem] font-semibold text-ink-900">Word → PDF/A-2b</p>
-      <div className="h-1.5 w-40 overflow-hidden rounded-full bg-canvas-200">
+      <p className="text-[0.7rem] font-semibold text-ink-900">Image → texte cherchable</p>
+      <div className="mx-auto h-1.5 w-40 overflow-hidden rounded-full bg-canvas-200">
         <div className="h-full w-[68%] rounded-full bg-brand-600" />
       </div>
-      <p className="text-[0.62rem] text-ink-500">Tableaux et styles conservés · 27 fichiers en lot</p>
+      <p className="text-[0.62rem] text-ink-500">Sur le poste · sans réseau · français et allemand</p>
     </div>
   );
 }
@@ -186,8 +174,8 @@ function EditBody() {
       </div>
       <div className="mt-3 rounded border border-brand-500 bg-brand-50/50 p-2 ring-2 ring-brand-500/20">
         <p className="text-[0.62rem] leading-snug text-ink-900">
-          La réunion des parents aura lieu le <mark className="rounded bg-brand-200/70 px-0.5 text-ink-900">jeudi 12 mars à 19h00</mark>
-          <span className="ml-0.5 inline-block h-3 w-px animate-pulse bg-brand-700 align-middle" aria-hidden /> à l'aula de l'établissement.
+          La réunion aura lieu le <mark className="rounded bg-brand-200/70 px-0.5 text-ink-900">jeudi 12 mars à 19h00</mark>
+          <span className="ml-0.5 inline-block h-3 w-px animate-pulse bg-brand-700 align-middle" aria-hidden /> à la salle communale.
         </p>
       </div>
       <div className="mt-3 space-y-2">
@@ -201,28 +189,21 @@ function EditBody() {
 
 /* ---------- Panneaux latéraux ---------- */
 
-function SignPanel() {
+function DossierPanel() {
   return (
     <>
-      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-ink-400">Signature électronique</p>
+      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-ink-400">Dossier de pièces</p>
       <ul className="mt-3 space-y-2.5">
-        {[
-          { name: "Greffe", role: "Dépôt", done: true },
-          { name: "Secrétariat", role: "Contrôle", done: true },
-          { name: "Syndic", role: "Signature", done: false },
-        ].map((s) => (
-          <li key={s.role} className="flex items-center gap-2">
-            <span className={cn("inline-flex size-5 shrink-0 items-center justify-center rounded-full", s.done ? "bg-success-50 text-success" : "border border-dashed border-line text-transparent")}>
+        {["Intercalaires", "Pièces numérotées", "Pagination continue", "Signet par pièce"].map((t) => (
+          <li key={t} className="flex items-center gap-2 text-[0.7rem] text-ink-900">
+            <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-success-50 text-success">
               <Check className="size-3" strokeWidth={3} aria-hidden />
             </span>
-            <span className="min-w-0">
-              <span className="block truncate text-[0.72rem] font-semibold text-ink-900">{s.name}</span>
-              <span className="block text-[0.62rem] text-ink-400">{s.role}</span>
-            </span>
+            {t}
           </li>
         ))}
       </ul>
-      <div className="mt-auto rounded-lg bg-canvas-100 p-2.5 text-[0.62rem] text-ink-500">Horodatage et certificat d'audit joints au document final.</div>
+      <div className="mt-auto rounded-lg bg-canvas-100 p-2.5 text-[0.62rem] text-ink-500">Le sommaire se refait quand une pièce est déplacée.</div>
     </>
   );
 }
@@ -233,47 +214,42 @@ function RedactPanel() {
       <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-ink-400">Caviardage</p>
       <label className="mt-3 flex items-center gap-2 rounded-lg border border-line px-2 py-1.5 text-[0.68rem] text-ink-500">
         <Search className="size-3" aria-hidden />
-        Motif : numéro AVS
+        Terme : nom du requérant
       </label>
       <ul className="mt-3 space-y-2">
-        {["000.0000.0000.00", "000.0000.0000.01", "000.0000.0000.02"].map((n) => (
+        {["page 2, ligne 4", "page 5, ligne 11", "page 9, ligne 2"].map((n) => (
           <li key={n} className="flex items-center gap-2 text-[0.7rem]">
             <span className="inline-flex size-4 items-center justify-center rounded bg-brand-700 text-white">
               <Check className="size-2.5" strokeWidth={3} aria-hidden />
             </span>
-            <span className="font-mono text-ink-900">{n}</span>
+            <span className="text-ink-900">{n}</span>
           </li>
         ))}
       </ul>
-      <span className="mt-auto inline-flex items-center justify-center rounded-lg bg-ink-900 px-3 py-2 text-[0.68rem] font-semibold text-white">Appliquer définitivement</span>
+      <span className="mt-auto inline-flex items-center justify-center rounded-lg bg-ink-900 px-3 py-2 text-[0.68rem] font-semibold text-white">Caviarder les 3 occurrences</span>
     </>
   );
 }
 
-function ConvertPanel() {
-  const items = [
-    { name: "Bulletins_9VP.docx", done: true },
-    { name: "Liste_classe.xlsx", done: true },
-    { name: "Programme_camp.pptx", done: false },
-  ];
+function OcrPanel() {
   return (
     <>
-      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-ink-400">Conversion par lots</p>
-      <ul className="mt-3 space-y-2.5">
-        {items.map((it) => (
-          <li key={it.name} className="flex items-center gap-2 text-[0.7rem]">
-            {it.done ? (
-              <span className="inline-flex size-5 items-center justify-center rounded-full bg-success-50 text-success">
-                <Check className="size-3" strokeWidth={3} aria-hidden />
-              </span>
-            ) : (
-              <Loader2 className="size-4 animate-spin text-brand-600" aria-hidden />
-            )}
-            <span className="truncate text-ink-900">{it.name}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-auto rounded-lg bg-canvas-100 p-2.5 text-[0.62rem] text-ink-500">Sortie PDF/A pour l'archivage, PDF/UA pour l'accessibilité.</div>
+      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-ink-400">Reconnaissance de texte</p>
+      <dl className="mt-3 space-y-2 text-[0.7rem]">
+        <div className="flex justify-between">
+          <dt className="text-ink-500">Langues</dt>
+          <dd className="font-semibold text-ink-900">Français, allemand</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-ink-500">Moteur</dt>
+          <dd className="font-semibold text-ink-900">Sur le poste</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-ink-500">Réseau</dt>
+          <dd className="font-semibold text-ink-900">Aucun</dd>
+        </div>
+      </dl>
+      <div className="mt-auto rounded-lg bg-canvas-100 p-2.5 text-[0.62rem] text-ink-500">Le texte reconnu repart dans le PDF exporté, invisible, sous l&rsquo;image.</div>
     </>
   );
 }
@@ -285,11 +261,7 @@ function EditPanel() {
       <dl className="mt-3 space-y-2 text-[0.7rem]">
         <div className="flex justify-between">
           <dt className="text-ink-500">Police</dt>
-          <dd className="font-semibold text-ink-900">Arial 11</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-ink-500">Interligne</dt>
-          <dd className="font-semibold text-ink-900">1.15</dd>
+          <dd className="font-semibold text-ink-900">Helvetica 11</dd>
         </div>
         <div className="flex justify-between">
           <dt className="text-ink-500">Couleur</dt>
@@ -305,7 +277,7 @@ function EditPanel() {
           </span>
         ))}
       </div>
-      <div className="mt-auto rounded-lg bg-canvas-100 p-2.5 text-[0.62rem] text-ink-500">Annuler / rétablir illimité, polices remplacées automatiquement.</div>
+      <div className="mt-auto rounded-lg bg-canvas-100 p-2.5 text-[0.62rem] text-ink-500">Annuler et rétablir sur 60 opérations. Police d&rsquo;origine absente : Helvetica ou Times.</div>
     </>
   );
 }

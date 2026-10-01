@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Check, Clock, Download, Mail, ShieldCheck, Table2 } from "lucide-react";
+import { BookOpen, Check, FileText, ScanText, ShieldCheck } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
@@ -48,49 +48,48 @@ export function Spotlight({
 }
 
 /* ---------- Visuels ---------- */
+/*
+ * Illustrations : aucune donnée réelle (le dépôt est public) et aucune
+ * promesse que le logiciel ne tienne pas. Chaque visuel montre un geste que
+ * le logiciel fait aujourd'hui.
+ */
 
-export function SignatureVisual() {
-  // Circuit d'illustration : aucun nom, aucune donnée réelle (dépôt public).
-  const events = [
-    { t: "08:12", e: "Préavis transmis au syndic", icon: Mail },
-    { t: "08:40", e: "Ouvert par le secrétariat", icon: Clock },
-    { t: "09:03", e: "Signé · empreinte horodatée", icon: Check },
-    { t: "09:04", e: "Certificat d'audit généré", icon: ShieldCheck },
+export function DossierVisual() {
+  const pieces = [
+    { n: 1, titre: "Rapport de la Municipalité", pages: "p. 3 – 9" },
+    { n: 2, titre: "Annexe technique", pages: "p. 11 – 24" },
+    { n: 3, titre: "Plan de situation", pages: "p. 26 – 27" },
+    { n: 4, titre: "Tableau financier", pages: "p. 29 – 33" },
   ];
   return (
     <div className="card relative p-6 sm:p-8">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">Camp de ski 8P · autorisations</p>
-          <p className="mt-1 font-display text-2xl font-semibold text-ink-900">42 / 48 signées</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">Préavis · dossier de pièces</p>
+          <p className="mt-1 font-display text-2xl font-semibold text-ink-900">Sommaire</p>
         </div>
-        <span className="rounded-full bg-success-50 px-3 py-1 text-xs font-semibold text-success">88 %</span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+          <BookOpen className="size-3.5" aria-hidden />1 signet par pièce
+        </span>
       </div>
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-canvas-200">
-        <div className="h-full w-[88%] rounded-full bg-brand-600" />
-      </div>
-      <ol className="mt-6 space-y-3">
-        {events.map((ev) => (
-          <li key={ev.t} className="flex items-center gap-3 text-sm">
-            <span className="w-11 shrink-0 tabular-nums text-ink-400">{ev.t}</span>
-            <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700">
-              <ev.icon className="size-3.5" aria-hidden />
-            </span>
-            <span className="text-ink-700">{ev.e}</span>
+      <ol className="mt-5 divide-y divide-line/70">
+        {pieces.map((p) => (
+          <li key={p.n} className="flex items-center gap-4 py-3 text-sm">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-50 font-display font-semibold text-brand-700">{p.n}</span>
+            <span className="flex-1 text-ink-900">{p.titre}</span>
+            <span className="tabular-nums text-ink-400">{p.pages}</span>
           </li>
         ))}
       </ol>
-      <div className="mt-6 flex items-center justify-between rounded-xl bg-canvas-100 px-4 py-3 text-xs text-ink-500">
-        <span>Rappel automatique aux 6 parents restants</span>
-        <span className="font-semibold text-ink-900">demain 08:00</span>
+      <div className="mt-5 flex items-center justify-between rounded-xl bg-canvas-100 px-4 py-3 text-xs text-ink-500">
+        <span>« Pièce n° 3 » posée sur chacune de ses pages</span>
+        <span className="font-semibold text-ink-900">pagination continue</span>
       </div>
     </div>
   );
 }
 
 export function RedactVisual() {
-  // Données d'illustration entièrement fictives : le dépôt est public, et rien
-  // ici ne doit ressembler à une personne réelle.
   const lines = [
     "Opposant·e n° 3 — dossier d'enquête",
     "N° AVS 000.0000.0000.00",
@@ -105,7 +104,6 @@ export function RedactVisual() {
           <div className="mt-3 space-y-2.5 rounded-md bg-canvas-50 p-4 text-[0.8rem] leading-relaxed">
             <p className="font-semibold text-ink-900">Transmission au service externe</p>
             {lines.map((l, i) => {
-              const sensitive = i !== 0 || k === 0;
               if (k === 0)
                 return (
                   <p key={l} className={cn(i > 0 && "rounded bg-accent-100 px-1 text-accent-600 ring-1 ring-accent-200")}>
@@ -115,15 +113,15 @@ export function RedactVisual() {
               return (
                 <p key={l} className="flex items-center gap-1 text-ink-700">
                   {i === 0 ? <span>Opposant·e n° 3 — dossier d&rsquo;enquête</span> : <span className={cn("inline-block h-3 rounded-sm bg-ink-900", i === 1 ? "w-36" : i === 2 ? "w-44" : "w-40")} aria-label="caviardé" />}
-                  {sensitive && i > 0 && <span className="sr-only">caviardé</span>}
+                  {i > 0 && <span className="sr-only">caviardé</span>}
                 </p>
               );
             })}
           </div>
           {k === 1 && (
-            <p className="mt-3 flex items-center gap-2 text-xs text-success">
-              <ShieldCheck className="size-3.5" aria-hidden />
-              Contenu réellement supprimé du fichier, métadonnées nettoyées.
+            <p className="mt-3 flex items-start gap-2 text-xs text-ink-500">
+              <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-brand-600" aria-hidden />
+              Lettres retirées du flux de la page. Métadonnées et commentaires : à nettoyer à part, puis relire le fichier.
             </p>
           )}
         </div>
@@ -132,49 +130,33 @@ export function RedactVisual() {
   );
 }
 
-export function FormsVisual() {
-  // Réponses d'illustration : des services, pas des personnes.
-  const rows = [
-    { name: "Greffe municipal", cls: "Préavis 12", ok: true, allergy: "—" },
-    { name: "Bourse communale", cls: "Préavis 12", ok: true, allergy: "Annexe financière" },
-    { name: "Urbanisme", cls: "Préavis 12", ok: false, allergy: "—" },
-  ];
+export function OcrVisual() {
   return (
-    <div className="card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-line px-5 py-3">
-        <p className="text-sm font-semibold text-ink-900">Réponses · Consultation des services</p>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-canvas-100 px-2.5 py-1 text-xs font-semibold text-ink-700">
-          <Download className="size-3" aria-hidden />
-          Exporter
-        </span>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="card p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">Scan : une image</p>
+        <div className="mt-3 flex h-40 flex-col justify-center gap-2 rounded-md bg-canvas-200 p-4" aria-hidden>
+          {["92%", "78%", "86%", "64%", "90%", "58%"].map((w, i) => (
+            <span key={i} className="block h-2 rounded-full bg-ink-500/40" style={{ width: w }} />
+          ))}
+        </div>
+        <p className="mt-3 flex items-center gap-2 text-xs text-ink-500">
+          <FileText className="size-3.5" aria-hidden />
+          Impossible à chercher
+        </p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-[0.65rem] uppercase tracking-[0.14em] text-ink-400">
-              <th className="px-5 py-2.5 font-semibold">Service</th>
-              <th className="px-3 py-2.5 font-semibold">Objet</th>
-              <th className="px-3 py-2.5 font-semibold">Retour</th>
-              <th className="px-5 py-2.5 font-semibold">Annexe</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.name} className="border-t border-line/70">
-                <td className="px-5 py-2.5 font-medium text-ink-900">{r.name}</td>
-                <td className="px-3 py-2.5 text-ink-700">{r.cls}</td>
-                <td className="px-3 py-2.5">
-                  {r.ok ? <span className="rounded-full bg-success-50 px-2 py-0.5 text-xs font-semibold text-success">Oui</span> : <span className="rounded-full bg-canvas-200 px-2 py-0.5 text-xs font-semibold text-ink-500">En attente</span>}
-                </td>
-                <td className="px-5 py-2.5 text-ink-700">{r.allergy}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center gap-2 border-t border-line bg-canvas-50 px-5 py-3 text-xs text-ink-500">
-        <Table2 className="size-3.5" aria-hidden />
-        46 réponses reçues · champs détectés automatiquement dans le formulaire PDF
+      <div className="card p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">Après reconnaissance</p>
+        <div className="mt-3 flex h-40 flex-col justify-center gap-1.5 rounded-md bg-canvas-50 p-4 text-[0.75rem] leading-snug text-ink-700">
+          <p>Extrait du registre du Conseil communal,</p>
+          <p>séance du <mark className="rounded bg-accent-100 px-0.5 text-ink-900">12 mars</mark>. Le Conseil décide :</p>
+          <p>1. d&rsquo;adopter le préavis n° 12 ;</p>
+          <p>2. d&rsquo;autoriser la Municipalité à…</p>
+        </div>
+        <p className="mt-3 flex items-center gap-2 text-xs text-ink-500">
+          <ScanText className="size-3.5 text-brand-600" aria-hidden />
+          Texte cherchable, sur le poste, sans réseau
+        </p>
       </div>
     </div>
   );

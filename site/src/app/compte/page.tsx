@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { createHash } from "node:crypto";
-import { ArrowRight, Building2, CalendarDays, Check, CreditCard, Download, Globe, KeyRound } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, Check, CreditCard, Download } from "lucide-react";
 import { BarChart, BarList } from "@/components/charts/bar-chart";
 import { Notice, Panel } from "@/components/account/space-shell";
 import { SubscriptionBadge } from "@/components/account/subscription-badge";
@@ -13,12 +12,6 @@ import { formatCHF, formatDate, formatDateShort, intervalSuffix } from "@/lib/fo
 import { orgUserIds } from "@/lib/org";
 import { listUserInvoices, planPrice } from "@/lib/subscriptions";
 import { getUsageSummary } from "@/lib/usage";
-
-/** Clé de licence lisible, dérivée de l'identifiant du compte titulaire (stable, sans état supplémentaire). */
-function licenceKey(ownerId: string) {
-  const hex = createHash("sha256").update(`blonay-pdf:${ownerId}`).digest("hex").toUpperCase();
-  return `BPDF-${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
-}
 
 export default async function CompteDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser("/compte");
@@ -33,7 +26,7 @@ export default async function CompteDashboardPage({ searchParams }: { searchPara
             <div>
               <SubscriptionBadge subscription={null} />
               <h2 className="mt-4 font-display text-[1.9rem] font-semibold text-ink-900">Vous n'avez pas encore de formule.</h2>
-              <p className="mt-2 max-w-lg text-[15px] text-ink-500">Choisissez la formule Enseignant·e ou Établissement pour activer votre licence et utiliser {site.name} dans le navigateur, sur Windows et sur macOS. Si votre établissement est déjà équipé, demandez au secrétariat de vous inviter avec cette adresse : {user.email}.</p>
+              <p className="mt-2 max-w-lg text-[15px] text-ink-500">Choisissez une formule pour disposer d'une licence de {site.name} sur Windows et sur macOS. Si votre établissement est déjà équipé, demandez au secrétariat de vous inviter avec cette adresse : {user.email}.</p>
             </div>
             <ButtonLink href="/tarifs">
               Choisir une formule
@@ -47,7 +40,6 @@ export default async function CompteDashboardPage({ searchParams }: { searchPara
   }
 
   const subscription = access.subscription;
-  const ownerId = access.kind === "member" ? access.owner.id : user.id;
   const establishment = isEstablishmentOwner(access);
   const usage = await getUsageSummary(establishment ? await orgUserIds(user.id) : [user.id]);
   const price = planPrice(subscription.plan, subscription.interval);
@@ -157,27 +149,15 @@ export default async function CompteDashboardPage({ searchParams }: { searchPara
       </div>
 
       {/* ---------- Licence ---------- */}
-      <Panel title="Votre licence et vos applications">
+      <Panel title="Vos applications">
         <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p className="text-sm text-ink-500">
-              {establishment
-                ? "Clé de licence de l'établissement, à transmettre à vos collaborateur·trice·s ou à saisir dans la console de déploiement."
-                : access.kind === "member"
-                  ? "Clé de licence de votre établissement, à saisir au premier lancement de l'application de bureau."
-                  : "Clé de licence, à saisir au premier lancement de l'application de bureau. Elle couvre tous vos appareils."}
-            </p>
-            <p className="mt-3 inline-flex items-center gap-3 rounded-xl border border-line bg-canvas-50 px-4 py-3 font-mono text-[15px] font-semibold tracking-wider text-ink-900">
-              <KeyRound className="size-4 text-brand-600" aria-hidden />
-              {licenceKey(ownerId)}
+              Téléchargez l&rsquo;application, décompressez-la, double-cliquez : elle n&rsquo;a pas de clé à saisir. Les mises à jour se font en remplaçant le dossier.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href={site.downloads.web} size="sm">
-              <Globe className="size-4" aria-hidden />
-              Ouvrir l'éditeur web
-            </ButtonLink>
-            <ButtonLink href={site.downloads.windows} variant="secondary" size="sm">
+            <ButtonLink href={site.downloads.windows} size="sm">
               <Download className="size-4" aria-hidden />
               Windows
             </ButtonLink>

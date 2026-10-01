@@ -27,7 +27,7 @@ export default async function DemoPage() {
           <ul className="mt-8 grid gap-4 text-sm text-ink-700 sm:grid-cols-3">
             {[
               { icon: Lock, text: "Traitement local : rien ne quitte votre appareil" },
-              { icon: MonitorSmartphone, text: "Fonctionne sur ordinateur et tablette" },
+              { icon: MonitorSmartphone, text: "Fonctionne dans le navigateur d'un ordinateur" },
               { icon: Sparkles, text: "Un document d'exemple est fourni" },
             ].map((h) => (
               <li key={h.text} className="flex items-center gap-2.5">
@@ -56,9 +56,9 @@ export default async function DemoPage() {
         <div className="band-brand grid gap-8 rounded-[1.75rem] p-8 text-white sm:p-12 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p className="eyebrow text-accent-400">Et dans la version complète</p>
-            <h2 className="mt-3 font-display text-[2rem] font-semibold leading-tight">Signature, OCR, caviardage, conversion, formulaires…</h2>
+            <h2 className="mt-3 font-display text-[2rem] font-semibold leading-tight">Dossier de pièces, OCR, caviardage, formulaires, commentaires…</h2>
             <p className="mt-3 max-w-xl text-[15px] text-white/75">
-              La démo montre les opérations réalisables hors ligne. Les douze outils, l'espace documentaire de l'établissement et la connexion cantonale sont dans les formules.
+              La démo montre cinq opérations réalisables dans le navigateur. Le logiciel complet en compte vingt-six, et se télécharge sans compte pour être essayé sur vos propres documents.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
@@ -66,7 +66,7 @@ export default async function DemoPage() {
               Voir les formules
             </ButtonLink>
             <ButtonLink href="/fonctionnalites" variant="outlineLight">
-              Les douze outils
+              Les vingt-six outils
             </ButtonLink>
           </div>
         </div>

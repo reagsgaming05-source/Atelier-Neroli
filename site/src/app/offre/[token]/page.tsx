@@ -36,8 +36,8 @@ export default async function OffreLienPage({ params }: { params: Promise<{ toke
         <LogoMark className="mx-auto size-12" />
         <h1 className="mt-6 font-display text-3xl font-semibold text-ink-900">Votre demande est arrivée</h1>
         <p className="mt-4 text-ink-500">
-          Nous préparons l&rsquo;offre {quote.number} pour {quote.orgName}. Vous la recevrez par courriel à{" "}
-          {quote.contactEmail}, sous deux jours ouvrables, et ce lien l&rsquo;affichera.
+          Nous préparons l&rsquo;offre {quote.number} pour {quote.orgName}. Elle sera adressée à{" "}
+          {quote.contactEmail}, et ce lien l&rsquo;affichera.
         </p>
       </section>
     );

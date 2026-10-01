@@ -45,7 +45,7 @@ Date d'expiration future et CVC à 3 chiffres quelconques.
 - Accueil : les trois publics, aperçu de l'éditeur à scénarios, comparatif face à Acrobat, parcours d'achat
 - **Une page par public** : `/communes`, `/ecoles`, `/etat` — mêmes outils, mais leur vocabulaire, leurs exemples et leur acheteur (`src/content/segments.ts`)
 - **Démo interactive** (`/demo`) : fusion, réorganisation, extraction, filigrane et numérotation de vrais PDF, entièrement dans le navigateur (pdf-lib + pdf.js), sans envoi de fichier
-- Fonctionnalités (12 outils), Tarifs avec calculateur d'économies et comparatif, Sécurité et hébergement, Contact
+- Fonctionnalités (26 outils, avec ce que chacun ne fait pas), Tarifs avec calculateur d'économies et comparatif, Sécurité et confidentialité, Télécharger, Contact
 - Mentions légales, conditions générales d'abonnement, politique de confidentialité
 
 **Le parcours d'achat public** — c'est le cœur commercial
@@ -68,7 +68,7 @@ Une offre non chiffrée n'est pas consultable ; une offre échue ne peut plus ê
 
 **Espace client** (`/compte`)
 
-- Tableau de bord : statistiques d'usage (documents, pages, signatures, OCR), graphique sur six mois, outils les plus utilisés, clé de licence et liens de téléchargement (web, Windows, macOS)
+- Tableau de bord : statistiques d'usage (documents, pages, signatures, OCR), graphique sur six mois, outils les plus utilisés et liens de téléchargement (Windows, macOS)
 - **Équipe** (licence Établissement) : invitation des collaborateur·trice·s par e-mail, rôles, retrait. Une personne invitée obtient l'accès dès la création de son compte et voit « Licence fournie par votre établissement »
 - Gestion de la formule, factures (imprimables / export PDF via le navigateur), profil et mot de passe
 - Les opérations réalisées dans la démo par une personne connectée alimentent ses statistiques
@@ -82,7 +82,8 @@ Une offre non chiffrée n'est pas consultable ; une offre échue ne peut plus ê
 
 | Quoi | Où |
 | --- | --- |
-| Coordonnées, textes, fonctionnalités, FAQ, témoignages, liens de téléchargement | `src/content/site.ts` |
+| Textes, fonctionnalités, FAQ, comparatif, liens de téléchargement | `src/content/site.ts` |
+| Qui vend : raison sociale, adresse, courriel, IDE, TVA, IBAN | variables `EDITEUR_*` (voir `.env.example`) ; `src/content/editeur.ts` les lit |
 | Les trois publics : titres, exemples, arguments, FAQ | `src/content/segments.ts` |
 | IBAN, IDE, TVA, délai de paiement, conditions de l'offre | `src/content/facturation.ts` |
 | Formules et prix | `src/content/plans.ts` (appliqué au prochain `npm run dev`) |
@@ -90,7 +91,7 @@ Une offre non chiffrée n'est pas consultable ; une offre échue ne peut plus ê
 | Polices (auto-hébergées : Bricolage Grotesque, Manrope) | `src/fonts/` et `src/app/fonts.ts` |
 | Aperçu de l'éditeur sur l'accueil | `src/components/app-mock.tsx` |
 
-Les coordonnées (adresse, téléphone, e-mail, IDE), les témoignages, les garanties de sécurité (certifications, taux de disponibilité) et les liens de téléchargement sont des **valeurs provisoires** à vérifier ou remplacer.
+Le dépôt est public : **aucune identité de vendeur n'y figure**. Raison sociale, adresse, courriel, IDE, numéro de TVA et IBAN viennent de variables d'environnement `EDITEUR_*`. Tant qu'elles manquent, le site n'affiche que ce qui existe et **refuse d'émettre une offre ou une facture** (`exigerIdentiteFacturation`). Une phrase du site ne s'écrit que si elle se vérifie dans le logiciel livré ; `npm test` (`test/affirmations.test.ts`) garde la liste des formulations qui ne doivent pas revenir.
 
 ## Commandes
 
@@ -127,12 +128,12 @@ Le type se déduit de l'IBAN : la banque rejette le mélange, et le code le refu
 
 ## Montrer le site sans hébergeur (vitrine figée)
 
-`npm run vitrine` fige le site public dans `site/vitrine/` : douze pages
+`npm run vitrine` fige le site public dans `site/vitrine/` : treize pages
 autonomes, CSS intégré, polices en base64, liens internes réécrits en fichiers
 voisins. Aucun serveur, aucun script, aucune requête sortante — le dossier
 s'ouvre par un double-clic, se met sur une clé USB ou se publie tel quel.
 
-Il produit en plus **`Blonay-PDF-site.html`** : les douze pages réunies en un
+Il produit en plus **`Blonay-PDF-site.html`** : les treize pages réunies en un
 seul fichier de 568 Ko, navigation comprise. Un seul fichier à envoyer par
 courriel ou à ouvrir sur un téléphone, là où le dossier complet demande de
 garder les fichiers ensemble.
@@ -141,8 +142,8 @@ Le dépôt le publie sur **GitHub Pages** à chaque modification de `site/vitrin
 (`.github/workflows/pages.yml`), à une adresse que n'importe qui peut ouvrir sans
 compte. À activer une fois : *Settings → Pages → Source : « GitHub Actions »*.
 
-Un `robots.txt` y interdit l'indexation : les prix, l'IBAN et les témoignages sont
-encore provisoires, et cette copie n'a pas à sortir dans les moteurs de recherche.
+Un `robots.txt` y interdit l'indexation : les prix ne sont pas arrêtés et l'éditeur n'est
+pas encore identifié, donc cette copie n'a pas à sortir dans les moteurs de recherche.
 À retirer le jour où le vrai site est en ligne.
 
 C'est la vitrine, pas l'application : les formulaires s'affichent sans rien
@@ -200,17 +201,15 @@ domaine. Les pages `/offre/…`, `/compte/…` et `/admin/…` sont déjà marqu
 « ne pas indexer » et « ne pas mettre en cache » par `vercel.json` : un devis
 nominatif n'a rien à faire dans un moteur de recherche.
 
-## À vérifier avant de vendre
+## À régler avant de vendre
 
 Rien de ce qui suit n'empêche le site de fonctionner, et tout doit être réglé avant la première offre envoyée à une vraie commune.
 
-1. **L'IBAN, l'IDE et la TVA** (`src/content/facturation.ts`). L'IBAN livré est l'exemple publié de la norme ISO 13616 : syntaxiquement valide, mais il ne mène à aucun compte. Une facture envoyée avec celui-là ne sera jamais payée. Faites aussi contrôler **une vraie référence** par votre banque avant le premier envoi.
+1. **L'identité du vendeur** : renseignez les variables `EDITEUR_NOM`, `EDITEUR_RUE`, `EDITEUR_NUMERO`, `EDITEUR_NPA`, `EDITEUR_LOCALITE`, `EDITEUR_IDE` et `EDITEUR_IBAN` (plus `EDITEUR_EMAIL`, `EDITEUR_TELEPHONE`, `EDITEUR_TVA` s'il y a lieu) dans l'environnement de l'hébergeur — jamais dans le dépôt. Sans elles, aucune offre ni facture ne s'émet. Faites aussi contrôler **une vraie référence** de QR-facture par votre banque avant le premier envoi.
 2. **Les prix** (`src/content/plans.ts`). Valeurs de départ défendables, pas des prix arrêtés.
-3. **Les seuils de marchés publics.** Le site affirme que le montant reste « dans la plupart des cantons sous le seuil du gré à gré ». C'est vrai aujourd'hui pour des montants de cet ordre, mais les seuils se révisent et changent d'un canton à l'autre : à faire confirmer, ou à reformuler plus prudemment (`src/content/segments.ts`).
-4. **Les témoignages** (`src/content/site.ts`) sont des exemples marqués « à recueillir ». Ne publiez pas de faux avis.
-5. **Les coordonnées** : adresse, téléphone, courriels.
-6. **L'envoi des courriels.** Aujourd'hui, l'offre chiffrée ne part pas toute seule : l'administration copie le lien depuis `/admin/offres` et l'envoie à la main. C'est utilisable tel quel, et c'est la première chose à automatiser.
-7. **Le paiement par carte** : remplacer `chargeCard` dans `src/lib/payments.ts` par un prestataire (Stripe, Datatrans, Payrexx…) en conservant la signature. Les renouvellements devront alors passer par une tâche planifiée ou les webhooks du prestataire. Le chemin sur facture, lui, ne dépend d'aucun prestataire.
-8. **Licence** : la clé affichée dans l'espace client est dérivée de l'identifiant du compte (`src/app/compte/page.tsx`) ; la faire vérifier par l'application de bureau.
-9. **Hébergement** : voir « Mettre en ligne sur Vercel » ci-dessus. La base Turso gratuite suffit largement à quelques centaines de clients.
-10. **Juridique** : faire relire les CGV et la politique de confidentialité.
+3. **Les seuils de marchés publics.** Le site affirme que le montant reste « dans la plupart des cantons sous le seuil du gré à gré ». Les seuils se révisent et changent d'un canton à l'autre : à faire confirmer (`src/content/segments.ts`).
+4. **Les témoignages** n'existent plus sur le site : n'en publiez qu'avec l'accord écrit d'un vrai client.
+5. **L'envoi des courriels.** Aujourd'hui, l'offre chiffrée ne part pas toute seule : l'administration copie le lien depuis `/admin/offres` et l'envoie à la main. Tant que le courriel n'est pas branché, le site ne promet aucun délai de réponse.
+6. **Le paiement par carte** : voir `src/lib/payments.ts`. Le chemin sur facture ne dépend d'aucun prestataire.
+7. **Hébergement** : voir « Mettre en ligne sur Vercel » ci-dessus. La base Turso gratuite suffit largement à quelques centaines de clients.
+8. **Juridique** : faire relire les CGV, la politique de confidentialité et le modèle de licence (`outils/desktop/build/LICENCE.txt`) par un juriste.

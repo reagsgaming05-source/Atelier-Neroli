@@ -8,7 +8,7 @@ import { formatCHF } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Fonctionnalités",
-  description: "Éditer, organiser, fusionner, convertir, compresser, signer, protéger, caviarder, annoter et comparer vos PDF : les douze outils de Blonay PDF.",
+  description: "Constituer un dossier de pièces, réorganiser, fusionner, corriger, annoter, reconnaître le texte, caviarder, protéger : les vingt-six outils de Blonay PDF, et ce qu'ils ne font pas.",
 };
 
 export default function FonctionnalitesPage() {
@@ -19,7 +19,7 @@ export default function FonctionnalitesPage() {
           <p className="eyebrow">Fonctionnalités</p>
           <h1 className="mt-4 max-w-3xl font-display text-[2.75rem] font-bold leading-[1.02] tracking-tight text-ink-900 sm:text-[3.5rem]">Tout ce qu'un PDF peut demander.</h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">
-            Douze outils dans une seule interface, disponibles dans le navigateur et dans l'application de bureau, pour le secrétariat comme pour la salle des maîtres. Tous les outils sont inclus dans chaque formule.
+            Vingt-six outils dans une seule interface, dans l'application de bureau Windows et macOS, pour le secrétariat comme pour la direction. Tous les outils sont inclus dans chaque formule. Chaque fonction ci-dessous dit aussi ce qu'elle ne fait pas.
           </p>
         </div>
       </section>
@@ -66,7 +66,7 @@ export default function FonctionnalitesPage() {
           <div className="band-brand rounded-[1.5rem] p-8 text-white shadow-soft">
             <p className="eyebrow text-accent-400">Formules</p>
             <h2 className="mt-3 font-display text-[1.75rem] font-semibold leading-tight">Tous les outils dès {formatCHF(490)} par mois.</h2>
-            <p className="mt-4 text-[15px] leading-relaxed text-white/75">Pour une personne. Une licence Établissement à {formatCHF(14900)} par mois couvre tous les collaborateur·trice·s, sans plafond.</p>
+            <p className="mt-4 text-[15px] leading-relaxed text-white/75">Pour une personne. La formule Administration à {formatCHF(19900)} par mois couvre tous les collaborateur·trice·s de l'entité, sans plafond.</p>
             <ButtonLink href="/tarifs" variant="light" className="mt-8 w-full">
               Comparer les formules
             </ButtonLink>
@@ -75,9 +75,10 @@ export default function FonctionnalitesPage() {
             <p className="font-semibold text-ink-900">Bon à savoir</p>
             <ul className="mt-3 space-y-2.5 text-ink-500">
               <li>Disponible sur {site.platforms.join(", ")}.</li>
-              <li>Fichiers traités en Suisse, supprimés après 24 h.</li>
-              <li>Compatible avec les annotations et formulaires Acrobat.</li>
-              <li>Export PDF/UA pour les documents accessibles.</li>
+              <li>Documents traités sur le poste, sans connexion.</li>
+              <li>Annotations enregistrées comme commentaires PDF standard.</li>
+              <li>Formulaires PDF standard (AcroForm) ; pas de XFA.</li>
+              <li>Pas de PDF/A, pas de signature qualifiée, pas de conversion Word.</li>
               <li>{site.vatNote}</li>
             </ul>
           </div>

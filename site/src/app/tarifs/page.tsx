@@ -14,16 +14,16 @@ import { listActivePlans } from "@/lib/subscriptions";
 
 export const metadata: Metadata = {
   title: "Tarifs",
-  description: "Formules Blonay PDF pour les enseignant·e·s, les établissements scolaires et le canton de Vaud. Mensuel ou annuel, sans engagement, facturation sur bon de commande.",
+  description: "Formules Blonay PDF pour une personne, un secrétariat, une administration ou plusieurs entités. Mensuel ou annuel, sans engagement, facturation sur bon de commande.",
 };
 
 const included = [
-  "Les 12 outils, sans option payante",
-  "Application web, Windows et macOS avec la même licence",
-  "Données hébergées en Suisse, conformité LPD et LPrD",
+  "Les 26 outils, sans option payante",
+  "Windows et macOS avec la même licence",
+  "Documents traités sur le poste, sans connexion",
   "Mises à jour incluses pendant toute la durée de l'abonnement",
   "Résiliation à tout moment, effective à la fin de la période réglée",
-  "Support en français, aux horaires scolaires",
+  "Support en français",
 ];
 
 export default async function TarifsPage() {
@@ -38,7 +38,7 @@ export default async function TarifsPage() {
           <p className="eyebrow">Tarifs</p>
           <h1 className="mx-auto mt-4 max-w-3xl font-display text-[2.75rem] font-bold leading-[1.02] tracking-tight text-ink-900 sm:text-[3.5rem]">Un prix public, sans engagement.</h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">
-            Une formule pour une personne, une licence par établissement, ou un déploiement cantonal sur devis. L'abonnement annuel équivaut à deux mois offerts ; les établissements règlent sur bon de commande.
+            Une formule pour une personne, une licence par entité, ou un déploiement sur plusieurs entités sur devis. L'abonnement annuel équivaut à deux mois offerts ; les établissements règlent sur bon de commande.
           </p>
         </div>
       </section>
@@ -50,7 +50,7 @@ export default async function TarifsPage() {
 
       <section className="container-x pb-20 lg:pb-28">
         <Reveal>
-          <SectionHeading eyebrow="Calculateur" title="Combien économise votre établissement ?" text="Comparez le coût de licences individuelles avec une licence Établissement, qui couvre tout le personnel sans plafond." />
+          <SectionHeading eyebrow="Calculateur" title="Combien économise votre entité ?" text="Comparez le coût de vos licences actuelles avec la formule Administration, qui couvre tout le personnel sans plafond. Saisissez le prix que vous payez réellement aujourd'hui." />
         </Reveal>
         <Reveal delay={100} className="mt-10">
           <RoiCalculator />
@@ -60,7 +60,7 @@ export default async function TarifsPage() {
       <section className="bg-canvas-100">
         <div className="container-x py-20 lg:py-28">
           <Reveal>
-            <SectionHeading eyebrow="Comparatif" title="Face à Acrobat et aux outils gratuits." text="Ce qui change pour un établissement public : l'hébergement, la conformité, le modèle de licence et le support." />
+            <SectionHeading eyebrow="Comparatif" title="Face à Acrobat et aux outils gratuits." text="Ce qui change pour une administration publique : où passent les documents, le modèle de licence, l'installation. Et ce que le logiciel ne fait pas." />
           </Reveal>
           <Reveal delay={100} className="mt-12">
             <ComparisonTable />
@@ -70,7 +70,7 @@ export default async function TarifsPage() {
 
       <section>
         <div className="container-x grid gap-12 py-20 lg:grid-cols-2 lg:gap-20">
-          <SectionHeading eyebrow="Dans toutes les formules" title="Ce qui est toujours inclus." text="Enseignant·e ou établissement, le même éditeur complet, sur toutes les plateformes, avec les mises à jour comprises." />
+          <SectionHeading eyebrow="Dans toutes les formules" title="Ce qui est toujours inclus." text="Une personne ou une administration entière, le même logiciel complet, sur Windows et macOS, avec les mises à jour comprises." />
           <ul className="grid gap-4 sm:grid-cols-2">
             {included.map((item) => (
               <li key={item} className="flex items-start gap-3 rounded-2xl bg-white p-5 text-[15px] text-ink-700 shadow-card">
@@ -91,15 +91,17 @@ export default async function TarifsPage() {
 
       <section className="container-x pb-20 lg:pb-28">
         <div className="band-brand rounded-[1.75rem] p-10 text-center text-white shadow-soft sm:p-16">
-          <h2 className="mx-auto max-w-2xl font-display text-[2.25rem] font-semibold leading-tight sm:text-[2.75rem]">Plusieurs établissements, ou tout le canton ?</h2>
-          <p className="mx-auto mt-5 max-w-xl text-[17px] text-white/75">Tarif dégressif, déploiement centralisé par la DGEO ou la DGEP, formation des secrétariats et fiche technique pour les marchés publics.</p>
+          <h2 className="mx-auto max-w-2xl font-display text-[2.25rem] font-semibold leading-tight sm:text-[2.75rem]">Plusieurs entités, ou tout un service ?</h2>
+          <p className="mx-auto mt-5 max-w-xl text-[17px] text-white/75">Tarif dégressif au nombre d&rsquo;entités, sous un seul contrat et une seule facture annuelle.</p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/contact?sujet=Offre%20cantonale" variant="light">
+            <ButtonLink href="/offre?formule=collectivite" variant="light">
               Demander une offre
             </ButtonLink>
-            <ButtonLink href={`mailto:${site.email}`} variant="outlineLight">
-              {site.email}
-            </ButtonLink>
+            {site.email ? (
+              <ButtonLink href={`mailto:${site.email}`} variant="outlineLight">
+                {site.email}
+              </ButtonLink>
+            ) : null}
           </div>
         </div>
       </section>

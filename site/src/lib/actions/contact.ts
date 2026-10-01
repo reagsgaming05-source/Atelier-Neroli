@@ -42,5 +42,5 @@ export async function contactAction(_prev: ActionState, formData: FormData): Pro
     message: parsed.data.message,
   });
 
-  return { success: "Merci, votre message a bien été envoyé. Nous vous répondons sous 24 h ouvrées." };
+  return { success: "Merci, votre message est enregistré. Nous vous répondrons à l'adresse indiquée." };
 }

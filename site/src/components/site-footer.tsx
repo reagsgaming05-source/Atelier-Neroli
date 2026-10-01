@@ -60,22 +60,29 @@ export function SiteFooter() {
         <div>
           <p className="eyebrow">Entreprise</p>
           <address className="mt-4 space-y-2.5 text-[15px] not-italic text-ink-700">
+            {site.adresseConnue ? (
+              <p>
+                {site.legalName}
+                <br />
+                {site.address.street}
+                <br />
+                {site.address.zip} {site.address.city}
+                {site.address.canton ? `, ${site.address.canton}` : ""}
+              </p>
+            ) : (
+              <p className="text-ink-500">Éditeur en cours d&rsquo;identification : voir les mentions légales.</p>
+            )}
+            {site.email ? (
+              <p>
+                <a href={`mailto:${site.email}`} className="transition hover:text-brand-700">
+                  {site.email}
+                </a>
+              </p>
+            ) : null}
             <p>
-              {site.legalName}
-              <br />
-              {site.address.street}
-              <br />
-              {site.address.zip} {site.address.city}, {site.address.canton}
-            </p>
-            <p>
-              <a href={`mailto:${site.email}`} className="transition hover:text-brand-700">
-                {site.email}
-              </a>
-            </p>
-            <p>
-              <a href={site.linkedin} target="_blank" rel="noreferrer" className="transition hover:text-brand-700">
-                LinkedIn
-              </a>
+              <Link href="/contact" className="transition hover:text-brand-700">
+                Formulaire de contact
+              </Link>
             </p>
           </address>
         </div>
@@ -84,7 +91,7 @@ export function SiteFooter() {
       <div className="border-t border-line">
         <div className="container-x flex flex-col gap-3 py-6 text-xs text-ink-500 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {new Date().getFullYear()} {site.legalName} · {site.address.city}, Suisse
+            © {new Date().getFullYear()} {site.legalName}{site.adresseConnue ? ` · ${site.address.city}, Suisse` : ""}
           </p>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {legal.map((item) => (

@@ -4,6 +4,11 @@
   const APP_VERSION = '2.0.0';
   // Renseigné par build.js : date de construction et commit.
   const APP_CONSTRUCTION = '__CONSTRUCTION__';
+  // Vrai dans la version hébergée, qui charge ses composants depuis un CDN ;
+  // build.js le passe à faux (et vide les adresses) dans tout ce qui est livré
+  // aux postes : là, rien ne se charge de l'extérieur, et les messages d'erreur
+  // ne doivent pas renvoyer l'utilisateur vers une connexion qu'on n'utilise pas.
+  const EN_LIGNE = true;
   const CDN = {
     pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
     worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
@@ -71,7 +76,9 @@
       started();
     } catch (e) {
       console.error(e);
-      msg.textContent = 'Les composants PDF n\'ont pas pu être chargés. Vérifiez votre connexion internet, puis réessayez.';
+      msg.textContent = EN_LIGNE
+        ? 'Les composants PDF n\'ont pas pu être chargés. Vérifiez votre connexion internet, puis réessayez.'
+        : 'Cette copie du logiciel est incomplète : les composants PDF sont absents. Retéléchargez-la depuis l\'adresse où vous l\'avez obtenue.';
       retry.hidden = false;
       retry.onclick = boot;
     }

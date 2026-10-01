@@ -1,38 +1,42 @@
 /**
- * Contenu éditorial du site Blonay PDF. Tout ce qui est propre au produit et à l'entreprise se règle ici.
- * ⚠️ Coordonnées, témoignages et liens de téléchargement sont des valeurs provisoires à remplacer.
+ * Contenu éditorial du site Blonay PDF.
+ *
+ * Règle de rédaction : une phrase n'entre ici que si elle se vérifie dans le
+ * logiciel livré. Le test `test/affirmations.test.ts` garde une liste de
+ * formulations qui ne doivent jamais revenir — des promesses faites un jour sur
+ * ce site et que le produit ne tenait pas.
+ *
+ * Qui vend (raison sociale, adresse, IDE, IBAN) ne s'écrit pas ici : le dépôt
+ * est public. Voir src/content/editeur.ts.
  */
+import { adresseConnue, editeur } from "@/content/editeur";
 
 export const site = {
   name: "Blonay PDF",
-  legalName: "Blonay PDF Sàrl",
-  tagline: "L'outil PDF des administrations publiques suisses",
+  /** Tant que l'éditeur n'est pas renseigné, on ne lui invente aucun nom. */
+  legalName: editeur.nom || "L'éditeur",
+  tagline: "Tout le travail PDF d'un secrétariat, sans qu'un document sorte",
   description:
-    "Blonay PDF réunit tout ce qu'il faut pour travailler les documents officiels : éditer, fusionner, convertir, signer, caviarder et annoter les PDF, depuis l'application de bureau ou le navigateur. Une alternative complète à Acrobat pour les communes, les établissements scolaires et les services de l'État — les documents restent sur vos postes, et la facture arrive sur bon de commande.",
+    "Blonay PDF est un logiciel PDF complet pour un secrétariat communal ou scolaire suisse. Vingt-six outils : lire, réorganiser, fusionner, corriger le texte dans le PDF, annoter, caviarder, reconnaître le texte d'un scan en français et en allemand, recopier un tableau dans Excel, comparer deux versions, constituer un dossier de pièces avec intercalaires, pagination continue et sommaire, imprimer en livret. Il se décompresse dans un dossier et se lance par double-clic : rien à installer, aucun droit administrateur. Il n'ouvre aucune connexion pour traiter un document.",
   audience: "les communes, les établissements scolaires et les services de l'État",
-  founded: 2021,
+  /** Vrai seulement quand l'éditeur a renseigné son adresse : sinon, rien à afficher. */
+  adresseConnue,
   address: {
-    street: "Route de Vevey 12",
-    zip: "1807",
-    city: "Blonay",
-    canton: "VD",
+    street: [editeur.rue, editeur.numero].filter(Boolean).join(" "),
+    zip: editeur.npa,
+    city: editeur.localite,
+    canton: editeur.canton,
     country: "Suisse",
   },
-  phone: "+41 21 943 00 00",
-  phoneHref: "tel:+41219430000",
-  email: "bonjour@blonaypdf.ch",
-  supportEmail: "support@blonaypdf.ch",
-  mapsUrl: "https://www.google.com/maps/search/?api=1&query=Route+de+Vevey+12+1807+Blonay",
-  linkedin: "https://www.linkedin.com/",
-  supportHours: [
-    { days: "Lundi – Vendredi", value: "07h30 – 17h30" },
-    { days: "Samedi et jours fériés", value: "Fermé" },
-  ],
-  vatNote: "Prix en CHF, TVA 8.1 % incluse.",
-  platforms: ["Web", "Windows", "macOS"],
+  phone: editeur.telephone,
+  phoneHref: editeur.telephone ? `tel:${editeur.telephone.replace(/[^+\d]/g, "")}` : "",
+  email: editeur.email,
+  supportEmail: editeur.emailSupport,
+  /** Les prix sont en francs ; la TVA n'est annoncée qu'une fois l'éditeur assujetti. */
+  vatNote: editeur.tva ? "Prix en CHF, TVA 8.1 % incluse." : "Prix en francs suisses.",
+  platforms: ["Windows", "macOS"],
   /** Les archives publiées par le dépôt, reconstruites à chaque modification. */
   downloads: {
-    web: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/tag/blonaypdf-windows-latest",
     windows: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/download/blonaypdf-windows-latest/BlonayPDF-windows.zip",
     mac: "https://github.com/reagsgaming05-source/Atelier-Neroli/releases/download/blonaypdf-mac-latest/BlonayPDF-mac.zip",
   },
@@ -45,9 +49,10 @@ export const navigation = [
   { href: "/fonctionnalites", label: "Fonctionnalités" },
   { href: "/tarifs", label: "Tarifs" },
   { href: "/securite", label: "Sécurité" },
+  { href: "/telecharger", label: "Télécharger" },
 ];
 
-export const featureCategories = ["Créer & éditer", "Organiser & convertir", "Signer & protéger", "Collaborer"] as const;
+export const featureCategories = ["Constituer & organiser", "Corriger & annoter", "Reconnaître & extraire", "Protéger & signer"] as const;
 export type FeatureCategory = (typeof featureCategories)[number];
 
 export type Feature = {
@@ -69,151 +74,163 @@ export type Feature = {
     | "redact"
     | "forms"
     | "annotate"
-    | "compare";
+    | "compare"
+    | "dossier";
   featured?: boolean;
-  /** Réservé aux formules Pro et Équipe. */
+  /** Fonction qui touche à des données sensibles : signalée comme telle sur la page. */
   pro?: boolean;
 };
 
 export const features: Feature[] = [
   {
-    slug: "editer",
-    name: "Éditer le texte et les images",
-    category: "Créer & éditer",
-    summary: "Corrigez une date de convocation, remplacez l'en-tête de l'établissement, ajoutez une page : directement dans le PDF.",
+    slug: "dossier",
+    name: "Constituer un dossier de pièces",
+    category: "Constituer & organiser",
+    summary: "Un préavis, un dossier de recours, un dossier de construction : chaque document devient une pièce numérotée, avec son intercalaire et son sommaire.",
     description:
-      "L'éditeur reconnaît les blocs de texte, les polices et les images du document. Vous modifiez le contenu comme dans un traitement de texte, avec la mise en page conservée. Les polices manquantes sont remplacées automatiquement par l'équivalent le plus proche.",
-    details: ["Texte, images, liens et en-têtes", "Polices et interlignes conservés", "Annuler / rétablir illimité"],
-    icon: "edit",
+      "Chaque document ouvert devient une pièce. Le logiciel insère un intercalaire à son titre, pose la mention « Pièce n° 3 » sur chacune de ses pages, numérote tout le dossier en continu, fabrique un sommaire en tête et pose un signet par pièce. Quand on déplace une pièce ensuite, le sommaire se refait tout seul.",
+    details: ["Intercalaires et pièces numérotées", "Pagination continue", "Sommaire et signets refaits automatiquement"],
+    icon: "dossier",
     featured: true,
   },
   {
-    slug: "formulaires",
-    name: "Créer et remplir des formulaires",
-    category: "Créer & éditer",
-    summary: "Inscriptions aux camps, autorisations de sortie, demandes de congé : des formulaires à remplir en ligne, réponses centralisées.",
-    description:
-      "Ajoutez des champs texte, cases à cocher, listes et signatures en quelques clics. La détection automatique repère les zones à remplir dans les formulaires existants, y compris scannés.",
-    details: ["Détection automatique des champs", "Réponses exportées en tableau", "Compatible avec les formulaires Acrobat"],
-    icon: "forms",
-  },
-  {
-    slug: "ocr",
-    name: "Reconnaissance de texte (OCR)",
-    category: "Créer & éditer",
-    summary: "Rendez les dossiers scannés consultables et modifiables : certificats, décisions, anciens bulletins.",
-    description:
-      "L'OCR convertit les images de texte en texte réel : vous pouvez ensuite rechercher, copier, éditer ou caviarder. Les documents multilingues sont pris en charge dans un seul passage, avec conservation de la mise en page.",
-    details: ["Plus de 30 langues", "Traitement par lots", "Sortie PDF/A pour l'archivage"],
-    icon: "ocr",
-    pro: true,
-  },
-  {
     slug: "organiser",
-    name: "Organiser les pages",
-    category: "Organiser & convertir",
-    summary: "Réordonnez, pivotez, supprimez ou insérez des pages par glisser-déposer, par exemple pour assembler un dossier d'élève.",
+    name: "Réorganiser les pages",
+    category: "Constituer & organiser",
+    summary: "Réordonnez, pivotez, supprimez ou insérez des pages par glisser-déposer.",
     description:
-      "La vue en vignettes permet de restructurer un document de cent pages en quelques secondes. Vous pouvez extraire une plage de pages vers un nouveau fichier ou insérer des pages venant d'un autre PDF, d'une image ou d'un scan.",
-    details: ["Glisser-déposer des vignettes", "Extraction de plages", "Numérotation et filigranes"],
+      "La vue en vignettes permet de restructurer un document de cent pages en quelques secondes. On peut extraire une plage de pages, insérer des pages vierges, des images ou des pages d'un autre PDF, redimensionner, détecter et retirer les pages vides d'un scan, puis poser un filigrane, un en-tête, un pied de page ou une numérotation.",
+    details: ["Glisser-déposer des vignettes", "Détection des pages vides", "Filigrane, en-tête, numérotation"],
     icon: "organize",
   },
   {
     slug: "fusionner",
     name: "Fusionner et diviser",
-    category: "Organiser & convertir",
-    summary: "Assemblez les bulletins d'une classe en un seul envoi, ou découpez un lot de convocations par élève.",
+    category: "Constituer & organiser",
+    summary: "Assemblez plusieurs PDF et images en un seul document, ou découpez un document en plusieurs.",
     description:
-      "Fusionnez des PDF, des images et des documents Office dans l'ordre souhaité, avec une table des matières générée automatiquement. La division fonctionne par nombre de pages, par signets ou par taille de fichier.",
-    details: ["Fusion de formats mixtes", "Division par signets ou par taille", "Signets et table des matières"],
+      "Fusionnez des PDF et des images dans l'ordre souhaité. Pour un dossier de pièces, le sommaire et les intercalaires se font à part (voir « Constituer un dossier »). La division se fait une page par fichier, par lots de N pages, ou par plages que vous indiquez. Le traitement en série applique la même opération à tout un dossier de fichiers.",
+    details: ["PDF et images", "Une page par fichier, par lots ou par plages", "Traitement de plusieurs fichiers en série"],
     icon: "merge",
     featured: true,
   },
   {
-    slug: "convertir",
-    name: "Convertir dans les deux sens",
-    category: "Organiser & convertir",
-    summary: "Word, Excel, PowerPoint, images : vers PDF et depuis PDF, avec export PDF/A pour l'archivage et PDF/UA pour l'accessibilité.",
+    slug: "editer",
+    name: "Corriger le texte dans le PDF",
+    category: "Corriger & annoter",
+    summary: "Corrigez une date de convocation ou remplacez un nom, directement dans le PDF, sans que la mise en page bouge.",
     description:
-      "La conversion vers Word ou Excel reconstruit les paragraphes, tableaux et styles pour un fichier réellement éditable. Vers PDF, la sortie respecte les normes PDF/A et PDF/X pour l'archivage et l'impression.",
-    details: ["Word, Excel, PowerPoint, JPG, PNG, HTML", "PDF/A (archivage) et PDF/UA (accessibilité)", "Conversion par lots"],
-    icon: "convert",
+      "L'éditeur de page repère les lignes de texte et vous laisse les corriger sur place. Quand la police d'origine n'est pas disponible, le texte est repris en Helvetica ou en Times. La fonction « Remplacer partout » corrige un terme dans tout le document. L'historique garde les soixante dernières opérations pour annuler et rétablir.",
+    details: ["Texte corrigé sur place", "Remplacer partout", "Annuler et rétablir sur 60 opérations"],
+    icon: "edit",
     featured: true,
-  },
-  {
-    slug: "compresser",
-    name: "Compresser sans perte visible",
-    category: "Organiser & convertir",
-    summary: "Réduisez le poids des documents jusqu'à 90 % pour les envoyer aux parents ou les déposer sur la plateforme de l'école.",
-    description:
-      "Trois niveaux de compression, avec un aperçu avant/après pour vérifier la qualité des images. Les polices et le texte restent vectoriels, seules les images sont recalculées.",
-    details: ["Aperçu avant / après", "Choix de la résolution cible", "Traitement par lots"],
-    icon: "compress",
-  },
-  {
-    slug: "signer",
-    name: "Signer électroniquement",
-    category: "Signer & protéger",
-    summary: "Faites signer les parents, la direction ou les stagiaires, suivez l'avancement, avec horodatage et journal d'audit.",
-    description:
-      "Envoyez un document à un ou plusieurs signataires, définissez l'ordre de signature et recevez une notification à chaque étape. Chaque signature est horodatée et le certificat d'audit est joint au document final.",
-    details: ["Signatures simples et avancées", "Ordre de signature et rappels", "Certificat d'audit joint"],
-    icon: "sign",
-    featured: true,
-    pro: true,
-  },
-  {
-    slug: "proteger",
-    name: "Protéger et chiffrer",
-    category: "Signer & protéger",
-    summary: "Mot de passe, chiffrement AES-256 et permissions fines pour les documents contenant des données d'élèves.",
-    description:
-      "Définissez un mot de passe d'ouverture et un mot de passe de permissions distincts. Vous contrôlez ce que le destinataire peut faire : imprimer, copier du texte, remplir des champs ou modifier le document.",
-    details: ["Chiffrement AES-256", "Permissions détaillées", "Suppression des métadonnées"],
-    icon: "protect",
-  },
-  {
-    slug: "caviarder",
-    name: "Caviarder définitivement",
-    category: "Signer & protéger",
-    summary: "Supprimez de façon irréversible les données personnelles avant transmission : noms, numéros AVS, adresses.",
-    description:
-      "Contrairement à un simple rectangle noir, le caviardage retire réellement le contenu du fichier. Recherchez un terme, un numéro AVS ou un IBAN pour caviarder toutes les occurrences en une fois.",
-    details: ["Recherche et caviardage en masse", "Motifs prédéfinis (AVS, IBAN, e-mails)", "Rapport de vérification"],
-    icon: "redact",
-    pro: true,
   },
   {
     slug: "annoter",
     name: "Annoter et commenter",
-    category: "Collaborer",
-    summary: "Corrigez des travaux, annotez un projet d'établissement, relisez un règlement à plusieurs.",
+    category: "Corriger & annoter",
+    summary: "Surlignez, posez des notes, des formes, des tampons : ce sont de vrais commentaires PDF.",
     description:
-      "Les annotations sont compatibles avec les autres lecteurs PDF. Partagez un lien de relecture : vos collègues commentent depuis leur navigateur, sans compte, et vous recevez un résumé des retours.",
-    details: ["Surlignage, notes, formes, tampons", "Lien de relecture sans compte", "Résumé des commentaires"],
+      "Les annotations sont enregistrées comme des commentaires PDF, que les autres lecteurs relisent. Les commentaires d'un document reçu se listent et se retirent. La signature manuscrite et les tampons personnels se mémorisent sur le poste, dans le dossier de données du logiciel.",
+    details: ["Surlignage, notes, formes, tampons", "Commentaires du document reçu : lister, retirer", "Signature et tampons mémorisés"],
     icon: "annotate",
+  },
+  {
+    slug: "formulaires",
+    name: "Remplir des formulaires",
+    category: "Corriger & annoter",
+    summary: "Remplissez les champs d'un formulaire PDF reçu, puis aplatissez-le à l'export.",
+    description:
+      "Les champs d'un formulaire PDF standard (AcroForm) se remplissent directement : texte, cases à cocher, listes. À l'export, le formulaire peut être aplati pour figer les valeurs. Les formulaires de type XFA ne sont pas pris en charge.",
+    details: ["Champs, cases et listes", "Formulaires PDF standard (AcroForm)", "Aplatir à l'export"],
+    icon: "forms",
   },
   {
     slug: "comparer",
     name: "Comparer deux versions",
-    category: "Collaborer",
-    summary: "Repérez chaque différence entre deux versions d'un règlement, d'une directive ou d'un plan d'études.",
+    category: "Corriger & annoter",
+    summary: "Repérez les mots ajoutés ou retirés entre deux versions d'un règlement ou d'une directive.",
     description:
-      "La comparaison met en évidence les textes ajoutés, supprimés et déplacés, ainsi que les changements de mise en page. Un rapport de synthèse liste les différences, page par page.",
-    details: ["Différences de texte et de mise en page", "Rapport exportable", "Navigation d'une différence à l'autre"],
+      "Les deux versions s'affichent côte à côte, avec les mots ajoutés et retirés mis en évidence. La comparaison porte sur le texte : elle ne signale pas les changements de mise en page.",
+    details: ["Côte à côte", "Mots ajoutés et retirés", "Texte seulement"],
     icon: "compare",
+  },
+  {
+    slug: "ocr",
+    name: "Reconnaître le texte d'un scan",
+    category: "Reconnaître & extraire",
+    summary: "Rendez un dossier scanné consultable : certificats, décisions, anciennes fiches.",
+    description:
+      "La reconnaissance de texte (OCR) s'exécute sur le poste, avec le moteur et les modèles de langue inclus dans le logiciel : rien n'est envoyé nulle part. Elle reconnaît le français et l'allemand. Le texte reconnu sert ensuite à la recherche, au remplacement, au caviardage et à la copie, et repart dans le PDF exporté comme texte invisible placé sous l'image.",
+    details: ["Français et allemand", "Entièrement local, sans réseau", "Texte invisible dans le PDF exporté"],
+    icon: "ocr",
+  },
+  {
+    slug: "extraire",
+    name: "Extraire : images, texte, tableaux",
+    category: "Reconnaître & extraire",
+    summary: "Recopiez un tableau du PDF dans Excel, en colonnes, avec les montants à la suisse.",
+    description:
+      "Un tableau sélectionné dans le PDF se recopie dans Excel en colonnes ; les montants suisses (1'234.50, CHF 1 234.–) sont reconnus. Le logiciel exporte aussi les pages en images (PNG ou JPEG) et le texte brut (.txt). Il ne convertit pas vers Word, Excel ou PowerPoint, ni depuis ces formats.",
+    details: ["Tableau vers Excel", "Pages en PNG ou JPEG", "Texte brut"],
+    icon: "convert",
+  },
+  {
+    slug: "compresser",
+    name: "Réduire la taille",
+    category: "Reconnaître & extraire",
+    summary: "Efficace sur un document scanné ; sur un document de texte, il l'alourdit, et le logiciel vous le dit avant.",
+    description:
+      "« Réduire la taille » convertit chaque page en image : le texte n'est plus sélectionnable après l'opération. Le logiciel vous le signale, mesure le résultat et refuse de livrer un fichier plus gros que l'original. Le bilan de taille s'affiche après l'export.",
+    details: ["Pages converties en images", "Résultat mesuré avant livraison", "Utile pour les scans"],
+    icon: "compress",
+  },
+  {
+    slug: "proteger",
+    name: "Protéger par mot de passe",
+    category: "Protéger & signer",
+    summary: "Chiffrement AES-256 du PDF que vous produisez, avec mot de passe d'ouverture et de permissions distincts.",
+    description:
+      "Définissez un mot de passe d'ouverture et un mot de passe de permissions distincts, et choisissez ce que le destinataire peut faire : imprimer, copier du texte, remplir des champs ou modifier le document. Cette protection s'applique au fichier que vous exportez, sur votre poste.",
+    details: ["Chiffrement AES-256", "Permissions détaillées", "Appliqué à l'export"],
+    icon: "protect",
+  },
+  {
+    slug: "caviarder",
+    name: "Caviarder le texte d'une page",
+    category: "Protéger & signer",
+    summary: "Recherchez un terme dans tout le document et caviardez toutes ses occurrences après confirmation du nombre.",
+    description:
+      "Le caviardage retire du flux de la page les lettres masquées, et refait l'image lorsqu'une image passe sous la zone. Le logiciel annonce le nombre d'occurrences avant d'agir et demande confirmation. Les métadonnées, les commentaires et les champs de formulaire ne sont pas traités : nettoyez-les avant transmission, et relisez le fichier produit.",
+    details: ["Recherche dans tout le document", "Confirmation du nombre d'occurrences", "Texte de la page seulement"],
+    icon: "redact",
+    pro: true,
+  },
+  {
+    slug: "signer",
+    name: "Poser une signature manuscrite",
+    category: "Protéger & signer",
+    summary: "Posez votre signature tracée à la souris ou au doigt, ou celle qu'on vous a transmise, sans imprimer puis scanner.",
+    description:
+      "La signature dessinée est fondue dans la page, avec la date que vous saisissez. Ce n'est pas une signature électronique au sens de la loi fédérale sur la signature électronique (SCSE) : pour une décision notifiée par voie électronique, un cachet électronique réglementé est requis, et nous vous orientons vers un fournisseur reconnu.",
+    details: ["Signature tracée", "Date saisie", "Pas de signature qualifiée (SCSE)"],
+    icon: "sign",
     pro: true,
   },
 ];
 
 export const values = [
   {
-    title: "Les documents ne quittent pas vos postes",
-    text: "L'application de bureau lit, modifie et réassemble les fichiers sur votre poste ou votre lecteur réseau. Aucune connexion sortante n'est ouverte pour traiter un document — cela se vérifie réseau coupé.",
+    title: "Les documents ne quittent pas le poste",
+    text: "Le logiciel lit, modifie et réassemble les fichiers sur votre poste ou votre lecteur réseau. Il n'ouvre aucune connexion pour traiter un document — cela se vérifie réseau coupé.",
   },
   {
-    title: "Un seul outil pour toute l'administration",
-    text: "Greffe, bourse, urbanisme, secrétariat, direction : la même application pour tout le monde, sans compter les postes et sans tenir une liste de licences.",
+    title: "Rien à installer, aucun droit administrateur",
+    text: "Un dossier posé sur le lecteur réseau, un raccourci par poste. Pas d'installation, pas d'écriture dans le registre, aucun service, aucune tâche planifiée. La mise à jour consiste à remplacer ce dossier, une fois, pour tout le monde.",
+  },
+  {
+    title: "Un prix par entité, pas par poste",
+    text: "Le greffe, la bourse, l'urbanisme et le contrôle des habitants ont besoin du même outil. Une licence d'entité supprime la liste de licences et la question du cinquième poste.",
   },
   {
     title: "Le circuit d'achat que vous connaissez",
@@ -236,25 +253,6 @@ export const steps = [
   },
 ];
 
-/** ⚠️ Témoignages fictifs d'exemple, à remplacer par de vrais retours avant publication. */
-export const testimonials = [
-  {
-    quote: "Le préavis part en un seul PDF paginé au lieu de quatre pièces jointes. On a arrêté d'imprimer pour assembler.",
-    author: "Témoignage à recueillir",
-    detail: "Secrétariat municipal",
-  },
-  {
-    quote: "Le caviardage avant une mise à l'enquête est devenu un réflexe : on cherche, on valide, le texte sort vraiment du fichier.",
-    author: "Témoignage à recueillir",
-    detail: "Service de l'urbanisme",
-  },
-  {
-    quote: "Rien à installer, rien à demander à notre informaticien externe. Un raccourci, et c'est tout.",
-    author: "Témoignage à recueillir",
-    detail: "Direction d'établissement scolaire",
-  },
-];
-
 export const faq = [
   {
     q: "Comment une commune achète-t-elle ?",
@@ -262,11 +260,11 @@ export const faq = [
   },
   {
     q: "Faut-il passer par un appel d'offres ?",
-    a: "Dans la plupart des cantons, un abonnement annuel de cet ordre reste sous le seuil du gré à gré pour les services. C'est à votre secrétariat de le vérifier au regard de votre règlement et du droit cantonal des marchés publics. Nous fournissons la fiche technique, le descriptif des prestations et les références dont un dossier d'achat a besoin.",
+    a: "Dans la plupart des cantons, un abonnement annuel de cet ordre reste sous le seuil du gré à gré pour les services. C'est à votre secrétariat de le vérifier au regard de votre règlement et du droit cantonal des marchés publics.",
   },
   {
     q: "Où passent les documents traités ?",
-    a: "Nulle part. L'application de bureau lit, modifie et réécrit les fichiers sur votre poste ou votre lecteur réseau ; elle n'ouvre aucune connexion pour traiter un document, et cela se vérifie réseau coupé. C'est la différence avec un outil de fusion en ligne, sur lequel un dossier d'enquête publique partirait chez un tiers.",
+    a: "Nulle part. Le logiciel lit, modifie et réécrit les fichiers sur votre poste ou votre lecteur réseau ; il n'ouvre aucune connexion pour traiter un document, et cela se vérifie réseau coupé. C'est la différence avec un outil de fusion en ligne, sur lequel un dossier d'enquête publique partirait chez un tiers.",
   },
   {
     q: "Faut-il installer quelque chose sur chaque poste ?",
@@ -281,45 +279,43 @@ export const faq = [
     a: "Il est annuel et se résilie pour l'échéance depuis l'espace client. Il reste actif jusqu'à la fin de la période déjà réglée, puis s'arrête sans frais.",
   },
   {
-    q: "Les signatures électroniques sont-elles valables juridiquement ?",
-    a: "Les signatures simples et avancées conviennent à la grande majorité des actes administratifs courants. Pour ceux qui exigent une signature qualifiée au sens de la SCSE, contactez-nous : nous vous orientons vers un prestataire certifié compatible.",
+    q: "Les signatures sont-elles valables juridiquement ?",
+    a: "Le logiciel pose une signature manuscrite dessinée dans la page, avec la date que vous saisissez. Ce n'est pas une signature électronique au sens de la SCSE. Pour une décision notifiée par voie électronique, un cachet électronique réglementé est requis (OCEl-PA, art. 9) ; nous vous orientons vers un fournisseur reconnu.",
+  },
+  {
+    q: "Le caviardage est-il définitif ?",
+    a: "Le caviardage retire du flux de la page les lettres masquées, et refait l'image lorsqu'une image passe sous la zone. Les métadonnées, les commentaires et les champs de formulaire ne sont pas traités : nettoyez-les avant transmission et relisez le fichier produit avant de le publier.",
+  },
+  {
+    q: "Que ne fait pas le logiciel ?",
+    a: "Il ne vérifie pas les signatures numériques des PDF que vous recevez, il ne produit pas de PDF/A, il ne convertit pas depuis ou vers Word, Excel et PowerPoint, et il ne balise pas les documents pour l'accessibilité. Nous le disons avant l'évaluation, pas après.",
   },
   {
     q: "Que se passe-t-il si vous cessez l'activité ?",
-    a: "Ce que produit le logiciel est du PDF standard, lisible par n'importe quel autre outil, sans conversion ni format propriétaire. Pour les déploiements de taille cantonale, une clause de réversibilité et un dépôt du code source figurent au contrat.",
+    a: "Ce que produit le logiciel est du PDF standard, lisible par n'importe quel autre outil, sans conversion ni format propriétaire. Un séquestre du code source peut être convenu pour un déploiement important.",
   },
 ];
 
 export const securityPoints = [
   {
+    icon: "monitor",
+    title: "Aucune connexion pour traiter un document",
+    text: "Le logiciel travaille sur le poste. La page est servie depuis le disque sous une politique de sécurité de contenu appliquée par le navigateur embarqué, qui lui interdit de contacter qui que ce soit. Débranchez le réseau : tout continue.",
+  },
+  {
     icon: "server",
-    title: "Hébergement en Suisse",
-    text: "Serveurs situés en Suisse, chez un prestataire certifié ISO 27001. Aucune donnée n'est transférée hors du pays.",
+    title: "Pas d'hébergement, donc rien à héberger",
+    text: "Vos documents ne sont jamais téléversés. Il n'y a ni serveur de traitement, ni stockage, ni suppression automatique : il n'y a rien à supprimer, parce que rien n'est envoyé.",
   },
   {
     icon: "lock",
-    title: "Chiffrement de bout en bout",
-    text: "TLS 1.3 pour les transferts, AES-256 pour le stockage. Les clés sont gérées séparément des données.",
-  },
-  {
-    icon: "trash",
-    title: "Suppression automatique",
-    text: "Les fichiers traités en ligne sont supprimés après 24 heures. Vous pouvez aussi les effacer immédiatement.",
-  },
-  {
-    icon: "shield",
-    title: "Conforme LPD et LPrD",
-    text: "Traitement conforme à la loi fédérale sur la protection des données et à la loi vaudoise sur la protection des données personnelles. Contrat de sous-traitance fourni à chaque établissement.",
+    title: "Chiffrement du PDF que vous produisez",
+    text: "AES-256, avec mot de passe d'ouverture et de permissions distincts. Le chiffrement s'applique à l'export, sur votre poste.",
   },
   {
     icon: "key",
-    title: "Accès maîtrisés",
-    text: "Connexion unique via l'identité cantonale, authentification à deux facteurs, journal d'audit des actions par établissement.",
-  },
-  {
-    icon: "monitor",
-    title: "Hors ligne sur le bureau",
-    text: "L'application Windows et macOS traite vos documents localement. Rien ne quitte votre machine sans votre accord.",
+    title: "Comptes locaux par utilisateur",
+    text: "Chaque personne a son compte sur le poste ; le mot de passe est stocké sous forme d'empreinte scrypt, les dossiers sont séparés. Il n'y a ni compte en ligne, ni authentification unique, ni journal hébergé.",
   },
 ] as const;
 
@@ -333,8 +329,8 @@ export const contactSubjects = [
 ];
 
 export const stats = [
-  { k: "12", v: "outils PDF" },
-  { k: "0", v: "donnée qui sort du poste" },
+  { k: "26", v: "outils PDF" },
+  { k: "0", v: "connexion pour traiter un document" },
   { k: "1", v: "facture par an, sur bon de commande" },
 ];
 
@@ -351,32 +347,38 @@ export const institutionTypes = [
 /** Déploiement type dans un établissement. */
 export const deployment = [
   { week: "Jour 1", title: "Demande d'offre", text: "Deux minutes, sans compte à créer. Nous chiffrons et renvoyons un devis nominatif valable 90 jours." },
-  { week: "Jour 3", title: "Offre reçue", text: "Un PDF prêt à joindre à une décision de Municipalité, de direction ou de service d'achat." },
-  { week: "À votre rythme", title: "Bon de commande", text: "Vous acceptez l'offre avec votre numéro de bon de commande ; la facture part avec sa QR-facture, payable à 30 jours." },
+  { week: "À votre rythme", title: "Offre et bon de commande", text: "Un PDF prêt à joindre à une décision de Municipalité, de direction ou de service d'achat. Vous l'acceptez avec votre numéro de bon de commande ; la facture part avec sa QR-facture, payable à 30 jours." },
   { week: "Le jour même", title: "Mise en service", text: "Le dossier se pose sur le lecteur réseau, un raccourci par poste, chacun crée son compte au premier lancement." },
 ];
 
-/** Comparatif indicatif (à vérifier avant publication). */
+/**
+ * Comparatif. Chaque ligne a été vérifiée dans le logiciel livré ; les colonnes
+ * des concurrents reposent sur leurs offres publiques et sont à relire à
+ * chaque révision du site.
+ */
 export const comparison = {
   columns: ["Blonay PDF", "Acrobat Pro", "Outils en ligne gratuits"],
   rows: [
     { label: "Documents traités sur le poste, sans envoi", values: ["yes", "partial", "no"] },
-    { label: "Conformité LPD et LPrD, contrat de sous-traitance", values: ["yes", "partial", "no"] },
     { label: "Licence par entité, sans plafond de postes", values: ["yes", "no", "no"] },
-    { label: "Signature électronique avec journal d'audit", values: ["yes", "yes", "no"] },
-    { label: "Caviardage définitif", values: ["yes", "yes", "no"] },
-    { label: "OCR multilingue", values: ["yes", "yes", "partial"] },
-    { label: "Application de bureau hors ligne", values: ["yes", "yes", "no"] },
+    { label: "Dossier de pièces : intercalaires, pagination continue, sommaire", values: ["yes", "partial", "no"] },
+    { label: "Caviarder le texte d'une page", values: ["partial", "yes", "no"] },
+    { label: "Reconnaissance de texte français et allemand, hors ligne", values: ["yes", "yes", "partial"] },
     { label: "Installation sans droits administrateur", values: ["yes", "no", "yes"] },
-    { label: "Support en français", values: ["yes", "partial", "no"] },
     { label: "Offre, bon de commande et QR-facture", values: ["yes", "partial", "no"] },
+    { label: "Signature électronique qualifiée (SCSE)", values: ["no", "partial", "no"] },
+    { label: "Sortie PDF/A pour l'archivage", values: ["no", "yes", "no"] },
+    { label: "Conversion depuis et vers Word, Excel, PowerPoint", values: ["no", "yes", "partial"] },
   ] as { label: string; values: ("yes" | "no" | "partial")[] }[],
-  note: "Comparatif indicatif établi à partir des offres publiques ; à vérifier avant publication.",
+  note: "Comparatif établi à partir du logiciel livré et des offres publiques des concurrents. Les deux dernières lignes sont des limites du produit, que nous indiquons volontairement.",
 };
 
 /** Hypothèses du calculateur d'économies. */
 export const roi = {
   defaultStaff: 12,
-  defaultLicenceCost: 24000, // CHF 240.– par an et par licence, en centimes
+  /** Laissé à zéro : le prix à comparer est celui que paie déjà l'établissement. */
+  defaultLicenceCost: 0,
   establishmentYearlyCents: 199000,
+  /** Prix annuel de la formule Secrétariat, pour dire quand elle est moins chère. */
+  secretariatYearlyCents: 89000,
 };

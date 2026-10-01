@@ -147,7 +147,7 @@ export function PricingTable({ plans, hasSubscription }: { plans: PricingPlan[];
               ) : null}
               <p className={cn("mt-3 text-center text-xs", dark ? "text-canvas-100/60" : "text-ink-400")}>
                 {plan.quoteOnly || !plan.allowCard
-                  ? "Offre chiffrée sous 2 jours · facture à 30 jours"
+                  ? "Offre chiffrée · facture à 30 jours"
                   : plan.allowInvoice
                     ? "Carte bancaire, ou bon de commande et facture"
                     : "Paiement par carte, sans engagement"}

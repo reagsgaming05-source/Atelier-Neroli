@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/schema";
 import type { PaymentMethod } from "@/lib/payments";
 import { intervalLabel } from "@/lib/format";
+import { exigerIdentiteFacturation } from "@/content/facturation";
 
 export class SubscriptionError extends Error {}
 
@@ -125,6 +126,11 @@ export async function startSubscription(input: {
   interval: BillingInterval;
   payment: PaymentMethod;
 }) {
+  try {
+    exigerIdentiteFacturation();
+  } catch (e) {
+    throw new SubscriptionError(e instanceof Error ? e.message : "Identité de l'éditeur non configurée.");
+  }
   const plan = await getPlanBySlug(input.planSlug);
   if (!plan) throw new SubscriptionError("Cette formule n'est plus disponible.");
   if (plan.quoteOnly) throw new SubscriptionError("Cette formule se souscrit sur devis. Contactez-nous.");

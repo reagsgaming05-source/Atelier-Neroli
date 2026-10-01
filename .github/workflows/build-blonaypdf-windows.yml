@@ -54,6 +54,31 @@ jobs:
         working-directory: outils/test-e2e
         run: npm test
 
+      # Le mode d'emploi se refait depuis l'application elle-même : ses captures
+      # sont prises sur la vraie fenêtre, son PDF imprimé par Chromium. Il se
+      # fabrique ici, sur Linux, là où il y a déjà un Chromium et un écran
+      # virtuel ; les jobs Windows et Mac n'ont qu'à le récupérer. Un guide
+      # que la CI ne produit pas vieillit dans un coin et ne part jamais chez le
+      # client : c'est ce qui était arrivé.
+      - name: Dépendances de l'application fenêtrée (Electron, pour photographier le guide)
+        working-directory: outils/desktop
+        run: npm ci
+
+      - name: Mode d'emploi (captures de l'application, puis PDF)
+        working-directory: outils/guide
+        run: |
+          set -euo pipefail
+          (cd ../desktop && node prepare-app.js)
+          export BLONAY_CHROMIUM="$(cd ../test-e2e && node -p "require('@playwright/test').chromium.executablePath()")"
+          xvfb-run -a node faire-le-guide.js "$GITHUB_WORKSPACE/Blonay-PDF-mode-d-emploi.pdf"
+          test -s "$GITHUB_WORKSPACE/Blonay-PDF-mode-d-emploi.pdf"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mode-d-emploi
+          path: Blonay-PDF-mode-d-emploi.pdf
+          retention-days: 7
+
       - name: Rapport (en cas d'échec)
         if: failure()
         uses: actions/upload-artifact@v4
@@ -97,12 +122,22 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run dist:win
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: mode-d-emploi
+          path: ${{ github.workspace }}/guide
+
       - name: Assembler le dossier portable
         working-directory: outils/desktop
         shell: pwsh
         run: |
           Rename-Item dist\win-unpacked BlonayPDF
-          Copy-Item ..\..\README.md dist\BlonayPDF\LISEZMOI.md
+          # Ce que lit un client : le mode d'emploi, la licence, les composants
+          # tiers. Le README du dépôt est une page de développeur, pas un
+          # LISEZMOI : il n'a rien à faire dans un dossier livré.
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'guide\Blonay-PDF-mode-d-emploi.pdf') dist\BlonayPDF\Mode-d-emploi.pdf
+          Copy-Item build\LICENCE.txt dist\BlonayPDF\LICENCE.txt
+          Copy-Item build\MENTIONS-TIERCES.txt dist\BlonayPDF\MENTIONS-TIERCES.txt
           Copy-Item build\LISEZMOI-portable.txt dist\BlonayPDF\LISEZMOI-portable.txt
           Copy-Item build\Mettre-a-jour.cmd dist\BlonayPDF\Mettre-a-jour.cmd
           # La fiche de version voyage a la racine du dossier : c'est elle que
@@ -413,6 +448,11 @@ jobs:
         # l'étape ci-dessus, qui ne les pose que s'il y a de quoi signer.
         run: npm run dist:mac
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: mode-d-emploi
+          path: ${{ github.workspace }}/guide
+
       - name: Assembler le dossier
         working-directory: outils/desktop
         run: |
@@ -424,7 +464,11 @@ jobs:
           echo "paquet : $paquet"
           rm -rf dist/BlonayPDF && mkdir -p dist/BlonayPDF
           ditto "$paquet" dist/BlonayPDF/BlonayPDF.app
-          cp ../../README.md dist/BlonayPDF/LISEZMOI.md
+          # Ce que lit un client : le mode d'emploi, la licence, les composants
+          # tiers. Le README du dépôt est une page de développeur.
+          cp "$GITHUB_WORKSPACE/guide/Blonay-PDF-mode-d-emploi.pdf" dist/BlonayPDF/Mode-d-emploi.pdf
+          cp build/LICENCE.txt dist/BlonayPDF/LICENCE.txt
+          cp build/MENTIONS-TIERCES.txt dist/BlonayPDF/MENTIONS-TIERCES.txt
           cp build/LISEZMOI-mac.txt dist/BlonayPDF/LISEZMOI-mac.txt
           cp build/Mettre-a-jour.command dist/BlonayPDF/Mettre-a-jour.command
           chmod +x dist/BlonayPDF/Mettre-a-jour.command

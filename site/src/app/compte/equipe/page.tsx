@@ -97,7 +97,7 @@ export default async function EquipePage() {
 
       <p className="flex items-center gap-2 text-xs text-ink-400">
         <Users className="size-3.5" aria-hidden />
-        La formule Établissement ne limite pas le nombre de collaborateur·trice·s.
+        La formule Administration ne limite pas le nombre de collaborateur·trice·s.
       </p>
     </>
   );

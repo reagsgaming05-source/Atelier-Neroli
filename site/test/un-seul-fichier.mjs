@@ -18,7 +18,7 @@ const SORTIE = process.env.FICHIER ?? path.join(process.cwd(), "vitrine", "Blona
 const PAGES = [
   ["index", "accueil"], ["communes", "communes"], ["ecoles", "ecoles"], ["etat", "etat"],
   ["fonctionnalites", "fonctionnalites"], ["tarifs", "tarifs"], ["securite", "securite"],
-  ["offre", "offre"], ["contact", "contact"], ["cgv", "cgv"],
+  ["telecharger", "telecharger"], ["offre", "offre"], ["contact", "contact"], ["cgv", "cgv"],
   ["mentions-legales", "mentions-legales"], ["confidentialite", "confidentialite"],
 ];
 const ANCRE = Object.fromEntries(PAGES.map(([f, a]) => [f + ".html", a]));
@@ -52,7 +52,7 @@ const doc = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blonay PDF — l'outil PDF des administrations publiques suisses</title>
+<title>Blonay PDF — tout le travail PDF d'un secrétariat, sans qu'un document sorte</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
 ${css}

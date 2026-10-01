@@ -18,6 +18,10 @@ const d = new Date();
 const CONSTRUCTION = 'construite le ' + String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear() + (commitCourt() ? ', commit ' + commitCourt() : '');
 if (!src.includes("'__CONSTRUCTION__'")) throw new Error('repère de construction introuvable dans la source');
 src = src.replace("'__CONSTRUCTION__'", () => JSON.stringify(CONSTRUCTION));
+// Les mentions des composants tiers : produites ici, depuis les licences des
+// paquets réellement embarqués, pour que le fichier livré ne vieillisse pas.
+fs.writeFileSync(path.join(__dirname, 'desktop', 'build', 'MENTIONS-TIERCES.txt'),
+  require('./mentions-tierces').mentions({ version: require('./package.json').version, construction: CONSTRUCTION }));
 fs.writeFileSync(path.join(__dirname, 'desktop', 'construction.json'), JSON.stringify({ construction: CONSTRUCTION, commit: commitCourt(), date: d.toISOString() }) + '\n');
 const HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="color-scheme" content="dark light">\n</head>\n<body>\n';
 const TAIL = '</body>\n</html>\n';
@@ -81,8 +85,23 @@ const inline = [
 // Remplacement par fonction : sinon les $& ou $` du code des bibliothèques
 // seraient interprétés comme des motifs et injecteraient le reste de la page.
 // Hors ligne, inutile d'appeler Google Fonts : la page utilise les polices du système.
-const noFonts = src.replace(/<link rel="preconnect"[^>]*>\n/, '').replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>\n/, '');
-if (noFonts === src) throw new Error('liens de polices introuvables');
+const sansPolices = src.replace(/<link rel="preconnect"[^>]*>\n/g, '').replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>\n/, '');
+if (sansPolices === src) throw new Error('liens de polices introuvables');
+// Ni adresse de CDN, ni message qui renvoie vers internet : ce qui part aux
+// postes ne charge rien de l'extérieur, et le dit.
+const vidage = (t, nom, re, remplacement) => {
+  const r = t.replace(re, () => remplacement);
+  if (r === t) throw new Error('bloc ' + nom + ' introuvable : le vidage des adresses est à revoir');
+  return r;
+};
+let noFonts = vidage(sansPolices, 'CDN', /const CDN = \{[\s\S]*?\n  \};/, "const CDN = { pdfjs: '', worker: '', pdflib: '', pdflibFallback: '', jszip: '' };");
+noFonts = vidage(noFonts, 'OCR_CDN', /const OCR_CDN = \{[\s\S]*?\n  \};/, "const OCR_CDN = { lib: '', worker: '', core: '' };");
+noFonts = vidage(noFonts, 'EN_LIGNE', /const EN_LIGNE = true;/, 'const EN_LIGNE = false;');
+// Garde-fou : le code de l'application (hors bibliothèques embarquées, qui
+// portent leurs propres noms d'espaces XML) ne doit contenir aucune adresse
+// réseau. C'est ce que lira un informaticien qui fait un « grep http ».
+const adresses = (noFonts.match(/https?:\/\/[^\s"'<>)\\]+/g) || []).filter(u => !/^https?:\/\/www\.w3\.org\//.test(u));
+if (adresses.length) throw new Error('adresse réseau dans le code de l\'application livrée : ' + [...new Set(adresses)].join(', '));
 const offline = noFonts.replace('<script>\n(() => {', () => inline + '\n<script>\n(() => {');
 if (offline === src) throw new Error("point d'insertion introuvable");
 fs.writeFileSync(path.join(OUT, 'blonay-pdf-hors-ligne.html'),
