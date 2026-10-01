@@ -98,6 +98,9 @@
 
   async function exportPages(pages, filename, opts) {
     if (!pages.length || state.busy) return null;
+    // Une signature, un PDF/A, un balisage que cet export détruit : on le dit
+    // avant d'écrire, pas après.
+    if (!(await pertesAcceptees(pages, opts))) { setLast('Export annulé'); return null; }
     // Le document entier, tel quel : une fois écrit, il n'est plus « modifié ».
     const entier = pages === state.pages && !opts;
     setBusy('Assemblage de ' + plural(pages.length, 'page', 'pages') + '…', 0, { annuler: true });
@@ -173,6 +176,7 @@
     const choix = await confirmerEcrasement(chemin);
     if (choix === 'sous') { exportPages(state.pages, nom); return; }
     if (choix !== 'remplacer' || state.busy) return;
+    if (!(await pertesAcceptees(state.pages))) { setLast('Enregistrement annulé'); return; }
     setBusy('Assemblage de ' + plural(state.pages.length, 'page', 'pages') + '…', 0, { annuler: true });
     const avisAvant = journal.filter(j => j.niveau !== 'info').length;
     try {

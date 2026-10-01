@@ -1,0 +1,244 @@
+  // =====================================================================
+  //  Ce qu'un document porte, et qu'une réécriture détruit
+  //  -------------------------------------------------------------------
+  //  Une signature numérique, une déclaration PDF/A, un balisage d'accessibilité,
+  //  un formulaire XFA : chacun tient à la forme exacte du fichier. Ce logiciel
+  //  réécrit le fichier à chaque export — c'est inévitable, comme dans
+  //  Acrobat quand on modifie un document signé. Ce qui n'est pas permis, c'est
+  //  de le faire sans le dire, ou de laisser le fichier prétendre qu'il porte
+  //  encore ce qu'il n'a plus : un /ByteRange périmé, un « pdfaid:part 2 » sur
+  //  une page qui ne l'est plus.
+  //  Chaque propriété est donc lue à l'ouverture, annoncée, rappelée avant
+  //  l'enregistrement qui la détruit, et ses marques sont retirées du fichier
+  //  produit — sauf PDF/A, que l'on sait refaire quand rien ne l'empêche.
+  // =====================================================================
+  // Les niveaux que la bibliothèque embarquée sait refaire : le niveau « a » exige un balisage complet.
+  const PDFA_NIVEAUX = ['1B', '2B', '2U', '3B', '3U'];
+  const nomPdf = (d, k) => { try { const v = d.get(PDFLib.PDFName.of(k)); return v && v.asString ? v.asString() : ''; } catch (_) { return ''; } };
+
+  // Le type de champ d'un dictionnaire, hérité de ses parents.
+  function proprFT(doc, d) {
+    const { PDFName, PDFDict } = PDFLib;
+    for (let i = 0; d instanceof PDFDict && i < 20; i++) {
+      const ft = nomPdf(d, 'FT');
+      if (ft) return ft;
+      d = doc.context.lookup(d.get(PDFName.of('Parent')));
+    }
+    return '';
+  }
+  // Une valeur de signature : un dictionnaire /Sig portant /ByteRange.
+  function proprEstSignee(doc, champ) {
+    const { PDFName, PDFDict } = PDFLib;
+    const v = doc.context.lookup(champ.get(PDFName.of('V')));
+    return v instanceof PDFDict && (nomPdf(v, 'Type') === '/Sig' || v.has(PDFName.of('ByteRange')) || v.has(PDFName.of('Contents')));
+  }
+  function proprChamps(doc, liste, sortie, prof) {
+    const { PDFName, PDFDict, PDFArray } = PDFLib;
+    if (!(liste instanceof PDFArray) || prof > 12) return;
+    for (let i = 0; i < liste.size(); i++) {
+      const f = doc.context.lookup(liste.get(i));
+      if (!(f instanceof PDFDict)) continue;
+      sortie.push(f);
+      proprChamps(doc, doc.context.lookup(f.get(PDFName.of('Kids'))), sortie, prof + 1);
+    }
+  }
+  const proprXmp = doc => {
+    const { PDFName, decodePDFRawStream } = PDFLib;
+    try {
+      const flux = doc.context.lookup(doc.catalog.get(PDFName.of('Metadata')));
+      if (!flux || !flux.dict) return '';
+      return new TextDecoder('utf-8').decode(decodePDFRawStream(flux).decode());
+    } catch (_) { return ''; }
+  };
+
+  async function lireProprietes(src) {
+    const { PDFName, PDFDict, PDFNumber } = PDFLib;
+    const doc = await loadLib(src);
+    const cat = doc.catalog;
+    const out = { signatures: 0, certifie: false, pdfa: '', balise: false, pdfua: false, xfa: false };
+    // Signatures : le champ porte une valeur /Sig, ou le formulaire se déclare signé.
+    const form = doc.context.lookup(cat.get(PDFName.of('AcroForm')));
+    if (form instanceof PDFDict) {
+      const champs = [];
+      proprChamps(doc, doc.context.lookup(form.get(PDFName.of('Fields'))), champs, 0);
+      champs.forEach(f => { if (proprFT(doc, f) === '/Sig' && proprEstSignee(doc, f)) out.signatures++; });
+      const flags = doc.context.lookup(form.get(PDFName.of('SigFlags')));
+      if (!out.signatures && flags instanceof PDFNumber && (flags.asNumber() & 1)) out.signatures = 1;
+      if (form.has(PDFName.of('XFA'))) out.xfa = true;
+    }
+    const perms = doc.context.lookup(cat.get(PDFName.of('Perms')));
+    if (perms instanceof PDFDict && perms.has(PDFName.of('DocMDP'))) { out.certifie = true; out.signatures = Math.max(out.signatures, 1); }
+    // PDF/A et PDF/UA : déclarés dans le paquet XMP du catalogue.
+    const xmp = proprXmp(doc);
+    const part = /pdfaid:part(?:>|\s*=\s*["'])\s*(\d)/.exec(xmp);
+    const conf = /pdfaid:conformance(?:>|\s*=\s*["'])\s*([A-Za-z])/.exec(xmp);
+    if (part) out.pdfa = part[1] + (conf ? conf[1].toUpperCase() : 'B');
+    out.pdfua = /pdfuaid:part/.test(xmp);
+    // Balisage : une structure, déclarée marquée.
+    const marque = doc.context.lookup(cat.get(PDFName.of('MarkInfo')));
+    out.balise = cat.has(PDFName.of('StructTreeRoot')) && marque instanceof PDFDict && !!(marque.get(PDFName.of('Marked')) && String(marque.get(PDFName.of('Marked'))) === 'true');
+    return out;
+  }
+
+  // À l'ouverture : dire ce que le document porte, et ce que cela coûte.
+  function annoncerProprietes(src) {
+    const p = src.proprietes;
+    if (!p) return;
+    const dits = [];
+    if (p.signatures) dits.push(p.certifie
+      ? '« ' + src.name + ' » est un document certifié : toute modification — même un numéro de page — détruit sa signature.'
+      : '« ' + src.name + ' » est signé : l\'enregistrer détruit sa signature. La copie ne sera plus signée.');
+    if (p.xfa) dits.push('« ' + src.name + ' » est un formulaire XFA, un format que ce logiciel ne sait pas remplir ni modifier. Ouvrez-le dans Adobe Reader pour le remplir ; l\'enregistrer ici peut lui faire perdre son formulaire.');
+    if (p.pdfa) dits.push('« ' + src.name + ' » déclare le format d\'archivage PDF/A-' + p.pdfa.toLowerCase() + '. Un filigrane, une numérotation, des annotations, la reconnaissance de texte ou un mot de passe lui feront perdre cette conformité : vous serez prévenu avant l\'enregistrement.');
+    if (p.balise) dits.push('« ' + src.name + ' » est balisé pour l\'accessibilité (lecteurs d\'écran). Supprimer, déplacer ou extraire des pages détruit ce balisage.');
+    dits.forEach(t => { signaler('Document', t, 'info'); });
+    if (dits.length) toast(dits[0] + (dits.length > 1 ? ' (' + (dits.length - 1) + ' autre avis dans le journal)' : ''), 'warn');
+  }
+
+  // Sources effectivement utilisées par ces pages.
+  const proprSources = pages => {
+    const ids = new Set(pages.map(p => p.src));
+    return state.sources.filter(s => ids.has(s.id));
+  };
+  // Le document sera-t-il écrit en entier, sur place, ou reconstruit page par page ?
+  function proprReconstruit(pages, opts) {
+    const specs = (state.purges || []).filter(x => x && x.terme);
+    const caviarde = specs.length > 0 || pages.some(p => (p.ann || []).some(a => a.type === 'redact' || (a.type === 'edit' && a.efface)));
+    return !!(opts && (opts.noInPlace || opts.rasterize)) || caviarde || !canExportInPlace(pages);
+  }
+  // Pourquoi la conformité PDF/A ne peut pas être gardée : ce que l'export ajoute.
+  function proprRaisonsPdfa(pages, srcs) {
+    const r = [];
+    if (state.watermark) r.push('un filigrane');
+    if (state.stamp) r.push('une numérotation ou un en-tête');
+    if (pages.some(p => (p.ann || []).length)) r.push('des annotations ou des corrections');
+    if (pages.some(p => p.ocr)) r.push('la reconnaissance de texte');
+    if (state.security) r.push('un mot de passe');
+    if (state.dossier) r.push('un dossier de pièces');
+    if (srcs.some(s => !s.proprietes || !s.proprietes.pdfa)) r.push('l\'ajout de pages qui ne sont pas du PDF/A');
+    if (new Set(srcs.map(s => s.proprietes && s.proprietes.pdfa)).size > 1) r.push('l\'assemblage de documents de niveaux PDF/A différents');
+    if (srcs.some(s => s.proprietes && /A$/.test(s.proprietes.pdfa))) r.push('le niveau « a », qui exige un balisage que ce logiciel ne sait pas refaire');
+    return r;
+  }
+  // Le niveau PDF/A que l'export peut garder, ou '' s'il ne le peut pas.
+  function proprPdfaGardable(pages, srcs) {
+    const declares = srcs.filter(s => s.proprietes && s.proprietes.pdfa);
+    if (!declares.length) return '';
+    if (proprRaisonsPdfa(pages, srcs).length) return '';
+    return declares[0].proprietes.pdfa;
+  }
+
+  // Ce que cet export détruit : la liste à montrer avant d'écrire.
+  function proprietesPerdues(pages, opts) {
+    const srcs = proprSources(pages);
+    const pertes = [];
+    srcs.forEach(s => {
+      const p = s.proprietes;
+      if (!p) return;
+      if (p.signatures) pertes.push(p.certifie
+        ? '« ' + s.name + ' » est certifié : la copie ne sera plus certifiée ni signée, et ne se déclarera plus telle.'
+        : '« ' + s.name + ' » est signé : la signature est détruite par l\'enregistrement. La copie ne sera plus signée, et ne se déclarera plus signée.');
+      if (p.xfa) pertes.push(proprReconstruit(pages, opts)
+        ? '« ' + s.name + ' » est un formulaire XFA : il ne sera pas conservé comme formulaire.'
+        : '« ' + s.name + ' » est un formulaire XFA : il est conservé tel quel, mais ce logiciel ne le modifie pas, et ce que vous y ajoutez peut ne pas s\'afficher dans Adobe Reader.');
+      if (p.pdfa && !proprPdfaGardable(pages, srcs)) pertes.push('« ' + s.name + ' » perd sa conformité PDF/A-' + p.pdfa.toLowerCase() + ' (' + proprRaisonsPdfa(pages, srcs).join(', ') + '). La copie ne se déclarera plus PDF/A.');
+      if (p.balise && proprReconstruit(pages, opts)) pertes.push('« ' + s.name + ' » perd son balisage d\'accessibilité : le texte ne sera plus lisible comme tel par un lecteur d\'écran.');
+    });
+    return pertes;
+  }
+  // Demander avant d'écrire. Les identifiants des boutons sont stables : les
+  // scénarios de test et les gestes rapides s'y reconnaissent.
+  function confirmerPertes(pertes) {
+    return new Promise(res => {
+      let repondu = false;
+      dialog({
+        title: 'Cet enregistrement détruit des propriétés du document',
+        icon: IC.info,
+        build: b => {
+          b.append(note('Ce que le fichier porte aujourd\'hui, et que la copie n\'aura plus :', 'warn'));
+          pertes.forEach(t => b.append(note(t)));
+          b.append(note('Le fichier d\'origine n\'est pas touché tant que vous ne le remplacez pas : « Enregistrer sous… » en garde une copie.'));
+        },
+        onClose: () => { if (!repondu) res(false); },
+        actions: [
+          { id: 'perte-annuler', label: 'Annuler', onClick: close => close() },
+          { id: 'perte-continuer', label: 'Enregistrer quand même', peril: true, onClick: close => { repondu = true; res(true); close(); } },
+        ],
+      });
+    });
+  }
+  async function pertesAcceptees(pages, opts) {
+    const pertes = proprietesPerdues(pages, opts);
+    return pertes.length ? confirmerPertes(pertes) : true;
+  }
+
+  // Dans le fichier produit : plus aucune marque d'une propriété détruite.
+  function appliquerProprietes(out, pagesPdf, pages, opts) {
+    const { PDFName, PDFDict, PDFArray } = PDFLib;
+    const srcs = proprSources(pages);
+    const sauve = proprPdfaGardable(pages, srcs);
+    // Retirer une référence ne retire pas l'objet : pdf-lib écrit tout ce qu'il
+    // a en mémoire. Dès qu'on a ôté quelque chose, les objets que plus rien
+    // n'atteint (la valeur de signature, son /ByteRange) sont ramassés, sinon
+    // ils resteraient dans le fichier, intacts.
+    let retire = false;
+    const ote = (d, k) => { const n = PDFName.of(k); if (d.has(n)) { d.delete(n); retire = true; } };
+
+    // 1. Signatures : plus de /Perms, plus de /SigFlags, plus de champ signé.
+    //    Le /ByteRange recopié pointerait sur des octets quelconques.
+    try { ote(out.catalog, 'Perms'); } catch (_) {}
+    try {
+      const form = out.context.lookup(out.catalog.get(PDFName.of('AcroForm')));
+      if (form instanceof PDFDict) {
+        ote(form, 'SigFlags');
+        const champs = out.context.lookup(form.get(PDFName.of('Fields')));
+        if (champs instanceof PDFArray) {
+          const gardes = [];
+          for (let i = 0; i < champs.size(); i++) {
+            const f = out.context.lookup(champs.get(i));
+            if (f instanceof PDFDict && proprFT(out, f) === '/Sig') { retire = true; continue; }
+            gardes.push(champs.get(i));
+          }
+          form.set(PDFName.of('Fields'), out.context.obj(gardes));
+        }
+        // Un formulaire XFA reconstruit n'est plus cohérent : il ne se déclare plus.
+        if (proprReconstruit(pages, opts)) ote(form, 'XFA');
+      }
+    } catch (e) { signaler('Signatures', e); }
+    pagesPdf.forEach(page => {
+      try {
+        const annots = page.node.Annots();
+        if (!annots) return;
+        const gardees = [];
+        let sig = false;
+        for (let i = 0; i < annots.size(); i++) {
+          const a = out.context.lookup(annots.get(i));
+          if (a instanceof PDFDict && nomPdf(a, 'Subtype') === '/Widget' && proprFT(out, a) === '/Sig') { sig = true; continue; }
+          gardees.push(annots.get(i));
+        }
+        if (sig) { page.node.set(PDFName.of('Annots'), out.context.obj(gardees)); retire = true; }
+      } catch (e) { signaler('Signatures', e); }
+      // Le balisage se reconstruit avec le fichier : ses renvois ne mènent plus nulle part.
+      try { if (proprReconstruit(pages, opts)) ote(page.node, 'StructParents'); } catch (_) {}
+    });
+    try {
+      if (proprReconstruit(pages, opts)) { ote(out.catalog, 'StructTreeRoot'); ote(out.catalog, 'MarkInfo'); }
+    } catch (_) {}
+
+    // 2. PDF/A : refait au même niveau quand rien ne l'empêche — la mécanique
+    //    existe dans la bibliothèque embarquée —, sinon la déclaration disparaît.
+    if (sauve && PDFA_NIVEAUX.indexOf(sauve) >= 0) {
+      try {
+        out.convertToPDFA({ conformance: sauve });
+        if (retire) ramasserLesObjets(out);
+        return { pdfa: sauve };
+      } catch (e) { signaler('PDF/A', e); }
+    }
+    try {
+      // Quelle que soit la raison, la déclaration ne reste pas : ni XMP « pdfaid », ni intention de sortie.
+      ote(out.catalog, 'Metadata');
+      ote(out.catalog, 'OutputIntents');
+    } catch (_) {}
+    if (retire) { try { ramasserLesObjets(out); } catch (e) { signaler('Propriétés du document', e); } }
+    return { pdfa: '' };
+  }

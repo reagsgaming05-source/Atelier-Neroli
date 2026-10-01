@@ -405,6 +405,9 @@
         if (r.notes) signaler('Caviardage', plural(r.notes, 'note, champ ou pièce jointe a été retiré', 'notes, champs ou pièces jointes ont été retirés') + ' parce qu\'ils portaient le texte caviardé.', 'info');
       } catch (e) { signaler('Caviardage', e, 'erreur'); throw e; }
     }
+    // Signatures, balisage et XFA détruits : plus aucune de leurs marques dans
+    // le fichier ; PDF/A refait au même niveau quand rien ne l'empêche.
+    try { appliquerProprietes(out, mapped.map(x => x.page), pages, opts); } catch (e) { signaler('Propriétés du document', e, 'erreur'); }
     onProgress(1, 'Finalisation…');
     return out.save();
   }

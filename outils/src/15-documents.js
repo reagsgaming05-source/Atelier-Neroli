@@ -85,6 +85,9 @@
     await measurePages(src);
     render();
     detectForm(src);
+    // Ce que le fichier porte et que la réécriture détruirait (signature, PDF/A,
+    // balisage, XFA) : lu sans bloquer l'ouverture, annoncé dès que c'est connu.
+    if (!src.isSample) lireProprietes(src).then(p => { src.proprietes = p; annoncerProprietes(src); }).catch(e => signaler('Document', e));
     return src;
   }
 
@@ -141,7 +144,10 @@
     return '';
   }
   async function loadLib(src) {
-    return PDFLib.PDFDocument.load(src.bytes, Object.assign({ ignoreEncryption: true, updateMetadata: false }, src.password ? { password: src.password } : {}));
+    // preserveXFA : sans cela, pdf-lib efface le paquet XFA d'un formulaire dès
+    // qu'on en demande les champs — c'est-à-dire à l'ouverture. Le formulaire
+    // ressort intact même s'il n'est pas compris.
+    return PDFLib.PDFDocument.load(src.bytes, Object.assign({ ignoreEncryption: true, updateMetadata: false, preserveXFA: true }, src.password ? { password: src.password } : {}));
   }
 
   async function imagesToPdf(files) {
