@@ -122,11 +122,16 @@ for (const quoi of ['lettre', 'tableau', 'scan']) {
       const actuel = await capturer(page, vue);
       const fichier = path.join(DOSSIER, quoi + '-' + vue + '.png');
       if (ECRIRE || !fs.existsSync(fichier)) {
-        if (process.env.CI) journaliser(path.basename(fichier), actuel);
-        fs.mkdirSync(DOSSIER, { recursive: true });
-        fs.writeFileSync(fichier, Buffer.from(actuel.split(',')[1], 'base64'));
-        test.info().annotations.push({ type: 'référence', description: 'écrite : ' + path.basename(fichier) });
-        if (!ECRIRE) throw new Error('la référence ' + path.basename(fichier) + ' n\'existait pas : elle vient d\'être écrite, relisez-la à l\'œil et versionnez-la');
+        // Sur la chaîne on n'écrit rien sur place : la reprise automatique d'un test échoué comparerait l'image
+        // à celle que le premier essai vient d'écrire, et ferait passer une référence qui n'existe pas.
+        const surLaChaine = !!process.env.CI && !ECRIRE;
+        if (surLaChaine) journaliser(path.basename(fichier), actuel);
+        else {
+          fs.mkdirSync(DOSSIER, { recursive: true });
+          fs.writeFileSync(fichier, Buffer.from(actuel.split(',')[1], 'base64'));
+          test.info().annotations.push({ type: 'référence', description: 'écrite : ' + path.basename(fichier) });
+        }
+        if (!ECRIRE) throw new Error('la référence ' + path.basename(fichier) + ' n\'existait pas : ' + (surLaChaine ? 'l\'image obtenue est dans le journal (REFERENCE-OBTENUE), relisez-la à l\'œil et versionnez-la dans references-ci/' : 'elle vient d\'être écrite, relisez-la à l\'œil et versionnez-la'));
         return;
       }
       const reference = 'data:image/png;base64,' + fs.readFileSync(fichier).toString('base64');
