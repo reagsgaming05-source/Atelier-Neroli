@@ -4,6 +4,9 @@ const assert = require('node:assert/strict');
 const { extraire } = require('./aide');
 // L'état d'écriture (polices incorporées ou standard) vit dans 49-unicode.js ; le bloc testé le lit.
 global.ecriture = { unicode: false, actifs: 0, couverture: null };
+// La langue de l'interface (01-langue.js) : plural() la consulte ; ici, le français.
+global.traduction = null;
+global.langue = 'fr';
 const { winAnsi, releverHorsWinAnsi, oublierPertes, pertesCaracteres } = extraire('  const WINANSI_SUP = ', '  // =====', '{ winAnsi, releverHorsWinAnsi, oublierPertes, pertesCaracteres }');
 const { plural, fmtSize } = extraire('  const plural = ', '  const baseName = ', '{ plural, fmtSize }');
 

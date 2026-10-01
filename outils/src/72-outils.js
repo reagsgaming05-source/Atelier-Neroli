@@ -320,7 +320,7 @@
       const { vides, autres, rates } = r;
 
       info.textContent = (vides.length
-        ? plural(vides.length, 'page vide détectée', 'pages vides détectées') + ' sur ' + state.pages.length + ', déjà cochée' + (vides.length > 1 ? 's' : '') + '.'
+        ? plural(vides.length, 'page vide détectée', 'pages vides détectées') + ' sur ' + state.pages.length + ', ' + (vides.length > 1 ? 'déjà cochées' : 'déjà cochée') + '.'
         : 'Aucune page entièrement vide sur ' + plural(state.pages.length, 'page', 'pages') + '.')
         + (autres.length
           ? ' ' + plural(autres.length, 'page ne porte presque rien', 'pages ne portent presque rien') + ' : cochez celles à retirer.'

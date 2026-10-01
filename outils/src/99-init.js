@@ -176,7 +176,7 @@
       btnOpen: $('#btn-open'), btnAdd: $('#btn-add'), btnChoose: $('#btn-choose'), btnSample: $('#btn-sample'), dzRecents: $('#dz-recents'),
       btnExport: $('#btn-export'), btnPrint: $('#btn-print'), btnUndo: $('#btn-undo'), btnRedo: $('#btn-redo'),
       btnSelectAll: $('#btn-select-all'), selectAllLabel: $('#select-all-label'), btnSearch: $('#btn-search'),
-      btnTheme: $('#btn-theme'), btnHelp: $('#btn-help'),
+      btnTheme: $('#btn-theme'), btnHelp: $('#btn-help'), btnLangue: $('#btn-langue'),
       zoom: $('#zoom'), summary: $('#summary'), last: $('#last'),
       progress: $('#progress'), progressBar: $('#progress-bar'),
       btnAnnulerOp: $('#btn-annuler-op'), btnJournal: $('#btn-journal'),
@@ -203,6 +203,16 @@
       theme = theme === 'light' ? 'dark' : theme === 'dark' ? 'auto' : 'light';
       applyTheme(theme);
     });
+    // La langue : le bouton affiche l'autre langue (« DE » sur une page française) et la propose.
+    const afficherLangue = () => {
+      const autre = langue === 'fr' ? 'de' : 'fr';
+      el.btnLangue.textContent = autre.toUpperCase();
+      el.btnLangue.title = 'Passer à ' + LANGUES[autre];
+      el.btnLangue.setAttribute('aria-label', el.btnLangue.title);
+    };
+    afficherLangue();
+    window.addEventListener('aktum-langue', afficherLangue);
+    el.btnLangue.addEventListener('click', () => { definirLangue(langue === 'fr' ? 'de' : 'fr', true); render(); });
     el.btnHelp.addEventListener('click', toolHelp);
     el.btnAnnulerOp.addEventListener('click', demanderAnnulation);
     el.btnJournal.addEventListener('click', toolJournal);
@@ -226,7 +236,7 @@
     const poserLeRepli = replie => {
       espace.classList.toggle('replie', replie);
       btnReplier.setAttribute('aria-expanded', replie ? 'false' : 'true');
-      btnReplier.title = (replie ? 'Déplier' : 'Replier') + ' le panneau (Ctrl+Maj+B)';
+      btnReplier.title = replie ? 'Déplier le panneau (Ctrl+Maj+B)' : 'Replier le panneau (Ctrl+Maj+B)';
       btnReplier.setAttribute('aria-label', btnReplier.title);
       try { localStorage.setItem('aktum-panneau-replie', replie ? '1' : ''); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
       planifierAjustementBarre();

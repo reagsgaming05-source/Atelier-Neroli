@@ -14,18 +14,31 @@ const SRC = path.join(__dirname, '..', 'src');
 const modules = () => fs.readdirSync(SRC).filter(f => f.endsWith('.js')).sort().map(f => fs.readFileSync(path.join(SRC, f), 'utf8').replace(/\r\n/g, '\n')).join('\n');
 
 // Un texte « pour humain » : pas un sélecteur, une classe, un type MIME, une expression régulière…
+// Des textes que les règles de forme écartent à tort : repérés à la main, ils sont toujours retenus.
+const TEXTES_RETENUS = ['pdf.js indisponible', 'point (1234.50)', '[caviardé]', 'CONFIDENTIEL'];
+
 function estUnTexte(s) {
   const t = s.trim();
+  if (TEXTES_RETENUS.indexOf(t) >= 0) return true;
   if (t.length < 2 || !/[A-Za-zÀ-ÿ]/.test(t)) return false;
   if (/^(https?:|data:|blob:|file:|#|\.|\/|\[|<)/.test(t)) return false;
   if (/^[a-z][a-zA-Z0-9_\-.:\/+=;,*]*$/.test(t) && !/[À-ÿ]/.test(t)) return false;   // identifiant, classe, type MIME, extension
-  if (!/[a-zà-ÿ]/.test(t)) return false;                                                // SIGLE seul : PNG, CHF, OCR
+  if (!/[a-zà-ÿ]/.test(t) && !/\s/.test(t)) return false;                              // SIGLE ou nom technique seul : PNG, CHF, SHA-256, DEFLATE (« PIÈCE N° » compte, « CONFIDENTIEL » est retenu à la main)
+  if (/^__[A-Z_]+__$/.test(t)) return false;                                            // repère remplacé à la construction
   if (/^[A-Za-z0-9+\/=]{24,}$/.test(t)) return false;                                  // base 64
   if (/\\[dsSwWbB]|\(\?:|\[\^/.test(t)) return false;                                   // morceau d'expression régulière
   if (/^[a-z]+(-[a-z0-9]+)+(\s+[a-z]+(-[a-z0-9]+)+)*$/.test(t)) return false;           // « sr-only », « tb-btn primary »
-  if (/^[\w.#\-\[\]="':, >+~*()]+$/.test(t) && /[#.\[]/.test(t) && !/\s{2}/.test(t) && !/[À-ÿ]/.test(t) && !/ [a-zà-ÿ]{3,} [a-zà-ÿ]{3,}/.test(t)) return false;   // sélecteurs
+  if (!/^[A-ZÀ-Ý][a-zà-ÿ]+ /.test(t) && /^[\w.#\-\[\]="':, >+~*()]+$/.test(t) && /[#.\[]/.test(t) && !/\s{2}/.test(t) && !/[À-ÿ]/.test(t) && !/ [a-zà-ÿ]{3,} [a-zà-ÿ]{3,}/.test(t)) return false;   // sélecteurs
   return true;
 }
+
+// Quelques mots isolés s'affichent tels quels, bien qu'ils ressemblent à des identifiants : ils sont
+// désignés ici, à la main, après lecture du code (les autres mots isolés sont des clés internes).
+const MOTS_AFFICHES = ['actif', 'autorisations', 'rempli', 'identique', 'blanche', 'clair', 'sombre', 'automatique', 'recto', 'verso'];
+
+// Un texte assemblé : ses morceaux fixes doivent faire un texte, et porter au moins une minuscule
+// (« M{0} 0H{1}A{2} » est un tracé, « A · {0} » une étiquette sans mot).
+const estUnMotif = m => { const fixe = m.replace(/\{\d+\}/g, ''); return estUnTexte(fixe) && /[a-zà-ÿ]/.test(fixe); };
 
 function relever(options) {
   const o = options || {};
@@ -38,6 +51,8 @@ function relever(options) {
     m.get(cle).push(noeud.loc.start.line);
   };
   const pris = new WeakSet();
+  const mots = new Map();   // mots isolés écartés comme identifiants (« page », « avis ») : candidats si le français les emploie
+  const motIsole = (v, n) => { if (/^[a-zà-ÿ]{3,}$/.test(v) && !estUnTexte(v)) { if (!mots.has(v)) mots.set(v, []); mots.get(v).push(n.loc.start.line); } };
   const estChaine = n => n && ((n.type === 'Literal' && typeof n.value === 'string') || n.type === 'TemplateLiteral');
   // Aplatir une chaîne de « + » en morceaux : [{ texte } | { expr }].
   function aplatir(n, morceaux) {
@@ -63,7 +78,7 @@ function relever(options) {
       const marquer = x => { pris.add(x); if (x.type === 'BinaryExpression' && x.operator === '+') { marquer(x.left); marquer(x.right); } };
       marquer(n);
       morceaux.forEach(m => { if (m.noeud) pris.add(m.noeud); });
-      if (k > 0 && nTextes > 0) { if (estUnTexte(motif.replace(/\{\d+\}/g, ''))) ajoute(motifs, motif, n); }
+      if (k > 0 && nTextes > 0) { if (estUnMotif(motif)) ajoute(motifs, motif, n); }
       else if (k === 0) { if (estUnTexte(motif)) ajoute(litteraux, motif, n); }   // « 'a' + 'b' » : un texte coupé en deux
       // Les expressions à l'intérieur peuvent contenir d'autres textes.
       morceaux.forEach(m => { if (m.expr) visiter(m.expr, n, 'expr'); });
@@ -73,13 +88,13 @@ function relever(options) {
       const cleDeProp = parent && parent.type === 'Property' && !parent.computed && parent.key === n;
       const imp = parent && (parent.type === 'ImportDeclaration' || parent.type === 'ExportNamedDeclaration');
       const directive = parent && parent.type === 'ExpressionStatement' && parent.directive;
-      if (!cleDeProp && !imp && !directive && estUnTexte(n.value)) ajoute(litteraux, n.value, n);
+      if (!cleDeProp && !imp && !directive) { if (estUnTexte(n.value)) ajoute(litteraux, n.value, n); else motIsole(n.value, n); }
       return;
     }
     if (n.type === 'TemplateLiteral' && !pris.has(n)) {
       let k = 0;
       const motif = n.quasis.map((q, i) => (q.value.cooked || '') + (i < n.expressions.length ? '{' + (k++) + '}' : '')).join('');
-      if (estUnTexte(motif.replace(/\{\d+\}/g, ''))) ajoute(k ? motifs : litteraux, motif, n);
+      if (estUnMotif(motif)) ajoute(k ? motifs : litteraux, motif, n);
       n.expressions.forEach(e => visiter(e, n, 'expr'));
       return;
     }
@@ -90,16 +105,24 @@ function relever(options) {
     }
   }
   visiter(ast, null, null);
+  mots.forEach((lignesDuMot, mot) => { if (MOTS_AFFICHES.indexOf(mot) >= 0 && !litteraux.has(mot)) litteraux.set(mot, lignesDuMot); });
+  // Les arguments de plural(n, 'page', 'pages') s'affichent : ils comptent, même s'ils ressemblent à des identifiants.
+  (function chercherPlural(n) {
+    if (!n || typeof n.type !== 'string') return;
+    if (n.type === 'CallExpression' && n.callee.type === 'Identifier' && n.callee.name === 'plural') {
+      n.arguments.slice(1, 3).forEach(a => { if (a.type === 'Literal' && typeof a.value === 'string' && !litteraux.has(a.value)) ajoute(litteraux, a.value, a); });
+    }
+    for (const c of Object.keys(n)) { const v = n[c]; if (Array.isArray(v)) v.forEach(chercherPlural); else if (v && typeof v.type === 'string') chercherPlural(v); }
+  })(ast);
   // Le HTML de la page : les textes visibles et les attributs lisibles (title, aria-label, placeholder, alt).
   const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'page.html'), 'utf8');
   const htmlTextes = new Map();
   const ajouteHtml = (t, n) => { t = t.replace(/\s+/g, ' ').trim(); if (t && /[A-Za-zÀ-ÿ]/.test(t) && !/^[\d\s\W]+$/.test(t)) { if (!htmlTextes.has(t)) htmlTextes.set(t, []); htmlTextes.get(t).push(n); } };
   const sansScript = html.replace(/<(script|style)[\s\S]*?<\/\1>/g, m => m.replace(/[^\n]/g, ''));
-  let ligneHtml = 1;
-  sansScript.split('\n').forEach((l, i) => {
-    for (const m of l.matchAll(/(?:title|aria-label|placeholder|alt)="([^"]+)"/g)) ajouteHtml(m[1], i + 1);
-    for (const m of l.matchAll(/>([^<>]+)</g)) ajouteHtml(m[1].replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&rsquo;/g, '’').replace(/&laquo;/g, '«').replace(/&raquo;/g, '»'), i + 1);
-  });
+  const ligneDe = i => sansScript.slice(0, i).split('\n').length;
+  for (const m of sansScript.matchAll(/(?:title|aria-label|placeholder|alt)="([^"]+)"/g)) ajouteHtml(m[1], ligneDe(m.index));
+  // Les textes entre balises, même répartis sur plusieurs lignes (une icône, puis le mot, sur la ligne suivante).
+  for (const m of sansScript.matchAll(/>([^<>]+)</g)) ajouteHtml(m[1].replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&rsquo;/g, '’').replace(/&laquo;/g, '«').replace(/&raquo;/g, '»'), ligneDe(m.index));
   return {
     litteraux: Object.fromEntries(Array.from(litteraux.entries()).sort((a, b) => a[0].localeCompare(b[0], 'fr'))),
     motifs: Object.fromEntries(Array.from(motifs.entries()).sort((a, b) => a[0].localeCompare(b[0], 'fr'))),

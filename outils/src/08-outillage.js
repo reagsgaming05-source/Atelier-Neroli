@@ -12,7 +12,7 @@
     if (state.busy) { state.messageBusy = text || ''; return; }
     el.last.textContent = text || '';
   }
-  const plural = (n, one, many) => n + ' ' + (n > 1 ? many : one);
+  const plural = (n, one, many) => n + ' ' + (traduction && langue !== 'fr' ? traduction.pluriel(n, one, many, langue) : (n > 1 ? many : one));
   const dureeTexte = s => s < 60 ? Math.max(1, Math.round(s)) + ' s' : Math.floor(s / 60) + ' min' + (Math.round(s % 60) ? ' ' + pad(Math.round(s % 60), 2) + ' s' : '');
   function fmtSize(bytes) {
     if (bytes < 1024) return bytes + ' o';

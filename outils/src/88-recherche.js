@@ -250,9 +250,9 @@
         icon: IC.search,
         build: b => {
           if (occurrences) {
-            b.append(note(plural(occurrences, 'occurrence', 'occurrences') + ' de « ' + terme + ' »'
-              + (occurrences > 1 ? ' seront masquées' : ' sera masquée') + ' d\'un rectangle noir, et le texte'
-              + ' correspondant sera retiré du fichier à l\'enregistrement.', 'warn'));
+            b.append(note(plural(occurrences, 'occurrence', 'occurrences') + ' de « ' + terme + ' » '
+              + (occurrences > 1 ? 'seront masquées d\'un rectangle noir' : 'sera masquée d\'un rectangle noir')
+              + ', et le texte correspondant sera retiré du fichier à l\'enregistrement.', 'warn'));
           }
           if (ailleurs && ailleurs.total) {
             b.append(note('« ' + terme + ' » figure aussi hors de la page affichée : ' + decrireAilleurs(ailleurs)

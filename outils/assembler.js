@@ -18,6 +18,10 @@ const REPERE_MODULES = '/*@modules@*/\n';
 // finissent toujours par diverger, et on ne s'en aperçoit pas.
 const REPERE_MARQUE = '<!--@marque@-->\n';
 const REPERE_FAVICON = '<!--@favicon@-->\n';
+// Le dictionnaire allemand (i18n/de.json) : posé dans la page comme donnée, sans code, et lu seulement
+// si l'interface est en allemand. On n'y met que ce qui change : un texte identique dans les deux langues
+// (un sigle, une mesure) se rend tel quel sans entrée.
+const REPERE_DICO_DE = '<!--@dico-de@-->\n';
 
 function lire(f) {
   // Windows convertit les fins de ligne au passage : on travaille en LF.
@@ -49,10 +53,18 @@ function favicon() {
   return '<link rel="icon" href="data:image/svg+xml;base64,' + b64 + '">\n';
 }
 
+function dictionnaireAllemand() {
+  const brut = JSON.parse(fs.readFileSync(path.join(__dirname, 'i18n', 'de.json'), 'utf8'));
+  const dico = { litteraux: {}, motifs: {}, html: {}, pluriels: brut.pluriels || {} };
+  for (const s of ['litteraux', 'motifs', 'html']) for (const k of Object.keys(brut[s])) if (brut[s][k] !== k) dico[s][k] = brut[s][k];
+  // « < » devient « \u003c » : rien, dans les données, ne peut refermer la balise ni ouvrir un commentaire.
+  return '<script type="application/json" id="aktum-dico-de">' + JSON.stringify(dico).replace(/</g, '\\u003c') + '</script>\n';
+}
+
 function assembler() {
   let page = lire('page.html');
   for (const [repere, quoi] of [[REPERE_STYLE, 'style'], [REPERE_MODULES, 'modules'],
-    [REPERE_MARQUE, 'marque'], [REPERE_FAVICON, 'favicon']]) {
+    [REPERE_MARQUE, 'marque'], [REPERE_FAVICON, 'favicon'], [REPERE_DICO_DE, 'dico-de']]) {
     if (!page.includes(repere)) throw new Error('repère ' + quoi + ' introuvable dans src/page.html');
   }
   const js = modules().map(lire).join('');
@@ -62,6 +74,7 @@ function assembler() {
   page = page.replace(REPERE_MODULES, () => js);
   page = page.replace(REPERE_MARQUE, () => traceMarque() + '\n');
   page = page.replace(REPERE_FAVICON, favicon);
+  page = page.replace(REPERE_DICO_DE, dictionnaireAllemand);
   return page;
 }
 

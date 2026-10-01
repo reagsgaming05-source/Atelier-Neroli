@@ -54,6 +54,7 @@
   }
 
   async function boot() {
+    demarrerLangue();
     const msg = $('#boot-msg'), retry = $('#boot-retry');
     retry.hidden = true;
     msg.textContent = 'Chargement des composants PDF…';

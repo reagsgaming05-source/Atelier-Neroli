@@ -47,12 +47,6 @@
   " Reliez au moins un champ à une colonne.": [
    10941
   ],
-  " sera masquée": [
-   10238
-  ],
-  " seront masquées": [
-   10238
-  ],
   " Toutes portent du texte ou une image.": [
    8318
   ],
@@ -276,6 +270,9 @@
    4643,
    6863,
    6864
+  ],
+  "actif": [
+   2090
   ],
   "Actif": [
    13271
@@ -680,6 +677,12 @@
   "Auto": [
    7626
   ],
+  "automatique": [
+   13449
+  ],
+  "autorisations": [
+   2091
+  ],
   "Autorisations": [
    9777
   ],
@@ -700,6 +703,21 @@
   ],
   "Autoriser les annotations": [
    9768
+  ],
+  "autre": [
+   4748
+  ],
+  "autres": [
+   4748
+  ],
+  "avertissement": [
+   446
+  ],
+  "avertissements": [
+   446
+  ],
+  "avis": [
+   446
   ],
   "avis pendant l'enregistrement": [
    6528,
@@ -747,6 +765,9 @@
   ],
   "BBox": [
    3186
+  ],
+  "blanche": [
+   7710
   ],
   "Bleu": [
    12742,
@@ -919,8 +940,14 @@
   "Century Gothic": [
    2364
   ],
+  "certificat joint": [
+   6250
+  ],
   "Certification du document non retirée": [
    4641
+  ],
+  "certificats joints": [
+   6250
   ],
   "ces documents soient enregistrés": [
    6671
@@ -956,6 +983,9 @@
   "Ceux déjà dans le PDF reçu : lister, retirer": [
    13204
   ],
+  "champ": [
+   9870
+  ],
   "Champ": [
    9837,
    10917,
@@ -970,6 +1000,9 @@
   ],
   "champ relié": [
    10938
+  ],
+  "champs": [
+   9870
   ],
   "Champs aplatis à l'export": [
    9813
@@ -1038,6 +1071,9 @@
    9837,
    10917
   ],
+  "clair": [
+   13449
+  ],
   "Clic": [
    10653
   ],
@@ -1077,17 +1113,29 @@
   "Coin": [
    6940
   ],
+  "colonne": [
+   10605
+  ],
+  "colonnes": [
+   10605
+  ],
   "Comic Sans MS": [
    2366
   ],
   "Comme le document": [
    7601
   ],
+  "commentaire": [
+   5327
+  ],
   "Commentaire PDF": [
    4940
   ],
   "commentaire retiré": [
    5348
+  ],
+  "commentaires": [
+   5327
   ],
   "Commentaires": [
    1765,
@@ -1200,6 +1248,9 @@
   "Convertir les images en PDF": [
    9327
   ],
+  "copie": [
+   11043
+  ],
   "Copie conforme": [
    12708
   ],
@@ -1226,6 +1277,9 @@
   ],
   "Copier un tableau vers Excel : plusieurs pages d'un coup, et les montants (1'234.50, CHF 1 234.-) deviennent des nombres.": [
    10700
+  ],
+  "copies": [
+   11043
   ],
   "Copies": [
    7579
@@ -1378,6 +1432,12 @@
   "définies": [
    2097
   ],
+  "déjà cochée": [
+   8314
+  ],
+  "déjà cochées": [
+   8314
+  ],
   "DejaVu Sans": [
    2369
   ],
@@ -1405,7 +1465,7 @@
   "Déplacer vers un numéro de page précis": [
    1939
   ],
-  "Déplier": [
+  "Déplier le panneau (Ctrl+Maj+B)": [
    13515
   ],
   "dépôt impossible": [
@@ -1515,6 +1575,9 @@
    6171,
    6172
   ],
+  "document": [
+   2207
+  ],
   "Document": [
    771,
    4539,
@@ -1546,6 +1609,9 @@
   ],
   "Document source introuvable.": [
    5556
+  ],
+  "documents": [
+   2207
   ],
   "Documents ouverts": [
    9738
@@ -1868,6 +1934,9 @@
   "Feuille suivante": [
    7640
   ],
+  "fichier": [
+   9379
+  ],
   "fichier créé": [
    9536
   ],
@@ -1883,6 +1952,9 @@
   "fichier produit": [
    9462,
    9466
+  ],
+  "fichiers": [
+   9379
   ],
   "fichiers créés": [
    9536
@@ -2140,6 +2212,9 @@
   ],
   "Home": [
    1454
+  ],
+  "identique": [
+   9001
   ],
   "Ignorer et supprimer": [
    6677
@@ -2618,6 +2693,9 @@
   "Lieu (facultatif)": [
    6973
   ],
+  "ligne": [
+   10605
+  ],
   "Ligne": [
    5226
   ],
@@ -2626,6 +2704,9 @@
   ],
   "ligne copiée": [
    10630
+  ],
+  "lignes": [
+   10605
   ],
   "lignes copiées": [
    10630
@@ -3014,6 +3095,9 @@
   "objets inaccessibles n'ont pas pu être retirés du fichier": [
    3914
   ],
+  "occurrence": [
+   10237
+  ],
   "occurrence caviardée": [
    10411
   ],
@@ -3025,6 +3109,9 @@
   ],
   "Occurrence suivante (Entrée)": [
    10272
+  ],
+  "occurrences": [
+   10237
   ],
   "occurrences caviardées": [
    10411
@@ -3129,6 +3216,9 @@
   "Ouvrir un document (nouvel onglet)": [
    10662
   ],
+  "page": [
+   2071
+  ],
   "Page": [
    6940
   ],
@@ -3209,6 +3299,9 @@
   ],
   "PageMode": [
    1387
+  ],
+  "pages": [
+   2071
   ],
   "Pages": [
    325,
@@ -3413,6 +3506,12 @@
   ],
   "Poids des sources": [
    9739
+  ],
+  "point": [
+   5798
+  ],
+  "points": [
+   5798
   ],
   "Police": [
    9633,
@@ -3681,6 +3780,12 @@
   "Rect": [
    4341
   ],
+  "recto": [
+   7330,
+   7551,
+   7705,
+   7711
+  ],
   "Recto seulement": [
    7551,
    7570
@@ -3773,6 +3878,9 @@
   "Remplacer tout corrige chaque bloc concerné comme dans l'éditeur : mêmes polices, même mise en page. Caviarder tout masque chaque occurrence d'un rectangle noir et retire le texte du fichier à l'export.": [
    10391
   ],
+  "rempli": [
+   2100
+  ],
   "Remplir en série": [
    10879
   ],
@@ -3811,7 +3919,7 @@
   "Répété en mosaïque": [
    9628
   ],
-  "Replier": [
+  "Replier le panneau (Ctrl+Maj+B)": [
    13515
   ],
   "Reprendre le texte": [
@@ -3958,6 +4066,9 @@
   "Séparés par des virgules.": [
    9731
   ],
+  "sera masquée d'un rectangle noir": [
+   10238
+  ],
   "Série annulée": [
    11000,
    11005,
@@ -3965,6 +4076,9 @@
   ],
   "Série annulée : rien n'a été écrit.": [
    11052
+  ],
+  "seront masquées d'un rectangle noir": [
+   10238
   ],
   "Seront retirés du fichier archivé : scripts, fichiers joints, mot de passe. Les formulaires sont aplatis. Le fichier d'origine n'est pas touché.": [
    5745
@@ -4040,8 +4154,14 @@
   "Signer et enregistrer": [
    6980
   ],
+  "signet": [
+   10223
+  ],
   "Signet retiré · Ctrl+Z pour annuler": [
    1293
+  ],
+  "signets": [
+   10223
   ],
   "Signets": [
    754,
@@ -4052,6 +4172,9 @@
   ],
   "Signets du document": [
    1365
+  ],
+  "sombre": [
+   13449
   ],
   "Sommaire": [
    9084,
@@ -4585,6 +4708,10 @@
   "Version d'essai en ligne : elle charge ses composants depuis internet. Pour des documents réels, utilisez la version portable, qui ne charge rien.": [
    96
   ],
+  "verso": [
+   7551,
+   7711
+  ],
   "Verso seulement": [
    7551
   ],
@@ -4911,7 +5038,7 @@
   "{0} dans une archive ZIP": [
    11046
   ],
-  "{0} de « {1} »{2} d'un rectangle noir, et le texte correspondant sera retiré du fichier à l'enregistrement.": [
+  "{0} de « {1} » {2}, et le texte correspondant sera retiré du fichier à l'enregistrement.": [
    10237
   ],
   "{0} en pages": [
@@ -4931,9 +5058,6 @@
   ],
   "{0} Ko": [
    364
-  ],
-  "{0} le panneau (Ctrl+Maj+B)": [
-   13515
   ],
   "{0} Mo": [
    365
@@ -4973,9 +5097,6 @@
   ],
   "{0} sur {1} pour « {2} »": [
    10343
-  ],
-  "{0} sur {1}, déjà cochée{2}.": [
-   8314
   ],
   "{0} sur cette page": [
    11148
@@ -5297,7 +5418,7 @@
    7484,
    7485
   ],
-  "La chaîne de certificats est incomplète ({0} certificat{1} joint{2}, jusqu'à « {3} ») : l'autorité qui a délivré le certificat ne peut pas être identifiée ici.": [
+  "La chaîne de certificats est incomplète ({0}, jusqu'à « {1} ») : l'autorité qui a délivré le certificat ne peut pas être identifiée ici.": [
    6250
   ],
   "La comparaison a échoué : {0}": [
