@@ -60,15 +60,23 @@
   const journal = [];
   function signaler(contexte, e, niveau) {
     const msg = e && e.message ? e.message : String(e == null ? '' : e);
-    journal.push({ quand: new Date(), contexte, msg, niveau: niveau || 'avert' });
+    // La même chose répétée (un stockage refusé à chaque réglage) ne remplit pas
+    // le journal : une ligne, et le nombre de fois.
+    const niv = niveau || 'avert';
+    const deja = journal.find(j => j.contexte === contexte && j.msg === msg && j.niveau === niv);
+    if (deja) { deja.fois = (deja.fois || 1) + 1; deja.quand = new Date(); }
+    else journal.push({ quand: new Date(), contexte, msg, niveau: niv, fois: 1 });
     if (journal.length > 400) journal.shift();
     if (niveau === 'erreur') console.error(contexte + ' :', e); else if (niveau !== 'info') console.warn(contexte + ' :', e);
     majJournal();
   }
+  // Le nombre d'avis qui comptent (hors information), répétitions comprises : de
+  // quoi savoir si une opération en a ajouté, même un avis déjà vu.
+  const avisGraves = () => journal.reduce((t, j) => (j.niveau !== 'info' ? t + (j.fois || 1) : t), 0);
   function majJournal() {
     if (!el.btnJournal) return;
     const n = journal.length;
-    const graves = journal.filter(j => j.niveau !== 'info').length;
+    const graves = avisGraves();
     el.btnJournal.hidden = !n;
     el.btnJournal.querySelector('.n').textContent = n;
     el.btnJournal.classList.toggle('grave', graves > 0);
@@ -84,7 +92,7 @@
         const q = document.createElement('span'); q.className = 'quand'; q.textContent = pad(j.quand.getHours(), 2) + ':' + pad(j.quand.getMinutes(), 2) + ':' + pad(j.quand.getSeconds(), 2);
         const g = document.createElement('div'); g.className = 'g';
         const c = document.createElement('div'); c.className = 'n'; c.textContent = j.contexte;
-        const m = document.createElement('div'); m.className = 's'; m.textContent = j.msg;
+        const m = document.createElement('div'); m.className = 's'; m.textContent = j.msg + (j.fois > 1 ? ' (×' + j.fois + ')' : '');
         g.append(c, m);
         d.append(q, g);
         liste.appendChild(d);
@@ -98,7 +106,7 @@
         b.append(liste);
       },
       actions: [
-        { label: 'Copier', onClick: async () => { const t = journal.map(j => j.quand.toISOString() + ' [' + j.niveau + '] ' + j.contexte + ' : ' + j.msg).join('\n'); if (await copierTexte(t)) toast('Journal copié.'); } },
+        { label: 'Copier', onClick: async () => { const t = journal.map(j => j.quand.toISOString() + ' [' + j.niveau + '] ' + j.contexte + ' : ' + j.msg + (j.fois > 1 ? ' (×' + j.fois + ')' : '')).join('\n'); if (await copierTexte(t)) toast('Journal copié.'); } },
         { label: 'Vider', onClick: () => { journal.length = 0; majJournal(); remplir(); } },
         { label: 'Fermer', primary: true, onClick: c => c() },
       ],
@@ -110,7 +118,14 @@
   const annulation = { demande: false, actif: false };
   class Annule extends Error { constructor() { super('Opération annulée'); this.annule = true; } }
   function annulable(oui) {
-    annulation.actif = !!oui; annulation.demande = false;
+    const etaitActif = annulation.actif;
+    annulation.actif = !!oui;
+    // Réactiver le bouton alors qu'il l'est déjà ne doit PAS effacer une demande
+    // d'arrêt : chaque setBusy(…, { annuler: true }) passe ici, et le journal du
+    // moteur de reconnaissance en émet plusieurs par page — la demande était
+    // effacée dans la milliseconde, et l'arrêt n'avait aucun effet.
+    if (oui && etaitActif) return;
+    annulation.demande = false;
     if (!el.btnAnnulerOp) return;
     el.btnAnnulerOp.hidden = !oui; el.btnAnnulerOp.disabled = false; el.btnAnnulerOp.textContent = 'Annuler';
   }
@@ -137,6 +152,19 @@
   // par leur approximation ASCII abîmait le texte pour rien.
   const WINANSI_SUP = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
   const CHAR_MAP = { ' ': ' ', ' ': ' ', ' ': ' ', '‑': '-', '−': '-', '­': '' };
+  // Les caractères que les polices standard ne savent pas écrire, relevés au
+  // fil de l'assemblage : « ć » dans « Milošević » sortait « Miloševi? », sans
+  // un mot. On les garde avec le mot où ils figurent, pour le dire avant d'écrire.
+  const pertesCaracteres = new Map();
+  const oublierPertes = () => pertesCaracteres.clear();
+  function noterPerte(ch, texte) {
+    if (pertesCaracteres.has(ch)) return;
+    const mot = (String(texte).split(/[\s\n]+/).find(m => m.indexOf(ch) >= 0) || '').slice(0, 40);
+    pertesCaracteres.set(ch, mot);
+  }
+  const hors = ch => { const c = ch.codePointAt(0); return c > 255 && WINANSI_SUP.indexOf(ch) < 0 && CHAR_MAP[ch] === undefined; };
+  // Pour les valeurs que pdf-lib écrit lui-même (champs de formulaire).
+  function releverHorsWinAnsi(texte) { for (const ch of String(texte == null ? '' : texte)) if (hors(ch)) noterPerte(ch, texte); }
   function winAnsi(s) {
     let out = '';
     for (const ch of String(s == null ? '' : s)) {
@@ -146,6 +174,7 @@
       if (c < 32) { out += ch === '\n' ? '\n' : ' '; continue; }
       // 0x7F à 0x9F : des codes de commande, que WinAnsi ne porte pas.
       if (c >= 0x7f && c <= 0x9f) { out += ' '; continue; }
+      if (c > 255 && WINANSI_SUP.indexOf(ch) < 0) noterPerte(ch, s);
       out += (c <= 255 || WINANSI_SUP.indexOf(ch) >= 0) ? ch : '?';
     }
     return out;

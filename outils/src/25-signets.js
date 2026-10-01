@@ -19,20 +19,34 @@
         return await doc.getPageIndex(d[0]);
       } catch (_) { return -1; }
     };
-    let compte = 0;
+    // Le plan est recopié en entier : l'export le réécrit depuis cette liste, et
+    // tout ce qu'elle ne porte pas disparaît du fichier enregistré. Un plafond de
+    // 800 coupait en silence — sur 2 000 signets, 1 200 étaient perdus à
+    // l'enregistrement. La borne qui reste (50 000) protège la mémoire, et quand
+    // elle joue elle le dit.
+    const LIMITE = 50000;
+    let compte = 0, tronque = false;
     const conv = async (items, prof) => {
       const out = [];
       for (const it of items) {
-        if (++compte > 800) break;
+        if (++compte > LIMITE) { tronque = true; break; }
+        // Un grand plan se lit par tranches : l'interface ne gèle pas pendant la lecture.
+        if (compte % 250 === 0) await nextFrame();
         const i = await indexDe(it.dest);
-        const enfants = prof < 8 && it.items && it.items.length ? await conv(it.items, prof + 1) : [];
+        const enfants = prof < 30 && it.items && it.items.length ? await conv(it.items, prof + 1) : [];
         const page = i >= 0 && pagesDeSrc[i] ? pagesDeSrc[i].id : null;
         if (page != null) out.push({ id: ++uid, titre: String(it.title || '').replace(/\s+/g, ' ').trim() || 'Sans titre', page, enfants });
         else out.push(...enfants);
       }
       return out;
     };
-    return conv(plan, 0);
+    const arbre = await conv(plan, 0);
+    if (tronque) {
+      const msg = 'Le plan de « ' + src.name + ' » compte plus de ' + LIMITE.toLocaleString('fr-CH') + ' signets : seuls les premiers sont gardés. Les autres ne seront pas dans le fichier enregistré.';
+      signaler('Signets', msg);
+      toast(msg, 'warn');
+    }
+    return arbre;
   }
   // Un signet dont la page a disparu s'efface ; ses sous-signets remontent.
   function purgerSignets() {
@@ -127,7 +141,7 @@
       try {
         const t = await getPageText(p);
         defaut = (t.split('\n').map(l => l.trim()).find(l => l.length >= 3) || '').slice(0, 70);
-      } catch (_) {}
+      } catch (e) { signaler('Titre proposé pour le signet', e, 'info'); }
     }
     const titre = input('sg-titre', 'text', defaut || ('Page ' + (pageIndex(pid) + 1)));
     const parent = signetActif != null ? trouverSignet(signetActif, state.signets) : null;
@@ -182,7 +196,7 @@
       return r;
     };
     const arbre = filtre(signets);
-    try { out.catalog.delete(PDFName.of('Outlines')); } catch (_) {}
+    try { out.catalog.delete(PDFName.of('Outlines')); } catch (e) { signaler('Signets du document', e); }
     if (!arbre.length) return 0;
     const compter = l => l.reduce((n, s) => n + 1 + compter(s.enfants), 0);
     const construire = (liste, parent) => {

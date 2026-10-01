@@ -100,3 +100,28 @@ test('le premier module ouvre le mode strict, le dernier démarre l\'application
 test('recoller deux fois donne exactement la même source', () => {
   assert.equal(assembler(), source);
 });
+
+// L'application tient en une seule portée : une `function` y est remontée, une
+// `const` non. Une déclaration changée de l'une à l'autre fait échouer le
+// démarrage avec « before initialization » — sans que rien d'autre ne le dise
+// avant plusieurs minutes de tests de bout en bout.
+const { erreursDeDemarrage } = require('../garde-demarrage');
+const ANCRE = '  const textCache = new Map();';
+
+test('le démarrage ne lit aucune déclaration avant de la poser', async () => {
+  assert.deepEqual(await erreursDeDemarrage(source), []);
+});
+
+test('le garde-fou attrape une `function` devenue `const`', async () => {
+  assert.ok(source.includes(ANCRE), 'l\'ancre du test existe encore');
+  const appel = (page, decl) => page.replace("  'use strict';\n", "  'use strict';\n  precoce();\n").replace(ANCRE, decl + ANCRE);
+  assert.deepEqual(await erreursDeDemarrage(appel(source, '  function precoce() { return 1; }\n')), [], 'une function est remontée');
+  const erreurs = await erreursDeDemarrage(appel(source, '  const precoce = () => 1;\n'));
+  assert.equal(erreurs.length, 1);
+  assert.match(erreurs[0], /precoce/);
+});
+
+test('il attrape aussi la lecture faite plus tard, dans le démarrage asynchrone', async () => {
+  const page = source.replace("  'use strict';\n", "  'use strict';\n  (async () => { tard; })();\n").replace(ANCRE, '  const tard = 1;\n' + ANCRE);
+  assert.match((await erreursDeDemarrage(page))[0] || '', /tard/);
+});

@@ -50,7 +50,7 @@
       return 'ok';
     } catch (e) {
       console.error(e);
-      try { await window.blonayEnregistrerAbandon(jeton); } catch (_) {}
+      try { await window.blonayEnregistrerAbandon(jeton); } catch (e) { signaler('Abandon de la récupération', e, 'info'); }
       toast('L\'enregistrement a échoué : ' + (e && e.message ? e.message : e), 'error');
       return 'echec';
     }
@@ -104,12 +104,18 @@
     // Le document entier, tel quel : une fois écrit, il n'est plus « modifié ».
     const entier = pages === state.pages && !opts;
     setBusy('Assemblage de ' + plural(pages.length, 'page', 'pages') + '…', 0, { annuler: true });
-    const avisAvant = journal.filter(j => j.niveau !== 'info').length;
+    const avisAvant = avisGraves();
     try {
       const bytes = await buildPdf(pages, Object.assign({ onProgress: (r, t) => { verifierAnnulation(); setBusy(t || 'Assemblage…', r, { annuler: true }); } }, opts));
+      setBusy('');
+      // Un export qui se déjuge : la fonction appelante peut refuser le résultat
+      // après l'avoir mesuré (« Réduire la taille » qui alourdirait le fichier).
+      const refus = opts && typeof opts.refuserSi === 'function' ? opts.refuserSi(bytes) : null;
+      if (refus) { signaler('Export', refus); toast(refus, 'warn'); setLast('Export refusé : le résultat est plus gros que l\'original'); return null; }
+      if (!(await caracteresAcceptes())) { setLast('Export annulé'); return null; }
       const parti = await deliver(bytes, filename, null, { document: entier });
       if (parti && entier && !state.bureau) documentEnregistre('');
-      const avis = journal.filter(j => j.niveau !== 'info').length - avisAvant;
+      const avis = avisGraves() - avisAvant;
       if (avis > 0) toast(plural(avis, 'avis pendant l\'export', 'avis pendant l\'export') + ' : voir le journal, en bas de la fenêtre.', 'warn');
       return bytes;
     } catch (e) {
@@ -142,7 +148,7 @@
   function confirmerEcrasement(chemin) {
     return new Promise(res => {
       let pref = '';
-      try { pref = localStorage.getItem('blonay-ecraser') || ''; } catch (_) {}
+      try { pref = localStorage.getItem('blonay-ecraser') || ''; } catch (e) { signaler('Préférence d\'écrasement', e, 'info'); }
       if (pref === 'toujours' || state.ecraserOk) { res('remplacer'); return; }
       let fait = false;
       const plus = checkbox('ecr-plus', 'Ne plus demander : remplacer directement, comme Acrobat', false);
@@ -160,13 +166,41 @@
           { label: 'Enregistrer sous…', id: 'ecr-sous', onClick: c => { fait = true; res('sous'); c(); } },
           { label: 'Remplacer le fichier', id: 'ecr-remplacer', primary: true, onClick: c => {
             fait = true;
-            if (plus.input.checked) { try { localStorage.setItem('blonay-ecraser', 'toujours'); } catch (_) {} }
+            if (plus.input.checked) { try { localStorage.setItem('blonay-ecraser', 'toujours'); } catch (e) { signaler('Préférence d\'écrasement', e, 'info'); } }
             state.ecraserOk = true;
             res('remplacer'); c();
           } },
         ],
       });
     });
+  }
+  // Le fichier a changé depuis qu'on l'a lu : quelqu'un d'autre a écrit
+  // entre-temps. L'écraser ferait disparaître son travail sans un mot.
+  function confirmerConflit(chemin) {
+    return new Promise(res => {
+      let fait = false;
+      dialog({
+        title: '« ' + nomDe(chemin) + ' » a changé depuis son ouverture', icon: IC.info,
+        build: b => {
+          b.append(note('Quelqu\'un a enregistré ce fichier depuis que vous l\'avez ouvert — une collègue, ou une autre fenêtre de cet ordinateur. Le remplacer maintenant ferait disparaître ses modifications.', 'warn'));
+          b.append(note('« Enregistrer sous… » garde les deux versions : la sienne reste intacte, la vôtre devient un nouveau fichier.'));
+        },
+        onClose: () => { if (!fait) res(''); },
+        actions: [
+          { id: 'conflit-annuler', label: 'Annuler', onClick: c => c() },
+          { id: 'conflit-sous', label: 'Enregistrer sous…', primary: true, onClick: c => { fait = true; res('sous'); c(); } },
+          { id: 'conflit-ecraser', label: 'Écraser quand même', peril: true, onClick: c => { fait = true; res('ecraser'); c(); } },
+        ],
+      });
+    });
+  }
+  // La date à laquelle on a lu ce fichier : celle de notre dernier
+  // enregistrement, sinon celle de sa source.
+  function mtimeAttendu() {
+    if (state.mtimeFichier > 0) return state.mtimeFichier;
+    if (state.mtimeFichier < 0) return 0;
+    const reels = state.sources.filter(s => !s.isSample && !s.genere);
+    return reels.length === 1 && reels[0].mtime > 0 ? reels[0].mtime : 0;
   }
   async function enregistrer() {
     if (!state.pages.length || state.busy) return;
@@ -178,16 +212,27 @@
     if (choix !== 'remplacer' || state.busy) return;
     if (!(await pertesAcceptees(state.pages))) { setLast('Enregistrement annulé'); return; }
     setBusy('Assemblage de ' + plural(state.pages.length, 'page', 'pages') + '…', 0, { annuler: true });
-    const avisAvant = journal.filter(j => j.niveau !== 'info').length;
+    const avisAvant = avisGraves();
     try {
       const bytes = await buildPdf(state.pages, { onProgress: (r, t) => { verifierAnnulation(); setBusy(t || 'Assemblage…', r, { annuler: true }); } });
+      setBusy('');
+      if (!(await caracteresAcceptes())) { setLast('Enregistrement annulé'); return; }
       setBusy('Écriture de ' + nomDe(chemin) + '…', 1);
-      const r = await window.BlonayDesktop.ecrire(chemin, bytes);
+      let r = await window.BlonayDesktop.ecrire(chemin, bytes, { mtimeAttendu: mtimeAttendu() });
+      if (r && r.conflit) {
+        setBusy('');
+        const suite = await confirmerConflit(chemin);
+        if (suite === 'sous') { exportPages(state.pages, nom); return; }
+        if (suite !== 'ecraser') { setLast('Enregistrement annulé : le fichier a changé'); return; }
+        setBusy('Écriture de ' + nomDe(chemin) + '…', 1);
+        r = await window.BlonayDesktop.ecrire(chemin, bytes, { forcer: true });
+      }
       if (!r || !r.ok) throw new Error((r && r.erreur) || 'le fichier n\'a pas pu être écrit');
-      documentEnregistre(chemin);
+      state.mtimeFichier = r.mtimeMs > 0 ? r.mtimeMs : -1;
+      documentEnregistre(chemin, undefined, r.mtimeMs);
       toast(nomDe(chemin) + ' enregistré (' + fmtSize(bytes.byteLength) + ')');
       setLast('Enregistré : ' + chemin);
-      const avis = journal.filter(j => j.niveau !== 'info').length - avisAvant;
+      const avis = avisGraves() - avisAvant;
       if (avis > 0) toast(plural(avis, 'avis pendant l\'enregistrement', 'avis pendant l\'enregistrement') + ' : voir le journal, en bas de la fenêtre.', 'warn');
     } catch (e) {
       if (e && e.annule) { setLast('Enregistrement annulé'); toast('Enregistrement annulé.', 'warn'); return; }
@@ -197,12 +242,14 @@
   }
   // Le document vient d'être écrit : il n'est plus « modifié », son dépôt de
   // récupération n'a plus lieu d'être, et Enregistrer visera ce fichier.
-  function documentEnregistre(chemin, ongletId) {
+  function documentEnregistre(chemin, ongletId, mtimeMs) {
     const courant = ongletId == null || ongletId === ongletActif;
     const e = courant ? state : (onglets.find(o => o.id === ongletId) || {}).etat;
     if (!e) return;
     e.touched = false;
-    if (chemin) { e.chemin = chemin; e.ecraserOk = false; }
+    // Un nouveau fichier a ses propres dates : celle du document d'origine ne dit
+    // plus rien de lui. Inconnue, elle vaut -1 (rien à comparer), jamais celle de la source.
+    if (chemin) { e.chemin = chemin; e.ecraserOk = false; e.mtimeFichier = mtimeMs > 0 ? mtimeMs : -1; }
     recupOublier(e);
     if (courant) render(); else renderOnglets();
   }

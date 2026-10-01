@@ -186,7 +186,7 @@
 
     // 1. Signatures : plus de /Perms, plus de /SigFlags, plus de champ signé.
     //    Le /ByteRange recopié pointerait sur des octets quelconques.
-    try { ote(out.catalog, 'Perms'); } catch (_) {}
+    try { ote(out.catalog, 'Perms'); } catch (e) { signaler('Certification du document non retirée', e); }
     try {
       const form = out.context.lookup(out.catalog.get(PDFName.of('AcroForm')));
       if (form instanceof PDFDict) {
@@ -219,11 +219,11 @@
         if (sig) { page.node.set(PDFName.of('Annots'), out.context.obj(gardees)); retire = true; }
       } catch (e) { signaler('Signatures', e); }
       // Le balisage se reconstruit avec le fichier : ses renvois ne mènent plus nulle part.
-      try { if (proprReconstruit(pages, opts)) ote(page.node, 'StructParents'); } catch (_) {}
+      try { if (proprReconstruit(pages, opts)) ote(page.node, 'StructParents'); } catch (e) { signaler('Renvois du balisage', e); }
     });
     try {
       if (proprReconstruit(pages, opts)) { ote(out.catalog, 'StructTreeRoot'); ote(out.catalog, 'MarkInfo'); }
-    } catch (_) {}
+    } catch (e) { signaler('Balisage non retiré', e); }
 
     // 2. PDF/A : refait au même niveau quand rien ne l'empêche — la mécanique
     //    existe dans la bibliothèque embarquée —, sinon la déclaration disparaît.
@@ -238,7 +238,35 @@
       // Quelle que soit la raison, la déclaration ne reste pas : ni XMP « pdfaid », ni intention de sortie.
       ote(out.catalog, 'Metadata');
       ote(out.catalog, 'OutputIntents');
-    } catch (_) {}
+    } catch (e) { signaler('Déclaration PDF/A non retirée', e); }
     if (retire) { try { ramasserLesObjets(out); } catch (e) { signaler('Propriétés du document', e); } }
     return { pdfa: '' };
+  }
+
+  // Des caractères que les polices du logiciel ne savent pas écrire : le dire
+  // avant d'écrire le fichier, avec le mot où ils figurent, plutôt que de laisser
+  // sortir « Miloševi? » sans un mot. Les polices incorporées (Unicode) suppriment
+  // cet avertissement ; en attendant, il évite d'envoyer un document faux.
+  function caracteresPerdus() { return Array.from(pertesCaracteres.entries()).map(([ch, mot]) => ({ ch, mot })); }
+  async function caracteresAcceptes() {
+    const l = caracteresPerdus();
+    if (!l.length) return true;
+    l.forEach(x => signaler('Caractères', '« ' + x.ch + ' » (U+' + x.ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0') + ') n\'a pas pu être écrit' + (x.mot ? ' dans « ' + x.mot + ' »' : '') + ' : il est remplacé par « ? ».'));
+    return new Promise(res => {
+      let repondu = false;
+      dialog({
+        title: 'Des caractères ne peuvent pas être écrits', icon: IC.info,
+        build: b => {
+          b.append(note('Les polices du logiciel ne savent pas écrire ces caractères. Dans le fichier, ils seraient remplacés par « ? » :', 'warn'));
+          l.slice(0, 8).forEach(x => b.append(note('« ' + x.ch + ' »' + (x.mot ? ' dans « ' + x.mot + ' »' : ''))));
+          if (l.length > 8) b.append(note('… et ' + plural(l.length - 8, 'autre', 'autres') + '.'));
+          b.append(note('Un nom écrit « Miloševi? » est un document qu\'on ne peut pas envoyer. Corrigez le texte (par exemple « c » pour « ć »), ou exportez en connaissance de cause.'));
+        },
+        onClose: () => { if (!repondu) res(false); },
+        actions: [
+          { id: 'carac-annuler', label: 'Annuler', onClick: close => close() },
+          { id: 'carac-continuer', label: 'Exporter quand même', peril: true, onClick: close => { repondu = true; res(true); close(); } },
+        ],
+      });
+    });
   }

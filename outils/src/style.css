@@ -681,6 +681,8 @@
   }
   .statusbar .summary { white-space: nowrap; color: var(--texte-2); }
   .statusbar .summary .mod { color: var(--ambre); }
+  .statusbar .essai-ligne { flex: 0 0 auto; padding: 2px 9px; border-radius: 99px; background: color-mix(in srgb, var(--ambre) 18%, transparent); color: var(--ambre); font-weight: 600; white-space: nowrap; }
+  .statusbar .essai-ligne[hidden] { display: none; }
   .statusbar .last { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 9px; }
   .spinner { width: 12px; height: 12px; flex: none; border-radius: 50%; border: 2px solid var(--trait); border-top-color: var(--bleu); animation: tourne .7s linear infinite; }
   @keyframes tourne { to { transform: rotate(360deg); } }

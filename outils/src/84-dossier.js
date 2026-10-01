@@ -125,7 +125,7 @@
   // n'insiste pas si une relance ne change rien : jamais d'attente sans fin.
   async function sommairePret() {
     for (let tour = 0; tour < 8; tour++) {
-      if (sommaireEnVol) { try { await sommaireEnVol; } catch (_) {} continue; }
+      if (sommaireEnVol) { try { await sommaireEnVol; } catch (e) { signaler('Sommaire en cours', e, 'info'); } continue; }
       if (sommaireAJour()) return;
       const avant = state.dossier ? state.dossier.signature : '';
       try { await lancerSommaire(); } catch (_) { return; }

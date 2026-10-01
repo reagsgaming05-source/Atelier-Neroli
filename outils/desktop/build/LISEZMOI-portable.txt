@@ -144,3 +144,14 @@ ouvre la fenêtre d'impression de Windows, avec les réglages du pilote (bac, qu
 Premier lancement : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur »
 (l'exécutable n'est pas signé). Cliquez sur « Informations complémentaires » puis
 « Exécuter quand même ». Si l'antivirus bloque le fichier, ajoutez le dossier en exception.
+
+DEUX PERSONNES, UN MÊME DOCUMENT
+Quand un document d'un dossier partagé est ouvert, un petit fichier caché-en-pratique
+« .~verrou.<nom du document>.json » est posé à côté de lui : il dit qui l'a ouvert et depuis
+quand. Si une seconde personne l'ouvre, l'application la prévient, avec le nom de la
+première. Ce fichier disparaît quand le document est fermé ; s'il reste après un plantage,
+il est ignoré au bout de trois minutes. Vous pouvez le supprimer sans risque.
+Et surtout : avant de remplacer un fichier, l'application compare sa date de modification
+à celle qu'il avait quand vous l'avez ouvert. S'il a changé entre-temps — une collègue a
+enregistré —, elle vous le dit et vous laisse choisir : annuler, enregistrer sous un autre
+nom (les deux versions sont gardées), ou écraser en connaissance de cause.

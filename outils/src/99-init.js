@@ -106,7 +106,7 @@
     if (nom) {
       // L'adresse est nettoyée tout de suite : le fichier d'ouverture ne vit
       // que quelques instants, un rechargement ne doit pas le redemander.
-      try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { signaler('Adresse de la page', e, 'info'); }
     }
     setBusy('Ouverture du document…');
     if (!liste) liste = await new Promise(resolve => {
@@ -138,6 +138,10 @@
         const fichier = new File([octets], f.nom, { type: /\.pdf$/i.test(f.nom) ? 'application/pdf' : '' });
         // D'où il vient, pour qu'Enregistrer sache quoi réécrire.
         if (typeof f.chemin === 'string' && f.chemin) fichier.chemin = f.chemin;
+        // Sa date de modification à la lecture, et qui l'a déjà ouvert : de quoi
+        // ne pas écraser le travail d'une collègue sans le savoir.
+        if (f.mtimeMs > 0) fichier.mtimeMs = f.mtimeMs;
+        if (f.verrou) fichier.verrou = f.verrou;
         fichiers.push(fichier);
       } catch (e) { console.error(e); }
     }
@@ -158,7 +162,7 @@
     el.btnTheme.replaceChildren(icon(mode === 'light' ? IC.sun : mode === 'dark' ? IC.moon : IC.auto));
     el.btnTheme.title = 'Thème : ' + (mode === 'light' ? 'clair' : mode === 'dark' ? 'sombre' : 'automatique');
     el.btnTheme.setAttribute('aria-label', el.btnTheme.title);
-    try { localStorage.setItem('blonay-theme', mode); } catch (_) {}
+    try { localStorage.setItem('blonay-theme', mode); } catch (e) { signaler('Préférence de thème', e, 'info'); }
   }
 
   // =====================================================================
@@ -193,7 +197,7 @@
     ongletActif = onglets[0].id;
 
     let theme = 'light';
-    try { theme = localStorage.getItem('blonay-theme') || 'light'; } catch (_) {}
+    try { theme = localStorage.getItem('blonay-theme') || 'light'; } catch (e) { signaler('Préférence de thème', e, 'info'); }
     applyTheme(theme);
     el.btnTheme.addEventListener('click', () => {
       theme = theme === 'light' ? 'dark' : theme === 'dark' ? 'auto' : 'light';
@@ -224,10 +228,10 @@
       btnReplier.setAttribute('aria-expanded', replie ? 'false' : 'true');
       btnReplier.title = (replie ? 'Déplier' : 'Replier') + ' le panneau (Ctrl+Maj+B)';
       btnReplier.setAttribute('aria-label', btnReplier.title);
-      try { localStorage.setItem('blonay-panneau-replie', replie ? '1' : ''); } catch (_) {}
+      try { localStorage.setItem('blonay-panneau-replie', replie ? '1' : ''); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
       planifierAjustementBarre();
     };
-    try { if (localStorage.getItem('blonay-panneau-replie')) poserLeRepli(true); } catch (_) {}
+    try { if (localStorage.getItem('blonay-panneau-replie')) poserLeRepli(true); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
     btnReplier.addEventListener('click', () => poserLeRepli(!espace.classList.contains('replie')));
     window.addEventListener('keydown', e => {
       if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || (e.key || '').toLowerCase() !== 'b') return;
@@ -267,16 +271,16 @@
     el.btnPrint.addEventListener('click', dialogImprimer);
 
     // --- lecture ou table de montage
-    try { const v = localStorage.getItem('blonay-vue'); if (v === 'organiser' || v === 'lecture') state.vue = v; } catch (_) {}
+    try { const v = localStorage.getItem('blonay-vue'); if (v === 'organiser' || v === 'lecture') state.vue = v; } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
     $$('.vue-mode').forEach(b => b.addEventListener('click', () => changerVue(b.dataset.vue)));
     const NIVEAUX = ['page', 'largeur', '0.5', '0.75', '1', '1.25', '1.5', '2', '3', '4'];
     const poserZoom = v => {
       state.zoomLecture = v;
       el.zoomNiveau.value = v;
-      try { localStorage.setItem('blonay-zoom-lecture', v); } catch (_) {}
+      try { localStorage.setItem('blonay-zoom-lecture', v); } catch (e) { signaler('Préférence de zoom', e, 'info'); }
       if (state.vue === 'lecture') lectureRendu();
     };
-    try { const z = localStorage.getItem('blonay-zoom-lecture'); if (z && NIVEAUX.indexOf(z) >= 0) state.zoomLecture = z; } catch (_) {}
+    try { const z = localStorage.getItem('blonay-zoom-lecture'); if (z && NIVEAUX.indexOf(z) >= 0) state.zoomLecture = z; } catch (e) { signaler('Préférence de zoom', e, 'info'); }
     el.zoomNiveau.value = state.zoomLecture;
     el.zoomNiveau.addEventListener('change', () => poserZoom(el.zoomNiveau.value));
     // Les deux boutons parcourent la liste, en partant du niveau réellement
@@ -296,10 +300,10 @@
     const poserDispo = v => {
       state.dispo = v === 'deux' ? 'deux' : 'une';
       el.vueDeux.setAttribute('aria-pressed', state.dispo === 'deux' ? 'true' : 'false');
-      try { localStorage.setItem('blonay-dispo', state.dispo); } catch (_) {}
+      try { localStorage.setItem('blonay-dispo', state.dispo); } catch (e) { signaler('Préférence de disposition', e, 'info'); }
       if (state.vue === 'lecture' && state.pages.length) lectureRendu();
     };
-    try { if (localStorage.getItem('blonay-dispo') === 'deux') { state.dispo = 'deux'; el.vueDeux.setAttribute('aria-pressed', 'true'); } } catch (_) {}
+    try { if (localStorage.getItem('blonay-dispo') === 'deux') { state.dispo = 'deux'; el.vueDeux.setAttribute('aria-pressed', 'true'); } } catch (e) { signaler('Préférence de disposition', e, 'info'); }
     el.vueDeux.addEventListener('click', () => poserDispo(state.dispo === 'deux' ? 'une' : 'deux'));
     el.btnSignet.addEventListener('click', () => ajouterSignet());
     // Ctrl + molette zoome le document, pas la page entière du navigateur.
@@ -353,7 +357,7 @@
 
     el.zoom.addEventListener('input', () => {
       document.documentElement.style.setProperty('--tuile', el.zoom.value + 'px');
-      try { localStorage.setItem('blonay-zoom', el.zoom.value); } catch (_) {}
+      try { localStorage.setItem('blonay-zoom', el.zoom.value); } catch (e) { signaler('Préférence de zoom', e, 'info'); }
     });
     // Sans réglage retenu, la taille des vignettes se déduit de la place : sur
     // un grand écran, quatre pages occupaient le coin supérieur gauche d'une
@@ -374,7 +378,7 @@
         const t = tuilesALaPlace();
         if (t) { el.zoom.value = t; document.documentElement.style.setProperty('--tuile', t + 'px'); }
       }
-    } catch (_) {}
+    } catch (e) { signaler('Préférence de zoom', e, 'info'); }
 
     // --- tiles: clicks
     el.pages.addEventListener('click', e => {
@@ -455,7 +459,7 @@
       if (!state.selected.has(id)) { state.selected.clear(); state.selected.add(id); state.anchor = id; updateSelectionUI(); }
       drag.ids = selectedInOrder();
       e.dataTransfer.effectAllowed = 'move';
-      try { e.dataTransfer.setData('text/plain', 'blonay-pages'); } catch (_) {}
+      try { e.dataTransfer.setData('text/plain', 'blonay-pages'); } catch (e) { signaler('Glisser-déposer', e, 'info'); }
       requestAnimationFrame(() => drag.ids.forEach(i => { const x = tiles.get(i); if (x) x.classList.add('dragging'); }));
     });
     el.canvas.addEventListener('dragover', e => {
@@ -559,7 +563,8 @@
       else if (mod && (e.key === 't' || e.key === 'T')) { e.preventDefault(); nouvelOnglet(); }
       else if (mod && (e.key === 'w' || e.key === 'W')) { e.preventDefault(); fermerOnglet(ongletActif); }
       else if (mod && e.key === 'Tab') { e.preventDefault(); ongletVoisin(e.shiftKey ? -1 : 1); }
-      else if (mod && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); if (state.pages.length) ajouterSignet(); }
+      // Ctrl+B pose un signet ; Ctrl+Maj+B replie le panneau (son propre gestionnaire) : sans cette garde, les deux partaient ensemble.
+      else if (mod && !e.shiftKey && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); if (state.pages.length) ajouterSignet(); }
       else if (mod && e.shiftKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); if (state.pages.length && !state.busy) exportPages(state.pages, safeBase(el.filename.value) + '.pdf'); }
       else if (mod && (e.key === 's' || e.key === 'S')) { e.preventDefault(); enregistrer(); }
       else if (mod && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); if (state.pages.length && !state.busy) dialogImprimer(); }
@@ -588,7 +593,7 @@
     // ici. Rien à défendre, on part ; sinon, la question, et la réponse
     // repart par blonayQuitter(true) pour partir, (false) pour rester.
     window.__blonayFermer = () => {
-      const quitter = oui => { try { if (typeof window.blonayQuitter === 'function') window.blonayQuitter(!!oui); } catch (_) {} };
+      const quitter = oui => { try { if (typeof window.blonayQuitter === 'function') window.blonayQuitter(!!oui); } catch (e) { signaler('Fermeture de l\'application', e); } };
       // Partir pour de bon : le travail mis de côté pour la récupération
       // n'a plus lieu d'être — sans attendre plus d'une seconde et demie.
       const partir = () => { const fin = () => quitter(true); Promise.race([recupToutOublier(), new Promise(r => setTimeout(r, 1500))]).then(fin, fin); };
@@ -645,7 +650,7 @@
           if (r && r.chemin) {
             toast(nomDe(r.chemin) + ' enregistré'); setLast('Enregistré : ' + r.chemin);
             // Le document entier vient d'être écrit là : c'est son fichier, désormais.
-            if (attente && /\.pdf$/i.test(r.chemin)) documentEnregistre(r.chemin, attente.onglet);
+            if (attente && /\.pdf$/i.test(r.chemin)) documentEnregistre(r.chemin, attente.onglet, r.mtimeMs);
           } else if (r && r.annule) toast('Enregistrement annulé.', 'warn');
         });
       } catch (e) { console.error(e); }

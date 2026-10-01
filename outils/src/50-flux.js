@@ -600,7 +600,7 @@
         const sous = polNomPdf(fd.get(PDFName.of('Subtype')));
         const composite = sous === 'Type0';
         let df = null;
-        if (composite) { try { const arr = fd.lookup(PDFName.of('DescendantFonts'), PDFArray); df = arr && arr.lookup(0, PDFDict); } catch (_) {} }
+        if (composite) { try { const arr = fd.lookup(PDFName.of('DescendantFonts'), PDFArray); df = arr && arr.lookup(0, PDFDict); } catch (e) { signaler('Police composite', e, 'info'); } }
         const lg = polLargeurs(fd, df);
         // code -> lettre : l'inverse de ce qui sert à écrire.
         const vers = new Map();
@@ -617,7 +617,7 @@
           if (std) {
             const sf = doc.embedStandardFont(PDFLib.StandardFonts[std]);
             w = new Map();
-            for (let c = 32; c < 256; c++) { try { w.set(c, sf.widthOfTextAtSize(String.fromCharCode(c), 1000)); } catch (_) {} }
+            for (let c = 32; c < 256; c++) { try { w.set(c, sf.widthOfTextAtSize(String.fromCharCode(c), 1000)); } catch (e) { signaler('Largeurs de la police de remplacement', e); } }
           }
         }
         out = {
@@ -726,7 +726,7 @@
   // Ce qu'il faut réécrire dans le flux pour que cette correction prenne
   // effet — sans rien déplacer d'autre. Rend null si le cas sort de ce que
   // l'on sait faire proprement : on recouvrira alors, comme avant.
-  const fxNon = r => { try { (window.__fxDiag = window.__fxDiag || []).push(r); } catch (_) {} signaler('Correction posée par-dessus plutôt que réécrite dans la page', r, 'info'); return null; };
+  const fxNon = r => { try { (window.__fxDiag = window.__fxDiag || []).push(r); } catch (e) { signaler('Diagnostic de correction', e, 'info'); } signaler('Correction posée par-dessus plutôt que réécrite dans la page', r, 'info'); return null; };
   function fxEdit(a, shows, g) {
     const o = a.origine;
     if (!o || !o.ancres.length) return fxNon('pas d ancres');

@@ -267,7 +267,6 @@
         const f = form.createTextField(champNom(a, pris));
         if (a.multi) f.enableMultiline();
         if (a.valeur) f.setText(String(a.valeur));
-        f.setFontSize(champTaille(a));
         f.addToPage(page, {
           x: r.x, y: r.y, width: r.w, height: r.h, font: police,
           textColor: pdfColor(a.encre || '#111111'),
@@ -276,7 +275,11 @@
           borderWidth: a.bordure ? 1 : 0,
           rotate: PDFLib.degrees(g.total),
         });
-      } catch (e) { console.error(e); }
+        // Après addToPage, jamais avant : c'est lui qui pose l'entrée /DA que
+        // setFontSize modifie. Avant, la bibliothèque levait MissingDAEntryError,
+        // que le catch avalait — et le champ n'était pas créé, sans un mot.
+        f.setFontSize(champTaille(a));
+      } catch (e) { signaler('Champ de formulaire', e, 'erreur'); }
     }
   }
 
@@ -372,7 +375,7 @@
         ctx.fillStyle = an.bg || '#FFFFFF';
         ctx.fillRect(an.x * s, an.y * s, an.w * s, annHauteur(an) * s);
         if (an.bgImg && an.h0 > 0) {
-          try { ctx.drawImage(await loadImage(an.bgImg), an.x * s, an.y * s, an.w * s, an.h0 * s); } catch (_) {}
+          try { ctx.drawImage(await loadImage(an.bgImg), an.x * s, an.y * s, an.w * s, an.h0 * s); } catch (e) { signaler('Image d\'arrière-plan d\'une correction', e); }
         }
         ctx.textBaseline = 'alphabetic';
         (an.lignes || []).forEach((seg, i) => {
@@ -428,11 +431,11 @@
             else if (t === 'check') { v ? f.check() : f.uncheck(); }
             else if (t === 'dropdown') { if (v) f.select(String(v)); else if (f.clear) f.clear(); }
             else if (t === 'radio' || t === 'list') { if (v) f.select(String(v)); }
-          } catch (_) {}
+          } catch (e) { signaler('Champ de formulaire « ' + name + ' »', e); }
         });
-      } catch (_) {}
+      } catch (e) { signaler('Champs de formulaire', e); }
     }
-    if (forceFlatten || state.flatten) { try { doc.getForm().flatten(); } catch (_) {} }
+    if (forceFlatten || state.flatten) { try { doc.getForm().flatten(); } catch (e) { signaler('Aplatissement du formulaire', e); } }
     return doc;
   }
 

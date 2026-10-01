@@ -217,7 +217,7 @@
   function changerVue(v) {
     if (state.vue === v) return;
     state.vue = v;
-    try { localStorage.setItem('blonay-vue', v); } catch (_) {}
+    try { localStorage.setItem('blonay-vue', v); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
     majVue();
     render();
     if (v === 'lecture') el.canvas.scrollTop = 0;

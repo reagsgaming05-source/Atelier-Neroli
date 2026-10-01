@@ -17,7 +17,7 @@
   function tamponsMemo() {
     try { const l = JSON.parse(localStorage.getItem('blonay-tampons') || '[]'); return Array.isArray(l) ? l.filter(t => t && typeof t.text === 'string' && t.text.trim()) : []; } catch (_) { return []; }
   }
-  function tamponsEcrire(liste) { try { localStorage.setItem('blonay-tampons', JSON.stringify(liste.slice(0, 40))); } catch (_) {} }
+  function tamponsEcrire(liste) { try { localStorage.setItem('blonay-tampons', JSON.stringify(liste.slice(0, 40))); } catch (e) { signaler('Tampons enregistrés', e); } }
   function tamponMemoriser(t) {
     const liste = tamponsMemo().filter(x => x.text !== t.text);
     liste.unshift({ text: t.text, color: t.color || '#C8102E', size: t.size || 14 });

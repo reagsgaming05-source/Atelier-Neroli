@@ -81,7 +81,7 @@
     return /[;"\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
   }).join(';')).join('\r\n');
   async function copierTexte(t) {
-    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(t); return true; } } catch (_) {}
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(t); return true; } } catch (e) { signaler('Presse-papiers', e, 'info'); }
     try {
       const ta = document.createElement('textarea');
       ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';

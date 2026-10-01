@@ -72,7 +72,7 @@
       const sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(r);
-    } catch (_) {}
+    } catch (e) { signaler('Sélection dans l\'éditeur', e, 'info'); }
   }
   function richePeindre(zone, a) {
     zone.replaceChildren();
@@ -286,7 +286,7 @@
     if (!opts.nouveau) snapshot();
     const zone = document.createElement('div');
     zone.className = 'ed-riche';
-    try { zone.contentEditable = 'plaintext-only'; } catch (_) {}
+    try { zone.contentEditable = 'plaintext-only'; } catch (e) { signaler('Zone de saisie', e, 'info'); }
     if (zone.contentEditable !== 'plaintext-only') zone.contentEditable = 'true';
     zone.spellcheck = false;
     zone.setAttribute('role', 'textbox');

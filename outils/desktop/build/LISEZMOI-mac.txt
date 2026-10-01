@@ -72,3 +72,12 @@ Le mot de passe empêche d'ouvrir le compte d'une autre DEPUIS L'APPLICATION. Il
 n'empêche pas de lire les fichiers : qui ouvre le dossier dans le Finder voit
 data/<nom> et son contenu, signature comprise. Le verrou est sur la porte de
 l'application, pas sur celle du dossier.
+
+DEUX PERSONNES, UN MÊME DOCUMENT
+Quand un document d'un dossier partagé est ouvert, un petit fichier « .~verrou.<nom du
+document>.json » est posé à côté de lui : il dit qui l'a ouvert et depuis quand. Si une
+seconde personne l'ouvre, l'application la prévient. Ce fichier disparaît quand le document
+est fermé ; s'il reste après un plantage, il est ignoré au bout de trois minutes.
+Avant de remplacer un fichier, l'application compare sa date de modification à celle qu'il
+avait à l'ouverture : s'il a changé entre-temps, elle vous le dit et vous laisse choisir
+(annuler, enregistrer sous un autre nom, ou écraser en connaissance de cause).

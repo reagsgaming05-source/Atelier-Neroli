@@ -249,6 +249,9 @@
       if (pages.some(p => !vivantes.has(p.id))) pages = pages.filter(p => vivantes.has(p.id));
     }
     const { PDFDocument, degrees } = PDFLib;
+    oublierPertes();
+    // Les valeurs de formulaire sont écrites par pdf-lib avec la police standard.
+    proprSources(pages).forEach(s => { Object.values(s.formValues || {}).forEach(v => { if (typeof v === 'string') releverHorsWinAnsi(v); }); });
     const onProgress = opts.onProgress || (() => {});
     const rasterAll = !!opts.rasterize;
     // Les termes caviardés partout : à retirer de tout le fichier, pas
@@ -339,7 +342,7 @@
     // Les noms déjà portés par les formulaires d'origine, pour ne pas les
     // écraser avec un champ ajouté ici.
     const nomsPris = new Set();
-    try { out.getForm().getFields().forEach(f => nomsPris.add(f.getName())); } catch (_) {}
+    try { out.getForm().getFields().forEach(f => nomsPris.add(f.getName())); } catch (e) { signaler('Noms des champs de formulaire', e); }
     const file = safeBase(el.filename.value);
     const bates = state.stamp && state.stamp.batesPrefix != null ? state.stamp : null;
     for (let i = 0; i < mapped.length; i++) {
@@ -408,6 +411,10 @@
     // Signatures, balisage et XFA détruits : plus aucune de leurs marques dans
     // le fichier ; PDF/A refait au même niveau quand rien ne l'empêche.
     try { appliquerProprietes(out, mapped.map(x => x.page), pages, opts); } catch (e) { signaler('Propriétés du document', e, 'erreur'); }
+    // Ce que plus rien n'atteint ne part pas : l'ancien plan du document, les
+    // anciens flux des pages réécrites, les objets d'une version antérieure. pdf-lib
+    // écrit tout ce qu'il a en mémoire, et le fichier enflait de ses restes.
+    try { ramasserLesObjets(out); } catch (e) { signaler('Nettoyage du fichier', e); }
     onProgress(1, 'Finalisation…');
     return out.save();
   }

@@ -7,6 +7,9 @@ const LIB = path.join(__dirname, 'libs');
 // Quel que soit le poste (Windows convertit les fins de ligne au passage),
 // on travaille en LF : les repères de ce script en dépendent.
 let src = assembler();
+// Avant d'écrire quoi que ce soit : une page dont une déclaration est lue avant
+// d'être posée ne démarre pas (voir garde-demarrage.js). Le build s'arrête là.
+try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'garde-demarrage.js')], { stdio: 'inherit' }); } catch (e) { process.exit(1); }
 // Date et commit de construction, affichés dans l'aide : on sait quelle
 // version on a sous la main.
 function commitCourt() {

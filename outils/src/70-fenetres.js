@@ -35,7 +35,7 @@
       conteneur.remove();
       document.removeEventListener('keydown', onKey, true);
       openDlg = null;
-      try { if (revenirA && revenirA.focus && document.contains(revenirA)) revenirA.focus(); } catch (_) {}
+      try { if (revenirA && revenirA.focus && document.contains(revenirA)) revenirA.focus(); } catch (e) { signaler('Retour du focus', e, 'info'); }
       if (o.onClose) o.onClose();
     };
     function onKey(e) {
@@ -81,7 +81,7 @@
     $('#modal-root').appendChild(conteneur);
     openDlg = api;
     const first = dlg.querySelector('input:not([type=hidden]), select, textarea, button.primary');
-    if (first) setTimeout(() => { try { first.focus(); if (first.select) first.select(); } catch (_) {} }, 30);
+    if (first) setTimeout(() => { try { first.focus(); if (first.select) first.select(); } catch (e) { signaler('Focus de la fenêtre', e, 'info'); } }, 30);
     return api;
   }
 

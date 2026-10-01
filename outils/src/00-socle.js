@@ -74,6 +74,11 @@
       if (!PDFLib) throw new Error('pdf-lib indisponible');
       try { await loadScript(CDN.jszip); JSZip = window.JSZip; FEAT.zip = !!JSZip; } catch (_) { FEAT.zip = false; }
       started();
+      // Cette page est la version d'essai : elle va chercher ses composants sur
+      // internet. Les documents ne quittent pas le navigateur, mais l'adresse du
+      // poste, elle, est vue de ces serveurs — pas pour des documents réels.
+      const essai = $('#essai-ligne'); if (essai) essai.hidden = false;
+      toast('Version d\'essai en ligne : elle charge ses composants depuis internet. Pour des documents réels, utilisez la version portable, qui ne charge rien.', 'warn');
     } catch (e) {
       console.error(e);
       msg.textContent = EN_LIGNE

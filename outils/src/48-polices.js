@@ -117,7 +117,7 @@
     const co = pdfPage.commonObjs;
     if (noms.some(n => !(co && co.has && co.has(n)))) {
       // Les objets police n'existent qu'une fois la page interpretee.
-      try { await pdfPage.getOperatorList(); } catch (_) {}
+      try { await pdfPage.getOperatorList(); } catch (e) { signaler('Lecture des polices de la page', e); }
     }
     const map = new Map();
     noms.forEach(n => {
@@ -174,7 +174,7 @@
     try {
       if (obj instanceof PDFLib.PDFRawStream) return PDFLib.decodePDFRawStream(obj).decode();
       if (typeof obj.getContents === 'function') return obj.getContents();
-    } catch (_) {}
+    } catch (e) { signaler('Flux de police illisible', e, 'info'); }
     return null;
   }
 
@@ -247,7 +247,7 @@
     let defaut = df ? 1000 : 0;
     const nb = v => (v && typeof v.asNumber === 'function' ? v.asNumber() : null);
     if (df) {
-      try { const d = nb(df.lookup(PDFName.of('DW'))); if (d != null) defaut = d; } catch (_) {}
+      try { const d = nb(df.lookup(PDFName.of('DW'))); if (d != null) defaut = d; } catch (e) { signaler('Largeur par défaut d\'une police', e); }
       try {
         const arr = df.lookup(PDFName.of('W'), PDFArray);
         let i = 0;
@@ -265,19 +265,19 @@
             i += 3;
           }
         }
-      } catch (_) {}
+      } catch (e) { signaler('Largeurs d\'une police composite', e); }
     } else {
       try {
         const dsc = fd.lookup(PDFName.of('FontDescriptor'));
         if (dsc && typeof dsc.lookup === 'function') { const mw = nb(dsc.lookup(PDFName.of('MissingWidth'))); if (mw != null) defaut = mw; }
-      } catch (_) {}
+      } catch (e) { signaler('Largeur manquante d\'une police', e); }
       try {
         const premier = nb(fd.lookup(PDFName.of('FirstChar')));
         const arr = fd.lookup(PDFName.of('Widths'), PDFArray);
         if (arr && premier != null) {
           for (let i = 0; i < arr.size(); i++) { const v = nb(arr.lookup(i)); if (v != null) w.set(premier + i, v); }
         }
-      } catch (_) {}
+      } catch (e) { signaler('Largeurs d\'une police', e); }
     }
     return { w, defaut };
   }
@@ -297,7 +297,7 @@
       // Seul l'encodage Identity laisse ecrire les codes directement ;
       // avec un CMap predefini les largeurs ne seraient plus alignees.
       if (!/^Identity/.test(polNomPdf(fd.get(PDFName.of('Encoding'))))) return null;
-      try { const arr = fd.lookup(PDFName.of('DescendantFonts'), PDFArray); df = arr && arr.lookup(0, PDFDict); } catch (_) {}
+      try { const arr = fd.lookup(PDFName.of('DescendantFonts'), PDFArray); df = arr && arr.lookup(0, PDFDict); } catch (e) { signaler('Police composite', e, 'info'); }
       if (!df) return null;
     }
     let codes = null, taille = composite ? 2 : 1;

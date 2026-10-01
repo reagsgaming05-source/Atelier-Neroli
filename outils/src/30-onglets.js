@@ -102,6 +102,16 @@
     const i = onglets.findIndex(o => o.id === ongletActif);
     activerOnglet(onglets[(i + sens + onglets.length) % onglets.length].id);
   }
+  // Le document fermé ne doit plus gêner une collègue : son verrou est levé.
+  function libererVerrous(e) {
+    try {
+      const b = window.BlonayDesktop;
+      if (!b || typeof b.liberer !== 'function' || !e) return;
+      const chemins = new Set((e.sources || []).filter(s => !s.isSample && s.chemin).map(s => s.chemin));
+      if (e.chemin) chemins.add(e.chemin);
+      if (chemins.size) b.liberer(Array.from(chemins));
+    } catch (err) { signaler('Verrou', err); }
+  }
   function fermerOnglet(id) {
     const o = onglets.find(x => x.id === id);
     if (!o) return;
@@ -110,6 +120,7 @@
       const i = onglets.indexOf(o);
       if (i < 0) return;
       recupOublier(o.id === ongletActif ? state : o.etat);
+      libererVerrous(o.id === ongletActif ? state : o.etat);
       onglets.splice(i, 1);
       if (o.id !== ongletActif) { renderOnglets(); return; }
       if (ed.root && !ed.root.hidden) closeEditor();

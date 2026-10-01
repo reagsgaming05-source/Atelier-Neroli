@@ -17,6 +17,68 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+// =============================================================================
+//  Réseau fermé — trois barrières, chacune suffisante pour une seule défaillance
+// =============================================================================
+// « Aucune donnée ne quitte le poste » est une promesse faite à des
+// secrétariats qui traitent des documents sensibles : elle ne tient pas sur une
+// seule serrure, et pas sur la seule intention de la page.
+//  1. Les noms de domaine ne se résolvent pas : toute adresse autre que celle de
+//     la machine échoue avant qu'un paquet ne parte (host-resolver-rules).
+//  2. Un mandataire fixe, mort — 127.0.0.1:1 —, pour TOUTES les sessions et pour
+//     le réseau interne de Chromium : jamais de mandataire du système, jamais de
+//     détection automatique (WPAD/PAC), et ce qui échapperait aux deux autres
+//     tomberait sur un port fermé.
+//  3. Chaque session refuse toute requête qui n'est pas locale, et tient la liste
+//     de ce qu'elle a refusé (voir reseauRefuse), pour que le test puisse dire
+//     « rien n'a même essayé ».
+// Les services d'arrière-plan de Chromium (mises à jour de composants, mesures,
+// pings) sont arrêtés à la source : ils n'ont rien à faire dans cette application.
+//
+// BLONAY_OBSERVATEUR (tests seulement) : l'adresse d'un mandataire d'observation
+// qui prend la place du mandataire mort. Il note tout ce qui lui parvient ; le
+// test échoue si la moindre connexion y arrive pendant un usage normal.
+// BLONAY_OBSERVATEUR_OUVERT (tests seulement, avec le précédent) : lève la
+// barrière 3 et la barrière 1, pour prouver que l'observateur voit bien ce qui
+// s'échapperait.
+const MANDATAIRE = process.env.BLONAY_OBSERVATEUR || '127.0.0.1:1';
+const BARRIERES_LEVEES = !!process.env.BLONAY_OBSERVATEUR && process.env.BLONAY_OBSERVATEUR_OUVERT === '1';
+app.commandLine.appendSwitch('proxy-server', MANDATAIRE);
+app.commandLine.appendSwitch('proxy-bypass-list', '<-loopback>');
+if (!BARRIERES_LEVEES) app.commandLine.appendSwitch('host-resolver-rules', 'MAP * ~NOTFOUND , EXCLUDE ' + MANDATAIRE.split(':')[0]);
+app.commandLine.appendSwitch('disable-background-networking');
+app.commandLine.appendSwitch('disable-component-update');
+app.commandLine.appendSwitch('disable-domain-reliability');
+app.commandLine.appendSwitch('no-pings');
+app.commandLine.appendSwitch('disable-features', 'OptimizationHints,MediaRouter,NetworkTimeServiceQuerying,InterestFeedContentSuggestions');
+
+// Ce que les barrières ont refusé : { url, quand }. Vide, en usage normal.
+const reseauRefuse = [];
+global.__blonayReseau = reseauRefuse;
+const sessionsFermees = new WeakSet();
+function fermerLaSession(s) {
+  if (!s || sessionsFermees.has(s)) return;
+  sessionsFermees.add(s);
+  s.setProxy({ mode: 'fixed_servers', proxyRules: MANDATAIRE, proxyBypassRules: '<-loopback>' }).catch(() => {});
+  // Le correcteur orthographique de Chromium va chercher son dictionnaire chez
+  // Google (redirector.gvt1.com) dès qu'une session existe — l'observation l'a
+  // montré, alors que « spellcheck: false » était posé sur la fenêtre. La
+  // session le coupe, ne lui laisse aucune langue, et lui retire son adresse.
+  try {
+    s.setSpellCheckerEnabled(false);
+    s.setSpellCheckerLanguages([]);
+    s.setSpellCheckerDictionaryDownloadURL('http://127.0.0.1:1/');
+  } catch (e) { /* une version sans correcteur : rien à fermer */ }
+  s.webRequest.onBeforeRequest((details, callback) => {
+    const u = details.url;
+    const local = u.startsWith('file:') || u.startsWith('blob:') || u.startsWith('data:') || u.startsWith('devtools:');
+    if (!local) reseauRefuse.push({ url: u.slice(0, 300), quand: new Date().toISOString() });
+    callback({ cancel: !local && !BARRIERES_LEVEES });
+  });
+}
+// Toute session créée, y compris celles qu'une version future ouvrirait sans y penser.
+app.on('session-created', fermerLaSession);
+
 const APP_TITLE = 'Blonay PDF';
 // Date, commit et horodatage de construction, posés par build.js puis
 // prepare-app.js. La date sert à « À propos », et à reconnaître un zip plus
@@ -33,6 +95,10 @@ const SCRIPT_MAJ = require('./ou-ranger').nomDuScriptDeMaj(process.platform);
 const { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = require('./comptes');
 const { miseAJourPosee, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons } = require('./version-posee');
+const verrou = require('./verrou');
+// Cette instance de l'application : le verrou d'un document dit « c'est moi », ou « c'est quelqu'un d'autre ».
+const INSTANCE = require('crypto').randomUUID();
+const verrousPoses = new Set();
 const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
 
 // Où vont les données : dans le dossier de la personne connectée, ou dans le
@@ -210,16 +276,35 @@ setupUserData();
 function fichiersDe(argv) {
   return argv.slice(1).filter((a) => !a.startsWith('-') && EXTENSIONS.includes(path.extname(a).toLowerCase()) && fs.existsSync(a));
 }
-/** Lus en mémoire, tels que la page les attend : { nom, octets }. */
+const quiTravaille = () => PROFIL || (() => { try { return os.userInfo().username; } catch (e) { return ''; } })();
+/**
+ * Lus en mémoire, tels que la page les attend : { nom, octets, chemin, mtimeMs, verrou }.
+ * La date de modification est celle du fichier au moment où on le lit : c'est
+ * elle qu'on comparera avant de l'écraser. Le verrou dit si une autre personne
+ * a déjà ce document ouvert ; sinon on le prend, et on le rafraîchit.
+ */
 function lire(chemins) {
   const out = [];
   for (const c of chemins) {
     try {
       const b = fs.readFileSync(c);
-      out.push({ nom: path.basename(c), octets: new Uint8Array(b.buffer, b.byteOffset, b.length), chemin: c });
+      const f = { nom: path.basename(c), octets: new Uint8Array(b.buffer, b.byteOffset, b.length), chemin: c, mtimeMs: 0, verrou: null };
+      try { f.mtimeMs = fs.statSync(c).mtimeMs; } catch (e) { /* date inconnue : pas de comparaison possible */ }
+      try {
+        const r = verrou.poser(c, quiTravaille(), INSTANCE);
+        if (r.pose) verrousPoses.add(c);
+        else if (r.autre) f.verrou = r.autre;
+      } catch (e) { /* un verrou qui ne se pose pas n'empêche pas de lire */ }
+      out.push(f);
     } catch (e) { console.warn('illisible :', c, e && e.message); }
   }
   return out;
+}
+// Tant qu'un document est ouvert, son verrou est rafraîchi : c'est ce qui
+// distingue une collègue qui travaille d'un plantage vieux d'une heure.
+setInterval(() => { verrousPoses.forEach((c) => verrou.rafraichir(c, INSTANCE)); }, verrou.RAFRAICHIR_MS).unref();
+function libererLesVerrous(chemins) {
+  (chemins || Array.from(verrousPoses)).forEach((c) => { if (verrou.liberer(c, INSTANCE) || !fs.existsSync(verrou.nomVerrou(c))) verrousPoses.delete(c); });
 }
 
 // Fichiers récents : une liste de chemins dans le dossier de données, rien d'autre.
@@ -400,18 +485,19 @@ function setupDownloads() {
     item.once('done', (_e, etat) => {
       if (!contents || contents.isDestroyed()) return;
       if (etat === 'completed' && /\.pdf$/i.test(item.getSavePath())) ajouterRecent(item.getSavePath());
-      contents.send('blonay:enregistre', etat === 'completed' ? { chemin: item.getSavePath() } : { annule: true });
+      // Sa date de modification, pour que l'enregistrement suivant sache de quel fichier il parle.
+      let mtimeMs = 0;
+      if (etat === 'completed') { try { mtimeMs = fs.statSync(item.getSavePath()).mtimeMs; } catch (e) { /* le fichier a déjà bougé */ } }
+      contents.send('blonay:enregistre', etat === 'completed' ? { chemin: item.getSavePath(), mtimeMs } : { annule: true });
     });
   });
 }
 
 // La page ne sait contacter personne : toute requête qui n'est pas locale est refusée.
+// Les sessions créées plus tard le sont par l'écouteur « session-created » plus haut ; celle-ci
+// existe déjà, on s'assure qu'elle est fermée.
 function setupNetwork() {
-  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-    const u = details.url;
-    const local = u.startsWith('file:') || u.startsWith('blob:') || u.startsWith('data:') || u.startsWith('devtools:');
-    callback({ cancel: !local });
-  });
+  fermerLaSession(session.defaultSession);
 }
 
 function setupIpc() {
@@ -426,12 +512,28 @@ function setupIpc() {
   ipcMain.handle('blonay:ecrire', (_e, o) => {
     try {
       if (!o || typeof o.chemin !== 'string' || !path.isAbsolute(o.chemin) || !o.octets) return { ok: false, erreur: 'chemin invalide' };
+      // Le fichier a-t-il changé depuis qu'on l'a lu ? Alors quelqu'un d'autre
+      // a écrit entre-temps, et l'écraser ferait disparaître son travail sans
+      // un mot. On rend la main à la page, qui demande.
+      if (!o.forcer) {
+        const c = verrou.conflit(o.chemin, o.mtimeAttendu);
+        if (c.conflit) return { ok: false, conflit: true, mtimeMs: c.mtimeMs, taille: c.taille };
+      }
       const tmp = o.chemin + '.blonay-tmp';
       fs.writeFileSync(tmp, Buffer.from(o.octets));
       fs.renameSync(tmp, o.chemin);
       ajouterRecent(o.chemin);
-      return { ok: true, chemin: o.chemin };
+      let mtimeMs = 0;
+      try { mtimeMs = fs.statSync(o.chemin).mtimeMs; } catch (e) { /* tant pis */ }
+      try { if (verrou.poser(o.chemin, quiTravaille(), INSTANCE).pose) verrousPoses.add(o.chemin); } catch (e) { /* pas de verrou, pas d'erreur */ }
+      return { ok: true, chemin: o.chemin, mtimeMs };
     } catch (err) { return { ok: false, erreur: err && err.message ? err.message : String(err) }; }
+  });
+  // Le document est fermé : son verrou ne doit pas gêner une collègue.
+  ipcMain.handle('blonay:liberer', (_e, chemins) => {
+    if (!Array.isArray(chemins)) return false;
+    libererLesVerrous(chemins.filter((c) => typeof c === 'string' && path.isAbsolute(c)));
+    return true;
   });
   ipcMain.handle('blonay:recents', () => lireRecents().filter((c) => fs.existsSync(c)));
   // La page d'accueil rouvre un récent : seulement un chemin de la liste, jamais un autre.
@@ -738,6 +840,7 @@ function lancerLaMiseAJour(trouvee) {
 }
 
 app.on('will-quit', () => {
+  libererLesVerrous();
   if (BATTEMENT) clearInterval(BATTEMENT);
   retirerLeJeton(MON_JETON);
   if (!MAJ_DEMANDEE) return;

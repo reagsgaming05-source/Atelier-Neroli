@@ -32,7 +32,7 @@
   // Ce qui fait un document ouvert — le reste de l'état (vue, zoom, thème)
   // est commun. Un traitement par lots, un onglet : chacun a le sien.
   const CHAMPS_DOC = ['sources', 'pages', 'selected', 'anchor', 'history', 'redo', 'touched', 'hueIdx', 'filenameDirty',
-    'meta', 'watermark', 'stamp', 'security', 'flatten', 'signets', 'purges', 'figerAnnotations', 'dossier', 'chemin', 'ecraserOk', 'cleRecup'];
+    'meta', 'watermark', 'stamp', 'security', 'flatten', 'signets', 'purges', 'figerAnnotations', 'dossier', 'chemin', 'ecraserOk', 'cleRecup', 'mtimeFichier'];
   function etatVierge() {
     return {
       sources: [], pages: [], selected: new Set(), anchor: null, history: [], redo: [], touched: false, hueIdx: 0, filenameDirty: false,
@@ -41,6 +41,8 @@
       // Le fichier que « Enregistrer » réécrit (application), la confirmation
       // déjà donnée pour ce fichier, et la clé du dépôt de récupération.
       chemin: '', ecraserOk: false, cleRecup: '',
+      // La date du fichier tel qu'on l'a lu ou écrit en dernier : ce qu'on compare avant de l'écraser.
+      mtimeFichier: 0,
     };
   }
   function prendreEtat() {

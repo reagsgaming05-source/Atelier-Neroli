@@ -16,7 +16,9 @@ contextBridge.exposeInMainWorld('BlonayDesktop', {
   onOuvrirOnglet: (cb) => ipcRenderer.on('blonay:ouvrir-onglet', (_e, liste) => cb(liste)),
   onCommande: (cb) => ipcRenderer.on('blonay:commande', (_e, nom) => cb(nom)),
   onEnregistre: (cb) => ipcRenderer.on('blonay:enregistre', (_e, r) => cb(r)),
-  ecrire: (chemin, octets) => ipcRenderer.invoke('blonay:ecrire', { chemin, octets }),
+  // mtimeAttendu : la date du fichier quand on l'a lu ; forcer : écraser malgré un conflit confirmé.
+  ecrire: (chemin, octets, opts) => ipcRenderer.invoke('blonay:ecrire', Object.assign({ chemin, octets }, opts || {})),
+  liberer: (chemins) => ipcRenderer.invoke('blonay:liberer', chemins),
   recents: () => ipcRenderer.invoke('blonay:recents'),
   lireRecent: (chemin) => ipcRenderer.invoke('blonay:lire-recent', chemin),
   recupEcrire: (o) => ipcRenderer.invoke('blonay:recup-ecrire', o),

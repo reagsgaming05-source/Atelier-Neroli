@@ -929,7 +929,7 @@
     } else if (type === 'draw') {
       ed.pending = { id: -1, type: 'draw', pts: [[pt.x, pt.y]], color: ed.style.textColor, width: ed.style.width };
     }
-    try { ed.svg.setPointerCapture(e.pointerId); } catch (_) {}
+    try { ed.svg.setPointerCapture(e.pointerId); } catch (e) { signaler('Capture du pointeur', e, 'info'); }
     ed.svg.addEventListener('pointermove', edPointerMove);
     ed.svg.addEventListener('pointerup', edPointerUp);
     ed.svg.addEventListener('pointercancel', edPointerUp);

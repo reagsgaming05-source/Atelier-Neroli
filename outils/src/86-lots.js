@@ -39,6 +39,12 @@
           } else if (op === 'compresser') {
             const avant = state.sources.reduce((a, s) => a + s.bytes.byteLength, 0);
             const octets = await buildPdf(state.pages, { rasterize: true, dpi: 150, quality: 0.72, noInPlace: true });
+            // Réduire ne doit jamais alourdir : sur un document de texte, convertir
+            // les pages en images multiplie la taille par dix ou plus.
+            if (octets.length >= avant) {
+              rapport.push(f.name + ' : non réduit — le résultat aurait fait ' + fmtSize(octets.length) + ' contre ' + fmtSize(avant) + ' (document de texte : la conversion en images l\'alourdirait), laissé tel quel');
+              continue;
+            }
             sorties.push({ nom: base + '-leger.pdf', octets });
             rapport.push(f.name + ' : ' + fmtSize(avant) + ' → ' + fmtSize(octets.length));
           } else if (op === 'numeroter') {
@@ -633,8 +639,14 @@
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Réduire et exporter', primary: true, onClick: async close => {
         close();
-        const before = state.sources.reduce((a, s) => a + s.bytes.byteLength, 0);
-        const bytes = await exportPages(state.pages, safeBase(el.filename.value) + '-leger.pdf', { rasterize: true, dpi: +dpi.value, quality: (clampInt(q.value, 30, 95) || 72) / 100, noInPlace: true });
+        const before = proprSources(state.pages).reduce((a, s) => a + s.bytes.byteLength, 0);
+        // Mesuré avant d'écrire : un fichier « réduit » qui serait plus gros que
+        // l'original n'est jamais livré. Convertir en images un document de
+        // texte le multipliait par quarante, et le texte n'était plus sélectionnable.
+        const refus = bytes => bytes.length >= before
+          ? 'La réduction aurait alourdi le fichier : ' + fmtSize(before) + ' → ' + fmtSize(bytes.length) + '. Elle convertit chaque page en image ; elle ne sert qu\'aux documents scannés ou riches en images. Rien n\'a été enregistré.'
+          : null;
+        const bytes = await exportPages(state.pages, safeBase(el.filename.value) + '-leger.pdf', { rasterize: true, dpi: +dpi.value, quality: (clampInt(q.value, 30, 95) || 72) / 100, noInPlace: true, refuserSi: refus });
         if (bytes) {
           const after = bytes.length;
           const pct = before ? Math.round((1 - after / before) * 100) : 0;

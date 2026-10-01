@@ -220,7 +220,7 @@
       setBusy('');
       toast('Impossible de préparer l\'impression : ' + (e && e.message ? e.message : e), 'error');
       return;
-    } finally { try { if (doc) doc.destroy(); } catch (_) {} }
+    } finally { try { if (doc) doc.destroy(); } catch (e) { signaler('Document d\'impression', e, 'info'); } }
     setBusy('');
     document.body.appendChild(hote);
     document.documentElement.classList.add('en-impression');
@@ -422,9 +422,9 @@
         cacheOctets = octets;
         const imposes = await imposerPdf(octets, o);
         if (mien !== jeton) return;
-        if (doc) { try { doc.destroy(); } catch (_) {} }
+        if (doc) { try { doc.destroy(); } catch (e) { signaler('Document d\'impression', e, 'info'); } }
         doc = await pdfjs.getDocument({ data: imposes.slice(0) }).promise;
-        if (mien !== jeton) { try { doc.destroy(); } catch (_) {} doc = null; return; }
+        if (mien !== jeton) { try { doc.destroy(); } catch (e) { signaler('Document d\'impression', e, 'info'); } doc = null; return; }
         cacheCle = cle;
         total = doc.numPages;
         if (feuille >= total) feuille = 0;
@@ -539,7 +539,7 @@
       o.qualite = qualite.value;
       clearTimeout(minuteur);
       jeton++;
-      if (doc) { try { doc.destroy(); } catch (_) {} doc = null; }
+      if (doc) { try { doc.destroy(); } catch (e) { signaler('Document d\'impression', e, 'info'); } doc = null; }
       close();
       if (quoi === 'imprimer') { imprimerPages(pages, o); return; }
       if (quoi === 'proprietes') { imprimerPages(pages, Object.assign({}, o, { dialogue: true })); return; }
@@ -569,7 +569,7 @@
         b.append(grille);
         rafraichir();
       },
-      onClose: () => { jeton++; clearTimeout(minuteur); if (doc) { try { doc.destroy(); } catch (_) {} doc = null; } },
+      onClose: () => { jeton++; clearTimeout(minuteur); if (doc) { try { doc.destroy(); } catch (e) { signaler('Document d\'impression', e, 'info'); } doc = null; } },
       actions: [
         { label: 'Annuler', onClick: c => c() },
         { label: 'Enregistrer', onClick: lancer('enregistrer') },

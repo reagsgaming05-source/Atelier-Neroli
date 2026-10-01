@@ -17,6 +17,8 @@
     "dist:linux": "npm run prepare-app && electron-builder --linux dir",
     "smoke": "node smoke-test.js",
     "comptes": "node comptes-test.js",
+    "ecrasement": "node ecrasement-test.js",
+    "reseau": "node reseau-test.js",
     "maj": "node maj-test.js",
     "dist:mac": "npm run prepare-app && electron-builder --mac dir --universal"
   },
@@ -37,6 +39,7 @@
       "main.js",
       "ou-ranger.js",
       "version-posee.js",
+      "verrou.js",
       "comptes.js",
       "preload.js",
       "choix-preload.js",

@@ -18,8 +18,9 @@
       sablier('Lecture de ' + f.name + '…');
       try {
         const bytes = await f.arrayBuffer();
-        const src = await addPdfSource(f.name, bytes, { remplaceExemple: true, chemin: typeof f.chemin === 'string' ? f.chemin : '' });
+        const src = await addPdfSource(f.name, bytes, { remplaceExemple: true, chemin: typeof f.chemin === 'string' ? f.chemin : '', mtimeMs: f.mtimeMs || 0 });
         setLast(f.name + ' · ' + plural(src.count, 'page ajoutée', 'pages ajoutées'));
+        if (f.verrou) avertirVerrou(f.name, f.verrou);
       } catch (e) {
         console.error(e);
         if (e && e.cancelled) setLast('Ouverture annulée');
@@ -54,16 +55,33 @@
     }
   }
 
+  // Quelqu'un d'autre a déjà ce document ouvert : le dire tout de suite, avec
+  // son nom et l'heure, plutôt que de laisser l'écraser sans le savoir.
+  function avertirVerrou(nom, v) {
+    const d = v && v.depuis ? new Date(v.depuis) : null;
+    const heure = d ? ' depuis ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2) : '';
+    const qui = (v && v.qui ? v.qui : 'Une autre personne') + (v && v.poste ? ' (poste ' + v.poste + ')' : '');
+    const msg = '« ' + nom + ' » est déjà ouvert par ' + qui + heure + '. Vous pouvez le lire ; avant d\'enregistrer, vérifiez avec elle, sous peine d\'écraser son travail.';
+    signaler('Document ouvert ailleurs', msg, 'info');
+    toast(msg, 'warn');
+  }
+
   async function addPdfSource(name, bytes, opts) {
     opts = opts || {};
     const opened = await openWithPdfjs(name, bytes, null);
     const doc = opened.doc, password = opened.password;
-    if (!opts.silent) snapshot();
+    // Ouvrir un document dans un espace vide n'est pas une action qu'on annule :
+    // Ctrl+Z juste après l'ouverture ramenait l'espace de travail à rien, et le
+    // document disparaissait. Seul ce qu'on AJOUTE à un document déjà là se défait.
+    const espaceVide = !state.sources.some(s => !s.isSample);
+    if (!opts.silent && !espaceVide) snapshot();
+    else if (espaceVide) { state.history = []; state.redo = []; syncButtons(); }
     const src = {
       id: ++uid, name, bytes, pdfjs: doc, count: doc.numPages,
       hue: HUES[state.hueIdx++ % HUES.length], isSample: !!opts.isSample,
       password: password || null, formValues: null, formFields: null, encrypted: !!password,
       chemin: opts.chemin || '',
+      mtime: opts.mtimeMs || 0,
     };
     state.sources.push(src);
     const fresh = [];
@@ -128,7 +146,7 @@
       src.formFields = fields.map(f => {
         const kind = fieldKind(f);
         let options = null;
-        try { if (typeof f.getOptions === 'function') options = f.getOptions(); } catch (_) {}
+        try { if (typeof f.getOptions === 'function') options = f.getOptions(); } catch (e) { signaler('Liste de choix d\'un champ de formulaire', e); }
         return { name: f.getName(), kind, value: readField(f, kind), options };
       });
       if (src.formFields.length) renderSources();
@@ -140,7 +158,7 @@
       if (kind === 'check') return f.isChecked();
       if (kind === 'radio') return f.getSelected() || '';
       if (kind === 'dropdown' || kind === 'list') return (f.getSelected() || [])[0] || '';
-    } catch (_) {}
+    } catch (e) { signaler('Lecture d\'un champ de formulaire', e); }
     return '';
   }
   async function loadLib(src) {

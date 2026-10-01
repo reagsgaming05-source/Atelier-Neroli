@@ -11,7 +11,7 @@
     worker: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
     core: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0/tesseract-core-simd-lstm.wasm.js',
   };
-  const ocr = { moteur: null, langues: '', workerUrl: null, embarque: !!document.getElementById('tess-worker-src') };
+  const ocr = { moteur: null, langues: '', workerUrl: null, embarque: !!document.getElementById('tess-worker-src'), avancement: null };
   // Le moteur pèse quelque deux cents mégaoctets. Il reste en place tant qu'on
   // s'en sert — reconnaître une seconde page ne doit pas le recharger — mais il
   // se libère après un long moment sans usage plutôt que de tenir la mémoire
@@ -33,11 +33,19 @@
   const ocrBase = m => (m.b != null ? m.b : m.y + m.h * 0.8);
   const ocrCorps = m => (m.s > 0 ? m.s : Math.max(4, m.h * 1.05));
   const ocrDisponible = () => typeof WebAssembly === 'object' && typeof Worker !== 'undefined' && (ocr.embarque || !state.bureau);
+  // Le journal du moteur ne sert qu'à la préparation (chargement du wasm et des
+  // modèles). Il reste attaché au moteur pendant toute la reconnaissance : sans
+  // le détacher ici, il écrasait la progression page par page (« Préparation…
+  // recognizing text ») et ses appels répétés réactivaient le bouton d'arrêt.
   async function ocrMoteur(langues, avancement) {
+    ocr.avancement = avancement || null;
+    try { return await ocrMoteurPret(langues); } finally { ocr.avancement = null; }
+  }
+  async function ocrMoteurPret(langues) {
     const cle = langues.join('+');
     ocrToucher();
     if (ocr.moteur && ocr.langues === cle) return ocr.moteur;
-    if (ocr.moteur) { try { await ocr.moteur.terminate(); } catch (_) {} ocr.moteur = null; }
+    if (ocr.moteur) { try { await ocr.moteur.terminate(); } catch (e) { signaler('Arrêt du moteur de reconnaissance', e, 'info'); } ocr.moteur = null; }
     if (!window.Tesseract) {
       if (ocr.embarque) throw new Error('le moteur de reconnaissance manque dans cette page');
       await loadScript(OCR_CDN.lib);
@@ -45,7 +53,7 @@
     const base64Octets = b64 => { const bin = atob(b64); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; };
     const opts = {
       cacheMethod: 'none',
-      logger: m => { if (avancement && m && m.status) avancement(m.status, m.progress); },
+      logger: m => { if (ocr.avancement && m && m.status) ocr.avancement(m.status, m.progress); },
       errorHandler: e => signaler('OCR', e),
     };
     let modeles;
@@ -64,6 +72,16 @@
       Object.assign(opts, { workerPath: OCR_CDN.worker, corePath: OCR_CDN.core });
     }
     ocr.moteur = await window.Tesseract.createWorker(modeles, 1, opts);
+    // Le mode de segmentation se fixe ici, et c'est mesuré. Laissé à lui-même, le
+    // moteur lit la page comme UN SEUL bloc (mode 6, le défaut de la bibliothèque,
+    // pas celui de l'outil en ligne de commande) : deux colonnes de texte sortent
+    // ligne à ligne (« Premier alinéa de la Second alinéa de la… »), et un
+    // tableau perd ses cellules. Le mode automatique (3) cherche les colonnes et
+    // les blocs, et lit chaque colonne l'une après l'autre. Le mode 4 (« une
+    // colonne ») récupère le tableau mais mélange de nouveau les colonnes : on ne
+    // le prend pas. Les filets d'un tableau sont effacés de l'image avant la
+    // lecture (voir ocrEffacerFilets), ce qui rend leurs mots aux cellules.
+    await ocr.moteur.setParameters({ tessedit_pageseg_mode: '3' });
     ocr.langues = cle;
     ocrToucher();
     return ocr.moteur;
@@ -81,6 +99,51 @@
     const page = await docjs.getPage(i + 1);
     return ocrRendu(page, page.rotate || 0, moteur);
   }
+  // Efface les filets : les rangées et les colonnes de pixels sombres presque
+  // continues sur toute la page, fines (un trait, pas un aplat). Ce qui touche
+  // un filet perd quelques pixels ; ce qui est dans une cellule reste intact.
+  // Rend le nombre de filets effacés.
+  function ocrEffacerFilets(cv) {
+    const w = cv.width, h = cv.height;
+    if (w < 200 || h < 200) return 0;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    const img = cx.getImageData(0, 0, w, h), d = img.data;
+    const sombre = i => d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114 < 120;
+    // La plus longue plage sombre de chaque rangée, puis de chaque colonne.
+    const rangees = new Int32Array(h), colonnes = new Int32Array(w);
+    for (let y = 0; y < h; y++) {
+      let run = 0, max = 0;
+      for (let x = 0; x < w; x++) { if (sombre((y * w + x) * 4)) { run++; if (run > max) max = run; } else run = 0; }
+      rangees[y] = max;
+    }
+    for (let x = 0; x < w; x++) {
+      let run = 0, max = 0;
+      for (let y = 0; y < h; y++) { if (sombre((y * w + x) * 4)) { run++; if (run > max) max = run; } else run = 0; }
+      colonnes[x] = max;
+    }
+    // Un tableau n'occupe pas toute la page : ses filets verticaux sont bien plus
+    // courts qu'elle, les horizontaux couvrent au moins le cinquième de sa largeur.
+    // Des groupes de lignes contiguës : un filet est fin ; un aplat ne l'est pas.
+    const groupes = (profil, n, minimum, epaisseurMax) => {
+      const out = [];
+      let a = -1;
+      for (let i = 0; i <= n; i++) {
+        const sur = i < n && profil[i] >= minimum;
+        if (sur && a < 0) a = i;
+        if (!sur && a >= 0) { if (i - a <= epaisseurMax) out.push([a, i - 1]); a = -1; }
+      }
+      return out;
+    };
+    const H = groupes(rangees, h, Math.max(150, w * 0.2), Math.max(8, Math.round(h / 150)));
+    const V = groupes(colonnes, w, Math.max(150, h * 0.08), Math.max(8, Math.round(w / 150)));
+    // Une rangée seule n'est pas un tableau : un soulignement, un trait de plume.
+    // Un tableau a au moins deux filets d'un sens ET deux de l'autre.
+    if (H.length < 2 || V.length < 2) return 0;
+    cx.fillStyle = '#fff';
+    H.forEach(([a, b]) => cx.fillRect(0, Math.max(0, a - 1), w, b - a + 3));
+    V.forEach(([a, b]) => cx.fillRect(Math.max(0, a - 1), 0, b - a + 3, h));
+    return H.length + V.length;
+  }
   async function ocrRendu(page, rotation, moteur) {
     const v1 = page.getViewport({ scale: 1, rotation });
     const echelle = Math.min(4, Math.max(1.5, 2300 / Math.max(v1.width, v1.height)));
@@ -91,6 +154,10 @@
     cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
     await page.render({ canvasContext: cx, viewport: vp }).promise;
     page.cleanup();
+    // Les filets d'un tableau (horizontaux ET verticaux) font écarter le contenu
+    // de ses cellules : un budget scanné perdait la quasi-totalité de ses lignes,
+    // avec une confiance annoncée de 95 %. On les efface de l'image avant de lire.
+    ocrEffacerFilets(cv);
     // Tant qu'une page est en cours de lecture, le moteur ne se libère pas.
     ocrEnCours++;
     let data;
@@ -162,7 +229,7 @@
     }
     const quoi = select('ocr-quoi', [['sans', 'Les pages sans texte (scans, images)'], ['sel', 'Les pages sélectionnées'], ['toutes', 'Toutes les pages']], state.selected.size ? 'sel' : 'sans');
     let langueMemo = 'fra';
-    try { langueMemo = localStorage.getItem('blonay-ocr-langue') || 'fra'; } catch (_) {}
+    try { langueMemo = localStorage.getItem('blonay-ocr-langue') || 'fra'; } catch (e) { signaler('Préférence de langue', e, 'info'); }
     const langue = select('ocr-langue', [['fra', 'Français'], ['fra+deu', 'Français et allemand'], ['deu', 'Allemand']], langueMemo);
     dialog({
       title: 'Reconnaître le texte (OCR)', icon: IC.ocr,
@@ -173,7 +240,7 @@
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Reconnaître', primary: true, onClick: async close => {
         close();
-        try { localStorage.setItem('blonay-ocr-langue', langue.value); } catch (_) {}
+        try { localStorage.setItem('blonay-ocr-langue', langue.value); } catch (e) { signaler('Préférence de langue', e, 'info'); }
         const langues = langue.value.split('+');
         setBusy('Repérage des pages…', 0);
         let pages = quoi.value === 'sel' ? selectedPages() : state.pages.slice();

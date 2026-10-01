@@ -199,7 +199,10 @@
     let retires = 0;
     const tous = [];
     ctx.enumerateIndirectObjects().forEach(([ref]) => { if (!vus.has(String(ref))) tous.push(ref); });
-    tous.forEach(ref => { try { ctx.delete(ref); retires++; } catch (_) {} });
+    let echecs = 0;
+    tous.forEach(ref => { try { ctx.delete(ref); retires++; } catch (_) { echecs++; } });
+    // Un objet qui reste, c'est peut-être ce qu'on voulait faire disparaître.
+    if (echecs) signaler('Purge', new Error(plural(echecs, 'objet inaccessible n\'a pas pu être retiré du fichier', 'objets inaccessibles n\'ont pas pu être retirés du fichier')), 'erreur');
     return retires;
   }
 
@@ -210,10 +213,10 @@
     const { PDFName } = PDFLib;
     let notes = 0;
     pagesPdf.forEach(page => {
-      try { page.node.delete(PDFName.of('Metadata')); } catch (_) {}
+      try { page.node.delete(PDFName.of('Metadata')); } catch (e) { signaler('Métadonnées de page non retirées', e); }
       try { notes += purgeAnnotations(out, page, specs); } catch (e) { signaler('Purge', e); }
     });
-    try { out.catalog.delete(PDFName.of('Metadata')); } catch (_) {}
+    try { out.catalog.delete(PDFName.of('Metadata')); } catch (e) { signaler('Métadonnées du document non retirées', e); }
     const orphelins = ramasserLesObjets(out);
     return { notes, orphelins };
   }
