@@ -4,10 +4,13 @@
  *   node maj-test.js                       # depuis les sources
  *   node maj-test.js chemin\BlonayPDF.exe  # sur le dossier empaqueté
  *
- * Quatre situations, parce que se tromper ici ne se rattrape pas : une mise à
+ * Huit situations, parce que se tromper ici ne se rattrape pas : une mise à
  * jour proposée à tort réinstalle une version plus ancienne, une mise à jour
  * lancée pendant qu'une collègue travaille laisse une installation à moitié
- * remplacée, et une mise à jour jamais proposée ne sert à rien.
+ * remplacée, une mise à jour jamais proposée ne sert à rien — et une archive
+ * que n'importe qui a déposée sur le partage ne doit jamais être exécutée :
+ * seule une archive signée par l'éditeur est proposée. Les clés sont des clés
+ * d'essai, posées par l'environnement ; l'application livrée porte les vraies.
  *
  * Le script de mise à jour est remplacé par un témoin : ce qu'on vérifie ici,
  * c'est que l'application ferme tout et l'appelle avec le bon zip. Que le vrai
@@ -18,7 +21,9 @@ const os = require('os');
 const path = require('path');
 const assert = require('node:assert/strict');
 const { _electron: electron } = require('playwright-core');
+const crypto = require('crypto');
 const { zipDe } = require('../test/zip-dessai.js');
+const sg = require('./signature.js');
 const { poserLeJeton } = require('./version-posee.js');
 const { MARQUEUR, nomDuScriptDeMaj } = require('./ou-ranger.js');
 
@@ -47,9 +52,25 @@ function menage() {
   } catch (e) { /* rien à tuer */ }
 }
 
+// Les clés d'essai : la paire de « l'éditeur », et une autre qui n'est celle de personne.
+const faire = () => { const k = crypto.generateKeyPairSync('ed25519'); return { pem: k.privateKey.export({ format: 'pem', type: 'pkcs8' }), cle: { id: 'essai-a', cle: sg.brute(k.publicKey) } }; };
+const editeur = faire();
+const intrus = faire();
+const PLATEFORME = sg.PLATEFORMES[process.platform]; // Linux n'est pas une cible : sans nom, pas de contrôle de plateforme
+
+// Écrit le fichier de signature à côté du zip : l'empreinte du zip tel qu'il est maintenant.
+function signerLeZip(zip, fiche, opts) {
+  const o = opts || {};
+  const k = o.cle || editeur;
+  const corps = { v: 1, objet: 'maj', cle: k.cle.id, fichier: path.basename(zip), sha256: sg.empreinteFichier(zip), taille: fs.statSync(zip).size,
+    version: fiche.version || '', plateforme: o.plateforme || PLATEFORME || 'windows', canal: o.canal || 'stable', critique: !!o.critique,
+    commit: fiche.commit || '', date: fiche.date || new Date().toISOString() };
+  fs.writeFileSync(zip + sg.SIGNATURE_DU_ZIP, JSON.stringify(sg.signer(corps, k.pem)));
+}
+
 // Une installation d'essai : le dossier de l'application, son script de mise à
 // jour remplacé par un témoin, et le zip qu'on veut lui faire trouver.
-function installation(nom, fiche) {
+function installation(nom, fiche, opts) {
   const d = path.join(base, nom);
   fs.mkdirSync(d, { recursive: true });
   // Sans ce fichier, l'application demanderait d'abord qui l'ouvre, et rien
@@ -67,13 +88,17 @@ function installation(nom, fiche) {
     fs.writeFileSync(script, '#!/bin/sh\nprintf "%s %s" "$BLONAY_MAJ_AUTO" "$1" > "$(dirname "$0")/temoin.txt"\n');
     fs.chmodSync(script, 0o755);
   }
-  if (fiche) fs.writeFileSync(path.join(d, 'BlonayPDF-windows.zip'),
-    zipDe([{ nom: 'BlonayPDF/version.json', contenu: JSON.stringify(fiche) }]));
-  return { dossier: d, temoin, zip: path.join(d, 'BlonayPDF-windows.zip') };
+  const zip = path.join(d, 'BlonayPDF-windows.zip');
+  if (fiche) {
+    fs.writeFileSync(zip, zipDe([{ nom: 'BlonayPDF/version.json', contenu: JSON.stringify(fiche) }]));
+    if (!opts || opts.signe !== false) signerLeZip(zip, fiche, opts);
+  }
+  return { dossier: d, temoin, zip };
 }
 
 const lancer = (dossier) => {
-  const env = { ...process.env, BLONAY_DOSSIER_APP: dossier, BLONAY_MAJ_DELAI: String(DELAI) };
+  const env = { ...process.env, BLONAY_DOSSIER_APP: dossier, BLONAY_MAJ_DELAI: String(DELAI),
+    BLONAY_CLES_PUBLIQUES_ESSAI: JSON.stringify({ maj: [editeur.cle], licence: [] }) };
   return electron.launch(exe ? { executablePath: exe, args: ['--no-sandbox'], env }
     : { args: [path.join(__dirname), '--no-sandbox'], env });
 };
@@ -112,7 +137,7 @@ async function attendreUneBoite(app, combien) {
 
 (async () => {
   const demain = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
-  const neuve = { construction: 'construite le 23.09.2026, commit f00df00', commit: 'f00df00', date: demain };
+  const neuve = { construction: 'construite le 23.09.2026, commit f00df00', commit: 'f00df00', date: demain, version: '99.0.0' };
 
   // 1. Une version plus récente est posée : elle est proposée, et « Plus tard »
   //    ne touche à rien.
@@ -170,11 +195,61 @@ async function attendreUneBoite(app, combien) {
   poste = installation('deja-a-jour', null);
   app = await ouvrir(poste.dossier, 1);
   fs.writeFileSync(poste.zip, zipDe([{ nom: 'BlonayPDF/version.json', contenu: JSON.stringify(installee) }]));
+  signerLeZip(poste.zip, Object.assign({ version: '' }, installee, installee.version ? {} : { version: require('./package.json').version }));
   await souffler(DELAI + 6000);
   assert.deepEqual(await boites(app), [], 'la version déjà installée ne se propose pas');
   await app.close().catch(() => {});
   menage();
   dit('zip de la version installée : rien n\'est proposé');
+
+  // 5. Une archive déposée sans signature — ce que ferait n'importe qui ayant accès
+  //    au partage — n'est ni proposée au lancement, ni exécutée. Demandée à la
+  //    main, l'application dit pourquoi elle la refuse.
+  const cliquerMenu = (app2, libelle) => app2.evaluate(({ Menu }, l) => {
+    const trouver = (items) => { for (const it of items) { if (it.label === l) return it; if (it.submenu) { const r = trouver(it.submenu.items); if (r) return r; } } return null; };
+    trouver(Menu.getApplicationMenu().items).click();
+  }, libelle);
+  const refusee = async (nom, preparer, motif) => {
+    const p = installation(nom, neuve, { signe: false });
+    preparer(p);
+    const a = await ouvrir(p.dossier, 0);
+    await souffler(DELAI + 4000);
+    assert.deepEqual(await boites(a), [], nom + ' : rien n\'est proposé au lancement');
+    await cliquerMenu(a, 'Rechercher une mise à jour');
+    const v = await attendreUneBoite(a);
+    assert.equal(v.length, 1, nom + ' : demandée à la main, la raison est dite');
+    assert.match(v[0].message, /Aucune mise à jour valable/);
+    assert.match(v[0].detail, motif, nom + ' : ' + v[0].detail);
+    assert.deepEqual(v[0].boutons, [], nom + ' : aucun bouton pour l\'installer');
+    await souffler(1500);
+    assert.equal(fs.existsSync(p.temoin), false, nom + ' : le script n\'est jamais lancé');
+    await a.close().catch(() => {});
+    menage();
+    dit(nom + ' : refusée (' + motif + ')');
+  };
+  await refusee('sans-signature', () => {}, /pas de fichier de signature/);
+  await refusee('falsifiee', (p) => {
+    signerLeZip(p.zip, neuve);
+    const b = fs.readFileSync(p.zip); b[b.length - 40] ^= 1; fs.writeFileSync(p.zip, b); // un octet change après la signature
+  }, /modifié/);
+  await refusee('autre-cle', (p) => signerLeZip(p.zip, neuve, { cle: Object.assign({}, intrus, { cle: Object.assign({}, intrus.cle, { id: 'essai-a' }) }) }), /invalide/);
+  if (PLATEFORME) await refusee('autre-plateforme', (p) => signerLeZip(p.zip, neuve, { plateforme: PLATEFORME === 'windows' ? 'mac' : 'windows' }), /ce poste est sous/);
+  await refusee('candidate', (p) => signerLeZip(p.zip, neuve, { canal: 'candidate' }), /canal stable/);
+
+  // 6. Une version plus ancienne, signée : jamais proposée seule ; proposée comme
+  //    un retour en arrière quand on la demande — et dite comme telle.
+  poste = installation('retour', { construction: 'ancienne', commit: '0ldc0de', date: '2020-01-01T00:00:00.000Z', version: '0.0.1' });
+  app = await ouvrir(poste.dossier, 1);
+  await souffler(DELAI + 4000);
+  assert.deepEqual(await boites(app), [], 'une version plus ancienne ne se propose pas d\'elle-même');
+  await cliquerMenu(app, 'Rechercher une mise à jour');
+  vues = await attendreUneBoite(app);
+  assert.equal(vues.length, 1);
+  assert.match(vues[0].message, /plus ancienne/);
+  assert.deepEqual(vues[0].boutons, ['Revenir à cette version', 'Plus tard']);
+  await app.close().catch(() => {});
+  menage();
+  dit('retour en arrière : jamais d\'office, proposé et nommé quand on le demande');
 
   try { fs.rmSync(base, { recursive: true, force: true }); } catch (e) { /* ménage sans importance */ }
   console.log('MAJ OK');

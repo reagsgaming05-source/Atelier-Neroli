@@ -31,8 +31,12 @@ Trois conséquences pratiques :
    ce que vous ne voulez pas y laisser.
 
 METTRE À JOUR
-Posez simplement le zip téléchargé à côté de BlonayPDF.exe (ou dans un sous-dossier
-« maj »). Au lancement suivant, l'application le voit, le dit, et propose de se mettre
+Posez le zip téléchargé ET son fichier « BlonayPDF-windows.zip.signature.json » (les deux,
+côte à côte, sous leur nom d'origine) à côté de BlonayPDF.exe, ou dans un sous-dossier
+« maj ». La signature prouve que le zip vient de l'éditeur : sans elle, ou si le zip a été
+modifié, l'application l'ignore — et « Aide › Rechercher une mise à jour » dit pourquoi.
+C'est ce qui empêche quelqu'un d'autre qui écrit sur le partage d'y déposer un programme
+que la prochaine personne exécuterait. Au lancement suivant, l'application le voit, le dit, et propose de se mettre
 à jour toute seule : elle se ferme, remplace ses fichiers et se rouvre. Rien n'est
 téléchargé — c'est vous qui apportez le zip — et « Aide › Rechercher une mise à jour »
 pose la question quand vous voulez.
@@ -41,14 +45,20 @@ Windows verrouille les fichiers en cours d'utilisation, et la copie se ferait à
 Faites refermer, puis recommencez.
 
 À LA MAIN, SI VOUS PRÉFÉREZ
-Double-cliquez sur « Mettre-a-jour.cmd », ou posez le zip téléchargé dessus. Il remplace
+Double-cliquez sur « Mettre-a-jour.cmd », ou posez le zip téléchargé dessus (son fichier
+« .signature.json » à côté). Il vérifie la signature avec l'application déjà installée,
+puis il remplace
 les fichiers de l'application par ceux du zip et ne touche jamais au sous-dossier
 « data » : vos tampons, votre signature mémorisée, vos récents et le travail mis de côté
 sont conservés. Il ne va rien chercher sur Internet et n'envoie rien ; c'est à vous de
 télécharger le zip. Fermez l'application avant de lancer la mise à jour : Windows
 verrouille un programme en cours, et la copie échouerait à moitié.
 Sans le script, la même chose à la main : fermez l'application, décompressez le zip
-par-dessus le dossier en acceptant de remplacer, et ne supprimez pas « data ».
+par-dessus le dossier en acceptant de remplacer, et ne supprimez pas « data ». C'est aussi
+ainsi qu'on passe d'une version d'avant la signature (2.0) à la 2.1 si le zip n'a pas
+son fichier de signature : les anciennes versions ne savent pas la vérifier.
+Un retour en arrière (une version plus ancienne, signée aussi) se propose seulement quand
+vous le demandez par « Aide › Rechercher une mise à jour », et il est dit comme tel.
 « Aide › À propos » indique la version installée, avec sa date.
 
 PLUSIEURS PERSONNES, UNE SEULE INSTALLATION
@@ -66,7 +76,9 @@ sur une clé USB, sur un dossier décompressé pour essayer. Aucune fenêtre de 
 s'ouvre avant. Il n'y a rien à préparer et rien à activer.
 
 Au premier lancement, chacune crée son compte : prénom et nom, puis un mot de passe
-(quatre caractères au minimum). L'application redémarre une fois, et c'est fini. Ensuite
+(huit caractères au minimum, et pas « 12345678 » ni les autres qu'on essaie en premier).
+L'application montre alors, UNE SEULE FOIS, un code de récupération : à noter sur papier.
+Elle redémarre une fois, et c'est fini. Ensuite
 elle reste connectée : elle se rouvre directement sur les affaires de la personne, sans
 jamais redemander le mot de passe — jusqu'à « Fichier › Se déconnecter ».
 
@@ -78,12 +90,24 @@ Chacune a son dossier : data\Marie Dupont, data\Sophie Martin… avec ses tampon
 signature, ses récents et son travail mis de côté. « Aide › À propos » rappelle sous quel
 nom on travaille.
 
-MOT DE PASSE OUBLIÉ
-Le mot de passe n'est enregistré nulle part : seule une empreinte l'est, et on ne peut pas
-la lire à l'envers. Il n'y a donc pas de « mot de passe oublié » automatique. Pour redonner
-l'accès, ouvrez data\<nom>\compte.json dans le Bloc-notes et supprimez la ligne
-« motDePasse » (et la virgule qui précède) : la personne en choisira un neuf à sa
-prochaine connexion, et retrouvera toutes ses affaires.
+MOT DE PASSE OUBLIÉ, CHANGÉ, COMPTE QUI PART
+- Oublié : sur l'écran du mot de passe, « Mot de passe oublié ? ». Le code de récupération
+  (celui montré à la création) permet d'en poser un neuf ; un code neuf est alors montré.
+- Changé : « Fichier › Changer mon mot de passe… » (l'actuel est demandé). « Fichier ›
+  Refaire mon code de récupération… » en donne un neuf si l'ancien est perdu.
+- Trop d'essais : après trois mots de passe faux, l'application fait patienter (5 secondes,
+  puis le double à chaque échec, jusqu'à 15 minutes). Cela tient aussi après un redémarrage.
+- Une collègue part : sur l'écran du mot de passe, « Mot de passe oublié ? » puis « Supprimer
+  ce compte… » (mot de passe ou code de récupération requis) efface son dossier data\<nom> :
+  tampons, signature mémorisée, récents, travail mis de côté. Ses PDF ne sont pas touchés.
+  Sans mot de passe ni code : supprimez le dossier data\<nom> dans l'Explorateur, et la ligne
+  du nom dans comptes.txt s'il y figure.
+- Aucun code, aucun mot de passe : l'administrateur ouvre data\<nom>\compte.json dans le
+  Bloc-notes et supprime la ligne « motDePasse » (et la virgule qui précède). Le compte
+  apparaît alors dans la liste avec la mention « attend un nouveau mot de passe » ; la
+  première personne qui s'y connecte en pose un — ce doit donc être la bonne, tout de
+  suite. L'application garde dans la fiche la date et le poste de ce changement, et
+  l'affiche sur l'écran de connexion : si la vraie propriétaire n'y est pour rien, elle le voit.
 
 CE QUE LE MOT DE PASSE PROTÈGE, ET CE QU'IL NE PROTÈGE PAS
 Il empêche d'ouvrir le compte d'une autre depuis l'application : c'est ce pour quoi il est

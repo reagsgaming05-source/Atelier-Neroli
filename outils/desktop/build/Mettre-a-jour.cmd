@@ -99,9 +99,37 @@ goto :echec
 
 :fermee
 
-rem --- 3. Ouvrir le zip a l'ecart --------------------------------------------
+rem --- 3. Copier a l'ecart, verifier la signature de la COPIE ----------------
+rem Ce zip arrive d'un dossier ou tout le monde ecrit. Il n'est execute que
+rem s'il est signe par l'editeur, et c'est la copie, posee dans un dossier a
+rem soi, qui est verifiee puis ouverte : un zip remplace entre la verification
+rem et l'ouverture ne passerait pas. La verification est faite par l'application
+rem DEJA installee (en mode Node), qui porte la cle publique de l'editeur ; la
+rem nouvelle version n'a pas voix au chapitre.
 set "ATELIER=%TEMP%\blonay-maj-%RANDOM%%RANDOM%"
 mkdir "%ATELIER%" 2>nul
+echo   Copie de l'archive…
+copy /y "%ZIP%" "%ATELIER%\maj.zip" >nul
+if errorlevel 1 (
+  echo   L'archive n'a pas pu être copiée : rien n'a été touché.
+  goto :echec
+)
+copy /y "%ZIP%.signature.json" "%ATELIER%\maj.zip.signature.json" >nul 2>&1
+echo   Vérification de la signature de l'éditeur…
+set "ELECTRON_RUN_AS_NODE=1"
+"%DOSSIER%BlonayPDF.exe" "%DOSSIER%resources\app.asar\verifier-maj.js" "%ATELIER%\maj.zip"
+set "VERIF=%ERRORLEVEL%"
+set "ELECTRON_RUN_AS_NODE="
+if not "%VERIF%"=="0" (
+  echo.
+  echo   Cette archive n'est pas signée par l'éditeur, ou a été modifiée :
+  echo   elle n'est PAS installée, et rien n'a été touché. Pour une vraie mise à jour,
+  echo   reprenez « BlonayPDF-windows.zip » ET son fichier « .signature.json » depuis
+  echo   la page de téléchargement de l'éditeur.
+  goto :echec
+)
+set "ZIP=%ATELIER%\maj.zip"
+echo   Signature vérifiée.
 echo   Ouverture du zip…
 tar -xf "%ZIP%" -C "%ATELIER%" 2>nul
 if errorlevel 1 (

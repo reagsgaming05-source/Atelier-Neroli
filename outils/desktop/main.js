@@ -93,8 +93,10 @@ const PORTABLE_DIR = process.env.BLONAY_DOSSIER_APP
 
 const SCRIPT_MAJ = require('./ou-ranger').nomDuScriptDeMaj(process.platform);
 const { MARQUEUR, COMPTES, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
-const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = require('./comptes');
-const { miseAJourPosee, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons } = require('./version-posee');
+const comptes = require('./comptes');
+const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = comptes;
+const { examinerLesZips, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons } = require('./version-posee');
+const signature = require('./signature');
 const verrou = require('./verrou');
 // Cette instance de l'application : le verrou d'un document dit « c'est moi », ou « c'est quelqu'un d'autre ».
 const INSTANCE = require('crypto').randomUUID();
@@ -154,38 +156,136 @@ function ecrireFiche(nom, fiche) {
   } catch (e) { return false; }
 }
 
-// Créer un compte, ou se connecter au sien. Rendent un message à afficher, ou
-// rien du tout quand c'est bon.
+// Créer un compte, ou se connecter au sien. Rendent un message à afficher ; ou
+// { code, nom } quand il y a un code de récupération à montrer avant d'ouvrir la
+// session ; ou rien du tout quand c'est bon.
+//
+// Le code n'est montré qu'une fois, et la session ne s'ouvre qu'après que la
+// personne a dit l'avoir noté (blonay:ouvrir) : ouvrir tout de suite
+// redémarrerait l'application avant qu'elle ait pu le recopier.
+const POSTE = () => { try { return os.hostname(); } catch (e) { return ''; } };
+let pretAOuvrir = null; // le seul compte que blonay:ouvrir peut ouvrir, une fois
+
+// Le frein, après un échec : le message dit aussi combien de temps patienter.
+function apresEchec(propre, fiche, base) {
+  const f = comptes.noterEchec(fiche);
+  ecrireFiche(propre, f);
+  const ms = comptes.attente(f);
+  return ms > 0 ? base + ' ' + comptes.messageAttente(ms) : base;
+}
+function avecNouveauCode(propre, fiche, quoi) {
+  const code = comptes.codeDeRecuperation();
+  const f = comptes.noterEvenement(Object.assign({ nom: propre }, comptes.effacerEchecs(fiche), { recuperation: comptes.scellerCode(code) }), quoi, POSTE());
+  return { code, fiche: f };
+}
+
 function creerLeCompte(nom, motDePasse) {
   const propre = nomDeDossier(nom);
   if (!propre) return 'Ce nom ne peut pas servir de dossier. Essayez votre prénom et votre nom.';
   if (comptesConnus().some((n) => n.toLowerCase() === propre.toLowerCase())) {
     return 'Ce compte existe déjà. Choisissez-le dans la liste pour vous connecter.';
   }
-  const souci = motDePasseAcceptable(motDePasse);
+  const souci = motDePasseAcceptable(motDePasse, propre);
   if (souci) return souci;
-  if (!ecrireFiche(propre, { nom: propre, cree: new Date().toISOString(), motDePasse: sceller(motDePasse) })) {
-    return 'Impossible d\u2019écrire dans le dossier des données.';
-  }
-  return ouvrirLaSession(propre);
+  const { code, fiche } = avecNouveauCode(propre, { nom: propre, cree: new Date().toISOString(), motDePasse: sceller(motDePasse) }, 'compte créé');
+  if (!ecrireFiche(propre, fiche)) return 'Impossible d’écrire dans le dossier des données.';
+  pretAOuvrir = propre;
+  return { code, nom: propre };
 }
 
 function connexion(nom, motDePasse) {
   const propre = nomDeDossier(nom);
   if (!propre) return 'Compte inconnu.';
-  const fiche = lireFiche(propre);
+  let fiche = lireFiche(propre);
+  const ms = comptes.attente(fiche);
+  if (ms > 0) return comptes.messageAttente(ms);
   // Un compte sans mot de passe : celui d'avant, ou un mot de passe retiré par
-  // l'administrateur pour en redonner l'accès. On en pose un maintenant.
+  // l'administrateur pour en redonner l'accès. Le compte appartient alors au
+  // premier arrivé — c'est le principe de cette procédure — mais cela se voit
+  // (la liste le dit, la fiche garde la date et le poste) et il reçoit un code
+  // de récupération tout neuf.
   if (!protege(fiche)) {
-    const souci = motDePasseAcceptable(motDePasse);
+    const souci = motDePasseAcceptable(motDePasse, propre);
     if (souci) return souci;
-    if (!ecrireFiche(propre, Object.assign({ nom: propre }, fiche, { motDePasse: sceller(motDePasse) }))) {
-      return 'Impossible d\u2019écrire dans le dossier des données.';
-    }
-    return ouvrirLaSession(propre);
+    const r = avecNouveauCode(propre, Object.assign({}, fiche, { motDePasse: sceller(motDePasse) }), 'mot de passe posé après réinitialisation');
+    if (!ecrireFiche(propre, r.fiche)) return 'Impossible d’écrire dans le dossier des données.';
+    pretAOuvrir = propre;
+    return { code: r.code, nom: propre };
   }
-  if (!verifier(motDePasse, fiche)) return 'Mot de passe incorrect.';
+  if (!verifier(motDePasse, fiche)) return apresEchec(propre, fiche, 'Mot de passe incorrect.');
+  // Connexion réussie : le frein repart à zéro, une empreinte posée avec l'ancien
+  // coût se refait au coût actuel, et un compte sans code de récupération en reçoit un.
+  const avant = JSON.stringify(fiche);
+  fiche = comptes.effacerEchecs(fiche);
+  if (comptes.aRehacher(fiche)) fiche.motDePasse = sceller(motDePasse);
+  if (!fiche.recuperation) {
+    const r = avecNouveauCode(propre, fiche, 'code de récupération créé');
+    if (ecrireFiche(propre, r.fiche)) { pretAOuvrir = propre; return { code: r.code, nom: propre }; }
+  }
+  if (JSON.stringify(fiche) !== avant) ecrireFiche(propre, fiche);
   return ouvrirLaSession(propre);
+}
+
+// Mot de passe oublié : le code de récupération, montré une fois à la création
+// ou à la dernière réinitialisation, tient lieu de mot de passe pour en poser un nouveau.
+function recuperer(nom, code, nouveau) {
+  const propre = nomDeDossier(nom);
+  if (!propre) return 'Compte inconnu.';
+  const fiche = lireFiche(propre);
+  const ms = comptes.attente(fiche);
+  if (ms > 0) return comptes.messageAttente(ms);
+  if (!fiche.recuperation) {
+    return 'Ce compte n’a pas de code de récupération. Demandez à votre informaticien de réinitialiser le mot de passe (voir le guide d’administration).';
+  }
+  if (!comptes.verifierCode(code, fiche)) return apresEchec(propre, fiche, 'Ce code n’est pas le bon.');
+  const souci = motDePasseAcceptable(nouveau, propre);
+  if (souci) return souci;
+  const r = avecNouveauCode(propre, Object.assign({}, fiche, { motDePasse: sceller(nouveau) }), 'mot de passe changé avec le code de récupération');
+  if (!ecrireFiche(propre, r.fiche)) return 'Impossible d’écrire dans le dossier des données.';
+  pretAOuvrir = propre;
+  return { code: r.code, nom: propre };
+}
+
+// Supprimer un compte (le départ d'une collègue) : son dossier — tampons,
+// signature mémorisée, copies de récupération — est effacé. Ses PDF, eux, sont
+// où ils sont : l'application n'y touche pas. Il faut le mot de passe ou le code.
+function supprimerCompte(nom, secret) {
+  const propre = nomDeDossier(nom);
+  if (!propre) return 'Compte inconnu.';
+  const fiche = lireFiche(propre);
+  const ms = comptes.attente(fiche);
+  if (ms > 0) return comptes.messageAttente(ms);
+  if (!(verifier(secret, fiche) || comptes.verifierCode(secret, fiche))) return apresEchec(propre, fiche, 'Ni le mot de passe ni le code de récupération ne correspondent.');
+  const dossier = path.join(DOSSIER_DATA(), propre);
+  // Jamais hors de data/, jamais data/ lui-même : le nom a déjà été nettoyé, on vérifie encore.
+  if (path.dirname(path.resolve(dossier)) !== path.resolve(DOSSIER_DATA())) return 'Ce dossier ne peut pas être supprimé d’ici.';
+  try { fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 4, retryDelay: 250 }); }
+  catch (e) { return 'Le dossier n’a pas pu être supprimé (' + (e && e.message ? e.message : e) + '). Fermez ce qui l’utilise et réessayez.'; }
+  return '';
+}
+
+// ---------------------------------------------------------------------------
+//  Une fois connectée : changer son mot de passe, refaire son code
+// ---------------------------------------------------------------------------
+function changerMonMotDePasse(ancien, nouveau) {
+  if (!PROFIL) return 'Aucun compte n’est connecté.';
+  const fiche = lireFiche(PROFIL);
+  const ms = comptes.attente(fiche);
+  if (ms > 0) return comptes.messageAttente(ms);
+  if (!verifier(ancien, fiche)) return apresEchec(PROFIL, fiche, 'Le mot de passe actuel n’est pas le bon.');
+  const souci = motDePasseAcceptable(nouveau, PROFIL);
+  if (souci) return souci;
+  const f = comptes.noterEvenement(Object.assign({}, comptes.effacerEchecs(fiche), { motDePasse: sceller(nouveau) }), 'mot de passe changé', POSTE());
+  return ecrireFiche(PROFIL, f) ? '' : 'Impossible d’écrire dans le dossier des données.';
+}
+function refaireMonCode(motDePasse) {
+  if (!PROFIL) return 'Aucun compte n’est connecté.';
+  const fiche = lireFiche(PROFIL);
+  const ms = comptes.attente(fiche);
+  if (ms > 0) return comptes.messageAttente(ms);
+  if (!verifier(motDePasse, fiche)) return apresEchec(PROFIL, fiche, 'Le mot de passe n’est pas le bon.');
+  const r = avecNouveauCode(PROFIL, fiche, 'code de récupération refait');
+  return ecrireFiche(PROFIL, r.fiche) ? { code: r.code, nom: PROFIL } : 'Impossible d’écrire dans le dossier des données.';
 }
 
 // Les comptes proposés : ceux de comptes.txt, plus ceux qui portent déjà leur
@@ -501,6 +601,11 @@ function setupNetwork() {
 }
 
 function setupIpc() {
+  if (RANGEMENT.ou === 'comptes' && PROFIL) {
+    ipcMain.handle('blonay:mon-compte', () => ({ nom: PROFIL }));
+    ipcMain.handle('blonay:changer', (_e, ancien, nouveau) => changerMonMotDePasse(ancien, nouveau));
+    ipcMain.handle('blonay:refaire-code', (_e, motDePasse) => refaireMonCode(motDePasse));
+  }
   // Les documents de cette fenêtre-là, remis une fois.
   ipcMain.handle('blonay:fichiers-initiaux', (e) => {
     const w = fenetreDe(e.sender);
@@ -634,6 +739,10 @@ function buildMenu() {
         { label: 'Imprimer…', accelerator: 'CmdOrCtrl+P', click: () => envoyer('imprimer') },
         { type: 'separator' },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
+        ...(RANGEMENT.ou === 'comptes' && PROFIL ? [
+          { label: 'Changer mon mot de passe…', click: () => ouvrirMonCompte('changer') },
+          { label: 'Refaire mon code de récupération…', click: () => ouvrirMonCompte('code') },
+        ] : []),
         ...(RANGEMENT.ou === 'comptes' ? [{
           label: 'Se déconnecter' + (PROFIL ? ' (' + PROFIL + ')' : ''),
           click: async () => {
@@ -715,6 +824,21 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+// Les deux gestes d'une personne connectée : changer son mot de passe, refaire
+// son code. La même fenêtre que la connexion, ouverte sur l'écran voulu.
+function ouvrirMonCompte(mode) {
+  const parent = BrowserWindow.getFocusedWindow() || undefined;
+  const fen = new BrowserWindow({
+    width: 460, height: 460, resizable: false, minimizable: false, maximizable: false,
+    fullscreenable: false, title: APP_TITLE, show: false, autoHideMenuBar: true, parent, modal: !!parent,
+    backgroundColor: '#191F25',
+    webPreferences: { preload: path.join(__dirname, 'choix-preload.js'), partition: 'choix-du-compte', sandbox: true },
+  });
+  fen.removeMenu();
+  fen.once('ready-to-show', () => fen.show());
+  fen.loadFile(path.join(__dirname, 'choix-profil.html'), { hash: mode });
+}
+
 // « Qui êtes-vous ? », une seule fois par personne et par poste. La fenêtre
 // tourne dans une session en mémoire : elle ne doit rien écrire dans un dossier
 // de données qu'on n'a justement pas encore choisi.
@@ -773,35 +897,55 @@ let MAJ_VUE = false;      // proposée une fois par session, pas à chaque fenê
 let MAJ_DEMANDEE = null;  // le script à lancer en partant, une fois tout fermé
 
 async function chercherUneMiseAJour(demandee) {
-  // Lecture synchrone, comme tout ce qui touche au dossier de l'application :
-  // quelques dizaines de kilo-octets lus dans l'index du zip, et la fenêtre est
-  // déjà ouverte depuis plusieurs secondes quand cela se produit.
-  const trouvee = miseAJourPosee(PORTABLE_DIR, VERSION);
+  // Une archive posée à côté n'est proposée que si elle est signée par l'éditeur :
+  // l'application est sur un partage où tout le secrétariat écrit, et sans cette
+  // preuve n'importe qui y déposerait un programme que la prochaine personne
+  // exécuterait. Voir signature.js.
+  const cles = signature.lireCles().maj;
+  const installee = Object.assign({}, VERSION, { version: VERSION.version || app.getVersion() });
+  const { propose: trouvee, refusees } = await examinerLesZips(PORTABLE_DIR, installee, {
+    anterieure: !!demandee,
+    verifier: (zip) => signature.verifierZipAsync(zip, { cles }),
+  });
   if (!trouvee) {
     if (demandee) {
+      // Une archive posée mais refusée, c'est ce que la personne cherche à comprendre.
+      const pourquoi = refusees.length
+        ? '\n\nPosée à côté, mais pas acceptée :\n' + refusees.map((r) => '• ' + path.basename(r.zip) + ' — ' + r.raison).join('\n')
+          + (cles.length ? '' : '\n\nCette version de l’application ne porte aucune clé d’éditeur : elle n’accepte aucune mise à jour posée à côté. Décompressez l’archive par-dessus le dossier à la main, sans toucher à « data ».')
+        : '';
       direA({
-        type: 'info', title: APP_TITLE, noLink: true,
-        message: 'Vous avez la version la plus récente.',
-        detail: (CONSTRUCTION || 'Version de travail') + '\n\n'
-          + 'Pour mettre à jour : posez « BlonayPDF-windows.zip » à côté de l\'application '
-          + '(ou dans un sous-dossier « maj »), et relancez-la.',
+        type: refusees.length ? 'warning' : 'info', title: APP_TITLE, noLink: true,
+        message: refusees.length ? 'Aucune mise à jour valable n’est posée.' : 'Vous avez la version la plus récente.',
+        detail: descriptionInstallee() + '\n\n'
+          + 'Pour mettre à jour : posez « BlonayPDF-windows.zip » et son fichier « .signature.json » à côté de l\'application '
+          + '(ou dans un sous-dossier « maj »), et relancez-la.' + pourquoi,
       });
     }
     return;
   }
   if (!demandee && MAJ_VUE) return;
   MAJ_VUE = true;
+  const v = trouvee.version;
   const { response } = await direA({
-    type: 'question', noLink: true, defaultId: 0, cancelId: 1,
-    buttons: ['Mettre à jour maintenant', 'Plus tard'],
+    type: trouvee.anterieure || v.critique ? 'warning' : 'question', noLink: true, defaultId: 0, cancelId: 1,
+    buttons: [trouvee.anterieure ? 'Revenir à cette version' : 'Mettre à jour maintenant', 'Plus tard'],
     title: APP_TITLE,
-    message: 'Une version plus récente est posée à côté de l\'application.',
-    detail: 'Installée : ' + (CONSTRUCTION || 'version de travail') + '\n'
-      + 'Posée : ' + (trouvee.version.construction || path.basename(trouvee.zip)) + '\n\n'
+    message: trouvee.anterieure
+      ? 'Une version plus ancienne est posée à côté de l\'application.'
+      : (v.critique ? 'Une mise à jour importante est posée à côté de l\'application.' : 'Une version plus récente est posée à côté de l\'application.'),
+    detail: 'Installée : ' + descriptionInstallee() + '\n'
+      + 'Posée : ' + (v.version ? v.version + ' (' + (v.canal || 'stable') + ')' : '') + (v.commit ? ' — commit ' + v.commit : '') + '\n'
+      + 'Signée par l’éditeur : oui (clé ' + (v.cle || '?') + ')\n\n'
+      + (trouvee.anterieure ? 'Cela remplace l\'application par une version plus ancienne. ' : '')
       + 'La mise à jour ferme l\'application, remplace ses fichiers et la rouvre. '
       + 'Vos tampons, votre signature, vos récents et le travail mis de côté sont conservés.',
   });
   if (response === 0) lancerLaMiseAJour(trouvee);
+}
+function descriptionInstallee() {
+  const v = VERSION.version || app.getVersion();
+  return v + (VERSION.canal === 'candidate' ? ' (candidate)' : '') + (CONSTRUCTION ? ' — ' + CONSTRUCTION : ' — version de travail');
 }
 
 function lancerLaMiseAJour(trouvee) {
@@ -862,9 +1006,22 @@ app.on('will-quit', () => {
 
 app.whenReady().then(() => {
   if (RANGEMENT.ou === 'comptes' && !PROFIL) {
-    ipcMain.handle('blonay:comptes', () => comptesConnus().map((nom) => ({ nom, protege: protege(lireFiche(nom)) })));
+    ipcMain.handle('blonay:comptes', () => comptesConnus().map((nom) => {
+      const fiche = lireFiche(nom);
+      const d = comptes.dernierChangement(fiche);
+      return { nom, protege: protege(fiche), recuperation: !!fiche.recuperation, dernierChangement: d };
+    }));
     ipcMain.handle('blonay:connexion', (_e, nom, motDePasse) => connexion(nom, motDePasse));
     ipcMain.handle('blonay:creer', (_e, nom, motDePasse) => creerLeCompte(nom, motDePasse));
+    ipcMain.handle('blonay:recuperer', (_e, nom, code, nouveau) => recuperer(nom, code, nouveau));
+    ipcMain.handle('blonay:supprimer', (_e, nom, secret) => supprimerCompte(nom, secret));
+    // La session ne s'ouvre qu'une fois le code noté, et seulement pour le compte
+    // qui vient de le recevoir : sans cela, ce canal ouvrirait n'importe quel compte.
+    ipcMain.handle('blonay:ouvrir', (_e, nom) => {
+      if (!pretAOuvrir || nomDeDossier(nom) !== pretAOuvrir) return 'Rien à ouvrir.';
+      const propre = pretAOuvrir; pretAOuvrir = null;
+      return ouvrirLaSession(propre);
+    });
     demanderLeCompte();
     return;
   }

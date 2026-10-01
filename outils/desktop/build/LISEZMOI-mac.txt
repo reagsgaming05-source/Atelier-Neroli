@@ -55,9 +55,13 @@ La connexion tient jusqu'à « Fichier > Se déconnecter ».
 
 METTRE À JOUR
 -------------
-Posez le nouveau BlonayPDF-mac.zip à côté de l'application : au lancement
-suivant, elle le voit et propose de se mettre à jour. Tout est fermé, remplacé,
-puis rouvert, sans toucher à « data ».
+Posez le nouveau BlonayPDF-mac.zip ET son fichier BlonayPDF-mac.zip.signature.json
+(les deux, côte à côte) à côté de l'application : au lancement suivant, elle les voit
+et propose de se mettre à jour. La signature prouve que le zip vient de l'éditeur :
+sans elle, ou si le zip a été modifié, l'application l'ignore, et « Aide > Rechercher
+une mise à jour » dit pourquoi. Tout est fermé, remplacé, puis rouvert, sans toucher
+à « data ». (Pour passer de la version 2.0, qui ne sait pas vérifier de signature, à la
+2.1 : remplacez le paquet à la main si le zip n'a pas son fichier de signature.)
 
 À la main : fermez l'application, puis double-cliquez sur
 « Mettre-a-jour.command ». Si le Mac refuse de lancer ce fichier, ouvrez le

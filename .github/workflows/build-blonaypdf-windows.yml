@@ -1,13 +1,39 @@
 name: Blonay PDF – Windows et Mac
 
+# Une construction qui sort d'une branche de travail n'est JAMAIS « la dernière
+# version » que les postes téléchargent : elle est publiée en version CANDIDATE, à
+# essayer d'abord. Seule une version numérotée — étiquette « v2.1.0 », ou lancement
+# manuel avec « stable » — passe en STABLE, et reste téléchargeable quand la suivante
+# sort. La publication attend que Windows ET Mac soient verts : un poste Windows et
+# un poste Mac d'un même secrétariat ne se retrouvent plus sur deux versions.
 on:
   push:
     branches: ["main", "claude/**"]
+    tags: ["v*"]
     paths: ["outils/**", ".github/workflows/build-blonaypdf-windows.yml"]
   workflow_dispatch:
+    inputs:
+      publier:
+        description: "Publier en STABLE (version numérotée, celle que les postes téléchargent)"
+        type: choice
+        options: ["candidate", "stable"]
+        default: "candidate"
 
 permissions:
   contents: write
+
+# Deux pushes rapprochés ne se disputent plus la publication : le plus ancien
+# s'arrête, sauf pour une version stable, qu'on n'interrompt jamais.
+concurrency:
+  group: construction-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+
+env:
+  # « stable » : une étiquette de version, ou un lancement manuel qui le demande.
+  # Tout le reste est candidate. Le build le grave dans la fiche de version et dans
+  # l'application ; la suite de tests n'y refait pas de nouvelle tentative (un test
+  # instable qui passe au deuxième essai ne doit pas laisser partir une version stable).
+  BLONAY_CANAL: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publier == 'stable')) && 'stable' || 'candidate' }}
 
 jobs:
   # De bout en bout, sur Linux : l'application entière pilotée dans Chromium,
@@ -157,7 +183,8 @@ jobs:
           # l'application lit dans un zip pose a cote d'elle pour savoir s'il
           # est plus recent que ce qui tourne. Sans elle, la mise a jour ne se
           # proposerait jamais (maj-test.js tombe alors).
-          Copy-Item construction.json dist\BlonayPDF\version.json
+          node fiche-de-version.js windows dist\BlonayPDF\version.json
+          Copy-Item ..\NOTES-DE-VERSION.md dist\BlonayPDF\Notes-de-version.txt
           Get-ChildItem dist\BlonayPDF | Select-Object Name, Length
 
       - name: Test de fumée de l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, export)
@@ -235,36 +262,74 @@ jobs:
 
       # Le script de mise a jour est la seule chose du depot qui touche a
       # l'installation de quelqu'un. Il est donc joue pour de vrai, sur Windows :
-      # un faux dossier deja installe, avec des donnees dedans, recoit le zip
-      # fraichement construit. Ce qui compte : data survit, l'executable est
-      # remplace, et un fichier personnel pose dans le dossier reste la.
-      - name: Le script de mise à jour préserve les données
+      # un faux dossier deja installe — une vraie copie de l'application, car c'est
+      # elle qui verifie la signature —, avec des donnees dedans, recoit le zip
+      # fraichement construit. Ce qui compte : data survit, les fichiers sont
+      # remplaces, un fichier personnel pose dans le dossier reste la ... et une
+      # archive qui n'est pas signee par l'editeur n'est jamais installee.
+      # Les cles sont des cles d'essai, jetables : l'application construite ici ne
+      # connait pas encore (ou pas du tout) celles de l'editeur.
+      - name: Le script de mise à jour préserve les données, et refuse ce qui n'est pas signé
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           # Capture fidèle : sans cela, les accents du script reviendraient
           # abîmés par la console et la vérification ne voudrait rien dire.
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $ws = $env:GITHUB_WORKSPACE
+          $dit = { param($quoi, $vrai) if (-not $vrai) { throw "RATÉ : $quoi" }; Write-Host "  ok - $quoi" }
+
+          # La paire d'essai : l'application et la signature la connaissent par l'environnement.
+          $pem = Join-Path $env:RUNNER_TEMP 'essai.pem'
+          $env:BLONAY_CLES_PUBLIQUES_ESSAI = node (Join-Path $ws 'outils\editeur\paire-essai.js') $pem
+          $zip = Join-Path $env:RUNNER_TEMP 'maj\BlonayPDF-windows.zip'
+          New-Item -ItemType Directory -Force -Path (Split-Path $zip) | Out-Null
+          Copy-Item (Join-Path $ws 'BlonayPDF-windows.zip') $zip
+          node (Join-Path $ws 'outils\editeur\signer-maj.js') $zip --cle $pem --plateforme windows --version 99.0.0 --canal stable --commit essai --date 2099-01-01T00:00:00Z
+          if ($LASTEXITCODE -ne 0) { throw "La signature d'essai a échoué." }
+
+          # Un faux dossier installé : la vraie application, une ancienne fiche de version, des données.
           $poste = Join-Path $env:RUNNER_TEMP 'poste'
+          Copy-Item -Recurse (Join-Path $ws 'outils\desktop\dist\BlonayPDF') $poste
+          Remove-Item (Join-Path $poste 'data') -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path (Join-Path $poste 'data\recuperation') | Out-Null
           Set-Content (Join-Path $poste 'data\tampons.json') 'MES TAMPONS'
           Set-Content (Join-Path $poste 'data\recuperation\a.json') 'MON TRAVAIL'
-          Set-Content (Join-Path $poste 'BlonayPDF.exe') 'VIEILLE VERSION'
           Set-Content (Join-Path $poste 'notes-du-service.txt') 'A MOI'
-          # Le job travaille dans outils/ : chemins absolus depuis l'espace de travail.
-          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'outils\desktop\build\Mettre-a-jour.cmd') $poste
+          Set-Content (Join-Path $poste 'version.json') '{"version":"0.0.1","commit":"ancien","date":"2020-01-01T00:00:00Z"}'
+          Remove-Item (Join-Path $poste 'LISEZMOI-portable.txt') -Force
+          Copy-Item (Join-Path $ws 'outils\desktop\build\Mettre-a-jour.cmd') $poste -Force
 
-          $sortie = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$env:GITHUB_WORKSPACE\BlonayPDF-windows.zip`" < NUL" 2>&1 | Out-String
+          # 1. Une archive NON signée est refusée, et rien n'est touché.
+          $nue = Join-Path $env:RUNNER_TEMP 'nue\BlonayPDF-windows.zip'
+          New-Item -ItemType Directory -Force -Path (Split-Path $nue) | Out-Null
+          Copy-Item $zip $nue
+          $sortie = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$nue`" < NUL" 2>&1 | Out-String
           Write-Host $sortie
+          & $dit 'une archive sans signature est refusée' ($sortie -match 'n''est pas signée')
+          & $dit 'et rien n''a été touché' (-not (Test-Path (Join-Path $poste 'LISEZMOI-portable.txt')))
+          & $dit 'la fiche de version est restée l''ancienne' ((Get-Content (Join-Path $poste 'version.json') -Raw) -match '0\.0\.1')
 
-          $dit = { param($quoi, $vrai) if (-not $vrai) { throw "RATÉ : $quoi" }; Write-Host "  ok - $quoi" }
+          # 2. Une archive signée, puis modifiée d'un octet, est refusée.
+          $falsifiee = Join-Path $env:RUNNER_TEMP 'falsifiee\BlonayPDF-windows.zip'
+          New-Item -ItemType Directory -Force -Path (Split-Path $falsifiee) | Out-Null
+          Copy-Item $zip $falsifiee; Copy-Item "$zip.signature.json" "$falsifiee.signature.json"
+          $o = [System.IO.File]::ReadAllBytes($falsifiee); $o[$o.Length - 40] = $o[$o.Length - 40] -bxor 1; [System.IO.File]::WriteAllBytes($falsifiee, $o)
+          $sortie = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$falsifiee`" < NUL" 2>&1 | Out-String
+          & $dit 'une archive modifiée après sa signature est refusée' ($sortie -match 'n''est pas signée')
+          & $dit 'et rien n''a été touché non plus' (-not (Test-Path (Join-Path $poste 'LISEZMOI-portable.txt')))
+
+          # 3. L'archive signée s'installe, les données restent.
+          $sortie = & cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$zip`" < NUL" 2>&1 | Out-String
+          Write-Host $sortie
+          & $dit 'la signature de l''éditeur est vérifiée par l''application déjà installée' ($sortie -match 'Signature vérifiée')
           & $dit 'le script est allé au bout' ($sortie -match 'BLONAY-MAJ: OK')
           & $dit 'les accents ressortent intacts' ($sortie -match 'Mise à jour terminée')
           & $dit 'les tampons sont conservés' ((Get-Content (Join-Path $poste 'data\tampons.json')) -eq 'MES TAMPONS')
           & $dit 'le travail mis de côté est conservé' ((Get-Content (Join-Path $poste 'data\recuperation\a.json')) -eq 'MON TRAVAIL')
           & $dit 'un fichier personnel du dossier est conservé' ((Get-Content (Join-Path $poste 'notes-du-service.txt')) -eq 'A MOI')
-          & $dit 'l''exécutable a bien été remplacé' ((Get-Item (Join-Path $poste 'BlonayPDF.exe')).Length -gt 1000000)
-          & $dit 'le LISEZMOI portable est arrivé' (Test-Path (Join-Path $poste 'LISEZMOI-portable.txt'))
+          & $dit 'les fichiers de la nouvelle version sont arrivés' (Test-Path (Join-Path $poste 'LISEZMOI-portable.txt'))
+          & $dit 'la fiche de version est celle de la nouvelle' (-not ((Get-Content (Join-Path $poste 'version.json') -Raw) -match '0\.0\.1'))
           & $dit 'le script s''est mis à jour lui-même' (Test-Path (Join-Path $poste 'Mettre-a-jour.cmd'))
 
           # Lancée par l'application elle-même, la mise à jour ne s'arrête pas sur
@@ -276,7 +341,7 @@ jobs:
           # du tuyau — donc celle de l'application. Le premier essai y est resté.
           $env:BLONAY_MAJ_AUTO = '1'
           $journal = Join-Path $env:RUNNER_TEMP 'maj-auto.txt'
-          cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$env:GITHUB_WORKSPACE\BlonayPDF-windows.zip`" > `"$journal`" 2>&1 < NUL"
+          cmd.exe /c "`"$poste\Mettre-a-jour.cmd`" `"$zip`" > `"$journal`" 2>&1 < NUL"
           Remove-Item Env:\BLONAY_MAJ_AUTO
           $auto = Get-Content $journal -Raw -Encoding utf8
           Write-Host $auto
@@ -286,114 +351,39 @@ jobs:
           Start-Sleep -Seconds 5
           taskkill /F /IM BlonayPDF.exe /T 2>$null | Out-Null
           Start-Sleep -Seconds 2
+          Remove-Item Env:\BLONAY_CLES_PUBLIQUES_ESSAI
           Remove-Item -Recurse -Force $poste -ErrorAction SilentlyContinue
 
-      # upload-artifact@v4 et action-gh-release@v2 ciblent encore Node 20 : le
-      # runner les force sur Node 24 et prévient à chaque exécution. Rien n'est
-      # cassé aujourd'hui ; à passer au majeur suivant dès qu'il sort.
+      # La preuve d'origine de l'archive : une signature Ed25519, posée à côté
+      # (BlonayPDF-windows.zip.signature.json). Les postes n'acceptent une mise à
+      # jour posée sur le partage que si elle est signée. Sans la clé privée
+      # (secret MAJ_CLE_PRIVEE, voir outils/editeur/generer-cles.js), la
+      # construction avertit et continue : l'archive s'installe à la main, mais aucun
+      # poste ne la prendra pour une mise à jour.
+      - name: Signer l'archive (empreinte SHA-256 et signature de l'éditeur)
+        shell: pwsh
+        env:
+          MAJ_CLE_PRIVEE: ${{ secrets.MAJ_CLE_PRIVEE }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'BlonayPDF-windows.zip'
+          $fiche = Get-Content (Join-Path $env:GITHUB_WORKSPACE 'outils\desktop\construction.json') -Raw | ConvertFrom-Json
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  BlonayPDF-windows.zip" | Set-Content -Encoding ascii "$zip.sha256"
+          node (Join-Path $env:GITHUB_WORKSPACE 'outils\editeur\signer-maj.js') $zip --plateforme windows --version $fiche.version --canal $fiche.canal --commit $fiche.commit --date $fiche.date
+          if ($LASTEXITCODE -ne 0) { throw "La signature a échoué." }
+
+      # upload-artifact@v4 ciblent encore Node 20 : le runner les force sur
+      # Node 24 et prévient à chaque exécution. Rien n'est cassé aujourd'hui ;
+      # à passer au majeur suivant dès qu'il sort.
       - uses: actions/upload-artifact@v4
         with:
           name: BlonayPDF-windows
-          path: BlonayPDF-windows.zip
-
-      - name: Retrouver la version 1 (le zip publié avant les dix ajouts), une seule fois
-        id: v1
-        if: github.event_name == 'push'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          $ErrorActionPreference = 'Continue'
-          $PSNativeCommandUseErrorActionPreference = $false
-          gh release view blonaypdf-v1 *> $null
-          if ($LASTEXITCODE -eq 0) { Write-Host "La release blonaypdf-v1 existe déjà : rien à faire." ; "creer=false" >> $env:GITHUB_OUTPUT ; exit 0 }
-          gh release download blonaypdf-windows-latest -p BlonayPDF-windows.zip -O BlonayPDF-v1-windows.zip
-          if ($LASTEXITCODE -ne 0 -or -not (Test-Path BlonayPDF-v1-windows.zip)) { throw "Impossible de récupérer le zip de la version 1 depuis blonaypdf-windows-latest." }
-          Write-Host ("Zip de la version 1 : " + (Get-Item BlonayPDF-v1-windows.zip).Length + " octets")
-          "creer=true" >> $env:GITHUB_OUTPUT
-
-      - name: Conserver la version 1 (release « blonaypdf-v1 »)
-        if: github.event_name == 'push' && steps.v1.outputs.creer == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          # Le tag blonaypdf-v1 existe déjà dans le dépôt (posé sur le commit 0ed7dac) :
-          # la release s'y attache sans avoir à créer de tag.
-          tag_name: blonaypdf-v1
-          name: "Blonay PDF — version 1 (avant les dix ajouts)"
-          prerelease: false
-          body: |
-            Version conservée telle quelle : l'application portable Windows avant les dix ajouts de la version 2
-            (signets, tampons mémorisés, commentaires PDF, dossier de pièces, tableau vers Excel, remplacer partout,
-            traitement par lots, onglets, OCR, comparaison). Décompressez `BlonayPDF-v1-windows.zip` puis lancez `BlonayPDF.exe`.
-            Construite depuis le commit 0ed7dac.
-          files: outils/BlonayPDF-v1-windows.zip
-
-      # Le zip fait 120 Mo, et son téléversement échoue de temps en temps
-      # (« Error saving asset »). L'action qui le posait supprimait l'ancien
-      # fichier avant d'envoyer le nouveau : un envoi manqué laissait la release
-      # sans rien, et les collègues devant un lien mort — c'est arrivé. On pose
-      # donc le zip nous-mêmes, en réessayant, et on ne déclare l'étape réussie
-      # qu'après avoir vu le fichier en ligne, à la bonne taille.
-      - name: Publier la version portable (pré-release « blonaypdf-windows-latest »)
-        if: github.event_name == 'push'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          $ErrorActionPreference = 'Continue'
-          $PSNativeCommandUseErrorActionPreference = $false
-          $tag = 'blonaypdf-windows-latest'
-          $titre = 'Blonay PDF — Windows portable (dernière version)'
-          # Le job travaille dans outils/ ; le zip, lui, est écrit à la racine
-          # du dépôt. Chemin absolu, pour ne pas dépendre de l'un ni de l'autre.
-          $zip = Join-Path $env:GITHUB_WORKSPACE 'BlonayPDF-windows.zip'
-          if (-not (Test-Path $zip)) { throw "Zip introuvable : $zip" }
-          # Guillemets simples : le texte contient des accents graves, qui sont
-          # le caractère d'échappement de PowerShell dans une chaîne double.
-          $notes = @'
-          Version portable Windows : décompressez le zip, puis double-cliquez sur `BlonayPDF.exe`.
-          Aucune installation, aucun navigateur : tout est inclus (lecture, organisation, correction du texte, annotations, formulaires, impression directe avec livret).
-          Version 2 : reconnaissance de texte locale (OCR, français et allemand), dossier de pièces, remplacer et caviarder partout, tableau vers Excel, tampons et signatures mémorisés, traitement par lots, vrais commentaires PDF, comparaison de deux versions, signets et lecture deux pages, onglets.
-          La version 1 reste disponible telle quelle dans la release « Blonay PDF — version 1 » (`blonaypdf-v1`).
-          Aucune donnée ne quitte le PC. Voir `LISEZMOI-portable.txt` dans le dossier.
-          Construit automatiquement depuis le commit ${{ github.sha }}.
-          '@
-
-          # L'API de GitHub répond parfois 500 sur ces appels-là. Sans nouvelle
-          # tentative, un zip construit et éprouvé reste à quai, et les collègues
-          # gardent l'ancienne version sans savoir pourquoi — c'est arrivé.
-          $attente = 2
-          for ($essai = 1; $essai -le 5; $essai++) {
-            gh release view $tag *> $null
-            if ($LASTEXITCODE -eq 0) {
-              gh release edit $tag --title $titre --notes $notes --prerelease=true
-            } else {
-              gh release create $tag --title $titre --notes $notes --prerelease
-            }
-            if ($LASTEXITCODE -eq 0) { break }
-            if ($essai -eq 5) { throw "Impossible de préparer la release $tag après cinq tentatives." }
-            Write-Host "Préparation manquée (tentative $essai). Nouvelle tentative dans $attente s."
-            Start-Sleep -Seconds $attente
-            $attente = $attente * 2
-          }
-
-          $attente = 2
-          for ($essai = 1; $essai -le 5; $essai++) {
-            gh release upload $tag $zip --clobber
-            if ($LASTEXITCODE -eq 0) { break }
-            if ($essai -eq 5) { throw "Le zip n'a pas pu être posé sur $tag après cinq tentatives." }
-            Write-Host "Téléversement manqué (tentative $essai). Nouvelle tentative dans $attente s."
-            Start-Sleep -Seconds $attente
-            $attente = $attente * 2
-          }
-
-          $attendu = (Get-Item $zip).Length
-          $pose = gh release view $tag --json assets --jq '.assets[] | select(.name == "BlonayPDF-windows.zip") | .size'
-          if (-not $pose) { throw "La release $tag n'a pas de zip : le lien de téléchargement serait mort." }
-          if ([int64]$pose -ne $attendu) { throw "Le zip posé fait $pose octets au lieu de $attendu." }
-          Write-Host "Zip publié : $pose octets."
+          path: |
+            BlonayPDF-windows.zip
+            BlonayPDF-windows.zip.sha256
+            BlonayPDF-windows.zip.signature.json
+          if-no-files-found: error
 
   # ---------------------------------------------------------------------------
   # La version Mac. Même application, même code : seul l'emballage change.
@@ -509,7 +499,8 @@ jobs:
           # La fiche de version voyage à la racine du dossier : c'est elle que
           # l'application lit dans un zip posé à côté d'elle pour savoir s'il est
           # plus récent. Sans elle, la mise à jour ne se proposerait jamais.
-          cp construction.json dist/BlonayPDF/version.json
+          node fiche-de-version.js mac dist/BlonayPDF/version.json
+          cp ../NOTES-DE-VERSION.md dist/BlonayPDF/Notes-de-version.txt
           ls -la dist/BlonayPDF
 
       - name: L'application est bien universelle, et signée
@@ -625,65 +616,210 @@ jobs:
           fi
           rm -rf "$essai"
 
+      # Le script de mise à jour Mac est joué pour de vrai, comme celui de Windows :
+      # une vraie copie de l'application (c'est elle qui vérifie la signature), de
+      # vraies données, une archive signée d'une clé d'essai — et une archive qui ne
+      # l'est pas, qui ne doit jamais s'installer.
+      - name: Le script de mise à jour (Mac) préserve les données, et refuse ce qui n'est pas signé
+        run: |
+          set -euo pipefail
+          ws="$GITHUB_WORKSPACE"
+          pem="$RUNNER_TEMP/essai.pem"
+          export BLONAY_CLES_PUBLIQUES_ESSAI=$(node "$ws/outils/editeur/paire-essai.js" "$pem")
+          mkdir -p "$RUNNER_TEMP/maj"
+          zip="$RUNNER_TEMP/maj/BlonayPDF-mac.zip"
+          cp "$ws/BlonayPDF-mac.zip" "$zip"
+          node "$ws/outils/editeur/signer-maj.js" "$zip" --cle "$pem" --plateforme mac --version 99.0.0 --canal stable --commit essai --date 2099-01-01T00:00:00Z
+
+          poste="$RUNNER_TEMP/poste"
+          ditto "$ws/outils/desktop/dist/BlonayPDF" "$poste"
+          rm -rf "$poste/data"; mkdir -p "$poste/data/recuperation"
+          echo "MES TAMPONS" > "$poste/data/tampons.json"
+          echo "MON TRAVAIL" > "$poste/data/recuperation/a.json"
+          echo "A MOI" > "$poste/notes-du-service.txt"
+          echo '{"version":"0.0.1","commit":"ancien","date":"2020-01-01T00:00:00Z"}' > "$poste/version.json"
+          rm -f "$poste/LISEZMOI-mac.txt"
+          cp "$ws/outils/desktop/build/Mettre-a-jour.command" "$poste/" && chmod +x "$poste/Mettre-a-jour.command"
+          ok() { echo "  ok - $1"; }
+          rate() { echo "::error::RATÉ : $1"; exit 1; }
+
+          # Sans signature : refusée, rien n'est touché.
+          mkdir -p "$RUNNER_TEMP/nue"; cp "$zip" "$RUNNER_TEMP/nue/BlonayPDF-mac.zip"
+          if sortie=$("$poste/Mettre-a-jour.command" "$RUNNER_TEMP/nue/BlonayPDF-mac.zip" < /dev/null 2>&1); then rate "une archive sans signature a été acceptée"; fi
+          echo "$sortie"
+          echo "$sortie" | grep -q "n'est pas signée" || rate "le refus n'est pas expliqué"
+          test ! -f "$poste/LISEZMOI-mac.txt" || rate "une archive refusée a quand même touché au dossier"
+          ok "une archive sans signature est refusée, et rien n'est touché"
+
+          # Signée, puis modifiée d'un octet : refusée.
+          mkdir -p "$RUNNER_TEMP/falsifiee"; cp "$zip" "$RUNNER_TEMP/falsifiee/BlonayPDF-mac.zip"; cp "$zip.signature.json" "$RUNNER_TEMP/falsifiee/BlonayPDF-mac.zip.signature.json"
+          printf 'X' | dd of="$RUNNER_TEMP/falsifiee/BlonayPDF-mac.zip" bs=1 seek=100 conv=notrunc 2>/dev/null
+          if "$poste/Mettre-a-jour.command" "$RUNNER_TEMP/falsifiee/BlonayPDF-mac.zip" < /dev/null >/dev/null 2>&1; then rate "une archive modifiée a été acceptée"; fi
+          test ! -f "$poste/LISEZMOI-mac.txt" || rate "une archive modifiée a quand même touché au dossier"
+          ok "une archive modifiée après sa signature est refusée"
+
+          # Signée : s'installe, les données restent.
+          sortie=$("$poste/Mettre-a-jour.command" "$zip" < /dev/null 2>&1) || { echo "$sortie"; rate "la mise à jour d'une archive signée a échoué"; }
+          echo "$sortie"
+          echo "$sortie" | grep -q "Signature vérifiée" || rate "la signature n'a pas été vérifiée"
+          echo "$sortie" | grep -q "BLONAY-MAJ: OK" || rate "le script n'est pas allé au bout"
+          test "$(cat "$poste/data/tampons.json")" = "MES TAMPONS" || rate "les tampons ont disparu"
+          test "$(cat "$poste/data/recuperation/a.json")" = "MON TRAVAIL" || rate "le travail mis de côté a disparu"
+          test "$(cat "$poste/notes-du-service.txt")" = "A MOI" || rate "un fichier personnel a disparu"
+          test -f "$poste/LISEZMOI-mac.txt" || rate "les fichiers de la nouvelle version ne sont pas arrivés"
+          ok "l'archive signée s'installe, data et fichiers personnels sont conservés"
+          rm -rf "$poste"
+
+      # Même preuve d'origine que côté Windows : l'archive est signée, et la
+      # signature part avec elle (voir « Signer l'archive » plus haut).
+      - name: Signer l'archive (empreinte SHA-256 et signature de l'éditeur)
+        env:
+          MAJ_CLE_PRIVEE: ${{ secrets.MAJ_CLE_PRIVEE }}
+        run: |
+          set -euo pipefail
+          zip="$GITHUB_WORKSPACE/BlonayPDF-mac.zip"
+          cd "$GITHUB_WORKSPACE"
+          shasum -a 256 BlonayPDF-mac.zip | sed 's|  .*|  BlonayPDF-mac.zip|' > BlonayPDF-mac.zip.sha256
+          version=$(node -p "require('./outils/desktop/construction.json').version")
+          canal=$(node -p "require('./outils/desktop/construction.json').canal")
+          commit=$(node -p "require('./outils/desktop/construction.json').commit")
+          date=$(node -p "require('./outils/desktop/construction.json').date")
+          node outils/editeur/signer-maj.js "$zip" --plateforme mac --version "$version" --canal "$canal" --commit "$commit" --date "$date"
+
       - uses: actions/upload-artifact@v4
         with:
           name: BlonayPDF-mac
-          path: BlonayPDF-mac.zip
+          path: |
+            BlonayPDF-mac.zip
+            BlonayPDF-mac.zip.sha256
+            BlonayPDF-mac.zip.signature.json
+          if-no-files-found: error
           retention-days: 14
 
-      - name: Publier la version Mac (pré-release « blonaypdf-mac-latest »)
-        if: github.event_name == 'push'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+  # ---------------------------------------------------------------------------
+  # La publication : un seul endroit, qui attend que Windows ET Mac soient verts.
+  #
+  #  - CANDIDATE (toute branche de travail) : deux pré-releases « …-candidate »,
+  #    écrasées à chaque construction. À essayer ; jamais ce que les postes
+  #    téléchargent par défaut.
+  #  - STABLE (étiquette « v2.1.0 », ou lancement manuel « stable ») : une release
+  #    numérotée, immuable — v2.1.0 reste téléchargeable quand v2.2.0 sort — avec
+  #    ses notes de version, ses deux archives, leurs empreintes et signatures ;
+  #    puis les deux pré-releases « …-latest », que les liens des postes visent déjà,
+  #    pointent sur elle.
+  # ---------------------------------------------------------------------------
+  publier:
+    needs: [build, mac]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: pose
+
+      - name: Lire la fiche de version
+        id: fiche
         run: |
-          set -uo pipefail
-          tag=blonaypdf-mac-latest
-          titre="Blonay PDF — Mac (dernière version)"
-          zip="$GITHUB_WORKSPACE/BlonayPDF-mac.zip"
-          test -f "$zip" || { echo "::error::zip introuvable"; exit 1; }
-          if [ "${{ steps.certificat.outputs.signe }}" = "oui" ]; then
-            ouverture='Décompressez le zip et double-cliquez sur `BlonayPDF.app`. Rien d'"'"'autre : l'"'"'application est signée et notarisée par Apple, elle s'"'"'ouvre sur n'"'"'importe quel Mac, y compris un poste d'"'"'entreprise.'
-          else
-            ouverture='Décompressez le zip, puis **clic droit sur `BlonayPDF.app` > Ouvrir** au premier lancement. Ce clic droit n'"'"'est nécessaire qu'"'"'une fois : cette version n'"'"'est pas notarisée, alors macOS demande votre accord. Voir `LISEZMOI-mac.txt`.'
+          set -euo pipefail
+          ls -la pose/*
+          cp outils/NOTES-DE-VERSION.md notes-completes.md
+          version=$(node -p "require('./outils/package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "canal=$BLONAY_CANAL" >> "$GITHUB_OUTPUT"
+          # Les notes de CETTE version : de « ## <version> » au « ## » suivant.
+          awk -v v="$version" '$0 ~ "^## " v " " {on=1; next} /^## / {on=0} on' outils/NOTES-DE-VERSION.md > notes-version.md
+          if [ ! -s notes-version.md ]; then
+            echo "::warning::Aucune note pour la version $version dans outils/NOTES-DE-VERSION.md"
+            echo "Pas de notes écrites pour cette version." > notes-version.md
           fi
-          notes=$(cat <<NOTES
-          $ouverture
-          Binaire universel : Mac Intel et Mac à puce Apple.
-          Aucune installation, aucun navigateur : tout est inclus (lecture, organisation, correction du texte, annotations, formulaires, caviardage, OCR, impression avec livret).
-          Aucune donnée ne quitte le Mac.
-          NOTES
-          )
-          notes="$notes
 
-          Construit automatiquement depuis le commit ${{ github.sha }}."
+      # Le zip pèse 120 Mo, et son téléversement échoue de temps en temps (« Error
+      # saving asset »). On le pose nous-mêmes, en réessayant, et on ne déclare
+      # l'étape réussie qu'après avoir revu le fichier en ligne, à la bonne taille.
+      - name: Fonctions de publication
+        run: |
+          cat > publier.sh <<'FONCTIONS'
+          # préparer <tag> <titre> <fichier-notes> <stable|candidate>
+          preparer() {
+            local tag="$1" titre="$2" notes="$3" canal="$4" attente=2 prerelease="--prerelease"
+            [ "$canal" = stable ] && prerelease=""
+            for essai in 1 2 3 4 5; do
+              if gh release view "$tag" >/dev/null 2>&1; then
+                if [ "$canal" = stable ]; then gh release edit "$tag" --title "$titre" --notes-file "$notes" --prerelease=false && return 0
+                else gh release edit "$tag" --title "$titre" --notes-file "$notes" --prerelease=true && return 0; fi
+              else
+                gh release create "$tag" --title "$titre" --notes-file "$notes" $prerelease --target "$GITHUB_SHA" && return 0
+              fi
+              [ "$essai" = 5 ] && { echo "::error::impossible de préparer la release $tag après cinq tentatives"; return 1; }
+              echo "Préparation manquée (tentative $essai). Nouvelle tentative dans ${attente}s."; sleep "$attente"; attente=$((attente * 2))
+            done
+          }
+          # poser <tag> <fichier>... : téléverse, puis relit la taille en ligne
+          poser() {
+            local tag="$1"; shift
+            for f in "$@"; do
+              local attente=2
+              for essai in 1 2 3 4 5; do
+                gh release upload "$tag" "$f" --clobber && break
+                [ "$essai" = 5 ] && { echo "::error::$f n'a pas pu être posé sur $tag après cinq tentatives"; return 1; }
+                echo "Téléversement manqué (tentative $essai). Nouvelle tentative dans ${attente}s."; sleep "$attente"; attente=$((attente * 2))
+              done
+              local attendu pose; attendu=$(stat -c %s "$f")
+              pose=$(gh release view "$tag" --json assets --jq ".assets[] | select(.name == \"$(basename "$f")\") | .size")
+              [ -n "$pose" ] || { echo "::error::$tag n'a pas $(basename "$f") : le lien serait mort"; return 1; }
+              [ "$pose" = "$attendu" ] || { echo "::error::$(basename "$f") posé à $pose octets au lieu de $attendu"; return 1; }
+              echo "posé : $(basename "$f") ($pose octets) sur $tag"
+            done
+          }
+          FONCTIONS
 
-          # Même prudence que côté Windows : l'API répond parfois 500.
-          attente=2
-          for essai in 1 2 3 4 5; do
-            if gh release view "$tag" >/dev/null 2>&1; then
-              gh release edit "$tag" --title "$titre" --notes "$notes" --prerelease=true && break
-            else
-              gh release create "$tag" --title "$titre" --notes "$notes" --prerelease && break
-            fi
-            if [ "$essai" = 5 ]; then echo "::error::impossible de préparer la release $tag après cinq tentatives"; exit 1; fi
-            echo "Préparation manquée (tentative $essai). Nouvelle tentative dans ${attente}s."
-            sleep "$attente"; attente=$((attente * 2))
-          done
+      - name: Publier la version candidate
+        if: steps.fiche.outputs.canal == 'candidate'
+        run: |
+          set -euo pipefail
+          . ./publier.sh
+          v="${{ steps.fiche.outputs.version }}"
+          {
+            echo "**CANDIDATE — à essayer avant tout, pas la version des postes.** Construite depuis une branche de travail (${GITHUB_REF_NAME}), commit ${GITHUB_SHA}."
+            echo
+            echo "Pour installer : l'archive ET son fichier \`.signature.json\`, posés ensemble."
+            echo
+            cat notes-version.md
+          } > notes-candidate.md
+          preparer blonaypdf-windows-candidate "Blonay PDF $v — Windows (CANDIDATE, à essayer)" notes-candidate.md candidate
+          poser blonaypdf-windows-candidate pose/BlonayPDF-windows/BlonayPDF-windows.zip pose/BlonayPDF-windows/BlonayPDF-windows.zip.sha256 pose/BlonayPDF-windows/BlonayPDF-windows.zip.signature.json
+          preparer blonaypdf-mac-candidate "Blonay PDF $v — Mac (CANDIDATE, à essayer)" notes-candidate.md candidate
+          poser blonaypdf-mac-candidate pose/BlonayPDF-mac/BlonayPDF-mac.zip pose/BlonayPDF-mac/BlonayPDF-mac.zip.sha256 pose/BlonayPDF-mac/BlonayPDF-mac.zip.signature.json
 
-          # Le téléversement échoue de temps en temps : on réessaie, et on ne
-          # déclare l'étape réussie qu'après avoir vu le fichier en ligne, à la
-          # bonne taille. Un lien mort chez les collègues, c'est déjà arrivé.
-          attente=2
-          for essai in 1 2 3 4 5; do
-            if gh release upload "$tag" "$zip" --clobber; then break; fi
-            if [ "$essai" = 5 ]; then echo "::error::le zip n'a pas pu être posé après cinq tentatives"; exit 1; fi
-            echo "Téléversement manqué (tentative $essai). Nouvelle tentative dans ${attente}s."
-            sleep "$attente"; attente=$((attente * 2))
-          done
-
-          attendu=$(stat -f %z "$zip")
-          pose=$(gh release view "$tag" --json assets --jq '.assets[] | select(.name == "BlonayPDF-mac.zip") | .size')
-          test -n "$pose" || { echo "::error::la release n'a pas de zip : le lien serait mort"; exit 1; }
-          test "$pose" = "$attendu" || { echo "::error::le zip posé fait $pose octets au lieu de $attendu"; exit 1; }
-          echo "Zip publié : $pose octets."
+      - name: Publier la version stable (numérotée, conservée)
+        if: steps.fiche.outputs.canal == 'stable'
+        run: |
+          set -euo pipefail
+          . ./publier.sh
+          v="${{ steps.fiche.outputs.version }}"
+          tag="v$v"
+          # Une version publiée ne change plus : si cette étiquette existe déjà avec
+          # des archives, on s'arrête plutôt que d'écraser ce que des postes ont déjà.
+          if gh release view "$tag" --json assets --jq '.assets | length' 2>/dev/null | grep -qv '^0$'; then
+            echo "::error::La release $tag existe déjà et elle est immuable. Montez le numéro de version (outils/package.json) et ses notes."
+            exit 1
+          fi
+          {
+            cat notes-version.md
+            echo
+            echo "---"
+            echo "Archives : \`BlonayPDF-windows.zip\` et \`BlonayPDF-mac.zip\`, chacune avec son \`.sha256\` et sa \`.signature.json\` — à poser ensemble. Construite depuis le commit ${GITHUB_SHA}."
+          } > notes-stable.md
+          preparer "$tag" "Blonay PDF $v" notes-stable.md stable
+          poser "$tag" pose/BlonayPDF-windows/* pose/BlonayPDF-mac/*
+          # Les liens que les postes connaissent déjà.
+          preparer blonaypdf-windows-latest "Blonay PDF — Windows portable (version $v)" notes-stable.md stable
+          poser blonaypdf-windows-latest pose/BlonayPDF-windows/*
+          preparer blonaypdf-mac-latest "Blonay PDF — Mac (version $v)" notes-stable.md stable
+          poser blonaypdf-mac-latest pose/BlonayPDF-mac/*
+          echo "Version $v publiée en stable : $tag, blonaypdf-windows-latest, blonaypdf-mac-latest."

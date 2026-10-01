@@ -12,7 +12,9 @@ module.exports = defineConfig({
   testMatch: '*.spec.js',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // Une nouvelle tentative en CI, sauf pour une version STABLE : un test instable qui passe au
+  // deuxième essai ne doit pas laisser partir ce que les postes téléchargent.
+  retries: process.env.CI && process.env.BLONAY_CANAL !== 'stable' ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
   // Un assemblage de PDF sur une machine chargée prend son temps.

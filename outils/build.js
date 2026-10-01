@@ -21,11 +21,21 @@ const d = new Date();
 const CONSTRUCTION = 'construite le ' + String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear() + (commitCourt() ? ', commit ' + commitCourt() : '');
 if (!src.includes("'__CONSTRUCTION__'")) throw new Error('repère de construction introuvable dans la source');
 src = src.replace("'__CONSTRUCTION__'", () => JSON.stringify(CONSTRUCTION));
+// Le numéro de version : un seul, celui de outils/package.json, partout (À propos,
+// propriétés de l'exécutable, fiche de version, nom des fichiers publiés).
+const VERSION = require('./package.json').version;
+if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(VERSION)) throw new Error('outils/package.json : « ' + VERSION + ' » n\u2019est pas un numéro de version (X.Y.Z)');
+if (!src.includes("'__VERSION__'")) throw new Error('repère de version introuvable dans la source');
+src = src.replace("'__VERSION__'", () => JSON.stringify(VERSION));
+// Le canal : « stable » pour ce qui est livré aux postes, « candidate » pour ce qui sort d'une branche
+// de travail et doit d'abord être essayé. La construction qui publie le pose ; sans rien, c'est une
+// version de travail, donc candidate.
+const CANAL = process.env.BLONAY_CANAL === 'stable' ? 'stable' : 'candidate';
 // Les mentions des composants tiers : produites ici, depuis les licences des
 // paquets réellement embarqués, pour que le fichier livré ne vieillisse pas.
 fs.writeFileSync(path.join(__dirname, 'desktop', 'build', 'MENTIONS-TIERCES.txt'),
   require('./mentions-tierces').mentions({ version: require('./package.json').version, construction: CONSTRUCTION }));
-fs.writeFileSync(path.join(__dirname, 'desktop', 'construction.json'), JSON.stringify({ construction: CONSTRUCTION, commit: commitCourt(), date: d.toISOString() }) + '\n');
+fs.writeFileSync(path.join(__dirname, 'desktop', 'construction.json'), JSON.stringify({ version: VERSION, canal: CANAL, construction: CONSTRUCTION, commit: commitCourt(), date: d.toISOString() }) + '\n');
 const HEAD = '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="color-scheme" content="dark light">\n</head>\n<body>\n';
 const TAIL = '</body>\n</html>\n';
 const OUT = __dirname;

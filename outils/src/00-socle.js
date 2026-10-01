@@ -1,7 +1,8 @@
   'use strict';
 
   const APP = 'Blonay PDF';
-  const APP_VERSION = '2.0.0';
+  // Renseigné par build.js, depuis le numéro de version de outils/package.json.
+  const APP_VERSION = '__VERSION__';
   // Renseigné par build.js : date de construction et commit.
   const APP_CONSTRUCTION = '__CONSTRUCTION__';
   // Vrai dans la version hébergée, qui charge ses composants depuis un CDN ;

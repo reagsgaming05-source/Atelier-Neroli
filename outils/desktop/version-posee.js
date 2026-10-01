@@ -112,6 +112,20 @@ function ficheDuZip(chemin) {
 // =============================================================================
 //  Comparer
 // =============================================================================
+// « 2.10.0 » après « 2.9.3 » : on compare les nombres, pas les chaînes.
+// Rend -1, 0, 1 — ou null quand l'un des deux n'est pas un numéro de version.
+function comparerVersions(a, b) {
+  const lire = (v) => { const m = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(String(v == null ? '' : v).trim()); return m ? { n: [+m[1], +m[2], +m[3]], pre: m[4] || '' } : null; };
+  const x = lire(a), y = lire(b);
+  if (!x || !y) return null;
+  for (let i = 0; i < 3; i++) if (x.n[i] !== y.n[i]) return x.n[i] < y.n[i] ? -1 : 1;
+  // Une version candidate (« 2.1.0-rc.3 ») précède la finale du même numéro.
+  if (x.pre === y.pre) return 0;
+  if (!x.pre) return 1;
+  if (!y.pre) return -1;
+  return x.pre < y.pre ? -1 : 1;
+}
+
 const quand = (v) => {
   if (!v || typeof v.date !== 'string') return null;
   const t = Date.parse(v.date);
@@ -124,6 +138,10 @@ const quand = (v) => {
  * risquer de réinstaller une version plus ancienne que celle qui marche.
  */
 function plusRecente(installee, posee) {
+  // Deux numéros de version : ils tranchent. Les dates ne servent qu'à départager
+  // deux constructions du même numéro, ou à défaut de numéro (versions anciennes).
+  const c = comparerVersions(installee && installee.version, posee && posee.version);
+  if (c !== null && c !== 0) return c < 0;
   const a = quand(installee), b = quand(posee);
   if (a === null || b === null) return false;
   // Le même commit reconstruit deux fois n'est pas une nouvelle version : sans
@@ -158,6 +176,45 @@ function miseAJourPosee(dossierApp, installee) {
     if (!mieux || plusRecente(mieux.version, version)) mieux = { zip, version };
   });
   return mieux;
+}
+
+/**
+ * Ce qui est posé à côté, examiné pour de bon : chaque archive doit porter la
+ * signature de l'éditeur (voir signature.js) — sinon elle n'est ni proposée ni
+ * exécutée, et on garde la raison pour la dire quand on la demande.
+ *
+ * `verifier(zip)` rend { ok, piece } ou { ok:false, raison } (asynchrone). Les
+ * comparaisons se font sur la pièce signée, jamais sur la fiche du zip, que
+ * personne n'a encore le droit de croire.
+ *
+ * opts.canal      — le canal de l'installation : « stable » n'accepte pas une
+ *                   version « candidate » ; l'inverse est vrai.
+ * opts.anterieure — le retour en arrière, demandé explicitement : une version
+ *                   signée plus ancienne se propose aussi, comme telle.
+ */
+async function examinerLesZips(dossierApp, installee, opts) {
+  const o = opts || {};
+  const canalInstalle = (installee && installee.canal) || o.canal || 'stable';
+  const propose = [], refusees = [];
+  for (const zip of zipsPoses(dossierApp)) {
+    const r = await o.verifier(zip);
+    if (!r.ok) { refusees.push({ zip, raison: r.raison }); continue; }
+    const v = r.piece;
+    if (v.canal === 'candidate' && canalInstalle !== 'candidate') {
+      refusees.push({ zip, raison: 'version candidate : ce poste est sur le canal stable' });
+      continue;
+    }
+    const plus = plusRecente(installee, v);
+    const egale = !plus && !plusRecente(v, installee) && (comparerVersions(installee && installee.version, v.version) === 0 || (installee && installee.commit && installee.commit === v.commit));
+    if (plus) propose.push({ zip, version: v, anterieure: false });
+    else if (o.anterieure && !egale) propose.push({ zip, version: v, anterieure: true });
+  }
+  // La meilleure : la plus récente. Pour un retour en arrière, la plus proche de l'installée.
+  const avant = propose.filter((p) => !p.anterieure), arriere = propose.filter((p) => p.anterieure);
+  let mieux = null;
+  avant.forEach((p) => { if (!mieux || plusRecente(mieux.version, p.version)) mieux = p; });
+  if (!mieux) arriere.forEach((p) => { if (!mieux || plusRecente(p.version, mieux.version)) mieux = p; });
+  return { propose: mieux, refusees };
 }
 
 // =============================================================================
@@ -234,6 +291,6 @@ function autresPostes(dossierData, monJeton, maintenant) {
 
 module.exports = {
   FICHE, FRAICHEUR,
-  ficheDuZip, plusRecente, zipsPoses, miseAJourPosee,
+  ficheDuZip, plusRecente, comparerVersions, zipsPoses, miseAJourPosee, examinerLesZips,
   nomDuJeton, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons,
 };

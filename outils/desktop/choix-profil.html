@@ -66,6 +66,15 @@
   }
   button.ajout:disabled { opacity: .4; cursor: not-allowed; }
   .note { flex: none; color: var(--texte-3); font-size: 11.5px; margin: 0; }
+  .avis { margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 12px; background: rgba(224,163,60,.14); color: #E0A33C; }
+  .avis[hidden] { display: none; }
+  .compte .etat { margin-left: auto; font-size: 11px; color: #E0A33C; }
+  .code { margin: 6px 0; padding: 14px; border-radius: 10px; border: 1px dashed var(--marque); background: var(--encre);
+    font: 600 19px/1.2 ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .06em; text-align: center; user-select: text; }
+  .case { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--texte); margin-top: 6px; }
+  .case input { width: 16px; height: 16px; margin-top: 2px; flex: none; }
+  button.danger { background: #B3261E; }
+  .lien.danger { color: #E4574C; }
 </style>
 </head>
 <body>
@@ -92,11 +101,18 @@
   <!-- 2. le mot de passe du compte choisi -->
   <form id="ecran-connexion" class="ecran" hidden>
     <p class="qui"><span class="pastille" id="pastille-c"></span><span id="nom-choisi"></span></p>
-    <label for="mdp">Mot de passe</label>
+    <p class="avis" id="avis-attente" hidden>Ce compte attend un nouveau mot de passe. Si ce n'est pas vous qui l'avez demandé, prévenez votre informaticien avant de continuer.</p>
+    <label for="mdp" id="etiq-mdp">Mot de passe</label>
     <input id="mdp" type="password" autocomplete="current-password">
+    <div id="bloc-confirm" hidden>
+      <label for="mdp-confirm">Répétez le mot de passe</label>
+      <input id="mdp-confirm" type="password" autocomplete="new-password">
+    </div>
+    <p class="note" id="dernier-changement" hidden></p>
     <p class="erreur" id="erreur-c" hidden></p>
     <div class="rangee">
       <button type="button" class="lien" id="retour-c">Retour</button>
+      <button type="button" class="lien" id="vers-oubli">Mot de passe oublié ?</button>
       <button type="submit" class="ajout" id="entrer">Se connecter</button>
     </div>
   </form>
@@ -105,7 +121,7 @@
   <form id="ecran-creation" class="ecran" hidden>
     <label for="nom">Prénom et nom</label>
     <input id="nom" type="text" maxlength="48" autocomplete="off" placeholder="Marie Dupont">
-    <label for="mdp1">Mot de passe</label>
+    <label for="mdp1">Mot de passe (8 caractères au moins)</label>
     <input id="mdp1" type="password" autocomplete="new-password">
     <label for="mdp2">Répétez le mot de passe</label>
     <input id="mdp2" type="password" autocomplete="new-password">
@@ -116,66 +132,203 @@
     </div>
   </form>
 
-  <p class="note">L'application redémarre une fois pour ouvrir votre dossier.</p>
+  <!-- 4. le code de récupération, montré une seule fois -->
+  <form id="ecran-code" class="ecran" hidden>
+    <p class="qui">Votre code de récupération</p>
+    <div class="code" id="le-code"></div>
+    <p class="note">Notez-le sur papier, ailleurs que sur ce poste. Il ne sera plus jamais affiché : c'est lui qui vous rend l'accès si vous oubliez votre mot de passe.</p>
+    <label class="case"><input type="checkbox" id="code-note"> <span>J'ai noté ce code.</span></label>
+    <div class="rangee">
+      <button type="submit" class="ajout" id="code-ouvrir" disabled>Continuer</button>
+    </div>
+  </form>
+
+  <!-- 5. mot de passe oublié : le code de récupération -->
+  <form id="ecran-oubli" class="ecran" hidden>
+    <p class="qui"><span class="pastille" id="pastille-o"></span><span id="nom-oubli"></span></p>
+    <label for="oubli-code">Code de récupération</label>
+    <input id="oubli-code" type="text" autocomplete="off" placeholder="XXXXX-XXXXX-XXXXX-XXXXX">
+    <label for="oubli-1">Nouveau mot de passe</label>
+    <input id="oubli-1" type="password" autocomplete="new-password">
+    <label for="oubli-2">Répétez le mot de passe</label>
+    <input id="oubli-2" type="password" autocomplete="new-password">
+    <p class="erreur" id="erreur-o" hidden></p>
+    <div class="rangee">
+      <button type="button" class="lien" id="retour-o">Retour</button>
+      <button type="button" class="lien danger" id="vers-suppression">Supprimer ce compte…</button>
+      <button type="submit" class="ajout" id="oubli-ok">Changer le mot de passe</button>
+    </div>
+  </form>
+
+  <!-- 6. supprimer un compte -->
+  <form id="ecran-suppression" class="ecran" hidden>
+    <p class="qui"><span class="pastille" id="pastille-s"></span><span id="nom-suppression"></span></p>
+    <p class="avis">Le dossier de ce compte sera effacé : tampons, signature mémorisée, récents et copies de récupération. Vos PDF ne sont pas touchés. Cela ne se défait pas.</p>
+    <label for="supp-secret">Mot de passe, ou code de récupération</label>
+    <input id="supp-secret" type="password" autocomplete="off">
+    <p class="erreur" id="erreur-s" hidden></p>
+    <div class="rangee">
+      <button type="button" class="lien" id="retour-s">Retour</button>
+      <button type="submit" class="ajout danger" id="supp-ok">Supprimer le compte</button>
+    </div>
+  </form>
+
+  <!-- 7. depuis le menu : changer son mot de passe -->
+  <form id="ecran-changer" class="ecran" hidden>
+    <p class="qui" id="qui-changer"></p>
+    <label for="ch-ancien">Mot de passe actuel</label>
+    <input id="ch-ancien" type="password" autocomplete="current-password">
+    <label for="ch-1">Nouveau mot de passe (8 caractères au moins)</label>
+    <input id="ch-1" type="password" autocomplete="new-password">
+    <label for="ch-2">Répétez le nouveau mot de passe</label>
+    <input id="ch-2" type="password" autocomplete="new-password">
+    <p class="erreur" id="erreur-ch" hidden></p>
+    <p class="note" id="fait-ch" hidden>Mot de passe changé. Vous pouvez fermer cette fenêtre.</p>
+    <div class="rangee">
+      <button type="button" class="lien" id="fermer-ch">Fermer</button>
+      <button type="submit" class="ajout" id="ch-ok">Changer le mot de passe</button>
+    </div>
+  </form>
+
+  <!-- 8. depuis le menu : refaire son code de récupération -->
+  <form id="ecran-refaire" class="ecran" hidden>
+    <p class="qui">Refaire mon code de récupération</p>
+    <p class="note">L'ancien code ne servira plus. Le nouveau ne sera montré qu'une fois.</p>
+    <label for="re-mdp">Mot de passe</label>
+    <input id="re-mdp" type="password" autocomplete="current-password">
+    <div class="code" id="re-code" hidden></div>
+    <p class="erreur" id="erreur-re" hidden></p>
+    <div class="rangee">
+      <button type="button" class="lien" id="fermer-re">Fermer</button>
+      <button type="submit" class="ajout" id="re-ok">Refaire le code</button>
+    </div>
+  </form>
+
+  <p class="note" id="note-redemarrage">L'application redémarre une fois pour ouvrir votre dossier.</p>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const ecrans = { liste: $('ecran-liste'), connexion: $('ecran-connexion'), creation: $('ecran-creation') };
+  const ecrans = { liste: $('ecran-liste'), connexion: $('ecran-connexion'), creation: $('ecran-creation'), code: $('ecran-code'),
+    oubli: $('ecran-oubli'), suppression: $('ecran-suppression'), changer: $('ecran-changer'), refaire: $('ecran-refaire') };
   const SOUS = {
     liste: 'Choisissez votre compte pour continuer.',
-    connexion: 'Votre mot de passe, une fois. La connexion tient jusqu\u2019à la déconnexion.',
+    connexion: 'Votre mot de passe, une fois. La connexion tient jusqu’à la déconnexion.',
     creation: 'Votre compte gardera vos tampons, votre signature et vos récents.',
+    code: 'Une seule fois : à noter avant de continuer.',
+    oubli: 'Le code de récupération vous rend l’accès.',
+    suppression: 'Effacer ce compte de ce poste.',
+    changer: 'Choisissez-en un que vous n’utilisez pas ailleurs.',
+    refaire: 'À refaire si le code est perdu ou a été vu par quelqu’un d’autre.',
   };
-  let choisi = '';
+  let choisi = '', ouvrirApres = '';
+  let comptesListe = [];
 
   function montrer(quoi) {
     Object.keys(ecrans).forEach((k) => { ecrans[k].hidden = k !== quoi; });
     $('sous-titre').textContent = SOUS[quoi];
-    if (quoi === 'connexion') { $('mdp').value = ''; $('erreur-c').hidden = true; $('mdp').focus(); }
+    $('note-redemarrage').hidden = (quoi === 'changer' || quoi === 'refaire');
+    if (quoi === 'connexion') { $('mdp').value = ''; $('mdp-confirm').value = ''; $('erreur-c').hidden = true; $('mdp').focus(); }
     if (quoi === 'creation') { $('erreur-n').hidden = true; $('nom').focus(); }
+    if (quoi === 'oubli') { ['oubli-code', 'oubli-1', 'oubli-2'].forEach((i) => { $(i).value = ''; }); $('erreur-o').hidden = true; $('oubli-code').focus(); }
+    if (quoi === 'suppression') { $('supp-secret').value = ''; $('erreur-s').hidden = true; $('supp-secret').focus(); }
   }
   const dire = (ou, message) => { const e = $(ou); e.textContent = message; e.hidden = !message; };
+  const pastille = (id, nom) => { $(id).textContent = nom.slice(0, 1).toUpperCase(); $(id).className = 'pastille'; };
 
-  // Une réponse vide veut dire que c'est bon : l'application redémarre, la
-  // fenêtre disparaît d'elle-même.
+  // La réponse d'un geste : '' veut dire que c'est bon (l'application redémarre,
+  // la fenêtre disparaît d'elle-même) ; { code } veut dire qu'un code de
+  // récupération est à montrer avant d'ouvrir la session ; sinon, un message.
   function suite(ou, promesse) {
-    return promesse.then((message) => { if (message) dire(ou, message); });
+    return promesse.then((r) => {
+      if (r && typeof r === 'object' && r.code) return montrerCode(r.nom, r.code);
+      if (r) dire(ou, r);
+    });
+  }
+  function montrerCode(nom, code) {
+    ouvrirApres = nom;
+    $('le-code').textContent = code;
+    $('code-note').checked = false; $('code-ouvrir').disabled = true;
+    montrer('code');
+    $('code-note').focus();
+  }
+  $('code-note').addEventListener('change', () => { $('code-ouvrir').disabled = !$('code-note').checked; });
+  ecrans.code.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!$('code-note').checked) return;
+    $('code-ouvrir').disabled = true;
+    window.comptes.ouvrir(ouvrirApres);
+  });
+
+  const quand = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('fr-CH') + ' à ' + d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }); };
+
+  function remplirListe() {
+    return window.comptes.liste().then((noms) => {
+      comptesListe = noms;
+      const liste = $('liste');
+      liste.replaceChildren();
+      // Le tout premier lancement : personne n'est encore passé par ici, et
+      // « Retour » ne mènerait qu'à une liste vide.
+      if (!noms.length) { $('retour-n').hidden = true; montrer('creation'); return; }
+      noms.forEach((c, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'compte';
+        const p = document.createElement('span');
+        p.className = 'pastille';
+        p.textContent = c.nom.slice(0, 1).toUpperCase();
+        const t = document.createElement('span');
+        t.textContent = c.nom;
+        b.append(p, t);
+        if (!c.protege) { const e = document.createElement('span'); e.className = 'etat'; e.textContent = 'attend un nouveau mot de passe'; b.appendChild(e); }
+        b.addEventListener('click', () => choisirCompte(c));
+        liste.appendChild(b);
+        if (i === 0) b.focus();
+      });
+      montrer('liste');
+    });
+  }
+  function choisirCompte(c) {
+    choisi = c.nom;
+    $('nom-choisi').textContent = c.nom; pastille('pastille-c', c.nom);
+    // Un compte dont le mot de passe a été retiré : le premier arrivé en pose un
+    // nouveau. On le dit, avant, et on demande de le répéter.
+    $('avis-attente').hidden = c.protege;
+    $('bloc-confirm').hidden = c.protege;
+    $('etiq-mdp').textContent = c.protege ? 'Mot de passe' : 'Nouveau mot de passe (8 caractères au moins)';
+    $('mdp').autocomplete = c.protege ? 'current-password' : 'new-password';
+    $('entrer').textContent = c.protege ? 'Se connecter' : 'Poser ce mot de passe';
+    $('vers-oubli').hidden = !c.protege;
+    const d = c.dernierChangement;
+    $('dernier-changement').hidden = !d;
+    if (d) $('dernier-changement').textContent = 'Dernier changement de mot de passe : ' + quand(d.quand) + (d.poste ? ', depuis ' + d.poste : '') + '. Ce n’est pas vous ? Prévenez votre informaticien.';
+    montrer('connexion');
   }
 
-  window.comptes.liste().then((noms) => {
-    const liste = $('liste');
-    // Le tout premier lancement : personne n'est encore passé par ici, et
-    // « Retour » ne mènerait qu'à une liste vide.
-    if (!noms.length) { $('retour-n').hidden = true; montrer('creation'); return; }
-    noms.forEach((c, i) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'compte';
-      const pastille = document.createElement('span');
-      pastille.className = 'pastille';
-      pastille.textContent = c.nom.slice(0, 1).toUpperCase();
-      const t = document.createElement('span');
-      t.textContent = c.nom;
-      b.append(pastille, t);
-      b.addEventListener('click', () => {
-        choisi = c.nom;
-        $('nom-choisi').textContent = c.nom;
-        $('pastille-c').textContent = c.nom.slice(0, 1).toUpperCase();
-        $('pastille-c').className = 'pastille';
-        montrer('connexion');
-      });
-      liste.appendChild(b);
-      if (i === 0) b.focus();
-    });
-  });
+  // Ouvert depuis le menu d'une personne déjà connectée : un seul écran, à part.
+  const mode = (location.hash || '').replace('#', '');
+  if (mode === 'changer' || mode === 'code') {
+    document.querySelector('.tete').querySelector('h1').textContent = mode === 'changer' ? 'Changer mon mot de passe' : 'Mon code de récupération';
+    window.comptes.monCompte().then((m) => { $('qui-changer').textContent = m && m.nom ? m.nom : ''; });
+    montrer(mode === 'changer' ? 'changer' : 'refaire');
+    $(mode === 'changer' ? 'ch-ancien' : 're-mdp').focus();
+  } else {
+    remplirListe();
+  }
 
   $('vers-creation').addEventListener('click', () => { $('retour-n').hidden = false; montrer('creation'); });
   $('retour-c').addEventListener('click', () => montrer('liste'));
   $('retour-n').addEventListener('click', () => montrer('liste'));
+  $('retour-o').addEventListener('click', () => montrer('connexion'));
+  $('retour-s').addEventListener('click', () => montrer('oubli'));
+  $('vers-oubli').addEventListener('click', () => { $('nom-oubli').textContent = choisi; pastille('pastille-o', choisi); montrer('oubli'); });
+  $('vers-suppression').addEventListener('click', () => { $('nom-suppression').textContent = choisi; pastille('pastille-s', choisi); montrer('suppression'); });
+  $('fermer-ch').addEventListener('click', () => window.close());
+  $('fermer-re').addEventListener('click', () => window.close());
 
   ecrans.connexion.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!$('mdp').value) return dire('erreur-c', 'Entrez votre mot de passe.');
+    if (!$('bloc-confirm').hidden && $('mdp').value !== $('mdp-confirm').value) return dire('erreur-c', 'Les deux mots de passe ne sont pas les mêmes.');
     dire('erreur-c', '');
     return suite('erreur-c', window.comptes.connexion(choisi, $('mdp').value));
   });
@@ -187,6 +340,45 @@
     if ($('mdp1').value !== $('mdp2').value) return dire('erreur-n', 'Les deux mots de passe ne sont pas les mêmes.');
     dire('erreur-n', '');
     return suite('erreur-n', window.comptes.creer(nom, $('mdp1').value));
+  });
+
+  ecrans.oubli.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!$('oubli-code').value.trim()) return dire('erreur-o', 'Entrez votre code de récupération.');
+    if ($('oubli-1').value !== $('oubli-2').value) return dire('erreur-o', 'Les deux mots de passe ne sont pas les mêmes.');
+    dire('erreur-o', '');
+    return suite('erreur-o', window.comptes.recuperer(choisi, $('oubli-code').value, $('oubli-1').value));
+  });
+
+  ecrans.suppression.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!$('supp-secret').value) return dire('erreur-s', 'Entrez le mot de passe ou le code de récupération.');
+    dire('erreur-s', '');
+    return window.comptes.supprimer(choisi, $('supp-secret').value).then((m) => {
+      if (m) return dire('erreur-s', m);
+      return remplirListe();
+    });
+  });
+
+  ecrans.changer.addEventListener('submit', (e) => {
+    e.preventDefault();
+    $('fait-ch').hidden = true;
+    if ($('ch-1').value !== $('ch-2').value) return dire('erreur-ch', 'Les deux mots de passe ne sont pas les mêmes.');
+    dire('erreur-ch', '');
+    return window.comptes.changer($('ch-ancien').value, $('ch-1').value).then((m) => {
+      if (m) return dire('erreur-ch', m);
+      ['ch-ancien', 'ch-1', 'ch-2'].forEach((i) => { $(i).value = ''; });
+      $('fait-ch').hidden = false;
+    });
+  });
+
+  ecrans.refaire.addEventListener('submit', (e) => {
+    e.preventDefault();
+    dire('erreur-re', '');
+    return window.comptes.refaireCode($('re-mdp').value).then((r) => {
+      if (r && typeof r === 'object' && r.code) { $('re-code').textContent = r.code; $('re-code').hidden = false; $('re-mdp').value = ''; $('re-ok').disabled = true; return; }
+      if (r) dire('erreur-re', r);
+    });
   });
 </script>
 </body>

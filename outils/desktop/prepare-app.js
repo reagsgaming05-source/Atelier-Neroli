@@ -16,4 +16,10 @@ fs.copyFileSync(src, path.join(__dirname, 'app', 'index.html'));
 // La date et le commit de construction (écrits par build.js), pour « À propos ».
 const info = path.join(__dirname, 'construction.json');
 fs.writeFileSync(path.join(__dirname, 'app', 'construction.json'), fs.existsSync(info) ? fs.readFileSync(info) : '{"construction":""}\n');
+// Le numéro de version est celui de outils/package.json ; celui de l'application fenêtrée
+// (propriétés de l'exécutable, « À propos », nom des fichiers) le suit, jamais l'inverse.
+const numero = require('../package.json').version;
+const pkgApp = path.join(__dirname, 'package.json');
+const pkg = JSON.parse(fs.readFileSync(pkgApp, 'utf8'));
+if (pkg.version !== numero) { pkg.version = numero; fs.writeFileSync(pkgApp, JSON.stringify(pkg, null, 2) + '\n'); console.log('version de l\'application alignée : ' + numero); }
 console.log('OK -> desktop/app/index.html (' + (html.length / 1024 / 1024).toFixed(2) + ' Mo)');

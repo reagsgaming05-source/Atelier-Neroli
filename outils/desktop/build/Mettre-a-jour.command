@@ -58,19 +58,44 @@ while pgrep -x "BlonayPDF" >/dev/null 2>&1; do
   sleep 2
 done
 
-# ---- Remplacer ------------------------------------------------------------
+# ---- Vérifier la signature de l'éditeur ----------------------------------
+# Ce zip arrive d'un dossier où tout le monde écrit. Il n'est exécuté que s'il est
+# signé par l'éditeur, et c'est une COPIE, posée dans un dossier à soi, qui est
+# vérifiée puis ouverte : un zip remplacé entre la vérification et l'ouverture ne
+# passerait pas. La vérification est faite par l'application DÉJÀ installée (en mode
+# Node), qui porte la clé publique de l'éditeur ; la nouvelle version n'a pas voix
+# au chapitre.
 TEMP=$(mktemp -d "${TMPDIR:-/tmp}/blonaypdf-maj-XXXXXX")
 trap 'rm -rf "$TEMP"' EXIT
+cp "$ZIP" "$TEMP/maj.zip"
+[ -f "$ZIP.signature.json" ] && cp "$ZIP.signature.json" "$TEMP/maj.zip.signature.json"
+echo "  Vérification de la signature de l'éditeur…"
+APPLI="$DOSSIER/BlonayPDF.app/Contents"
+if ! ELECTRON_RUN_AS_NODE=1 "$APPLI/MacOS/BlonayPDF" "$APPLI/Resources/app.asar/verifier-maj.js" "$TEMP/maj.zip"; then
+  echo
+  echo "  Cette archive n'est pas signée par l'éditeur, ou a été modifiée :"
+  echo "  elle n'est PAS installée, et rien n'a été touché. Pour une vraie mise à jour,"
+  echo "  reprenez « BlonayPDF-mac.zip » ET son fichier « .signature.json » depuis la"
+  echo "  page de téléchargement de l'éditeur."
+  echo
+  [ -z "$BLONAY_MAJ_AUTO" ] && { printf "  Appuyez sur Entrée pour fermer… "; read -r _; }
+  exit 1
+fi
+ZIP="$TEMP/maj.zip"
+echo "  Signature vérifiée."
 
+# ---- Remplacer ------------------------------------------------------------
+SOURCE_TEMP="$TEMP/ouvert"
+mkdir -p "$SOURCE_TEMP"
 echo "  Décompression…"
-if ! ditto -x -k "$ZIP" "$TEMP" 2>/dev/null; then
-  unzip -q -o "$ZIP" -d "$TEMP"
+if ! ditto -x -k "$ZIP" "$SOURCE_TEMP" 2>/dev/null; then
+  unzip -q -o "$ZIP" -d "$SOURCE_TEMP"
 fi
 
 # Le zip peut contenir le paquet à sa racine, ou dans un dossier.
-SOURCE="$TEMP"
-if [ ! -d "$TEMP/BlonayPDF.app" ]; then
-  for d in "$TEMP"/*; do
+SOURCE="$SOURCE_TEMP"
+if [ ! -d "$SOURCE_TEMP/BlonayPDF.app" ]; then
+  for d in "$SOURCE_TEMP"/*; do
     [ -d "$d/BlonayPDF.app" ] && SOURCE="$d" && break
   done
 fi

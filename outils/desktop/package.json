@@ -1,6 +1,6 @@
 {
   "name": "blonay-pdf-desktop",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Blonay PDF – application fenêtrée (version portable, sans installation)",
   "main": "main.js",
   "private": true,
@@ -40,6 +40,9 @@
       "ou-ranger.js",
       "version-posee.js",
       "verrou.js",
+      "signature.js",
+      "verifier-maj.js",
+      "cles-publiques.json",
       "comptes.js",
       "preload.js",
       "choix-preload.js",

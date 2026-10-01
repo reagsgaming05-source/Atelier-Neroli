@@ -189,8 +189,8 @@ test('une fiche sans mot de passe, ou abîmée, n\'ouvre rien', () => {
 });
 
 test('un mot de passe trop court est refusé, avec une phrase à montrer', () => {
-  assert.match(motDePasseAcceptable('abc'), /au moins 4/);
-  assert.equal(motDePasseAcceptable('abcd'), '');
+  assert.match(motDePasseAcceptable('abc'), /au moins 8/);
+  assert.equal(motDePasseAcceptable('abcd efgh ijkl'), '');
   assert.match(motDePasseAcceptable('x'.repeat(300)), /trop long/);
 });
 
