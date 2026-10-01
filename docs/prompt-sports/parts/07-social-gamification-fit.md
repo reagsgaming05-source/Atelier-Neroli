@@ -384,7 +384,7 @@ Bouton « Préparer cet événement » : le coach (Partie 5) crée un plan à pa
 ## 7.9 Marketplace de coachs et de plans
 
 ### 7.9.1 Coachs humains certifiés
-Rôle `coach` demandé depuis le profil. **Vérification** : identité ([FOURNISSEUR_KYC]), diplôme ou carte professionnelle (en France : BPJEPS, DEJEPS, STAPS, carte professionnelle d'éducateur sportif ; équivalents par pays dans une table paramétrable), assurance responsabilité civile professionnelle en cours de validité, casier judiciaire (extrait du bulletin n°3 ou équivalent) lorsqu'il y a travail avec des mineurs, charte de l'app signée. Revue humaine sous 5 jours ouvrés. Statuts : `pending`, `verified`, `suspended`, `revoked`. Renouvellement annuel des justificatifs ; alerte à J−30. Les coachs affichent leur spécialité (course, trail, vélo, rando, multi-sports), langues, tarifs et disponibilités.
+Rôle `coach` demandé depuis le profil. **Vérification** : identité ([FOURNISSEUR_KYC]), diplôme ou carte professionnelle (en France : BPJEPS, DEJEPS, STAPS, carte professionnelle d'éducateur sportif ; équivalents par pays dans une table paramétrable), assurance responsabilité civile professionnelle en cours de validité, casier judiciaire (extrait du bulletin n°3 ou équivalent) lorsqu'il y a travail avec des mineurs, charte de l'app signée. Revue humaine sous 5 jours ouvrés. Statuts : `pending`, `verified`, `suspended`, `revoked`. Renouvellement annuel des justificatifs ; alerte à J−30. Profils acceptés : coachs de course à pied (route, trail), coachs vélo (route, gravel, VTT), coachs de randonnée et de trek, **accompagnateurs en moyenne montagne et guides de haute montagne** (diplôme d'État, UIAGM/IFMGA ou équivalent national, carte professionnelle en cours, assurance couvrant l'activité encadrée). Les coachs affichent leur spécialité, leur niveau de terrain (plaine, moyenne montagne, haute montagne), langues, tarifs et disponibilités. Les sorties encadrées en montagne affichent obligatoirement la qualification du guide et la zone d'intervention.
 
 ### 7.9.2 Produits vendus
 | Produit | Description | Livraison |
@@ -392,7 +392,7 @@ Rôle `coach` demandé depuis le profil. **Vérification** : identité ([FOURNIS
 | Plan d'entraînement | Plan fixe (ex. « 10 km en 8 semaines ») importable dans le planning | Numérique |
 | Abonnement coach | Suivi mensuel : plan adaptatif humain, messages, ajustements | Numérique + service |
 | Séance en visio | 30/60 min planifiée | Service à distance |
-| Séance physique | Coaching présentiel | Service physique |
+| Séance physique ou sortie encadrée | Coaching présentiel, sortie de trail, stage vélo, randonnée guidée, trek | Service physique |
 
 Un plan vendu est importé dans le planning unifié (7.10.6) ; le coach IA (Partie 5) en respecte la structure, ajuste les charges en cas de fatigue ou de blessure et notifie le coach humain des écarts significatifs (si consentement 7.9.8).
 
@@ -532,3 +532,267 @@ Invitations contextuelles et non intrusives : après 3 sorties longues, « Ta nu
 
 **Critères d'acceptation 7.10** : une activité de 13 km génère un ajustement nutritionnel dans Fit en moins de 60 s ; un trophée gagné simultanément dans les deux apps n'apparaît qu'une fois ; avec Fit indisponible, l'enregistrement et la publication fonctionnent normalement.
 
+## 7.11 Notifications et engagement
+
+### 7.11.1 Principes
+Chaque notification a : catégorie, déclencheur, priorité, fréquence maximale, canaux autorisés, texte français (clés i18n), lien profond. **Budget global : 3 push par jour hors sécurité, 10 par semaine hors sécurité**. Heures calmes par défaut de 22 h à 8 h (fuseau local), modifiables ; seules les notifications de sécurité (position en direct, alerte d'immobilité de la Partie 4) les traversent, et uniquement avec consentement. Désactivation par catégorie et par canal (push, e-mail, dans l'app). Aucune notification ne culpabilise, aucune ne dit « tu nous manques ». Regroupement : plus de 3 événements sociaux en 1 h donnent un seul message (« 5 personnes ont réagi »).
+
+### 7.11.2 Catalogue
+| Catégorie | Déclencheur | Texte | Fréquence max. |
+|---|---|---|---|
+| Social | Demande d'ami reçue | « Camille veut être ton amie sur [NOM_APP_SPORTS]. » | 5/jour |
+| Social | Ami accepté | « Léo a accepté ta demande. » | 5/jour |
+| Social | Réaction ou commentaire | « 3 bravos sur ta sortie du matin. » | groupés, 1/h |
+| Social | Mention | « Inès t'a mentionné dans une sortie. » | 5/jour |
+| Club | Nouvelle sortie de club | « Sortie vélo dimanche 8 h, 12 places restantes. » | 2/jour |
+| Club | Annonce épinglée | « Annonce du club Foulées du Parc. » | 1/jour |
+| Sortie | Rappel d'inscription | « Ta sortie démarre demain à 8 h au parc. » | 1 à J−1, 1 à H−2 |
+| Sortie | Annulation ou changement | « Sortie annulée : orage prévu. » | immédiat |
+| Sortie | Place libérée (liste d'attente) | « Une place s'est libérée, confirme avant 18 h. » | immédiat |
+| Défi | Défi débute / presque terminé / terminé | « Il te reste 4 km pour finir le défi de la semaine. » | 2 par défi |
+| Défi | Rang dépassé | « Tu as repris la 2e place du défi entre amis. » | 1/jour |
+| Trophée | Trophée obtenu | « Nouveau trophée : Mille bornes. » | immédiat, groupés |
+| Record | Record personnel | « Nouveau record sur 10 km : 52:14. » | 3/semaine |
+| Événement | Ouverture/clôture des inscriptions | « Les inscriptions du semi de ta ville ferment dans 7 jours. » | 2 par événement |
+| Coach (IA) | Veille de séance clé | « Demain sortie longue : pense à manger plus de glucides ce soir. » | 1/jour |
+| Coach (IA) | Fatigue détectée | « Ta charge est élevée : on allège la séance de demain ? » | 2/semaine |
+| Coach (IA) | Météo défavorable | « Orages prévus sur ta sortie : on la décale ? » | 1/sortie |
+| Coach humain | Message ou retour de séance | « Marc a commenté ta séance de seuil. » | selon activité |
+| Marketplace | Achat, litige, avis | « Ton plan 10 km est disponible. » | immédiat |
+| Résumé | Résumé hebdomadaire | « Ta semaine : 34 km, 3 sorties, +1 niveau. » | 1/semaine |
+| Fit | Ajustement nutrition | « +420 kcal conseillées aujourd'hui pour récupérer. » | 1/jour |
+| Sécurité | Partage de position, alerte | « Ta position est partagée jusqu'à 14 h. » | non limité (sécurité) |
+| Compte | Sécurité du compte, facturation | « Nouvelle connexion détectée. » | non limité |
+
+### 7.11.3 Notifications intelligentes liées au coach
+Conditions : plan actif, notifications « Coach » activées. Exemples de règles :
+- J−1 d'une sortie > 90 min : conseil nutrition du soir, envoyé à 18 h locales, avec bouton « Voir les recettes » (7.10.5).
+- H−2 avant la séance planifiée si créneau météo OK : « Ton créneau est idéal, 14 °C, pas de pluie. »
+- Après trois séances manquées : un seul message neutre « Besoin d'adapter ton plan ? », puis silence 7 jours.
+- Jamais de rappel de séance un jour de repos, de pause santé ou de maladie déclarée ; les conseils de récupération remplacent les relances.
+
+### 7.11.4 Canaux, résumés, anti-spam
+- **Push** : [STACK_PUSH], jeton par appareil, demande de permission après la première activité (pas au lancement), page de préférences accessible en deux taps.
+- **E-mail** : résumé hebdomadaire (dimanche soir), récapitulatif de défi, e-mails transactionnels ; lien de désinscription en un clic, en-tête `List-Unsubscribe`.
+- **Dans l'app** : centre de notifications, conservation 60 jours, état lu/non lu.
+- **Anti-spam** : déduplication par `(user, type, entité)` sur 24 h, suppression si l'utilisateur a déjà ouvert l'entité, désactivation automatique des e-mails après 5 envois non ouverts, dégradation du push vers dans l'app après 3 ignorés.
+- **Tests** : test unitaire de chaque règle de fréquence, test de fuseau horaire et de passage à l'heure d'été, test de non-envoi pendant heures calmes et pauses santé, test A/B encadré par feature flag.
+- **Métriques saines** : taux d'ouverture par catégorie, taux de désactivation (alerte si > 2 % par semaine), plaintes, part d'utilisateurs actifs avec ≥ 1 séance (jamais « temps passé dans l'app » comme objectif), séances suivies par rapport aux séances planifiées, adhérence à 4 semaines.
+
+**Critères d'acceptation 7.11** : aucune notification non critique entre 22 h et 8 h ; un utilisateur en pause santé ne reçoit aucune relance ; le résumé hebdomadaire est envoyé une seule fois.
+
+---
+
+## 7.12 Parrainage et croissance
+
+### 7.12.1 Parrainage
+Lien ou code personnel. Récompense : le filleul reçoit 14 jours d'essai de l'offre Sports ; le parrain reçoit 30 jours après que le filleul a terminé **3 activités valides sur 14 jours** (plafond de 6 mois offerts par an, 10 parrainages récompensés par an). Les récompenses sont créditées via le service d'entitlements (Partie 2). Le parrainage est valable entre apps (un filleul de Fit ayant installé Sports compte une fois).
+**Antifraude** : un même appareil, une même carte, une même adresse IP répétée ou un e-mail jetable annulent la récompense ; auto-parrainage détecté par empreinte d'appareil et de moyen de paiement ; limite de 5 inscriptions par IP et par jour ; revue manuelle au-delà de 3 parrainages en 24 h ; récompense retardée de 14 jours après l'achat éventuel. Aucune récompense en argent.
+
+### 7.12.2 Partage et liens profonds
+Partage d'un plan, d'un itinéraire, d'un défi, d'un club, d'un événement par lien universel ([STACK_LIENS_PROFONDS]) : ouvre l'app si installée, sinon la page web publique puis le store avec attribution différée. Les itinéraires partagés suppriment les 200 premiers et derniers mètres s'ils sont issus d'une activité (7.2.5).
+
+### 7.12.3 Pages web publiques et SEO
+Pages indexables, rendues côté serveur : itinéraires marqués publics, clubs publics, événements, défis publics. Contenu : titre, résumé, carte statique, profil de dénivelé, difficulté, saison conseillée, avis ; balisage `schema.org` (`SportsEvent`, `Place`), `sitemap.xml`, canonical, hreflang. Aucun contenu privé, aucune page de profil individuel indexable par défaut (option « profil indexable » désactivée). Possibilité de retrait par `noindex` immédiat. Les itinéraires issus de traces d'utilisateurs sont publiés **uniquement avec consentement explicite** et passent par un contrôle de sécurité (Partie 4).
+
+### 7.12.4 Widgets et ambassadeurs
+Widgets écran d'accueil : objectif de la semaine, prochaine sortie de club, série, compte à rebours d'événement ; ne montrent aucune position. Programme ambassadeur : clubs et coachs invités (conditions : 50 filleuls actifs ou club de 100 membres), codes dédiés, tableau de bord de conversions, avantages en plan offert et visibilité ; charte de transparence obligatoire (mention « partenariat » dans toute communication). Pas de commissions en argent sur les ambassadeurs mineurs.
+
+---
+
+## 7.13 Modération et sécurité communautaire
+
+### 7.13.1 Politique de contenu
+Interdits : harcèlement, haine, menaces, doxxing et partage de position d'un tiers, contenu sexuel ou nudité, violence, automutilation et troubles du comportement alimentaire (promotion), contenu impliquant des mineurs de façon inappropriée, spam et arnaques, fausses informations médicales dangereuses, publicité non autorisée, contenus portant atteinte à la propriété intellectuelle, tricherie organisée sur défis. Politique rédigée en français clair, versionnée, consultable depuis chaque menu de signalement.
+
+### 7.13.2 Signalements et file de modération
+Signalement en 3 taps avec catégorie. Priorités : P0 (mineur en danger, menace imminente, nudité impliquant un mineur : traitement immédiat, astreinte 24/7), P1 (harcèlement, haine : sous 24 h), P2 (spam, divers : sous 72 h). Outils : tableau de revue avec contexte (publication, historique de l'auteur, signalements précédents), actions (retirer, restreindre, avertir, suspendre, bannir, escalader), notes internes, journal d'audit immuable, double validation pour un bannissement définitif. Aucun modérateur n'accède aux données de santé ; l'accès aux tracés est limité à ce qui est signalé.
+
+### 7.13.3 Sanctions graduées et appels
+Échelle : 1) avertissement et suppression du contenu ; 2) restriction de 24 h à 7 jours (pas de commentaires, pas de messages) ; 3) suspension de 30 jours ; 4) bannissement définitif (récidive grave, ou dès la première infraction pour contenu pédocriminel, menaces graves, usurpation). Notification motivée et référence à la règle ; **appel** en un clic, réponse sous 7 jours par un modérateur différent de celui qui a décidé ; décision finale conservée pour audit. Les sanctions expirent de la liste de récidive après 12 mois, sauf infractions graves.
+
+### 7.13.4 Détection d'abus
+- **Spam** : limites de débit, détection de liens et de répétition, score de réputation des nouveaux comptes.
+- **Harcèlement** : détection de messages répétés vers une personne bloquante, de langage injurieux (modèle de classification de langue française), alerte de la cible avec options de blocage.
+- **Contenu sexuel** : classifieur d'images avant diffusion (7.2.4), floutage par défaut et révision humaine.
+- **Pédocriminalité** : empreintes de hachage ([FOURNISSEUR_HASH_CSAM], par exemple PhotoDNA ou équivalent) sur tous les médias envoyés ; correspondance = blocage, conservation sécurisée des éléments, **signalement obligatoire aux autorités compétentes** (en France : plateforme PHAROS et le Centre national d'assistance ; selon les juridictions, le NCMEC aux États-Unis) selon la procédure légale validée par le conseil juridique ; accès aux éléments strictement limité à une équipe habilitée ; aucun visionnage à des fins autres que la revue légale ; soutien psychologique des modérateurs. Les messages privés entre adultes et mineurs sont soumis à des détecteurs de grooming (demande de photos, de rendez-vous, de changement de plateforme).
+
+### 7.13.5 Transparence, DSA, parents
+- **Conformité DSA** : mécanisme de notification et d'action, exposé des motifs pour chaque restriction, voie de recours interne, point de contact unique, rapport de transparence annuel (nombre de signalements, délais, décisions, usage de l'automatisation), conditions d'utilisation claires sur les systèmes de recommandation avec option de fil non classé (7.2.2), publicités identifiées. Voir Partie 8 pour le détail réglementaire.
+- **Outils pour les parents** : compte parent lié (consentement vérifié), visibilité sur la liste d'amis, clubs rejoints, paramètres de confidentialité verrouillés, possibilité de supprimer le compte de l'enfant, aucun accès aux messages privés ni aux positions, notification de toute demande d'ami d'un adulte.
+
+**Critères d'acceptation 7.13** : un contenu P0 est bloqué avant diffusion et visible de la file en moins de 5 minutes ; une décision de sanction comporte toujours un motif et un lien d'appel ; le rapport de transparence se génère depuis les données de modération.
+
+---
+
+## 7.14 Modèle de données et API
+
+### 7.14.1 Tables
+Types : `uuid` pour les identifiants, `timestamptz` pour les dates, `jsonb` pour les extensions. Tous les index listés sont obligatoires.
+
+| Table | Champs principaux | Index et contraintes |
+|---|---|---|
+| `friendships` | `id`, `user_a`, `user_b`, `status`, `requested_by`, `created_at`, `accepted_at` | unique `(least(user_a,user_b), greatest(...))` ; index `(user_a,status)`, `(user_b,status)` |
+| `follows` | `follower_id`, `followee_id`, `status`, `created_at` | PK composite ; index `(followee_id,status)` |
+| `blocks` | `blocker_id`, `blocked_id`, `reason`, `created_at` | PK composite ; index `(blocked_id)` |
+| `mutes` | `muter_id`, `muted_id`, `scope`, `created_at` | PK composite |
+| `posts` | `id`, `author_id`, `type`, `visibility`, `source_ref`, `body`, `club_id`, `status`, `created_at`, `deleted_at` | index `(author_id,created_at desc)`, `(club_id,created_at desc)`, `(status)` |
+| `post_media` | `id`, `post_id`, `kind`, `storage_key`, `width`, `height`, `moderation_state` | index `(post_id)` |
+| `reactions` | `post_id`, `user_id`, `kind`, `created_at` | PK `(post_id,user_id)` |
+| `comments` | `id`, `post_id`, `author_id`, `parent_id`, `body`, `status`, `created_at` | index `(post_id,created_at)` |
+| `privacy_settings` | `user_id`, `profile_visibility`, `activity_default`, `search_visible`, `suggest_nearby`, `delay_minutes`, `jsonb extras` | PK `user_id` |
+| `privacy_zones` | `id`, `user_id`, `center` (geography), `radius_m`, `label` | index spatial GiST |
+| `clubs` | `id`, `name`, `type`, `join_policy`, `owner_id`, `city`, `fee_cents`, `archived_at` | unique lower(name) |
+| `club_members` | `club_id`, `user_id`, `role`, `status`, `joined_at` | PK composite ; index `(user_id)` |
+| `group_rides` | `id`, `club_id`, `organizer_id`, `route_id`, `starts_at`, `meeting_point`, `pace_min`, `pace_max`, `capacity`, `status` | index `(club_id,starts_at)`, `(starts_at)` |
+| `ride_signups` | `ride_id`, `user_id`, `status`, `position_waitlist`, `checked_in_at` | PK composite |
+| `challenges` | `id`, `type`, `metric`, `sports[]`, `starts_at`, `ends_at`, `creator_id`, `visibility`, `sponsor_id`, `rules_json`, `status` | index `(status,starts_at)` |
+| `challenge_participants` | `challenge_id`, `user_id`, `team_id`, `progress`, `rank`, `joined_at` | PK composite ; index `(challenge_id,progress desc)` |
+| `activity_validation` | `activity_id`, `status`, `reasons[]`, `evaluated_at`, `appeal_status` | index `(status)` |
+| `xp_ledger` | `id`, `user_id`, `source`, `source_id`, `xp`, `day`, `created_at` | unique `(user_id,source,source_id)` ; index `(user_id,day)` |
+| `user_levels` | `user_id`, `xp_total`, `level`, `prestige` | PK `user_id` |
+| `trophies` | `code`, `category`, `rarity`, `rule_json`, `secret` | PK `code` |
+| `user_trophies` | `user_id`, `trophy_code`, `awarded_at`, `source_app`, `revoked_at` | unique `(user_id,trophy_code)` |
+| `streaks` | `user_id`, `current_weeks`, `best_weeks`, `jokers_left`, `pause_until` | PK `user_id` |
+| `personal_records` | `id`, `user_id`, `metric`, `value`, `activity_id`, `set_at` | index `(user_id,metric,value)` |
+| `segments` | `id`, `creator_id`, `geom` (linestring), `length_m`, `risk_class`, `status` | GiST `(geom)` |
+| `segment_efforts` | `segment_id`, `user_id`, `activity_id`, `time_s`, `visibility` | index `(segment_id,time_s)` |
+| `events` | `id`, `name`, `sport`, `starts_at`, `location`, `distance_m`, `elevation_m`, `external_url`, `organizer_id`, `status` | index `(starts_at)`, spatial `(location)` |
+| `event_participations` | `event_id`, `user_id`, `status`, `result_time_s`, `activity_id` | PK composite |
+| `coach_profiles` | `user_id`, `verification_status`, `qualifications jsonb`, `insurance_expiry`, `rating_avg`, `rating_count` | index `(verification_status)` |
+| `coach_products` | `id`, `coach_id`, `kind`, `price_cents`, `currency`, `duration_weeks`, `store_sku` | index `(coach_id)` |
+| `coach_engagements` | `id`, `coach_id`, `athlete_id`, `product_id`, `status`, `consent_scopes[]`, `started_at`, `ended_at` | index `(coach_id,status)`, `(athlete_id,status)` |
+| `coach_data_access_log` | `engagement_id`, `scope`, `accessed_at` | index `(engagement_id,accessed_at)` |
+| `reviews` | `id`, `engagement_id`, `rating`, `body`, `status` | unique `(engagement_id)` |
+| `disputes` | `id`, `engagement_id`, `opened_by`, `status`, `decision` | index `(status)` |
+| `notifications` | `id`, `user_id`, `category`, `payload`, `read_at`, `sent_channels[]`, `created_at` | index `(user_id,created_at desc)` |
+| `notification_prefs` | `user_id`, `category`, `push`, `email`, `in_app`, `quiet_start`, `quiet_end` | PK `(user_id,category)` |
+| `referrals` | `id`, `referrer_id`, `referee_id`, `status`, `fraud_score`, `rewarded_at` | unique `(referee_id)` |
+| `reports` | `id`, `reporter_id`, `target_type`, `target_id`, `category`, `priority`, `status`, `decided_by`, `decision`, `created_at` | index `(status,priority,created_at)` |
+| `sanctions` | `id`, `user_id`, `level`, `reason`, `report_id`, `expires_at`, `appeal_status` | index `(user_id,created_at)` |
+| `fit_sync_outbox` | `id`, `event_type`, `payload`, `attempts`, `next_attempt_at`, `status` | index `(status,next_attempt_at)` |
+
+### 7.14.2 API publique (extraits, préfixe `/v1`)
+Authentification : jeton utilisateur ; pagination par curseur ; limites de débit par route ; réponse d'erreur uniforme `{ "error": { "code", "message", "request_id" } }`.
+
+| Méthode et route | Rôle |
+|---|---|
+| `POST /friends/requests` | Envoyer une demande |
+| `POST /friends/requests/{id}/accept` | Accepter |
+| `POST /blocks`, `DELETE /blocks/{userId}` | Bloquer, débloquer |
+| `GET /feed?tab=following\|foryou&cursor=` | Fil |
+| `POST /posts`, `PATCH /posts/{id}/visibility` | Publier, changer la visibilité |
+| `POST /posts/{id}/reactions`, `POST /posts/{id}/comments` | Interactions |
+| `POST /reports` | Signaler |
+| `POST /clubs`, `GET /clubs/{id}`, `POST /clubs/{id}/join` | Clubs |
+| `POST /clubs/{id}/rides`, `POST /rides/{id}/signup` | Sorties |
+| `POST /challenges`, `POST /challenges/{id}/join`, `GET /challenges/{id}/leaderboard` | Défis |
+| `POST /activities/{id}/validation/appeal` | Contester |
+| `GET /me/gamification` | XP, niveau, séries, trophées |
+| `GET /events?lat=&lon=&radius=&sport=` , `POST /events/{id}/prepare` | Événements et plan |
+| `POST /coach/engagements`, `PUT /coach/engagements/{id}/consent` | Marketplace, consentement |
+| `GET /me/notifications`, `PUT /me/notification-prefs` | Notifications |
+
+Exemple `POST /posts` :
+```json
+{"type": "activity", "source_ref": {"activity_id": "act_998"},
+ "visibility": "friends", "body": "Belle sortie trail ce matin",
+ "media": [{"upload_id": "upl_77"}], "share_card": {"template": "route", "blur_ends_m": 200}}
+```
+Réponse :
+```json
+{"id": "post_5521", "status": "published", "visibility": "friends",
+ "visible_from": "2026-10-04T10:30:00Z", "created_at": "2026-10-04T09:58:00Z"}
+```
+Exemple `GET /challenges/{id}/leaderboard` :
+```json
+{"challenge_id": "chl_42", "metric": "distance_equiv_km", "updated_at": "2026-10-04T10:00:00Z",
+ "me": {"rank": 8, "value": 41.3},
+ "entries": [{"rank": 1, "user": {"id": "usr_9", "name": "Sam"}, "value": 63.0, "status": "valid"}]}
+```
+Exemple `PUT /coach/engagements/{id}/consent` :
+```json
+{"scopes": ["activities", "load", "hr"], "excluded": ["weight", "sleep", "injuries"], "expires_at": "2027-04-01T00:00:00Z"}
+```
+
+---
+
+## 7.15 Tests et critères d'acceptation
+
+### 7.15.1 Stratégie
+Tests unitaires du domaine (formules d'XP, ranking, anti-triche, règles anti-conflit), tests d'intégration API (droits, blocage, visibilité), tests de contrat avec Fit (7.10.11), tests de charge (fil à 1 000 req/s, classement de 100 000 participants), tests de sécurité (IDOR, énumération, abus de pagination) et tests d'accessibilité. Jeux de données : 1 000 tracés synthétiques avec zones masquées, 50 traces de véhicules, 200 cas de timing pour séries.
+
+### 7.15.2 Cas d'acceptation numérotés
+**Graphe social**
+1. Une demande d'ami acceptée crée une relation symétrique visible des deux côtés en moins de 10 s, dans Sports et dans Fit.
+2. Un utilisateur bloqué reçoit 404 sur le profil, les publications, les commentaires et les classements du bloqueur.
+3. Le 21e envoi de demande d'ami du jour est refusé avec un code d'erreur lisible.
+4. Les contacts non appariés ne sont jamais stockés.
+5. Un profil passé de « public » à « amis » retire ses publications des fils d'inconnus en moins de 60 s.
+
+**Fil et médias**
+6. Une photo envoyée avec GPS dans l'EXIF est publiée sans aucune métadonnée de position.
+7. L'onglet « Suivis » est strictement chronologique inverse ; « Pour toi » ne montre pas plus de 2 publications consécutives du même auteur.
+8. Une publication signalée trois fois par des comptes distincts passe en revue prioritaire et est masquée à titre conservatoire.
+9. Le repartage est absent pour une publication non publique.
+10. La carte de partage affiche par défaut un flou de 200 m au début et à la fin du tracé.
+
+**Confidentialité et mineurs**
+11. Aucun point de tracé situé dans une zone masquée n'apparaît dans la réponse API d'un tiers (1 000 tracés).
+12. Un tracé n'est visible d'un ami que 30 minutes après la fin par défaut.
+13. Un compte de 14 ans ne peut pas passer en public (403, y compris par appel direct).
+14. Un adulte sans lien préalable ne peut pas envoyer de demande d'ami à un mineur.
+15. La suppression de compte rend le profil introuvable immédiatement et purge les données personnelles sous 30 jours.
+
+**Clubs et sorties**
+16. Un membre exclu perd l'accès au chat en moins de 60 s.
+17. Une sortie complète place la 13e personne en liste d'attente, promue automatiquement lors d'un désistement.
+18. L'annulation d'une sortie notifie tous les inscrits sous 60 s.
+19. Un club d'entreprise de moins de 10 membres n'affiche aucune statistique agrégée.
+20. Un propriétaire unique qui quitte le club déclenche le transfert au plus ancien admin.
+
+**Défis et anti-triche**
+21. Une activité en voiture (vitesse constante de 60 km/h sur route) est classée `invalid` et exclue du classement.
+22. Une course à 30 km/h soutenus pendant 2 min est `invalid`.
+23. Deux enregistrements d'une même sortie (montre et téléphone) ne comptent qu'une seule fois.
+24. La correction du type d'activité relance l'évaluation et met à jour le classement en moins de 60 s.
+25. Un défi de 20 km « toutes disciplines » applique le coefficient vélo ×0,25.
+26. Un défi sponsorisé sans mention « Sponsorisé » est refusé à la publication.
+27. Un appel d'exclusion de défi reçoit une décision motivée sous 72 h.
+
+**Gamification**
+28. Le plafond de 400 XP/jour est respecté sur 5 activités le même jour.
+29. Un trophée n'est attribué qu'une seule fois (contrainte unique, événement rejoué deux fois).
+30. Une pause santé de 3 semaines conserve la série et n'envoie aucune relance.
+31. Un record personnel issu d'une activité `suspect` n'est pas validé.
+32. Le bilan annuel ne contient aucune donnée de santé dans ses cartes de partage.
+33. Un utilisateur au ratio de charge de 1,6 ne reçoit plus de bonus de régularité et reçoit une suggestion de repos.
+
+**Classements et segments**
+34. Un utilisateur « Ne pas figurer » est absent de tout classement et segment publics.
+35. Un segment de descente ne génère aucun classement de temps absolu public.
+36. Le retrait d'un segment demandé par une commune est effectif en moins de 24 h.
+
+**Événements**
+37. « Préparer cet événement » à 6 semaines d'un semi débutant produit un avertissement de délai court.
+38. Un résultat saisi à ± 3 % de la distance est rapproché automatiquement de l'activité enregistrée.
+
+**Marketplace**
+39. Un coach non vérifié ne peut créer aucun produit ni recevoir de paiement.
+40. La révocation du consentement « fréquence cardiaque » supprime la FC de la réponse de l'API coach en moins de 60 s.
+41. Un litige ouvert bloque le versement correspondant.
+42. Un guide de montagne affiche sa qualification sur toute sortie encadrée, ou la sortie est refusée.
+
+**Intégration Fit**
+43. Une sortie de 13 km publie `activity.completed` puis un ajustement nutritionnel dans Fit en moins de 60 s.
+44. Un trophée gagné dans les deux apps n'est enregistré qu'une fois.
+45. Avec Fit indisponible, l'enregistrement, la publication et le fil fonctionnent ; la file de reprise rejoue les événements à la reprise.
+46. Un abonnement Sports seul n'accède pas à l'ajustement nutritionnel automatique (droit vérifié côté serveur).
+47. Un conflit « jambes la veille d'un fractionné » déclenche un avertissement et une proposition d'alternative.
+
+**Notifications, parrainage, modération**
+48. Aucune notification non critique n'est envoyée entre 22 h et 8 h.
+49. Un parrainage depuis le même appareil n'accorde aucune récompense.
+50. Un contenu P0 est bloqué avant diffusion et visible de la file en moins de 5 minutes.
+51. Toute sanction affiche un motif et un lien d'appel.
+52. Un média dont l'empreinte correspond à la base de contenus pédocriminels est bloqué, conservé de façon sécurisée et signalé selon la procédure légale.

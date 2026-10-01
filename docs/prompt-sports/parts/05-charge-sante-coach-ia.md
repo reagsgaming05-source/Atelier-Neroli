@@ -550,3 +550,102 @@ Journaliser : `request_id`, pseudonyme, modèle, tokens in/out, latence, outils 
 - Latence cible : premier token < 1,5 s, réponse complète < 6 s p95 ; streaming obligatoire ; délai max 12 s puis repli.
 - **Mode dégradé sans LLM** : toutes les fonctions critiques (plan, adaptation, alertes, explications par gabarit, débriefs par gabarit) fonctionnent sans LLM ; le chat affiche « Le coach conversationnel est indisponible, voici les réponses rapides » avec boutons (Pourquoi cette séance ? Ma charge, Reporter, Signaler une douleur). Bascule automatique après 3 échecs en 60 s (circuit breaker).
 
+## 5.10 Débriefs et insights
+
+### 5.10.1 Débrief post-séance
+Généré par gabarits déterministes (reformulation LLM optionnelle, Sports+). Structure : (1) verdict en une ligne ; (2) 3 chiffres clés (durée, charge, % du temps dans la zone visée) ; (3) comparaison au plan ; (4) un point positif ; (5) une consigne pour la suite ; (6) question RPE si absente.
+Exemple : « Séance de seuil réalisée : 4×6 min à 4:52/km, FC 168 (Z4), charge 78 pTSS (prévu 75). Tu as tenu l'allure cible sur les 4 blocs, le dernier à +2 bpm seulement. Demain : footing facile 30 min, ta disponibilité devrait remonter autour de 75. Comment l'as-tu ressentie (RPE) ? » Exemple séance ratée : « Séance raccourcie (28 sur 45 min) : FC élevée dès le début (+9 bpm vs d'habitude), chaleur 31 °C. Pas de souci : je garde la séance de jeudi, plus légère. »
+
+### 5.10.2 Résumés
+- **Hebdomadaire** (dimanche soir) : volume par discipline, charge vs cible, séances réalisées/planifiées, ACWR et état, meilleur effort, sommeil moyen, une chose à améliorer, aperçu de la semaine suivante.
+- **Mensuel** : tendances CTL (+/−), records, objectifs en cours, régularité, bilan sommeil/FC repos.
+- **Revue de bloc** (fin de chaque phase) : objectifs de phase atteints ou non, progression des seuils, effet des décharges, ajustement du bloc suivant.
+
+### 5.10.3 Insights (calculés par le moteur, jamais inventés)
+Méthode : corrélations sur ≥ 20 observations, intervalle de confiance, seuil d'affichage p < 0,05 et effet minimal (ex. écart d'allure ≥ 2 %). Exemples : « Tu cours 3,1 % plus vite à FC égale après 2 jours de repos », « Tes séances après < 6 h de sommeil ont un RPE +1,4 », « Tes progrès de CTL stagnent depuis 3 semaines ». Toujours formulés comme corrélations (« tendance observée »), jamais comme causalité.
+**Détection d'anomalies** : une valeur > 3 écarts-type (z robuste, MAD) sur FC repos, HRV, allure à FC égale, ou découplage cardiaque (dérive FC > 8 % entre 1re et 2e moitié à allure constante) déclenche une alerte douce et, si répétée, la règle 5.3.6.
+
+### 5.10.4 Rapports exportables et graphiques
+Export PDF/CSV (Sports+ ; PDF pour coach humain/médecin, avec consentement explicite à chaque export). Graphiques : (1) CTL/ATL/TSB sur 90 jours (zone de forme ombrée) ; (2) charge hebdomadaire empilée par discipline ; (3) volume vs plan ; (4) répartition du temps par zone (80/20) ; (5) courbe de puissance/allure ; (6) FC repos et HRV avec bande de normalité ; (7) sommeil ; (8) disponibilité quotidienne ; (9) VO2max estimée avec intervalle ; (10) allure à FC égale (efficacité aérobie) ; (11) découplage ; (12) trajectoire d'objectif. Chaque graphique a un résumé textuel d'une phrase d'interprétation et une version accessible (valeurs lisibles par lecteur d'écran).
+
+## 5.11 Entraînement croisé et multi-disciplines
+
+### 5.11.1 Semaine multi-disciplines
+Les disciplines (course, vélo, rando/marche, et sport « autre » : natation, aquajogging, ski de fond) partagent le même budget de charge (5.1.6). Une semaine type « triathlon-like » : 2 courses, 2 vélos, 1 rando ou marche longue, 1-2 renforcements Fit. Principes :
+- Le budget hebdomadaire est fixé en pTSS, puis réparti selon la **discipline principale** de l'objectif (60-70 %) et les secondaires (30-40 %).
+- La charge mécanique `L_neuro` limite la course : un vélo long de 150 pTSS ne compte que pour 45 de charge d'impact (c_imp 0,3) ; on peut donc ajouter du volume vélo sans dépasser les plafonds d'impact (5.3.7).
+- Ordre : discipline la plus technique/impactante en premier lors d'un enchaînement (brique) ; jamais deux séances clés le même jour hors brique planifiée.
+- Contrainte « rando du dimanche » : si l'utilisateur rando régulièrement le week-end, elle est traitée comme séance longue fixe et la sortie longue course est déplacée au samedi ou remplacée par un footing court.
+
+### 5.11.2 Transfert de forme entre disciplines
+CTL global = somme pondérée ; **coefficients de transfert aérobie** pour estimer l'effet d'une discipline sur une autre (utilisés pour évaluer la faisabilité et les prédictions) : vélo → course 0,55 ; course → vélo 0,70 ; rando/marche → course 0,35 ; natation/aquajogging → course 0,60 ; course → rando 0,70 ; vélo → rando 0,60. Exemple : un cycliste avec CTL vélo 60 débutant la course démarre avec CTL course = 60 × 0,55 = 33 côté cardio, mais la capacité mécanique (`CTL_m`) reste basse : le plan de course commence par marche/course et monte plus lentement (+6 %/semaine).
+Les prédictions (Riegel/VDOT) n'utilisent que des performances de la discipline visée ; VO2max est partagée avec ajustement ±5 % selon la discipline.
+
+### 5.11.3 Discipline alternative en cas de blessure
+| Blessure/douleur déclarée | Course remplacée par | Équivalence |
+|---|---|---|
+| Tibia, périoste, pied, genou (impact) | vélo (route ou home-trainer), aquajogging, elliptique | même durée × 1,0 pour l'aquajogging ; × 1,2 vélo ; même zone de FC (FC vélo −5 à −8 bpm) |
+| Hanche, bas du dos | marche, aquajogging, vélo en position redressée | à valider selon douleur |
+| Genou sur vélo (rotule) | course douce, marche, natation | selon douleur |
+| Cheville/entorse | vélo, natation (si indolore) | 5.3.9 puis reprise |
+Règle : la discipline alternative doit respecter un test « indolore à l'échauffement » (≤ 2/10) ; sinon repos. Équivalence de charge : `durée_alt = L_cible / (IF_alt² × 100/60)` pour maintenir `L_cardio` ± 10 % ; la charge d'impact (`L_neuro`) tombe naturellement. Pendant 3 semaines d'alternative, CTL course décroît de ~0,7 %/jour de moins que sans entraînement (maintien aérobie), mais prévoir un retour progressif (5.3.9).
+
+## 5.12 Tests, validation et critères d'acceptation
+
+### 5.12.1 Validation des formules
+Jeux de référence versionnés (`/tests/fixtures/load/`) : fichiers FIT/GPX réels anonymisés (≥ 30 séances par sport) avec valeurs attendues validées contre un outil de référence (TrainingPeaks/Golden Cheetah) : tolérance TSS ± 2 %, NP ± 1 %, TRIMP ± 3 %, rTSS ± 4 %. Cas calculés à la main : vélo 90 min NP 210/FTP 250 → TSS 105,8 ; 60 min IF 1,0 → TSS 100 ; EWMA : charge constante 100 pendant 200 jours → CTL = ATL = 100 (± 0,5).
+**Tests de propriété** : (P1) CTL, ATL ≥ 0 ; (P2) charge nulle → CTL, ATL décroissent monotoniquement ; (P3) recalcul idempotent ; (P4) plan généré : aucune semaine ne dépasse le plafond de progression ; (P5) aucune séance dure adjacente à une autre ; (P6) une même entrée produit un même plan (déterminisme) ; (P7) augmenter le temps disponible n'augmente jamais le risque ; (P8) toute zone est strictement croissante et couvre [0 ; 100 %] sans trou.
+**Évaluation par coachs humains** : 3 entraîneurs diplômés relisent 50 plans générés (aveugle) ; seuil : ≥ 85 % jugés « sûrs et adaptés », 0 plan jugé dangereux ; relecture à chaque évolution majeure du moteur.
+**Scénarios de bout en bout** : onboarding → plan 10 km → 4 semaines simulées avec séances manquées/trop dures → vérification des adaptations et de l'historique de versions.
+
+### 5.12.2 Critères d'acceptation numérotés
+1. TSS vélo conforme à l'exemple (105,8 ± 0,5).
+2. NP calculée par moyenne glissante 30 s puis puissance 4.
+3. hrTSS : 60 min à la FC du seuil = 100 ± 3.
+4. rTSS : 60 min à la vitesse seuil = 100.
+5. GAP : pente +10 % augmente la vitesse ajustée ; pente −10 % la diminue modérément.
+6. Charge marche/rando : exemple 5 h/800 m D+/8 kg → 142 ± 3 pTSS.
+7. Hiérarchie des sources : si puissance + FC présentes, `load_method = power`.
+8. RPE × durée convertit via k calibré ; k borné [0,25 ; 0,60].
+9. Muscu issue de Fit : L_cardio = sRPE × 0,16 ; séance jambes marque `legs_heavy`.
+10. CTL/ATL : constantes 42 et 7 jours ; test de charge constante.
+11. TSB = CTL_{j−1} − ATL_{j−1}.
+12. ACWR non affiché si CTL < 15.
+13. Badge 3 états : le pire critère l'emporte.
+14. Démarrage à froid : aucun rouge basé sur ACWR pendant 28 jours.
+15. Séance sans données : RPE demandé, imputation à 48 h marquée `imputed`.
+16. Pause > 14 jours : plan de reprise proposé.
+17. Correction manuelle : recalcul incrémental < 200 ms (2 ans de données).
+18. FC aberrante (> FCmax + 10 sur > 20 %) : bascule sur allure/RPE.
+19. VO2max toujours affichée avec intervalle d'erreur.
+20. Zones : 5 à 7 niveaux, versionnées, anciennes séances conservent leurs zones.
+21. Nouveau seuil détecté : jamais appliqué sans validation ; refus bloque 21 jours.
+22. Riegel : 10 km en 50:00 → semi prédit ≈ 1:50:28 ± 20 s (exposant 1,06).
+23. Prédictions affichées en fourchette.
+24. Score de disponibilité : poids sommant à 1, renormalisation si composante manquante.
+25. Plafond douleur ≥ 6 → disponibilité ≤ 40.
+26. Fièvre déclarée → disponibilité ≤ 20 et séances coupées.
+27. Check-in réalisable en ≤ 10 s (5 taps maximum) et modifiable 48 h.
+28. Progression hebdomadaire jamais > +15 % ; débutant ≤ +8 %.
+29. Séance longue ≤ 120 % de la plus longue des 28 derniers jours.
+30. Semaine de décharge insérée toutes les 3-4 semaines (−30 %).
+31. Signaux de surentraînement : alerte si ≥ 3 simultanés.
+32. Suivi du cycle désactivé par défaut, jamais envoyé au LLM sans consentement distinct.
+33. Messages d'urgence médicaux codés en dur, jamais générés.
+34. Aucune sortie de l'app ne contient de diagnostic.
+35. Faisabilité : objectif hors de portée → au moins 3 alternatives proposées.
+36. Plan 10 km de 12 semaines conforme au tableau 5.5.6 (± 1 km par semaine).
+37. Placement : aucune séance dure à moins de 36 h de jambes lourdes ni de deux séances dures adjacentes (propriété).
+38. Anti-oscillation : max 2 modifications automatiques/semaine.
+39. Modification de confiance < 0,5 : proposée uniquement, jamais appliquée.
+40. Chaque modification a `facts[]`, boutons Accepter/Refuser, version immuable.
+41. Semaine entière manquée → semaine suivante à 80 % de la dernière réalisée.
+42. Entraînement croisé : une séance vélo remplaçant la course conserve L_cardio ± 10 % et réduit L_neuro.
+43. Glucides : sortie 4 h → 60-90 g/h proposés ; séance < 60 min → aucun apport.
+44. Déficit calorique : jamais > 20 % ni les jours de séance clé.
+45. LLM : 0 nombre non sourcé dans 300 conversations de test ; 100 % des urgences redirigées.
+46. LLM indisponible : plan, adaptation, alertes et débriefs restent fonctionnels.
+47. Quotas par abonnement vérifiés côté serveur ; dépassement → mode dégradé.
+48. Aucun identifiant, nom, e-mail ou coordonnée GPS précise dans les requêtes envoyées au LLM.
+49. Journaux sans texte brut par défaut ; suppression de l'historique à la demande en < 24 h.
+50. Les règles de non-régression S1 à S10 (5.7.7) passent en CI à chaque commit.

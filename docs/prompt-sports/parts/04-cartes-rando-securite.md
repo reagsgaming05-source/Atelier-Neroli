@@ -482,3 +482,183 @@ Contraintes : longueur minimale 500 m, pente moyenne minimale 3 %. Chaque côte 
 - **Gravel** : pourcentage de surface non goudronnée = `longueur(surface ∈ {gravel, dirt, grass, sand, compacted}) / longueur totale`, affiché avec répartition en barre ; recommandation de pneus (section de pneu ≥ 38 mm si > 40 % non goudronné) ; alerte « surface inconnue » si > 15 % du tracé non renseigné.
 - **Vélo électrique** : autonomie estimée `A = capacité_wh × (1 − marge) / (conso_wh_km)` avec `conso = (P_moyenne_requise − assistance)/vitesse` ; modèle simple : conso de base 8-12 Wh/km sur plat, +4 Wh/km par 1 % de pente moyenne, +30 % en mode Turbo ; marge de sécurité 20 % ; froid < 5 °C : −20 % de capacité. L'utilisateur saisit batterie (400-750 Wh) et mode d'assistance ; alerte « autonomie insuffisante » si le trajet dépasse 80 % de l'autonomie estimée, avec bornes de recharge sur la carte. Exemple : 500 Wh, tracé 60 km, 900 m D+ (pente moyenne ≈ 1,5 %) : conso ≈ 10 + 6 = 16 Wh/km → 960 Wh requis → 500 × 0,8 / 16 ≈ 25 km seulement en assistance continue, donc plan : mode Eco ou recharge (ex. Eco 7 Wh/km → 57 km, trop juste).
 
+## 4.9 Sécurité (module critique)
+
+Ce module est prioritaire sur toute autre fonction : en cas de conflit (batterie, performance, monétisation), la sécurité l'emporte. Les fonctions de sécurité de base (partage de position, numéros d'urgence, fiche médicale, alerte de lumière) sont **gratuites** pour tous ; la détection de chute/immobilité automatique et les contacts illimités peuvent être réservés aux abonnements payants **sans jamais retirer** le bouton d'urgence manuel ni les numéros (décision à valider, voir Partie 2).
+
+### 4.9.1 Partage de position en direct
+
+- Création d'une « Sortie suivie » : l'utilisateur choisit des **contacts de confiance** (max 5 en gratuit, 10 en payant), la durée (1 h à 72 h ; défaut = durée estimée + 2 h), le niveau de précision (exacte, ~500 m), la fréquence d'envoi (30 s en mouvement, 5 min à l'arrêt, adaptée à la batterie).
+- **Consentement explicite** : un écran explique ce qui est partagé (position, batterie, vitesse, itinéraire prévu), avec qui, combien de temps ; consentement du contact également (lien d'invitation : le contact accepte avant de recevoir, il peut quitter à tout moment).
+- Le contact reçoit un **lien web** (sans installation) `https://[DOMAINE]/live/{jeton}` : jeton aléatoire de 128 bits à durée limitée, révocable en un tap, expirant automatiquement à la fin de la sortie ou à l'heure limite. Affiche carte, dernier point connu avec horodatage (rouge si > 15 min), batterie, itinéraire prévu, heure de retour prévue, fiche médicale si l'utilisateur l'a autorisée.
+- **Chiffrement** : TLS 1.3 en transit ; positions chiffrées au repos (clé par sortie) ; jeton non devinable ; aucune indexation moteur de recherche (`noindex`) ; suppression complète des points 7 jours après la fin sauf si l'utilisateur les garde dans son historique. Aucun partage de position à des tiers publicitaires.
+- Le partage continue en mode économie (4.6.4) ; en cas de perte de réseau, les positions sont mises en file et envoyées dans l'ordre à la reconnexion, avec la dernière position connue et son âge.
+
+### 4.9.2 Heure de retour prévue (check-in)
+
+Au départ, proposer « Heure de retour prévue » = durée estimée haute (4.4.6) + marge (30 min, ou 20 % de la durée si > 5 h). Machine à états `Planned → Active → (Overdue1 → Overdue2 → Alerting) → Closed`.
+
+| Étape | Délai après l'heure prévue | Action |
+|---|---|---|
+| Rappel doux | −15 min | notification « Tu rentres bientôt ? Prolonge si besoin » |
+| Retard 1 | +0 min | notification, vibration, boutons « Je vais bien (+1 h) », « Terminer », « J'ai besoin d'aide » |
+| Retard 2 | +20 min | seconde notification, appel automatique sonore, rappel écran verrouillé |
+| Alerte | +45 min sans réponse | SMS/notification aux contacts de confiance avec dernière position et fiche utilitaire |
+| Escalade | +90 min (réglable) | seconde alerte, suggestion explicite aux contacts d'appeler le secours (« Appelle le 112/15/17/18 ou le PGHM/secours en montagne ») |
+
+L'**app ne contacte pas les secours automatiquement** sauf après confirmation explicite de l'utilisateur ou de la détection de chute (4.9.3) et uniquement selon les capacités de la plateforme/pays ; sinon elle guide un appel manuel. L'alerte à retardement s'exécute **côté serveur** (planificateur) pour fonctionner même si le téléphone est éteint ou sans batterie : c'est la fonction de sécurité la plus fiable sans réseau. Le serveur doit déclencher l'alerte avec précision à ±2 min.
+
+### 4.9.3 Détection de chute et d'immobilité
+
+Capteurs : accéléromètre et gyroscope (100 Hz en fenêtre), baromètre (chute d'altitude), GNSS, état de l'enregistrement. Actif uniquement pendant une activité avec la fonction activée (consentement explicite, avertissement sur la consommation).
+
+**Chute (course, rando, vélo)** :
+1. **Impact** : pic d'accélération > 3 g (course/rando) ou > 4 g (vélo, pour limiter les nids-de-poule) suivi d'une phase de **faible mouvement** : variance d'accélération < 0,05 g² pendant ≥ 5 s ;
+2. Contexte vélo : décélération brutale de plus de 15 km/h/s en moins de 1 s, puis vitesse < 2 km/h ;
+3. Chute libre préalable (|a| < 0,4 g pendant 150-400 ms) renforce le score.
+Score combiné `s = 0,4·impact + 0,3·immobilité + 0,2·chute_libre + 0,1·rupture_vitesse` ; déclenchement si `s ≥ 0,7`.
+
+**Immobilité** : vitesse < 0,3 m/s et activité accéléro nulle depuis `T` sans pause volontaire (pas de bouton Pause) : T = 3 min en vélo, 5 min en course, 10 min en rando (haute altitude/froid : 6 min) ; les pauses légitimes réduisent la sensibilité si l'utilisateur confirme « pause photo/repas » (valable 30 min).
+
+**Réduction des faux positifs** : ignorer si la montre/téléphone a été posé et que l'utilisateur interagit avec l'écran dans les 10 s ; ignorer les mouvements de véhicule (vitesse GNSS > 25 km/h en marche/course sans activité cyclique) ; ignorer pendant le transport en téléphérique/train (profil de vitesse régulier) ; ajuster les seuils avec la position du téléphone (poche, sac, bras, guidon) ; adapter après 3 faux positifs consécutifs (baisse de sensibilité proposée). Objectif de test : < 1 faux positif pour 50 heures d'activité, détection d'une chute simulée ≥ 90 %.
+
+**Confirmation à l'écran** : plein écran rouge, vibration forte et sonnerie, bouton « Je vais bien » (tap ou geste), bouton « J'ai besoin d'aide ». **Compte à rebours 30 s** (60 s en rando si option) ; sans réponse, envoi de l'alerte aux contacts de confiance (position précise, heure, type de détection, fiche médicale autorisée, itinéraire) et, selon la plateforme, appel aux urgences après confirmation par un second compte à rebours de 10 s (optionnel, activé par l'utilisateur). Le compte à rebours continue en arrière-plan si l'écran est verrouillé ; l'annulation est toujours possible tant qu'aucun appel n'a abouti.
+
+### 4.9.4 Bouton d'urgence
+
+Bouton « SOS » visible dans l'écran d'enregistrement et de navigation, déclenché par pression maintenue 2 s (évite les appuis accidentels) puis choix : « Appeler les secours » (composeur avec le numéro local), « Alerter mes contacts » (envoi de la position), « Les deux ». L'écran affiche en grand : **coordonnées** (latitude/longitude en degrés décimaux, MGRS/UTM et, si dispo, nom du lieu ou de la route, altitude, numéro du chemin ou du balisage) à communiquer, prêt à lire à voix haute et à copier ; plus la fiche médicale.
+
+### 4.9.5 Numéros d'urgence par pays
+
+| Zone | Numéros |
+|---|---|
+| Union européenne | 112 (tous pays) |
+| France | 112, 15 (SAMU), 17 (police), 18 (pompiers), 114 (SMS pour sourds et malentendants), secours en montagne via 112 (PGHM/CRS) |
+| Suisse | 144 (santé), 117 (police), 118 (pompiers), 1414 (Rega, secours aérien), 112 |
+| Italie | 112, 118 (santé), secours en montagne 118/112 |
+| Espagne | 112 |
+| Royaume-Uni | 999 ou 112 ; Mountain Rescue via 999 |
+| États-Unis/Canada | 911 |
+| Australie | 000 |
+| Reste du monde | 112 reconnu par la plupart des réseaux GSM ; sinon table par pays [STACK_EMERGENCY_NUMBERS_DB] |
+
+Détermination du pays par la position GNSS (frontières, pas par la langue de l'appareil) avec repli sur le MCC du réseau ; si on est à moins de 5 km d'une frontière, afficher les deux pays. La table est embarquée dans l'app (hors ligne), revue chaque trimestre, versionnée et testée.
+
+### 4.9.6 Mode hors réseau
+
+- **SOS satellite natif** quand disponible (iPhone récents « Urgence SOS par satellite », certains Android) : le bouton affiche un guide pas-à-pas ouvrant la fonction native du système (l'app ne peut pas remplacer ce mécanisme) ; vérifier l'état de la couverture mobile pour afficher « Aucun réseau : utilise le SOS satellite » avec instructions (se mettre à ciel dégagé).
+- **Préparation de message** : l'app rédige un SMS précompté contenant coordonnées, altitude, heure, nature du problème (choix rapides : blessure, perdu, épuisement, météo) et nombre de personnes ; envoi automatique dès qu'un signal revient (surveillance de couverture périodique, essai toutes les 60 s) ; possibilité d'envoyer par SMS qui passe parfois avec très peu de signal.
+- Compatibilité balises/communicateurs satellite (Garmin inReach, ZOLEO, Spot) via leur lien de suivi : champ « lien de suivi externe » partagé avec les contacts ; intégration avancée voir Partie 8.
+- Si la dernière position connue date de plus de 10 min, l'app l'affiche avec son âge et le rayon d'incertitude estimé (vitesse moyenne × temps).
+
+### 4.9.7 Avertissements météo et lumière
+
+- Alertes météo avant et pendant la sortie : orages (probabilité > 40 % ou alerte officielle), froid (ressenti < 0 °C ou < 5 °C en altitude sous pluie), canicule (> 32 °C ou alerte), vent (rafales > 60 km/h en crête, > 40 km/h à vélo), neige/verglas, brouillard en altitude. Seuils paramétrés par activité, avec recommandations (« Rentre avant 15 h », « Reporte »). Les alertes officielles (Météo-France vigilance, MeteoSwiss, etc.) sont affichées avec leur source et leur validité.
+- Pendant une sortie avec connexion : rafraîchissement toutes les 30 min ; foudre à proximité (via données d'impacts si disponibles) : notification « Orage à moins de 10 km, redescends des crêtes ».
+- **Coucher du soleil** : calculé localement par l'algorithme NOAA/Meeus à partir de la position et de la date ; afficher heures de lever/coucher, fin de crépuscule civil (+~30 min).
+
+### 4.9.8 Alertes de risque : lumière restante
+
+Avant et pendant une sortie : `marge = coucher_soleil − (maintenant + temps_restant_estimé)`. Alerte orange si `marge < 60 min` (« Tu risques d'arriver à la nuit tombée »), rouge si `marge < 15 min` ou `< 0` sans frontale cochée. Exemple : il est 17 h 10, coucher à 19 h 02, il reste 14 km et 700 m D+ (estimation 3 h 20) → arrivée 20 h 30, marge −88 min → alerte rouge avec propositions : raccourcir (échappatoire la plus proche à 2,1 km), faire demi-tour, sortir la frontale, prévenir un contact (« modifier l'heure de retour »). Autres règles : temps de repli insuffisant avec batterie < 15 % ; météo dégradée prévue avant l'arrivée ; sortie très supérieure aux dernières distances (> 2× le plus long récent, voir Partie 5).
+
+### 4.9.9 Fiche médicale d'urgence
+
+Données facultatives : nom, groupe sanguin, allergies, médicaments, pathologies, contact d'urgence, date de naissance, langues parlées, don d'organes. Stockée **chiffrée** sur l'appareil et accessible depuis l'écran verrouillé via bouton « Informations médicales » (comme sur les systèmes iOS/Android) ; partage au contact uniquement avec choix explicite par sortie. Rappel à l'utilisateur de remplir la fiche système native également. Jamais envoyée à des tiers, jamais utilisée pour de la publicité ni du coaching sans consentement séparé (voir Partie 5 et Partie 8 sur la conformité santé).
+
+### 4.9.10 Limites légales, journalisation, vie privée
+
+- Mentions obligatoires, affichées à l'activation et dans l'aide : l'app **n'est pas un service d'urgence** ; elle ne garantit ni la détection, ni la transmission, ni le délai de réaction ; elle dépend de la batterie, du GNSS, du réseau et des autorisations ; elle ne remplace ni l'expérience, ni le matériel de sécurité, ni un appel au 112 ; les itinéraires et estimations sont indicatifs ; l'utilisateur reste responsable de sa décision (météo, niveau, matériel). Les textes sont validés par un juriste ([STACK_LEGAL]) avant lancement.
+- Journalisation : journal d'événements de sécurité (`SafetyEvent {type, ts, position, état, décision utilisateur, délai}`) stocké localement et côté serveur pour la sortie suivie, conservé 30 jours (sauf alerte réelle : conservation prolongée si l'utilisateur le demande ou obligation légale), avec accès/suppression par l'utilisateur (RGPD, voir Partie 8). Les journaux servent à l'amélioration des seuils uniquement sous forme agrégée et anonyme.
+- Autorisations : localisation en arrière-plan, notifications critiques, exemption d'optimisation batterie ; flux de demande expliqué avec les raisons ; si refus, afficher exactement ce qui ne fonctionnera pas.
+- Essais obligatoires : « tester la sécurité » (simule une alerte vers un contact, sans appeler les secours).
+
+## 4.10 Confidentialité de la carte
+
+- **Zones de masquage** : l'utilisateur définit jusqu'à 5 zones (domicile, travail...) avec rayon de 200 m, 500 m ou 1 km ; la première utilisation du suivi propose de créer une zone autour du lieu de départ le plus fréquent. Les points du tracé dans la zone sont retirés des versions **partagées** (flux, lien, heatmap) mais conservés dans l'historique privé ; recalcul des statistiques publiques (distance, durée) sur le tracé visible, avec précision affichée.
+- **Flou de début/fin** : option par défaut ON pour partage public : retrait des 200 m (réglable 100 à 1 000 m) au début et à la fin ; aléatoire stable (même décalage pour toute l'activité) pour éviter de recouper par moyennage.
+- **Heatmap communautaire** : ne contient que des activités dont le propriétaire l'a autorisé (opt-in explicite, défaut OFF pour les mineurs et pour les zones masquées) ; agrégation en cellules de 30 m sur 12 mois ; **seuils d'anonymat** : une cellule n'est affichée que si ≥ 10 utilisateurs distincts et ≥ 20 passages l'ont traversée ; bruit de Laplace léger sur les comptes ; retrait de la carte dans les segments proches de zones de masquage (k-anonymat sur voisinages) ; mise à jour toutes les 24 h, jamais en temps réel ; opt-out avec effacement des contributions sous 30 jours.
+- **Partage fin** : pour chaque activité, trois niveaux (privé, amis, public) + « lien secret » ; réglages par défaut à `amis` pour les nouveaux comptes, `privé` pour les mineurs (voir Partie 7) ; choix distinct pour la carte, la fiche, les photos, la fréquence cardiaque (voir Partie 3) et la position en direct.
+- Aucune exposition d'adresses précises, ni de métadonnées (EXIF, noms de fichier) sur les contenus partagés ; audit automatisé : aucune activité publique ne doit commencer ou finir à moins de 150 m d'une zone de masquage.
+
+## 4.11 Performance et batterie
+
+- **Rendu** : cible 60 fps en pan/zoom sur appareil milieu de gamme (2020) ; jamais plus de 5 000 features visibles non clusterisées ; clustering des POI aux faibles zooms ; couches limitées à 6 ; styles précompilés ; pas de requête réseau bloquant le thread UI.
+- **Cache de tuiles** : cache disque LRU 300 Mo (réglable) pour la navigation en ligne, séparé des packs hors ligne ; cache mémoire de 64 tuiles ; en-têtes HTTP `Cache-Control: public, max-age=86400` + ETag ; pré-chargement du corridor devant la position pendant la navigation.
+- **Gros tracés** : simplification par **Ramer-Douglas-Peucker** avec tolérance dépendant du zoom : `ε = 2^(−z) × 156 543 × cos(lat) × 1,5 px` (en mètres), calcul par niveau de détail (LOD) en pré-calcul serveur pour 4 niveaux (ε ≈ 100, 25, 6, 1 m) stockés dans la table de géométries ; affichage progressif ; tracé complet seulement en zoom ≥ 15 ou dans la fenêtre visible. Pour la distance et le D+ affichés, toujours utiliser la géométrie complète. Le profil d'altitude est ré-échantillonné à 600 points maximum pour l'affichage. Exemple : un tracé de 200 000 points (ultra 100 miles) doit descendre sous 3 000 points en vue d'ensemble (< 40 ms de calcul).
+- **Mémoire** : pas plus de 250 Mo de mémoire résidente en navigation sur 6 h ; flux incrémentiel de lecture GPX ; libérer les couches hors écran ; surveillance de fuite pendant les tests de 8 h.
+- **Démarrage rapide** : carte interactive en < 1,5 s (démarrage à chaud) et < 3 s (à froid) avec dernier viewport restauré ; initialisation du moteur carto différée après le premier écran ; fixe GPS initial visible en < 5 s en extérieur grâce aux données d'assistance et à la dernière position.
+- **Batterie** : fréquence GNSS adaptative, regroupement des écritures (flush toutes les 10 s), capteurs à la demande, luminosité réduite et rafraîchissement 30 fps en navigation, pas d'animations décoratives. Budget : cf. 4.6.4. Mesurer et publier en interne un tableau de consommation par scénario à chaque version majeure.
+
+## 4.12 Tests et critères d'acceptation
+
+### 4.12.1 Jeux de données
+
+Constituer un corpus versionné `fixtures/tracks/` d'au moins 120 tracés réels anonymisés (consentement ou tracés synthétiques créés à partir de tracés publics) : 20 courses route, 20 trails, 20 vélos route, 15 gravel, 15 VTT, 20 randos de journée, 10 itinérances multi-jours ; avec GPS bruité (canyon, forêt dense), pauses, arrêts, tunnels, pertes de signal, altitudes manquantes, un tracé de plus de 200 000 points, un GPX malformé, un tracé traversant le 180e méridien ou un fuseau horaire, une frontière nationale. Associer des « vérités terrain » : distance officielle, D+ de référence (MNT RGE ALTI), temps réels.
+
+### 4.12.2 Cas limites obligatoires
+
+- Frontières : itinéraire à cheval sur deux pays (numéros d'urgence, couches de risque, unités, langue, pack hors ligne unique ou multiples) ;
+- Sentiers non cartographiés : ligne droite signalée, pas de routage faux, avertissement ;
+- Zones sans élévation (mer, trous SRTM, polaire) : repli sur Copernicus ou valeur « inconnue », jamais 0 m silencieux ;
+- Antiméridien et pôles : géométrie correctement découpée ;
+- Heure : changement d'heure, fuseau, coucher du soleil polaire (jour/nuit continus) ;
+- Boucles qui se croisent ou repassent au même point (suivi du tracé), tracé retour identique à l'aller ;
+- GPS dégradé (précision > 50 m), saut de position, démarrage sans fix ;
+- Stockage plein, batterie < 5 %, mode avion, DST, abonnement qui expire en cours de sortie.
+
+### 4.12.3 Liste d'acceptation (40 cas minimum)
+
+1. Le fond topo s'affiche en < 2 s en 4G, avec l'attribution OSM visible en permanence.
+2. L'écran Sources et licences liste toutes les données utilisées (OSM, IGN, Copernicus, MNT) avec liens.
+3. Le client ne contient aucune clé d'un fournisseur de tuiles commercial ; toutes les URL passent par `tiles.[DOMAINE]`.
+4. Une panne simulée du fournisseur primaire déclenche la bascule vers le secours après 3 erreurs, sans plantage.
+5. Activer/désactiver une couche prend moins de 150 ms et ne recharge pas le style.
+6. Une couche externe périmée affiche le badge « donnée périmée » ; l'absence de donnée de chasse n'affiche jamais « pas de chasse ».
+7. La couche de danger d'avalanche affiche niveau, altitude, exposition, source et heure d'émission, ou rien hors zone couverte.
+8. Un téléchargement hors ligne de corridor 40 km × 4 km pèse 25-45 Mo et l'estimation affichée est exacte à ±20 %.
+9. Le téléchargement reprend après coupure réseau sans repartir de zéro et passe la vérification du hash.
+10. En gratuit, un 2e pack est refusé côté serveur, même avec un client modifié, avec message d'upgrade clair.
+11. À l'expiration de l'abonnement, les packs excédentaires sont verrouillés (non supprimés) pour 60 jours.
+12. En mode avion, la navigation d'un itinéraire enregistré fonctionne 2 h sans écran d'erreur bloquant.
+13. Hors de la zone téléchargée, un fond gris explicite s'affiche et l'enregistrement n'est pas interrompu.
+14. La mise à jour différentielle d'un pack ne télécharge que les blocs modifiés (≤ 20 % de la taille pour une mise à jour mensuelle type).
+15. Poser 10 points et en déplacer un recalcule les deux segments adjacents en < 800 ms (4G).
+16. Annuler et rétablir restaurent exactement l'état précédent (test sur 50 opérations aléatoires).
+17. Le profil course route ne propose jamais d'autoroute, et le profil vélo route n'emprunte pas d'escalier ni de sentier T3.
+18. Avec « éviter les escaliers », aucun tronçon `highway=steps` n'apparaît dans les itinéraires de marche.
+19. Une boucle de 10 km est générée à 10 km ±10 % en moins de 6 s, avec plus de 85 % de tracé sans retour sur ses pas, ou un message d'écart explicite.
+20. Un aller-retour avec « retour différent » partage au plus 40 % de son tracé.
+21. Un import de GPX de 150 000 points réussit en moins de 5 s ; un fichier avec entités XML externes est rejeté.
+22. L'export GPX relu par un outil tiers conserve distance et D+ à ±1 %.
+23. La restauration d'une version précédente de l'itinéraire est possible parmi les 30 dernières (5 en gratuit).
+24. Le temps estimé d'une rando de test (12 km, 900 m D+) est dans la fourchette attendue et l'erreur médiane du corpus est < 8 %.
+25. Avec 30 min de données dans un bin de pente, la prédiction personnalisée s'en approche (poids n/(n+60)) ; sans données, le libellé « estimation générique » apparaît.
+26. Le D+ affiché pour un tracé bruité ne dépasse pas la référence MNT de plus de 5 %.
+27. Un passage à pente > 30 % sur 80 m est détecté et expliqué dans la fiche.
+28. Le résumé en une phrase n'emploie jamais « facile » sans données de pente, de surface et de cotation, et cite l'absence d'eau > 15 km.
+29. La recherche avec filtre « poussette » ne renvoie aucun itinéraire avec escalier ou pente > 8 %.
+30. Le filtre « accessible en transport » ne renvoie que des itinéraires à ≤ 600 m d'un arrêt au départ et à l'arrivée.
+31. Un itinéraire avec une seule note de 5 ne dépasse pas, en classement, un itinéraire noté 4,5 par 40 utilisateurs.
+32. Deux tracés d'une même rando (Jaccard ≥ 0,85) sont fusionnés en un canonique avec variantes.
+33. Un tracé avec vitesse moyenne irréaliste ou saut de 600 m en 3 s est mis en quarantaine et invisible en découverte.
+34. Un signalement « arbre tombé » expire après 14 jours sans confirmation et disparaît après 2 infirmations.
+35. Une activité publique ne commence jamais à moins de 150 m d'une zone de masquage ; la heatmap n'affiche aucune cellule avec moins de 10 utilisateurs.
+36. Une alerte de déviation à 60 m en vélo s'affiche en < 5 s sans interaction ; aucune alerte à l'arrêt ni avec précision GPS > 50 m.
+37. En vélo à plus de 8 km/h, les écrans d'édition et de saisie sont verrouillés.
+38. L'écran éteint en mode économie consomme ≤ 6 % de batterie/h (mesure sur 2 appareils de référence) et les alertes de sécurité réveillent l'écran.
+39. Une sortie sans réponse à l'heure de retour prévue déclenche, côté serveur, l'alerte aux contacts à +45 min ±2 min, même téléphone éteint.
+40. Un lien de position en direct expire à l'heure prévue, est révocable instantanément et affiche l'âge de la dernière position.
+41. Une chute simulée (impact > 3 g + immobilité 5 s) ouvre l'écran de confirmation, et sans réponse envoie l'alerte après 30 s ; « Je vais bien » l'annule.
+42. Sur 50 h d'activité de test sans chute, moins d'un faux positif ; les secousses de vélo sur pavés ne déclenchent rien.
+43. Le bouton SOS exige 2 s de pression et affiche coordonnées, numéro d'urgence du pays (déterminé par GNSS) et fiche médicale, hors ligne.
+44. Près d'une frontière (< 5 km), deux jeux de numéros s'affichent ; le 112 est toujours accessible.
+45. L'alerte de lumière se déclenche rouge dans l'exemple 17 h 10 / coucher 19 h 02 / arrivée estimée 20 h 30.
+46. La fiche médicale est lisible depuis l'écran verrouillé et chiffrée sur l'appareil ; elle n'est partagée qu'avec choix explicite.
+47. Un tracé de 200 000 points descend sous 3 000 points en vue d'ensemble en < 40 ms, sans changer la distance affichée.
+48. Pan/zoom à 60 fps sur appareil de référence 2020 avec 4 couches actives ; mémoire < 250 Mo après 6 h de navigation.
+49. Démarrage à froid de la carte en < 3 s ; fix GPS initial en < 5 s en extérieur.
+50. Les droits (satellite complet, heatmap complète, routage hors ligne) sont refusés par le serveur sans entitlement valide, quel que soit l'état du client.
+
+### 4.12.4 Qualité continue
+
+Suite d'intégration exécutée à chaque modification de profils de routage ou de styles (rendu comparé par captures de référence, tolérance 0,5 %) ; revue manuelle d'un échantillon de 30 itinéraires chaque trimestre par un randonneur et un cycliste expérimentés ; tableau de bord des erreurs d'estimation de temps, des fausses alertes de déviation, des faux positifs de chute et des coûts de tuiles par MAU ; toute régression d'un critère de la section 4.9 bloque la mise en production.
