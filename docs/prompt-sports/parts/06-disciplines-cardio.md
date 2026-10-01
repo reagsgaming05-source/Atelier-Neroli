@@ -125,3 +125,111 @@ Après un marathon : repos actif 3-7 jours, aucune intensité 2 semaines, repris
 - Riegel : 10 km en 50:00 prédit 1:51:26 (± 1 s) pour le semi.
 - Séance 8x400 : 8 alertes de début de répétition, 8 de récupération, écart de cible affiché.
 - Trail : un point de ravitaillement dont la marge descend sous 30 min déclenche une alerte même sans réseau.
+
+---
+
+## 6.3 Vélo
+
+### 6.3.1 Types
+| Discipline | Spécificités |
+|---|---|
+| Route | puissance, cadence, FTP, groupes, drafting |
+| Gravel | surface (asphalte, piste, chemin), pression de pneus conseillée, itinéraires mixtes (voir Partie 4) |
+| VTT XC | montées/descentes, FC et puissance ; **enduro** : sections chronométrées en descente (segments auto-détectés par pente < −8 % sur > 30 s), montées en liaison non chronométrées ; **descente** : vitesse max, saut/chocs (accéléromètre), sécurité renforcée (détection de chute, voir Partie 4) |
+| Ville | trajets domicile-travail, calcul CO₂ évité (indicatif), pas de charge d'entraînement par défaut si vitesse moyenne < 15 km/h |
+| Électrique | niveau d'assistance par sortie, autonomie estimée `km_restants = batterie_% × autonomie_nominale × facteur_niveau`, charge physique × (1 − 0,25 par niveau d'assistance, plancher 0,4) |
+| Home-trainer | 6.3.4 |
+
+### 6.3.2 Puissance, FTP et courbes
+- **Puissance normalisée** : moyenne mobile 30 s de la puissance, élevée à la puissance 4, moyenne, puis racine 4e : `NP = (moyenne(P30⁴))^(1/4)`.
+- **Facteur d'intensité** `IF = NP / FTP` ; **TSS** `= (durée_s × NP × IF) / (FTP × 3600) × 100`. Exemple : 1 h à NP = FTP donne TSS = 100. Rapport d'effort : variabilité `VI = NP / puissance_moyenne`.
+- **FTP** : tests proposés (20 min : `FTP = 0,95 × P20`; rampe : `FTP = 0,75 × puissance moyenne de la dernière minute complétée`) ; estimation automatique à partir de la courbe de puissance sur 90 jours (95 % de la meilleure P20 ou modèle de puissance critique) avec confirmation de l'utilisateur ; jamais de mise à jour silencieuse.
+- **Zones de puissance** (% FTP) : Z1 < 55 ; Z2 56-75 ; Z3 76-90 ; Z4 91-105 ; Z5 106-120 ; Z6 121-150 ; Z7 > 150.
+- **Courbe de puissance** (mean-maximal) : meilleure puissance moyenne pour des durées 1 s à 5 h, records personnels par durée, comparaison 30/90/365 jours. **Puissance critique** (modèle 2 paramètres) : `P(t) = CP + W'/t`, ajustement par moindres carrés sur les efforts de 3 à 20 min.
+- Sans capteur de puissance : estimation depuis vitesse, pente, masse, CdA, Crr (modèle physique) étiquetée « estimée », jamais utilisée pour la FTP.
+- Équation du modèle : `P = (Crr·m·g·cosθ + m·g·sinθ + ½·ρ·CdA·v²)·v / rendement_transmission` (rendement 0,975).
+
+### 6.3.3 Sorties de groupe, drafting
+Sortie de groupe : un organisateur crée une sortie (tracé, heure, allure cible, niveau, point de départ), les inscrits voient le **partage de position en direct** facultatif entre participants. Règles : mineurs encadrés uniquement ; vitesse affichée d'un groupe = moyenne ; alerte « un membre est resté à plus de 2 km de l'arrière » (sécurité, voir Partie 4). Le drafting est estimé par la différence entre puissance mesurée et puissance prédite ; il est un **indicateur** et jamais un classement.
+
+### 6.3.4 Home-trainer (entraînement virtuel léger)
+- **Connexion** [STACK_BLE] : FTMS (Fitness Machine Service) pour contrôle de résistance, Cycling Power Service, Heart Rate Service. Appairage guidé, mémorisation, reconnexion auto en 5 s, bandeau en cas de perte (la séance continue en mode estimé).
+- **Mode ERG** : l'application envoie la puissance cible du bloc (`Set Target Power`) ; transitions en rampe de 5 s ; correction si cadence < 50 rpm (suspension 10 s) ; ajustement `± 5 %` par boutons pendant la séance.
+- **Mode pente/simulation** : `Set Indoor Bike Simulation Parameters` (pente, vent, Crr, Cw).
+- **Parcours virtuels simples** : tracés GPX réels convertis en profil de pente ; avatar 2D, vitesse virtuelle dérivée de la puissance via le modèle physique ci-dessus ; pas d'environnement multi-joueurs temps réel au lancement (extension prévue).
+- Séances prédéfinies (modèles) : 3 x 12 min à 90 % FTP ; 5 x 5 min à 110 % ; rampe test ; endurance 90 min Z2. Export de la séance FIT/ZWO.
+- Hors ligne complet, sauvegarde toutes les 10 s.
+
+### 6.3.5 Entretien et composants
+Voir 6.6. Alertes spécifiques : chaîne (voir 6.6.3), pneus (repère 4 000-6 000 km route, à régler par l'utilisateur), plaquettes (examen tous les 1 500 km ou 3 mois de pluie), câbles (annuel), révision générale (annuel ou 5 000 km). Chaque rappel est modifiable et il y a un historique de dates et de coûts.
+
+### 6.3.6 Réglages de base (« fit basique »)
+Assistant en 6 questions : taille, entrejambe, souplesse perçue, objectif, douleurs ; propose repères de hauteur de selle (`entrejambe × 0,883` du centre du boîtier à l'axe de selle, méthode indicative), recul, longueur de potence, pression de pneus selon poids et largeur. **Avertissement obligatoire** : repères indicatifs, voir un professionnel pour douleurs.
+
+### 6.3.7 Cyclosportives et bikepacking
+- Cyclosportive : fiche d'événement (6.5), stratégie : puissance cible sur les montées `= 0,85 à 0,95 × FTP` pour une durée > 1 h, jamais > 105 % ; ravitaillement 60-90 g glucides/h ; plan de pacing sur GPX.
+- Bikepacking : itinérance sur plusieurs jours (étapes calculées selon vitesse moyenne chargée = vitesse habituelle × 0,8), points d'eau/ravitaillement/hébergement sur le tracé (voir Partie 4), poids des sacoches et liste de matériel, consommation batterie des appareils, mode ultra-économie, balise de sécurité partageable.
+
+### 6.3.8 Critères d'acceptation 6.3
+- Puissance constante de 200 W avec FTP 200 W pendant 1 h donne NP = 200, IF = 1,00, TSS = 100.
+- Une perte de connexion FTMS en séance ERG n'interrompt pas l'enregistrement et affiche un bandeau.
+- Une sortie e-bike avec assistance niveau 2 réduit la charge d'un facteur 0,5 selon la règle.
+
+---
+
+## 6.4 Randonnée et marche
+
+### 6.4.1 Niveaux de pratique
+| Niveau | Définition | Règles produit |
+|---|---|---|
+| Marche quotidienne | pas, trajets | objectif de pas par défaut 7 000 (réglable 3 000-15 000) ; marche active = cadence > 100 pas/min ; minutes actives hebdomadaires cible 150 |
+| Marche nordique | bâtons, cadence | facteur de dépense × 1,2 (indicatif), technique en conseils |
+| Balade | < 2 h, < 200 m D+ | fiche simple |
+| Rando journée | 2 à 9 h | checklist, estimation de durée, météo |
+| Itinérance / trek | plusieurs jours | étapes, hébergements, ravitaillement, GR |
+| Haute montagne légère | > 2 500 m, neige/glace possibles | avertissements, prudence, matériel obligatoire |
+
+### 6.4.2 Difficulté et cotations
+Score interne de difficulté : `score = 0,5·(distance_km) + 1,0·(D+/100) + 2·(altitude_max > 2500) + 3·(passages exposés)`. Niveaux : < 6 facile ; 6-12 moyen ; 12-20 difficile ; > 20 très difficile. Cotations officielles : **échelle SAC** (T1 à T6, randonnée de montagne), **UIAA** (I à XII, escalade), balisage **GR/GRP/PR** (blanc-rouge, blanc-jaune), cotations locales (ex. vert/bleu/rouge/noir pour certaines randonnées). Règle : afficher la cotation de la source avec son nom et sa date, **jamais la convertir silencieusement**. T4 et plus : avertissement renforcé, recommandation de ne pas partir seul sans expérience.
+
+### 6.4.3 Estimation de durée
+Temps de marche (formule de Naismith modifiée) : `heures = distance_km / 5 + D+_m / 600`, avec facteur de l'utilisateur (calibré sur son historique, plage 0,6-1,6) ; en descente raide (> 15 %), ajouter 1 h par 500 m D− sur tracés techniques. **Pause** : +10 % de temps total. Exemple : 12 km et 900 m D+ = 2,4 + 1,5 = 3,9 h, avec pauses ≈ 4 h 17.
+
+### 6.4.4 Conditions, matériel obligatoire, prudence
+- Conditions : neige/glace, risque d'avalanche (lien vers bulletin officiel, voir Partie 4), météo montagne, heure de coucher du soleil ; pas de prévision d'avalanche produite par l'app.
+- **Matériel obligatoire** par niveau : base (eau 1,5 L, eau/coupe-vent, trousse, téléphone chargé, carte hors ligne) ; montagne (lampe frontale, couverture de survie, vêtements chauds) ; neige/glace (crampons, piolet, casque : alerte si non coché). Le démarrage d'une rando affiche une **check-list** ; non bloquante sauf niveau haute montagne où l'app demande une confirmation explicite.
+- Prudence : départ avant midi conseillé en montagne ; règle du demi-tour : si la marge de jour restante < 1 h pour le retour, alerte ; partage d'itinéraire avec un contact de sécurité (voir Partie 4).
+
+### 6.4.5 Publics et accessibilité
+- Enfants : durée conseillée = âge en ans × 30 min de marche effective (max 4 h), D+ ≤ 300 m < 8 ans, pauses toutes les 45 min, aucun passage exposé.
+- Seniors : rythme confortable calibré ; recommandation de rando courte, bâtons, points d'eau.
+- Accessibilité : filtre de tracés (pente max, largeur, surface, bancs, toilettes), compatible fauteuil/poussette (source : données OSM `wheelchair`, `smoothness`), mention de fiabilité des données.
+
+### 6.4.6 Bivouac, bâtons, sac, altitude
+- Bivouac : respect des réglementations locales ; l'app rappelle la règle locale quand elle est connue et invite à vérifier ; conseil « pas de feu, aucun déchet ».
+- **Poids du sac** : conseil indicatif ≤ 10-15 % du poids du corps en rando journée, ≤ 20 % en trek ; calcul d'impact : charge supplémentaire de 10 % ajoute environ 5-8 % à la dépense énergétique.
+- Altitude et acclimatation : à partir de 2 500 m, alerte de signes de mal des montagnes (maux de tête, nausées, fatigue inhabituelle) ; règle : dormir ≤ 500 m plus haut par jour au-delà de 3 000 m ; ne pas dépasser 1 000 m de gain de couchage par jour. Jamais de diagnostic ; si symptômes : descendre et demander de l'aide.
+- Dépense énergétique : formule ACSM de marche `VO2 = 0,1·v + 1,8·v·pente + 3,5` (v en m/min, pente en fraction) → kcal/min `= VO2 × poids_kg / 1000 × 5`.
+
+### 6.4.7 Critères d'acceptation 6.4
+- Une rando 12 km / 900 m D+ affiche une estimation de ~ 4 h 17 pour un facteur 1,00.
+- Un tracé coté T4 déclenche l'avertissement renforcé avant démarrage.
+- Le filtre accessibilité exclut les tracés dont la pente max dépasse la valeur choisie.
+
+---
+
+## 6.5 Événements et compétitions
+
+### 6.5.1 Découverte et fiches
+Catalogue d'événements (courses, cyclosportives, treks, randonnées organisées) issu de partenaires et de saisies utilisateur modérées. Fiche : nom, discipline, date, lieu, distances, D+, parcours GPX, **barrières horaires**, prix, lien d'inscription externe, matériel obligatoire, ravitaillements, limite de places, statut. Recherche par distance, rayon, date, discipline, niveau, difficulté. Les inscriptions se font **sur le site de l'organisateur** (lien externe), l'app ne traite aucun paiement. Parkrun et courses officielles : lien et import du tracé, résultat saisi ou importé, **sans** revendiquer d'affiliation officielle.
+
+### 6.5.2 Plan lié et résultats
+Ajouter un événement à « mes objectifs » : génère un plan jour par jour (6.2.7 pour course ; équivalent vélo : affûtage 5-7 jours ; rando : montée en volume de D+). Après l'événement : saisie du temps officiel, classement général/catégorie (facultatif), **comparaison avec l'estimation de la montre**, PB, rapport de course. Classements personnels : liste de performances par distance/année, records par édition. Un résultat saisi à la main est marqué « non vérifié ».
+
+### 6.5.3 Logistique jour J
+Check-list modifiable (dossard, épingles, chaussures testées, nutrition, vêtement météo, sac de change, carte hors ligne, montre chargée) ; trajets (lien itinéraire, temps de départ conseillé : arrivée 90 min avant), hébergement (liens, saisie manuelle), récupération du dossard (horaires), météo prévue (voir 6.8), rappel J-7/J-2/J-1/H-3. Souvenirs : album, carte de la course, médaille virtuelle, partage (voir Partie 7).
+
+### 6.5.4 Critères d'acceptation 6.5
+- Ajouter un semi dans 12 semaines génère un plan daté de 12 semaines avec affûtage.
+- Un lien d'inscription externe s'ouvre dans le navigateur sans transmettre de données personnelles.
+- Un résultat saisi manuellement porte la mention « non vérifié ».

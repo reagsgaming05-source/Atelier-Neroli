@@ -103,8 +103,8 @@ Objectif : première valeur perçue en **moins de 2 minutes** (un plan de dépar
 | # | Écran | Copy FR (exemple exact) | Validation / états | Sauts |
 |---|---|---|---|---|
 | O1 | Splash + choix de langue implicite | « Un seul coach pour tous tes sports. » CTA « Commencer » | Hors ligne : fonctionne, contenu embarqué | — |
-| O2 | Objectif principal | « Qu'est-ce qui t'amène ? » Choix unique : « Me remettre en mouvement », « Courir mon premier 5 km / 10 km », « Préparer un semi / marathon », « Randonner plus loin », « Rouler plus fort », « Rester en forme (multi-sports) », « Autre » | 1 choix requis ; « Autre » ouvre un champ libre 80 car. | Non |
-| O3 | Sports pratiqués | « Tu pratiques quoi aujourd'hui ? » Puces multiples : Marche, Rando, Course, Vélo, Musculation, Foot, Basket, Tennis, Autre | ≥ 1 choix ; les sports non encore disponibles s'affichent « Bientôt » et enregistrent l'intérêt (liste d'attente) | Non |
+| O2 | Objectif principal | « Qu'est-ce qui t'amène ? » Choix unique : « Me remettre en mouvement », « Courir mon premier 5 km / 10 km », « Préparer un semi / marathon », « Randonner plus loin », « Rouler plus fort », « Rester en forme (course, vélo, rando) », « Autre » | 1 choix requis ; « Autre » ouvre un champ libre 80 car. | Non |
+| O3 | Sports pratiqués | « Tu pratiques quoi aujourd'hui ? » Puces multiples : Marche, Rando, Course, Vélo, Musculation (Fit), Autre | ≥ 1 choix ; « Autre » enregistre l'intérêt pour d'autres disciplines d'endurance (ski de fond, natation) | Non |
 | O4 | Âge et sexe | « Pour adapter ton plan en sécurité. » Date de naissance (obligatoire), sexe : Femme / Homme / Autre / Je préfère ne pas dire | Âge < seuil local → flux mineurs §2.1.5 ; futur/impossible refusés | Sexe : oui |
 | O5 | Niveau (par discipline principale) | 3 questions concrètes par discipline (§2.2.2) | Au moins une discipline | « Je ne sais pas » → niveau débutant prudent |
 | O6 | Disponibilités | « Combien de séances par semaine ? » 1-7, jours préférés (puces L-D), durée max (20/30/45/60/90+ min) | Au moins 1 jour | Oui (valeurs par défaut : 3 jours, 45 min) |
@@ -137,7 +137,7 @@ Barre de progression « Étape 3 sur 7 » visible, bouton retour sur chaque écr
 2. « Vitesse moyenne sur sortie plate de 1 h ? » (< 15 km/h / 15-20 / 20-27 / > 27 / Je ne sais pas)
 3. « As-tu un capteur de puissance ou connais-tu ta FTP ? » (Non / Oui → champ numérique 80-600 W)
 
-Pour les sports d'équipe et de raquette (Partie 6) : niveau déclaré en 3 questions propres au sport, chargées uniquement si le module est actif. Les questions sont définies en données (`onboarding_questions.json`), pas en dur dans l'UI, pour ajouter un sport sans mise à jour d'app.
+Les questions sont définies en données (`onboarding_questions.json`), pas en dur dans l'UI, pour ajouter une discipline d'endurance sans mise à jour d'app.
 
 Matériel (écran optionnel dans le profil, proposé après O10) : montre GPS/cardio, capteur FC (ceinture/bracelet), capteur de puissance, vélo (route/gravel/VTT/ville/home-trainer), tapis, chaussures de trail, bâtons. Chaque réponse débloque des suggestions (ex. home-trainer → séances d'intérieur proposées en cas de pluie).
 
@@ -190,7 +190,7 @@ Persona calculée après O2/O3 (`persona_id`), qui modifie ordre, longueur et to
 | « Coureur régulier » | Course ≥ 10 km/sem. | Demande objectif chiffré (distance, date, temps cible), proposition d'import Strava/montre, questions blessures détaillées |
 | « Randonneur » | Rando dominante | Questions dénivelé, sécurité montagne, téléchargement de cartes proposé |
 | « Cycliste » | Vélo dominante | FTP, type de vélo, home-trainer |
-| « Multi-sports / Fit » | ≥ 2 sports ou compte Fit | Import du profil Fit, écran « Ton coach unique », demande de lecture des séances Fit |
+| « Multi-activités / Fit » | ≥ 2 disciplines (course + vélo + rando) ou compte Fit | Import du profil Fit, écran « Ton coach unique », demande de lecture des séances Fit |
 | « Compétiteur » | Objectif préparer course avec date | Date de l'épreuve, créneau d'affûtage, accès direct paywall d'essai Sports |
 
 ### 2.2.7 Cas limites
@@ -281,9 +281,9 @@ Réglages : plage silencieuse (22 h-7 h par défaut, selon le fuseau local de l'
 | Cartes hors ligne | 1 zone, 100 Mo | Illimité (quota stockage seulement) | — | Illimité |
 | Création / import d'itinéraires (GPX) | 3 itinéraires | Illimité | — | Illimité |
 | Plan d'entraînement endurance | 1 plan découverte (4 semaines, 3 séances/sem.) | Plans illimités adaptatifs | — | Illimités |
-| Coach IA conversationnel | 5 messages/jour (version simple) | Illimité, mémoire longue | Illimité côté Fit | Illimité, **coach unifié multi-sports** |
+| Coach IA conversationnel | 5 messages/jour (version simple) | Illimité, mémoire longue | Illimité côté Fit | Illimité, **coach unifié course, vélo, rando et musculation** |
 | Analyse de charge, récupération, readiness | Charge simple (7 j) | Complète (CTL/ATL, tendances, alertes surcharge) | — | Complète + croisée musculation |
-| Sports d'équipe et de duel (Partie 6) | Suivi manuel de base | Inclus selon disponibilité | — | Inclus |
+| Rando avancée : profils d'élévation, météo montagne, itinéraires multi-jours | Aperçu (1 profil) | Inclus | — | Inclus |
 | Musculation, programmes, bibliothèque d'exercices | — | — | Oui | Oui |
 | Nutrition : recettes, aliments, journal | Consultation limitée (20 recettes, journal 7 jours) | Conseils de ravitaillement endurance (Sports) | Complète | Complète + **nutrition adaptée à la charge de toutes les activités** |
 | Planning unifié (séances Sports + Fit sur un même calendrier) | Non | Sports seul | Fit seul | **Oui** |
@@ -314,7 +314,7 @@ Messages d'approche de limite à 80 % (« Il te reste 1 message aujourd'hui ») 
 | Ultra | 13,99 € | 99,99 € | 8,33 € |
 
 (Somme mensuelle 17,98 € → Ultra 13,99 € soit −22 % ; somme annuelle 129,98 € → Ultra 99,99 € soit −23 %.)
-- Avantages exclusifs Ultra : coach unifié, planning unifié, nutrition adaptée à la charge, readiness croisée muscu/endurance, remise 15 % marketplace, chat prioritaire, accès anticipé aux nouveaux sports.
+- Avantages exclusifs Ultra : coach unifié, planning unifié, nutrition adaptée à la charge, readiness croisée muscu/endurance, remise 15 % marketplace, chat prioritaire, accès anticipé aux nouvelles fonctions d'endurance.
 - Un seul Ultra annuel coûte toujours moins que Fit annuel + Sports annuel ; un test automatisé vérifie cet invariant sur la grille de prix de chaque pays.
 
 ### 2.4.4 Essai, annuel, familles, étudiants, lancement
