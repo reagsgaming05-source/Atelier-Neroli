@@ -75,8 +75,8 @@ export default async function OffrePage({
         </dl>
 
         <p className="mt-10 rounded-xl border border-line bg-canvas-100 p-5 text-sm leading-relaxed text-ink-500">
-          Pour une personne seule, il y a plus simple : la formule Poste se souscrit en ligne par carte, en deux minutes,
-          depuis la page <a href="/tarifs" className="font-semibold text-brand-700 hover:text-brand-900">Tarifs</a>.
+          Une personne seule peut aussi demander une offre : la formule Poste se règle de la même façon, sur facture.
+          Les formules et leurs prix sont sur la page <a href="/tarifs" className="font-semibold text-brand-700 hover:text-brand-900">Tarifs</a>.
         </p>
       </div>
 

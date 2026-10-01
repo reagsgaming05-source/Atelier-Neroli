@@ -39,7 +39,7 @@ export default function CgvPage() {
 
       <h2>3. Prix et paiement</h2>
       <p>
-        Les prix sont indiqués en francs suisses (CHF). {site.vatNote} Les personnes seules règlent par carte, en ligne, à la souscription puis à chaque renouvellement. Les entités publiques peuvent régler sur facture, à 30 jours, avec bon de commande et référence interne. Une facture est mise à disposition dans l&rsquo;espace client. En cas de retard de paiement, l&rsquo;éditeur peut suspendre l&rsquo;accès aux mises à jour après notification et délai de grâce de 30 jours.
+        Les prix sont indiqués en francs suisses (CHF). {site.vatNote} Le prix se règle sur facture, à 30 jours (QR-facture), avec bon de commande et référence interne si le service le demande ; rien n&rsquo;est prélevé. Le paiement par carte n&rsquo;est pas ouvert à ce jour. Une facture est mise à disposition dans l&rsquo;espace client. En cas de retard de paiement, l&rsquo;éditeur peut suspendre l&rsquo;accès aux mises à jour après notification et délai de grâce de 30 jours.
       </p>
 
       <h2>4. Mises à jour et support</h2>

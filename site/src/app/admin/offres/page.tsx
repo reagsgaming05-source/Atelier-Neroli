@@ -32,6 +32,7 @@ export default async function AdminOffresPage({
 }) {
   const params = await searchParams;
   const envoyeeId = typeof params.envoyee === "string" ? params.envoyee : null;
+  const courriel = typeof params.courriel === "string" ? params.courriel : "";
   const [offres, compteurs, plans] = await Promise.all([listQuotes(), quoteCounts(), listActivePlans()]);
   const aChiffrer = offres.filter((o) => o.status === "demande");
   const suite = offres.filter((o) => o.status !== "demande");
@@ -52,8 +53,15 @@ export default async function AdminOffresPage({
           <p className="font-semibold text-brand-800">
             Offre {envoyee.number} chiffrée à {formatCHF(envoyee.amountCents)} pour {envoyee.orgName}.
           </p>
+          {courriel === "ok" ? (
+            <p className="mt-2 text-sm font-medium text-brand-800">Le courriel avec ce lien est parti chez {envoyee.contactEmail}.</p>
+          ) : (
+            <p className="mt-2 text-sm font-semibold text-danger">
+              {courriel === "echec" ? "Le courriel n'a PAS pu être envoyé" : "Le courriel n'est PAS parti (l'envoi n'est pas configuré sur ce site)"} : transmettez le lien vous-même.
+            </p>
+          )}
           <p className="mt-2 text-sm text-ink-700">
-            Transmettez ce lien à {envoyee.contactFirstName} {envoyee.contactLastName} (
+            Le lien, pour {envoyee.contactFirstName} {envoyee.contactLastName} (
             <a href={`mailto:${envoyee.contactEmail}`} className="font-medium text-brand-700 hover:text-brand-900">
               {envoyee.contactEmail}
             </a>

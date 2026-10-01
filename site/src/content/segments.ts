@@ -268,7 +268,7 @@ export const segments: Segment[] = [
     faq: [
       {
         q: "Qui souscrit : l'établissement ou l'enseignant·e ?",
-        a: "Les deux sont possibles. La formule Administration couvre tout l'établissement sans plafond et se règle sur facture. La formule Poste permet à une personne de s'équiper seule, par carte, sans passer par la direction.",
+        a: "Les deux sont possibles. La formule Administration couvre tout l'établissement sans plafond et se règle sur facture. La formule Poste permet à une personne de s'équiper seule, sans passer par la direction ; elle se règle elle aussi sur facture.",
       },
       {
         q: "Les élèves peuvent-ils l'utiliser ?",

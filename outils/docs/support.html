@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Procédure de support</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<p class="sur-titre">Pour les utilisatrices, l'informaticien du service — et pour l'éditeur</p>
+<h1>Procédure de support</h1>
+<p class="lede">Comment demander de l'aide, ce qu'il faut joindre, dans quels délais on répond. Des délais qui se tiennent valent mieux que des délais qui impressionnent. Version {{VERSION}}.</p>
+
+<h2>1. Demander de l'aide</h2>
+<ol>
+  <li>Écrivez à <strong>{{SUPPORT}}</strong>. Un message par problème. Pas de support par téléphone sans rendez-vous.</li>
+  <li>Dites <strong>ce que vous essayiez de faire, ce que l'application a fait, ce que vous attendiez</strong> — en quelques lignes.</li>
+  <li>Joignez, si vous le pouvez, le <strong>rapport de diagnostic</strong> : <em>Aide › Rapport de diagnostic pour le support…</em>, puis « Enregistrer le rapport… ». Il ne contient ni nom de document, ni contenu, ni nom de personne ; il n'est envoyé nulle part, c'est vous qui le joignez, après l'avoir relu.</li>
+  <li><strong>N'envoyez pas le document en cause</strong> s'il est sensible. Si le problème en dépend, on vous aidera à le reproduire avec un document fabriqué : l'éditeur ne veut pas recevoir vos dossiers.</li>
+  <li>Indiquez la <strong>version</strong> (« Aide › À propos ») et le système (Windows 10/11, macOS).</li>
+</ol>
+
+<h2>2. Les niveaux de gravité, et ce que l'éditeur s'engage à faire</h2>
+<table>
+<tr><th>Niveau</th><th>C'est quand…</th><th>Accusé de réception</th><th>Première réponse utile</th><th>Contournement ou correctif visé</th></tr>
+<tr><td><strong>1 — Données</strong></td><td>Des données sont perdues, altérées, ou ont été exposées ; un caviardage laisse un mot dans le fichier ; une licence ou une mise à jour fait perdre l'accès au travail</td><td>{{D1A}}</td><td>{{D1R}}</td><td>{{D1C}}</td></tr>
+<tr><td><strong>2 — Bloqué</strong></td><td>Une fonction principale ne marche plus pour tout le service (l'application ne s'ouvre pas, on ne peut plus enregistrer)</td><td>{{D2A}}</td><td>{{D2R}}</td><td>{{D2C}}</td></tr>
+<tr><td><strong>3 — Gênant</strong></td><td>Une fonction marche mal ou pas pour un cas précis ; un contournement existe</td><td>{{D3A}}</td><td>{{D3R}}</td><td>Dans une prochaine version</td></tr>
+<tr><td><strong>4 — Question</strong></td><td>Comment faire ? Une suggestion</td><td>{{D4A}}</td><td>{{D4R}}</td><td>—</td></tr>
+</table>
+<p class="petit">Les délais sont en <strong>jours ouvrables</strong> (lundi au vendredi, hors jours fériés du canton du siège de l'éditeur). Ils sont des engagements de moyens : un correctif dépend de la reproduction du problème, et il passe par la construction, les tests et la publication d'une version signée. Le niveau est fixé avec vous au premier échange ; en cas de doute, c'est le plus élevé qui s'applique jusqu'à ce qu'on sache.</p>
+
+<h2>3. Ce qui est du ressort du support, et ce qui ne l'est pas</h2>
+<table>
+<tr><th>Oui</th><th>Non (mais on oriente)</th></tr>
+<tr><td>L'application : installation, comptes, mise à jour, licence, essai, fonctions PDF, caviardage, OCR, impression depuis l'application</td><td>La configuration de Windows, de l'annuaire, des droits NTFS, des antivirus du service — c'est votre informaticien ; le guide d'administration dit quoi lui demander</td></tr>
+<tr><td>Un document qui s'ouvre mal ou s'enregistre mal <em>à cause de l'application</em></td><td>Un document déjà corrompu à la source, ou produit par un logiciel tiers qui sort du format PDF</td></tr>
+<tr><td>Une question sur ce que fait ou ne fait pas le produit</td><td>Le conseil juridique sur la validité d'une signature ou d'un caviardage dans une procédure : le produit pose une signature dessinée, pas une signature électronique qualifiée</td></tr>
+</table>
+
+<h2>4. Les correctifs, et comment vous êtes prévenus</h2>
+<ul>
+  <li>Un correctif sort sous forme d'une <strong>nouvelle version numérotée</strong>, avec ses notes de version, son archive signée, son empreinte. Vous l'appliquez comme toute mise à jour (voir le guide d'administration, §7).</li>
+  <li>Un défaut du niveau 1 qui touche tous les clients fait l'objet d'un <strong>avis</strong> : sur la page de téléchargement de l'éditeur, et l'éditeur écrit directement aux clients concernés (adresse de leur compte ou de leur offre). La version corrigée est signée « importante » : l'application la présente alors comme une <em>mise à jour importante</em> à son lancement, et ses notes de version disent ce qui était en cause.</li>
+  <li>Une version « candidate » peut vous être remise pour confirmer qu'un correctif résout votre cas, avant sa publication en « stable ».</li>
+  <li>L'éditeur n'a <strong>aucun moyen de forcer</strong> une mise à jour : le produit ne se connecte à rien. C'est vous qui posez l'archive. Il n'y a pas non plus de remontée automatique qui lui dirait quelles versions tournent chez vous.</li>
+</ul>
+
+<h2 class="page">5. Pour l'éditeur : traiter une demande</h2>
+<ol>
+  <li><strong>Accuser réception</strong> dans le délai du niveau, et <strong>fixer le niveau</strong> avec la personne. Ouvrir une ligne dans le registre de suivi : date, client, version, niveau, résumé.</li>
+  <li><strong>Lire le rapport de diagnostic</strong> : version et canal, système, mode de rangement des données, état de licence, journal de session, connexions refusées (attendu : aucune). Chercher d'abord : mauvais mode de rangement (<span class="chemin">donnees-par-utilisateur.txt.txt</span>), archive non signée refusée, licence invalide, essai terminé, fichier verrouillé par une collègue.</li>
+  <li><strong>Reproduire avec un document fabriqué</strong> (jamais celui du client). Le dépôt contient des générateurs de PDF d'essai (<span class="chemin">outils/test-e2e/aide.js</span>, <span class="chemin">outils/test-caviardage</span>).</li>
+  <li>Niveau 1 : <strong>geler les mises en circulation</strong> (aucune version stable tant que la cause n'est pas comprise), prévenir les clients concernés, écrire un test qui échoue avant le correctif et passe après.</li>
+  <li><strong>Répondre</strong> avec : ce qui a été compris, le contournement s'il y en a un, la version qui corrige, la date visée. Ne jamais promettre une date qu'on ne tient pas.</li>
+  <li><strong>Clore</strong> : noter la cause, le correctif, la version, et si la documentation doit changer (guide, notes de version, ce document).</li>
+</ol>
+<div class="note"><div class="titre">Modèle de réponse</div>
+<p>« Bonjour, merci pour votre message et votre rapport. Ce que nous comprenons : … Pour l'instant : … (contournement). Le correctif est prévu dans la version X.Y.Z, que nous visons pour le … Nous vous écrivons dès qu'elle est publiée. »</p></div>
+<h2>6. Ce que cette procédure suppose</h2>
+<p>Qu'une personne répond aux messages aux jours ouvrables, qu'elle sait publier une version signée et qu'elle tient le registre de suivi. Si l'éditeur change ces moyens, il change ce document <em>avant</em> de changer ses délais.</p>
+</body></html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Fiche de protection des données</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<p class="sur-titre">Pour le délégué à la protection des données et le service juridique</p>
+<h1>Fiche de protection des données</h1>
+<p class="lede">Ce que Blonay PDF traite, où cela se trouve, ce qui en sort — rien —, ce qui le protège et ce qui ne le protège pas. Version {{VERSION}}. Cette fiche décrit des faits techniques ; l'appréciation juridique (nLPD, LPrD cantonale, base légale, analyse d'impact) revient au responsable du traitement et à son conseil.</p>
+
+<h2>1. En bref</h2>
+<table>
+<tr><th>Question</th><th>Réponse</th></tr>
+<tr><td>Les documents quittent-ils le poste ?</td><td><strong>Non.</strong> Ils sont lus, modifiés et réassemblés dans la fenêtre de l'application, sur le poste. Aucun service en ligne, aucun serveur de l'éditeur, aucun prestataire n'intervient dans le traitement d'un document.</td></tr>
+<tr><td>L'application se connecte-t-elle à Internet ?</td><td><strong>Non, et elle est construite pour ne pas pouvoir.</strong> Trois barrières techniques (§4), et un test de la construction qui l'observe derrière un mandataire d'observation et échoue à la moindre connexion.</td></tr>
+<tr><td>Y a-t-il de la télémétrie, des statistiques d'usage, des rapports d'erreur automatiques ?</td><td><strong>Non.</strong> Le rapport de diagnostic est fabriqué à la demande de la personne, sur le poste ; elle le relit et le joint elle-même à un message (§6).</td></tr>
+<tr><td>L'éditeur peut-il accéder aux documents ou aux comptes ?</td><td><strong>Non.</strong> Il n'a aucun accès au poste, au serveur de fichiers du client ni aux documents. Il ne reçoit rien sans que la personne l'envoie elle-même.</td></tr>
+<tr><td>Faut-il un compte chez l'éditeur pour travailler ?</td><td>Non. L'application s'utilise hors ligne ; la licence est un fichier signé, vérifié sur le poste.</td></tr>
+</table>
+
+<h2>2. Ce que le logiciel traite</h2>
+<p><strong>Les documents que la personne ouvre</strong> — des PDF et des images, qui peuvent contenir n'importe quelle donnée personnelle, y compris sensible (décisions, dossiers de personnel, données d'élèves). Le logiciel n'en tire aucune copie hors du poste et n'en journalise pas le contenu. Il les modifie en mémoire et écrit ce que la personne choisit d'enregistrer ou d'exporter, à l'endroit qu'elle choisit.</p>
+<p><strong>Ce que le logiciel garde, sur le poste ou le serveur de fichiers du client</strong>, dans le dossier de données de la personne (<span class="chemin">data\&lt;nom&gt;\</span>, ou son profil Windows selon le mode) :</p>
+<table>
+<tr><th>Donnée</th><th>Nature</th><th>Durée</th></tr>
+<tr><td>Fiche du compte</td><td>Prénom et nom, date de création, empreinte scrypt du mot de passe et du code de récupération (jamais le mot de passe), compteur d'échecs, douze derniers événements (date, nature, nom du poste)</td><td>Jusqu'à suppression du compte</td></tr>
+<tr><td>Tampons et signature mémorisés</td><td>Textes de tampons ; <strong>une signature manuscrite sous forme d'image</strong> (donnée personnelle)</td><td>Jusqu'à suppression du compte ou effacement par la personne</td></tr>
+<tr><td>Documents récents</td><td>Les <strong>noms et chemins</strong> de fichiers récemment ouverts</td><td>Liste bornée ; « Fichier › Récents › Effacer la liste »</td></tr>
+<tr><td>Travail mis de côté (récupération)</td><td>Une <strong>copie complète des documents ouverts</strong> et des modifications non enregistrées, <strong>en clair</strong></td><td>Effacée à l'enregistrement et à la fermeture volontaire ; reste après un arrêt brutal jusqu'à ce que la personne récupère ou refuse</td></tr>
+<tr><td>Réglages d'affichage</td><td>Thème, zoom, taille des vignettes</td><td>—</td></tr>
+<tr><td>Verrou de document</td><td>Nom de la personne et du poste, heure, dans un fichier caché à côté du document ouvert</td><td>Supprimé à la fermeture ; périmé après trois minutes sans battement</td></tr>
+<tr><td>Jeton de poste</td><td>Nom du poste, heure, dans <span class="chemin">data\</span></td><td>Supprimé à la fermeture ; balayé après 24 h</td></tr>
+<tr><td>Profil Windows de la personne</td><td><span class="chemin">session.json</span> (quel compte est connecté) et <span class="chemin">essai.json</span> (date du premier lancement)</td><td>Jusqu'à effacement</td></tr>
+<tr><td>Journal de la session</td><td>Avis techniques (« police illisible »…) ; <strong>en mémoire seulement</strong>, perdu à la fermeture</td><td>Une session</td></tr>
+<tr><td>Fichier de licence</td><td>Nom du client, IDE, nombre de postes, dates — des données de personne morale</td><td>Tant qu'il est posé</td></tr>
+</table>
+
+<h2>3. Où cela se trouve, et qui peut le lire</h2>
+<p>Dans le dossier de l'application sur le serveur de fichiers du client, ou dans le profil de la personne. <strong>Tout y est lisible en clair</strong> par qui peut ouvrir le dossier depuis l'Explorateur. Le mot de passe du compte empêche d'ouvrir l'application sous le nom d'une autre personne ; il <strong>ne chiffre rien</strong>. La confidentialité des dossiers de données repose donc sur les <strong>droits d'accès (NTFS) que le client pose</strong> sur <span class="chemin">data\&lt;nom&gt;</span>, et sur le verrouillage de session Windows. Les copies de récupération contenant des documents en clair, un client soucieux les exclura des sauvegardes. Le logiciel ne chiffre pas les fichiers au repos.</p>
+
+<h2>4. Ce qui sort du poste : rien — et comment on le sait</h2>
+<ul>
+  <li><strong>Aucun composant n'est chargé depuis Internet.</strong> Le lecteur PDF, la bibliothèque d'écriture PDF, la reconnaissance de texte (moteur et modèles de langue) sont dans le dossier livré ; les polices sont celles du poste. Un contrôle de la construction échoue si une adresse réseau réapparaît dans le code.</li>
+  <li><strong>Trois barrières dans l'application de bureau</strong> : (1) les noms de domaine ne se résolvent pas ; (2) un mandataire fixe et mort sert toutes les sessions et le réseau interne du moteur d'affichage, sans mandataire du système ni détection automatique ; (3) chaque session refuse toute requête non locale et la comptabilise.</li>
+  <li><strong>Une observation, pas une promesse</strong> : à chaque construction, l'application empaquetée est lancée derrière un mandataire d'observation qui note toute connexion qui lui parvient ; elle est utilisée pour de vrai (ouvrir, modifier, enregistrer, reconnaître le texte d'une image) ; le test échoue à la moindre connexion ou à la moindre requête refusée par l'application elle-même. Ce test a trouvé, au moment de sa mise en place, une tentative de téléchargement d'un dictionnaire orthographique par le moteur d'affichage ; elle a été supprimée.</li>
+  <li><strong>Ce que cette preuve ne couvre pas</strong> : un poste compromis par ailleurs, un composant du système (ex. l'imprimante, le client de messagerie que la personne utilise pour joindre un fichier), et la page d'essai en ligne du site de l'éditeur, qui charge ses composants depuis Internet et <strong>n'est pas destinée à des documents réels</strong>.</li>
+</ul>
+
+<h2>5. Mesures de sécurité, et leurs limites</h2>
+<table>
+<tr><th>Mesure</th><th>Ce qu'elle fait</th><th>Ce qu'elle ne fait pas</th></tr>
+<tr><td>Mot de passe de compte (≥ 8 car., scrypt N=2^17, frein, code de récupération)</td><td>Empêche d'ouvrir l'application sous le nom d'une collègue ; rend les essais en série lents</td><td>Ne chiffre pas les fichiers ; contournable par qui édite la fiche ou lit le dossier</td></tr>
+<tr><td>Verrou de document, comparaison de date</td><td>Prévient une deuxième personne ; empêche d'écraser sans un mot le travail d'une collègue</td><td>N'est pas un contrôle d'accès</td></tr>
+<tr><td>Mises à jour signées (Ed25519, hors ligne)</td><td>Une archive posée sur le partage n'est exécutée que si elle vient de l'éditeur</td><td>Ne protège pas d'un poste déjà compromis</td></tr>
+<tr><td>Licence signée</td><td>Nom du client visible dans « À propos » ; décourage la copie de bon voisinage</td><td>N'est pas un dispositif anticopie</td></tr>
+<tr><td>Caviardage</td><td>Retire le texte du fichier (pas seulement un rectangle noir) : contenu des pages, légendes d'images, formulaires, notes, métadonnées, pièces jointes, signets — vérifié à chaque construction sur dix-sept documents piégés par des outils qui ne sont pas les nôtres</td><td>Ne reconnaît pas de lui-même une donnée personnelle (pas de motif automatique) : la personne désigne ce qui doit disparaître. Un mot qui n'est qu'une image dans un scan non reconnu ne se retrouve pas</td></tr>
+<tr><td>Rapport de diagnostic anonymisé</td><td>Retire chemins, noms de poste et de personne, noms de fichiers, texte entre guillemets, longs numéros (AVS, IBAN, références)</td><td>Reste un texte relu par la personne avant envoi : c'est elle qui décide de l'envoyer</td></tr>
+</table>
+
+<h2>6. L'éditeur, et ce qu'il reçoit</h2>
+<p><strong>Pour le logiciel</strong> : rien, sauf ce que la personne envoie elle-même (par exemple un rapport de diagnostic anonymisé, joint à une demande d'aide). L'éditeur ne traite aucun document du client et n'est donc pas sous-traitant au sens de l'article 9 nLPD pour les documents ; le client reste seul responsable du traitement des documents qu'il ouvre.</p>
+<p><strong>Pour le site de l'éditeur</strong> (demande d'offre, espace client, facturation, formulaire de contact) : l'éditeur traite des données de contact et de facturation du client (nom, fonction, adresse électronique, téléphone, organisation, adresse), des messages, et, pour l'espace client, un compte (adresse, empreinte bcrypt du mot de passe). Finalités : répondre aux demandes, établir offres et factures, remettre la licence. L'hébergeur du site et le lieu d'hébergement sont indiqués dans les mentions légales du site. Les droits des personnes (accès, rectification, effacement) s'exercent par les coordonnées des mentions légales.</p>
+
+<h2>7. Effacement et fin de contrat</h2>
+<ul>
+  <li><strong>Un compte</strong> : suppression depuis l'écran de connexion (mot de passe ou code requis) ou suppression du dossier <span class="chemin">data\&lt;nom&gt;</span>. Le dossier contient tampons, signature, récents et copies de récupération ; il disparaît entièrement.</li>
+  <li><strong>L'application</strong> : suppression du dossier, et de <span class="chemin">%APPDATA%\Blonay PDF</span> sur chaque poste. Rien n'est écrit dans le registre, rien n'est installé.</li>
+  <li><strong>Les documents</strong> produits ou enregistrés par la personne restent là où elle les a mis : l'application n'en garde pas de copie hors récupération.</li>
+</ul>
+
+<h2>8. Ce que cette fiche ne dit pas</h2>
+<p>Elle ne dit pas que l'usage de l'application par un service est conforme : cela dépend de la base légale du traitement, des droits posés sur le serveur, des durées de conservation du service et de ses propres procédures. Elle ne remplace ni l'analyse d'impact ni l'avis du délégué. Elle ne couvre pas les attestations dont un cahier des charges public peut avoir besoin (certification, audit externe) : l'éditeur n'en a pas à ce jour.</p>
+</body></html>

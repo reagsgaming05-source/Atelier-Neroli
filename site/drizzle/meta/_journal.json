@@ -29,6 +29,13 @@
       "when": 1790232168499,
       "tag": "0003_offres_et_facturation",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790869144941,
+      "tag": "0004_licences",
+      "breakpoints": true
     }
   ]
 }

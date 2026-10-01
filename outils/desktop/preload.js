@@ -26,5 +26,6 @@ contextBridge.exposeInMainWorld('BlonayDesktop', {
   recupLire: (cle) => ipcRenderer.invoke('blonay:recup-lire', cle),
   recupEffacer: (cle) => ipcRenderer.invoke('blonay:recup-effacer', cle),
   imprimantes: () => ipcRenderer.invoke('blonay:imprimantes'),
+  licence: () => ipcRenderer.invoke('blonay:licence'),
   imprimer: (o) => ipcRenderer.invoke('blonay:imprimer', o),
 });

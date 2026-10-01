@@ -12,11 +12,13 @@ import { formatCHF, formatDate, formatDateShort, intervalSuffix } from "@/lib/fo
 import { orgUserIds } from "@/lib/org";
 import { listUserInvoices, planPrice } from "@/lib/subscriptions";
 import { getUsageSummary } from "@/lib/usage";
+import { licenceDe } from "@/lib/licences";
 
 export default async function CompteDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser("/compte");
   const params = await searchParams;
   const [access, invoices] = await Promise.all([getAccess(user), listUserInvoices(user.id)]);
+  const licence = await licenceDe(access.kind === "member" ? access.owner.id : user.id);
 
   if (access.kind === "none") {
     return (
@@ -153,8 +155,21 @@ export default async function CompteDashboardPage({ searchParams }: { searchPara
         <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p className="text-sm text-ink-500">
-              Téléchargez l&rsquo;application, décompressez-la, double-cliquez : elle n&rsquo;a pas de clé à saisir. Les mises à jour se font en remplaçant le dossier.
+              Téléchargez l&rsquo;application et décompressez-la : elle démarre en version d&rsquo;essai. Votre licence est un petit fichier signé à votre nom, que vous posez à côté de
+              l&rsquo;exécutable ; elle ne se saisit nulle part et n&rsquo;est liée à aucun poste. Les mises à jour se posent à côté de l&rsquo;application, avec leur fichier de signature.
             </p>
+            {licence ? (
+              <p className="mt-3 text-sm text-ink-700">
+                <strong>{licence.number}</strong> — {licence.seats ? `${licence.seats} postes` : "postes illimités"}
+                {licence.updatesUntil ? `, mises à jour comprises jusqu'au ${licence.updatesUntil}` : ""}.{" "}
+                <a href="/compte/licence" className="font-semibold text-brand-700 hover:text-brand-900">
+                  Télécharger licence.json
+                </a>{" "}
+                (permanent : un fichier perdu se retrouve ici).
+              </p>
+            ) : (
+              <p className="mt-3 text-sm text-ink-500">Votre licence vous est remise sous forme de fichier dès que votre commande est réglée. Elle apparaîtra ici.</p>
+            )}
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <ButtonLink href={site.downloads.windows} size="sm">

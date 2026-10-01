@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Fiche produit</title><link rel="stylesheet" href="style.css">
+<style>
+  body { font-size: 9.8pt; line-height: 1.42; }
+  h1 { font-size: 22pt; }
+  h2 { font-size: 12.5pt; margin: 12pt 0 5pt; }
+  .colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; }
+  .colonnes > div { break-inside: avoid; }
+  .encart { border: .8pt solid var(--trait); padding: 6pt 9pt; margin: 6pt 0; break-inside: avoid; }
+  li { margin-bottom: 2pt; }
+</style></head>
+<body>
+<p class="sur-titre">Fiche produit — {{PRODUIT}} {{VERSION}}</p>
+<h1>Le PDF qui reste sur le poste</h1>
+<p class="lede">Un outil PDF complet pour un secrétariat communal ou scolaire, qui ne s'installe pas et dont aucun document ne sort : une application portable, des comptes locaux, une licence qui est un fichier.</p>
+
+<div class="colonnes">
+<div>
+<h2>Ce qu'il fait</h2>
+<ul>
+  <li><strong>Organiser</strong> : réordonner, pivoter, retirer, assembler, découper, extraire ; vue lecture et vue table de montage.</li>
+  <li><strong>Corriger le texte existant</strong> d'un PDF, par paragraphe, et annoter (surlignage, notes, formes) en vrais commentaires PDF.</li>
+  <li><strong>Caviarder pour de bon</strong> : le texte est retiré du fichier — pages, légendes d'images, champs, notes, métadonnées, pièces jointes, signets —, pas masqué par un rectangle. Vérifié à chaque version sur dix-sept documents piégés, avec des outils qui ne sont pas les nôtres.</li>
+  <li><strong>Rechercher, remplacer, caviarder partout</strong>, y compris un mot coupé en fin de ligne ou écrit sans accent.</li>
+  <li><strong>Reconnaître le texte d'un scan</strong> (OCR, français et allemand), sur le poste ; les tableaux à filets et les deux colonnes se lisent.</li>
+  <li><strong>Constituer un dossier de pièces</strong> avec sommaire et intercalaires tenus à jour ; comparer deux versions d'un document.</li>
+  <li><strong>Remplir des formulaires</strong>, apposer des tampons et une signature dessinée (mémorisés par personne).</li>
+  <li><strong>Copier un tableau vers Excel</strong> (CSV propre) ; traiter plusieurs fichiers d'un coup ; imprimer en livret.</li>
+  <li><strong>Protéger</strong> par mot de passe, filigrane, numérotation, métadonnées.</li>
+</ul>
+</div>
+<div>
+<h2>Ce qui le distingue</h2>
+<ul>
+  <li><strong>Rien à installer</strong> : un dossier portable. Pas de droits d'administrateur, pas de registre, pas de service. Windows 10/11 et macOS.</li>
+  <li><strong>Rien ne sort du poste</strong>, et c'est observé : à chaque version, un test lance l'application derrière un mandataire d'observation et échoue à la moindre connexion. Aucune télémétrie, aucun compte chez l'éditeur, aucun composant chargé d'Internet.</li>
+  <li><strong>Un dossier sur le serveur, tout le service</strong> : chacune a son compte, ses tampons et sa signature ; un seul endroit à mettre à jour.</li>
+  <li><strong>Deux personnes sur un même document</strong> : la seconde est prévenue, et n'écrase jamais le travail de l'autre sans un mot.</li>
+  <li><strong>Ne détruit rien en silence</strong> : un PDF signé, un PDF/A ou un document balisé est reconnu à l'ouverture, et l'application dit ce que l'enregistrement détruirait avant de le faire.</li>
+  <li><strong>Mises à jour sûres</strong> : une archive posée sur le partage n'est exécutée que signée par l'éditeur (Ed25519, vérifié hors ligne).</li>
+  <li><strong>Licence sans activation</strong> : un fichier signé posé à côté de l'exécutable, pas de clé à saisir, pas de lien au matériel. Essai de 45 jours, toutes les fonctions, sans filigrane.</li>
+</ul>
+</div>
+</div>
+
+<div class="colonnes">
+<div>
+<h2>Ce qu'il ne fait pas — encore</h2>
+<ul>
+  <li><strong>Pas de signature électronique reconnue légalement</strong> (SCSE / ZertES), pas de vérification des signatures reçues : le produit pose une signature dessinée.</li>
+  <li>Pas de PDF/A produit à neuf, pas de balisage d'accessibilité des documents créés.</li>
+  <li>Interface en <strong>français</strong> seulement (la reconnaissance de texte lit aussi l'allemand).</li>
+  <li>Ne lit pas les formats Office (Word, Excel) ; pas de collaboration en ligne, pas d'infonuagique : c'est voulu.</li>
+  <li>Les mots de passe de compte ne chiffrent pas les fichiers : les droits d'accès du serveur protègent les dossiers.</li>
+  <li>L'exécutable Windows n'est signé par un certificat de code que si l'éditeur en a fourni un : à vérifier avant un déploiement sous AppLocker.</li>
+</ul>
+</div>
+<div>
+<h2>Déploiement</h2>
+<table>
+<tr><th>Poser</th><td>Décompresser, un raccourci par poste</td></tr>
+<tr><th>Droits</th><td>Aucun droit d'administrateur</td></tr>
+<tr><th>Réseau</th><td>Aucune connexion, aucune règle de pare-feu</td></tr>
+<tr><th>Taille</th><td>≈ 290 Mo sur disque (zip ≈ 120 Mo)</td></tr>
+<tr><th>Mise à jour</th><td>Zip signé posé à côté ; vérifié, proposé, appliqué ; retour en arrière possible</td></tr>
+<tr><th>Données</th><td>Dossier du compte sur le serveur, ou profil de la personne</td></tr>
+<tr><th>Désinstaller</th><td>Supprimer le dossier</td></tr>
+</table>
+</div>
+</div>
+
+<div class="encart">
+<h2 style="margin-top:0">Pour un dossier d'achat</h2>
+<p>Sont livrés avec chaque version : le <strong>mode d'emploi</strong> (PDF illustré), le <strong>guide d'administration et de déploiement</strong>, la <strong>fiche de protection des données</strong> (ce que le logiciel traite, où, ce qui en sort — rien —, ce qui protège et ce qui ne protège pas), la <strong>procédure de support</strong> avec ses niveaux de gravité et ses délais, les <strong>notes de version</strong>, la <strong>licence d'utilisation</strong> et la liste des <strong>composants tiers</strong> avec leurs licences. Les empreintes SHA-256 et les signatures des archives sont publiées avec chaque version.</p>
+<p><strong>Licence</strong> : fichier signé au nom du client (nom, IDE, nombre de postes, date jusqu'à laquelle les mises à jour sont comprises). L'application continue de fonctionner au-delà de cette date ; seules les versions plus récentes sont hors licence. Conditions et prix : voir l'offre et les conditions générales.</p>
+</div>
+
+<p class="petit">{{COORDONNEES}}</p>
+</body></html>

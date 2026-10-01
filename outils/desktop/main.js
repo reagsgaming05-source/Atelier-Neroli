@@ -97,6 +97,8 @@ const comptes = require('./comptes');
 const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = comptes;
 const { examinerLesZips, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons } = require('./version-posee');
 const signature = require('./signature');
+const licence = require('./licence');
+const diagnostic = require('./diagnostic');
 const verrou = require('./verrou');
 // Cette instance de l'application : le verrou d'un document dit « c'est moi », ou « c'est quelqu'un d'autre ».
 const INSTANCE = require('crypto').randomUUID();
@@ -601,6 +603,7 @@ function setupNetwork() {
 }
 
 function setupIpc() {
+  ipcMain.handle('blonay:licence', () => etatLicence());
   if (RANGEMENT.ou === 'comptes' && PROFIL) {
     ipcMain.handle('blonay:mon-compte', () => ({ nom: PROFIL }));
     ipcMain.handle('blonay:changer', (_e, ancien, nouveau) => changerMonMotDePasse(ancien, nouveau));
@@ -616,6 +619,9 @@ function setupIpc() {
   // Enregistrer : réécrire le fichier ouvert, sur place, sans boîte de dialogue.
   ipcMain.handle('blonay:ecrire', (_e, o) => {
     try {
+      // L'essai est fini : on lit tout, on n'écrit plus rien. Le travail en cours reste
+      // dans le dossier de récupération.
+      if (etatLicence().etat === 'essai-fini') return { ok: false, erreur: 'La version d\u2019essai est terminée : l\u2019application n\u2019enregistre plus de nouveau fichier.' };
       if (!o || typeof o.chemin !== 'string' || !path.isAbsolute(o.chemin) || !o.octets) return { ok: false, erreur: 'chemin invalide' };
       // Le fichier a-t-il changé depuis qu'on l'a lu ? Alors quelqu'un d'autre
       // a écrit entre-temps, et l'écraser ferait disparaître son travail sans
@@ -803,6 +809,7 @@ function buildMenu() {
         { label: 'Raccourcis clavier', accelerator: 'F1', click: () => envoyer('raccourcis') },
         { type: 'separator' },
         { label: 'Rechercher une mise à jour', click: () => { chercherUneMiseAJour(true).catch(() => {}); } },
+        { label: 'Rapport de diagnostic pour le support…', click: () => { proposerLeDiagnostic().catch(() => {}); } },
         {
           label: 'À propos de ' + APP_TITLE,
           click: () => dialog.showMessageBox(fenetreActive(), {
@@ -812,6 +819,7 @@ function buildMenu() {
             detail: 'Organiser, corriger, annoter, remplir et imprimer des PDF.\n\n' +
               'Version portable : rien n\'est installé, aucune donnée ne quitte ce PC (les documents sont lus, ' +
               'modifiés et réassemblés dans cette fenêtre).\n\n' +
+              etatLicence().description + '\n' +
               (PROFIL ? 'Compte : ' + PROFIL + '\n' : '') +
               'Dossier des données : ' + app.getPath('userData') + '\n' +
               (POURQUOI[RANGEMENT.pourquoi] || '') + '\n\n' +
@@ -896,6 +904,60 @@ function annoncerCePoste() {
 let MAJ_VUE = false;      // proposée une fois par session, pas à chaque fenêtre
 let MAJ_DEMANDEE = null;  // le script à lancer en partant, une fois tout fermé
 
+// La licence, lue à chaque fois qu'on la demande : le fichier peut être posé pendant
+// qu'on travaille, et la lecture coûte une fraction de milliseconde.
+function etatLicence() {
+  let editeur = {};
+  try { editeur = JSON.parse(fs.readFileSync(path.join(__dirname, 'editeur.json'), 'utf8')) || {}; } catch (e) { /* pas de coordonnées renseignées */ }
+  const e = licence.etatDeLaLicence({
+    dossier: PORTABLE_DIR, cles: signature.lireCles().licence,
+    essai: licence.ancreDansLeProfil(path.join(profilLocal(), 'Blonay PDF')),
+  });
+  return Object.assign({}, e, { description: licence.description(e), editeur: { nom: String(editeur.nom || ''), contact: String(editeur.contact || '') } });
+}
+
+// Le rapport de diagnostic : fabriqué ici, jamais envoyé. On le relit, on l'enregistre ou on le
+// copie, et on le joint soi-même à une demande de support.
+async function rapportDeDiagnostic() {
+  let journal = [];
+  const fen = fenetreActive();
+  try { if (fen && !fen.isDestroyed()) journal = (await fen.webContents.executeJavaScript('window.blonayDiagnostic ? window.blonayDiagnostic() : []', true)) || []; } catch (e) { /* page absente : journal vide */ }
+  let utilisateur = '', poste = '';
+  try { utilisateur = os.userInfo().username; } catch (e) { /* inconnu */ }
+  try { poste = os.hostname(); } catch (e) { /* inconnu */ }
+  const l = etatLicence();
+  return diagnostic.rapport({
+    produit: { version: VERSION.version || app.getVersion(), canal: VERSION.canal || '', construction: CONSTRUCTION, commit: VERSION.commit || '' },
+    systeme: { plateforme: process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : process.platform, version: os.release(), arch: process.arch,
+      electron: process.versions.electron, chrome: process.versions.chrome, locale: app.getLocale() },
+    donnees: { mode: RANGEMENT.ou, pourquoi: POURQUOI[RANGEMENT.pourquoi] || RANGEMENT.pourquoi || '' },
+    licence: { etat: l.etat, id: l.id, postes: l.postes, majJusqu: l.majJusqu, joursRestants: l.joursRestants, invalide: l.invalide },
+    postes: autresPostes(DOSSIER_DATA(), MON_JETON, Date.now()).length,
+    journal, reseau: reseauRefuse.slice(), ident: { utilisateur, poste },
+  });
+}
+
+async function proposerLeDiagnostic() {
+  const texte = await rapportDeDiagnostic();
+  const { response } = await dialog.showMessageBox(fenetreActive(), {
+    type: 'info', noLink: true, defaultId: 0, cancelId: 2, title: APP_TITLE,
+    buttons: ['Enregistrer le rapport…', 'Copier', 'Fermer'],
+    message: 'Rapport de diagnostic',
+    detail: 'Il aide le support à comprendre un problème sans venir sur place. Il ne contient aucun nom de document, aucun contenu, aucun nom de personne ; '
+      + 'il n\u2019est envoyé nulle part — vous l\u2019enregistrez, vous le relisez, et c\u2019est vous qui le joignez à votre message.\n\n'
+      + texte.split('\n').slice(0, 24).join('\n'),
+  });
+  if (response === 1) { require('electron').clipboard.writeText(texte); return; }
+  if (response !== 0) return;
+  const nom = 'Diagnostic-Blonay-PDF-' + new Date().toISOString().slice(0, 10) + '.txt';
+  const r = process.env.BLONAY_SMOKE_DIR
+    ? { filePath: path.join(process.env.BLONAY_SMOKE_DIR, nom) }
+    : await dialog.showSaveDialog(fenetreActive(), { title: 'Enregistrer le rapport de diagnostic', defaultPath: path.join(app.getPath('documents'), nom), filters: [{ name: 'Texte', extensions: ['txt'] }] });
+  if (r.canceled || !r.filePath) return;
+  try { fs.writeFileSync(r.filePath, texte, 'utf8'); shell.showItemInFolder(r.filePath); }
+  catch (e) { dialog.showErrorBox(APP_TITLE, 'Le rapport n\u2019a pas pu être enregistré : ' + (e && e.message ? e.message : e)); }
+}
+
 async function chercherUneMiseAJour(demandee) {
   // Une archive posée à côté n'est proposée que si elle est signée par l'éditeur :
   // l'application est sur un partage où tout le secrétariat écrit, et sans cette
@@ -903,9 +965,16 @@ async function chercherUneMiseAJour(demandee) {
   // exécuterait. Voir signature.js.
   const cles = signature.lireCles().maj;
   const installee = Object.assign({}, VERSION, { version: VERSION.version || app.getVersion() });
+  const maLicence = etatLicence();
   const { propose: trouvee, refusees } = await examinerLesZips(PORTABLE_DIR, installee, {
     anterieure: !!demandee,
-    verifier: (zip) => signature.verifierZipAsync(zip, { cles }),
+    verifier: async (zip) => {
+      const r = await signature.verifierZipAsync(zip, { cles });
+      if (!r.ok) return r;
+      // Perpétuelle, avec les mises à jour d'un an : une version postérieure à la période n'est pas comprise.
+      const c = licence.miseAJourComprise(maLicence, r.piece.date);
+      return c.ok ? r : { ok: false, raison: c.raison };
+    },
   });
   if (!trouvee) {
     if (demandee) {

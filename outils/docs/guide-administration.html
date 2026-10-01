@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Guide d'administration et de déploiement</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<p class="sur-titre">Pour l'informaticien du service</p>
+<h1>Guide d'administration et de déploiement</h1>
+<p class="lede">Poser Blonay PDF une fois, le faire utiliser par tout un secrétariat, le garder à jour, savoir quoi faire quand quelque chose coince. Version {{VERSION}}.</p>
+
+<h2>1. L'essentiel en une page</h2>
+<ol>
+  <li><strong>Décompressez</strong> le zip dans un dossier — de préférence un dossier du serveur de fichiers, lisible et inscriptible par le secrétariat. Rien n'est installé : pas de droits d'administrateur, pas de registre, pas de service.</li>
+  <li><strong>Créez un raccourci</strong> vers <span class="chemin">BlonayPDF.exe</span> (macOS : <span class="chemin">BlonayPDF.app</span>) sur le bureau de chaque poste.</li>
+  <li><strong>Chacune crée son compte</strong> au premier lancement (prénom, nom, mot de passe, et un code de récupération à noter). Elle reste ensuite connectée.</li>
+  <li>Sans licence, l'application est en <strong>essai de 45 jours</strong>, toutes les fonctions. À l'achat, posez le fichier <span class="chemin">licence.json</span> à côté de l'exécutable : une fois pour tout le service.</li>
+</ol>
+<p>Aucune connexion Internet n'est nécessaire, ni ouverte. Il n'y a rien à ouvrir dans le pare-feu.</p>
+
+<div class="note"><div class="titre">Prérequis</div>
+<p>Windows 10 ou 11, 64 bits (ou macOS, binaire universel Intel et Apple). Environ 290 Mo sur le disque pour le dossier de l'application (le zip en pèse 120 environ) ; la mémoire dépend des documents : un scan de plusieurs centaines de pages et la reconnaissance de texte demandent de la place, les postes à 8 Go suffisent pour l'usage courant. Aucun .NET, aucun Java, aucun Office.</p></div>
+
+<h2>2. Où poser l'application</h2>
+<table>
+<tr><th>Mode</th><th>Quand</th><th>À savoir</th></tr>
+<tr><td><strong>Un dossier sur le serveur</strong> (recommandé)</td><td>Un secrétariat, plusieurs postes</td><td>Un seul endroit à mettre à jour. Chaque personne a son dossier dans <span class="chemin">data\</span>. Les droits NTFS du dossier décident de qui peut lire quoi (voir §4). Un lecteur réseau est détecté, mais le fonctionnement par comptes vaut aussi sur disque local.</td></tr>
+<tr><td><strong>Poste par poste</strong></td><td>Peu de postes, pas de serveur</td><td>Chaque poste a sa copie et ses mises à jour à faire. Les données restent dans <span class="chemin">data\</span> à côté de l'exécutable.</td></tr>
+<tr><td><strong>Clé USB</strong></td><td>Dépannage, essai</td><td>Les comptes, tampons et signatures voyagent avec la clé : à ne pas laisser circuler (voir le LISEZMOI).</td></tr>
+</table>
+<p>Sur un lecteur réseau, lancer un exécutable de 290 Mo par quinze postes au même moment est un cas à essayer chez vous avant de généraliser : les premiers lancements sont plus lents. Aucune mesure sur votre réseau n'a pu être faite par l'éditeur.</p>
+
+<h2>3. Les deux fichiers de réglage</h2>
+<p>On les crée à côté de l'exécutable, <strong>vides</strong> : leur présence suffit.</p>
+<table>
+<tr><th>Fichier</th><th>Effet</th></tr>
+<tr><td><span class="chemin">donnees-par-utilisateur.txt</span></td><td>Chacune range ses données dans son profil Windows (<span class="chemin">%APPDATA%</span>), pas dans <span class="chemin">data\</span>. À préférer si le dossier de l'application est en lecture seule, ou si vous ne voulez aucun compte à gérer.</td></tr>
+<tr><td><span class="chemin">comptes.txt</span></td><td>Force le fonctionnement par comptes. Une ligne par personne : ces noms apparaissent dans la liste de connexion, sans mot de passe tant que la personne ne s'y est pas connectée.</td></tr>
+</table>
+<div class="attention"><div class="titre">Le piège classique</div><p>L'Explorateur Windows masque les extensions connues. « Nouveau › Document texte » puis « donnees-par-utilisateur.txt » donne <span class="chemin">donnees-par-utilisateur.txt.txt</span>, et rien ne se passe. Activez « Extensions de noms de fichiers » dans l'onglet Affichage, ou créez le fichier depuis une invite de commandes.</p></div>
+<p>Si le dossier de l'application n'est pas inscriptible, l'application range les données dans le profil de la personne <em>sans le dire au lancement</em> ; « Aide › À propos » le mentionne. Deux postes d'un même service peuvent donc se comporter différemment : vérifiez-le à la mise en place.</p>
+
+<h2>4. Où vont les données, et ce qui les protège</h2>
+<p>Dans <span class="chemin">data\&lt;nom de la personne&gt;\</span> : la fiche du compte, les tampons et la signature mémorisés, les documents récents, les réglages d'affichage, et le <strong>travail mis de côté</strong> pour la récupération après un arrêt brutal (une copie des documents ouverts, effacée à l'enregistrement). Tout y est <strong>en clair</strong>.</p>
+<p>Le mot de passe empêche d'ouvrir l'application sous le nom d'une collègue ; il ne chiffre rien et n'empêche pas de lire le dossier depuis l'Explorateur. <strong>Ce sont les droits NTFS du dossier qui protègent</strong> : si chaque personne ne doit voir que le sien, c'est à vous de poser ces droits sur <span class="chemin">data\&lt;nom&gt;</span>. L'application ne le fait pas.</p>
+<p>Hors du dossier de l'application, l'application écrit dans <span class="chemin">%APPDATA%\Blonay PDF\</span> : <span class="chemin">session.json</span> (quel compte est connecté sur ce poste) et <span class="chemin">essai.json</span> (le premier jour de l'essai). Rien d'autre.</p>
+
+<h2>5. Les comptes</h2>
+<ul>
+  <li><strong>Règles</strong> : huit caractères au moins ; refus des mots de passe qu'on essaie en premier (« 12345678 », « password »…), d'un caractère répété, ou du nom du compte. Empreinte scrypt (N = 2^17), un sel par compte ; une empreinte plus ancienne se refait toute seule à la connexion suivante.</li>
+  <li><strong>Frein</strong> : trois essais libres, puis 5 s, 10 s, 20 s… jusqu'à 15 minutes ; le compteur est dans la fiche et survit à un redémarrage. Il se remet à zéro à la bonne connexion. (Quelqu'un qui édite la fiche à la main le contourne : c'est un frein, pas un coffre.)</li>
+  <li><strong>Code de récupération</strong> : 20 signes, montré une seule fois, jamais gardé qu'en empreinte. Il permet de poser un mot de passe neuf (« Mot de passe oublié ? »). Les comptes d'avant la 2.1 en reçoivent un à leur prochaine connexion.</li>
+  <li><strong>Changer</strong> son mot de passe ou refaire son code : <em>Fichier › Changer mon mot de passe…</em>, <em>Refaire mon code de récupération…</em>.</li>
+  <li><strong>Remettre un compte à zéro</strong> (plus de mot de passe, plus de code) : ouvrez <span class="chemin">data\&lt;nom&gt;\compte.json</span> dans le Bloc-notes, supprimez la ligne <code>"motDePasse"</code> et la virgule qui précède. Le compte apparaît dans la liste avec « attend un nouveau mot de passe » ; <strong>la première personne qui s'y connecte en pose un</strong> — organisez-vous pour que ce soit la bonne, tout de suite. La date et le poste du changement sont gardés dans la fiche (<code>evenements</code>) et montrés sur l'écran de connexion : si la propriétaire n'y est pour rien, elle le voit.</li>
+  <li><strong>Supprimer un compte</strong> (départ d'une collègue) : depuis l'écran de connexion, « Mot de passe oublié ? » puis « Supprimer ce compte… » (mot de passe ou code requis), ou, sans l'un ni l'autre, supprimez le dossier <span class="chemin">data\&lt;nom&gt;</span> et la ligne du nom dans <span class="chemin">comptes.txt</span>. Ses PDF, ailleurs, ne sont pas touchés ; sa signature mémorisée disparaît avec son dossier.</li>
+</ul>
+
+<h2 class="page">6. Licence et essai</h2>
+<ul>
+  <li><strong>Essai</strong> : 45 jours à partir du premier lancement sur le poste, toutes les fonctions, aucun filigrane. Bandeau « Essai : N jours restants » en bas de la fenêtre. La date de départ est notée dans le profil de la personne (<span class="chemin">essai.json</span>) : décompresser le zip ailleurs ne la remet pas à zéro ; effacer ce fichier la remet à zéro — c'est assumé, l'essai décourage la prolongation distraite, il n'arrête personne. Si l'écriture échoue (profil en lecture seule), l'essai continue.</li>
+  <li><strong>Fin d'essai</strong> : on ouvre, lit et cherche encore ; l'enregistrement et l'export de nouveaux fichiers sont suspendus, et l'application le dit. Le travail en cours est gardé.</li>
+  <li><strong>Licence</strong> : le fichier <span class="chemin">licence.json</span>, signé par l'éditeur, posé <strong>à côté de l'exécutable</strong> (sous macOS : à côté de <span class="chemin">BlonayPDF.app</span>, pas dedans). Il porte le nom du client, le nombre de postes, la date jusqu'à laquelle les <strong>mises à jour</strong> sont comprises. Relancez l'application : « Aide › À propos » le montre. Sur un lecteur réseau, un seul fichier pour tout le service.</li>
+  <li><strong>Ce que la licence ne fait pas</strong> : elle n'est liée à aucun matériel (un parc se renouvelle par tranches et se clone) ; l'application ne se verrouille pas à la date des mises à jour — seules les versions plus récentes sont hors licence ; le nombre de postes n'est pas contrôlé techniquement. Un fichier modifié (400 postes au lieu de 10) est refusé ; l'application retombe alors sur l'essai et le dit dans « Licence ».</li>
+  <li><strong>Fichier perdu</strong> : il se télécharge à tout moment dans l'espace client du site.</li>
+</ul>
+
+<h2>7. Mettre à jour</h2>
+<ol>
+  <li>Téléchargez, depuis la page de téléchargement, le zip <strong>et son fichier</strong> <span class="chemin">….zip.signature.json</span> (et, si vous voulez le contrôler à la main, le <span class="chemin">….zip.sha256</span>). Posez-les ensemble à côté de l'exécutable, ou dans un sous-dossier <span class="chemin">maj</span>.</li>
+  <li>Au lancement suivant, l'application les voit, <strong>vérifie la signature de l'éditeur</strong> (sans réseau) et propose la mise à jour. Elle refuse si l'application est ouverte sur un autre poste, et nomme le poste : Windows verrouille un programme en cours. Faites refermer, puis recommencez.</li>
+  <li>« Aide › Rechercher une mise à jour » pose la question à la demande ; un double-clic sur <span class="chemin">Mettre-a-jour.cmd</span> (macOS : <span class="chemin">Mettre-a-jour.command</span>) fait la même chose à la main.</li>
+</ol>
+<div class="note"><div class="titre">Ce que la signature change</div><p>Le dossier de l'application est un dossier où tout le monde écrit : sans preuve d'origine, quiconque y dépose un « zip de mise à jour » le ferait exécuter par la prochaine personne qui ouvre l'application. Désormais un zip sans signature, modifié, d'une autre plateforme, signé d'une autre clé ou plus récent que la période de mise à jour de la licence est <strong>ignoré</strong>. Le script copie d'abord le zip dans un dossier temporaire à lui, vérifie la <em>copie</em> avec l'application déjà installée, puis seulement l'ouvre : un zip remplacé entre-temps ne passerait pas. « Rechercher une mise à jour » dit pourquoi une archive est refusée.</p></div>
+<ul>
+  <li><strong>Canaux</strong> : « stable » est ce qu'on déploie ; « candidate » est une version à essayer d'abord, qu'une installation stable n'accepte pas. Une installation candidate accepte les deux.</li>
+  <li><strong>Revenir en arrière</strong> : chaque version publiée reste téléchargeable. Posez le zip signé de la version voulue et demandez « Rechercher une mise à jour » : une version plus ancienne n'est proposée que sur demande, et dite comme telle.</li>
+  <li><strong>Première mise à jour vers la 2.1</strong> : les versions d'avant ne savent pas vérifier de signature. Si le zip n'a pas son fichier de signature, décompressez-le par-dessus le dossier à la main (sans toucher à <span class="chemin">data</span>).</li>
+  <li><strong>Ce qui est conservé</strong> : <span class="chemin">data\</span> et tout fichier que vous avez posé dans le dossier. Ce qui n'est plus livré par la nouvelle version reste en place (la copie n'efface rien) : à nettoyer à la main si un diagnostic le demande.</li>
+  <li><strong>Notes de version</strong> : <span class="chemin">Notes-de-version.txt</span> dans le dossier, et sur la page de la release.</li>
+</ul>
+
+<h2>8. Deux personnes, un même document</h2>
+<p>Ouvrir un document d'un dossier partagé y pose un fichier de verrou caché (<span class="chemin">.~verrou.&lt;nom&gt;.json</span>), rafraîchi chaque minute ; il se périme à trois minutes sans battement et disparaît à la fermeture. Une deuxième personne est <strong>prévenue</strong> à l'ouverture (elle peut lire). À l'enregistrement, la date du fichier est comparée à celle qu'on a lue : si quelqu'un l'a modifié entretemps, l'application demande (annuler / enregistrer sous / écraser) au lieu d'écraser. Le verrou est un avertissement, pas un blocage — et il ne couvre que les ouvertures faites par cette application. Un poste éteint de force laisse son verrou jusqu'à trois minutes ; un verrou orphelin se supprime à la main sans risque.</p>
+
+<h2 class="page">9. Réseau, pare-feu, antivirus</h2>
+<ul>
+  <li><strong>Aucune connexion sortante.</strong> Trois barrières l'imposent (les noms de domaine ne se résolvent pas, un mandataire fixe et mort sert toutes les sessions, chaque requête non locale est refusée et comptée), et un test de la construction l'observe : l'application est lancée derrière un mandataire d'observation, utilisée pour de vrai (ouvrir, tourner, enregistrer, reconnaître le texte d'une image), et le test échoue à la moindre connexion reçue. Il a déjà trouvé, et fait supprimer, un téléchargement du dictionnaire orthographique.</li>
+  <li><strong>Pare-feu</strong> : rien à autoriser. <strong>Proxy</strong> : l'application n'utilise pas celui du système (ni détection automatique).</li>
+  <li><strong>Signature du code Windows</strong> : l'exécutable n'est signé par un certificat de code que si l'éditeur en a fourni un lors de la construction. Contrôlez : clic droit sur <span class="chemin">BlonayPDF.exe</span> › Propriétés › « Signatures numériques ». <em>Sans signature, SmartScreen avertit au premier lancement d'un fichier téléchargé, et une stratégie AppLocker ou WDAC qui n'autorise que le code signé refusera l'exécution.</em> Dans ce cas : autorisez le dossier par une règle de <strong>chemin</strong>, ou par l'<strong>empreinte</strong> (SHA-256, publiée à côté de chaque zip) — et demandez à l'éditeur où en est la signature.</li>
+  <li><strong>Antivirus</strong> : l'éditeur n'a pu tester aucun produit d'entreprise. Un exécutable Electron non signé posé sur un partage est le premier endroit où vous pouvez avoir un blocage ; la règle d'exclusion se fait sur le dossier.</li>
+</ul>
+
+<h2>10. Sauvegarde, désinstallation</h2>
+<p><strong>À sauvegarder</strong> : <span class="chemin">data\</span> (les comptes, tampons, signatures) et <span class="chemin">licence.json</span> ; le reste se re-télécharge. Les copies de récupération (<span class="chemin">data\&lt;nom&gt;\recuperation</span>) sont éphémères : inutile de les sauvegarder, et elles contiennent des documents en clair — à exclure des sauvegardes si cela vous gêne. <strong>Désinstaller</strong> : supprimez le dossier de l'application (et son raccourci) ; <span class="chemin">%APPDATA%\Blonay PDF</span> sur chaque poste si vous voulez aussi effacer la session et le jour de départ de l'essai.</p>
+
+<h2>11. Quand quelque chose coince</h2>
+<ol>
+  <li>« Aide › À propos » : version, canal, licence, mode de rangement des données.</li>
+  <li>Le bouton du journal, en bas de la fenêtre : ce qui a été contourné pendant la session.</li>
+  <li><strong>« Aide › Rapport de diagnostic pour le support… »</strong> : un texte sans nom de document ni de personne, que vous enregistrez, relisez et joignez vous-même. Il n'est envoyé nulle part.</li>
+  <li>Voir la <em>Procédure de support</em> : comment demander, les niveaux de gravité et les délais.</li>
+</ol>
+
+<h2>12. Limites connues, dites franchement</h2>
+<ul>
+  <li>Pas de signature électronique reconnue légalement (SCSE/ZertES) ni de vérification des signatures reçues ; le produit pose une signature dessinée, pas une signature qualifiée.</li>
+  <li>Interface en français seulement. La reconnaissance de texte lit aussi l'allemand.</li>
+  <li>Pas de PDF/A produit à neuf, pas de balisage d'accessibilité des documents créés ; un PDF/A ou un document balisé reçu est reconnu, et l'application dit ce que l'enregistrement détruit.</li>
+  <li>Les mots de passe des comptes ne chiffrent pas les fichiers (voir §4).</li>
+  <li>La licence n'est pas un dispositif anticopie (voir §6).</li>
+</ul>
+<h2>Aide-mémoire : fichiers et dossiers</h2>
+<table>
+<tr><th>Où</th><th>Quoi</th></tr>
+<tr><td><span class="chemin">BlonayPDF.exe</span></td><td>L'application (macOS : <span class="chemin">BlonayPDF.app</span>)</td></tr>
+<tr><td><span class="chemin">licence.json</span></td><td>La licence, signée, à côté de l'exécutable</td></tr>
+<tr><td><span class="chemin">comptes.txt</span>, <span class="chemin">donnees-par-utilisateur.txt</span></td><td>Réglages, vides ou une ligne par personne</td></tr>
+<tr><td><span class="chemin">data\&lt;nom&gt;\</span></td><td>Compte, tampons, signature, récents, récupération (en clair)</td></tr>
+<tr><td><span class="chemin">data\.ouvert-*.json</span></td><td>Jetons des postes qui ont l'application ouverte (pour la mise à jour)</td></tr>
+<tr><td><span class="chemin">maj\</span> (facultatif)</td><td>Où poser les zips de mise à jour et leurs signatures</td></tr>
+<tr><td><span class="chemin">version.json</span></td><td>Version, canal, commit et date de cette installation</td></tr>
+<tr><td><span class="chemin">%APPDATA%\Blonay PDF\</span></td><td><span class="chemin">session.json</span>, <span class="chemin">essai.json</span> — par personne et par poste</td></tr>
+<tr><td><span class="chemin">.~verrou.&lt;doc&gt;.json</span></td><td>Verrou d'un document ouvert, à côté du document</td></tr>
+</table>
+</body></html>

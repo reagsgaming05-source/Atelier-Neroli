@@ -28,6 +28,8 @@
     figerAnnotations: false,
     // Le dossier de pièces constitué, pour tenir son sommaire à jour.
     dossier: null,
+    // La licence (application de bureau) : essai, licence signée, ou rien — voir 58-licence.js.
+    licence: null,
   };
   // Ce qui fait un document ouvert — le reste de l'état (vue, zoom, thème)
   // est commun. Un traitement par lots, un onglet : chacun a le sien.

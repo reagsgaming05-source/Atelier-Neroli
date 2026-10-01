@@ -101,6 +101,11 @@ async function ecransDeConnexion() {
     await f.fill('#mdp2', 'greffe2026');
   });
   await f.click('#creer');
+  // Le code de récupération, montré une seule fois : c'est ce que voit une collègue juste après.
+  await f.waitForSelector('#ecran-code:not([hidden])', { timeout: 20000 });
+  await prendre(f, 'c4-code');
+  await f.check('#code-note');
+  await f.click('#code-ouvrir');
   await souffler(2500);
   await app.close().catch(() => {});
   menage();

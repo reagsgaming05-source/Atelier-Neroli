@@ -32,7 +32,7 @@ export default function ConfidentialitePage() {
       <p>Nous n&rsquo;utilisons aucun outil de suivi publicitaire, ne vendons pas de données et n&rsquo;entraînons aucun modèle sur des documents.</p>
 
       <h2>Sous-traitants</h2>
-      <p>Les prestataires techniques (hébergement du site, paiement par carte) sont liés par contrat et n&rsquo;accèdent qu&rsquo;aux données nécessaires à leur prestation. La liste à jour est disponible sur demande.</p>
+      <p>Les prestataires techniques (hébergement du site, envoi de courriel) sont liés par contrat et n&rsquo;accèdent qu&rsquo;aux données nécessaires à leur prestation. La liste à jour est disponible sur demande.</p>
 
       <h2>Durée de conservation</h2>
       <p>Les données de compte sont conservées tant que le compte est actif, puis 30 jours. Les factures sont conservées dix ans conformément aux obligations comptables suisses.</p>

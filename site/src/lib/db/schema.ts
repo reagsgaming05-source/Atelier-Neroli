@@ -212,6 +212,46 @@ export const quotes = sqliteTable(
   (t) => [index("quotes_status_idx").on(t.status), index("quotes_email_idx").on(t.contactEmail)],
 );
 
+/**
+ * Les licences émises : le registre de l'éditeur.
+ *
+ * Une licence est un petit fichier signé (voir outils/desktop/licence.js). Elle est
+ * SIGNÉE HORS DU SITE, sur le poste de l'éditeur, avec une clé privée qui ne vient
+ * jamais ici : si l'hébergement était compromis, personne ne pourrait se signer une
+ * licence. Le site ne fait que garder ce qui a été signé — le corps exact, à l'octet
+ * près, pour rejouer la vérification deux ans plus tard quand un client dit que son
+ * fichier ne marche pas — et le remettre au client : en téléchargement permanent dans
+ * son espace, un fichier perdu se retrouve tout seul.
+ */
+export const licences = sqliteTable(
+  "licences",
+  {
+    id: text("id").primaryKey(),
+    /** L'identifiant lisible, celui du fichier signé : BLP-2026-0042. */
+    number: text("number").notNull().unique(),
+    client: text("client").notNull(),
+    ide: text("ide"),
+    seats: integer("seats").notNull().default(0),
+    model: text("model", { enum: ["site", "interne"] }).notNull().default("site"),
+    issuedOn: text("issued_on").notNull(),
+    updatesUntil: text("updates_until"),
+    /** Le fichier signé, tel que remis au client : la pièce de référence. */
+    body: text("body").notNull(),
+    keyId: text("key_id").notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    subscriptionId: text("subscription_id").references(() => subscriptions.id, { onDelete: "set null" }),
+    invoiceId: text("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    /** Remplacée par une réémission : on la garde, on ne la remet plus. */
+    supersededById: text("superseded_by_id"),
+    /** Pourquoi une réémission : fichier perdu, nouveau nom, renouvellement des mises à jour… */
+    reason: text("reason"),
+    createdAt: timestamp("created_at")
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("licences_user_idx").on(t.userId), index("licences_subscription_idx").on(t.subscriptionId)],
+);
+
 /** Collaborateur·trice·s rattachés à une licence Établissement (invitation par e-mail). */
 export const orgMembers = sqliteTable(
   "org_members",
@@ -267,6 +307,10 @@ export const contactMessages = sqliteTable("contact_messages", {
 });
 
 /* ---------- Relations (API db.query) ---------- */
+
+export const licencesRelations = relations(licences, ({ one }) => ({
+  user: one(users, { fields: [licences.userId], references: [users.id] }),
+}));
 
 export const usersRelations = relations(users, ({ many }) => ({
   subscriptions: many(subscriptions),

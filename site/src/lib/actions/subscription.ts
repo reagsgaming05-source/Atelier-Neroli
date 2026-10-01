@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireUser } from "@/lib/auth";
 import { BILLING_INTERVALS, type BillingInterval } from "@/lib/db/schema";
-import { chargeCard, validateCard } from "@/lib/payments";
+import { MESSAGE_CARTE_FERMEE, chargeCard, paiementParCarteOuvert, validateCard } from "@/lib/payments";
 import {
   cancelAtPeriodEnd,
   cancelPendingChange,
@@ -35,6 +35,8 @@ export async function subscribeAction(_prev: ActionState, formData: FormData): P
   if (!user) {
     redirect(`/connexion?next=${encodeURIComponent(`/abonnement/${planSlug}/checkout?interval=${interval}`)}`);
   }
+
+  if (!paiementParCarteOuvert()) return { error: MESSAGE_CARTE_FERMEE };
 
   const card = {
     holder: str(formData, "holder"),

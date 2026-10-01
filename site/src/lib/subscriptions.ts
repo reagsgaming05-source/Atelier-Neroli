@@ -10,7 +10,7 @@ import {
   type Plan,
   type Subscription,
 } from "@/lib/db/schema";
-import type { PaymentMethod } from "@/lib/payments";
+import { paiementParCarteOuvert, type PaymentMethod } from "@/lib/payments";
 import { intervalLabel } from "@/lib/format";
 import { exigerIdentiteFacturation } from "@/content/facturation";
 
@@ -90,7 +90,10 @@ async function insertInvoice(
 /* ---------- Lecture ---------- */
 
 export async function listActivePlans() {
-  return db.query.plans.findMany({ where: eq(plans.active, true), orderBy: [plans.sortOrder] });
+  const rows = await db.query.plans.findMany({ where: eq(plans.active, true), orderBy: [plans.sortOrder] });
+  // « On peut payer par carte » n'est vrai que si le paiement par carte est ouvert (voir payments.ts) :
+  // sinon, toutes les formules se commandent par offre, et se règlent sur facture.
+  return rows.map((p) => ({ ...p, allowCard: p.allowCard && paiementParCarteOuvert() }));
 }
 
 export async function getPlanBySlug(slug: string) {

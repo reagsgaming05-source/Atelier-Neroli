@@ -18,6 +18,7 @@
     "smoke": "node smoke-test.js",
     "comptes": "node comptes-test.js",
     "ecrasement": "node ecrasement-test.js",
+    "licence": "node licence-test.js",
     "reseau": "node reseau-test.js",
     "maj": "node maj-test.js",
     "dist:mac": "npm run prepare-app && electron-builder --mac dir --universal"
@@ -41,6 +42,9 @@
       "version-posee.js",
       "verrou.js",
       "signature.js",
+      "licence.js",
+      "diagnostic.js",
+      "editeur.json",
       "verifier-maj.js",
       "cles-publiques.json",
       "comptes.js",

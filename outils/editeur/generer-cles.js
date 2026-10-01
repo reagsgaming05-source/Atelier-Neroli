@@ -42,6 +42,12 @@ const chemin = path.join(dossierPrive, id + '.pem');
 fs.writeFileSync(chemin, privateKey.export({ format: 'pem', type: 'pkcs8' }), { mode: 0o600 });
 j[quoi].push({ id, cle: brute(publicKey) });
 fs.writeFileSync(fichierPublic, JSON.stringify(j, null, 2) + '\n');
+// Le site range les licences émises et vérifie leur signature avant de les garder : il lui faut
+// la clé PUBLIQUE de licence — publique, donc sans risque dans le dépôt.
+if (quoi === 'licence') {
+  const site = path.join(__dirname, '..', '..', 'site', 'src', 'content', 'licence-cles.json');
+  try { fs.writeFileSync(site, JSON.stringify({ licence: j.licence }, null, 2) + '\n'); console.log('  publique (site) : site/src/content/licence-cles.json — à commiter aussi.'); } catch (e) { /* le site n'est pas dans cette copie */ }
+}
 
 console.log('Clé ' + id + ' créée.');
 console.log('  privée : ' + chemin + '   (à ne jamais commiter, jamais envoyer)');

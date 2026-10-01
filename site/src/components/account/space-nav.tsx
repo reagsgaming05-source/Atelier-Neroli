@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, FileSignature, Inbox, LayoutDashboard, LogOut, Receipt, Repeat, User, Users } from "lucide-react";
+import { CreditCard, FileSignature, Inbox, KeyRound, LayoutDashboard, LogOut, Receipt, Repeat, User, Users } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
 import { cn } from "@/lib/cn";
 
@@ -15,6 +15,7 @@ const icons = {
   subscriptions: Repeat,
   messages: Inbox,
   quotes: FileSignature,
+  licences: KeyRound,
 } as const;
 
 export type SpaceNavItem = { href: string; label: string; icon: keyof typeof icons; exact?: boolean; badge?: number };

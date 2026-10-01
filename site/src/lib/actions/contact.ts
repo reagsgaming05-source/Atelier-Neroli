@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { contactMessages } from "@/lib/db/schema";
+import { envoyer } from "@/lib/mail";
+import { editeur } from "@/content/editeur";
 import type { ActionState } from "./types";
 
 const schema = z.object({
@@ -41,6 +43,17 @@ export async function contactAction(_prev: ActionState, formData: FormData): Pro
     subject: parsed.data.subject,
     message: parsed.data.message,
   });
+
+  // Prévenir le support : au mieux. Le message est enregistré quoi qu'il arrive, et l'administration le voit.
+  const support = editeur.emailSupport || editeur.email;
+  if (support) {
+    await envoyer({
+      a: support,
+      repondreA: parsed.data.email,
+      sujet: `[Contact] ${parsed.data.subject}`,
+      texte: `De : ${parsed.data.name} <${parsed.data.email}>${parsed.data.phone ? `\nTéléphone : ${parsed.data.phone}` : ""}\n\n${parsed.data.message}`,
+    }).catch(() => undefined);
+  }
 
   return { success: "Merci, votre message est enregistré. Nous vous répondrons à l'adresse indiquée." };
 }

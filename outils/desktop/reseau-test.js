@@ -52,6 +52,20 @@ function observateur() {
   return new Promise((ok) => srv.listen(0, '127.0.0.1', () => ok({ vu, adresse: '127.0.0.1:' + srv.address().port, fermer: () => srv.close() })));
 }
 
+// Une garde : un test qui se fige ne doit pas retenir la construction pendant des heures. Il dit
+// à quelle étape il s'est arrêté, et sort en échec.
+let etape = 'démarrage';
+const note = (quoi) => { etape = quoi; console.log('  … ' + quoi); };
+const garde = setTimeout(() => { console.error('ÉCHEC : délai global dépassé pendant « ' + etape + ' »'); process.exit(1); }, 9 * 60 * 1000);
+
+// Fermer sans que la question « modifications non exportées » ne retienne le test : elle est
+// native, donc invisible au pilote.
+async function arreter(app) {
+  await app.evaluate(({ app: a }) => { setTimeout(() => a.exit(0), 50); }).catch(() => {});
+  await Promise.race([app.waitForEvent('close').catch(() => {}), new Promise((r) => setTimeout(r, 10000))]);
+  await app.close().catch(() => {});
+}
+
 const lancer = (exe, smoke, fichier, env) => electron.launch(exe
   ? { executablePath: exe, args: fichier ? [fichier] : [], env: { ...process.env, BLONAY_SMOKE_DIR: smoke, ...env } }
   : { args: [path.join(__dirname), ...(fichier ? [fichier] : []), '--no-sandbox'], env: { ...process.env, BLONAY_SMOKE_DIR: smoke, ...env } });
@@ -79,15 +93,17 @@ async function tenter(app, adresses) {
   console.log('1. L\'observateur est-il capable de voir ?');
   {
     const obs = await observateur();
+    note('lancement, barrières levées');
     const app = await lancer(exe, path.join(racine, 'poste-1'), doc, { BLONAY_OBSERVATEUR: obs.adresse, BLONAY_OBSERVATEUR_OUVERT: '1' });
     const win = await app.firstWindow();
     await win.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });
+    note('appels d\'essai, barrières levées');
     await tenter(app, CANARIS);
     await attendre(() => obs.vu.some((v) => /canari-http\.example/.test(v)) && obs.vu.some((v) => /canari-https\.example/.test(v)), 20000, 'l\'observateur reçoit les deux appels d\'essai');
     verifier(obs.vu.some((v) => /^GET http:\/\/canari-http\.example/.test(v)), 'un appel http qui s\'échappe arrive chez l\'observateur');
     verifier(obs.vu.some((v) => /^CONNECT canari-https\.example:443/.test(v)), 'un appel https qui s\'échappe arrive chez l\'observateur');
     verifier((await refuses(app)).length >= 2, 'et l\'application les note comme requêtes non locales');
-    await app.close();
+    await arreter(app);
     obs.fermer();
   }
 
@@ -98,12 +114,14 @@ async function tenter(app, adresses) {
   {
     const obs = await observateur();
     const smoke = path.join(racine, 'poste-2');
+    note('lancement, barrières en place');
     const app = await lancer(exe, smoke, doc, { BLONAY_OBSERVATEUR: obs.adresse });
     const win = await app.firstWindow();
     win.on('pageerror', (e) => console.log('[pageerror]', e.message));
     await win.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });
     await win.waitForFunction(() => document.querySelectorAll('#pages .tile').length === 3, null, { timeout: 60000 });
 
+    note('tourner une page et enregistrer');
     // Tourner une page et exporter : la boîte « Enregistrer sous » se règle sur le dossier d'essai.
     await win.keyboard.press('Control+2');
     await win.keyboard.press('Escape');
@@ -116,6 +134,7 @@ async function tenter(app, adresses) {
     await attendre(() => /\/Rotate\s+90/.test(fs.readFileSync(doc, 'latin1')), 60000, 'l\'export écrit le fichier');
     verifier(true, 'ouvrir, tourner, enregistrer : fait');
 
+    note('reconnaissance de texte');
     // Reconnaissance de texte : le gros morceau (moteur wasm, worker, modèles de langue).
     const png = await win.evaluate(() => {
       const c = document.createElement('canvas'); c.width = 1240; c.height = 800;
@@ -132,6 +151,7 @@ async function tenter(app, adresses) {
     await attendre(async () => /Texte reconnu/.test(await win.locator('#last').textContent()), 240000, 'la reconnaissance de texte aboutit');
     verifier(true, 'reconnaissance de texte : faite');
 
+    note('attente d\'un éventuel service d\'arrière-plan');
     // Imprimer, c'est ouvrir l'aperçu : la fenêtre d'impression ne doit pas non plus appeler dehors.
     await win.keyboard.press('Escape');
     await dormir(3000); // le temps qu'un service d'arrière-plan s'il y en a un se manifeste
@@ -140,16 +160,18 @@ async function tenter(app, adresses) {
     const r = await refuses(app);
     verifier(r.length === 0, 'l\'application n\'a elle-même refusé aucune requête (rien n\'a même essayé)' + (r.length ? ' : ' + r.join(' ; ') : ''));
 
+    note('appels d\'essai, barrières en place');
     // Et si l'on essaie quand même — comme le ferait une page piégée — la barrière tient.
     await tenter(app, CANARIS);
     await dormir(1500);
     const apres = await refuses(app);
     verifier(CANARIS.every((u) => apres.includes(u)), 'un appel d\'essai est refusé par l\'application et noté');
     verifier(obs.vu.length === 0, 'et il n\'atteint toujours pas le mandataire' + (obs.vu.length ? ' : ' + obs.vu.join(' ; ') : ''));
-    await app.close();
+    await arreter(app);
     obs.fermer();
   }
 
+  clearTimeout(garde);
   await menage(racine);
   if (!ok) { console.log('\nRÉSEAU : ÉCHEC'); process.exit(1); }
   console.log('\nRéseau : rien ne sort.');

@@ -18,6 +18,10 @@ on:
         type: choice
         options: ["candidate", "stable"]
         default: "candidate"
+      critique:
+        description: "Mise à jour IMPORTANTE (correctif de sécurité ou de données) : l'application la présente comme telle"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -42,6 +46,7 @@ jobs:
   # sommaire de dossier à jour dans le PDF enregistré.
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
@@ -118,6 +123,34 @@ jobs:
           path: Blonay-PDF-mode-d-emploi.pdf
           retention-days: 7
 
+      # Les quatre autres documents du dossier livré : guide d'administration, fiche de
+      # protection des données, fiche produit, procédure de support. Les coordonnées de
+      # l'éditeur viennent des variables du dépôt (EDITEUR_*), jamais du code : le dépôt est
+      # public. Sans elles, les documents renvoient aux mentions légales du site.
+      - name: Documents (administration, protection des données, fiche produit, support)
+        working-directory: outils/docs
+        env:
+          EDITEUR_NOM: ${{ vars.EDITEUR_NOM }}
+          EDITEUR_RUE: ${{ vars.EDITEUR_RUE }}
+          EDITEUR_NUMERO: ${{ vars.EDITEUR_NUMERO }}
+          EDITEUR_NPA: ${{ vars.EDITEUR_NPA }}
+          EDITEUR_LOCALITE: ${{ vars.EDITEUR_LOCALITE }}
+          EDITEUR_TELEPHONE: ${{ vars.EDITEUR_TELEPHONE }}
+          EDITEUR_EMAIL: ${{ vars.EDITEUR_EMAIL }}
+          EDITEUR_EMAIL_SUPPORT: ${{ vars.EDITEUR_EMAIL_SUPPORT }}
+        run: |
+          set -euo pipefail
+          export BLONAY_CHROMIUM="$(cd ../test-e2e && node -p "require('@playwright/test').chromium.executablePath()")"
+          node faire-les-documents.js "$GITHUB_WORKSPACE/documents"
+          test "$(ls "$GITHUB_WORKSPACE/documents"/*.pdf | wc -l)" -eq 4
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documents
+          path: documents/*.pdf
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Rapport (en cas d'échec)
         if: failure()
         uses: actions/upload-artifact@v4
@@ -129,6 +162,7 @@ jobs:
   build:
     needs: e2e
     runs-on: windows-latest
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: outils
@@ -166,6 +200,11 @@ jobs:
           name: mode-d-emploi
           path: ${{ github.workspace }}/guide
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: documents
+          path: ${{ github.workspace }}/documents
+
       - name: Assembler le dossier portable
         working-directory: outils/desktop
         shell: pwsh
@@ -175,6 +214,8 @@ jobs:
           # tiers. Le README du dépôt est une page de développeur, pas un
           # LISEZMOI : il n'a rien à faire dans un dossier livré.
           Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'guide\Blonay-PDF-mode-d-emploi.pdf') dist\BlonayPDF\Mode-d-emploi.pdf
+          New-Item -ItemType Directory -Force -Path dist\BlonayPDF\Documents | Out-Null
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'documents\*.pdf') dist\BlonayPDF\Documents\
           Copy-Item build\LICENCE.txt dist\BlonayPDF\LICENCE.txt
           Copy-Item build\MENTIONS-TIERCES.txt dist\BlonayPDF\MENTIONS-TIERCES.txt
           Copy-Item build\LISEZMOI-portable.txt dist\BlonayPDF\LISEZMOI-portable.txt
@@ -188,6 +229,7 @@ jobs:
           Get-ChildItem dist\BlonayPDF | Select-Object Name, Length
 
       - name: Test de fumée de l'exécutable (fenêtre, menu, ouverture d'un PDF, imprimantes, export)
+        timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
         run: |
@@ -204,6 +246,7 @@ jobs:
       # connexion ne s'ouvrait que sur un partage reconnu, et une installation
       # posee ailleurs ne demandait jamais rien a personne.
       - name: Comptes — la connexion d'abord, puis chacune ses tampons
+        timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
         run: node comptes-test.js dist\BlonayPDF\BlonayPDF.exe
@@ -214,6 +257,7 @@ jobs:
       # de l'exécutable empaqueté sur un même document : verrou, conflit,
       # annulation, écrasement voulu, et aucun verrou qui traîne à la fermeture.
       - name: Écrasement — le travail d'une collègue n'est jamais perdu en silence
+        timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
         run: node ecrasement-test.js dist\BlonayPDF\BlonayPDF.exe
@@ -225,15 +269,27 @@ jobs:
       # moindre connexion reçue ou à la moindre requête refusée. Il a déjà
       # débusqué un téléchargement de dictionnaire orthographique chez Google.
       - name: Réseau — rien ne sort du poste, observé derrière un mandataire
+        timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
         run: node reseau-test.js dist\BlonayPDF\BlonayPDF.exe
+
+      # La licence est un fichier signé posé à côté de l'exécutable, et un essai qui
+      # court depuis le premier lancement : joués sur l'exécutable empaqueté, avec des
+      # clés d'essai. Une licence falsifiée n'ouvre rien ; un essai fini n'enregistre
+      # plus, mais laisse tout lire.
+      - name: Licence — essai, licence signée, fichier falsifié, essai terminé
+        timeout-minutes: 14
+        working-directory: outils/desktop
+        shell: pwsh
+        run: node licence-test.js dist\BlonayPDF\BlonayPDF.exe
 
       # Une mise a jour qui se propose a tort reinstalle une version plus
       # ancienne ; lancee pendant qu'une collegue travaille, elle laisse une
       # installation a moitie remplacee. Les quatre cas sont joues sur
       # l'executable empaquete.
       - name: Mise à jour — proposée, refusée quand une collègue travaille, lancée sinon
+        timeout-minutes: 14
         working-directory: outils/desktop
         shell: pwsh
         run: |
@@ -370,7 +426,8 @@ jobs:
           $fiche = Get-Content (Join-Path $env:GITHUB_WORKSPACE 'outils\desktop\construction.json') -Raw | ConvertFrom-Json
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           "$hash  BlonayPDF-windows.zip" | Set-Content -Encoding ascii "$zip.sha256"
-          node (Join-Path $env:GITHUB_WORKSPACE 'outils\editeur\signer-maj.js') $zip --plateforme windows --version $fiche.version --canal $fiche.canal --commit $fiche.commit --date $fiche.date
+          $critique = @(); if ('${{ inputs.critique }}' -eq 'true') { $critique = @('--critique') }
+          node (Join-Path $env:GITHUB_WORKSPACE 'outils\editeur\signer-maj.js') $zip --plateforme windows --version $fiche.version --canal $fiche.canal --commit $fiche.commit --date $fiche.date @critique
           if ($LASTEXITCODE -ne 0) { throw "La signature a échoué." }
 
       # upload-artifact@v4 ciblent encore Node 20 : le runner les force sur
@@ -400,6 +457,7 @@ jobs:
   mac:
     needs: e2e
     runs-on: macos-latest
+    timeout-minutes: 90
     defaults:
       run:
         working-directory: outils
@@ -477,6 +535,11 @@ jobs:
           name: mode-d-emploi
           path: ${{ github.workspace }}/guide
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: documents
+          path: ${{ github.workspace }}/documents
+
       - name: Assembler le dossier
         working-directory: outils/desktop
         run: |
@@ -491,6 +554,8 @@ jobs:
           # Ce que lit un client : le mode d'emploi, la licence, les composants
           # tiers. Le README du dépôt est une page de développeur.
           cp "$GITHUB_WORKSPACE/guide/Blonay-PDF-mode-d-emploi.pdf" dist/BlonayPDF/Mode-d-emploi.pdf
+          mkdir -p dist/BlonayPDF/Documents
+          cp "$GITHUB_WORKSPACE"/documents/*.pdf dist/BlonayPDF/Documents/
           cp build/LICENCE.txt dist/BlonayPDF/LICENCE.txt
           cp build/MENTIONS-TIERCES.txt dist/BlonayPDF/MENTIONS-TIERCES.txt
           cp build/LISEZMOI-mac.txt dist/BlonayPDF/LISEZMOI-mac.txt
@@ -527,6 +592,7 @@ jobs:
           codesign -dv "$paquet" 2>&1 | head -6
 
       - name: Test de fumée de l'application empaquetée
+        timeout-minutes: 14
         working-directory: outils/desktop
         run: |
           set -euo pipefail
@@ -537,16 +603,24 @@ jobs:
       # tests unitaires (dossierPortable). Ici, c'est le parcours des comptes
       # qu'on rejoue sur l'application empaquetée pour de vrai.
       - name: Comptes — la connexion d'abord, sur l'application empaquetée
+        timeout-minutes: 14
         working-directory: outils/desktop
         run: node comptes-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
 
       - name: Écrasement — le travail d'une collègue n'est jamais perdu en silence
+        timeout-minutes: 14
         working-directory: outils/desktop
         run: node ecrasement-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
 
       - name: Réseau — rien ne sort du poste, observé derrière un mandataire
+        timeout-minutes: 14
         working-directory: outils/desktop
         run: node reseau-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
+
+      - name: Licence — essai, licence signée, fichier falsifié, essai terminé
+        timeout-minutes: 14
+        working-directory: outils/desktop
+        run: node licence-test.js dist/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF
 
       # Notariser, c'est soumettre le paquet à Apple, qui l'analyse et rend un
       # « ticket ». Agrafé au paquet, ce ticket permet à n'importe quel Mac de
@@ -599,6 +673,8 @@ jobs:
           test -x "$essai/BlonayPDF/BlonayPDF.app/Contents/MacOS/BlonayPDF" || { echo "::error::le binaire a perdu son droit d'exécution dans le zip"; exit 1; }
           test -f "$essai/BlonayPDF/version.json" || { echo "::error::la fiche de version manque dans l'archive"; exit 1; }
           test -f "$essai/BlonayPDF/LISEZMOI-mac.txt" || { echo "::error::le LISEZMOI manque"; exit 1; }
+          test "$(ls "$essai/BlonayPDF/Documents"/*.pdf | wc -l | tr -d ' ')" -eq 4 || { echo "::error::les quatre documents manquent dans l'archive"; exit 1; }
+          test -f "$essai/BlonayPDF/Notes-de-version.txt" || { echo "::error::les notes de version manquent dans l'archive"; exit 1; }
           test -x "$essai/BlonayPDF/Mettre-a-jour.command" || { echo "::error::le script de mise à jour n'est pas exécutable"; exit 1; }
           # Les frameworks d'Electron sont pleins de liens symboliques ; s'ils
           # arrivent en copies, l'application pèse le triple et ne démarre pas.
@@ -684,7 +760,8 @@ jobs:
           canal=$(node -p "require('./outils/desktop/construction.json').canal")
           commit=$(node -p "require('./outils/desktop/construction.json').commit")
           date=$(node -p "require('./outils/desktop/construction.json').date")
-          node outils/editeur/signer-maj.js "$zip" --plateforme mac --version "$version" --canal "$canal" --commit "$commit" --date "$date"
+          critique=""; [ "${{ inputs.critique }}" = "true" ] && critique="--critique"
+          node outils/editeur/signer-maj.js "$zip" --plateforme mac --version "$version" --canal "$canal" --commit "$commit" --date "$date" $critique
 
       - uses: actions/upload-artifact@v4
         with:
@@ -712,6 +789,7 @@ jobs:
     needs: [build, mac]
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}

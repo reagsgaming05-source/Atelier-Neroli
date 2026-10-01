@@ -171,13 +171,19 @@
 <h3>Créer son compte</h3>
 <ol class="etapes">
   <li>Double-cliquez sur le raccourci <strong>Blonay PDF</strong>.</li>
-  <li>La fenêtre de connexion s'ouvre. Écrivez votre <strong>prénom et nom</strong>, puis choisissez un <strong>mot de passe</strong> — quatre caractères au minimum — et répétez-le.</li>
-  <li>Cliquez sur <strong>Créer mon compte</strong>. L'application redémarre une fois, toute seule, puis s'ouvre sur votre espace.</li>
+  <li>La fenêtre de connexion s'ouvre. Écrivez votre <strong>prénom et nom</strong>, puis choisissez un <strong>mot de passe</strong> — huit caractères au minimum, et pas l'un de ceux qu'on essaie en premier, comme « 12345678 » — et répétez-le.</li>
+  <li>Cliquez sur <strong>Créer mon compte</strong>. L'application montre alors, <strong>une seule fois</strong>, votre <strong>code de récupération</strong> : notez-le sur papier, ailleurs que sur ce poste, cochez « J'ai noté ce code », puis continuez.</li>
+  <li>L'application redémarre une fois, toute seule, puis s'ouvre sur votre espace.</li>
 </ol>
 
 <figure>
   <img class="petite" src="captures/c1-creation.png" alt="La fenêtre de création de compte">
   <figcaption>Le premier lancement : prénom et nom, un mot de passe, et c'est fini.</figcaption>
+</figure>
+
+<figure>
+  <img class="petite" src="captures/c4-code.png" alt="L'écran du code de récupération">
+  <figcaption>Le code de récupération : montré une seule fois, à noter avant de continuer.</figcaption>
 </figure>
 
 <div class="note">
@@ -202,9 +208,17 @@
   </div>
 </figure>
 
+<h3>Mot de passe oublié, changé, ou compte à supprimer</h3>
+<ul>
+  <li><strong>Oublié</strong> : sur l'écran du mot de passe, « Mot de passe oublié ? ». Le <strong>code de récupération</strong> montré à la création permet d'en poser un neuf ; l'application en montre alors un nouveau, une fois de plus à noter.</li>
+  <li><strong>Changé</strong> : <strong>Fichier&nbsp;› Changer mon mot de passe…</strong> (l'actuel est demandé). <strong>Fichier&nbsp;› Refaire mon code de récupération…</strong> en donne un neuf si l'ancien est perdu.</li>
+  <li><strong>Trop d'essais</strong> : après trois mots de passe faux, l'application fait patienter — cinq secondes, puis le double à chaque nouvel échec, jusqu'à quinze minutes. Cela tient aussi si l'application est relancée.</li>
+  <li><strong>Une collègue qui part</strong> : depuis « Mot de passe oublié ? », « Supprimer ce compte… » efface son dossier (tampons, signature mémorisée, récents, travail mis de côté) ; il faut son mot de passe ou son code. Ses PDF ne sont pas touchés. Sans l'un ni l'autre, c'est à la personne qui s'occupe de l'installation de supprimer le dossier.</li>
+</ul>
+
 <div class="attention">
-  <div class="titre">Mot de passe oublié</div>
-  <p>Il n'est enregistré nulle part : impossible de le retrouver, même en ouvrant les fichiers de l'application. Pour retrouver l'accès, adressez-vous à la personne qui s'occupe de l'installation : elle remet le compte à zéro, et vous en choisissez un neuf à la connexion suivante — vos tampons, votre signature et vos récents sont intacts.</p>
+  <div class="titre">Plus de code, plus de mot de passe</div>
+  <p>Adressez-vous à la personne qui s'occupe de l'installation : elle remet le compte à zéro, et la première personne qui s'y connecte pose un mot de passe neuf — ce doit donc être vous, tout de suite. Le compte est signalé « attend un nouveau mot de passe » dans la liste, et l'application garde la date et le poste de ce changement : si ce n'est pas vous qui l'avez fait, l'écran de connexion vous le montre. Vos tampons, votre signature et vos récents sont intacts.</p>
 </div>
 
 <div class="note">
@@ -487,8 +501,9 @@
 <h3>Traiter plusieurs fichiers</h3>
 <p>Pages vides, compression, numérotation, protection, images en PDF, séparation, extraction du texte — en série sur plusieurs fichiers, sans toucher au document ouvert. Les résultats arrivent dans une archive ZIP.</p>
 
-<h3>Le journal</h3>
-<p>Quand une opération a dû contourner quelque chose — une police illisible, un lien perdu, un commentaire ignoré —, elle ne le tait pas : le bouton en bas de la fenêtre ouvre le journal.</p>
+<h3>Le journal, et le rapport pour le support</h3>
+<p>Quand une opération a dû contourner quelque chose — une police illisible, un lien perdu, un commentaire ignoré, un caractère que le PDF ne sait pas écrire —, elle ne le tait pas : le bouton en bas de la fenêtre ouvre le journal, et un export ou un enregistrement qui a produit des avis le dit avant de finir.</p>
+<p>Pour une demande d'aide, <strong>Aide&nbsp;› Rapport de diagnostic pour le support…</strong> prépare un petit texte : version, système, mode de rangement des données, état de la licence, journal de la session. Il ne contient <strong>aucun nom de document, aucun contenu, aucun nom de personne</strong> (les chemins, le nom du poste, les noms de fichiers, ce qui est entre guillemets et les longs numéros sont remplacés). Il n'est envoyé nulle part : vous l'enregistrez ou le copiez, vous pouvez le relire, et c'est vous qui le joignez à votre message.</p>
 </section>
 
 <!-- =================================================== 12 -->
@@ -501,6 +516,9 @@
   <div class="titre">Ce qui est mis de côté</div>
   <p>Une copie des documents ouverts et de vos modifications, dans votre dossier de données. Elle disparaît à l'enregistrement, ou quand vous fermez volontairement.</p>
 </div>
+
+<h3>Deux personnes, un même document</h3>
+<p>Quand un document d'un dossier partagé est déjà ouvert par une collègue, l'application vous prévient à l'ouverture (« déjà ouvert par… ») : vous pouvez le lire. Si elle a enregistré depuis que vous l'avez ouvert, votre « Enregistrer » ne l'écrase pas en silence : une fenêtre demande quoi faire — <strong>Annuler</strong> (rien n'est touché), <strong>Enregistrer sous…</strong> (la sienne reste intacte, la vôtre devient un nouveau fichier) ou <strong>Écraser quand même</strong>, ce qui est alors un choix, pas un accident.</p>
 </section>
 
 <!-- =================================================== 13 -->
@@ -510,25 +528,37 @@
 <p>L'application est posée à un seul endroit, sur le serveur. Pour la mettre à jour, il n'y a donc qu'un dossier à remplacer : les raccourcis ne contiennent qu'un chemin, et tout le monde lance la nouvelle version au lancement suivant, sans rien réinstaller.</p>
 
 <ol class="etapes">
-  <li><strong>Fermez l'application</strong> sur tous les postes. Windows verrouille un programme en cours, et la copie échouerait à moitié.</li>
-  <li>Téléchargez le nouveau zip et posez-le dans le dossier de l'application.</li>
-  <li>Double-cliquez sur <span class="chemin">Mettre-a-jour.cmd</span> — ou faites glisser le zip dessus.</li>
+  <li>Téléchargez le nouveau zip <strong>et son fichier « .signature.json »</strong>, et posez les deux, côte à côte, dans le dossier de l'application (ou dans un sous-dossier <span class="chemin">maj</span>).</li>
+  <li>Au lancement suivant, l'application les voit, vérifie la signature de l'éditeur et propose de se mettre à jour : elle se ferme, remplace ses fichiers et se rouvre. Elle refuse si une collègue l'a encore ouverte sur un autre poste (Windows verrouille un programme en cours) et nomme le poste.</li>
+  <li>Sans attendre : <strong>Aide&nbsp;› Rechercher une mise à jour</strong>, ou un double-clic sur <span class="chemin">Mettre-a-jour.cmd</span>.</li>
 </ol>
 
 <div class="note">
-  <div class="titre">Vos affaires sont conservées</div>
-  <p>Le script remplace les fichiers de l'application et ne touche jamais au dossier <span class="chemin">data</span> : tampons, signatures, récents et travail mis de côté restent en place. Il ne va rien chercher sur Internet et n'envoie rien ; c'est vous qui apportez le zip. <strong>Aide&nbsp;› À propos</strong> indique la version installée et sa date.</p>
+  <div class="titre">La signature : pourquoi un second fichier</div>
+  <p>Le dossier de l'application est un dossier où tout le secrétariat écrit. Sans preuve d'origine, quelqu'un d'autre pourrait y déposer un faux « zip de mise à jour » que la prochaine personne exécuterait. La signature prouve que le zip vient de l'éditeur et n'a pas été modifié ; sans elle, ou si le zip est abîmé, l'application l'ignore, et « Rechercher une mise à jour » dit pourquoi. Tout se vérifie sur le poste, sans connexion.</p>
 </div>
+
+<div class="note">
+  <div class="titre">Vos affaires sont conservées</div>
+  <p>La mise à jour remplace les fichiers de l'application et ne touche jamais au dossier <span class="chemin">data</span> : tampons, signatures, récents et travail mis de côté restent en place. Rien n'est téléchargé ni envoyé : c'est vous qui apportez le zip. <strong>Aide&nbsp;› À propos</strong> indique la version installée, son canal (stable ou candidate), sa date, et la licence.</p>
+</div>
+
+<h3>Revenir à la version précédente</h3>
+<p>Chaque version publiée reste téléchargeable, avec ses notes. Pour revenir en arrière, posez le zip (signé) de la version voulue et demandez <strong>Aide&nbsp;› Rechercher une mise à jour</strong> : une version plus ancienne n'est jamais proposée d'elle-même, mais elle l'est quand vous la demandez, et l'application le dit comme un retour en arrière.</p>
+
+<h3>Licence et essai</h3>
+<p>Sans fichier de licence, l'application est en <strong>essai</strong> : quarante-cinq jours à partir du premier lancement, toutes les fonctions, <strong>aucun filigrane</strong> sur ce que vous produisez. Un bandeau en bas de la fenêtre donne les jours restants. L'essai est compté dans le profil de la personne : décompresser le zip une seconde fois ne le remet pas à zéro. À la fin, l'application se lit encore entièrement mais n'enregistre plus de nouveau fichier, et le dit ; le travail en cours est gardé.</p>
+<p>À l'achat, l'éditeur remet un fichier <span class="chemin">licence.json</span> signé au nom du service : posez-le à côté de l'exécutable, une seule fois pour tout le secrétariat si l'application est sur le serveur, et relancez. <strong>Aide&nbsp;› À propos</strong> affiche alors le nom du client, le nombre de postes et la date jusqu'à laquelle les mises à jour sont comprises. La licence n'est liée à aucun poste : on peut changer d'ordinateur ou cloner un parc sans rien redemander. Elle est aussi téléchargeable à tout moment dans l'espace client du site, si le fichier est perdu.</p>
 </section>
 
 <!-- =================================================== 14 -->
 <section>
 <h2><span class="num">14</span>Où sont mes affaires</h2>
 
-<p>Chaque personne a son dossier sur le serveur, à l'intérieur du dossier <span class="chemin">data</span> de l'application. On y trouve les tampons mémorisés, la signature, la liste des documents récents, les réglages d'affichage et le travail mis de côté pour la récupération. <strong>Fichier&nbsp;› Ouvrir le dossier des données</strong> y donne accès directement : vous pouvez y faire le ménage quand vous le souhaitez.</p>
+<p>Chaque personne a son dossier sur le serveur, à l'intérieur du dossier <span class="chemin">data</span> de l'application. On y trouve les tampons mémorisés, la signature, la liste des documents récents, les réglages d'affichage et le travail mis de côté pour la récupération. <strong>Fichier&nbsp;› Ouvrir le dossier des données</strong> y donne accès directement : vous pouvez y faire le ménage quand vous le souhaitez. Ces fichiers sont lisibles par qui ouvre le dossier du serveur, y compris les copies de récupération des documents en cours : les droits d'accès du serveur sont ce qui les protège.</p>
 
 <h3>Rien ne sort du poste</h3>
-<p>Les documents sont lus, modifiés et réassemblés dans la fenêtre, sur l'ordinateur. Aucun fichier n'est envoyé nulle part : ni à un service en ligne, ni à un serveur d'analyse, ni à l'éditeur du logiciel. La reconnaissance de texte elle-même tourne sur le poste. L'application n'a besoin d'aucun accès Internet pour fonctionner.</p>
+<p>Les documents sont lus, modifiés et réassemblés dans la fenêtre, sur l'ordinateur. Aucun fichier n'est envoyé nulle part : ni à un service en ligne, ni à un serveur d'analyse, ni à l'éditeur du logiciel. La reconnaissance de texte elle-même tourne sur le poste. L'application n'a besoin d'aucun accès Internet pour fonctionner, et elle est construite pour ne pas en demander : un test vérifie à chaque version, derrière un observateur réseau, qu'une journée de travail ordinaire n'ouvre aucune connexion. (La page d'essai en ligne du site, elle, charge ses composants depuis Internet : elle ne s'utilise pas pour des documents réels.)</p>
 
 <div class="attention">
   <div class="titre">Le bon réflexe</div>

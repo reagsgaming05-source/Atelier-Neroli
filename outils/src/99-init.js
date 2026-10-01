@@ -641,6 +641,13 @@
         else if (nom === 'theme') el.btnTheme.click();
         else if (nom === 'raccourcis') toolHelp();
       };
+      // La licence : l'état vient de l'application, la page affiche et suspend l'enregistrement
+      // quand l'essai est fini. Relue de temps en temps : le fichier peut être posé pendant qu'on travaille.
+      const lireLaLicence = () => { if (typeof bureau.licence === 'function') bureau.licence().then(l => { state.licence = l; majLicence(); }).catch(e => signaler('Licence', e)); };
+      lireLaLicence();
+      setInterval(lireLaLicence, 10 * 60 * 1000);
+      const chipLicence = document.getElementById('licence-ligne');
+      if (chipLicence) chipLicence.addEventListener('click', toolLicence);
       try {
         bureau.onOuvrir(liste => { ouvrirListe(liste); });
         if (bureau.onOuvrirOnglet) bureau.onOuvrirOnglet(liste => { ouvrirListe(liste, { onglet: true }); });

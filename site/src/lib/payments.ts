@@ -1,4 +1,25 @@
 /**
+ * Le paiement par carte est FERMÉ tant qu'aucun prestataire réel n'est branché.
+ *
+ * Ce fichier ne contient qu'un simulateur : il valide le format et l'algorithme de Luhn,
+ * « débite » en attendant un tiers de seconde, et accepte toute carte sauf une carte de
+ * test. Une personne qui y saisirait sa vraie carte croirait avoir payé — et n'aurait
+ * rien payé. Il ne s'ouvre donc qu'EXPLICITEMENT (PAIEMENT_MODE=demo) et jamais en
+ * production : un site qui vend vraiment n'a pas de carte fictive.
+ *
+ * Le chemin d'achat réel, lui, est : demander une offre, la faire accepter, payer la
+ * facture QR à 30 jours. Brancher un prestataire (Stripe, Datatrans, Payrexx…) demande un
+ * compte chez lui et sa clé secrète en variable d'environnement : c'est une décision de
+ * l'éditeur, pas du code.
+ */
+export function paiementParCarteOuvert(): boolean {
+  return process.env.PAIEMENT_MODE === "demo" && process.env.NODE_ENV !== "production";
+}
+
+export const MESSAGE_CARTE_FERMEE =
+  "Le paiement par carte n'est pas ouvert. Pour souscrire, demandez une offre : elle se règle par facture à 30 jours (QR-facture), sans prélèvement.";
+
+/**
  * Fournisseur de paiement en MODE DÉMONSTRATION.
  * Aucune transaction réelle : les cartes sont validées localement (format + Luhn)
  * et seuls la marque et les 4 derniers chiffres sont conservés.
@@ -86,6 +107,8 @@ export type ChargeResult = { ok: true; reference: string } | { ok: false; reason
 
 /** Simule un débit. La carte de test "…0002" est refusée pour tester le parcours d'échec. */
 export async function chargeCard(card: CardInput, amountCents: number): Promise<ChargeResult> {
+  // Défense en profondeur : même si une page oubliait de vérifier, le simulateur ne « débite » jamais en production.
+  if (!paiementParCarteOuvert()) return { ok: false, reason: MESSAGE_CARTE_FERMEE };
   const number = normalizeCardNumber(card.number);
   await new Promise((r) => setTimeout(r, 350)); // latence simulée
   if (number === normalizeCardNumber(DEMO_CARDS.declined)) {

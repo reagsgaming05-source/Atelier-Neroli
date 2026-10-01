@@ -30,6 +30,20 @@ Trois conséquences pratiques :
  - « Fichier › Ouvrir le dossier des données » y donne accès : vous pouvez vider
    ce que vous ne voulez pas y laisser.
 
+LICENCE ET ESSAI
+Sans fichier de licence, l'application est en ESSAI : quarante-cinq jours à partir du
+premier lancement, toutes les fonctions, AUCUN filigrane sur les fichiers produits. Un
+bandeau en bas de la fenêtre indique les jours restants. L'essai est compté dans le profil
+de la personne, pas dans le dossier de l'application : décompresser le zip une seconde fois
+ne le remet pas à zéro.
+À la fin de l'essai, l'application se lit encore entièrement (ouvrir, parcourir, chercher),
+mais elle n'enregistre plus de nouveau fichier, et le dit. Le travail en cours est gardé.
+Quand le service achète, l'éditeur remet un fichier « licence.json », signé à son nom : posez-le
+à côté de BlonayPDF.exe (une seule fois pour tout le secrétariat si l'application est sur un
+lecteur réseau), relancez l'application, c'est tout. « Aide › À propos » affiche le nom du
+client, le nombre de postes et la date jusqu'à laquelle les mises à jour sont comprises. La
+licence n'est liée à aucun matériel : on peut changer de poste, cloner un parc, sans rien redemander.
+
 METTRE À JOUR
 Posez le zip téléchargé ET son fichier « BlonayPDF-windows.zip.signature.json » (les deux,
 côte à côte, sous leur nom d'origine) à côté de BlonayPDF.exe, ou dans un sous-dossier
@@ -73,7 +87,8 @@ peut donc reposer la signature d'un collègue ni lire les documents qu'il avait 
 UN COMPTE PAR PERSONNE — RIEN À PRÉPARER
 La connexion est la première chose que l'on voit au lancement, partout : sur un partage,
 sur une clé USB, sur un dossier décompressé pour essayer. Aucune fenêtre de travail ne
-s'ouvre avant. Il n'y a rien à préparer et rien à activer.
+s'ouvre avant. Il n'y a rien à préparer. Rien à activer non plus : pas de clé à saisir, pas de compte à créer
+chez l'éditeur (voir LICENCE ci-dessous).
 
 Au premier lancement, chacune crée son compte : prénom et nom, puis un mot de passe
 (huit caractères au minimum, et pas « 12345678 » ni les autres qu'on essaie en premier).

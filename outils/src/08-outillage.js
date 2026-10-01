@@ -70,6 +70,9 @@
     if (niveau === 'erreur') console.error(contexte + ' :', e); else if (niveau !== 'info') console.warn(contexte + ' :', e);
     majJournal();
   }
+  // Le journal de la session pour le rapport de diagnostic de l'application de bureau : des
+  // copies, jamais l'objet vivant. Le rapport le nettoie avant de le montrer (desktop/diagnostic.js).
+  window.blonayDiagnostic = () => journal.map(j => ({ quand: j.quand.getTime(), niveau: j.niveau, contexte: j.contexte, msg: j.msg, fois: j.fois || 1 }));
   // Le nombre d'avis qui comptent (hors information), répétitions comprises : de
   // quoi savoir si une opération en a ajouté, même un avis déjà vu.
   const avisGraves = () => journal.reduce((t, j) => (j.niveau !== 'info' ? t + (j.fois || 1) : t), 0);

@@ -9,6 +9,7 @@ import type { BillingInterval } from "@/lib/db/schema";
 import { formatCHF, formatDate, fullName, intervalLabel, intervalSuffix } from "@/lib/format";
 import { addInterval, getPlanBySlug, planPrice, yearlySavings } from "@/lib/subscriptions";
 import { getAccess } from "@/lib/access";
+import { MESSAGE_CARTE_FERMEE, paiementParCarteOuvert } from "@/lib/payments";
 
 export const metadata: Metadata = { title: "Souscription" };
 
@@ -30,6 +31,23 @@ export default async function CheckoutPage({
   const access = await getAccess(user);
   if (access.kind === "owner") redirect("/compte/abonnement?notice=already");
   if (access.kind === "member") redirect("/compte?notice=via-etablissement");
+
+  // Pas de carte fictive sur un site qui vend : tant qu'aucun prestataire réel n'est branché, le seul
+  // chemin ouvert est l'offre, puis la facture QR à 30 jours.
+  if (!paiementParCarteOuvert()) {
+    return (
+      <section className="bg-canvas-100/60">
+        <div className="container-x max-w-2xl py-20">
+          <p className="eyebrow">Souscription</p>
+          <h1 className="mt-3 font-display text-[2.25rem] font-semibold text-ink-900">Le paiement par carte n&rsquo;est pas ouvert.</h1>
+          <p className="mt-4 text-[15px] text-ink-500">{MESSAGE_CARTE_FERMEE}</p>
+          <Link href={`/offre?formule=${plan.slug}`} className="btn btn-primary mt-8 inline-flex">
+            Demander une offre
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   const amount = planPrice(plan, interval);
   const renewal = addInterval(new Date(), interval);

@@ -272,7 +272,7 @@ export const faq = [
   },
   {
     q: "Combien de postes sont compris ?",
-    a: "La formule Administration ne les compte pas : tout le personnel de l'entité peut l'utiliser. La formule Secrétariat, moins chère, s'arrête à dix postes. La formule Poste équipe une seule personne, par carte, sans passer par le service d'achat.",
+    a: "La formule Administration ne les compte pas : tout le personnel de l'entité peut l'utiliser. La formule Secrétariat, moins chère, s'arrête à dix postes. La formule Poste équipe une seule personne et se règle sur facture, comme les autres.",
   },
   {
     q: "L'abonnement est-il avec engagement ?",

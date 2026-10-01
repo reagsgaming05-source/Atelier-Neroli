@@ -18,6 +18,8 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyPassword } from "@/lib/password";
+import { dire, envoyer, urlDuSite } from "@/lib/mail";
+import { editeur } from "@/content/editeur";
 import type { ActionState } from "./types";
 
 function str(formData: FormData, key: string) {
@@ -139,6 +141,22 @@ export async function acceptQuoteAction(_prev: ActionState, formData: FormData):
 
   await createSession(userId);
   revalidatePath("/admin/offres");
+  // La confirmation de commande, au contact de l'offre — au mieux : la commande, elle, est enregistrée.
+  await envoyer({
+    a: quote.contactEmail,
+    sujet: `Commande enregistrée — offre ${quote.number}`,
+    texte: [
+      `Bonjour ${quote.contactFirstName} ${quote.contactLastName},`,
+      "",
+      `Votre commande pour l'offre ${quote.number} est enregistrée, et la facture émise.`,
+      `Vous la retrouvez dans votre espace client, avec sa QR-facture : ${urlDuSite("/compte")}`,
+      "",
+      "Votre licence vous est remise sous forme de fichier dès que la facture est réglée ; elle sera alors téléchargeable dans votre espace.",
+      "",
+      "Cordialement,",
+      editeur.nom || "",
+    ].join("\n"),
+  }).catch(() => undefined);
   redirect(`/compte/factures/${invoiceId}?commande=1`);
 }
 
@@ -181,6 +199,7 @@ export async function sendQuoteAction(_prev: ActionState, formData: FormData): P
   if (!parsed.success) return { fieldErrors: z.flattenError(parsed.error).fieldErrors, values: raw };
 
   let id: string;
+  let courriel = "";
   try {
     const quote = await sendQuote({
       id: parsed.data.id,
@@ -194,6 +213,25 @@ export async function sendQuoteAction(_prev: ActionState, formData: FormData): P
     id = quote.id;
     revalidatePath("/admin/offres");
     revalidatePath(`/offre/${quote.token}`);
+    // L'offre part chez le client. Le verdict est dit à l'administration : « envoyé » seulement si c'est vrai.
+    const v = await envoyer({
+      a: quote.contactEmail,
+      sujet: `Votre offre ${quote.number}`,
+      texte: [
+        `Bonjour ${quote.contactFirstName} ${quote.contactLastName},`,
+        "",
+        `Voici l'offre ${quote.number} pour ${quote.orgName}. Elle se consulte et se commande sans connexion, à ce lien :`,
+        urlDuSite(`/offre/${quote.token}`),
+        "",
+        quote.validUntil ? `Elle est valable jusqu'au ${new Date(quote.validUntil).toLocaleDateString("fr-CH")}.` : "",
+        "Elle se règle par facture à 30 jours (QR-facture) : rien n'est prélevé.",
+        "",
+        "Cordialement,",
+        editeur.nom || "",
+      ].join("\n"),
+    });
+    courriel = v.etat === "envoye" ? "ok" : v.etat === "non-configure" ? "non" : "echec";
+    void dire;
   } catch (e) {
     if (e instanceof QuoteError) return { error: e.message, values: raw };
     throw e;
@@ -202,7 +240,7 @@ export async function sendQuoteAction(_prev: ActionState, formData: FormData): P
   // qui portait le message de réussite est démonté avec elle, et le lien à
   // transmettre — la seule chose dont l'administration a besoin ensuite —
   // disparaissait avec lui. On renvoie donc sur la page, qui le montre.
-  redirect(`/admin/offres?envoyee=${id}`);
+  redirect(`/admin/offres?envoyee=${id}&courriel=${courriel}`);
 }
 
 export async function markPaidAction(formData: FormData) {

@@ -60,6 +60,7 @@
   // lancé). o.document : c'est le document entier, tel quel — une fois écrit,
   // il n'est plus « modifié ».
   async function deliver(data, filename, mime, o) {
+    if (essaiFiniRefuse()) return false;
     filename = asciiName(filename);
     const blob = data instanceof Blob ? data : new Blob([data], { type: mime || 'application/pdf' });
     state.attenteChemin = null;
@@ -204,6 +205,7 @@
   }
   async function enregistrer() {
     if (!state.pages.length || state.busy) return;
+    if (essaiFiniRefuse()) return;
     const nom = safeBase(el.filename.value) + '.pdf';
     const chemin = ecritureDispo() ? cheminDocument() : '';
     if (!chemin) { exportPages(state.pages, nom); return; }
