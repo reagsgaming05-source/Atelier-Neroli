@@ -149,4 +149,9 @@ function assembler() {
   return page;
 }
 
-module.exports = { assembler, modules, traceMarque, registreIcones, svgIcone };
+// La feuille de style de l'application, avec ses polices : celle que la page de référence des composants (docs/) montre.
+function feuilleDeStyle() {
+  return lire('style.css').replace(REPERE_POLICES, () => policesInterface());
+}
+
+module.exports = { assembler, modules, traceMarque, registreIcones, svgIcone, feuilleDeStyle };

@@ -88,7 +88,7 @@ Une offre non chiffrée n'est pas consultable ; une offre échue ne peut plus ê
 | IBAN, IDE, TVA, délai de paiement, conditions de l'offre | `src/content/facturation.ts` |
 | Formules et prix | `src/content/plans.ts` (appliqué au prochain `npm run dev`) |
 | Couleurs, typographies, styles de base | `src/app/globals.css` |
-| Polices (auto-hébergées : Bricolage Grotesque, Manrope) | `src/fonts/` et `src/app/fonts.ts` |
+| Polices (auto-hébergées, celles de l'application : Instrument Serif, Geist) | `src/fonts/` et `src/app/fonts.ts` |
 | Aperçu de l'éditeur sur l'accueil | `src/components/app-mock.tsx` |
 
 Le dépôt est public : **aucune identité de vendeur n'y figure**. Raison sociale, adresse, courriel, IDE, numéro de TVA et IBAN viennent de variables d'environnement `EDITEUR_*`. Tant qu'elles manquent, le site n'affiche que ce qui existe et **refuse d'émettre une offre ou une facture** (`exigerIdentiteFacturation`). Une phrase du site ne s'écrit que si elle se vérifie dans le logiciel livré ; `npm test` (`test/affirmations.test.ts`) garde la liste des formulations qui ne doivent pas revenir.

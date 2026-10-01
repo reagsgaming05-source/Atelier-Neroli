@@ -42,7 +42,7 @@
       t.appendChild(sp);
       if (modifie) { const m = document.createElement('span'); m.className = 'mod'; m.textContent = '\u2022'; m.title = 'Modifié'; t.appendChild(m); }
       const x = document.createElement('button');
-      x.type = 'button'; x.className = 'x'; x.title = 'Fermer cet onglet (Ctrl+W)'; x.setAttribute('aria-label', 'Fermer ' + titre);
+      x.type = 'button'; x.className = 'x'; x.title = vue.infobulle('Fermer cet onglet', 'fermer-onglet'); x.setAttribute('aria-label', 'Fermer ' + titre);
       x.appendChild(icon(IC.x, { sw: 2 }));
       x.addEventListener('click', ev => { ev.stopPropagation(); fermerOnglet(o.id); });
       t.appendChild(x);
@@ -54,7 +54,7 @@
     el.onglets.appendChild(liste);
     const plus = document.createElement('button');
     plus.type = 'button'; plus.className = 'onglet-plus'; plus.id = 'onglet-plus';
-    plus.title = 'Nouvel onglet (Ctrl+T)'; plus.setAttribute('aria-label', 'Nouvel onglet');
+    plus.title = vue.infobulle('Nouvel onglet', 'nouvel-onglet'); plus.setAttribute('aria-label', 'Nouvel onglet');
     plus.appendChild(icon(IC.plus, { sw: 1.8 }));
     plus.addEventListener('click', () => nouvelOnglet());
     el.onglets.appendChild(plus);

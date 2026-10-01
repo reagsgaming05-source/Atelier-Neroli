@@ -84,8 +84,9 @@ test('les surfaces du thème clair ont leurs propres niveaux, comme celles du th
 test('les deux thèmes déclarent les mêmes jetons de couleur', () => {
   const couleur = (t) => Object.keys(t).filter(n => /^#|^rgba?\(/.test(t[n])).sort();
   const manque = couleur(sombre).filter(n => !(n in jetons(bloc(':root[data-theme="light"] {'))) && !['--bleu-ombre', '--rouge-ombre'].includes(n));
-  // seuls les jetons de géométrie, de police ou de transparence propres à un thème peuvent ne pas être redéclarés
-  assert.deepEqual(manque.filter(n => !/^--(survol|lueur|voile|ombre|teinte|bleu-encre)/.test(n)), [], 'jetons du thème sombre sans pendant clair');
+  // seuls les jetons de géométrie, de police ou de transparence propres à un thème peuvent ne pas être redéclarés ; les trois du signet
+  // sont ceux de la marque, qui ne suit pas le thème (desktop/marque.json)
+  assert.deepEqual(manque.filter(n => !/^--(survol|lueur|voile|ombre|teinte|bleu-encre|signet)/.test(n)), [], 'jetons du thème sombre sans pendant clair');
 });
 
 test('un seul état « désactivé » : un jeton, pas cinq opacités', () => {

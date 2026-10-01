@@ -163,6 +163,8 @@
     el.btnTheme.title = 'Thème : ' + (mode === 'light' ? 'clair' : mode === 'dark' ? 'sombre' : 'automatique');
     el.btnTheme.setAttribute('aria-label', el.btnTheme.title);
     try { localStorage.setItem('aktum-theme', mode); } catch (e) { signaler('Préférence de thème', e, 'info'); }
+    // La fenêtre de l'application peint son fond avant la page : elle retient le thème pour la prochaine ouverture.
+    if (window.AktumDesktop && typeof window.AktumDesktop.definirTheme === 'function') { try { window.AktumDesktop.definirTheme(mode); } catch (e) { signaler('Thème de la fenêtre', e, 'info'); } }
   }
 
   // =====================================================================
@@ -252,7 +254,7 @@
     const poserLeRepli = replie => {
       espace.classList.toggle('replie', replie);
       btnReplier.setAttribute('aria-expanded', replie ? 'false' : 'true');
-      btnReplier.title = replie ? 'Déplier le panneau (Ctrl+Maj+B)' : 'Replier le panneau (Ctrl+Maj+B)';
+      btnReplier.title = vue.infobulle(replie ? 'Déplier le panneau' : 'Replier le panneau', 'panneau');
       btnReplier.setAttribute('aria-label', btnReplier.title);
       try { localStorage.setItem('aktum-panneau-replie', replie ? '1' : ''); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
       planifierAjustementBarre();
@@ -646,6 +648,8 @@
     ACTIONS['ed-precedente'] = { quand: () => ed.root && !ed.root.hidden, agit: () => edGo(-1) };
     ACTIONS['ed-suivante'] = { quand: () => ed.root && !ed.root.hidden, agit: () => edGo(1) };
     envoyerLesAccelerateurs();
+    poserLesInfobulles();
+    window.addEventListener('aktum-langue', poserLesInfobulles);
 
     document.addEventListener('keydown', e => {
       if (ed.root && !ed.root.hidden) return;
@@ -754,7 +758,7 @@
       // « Enregistrer sous… » (Ctrl+Maj+S) est dans le menu Fichier.
       const lblExport = el.btnExport.querySelector('.lbl');
       if (lblExport) lblExport.textContent = 'Enregistrer';
-      el.btnExport.title = 'Enregistrer (Ctrl+S) · Enregistrer sous… : Ctrl+Maj+S';
+      el.btnExport.title = vue.infobulle('Enregistrer', 'enregistrer') + ' · ' + vue.infobulle('Enregistrer sous…', 'exporter');
     } else {
       // Un document demandé au lancement prend la place de l'exemple. Demandé
       // plus tard, sur une page déjà ouverte, il s'ajoute comme par le bouton Ouvrir.
@@ -768,6 +772,7 @@
   const rendreLesVignettes = vue.render;
   vue.render = function () { rendreLesVignettes(); renderTools(); planifierAjustementBarre(); };
   vue.touche = traiterLaTouche;
+  vue.infobulle = infobulle;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

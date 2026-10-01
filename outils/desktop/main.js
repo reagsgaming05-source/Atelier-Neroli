@@ -12,7 +12,7 @@
  * PDF ouverts depuis le bureau sont deux documents indépendants. Les combiner est
  * un choix explicite (« Ajouter au document… », ou le bouton Ouvrir dans la page).
  */
-const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -380,7 +380,8 @@ function reprendreLesDossiersDAvant() {
   if (!app.isPackaged) return;
   let appData;
   try { appData = app.getPath('appData'); } catch (e) { return; }
-  [['Blonay PDF', 'Aktum PDF'], ['blonay-pdf-desktop', 'aktum-pdf-desktop']].forEach(([avant, apres]) => { // @garder-ancien-nom
+  // « AktumPDF » : le nom que portaient les versions candidates, avant que le produit s'écrive « Aktum PDF » partout, à l'exécutable près.
+  [['Blonay PDF', 'Aktum PDF'], ['blonay-pdf-desktop', 'aktum-pdf-desktop'], ['AktumPDF', 'Aktum PDF']].forEach(([avant, apres]) => { // @garder-ancien-nom
     try {
       const a = path.join(appData, avant), n = path.join(appData, apres);
       if (fs.existsSync(a) && !fs.existsSync(n)) fs.renameSync(a, n);
@@ -441,6 +442,20 @@ function ecrireReglages(r) {
   } catch (e) { /* le réglage ne survivra pas au redémarrage, tant pis */ }
 }
 const toujoursEnOnglet = () => lireReglages().toujoursEnOnglet === true;
+// Le fond de la fenêtre avant que la page ne soit peinte : celui du thème de la page (clair par défaut), pris dans la palette
+// de la marque — plus de valeur écrite ici, qui n'était le jeton d'aucun des deux thèmes (un éclair clair, en thème sombre).
+const MARQUE = require('./marque.json');
+function fondDeFenetre() {
+  const t = lireReglages().theme;   // « light », « dark » ou « auto » : le choix de la page, recopié par aktum:theme
+  const sombre = t === 'dark' || (t === 'auto' && nativeTheme.shouldUseDarkColors);
+  return sombre ? MARQUE['fond-fenetre'].sombre : MARQUE['fond-fenetre'].clair;
+}
+ipcMain.on('aktum:theme', (_e, mode) => {
+  if (mode !== 'light' && mode !== 'dark' && mode !== 'auto') return;
+  const r = lireReglages();
+  if (r.theme === mode) return;
+  r.theme = mode; ecrireReglages(r);
+});
 function lireRecents() {
   try { const l = JSON.parse(fs.readFileSync(fichierRecents(), 'utf8')); return Array.isArray(l) ? l.filter((c) => typeof c === 'string') : []; } catch (e) { return []; }
 }
@@ -538,7 +553,7 @@ function createWindow(fichiers) {
     minWidth: 880,
     minHeight: 560,
     title: APP_TITLE,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: fondDeFenetre(),
     show: false,
     icon: path.join(__dirname, 'build', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     webPreferences: {
@@ -962,7 +977,7 @@ function ouvrirMonCompte(mode) {
   const fen = new BrowserWindow({
     width: 460, height: 460, resizable: false, minimizable: false, maximizable: false,
     fullscreenable: false, title: APP_TITLE, show: false, autoHideMenuBar: true, parent, modal: !!parent,
-    backgroundColor: '#191F25',
+    backgroundColor: MARQUE['fond-fenetre'].sombre,
     webPreferences: { preload: path.join(__dirname, 'choix-preload.js'), partition: 'choix-du-compte', sandbox: true },
   });
   fen.removeMenu();
@@ -978,7 +993,7 @@ function demanderLeCompte() {
   const fen = new BrowserWindow({
     width: 460, height: 540, resizable: false, minimizable: false, maximizable: false,
     fullscreenable: false, title: APP_TITLE, show: false, autoHideMenuBar: true,
-    backgroundColor: '#191F25',
+    backgroundColor: MARQUE['fond-fenetre'].sombre,
     webPreferences: { preload: path.join(__dirname, 'choix-preload.js'), partition: 'choix-du-compte' },
   });
   fen.removeMenu();

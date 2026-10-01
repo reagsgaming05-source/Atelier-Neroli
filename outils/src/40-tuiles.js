@@ -256,8 +256,8 @@
     // et nomme le fichier qui sera réellement remplacé.
     if (state.bureau) {
       const vise = typeof cheminDocument === 'function' ? cheminDocument() : '';
-      el.btnExport.title = (vise ? 'Enregistrer « ' + nomDe(vise) + ' » (Ctrl+S)' : 'Enregistrer (Ctrl+S)')
-        + ' · Enregistrer sous… : Ctrl+Maj+S';
+      el.btnExport.title = vue.infobulle(vise ? 'Enregistrer « ' + nomDe(vise) + ' »' : 'Enregistrer', 'enregistrer')
+        + ' · ' + vue.infobulle('Enregistrer sous…', 'exporter');
       const champ = el.filename && el.filename.closest('.filename');
       if (champ) champ.title = 'Nom proposé pour « Enregistrer sous… » et les exports. « Enregistrer » réécrit le fichier ouvert.';
     }

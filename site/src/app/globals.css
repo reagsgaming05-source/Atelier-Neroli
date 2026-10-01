@@ -1,24 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: var(--font-bricolage), "Bricolage Grotesque", "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
+  /* La marque (outils/desktop/marque.json) : les mêmes polices, les mêmes couleurs que l'application et que l'icône. */
+  --font-display: var(--font-instrument-serif), "Instrument Serif", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-geist), "Geist", ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-  --color-canvas-50: #fafaf8;
+  --color-papier: #FBFAF7;
+  --color-signet: #D4322A;
+  --color-signet-fonce: #AF1C14;
+  --color-signet-pli: #F2705C;
+
+  --color-canvas-50: #FBFAF7;
   --color-canvas-100: #f4f4f1;
   --color-canvas-200: #eaeae5;
   --color-canvas-300: #dcdcd5;
 
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #dde5ff;
-  --color-brand-200: #b9c8ff;
-  --color-brand-500: #2f5bff;
-  --color-brand-600: #2348e6;
-  --color-brand-700: #1c3ac0;
-  --color-brand-800: #172f96;
-  --color-brand-900: #10216a;
+  /* le bleu de l'action : celui de l'application (--bleu, --bleu-survol), puis ses ombres */
+  --color-brand-50: #eef3fd;
+  --color-brand-100: #dde8fb;
+  --color-brand-200: #bad0f7;
+  --color-brand-500: #2F6AE0;
+  --color-brand-600: #2859C6;
+  --color-brand-700: #2149a5;
+  --color-brand-800: #1a3a85;
+  --color-brand-900: #122a62;
 
-  --color-ink-900: #121418;
+  --color-ink-900: #10151A;
   --color-ink-700: #383c44;
   --color-ink-500: #676c76;
   --color-ink-400: #8c919b;
@@ -51,6 +58,10 @@
   }
   ::selection {
     background: var(--color-brand-100);
+  }
+  /* Instrument Serif n'existe qu'en graisse normale : on ne la fait pas grossir au navigateur. */
+  .font-display {
+    font-synthesis-weight: none;
   }
   h1,
   h2,

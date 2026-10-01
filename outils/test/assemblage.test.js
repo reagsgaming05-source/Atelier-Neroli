@@ -131,3 +131,18 @@ test('il attrape aussi la lecture faite plus tard, dans le démarrage asynchrone
   const page = source.replace("  'use strict';\n", "  'use strict';\n  (async () => { tard; })();\n").replace(ANCRE, '  const tard = 1;\n' + ANCRE);
   assert.match((await erreursDeDemarrage(page))[0] || '', /tard/);
 });
+
+// Les modules partagent une seule portée : deux déclarations de même nom, et la dernière écrase l'autre sans un mot
+// (edFond, à la fois le relevé du fond d'une zone et la mise à l'écart du fond de l'éditeur, a fait lever
+// « Cannot read properties of undefined » à l'édition du texte). Aucun nom ne se déclare deux fois au niveau du module.
+test('aucun nom n\'est déclaré deux fois dans la portée commune des modules', () => {
+  const vus = new Map(), doubles = [];
+  for (const f of fs.readdirSync(SRC).filter(n => n.endsWith('.js')).sort()) {
+    const code = fs.readFileSync(path.join(SRC, f), 'utf8');
+    for (const m of code.matchAll(/^ {2}(?:async\s+)?function\*?\s+([A-Za-z_$][\w$]*)\s*\(|^ {2}(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/gm)) {
+      const nom = m[1] || m[2];
+      if (vus.has(nom)) doubles.push(nom + ' (' + vus.get(nom) + ' et ' + f + ')'); else vus.set(nom, f);
+    }
+  }
+  assert.deepStrictEqual(doubles, []);
+});

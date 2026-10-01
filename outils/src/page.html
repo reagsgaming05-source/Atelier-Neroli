@@ -25,32 +25,32 @@
   </div>
   <span class="tb-sep"></span>
   <input type="file" id="file-input" accept="application/pdf,.pdf,image/png,image/jpeg,image/webp" multiple class="sr-only" tabindex="-1" aria-hidden="true">
-  <button class="tb-btn" id="btn-open" type="button" title="Ouvrir des PDF ou des images (Ctrl+O)">
+  <button class="tb-btn" id="btn-open" type="button" title="Ouvrir des PDF ou des images">
     <!--@ic:ouvrir-->
     <span class="lbl">Ouvrir</span>
   </button>
   <span class="tb-sep"></span>
-  <button class="tb-btn" id="btn-undo" type="button" disabled title="Annuler (Ctrl+Z)">
+  <button class="tb-btn" id="btn-undo" type="button" disabled title="Annuler">
     <!--@ic:annuler-->
     <span class="lbl" data-de="Rückgängig">Annuler</span>
   </button>
-  <button class="tb-btn" id="btn-redo" type="button" disabled title="Rétablir (Ctrl+Y)">
+  <button class="tb-btn" id="btn-redo" type="button" disabled title="Rétablir">
     <!--@ic:retablir-->
     <span class="lbl">Rétablir</span>
   </button>
   <span class="tb-sep"></span>
   <div class="vue-modes" id="vue-modes" role="group" aria-label="Affichage">
-    <button class="vue-mode" data-vue="lecture" type="button" aria-pressed="true" title="Lire le document (Ctrl+1)">
+    <button class="vue-mode" data-vue="lecture" type="button" aria-pressed="true" title="Lire le document">
       <!--@ic:lire-->
       <span class="lbl">Lire</span>
     </button>
-    <button class="vue-mode" data-vue="organiser" type="button" aria-pressed="false" title="Organiser les pages (Ctrl+2)">
+    <button class="vue-mode" data-vue="organiser" type="button" aria-pressed="false" title="Organiser les pages">
       <!--@ic:grille-->
       <span class="lbl">Organiser</span>
     </button>
   </div>
   <span class="zoom-lecture" id="zoom-lecture" hidden role="group" aria-label="Zoom">
-    <button type="button" id="zoom-moins" title="Réduire (Ctrl −)" aria-label="Réduire">−</button>
+    <button type="button" id="zoom-moins" title="Réduire" aria-label="Réduire">−</button>
     <select id="zoom-niveau" aria-label="Niveau de zoom" title="Zoom : Ctrl + molette, Ctrl + / Ctrl −, Ctrl 0 pour la page entière">
       <option value="page">Page entière</option>
       <option value="largeur">Largeur</option>
@@ -63,17 +63,17 @@
       <option value="3">300 %</option>
       <option value="4">400 %</option>
     </select>
-    <button type="button" id="zoom-plus" title="Agrandir (Ctrl +)" aria-label="Agrandir">+</button>
+    <button type="button" id="zoom-plus" title="Agrandir" aria-label="Agrandir">+</button>
     <button type="button" id="vue-deux" title="Deux pages côte à côte, comme un livre ouvert" aria-label="Deux pages côte à côte" aria-pressed="false">
       <!--@ic:deux-->
     </button>
   </span>
   <span class="tb-sep"></span>
-  <button class="tb-btn" id="btn-select-all" type="button" disabled title="Tout sélectionner (Ctrl+A)">
+  <button class="tb-btn" id="btn-select-all" type="button" disabled title="Tout sélectionner">
     <!--@ic:toutSelect-->
     <span class="lbl" id="select-all-label">Tout sélectionner</span>
   </button>
-  <button class="tb-btn" id="btn-search" type="button" disabled title="Rechercher du texte (Ctrl+F)">
+  <button class="tb-btn" id="btn-search" type="button" disabled title="Rechercher du texte">
     <!--@ic:search-->
     <span class="lbl">Rechercher</span>
   </button>
@@ -83,7 +83,7 @@
   <button class="tb-btn icon" id="btn-help" type="button" title="Raccourcis clavier (?)">
     <!--@ic:aide-->
   </button>
-  <button class="tb-btn" id="btn-print" type="button" disabled title="Imprimer (Ctrl+P)">
+  <button class="tb-btn" id="btn-print" type="button" disabled title="Imprimer">
     <!--@ic:print-->
     <span class="lbl">Imprimer</span>
   </button>
@@ -92,7 +92,7 @@
     <input type="text" id="filename" value="document" spellcheck="false" autocomplete="off">
     <span class="ext">.pdf</span>
   </div>
-  <button class="tb-btn primary" id="btn-export" type="button" disabled title="Exporter le PDF (Ctrl+S)">
+  <button class="tb-btn primary" id="btn-export" type="button" disabled title="Exporter le PDF">
     <!--@ic:save-->
     <span class="lbl">Exporter le PDF</span>
   </button>
@@ -103,7 +103,7 @@
   <aside class="side" aria-label="Panneau latéral">
     <h2 class="sr-only">Panneau latéral</h2>
     <div class="tabs">
-      <button class="replier" id="btn-replier" type="button" title="Replier le panneau (Ctrl+Maj+B)" aria-label="Replier le panneau" aria-expanded="true">
+      <button class="replier" id="btn-replier" type="button" title="Replier le panneau" aria-label="Replier le panneau" aria-expanded="true">
         <!--@ic:left-->
       </button>
       <div class="tabs-liste" role="tablist" aria-label="Volets du panneau">
@@ -220,7 +220,7 @@
     <button class="go" id="moveto-go" type="button">OK</button>
   </div>
   <span class="sep"></span>
-  <button class="tb-btn" id="sel-rot-left" type="button" title="Pivoter à gauche (Maj+R)">
+  <button class="tb-btn" id="sel-rot-left" type="button" title="Pivoter à gauche">
     <!--@ic:rotL-->
   </button>
   <button class="tb-btn" id="sel-rot-right" type="button" title="Pivoter à droite (R)">

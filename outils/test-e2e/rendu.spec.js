@@ -62,6 +62,11 @@ test('le rendu hors du fil principal donne les mêmes pixels que le fil principa
   test.setTimeout(240000);
   const scan = await fabriquerScan(page);
   await app.ouvrir('scan.pdf', scan);
+  // Le zoom « largeur » : la page prend un nombre entier de pixels, de sorte que l'échelle de la page est exactement celle
+  // que le test rejoue (sur « page entière », elle dépend de la hauteur de la fenêtre et tombe entre deux pixels).
+  await page.keyboard.press('Control+2');
+  await page.waitForFunction(() => document.querySelector('#zoom-niveau').value === 'largeur');
+  await page.waitForTimeout(600);
   await page.waitForFunction(() => { const cv = document.querySelector('#lecture .feuille-vue canvas'); return cv && cv.width > 100 && document.querySelector('#lecture .feuille-vue .attente[hidden]'); }, null, { timeout: 120000 });
   const r = await page.evaluate(async (b64) => {
     const bin = atob(b64); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);

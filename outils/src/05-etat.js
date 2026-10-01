@@ -59,10 +59,10 @@
   function edPage() { return state.pages.find(p => p.id === ed.pageId); }
 
   // Le modèle prévient sa vue par un seul chemin. Ces gestes — redessiner, rafraîchir les boutons, rafraîchir la
-  // sélection, répondre à une touche de la table des raccourcis — sont des points d'accroche que 40-tuiles.js (les
+  // sélection, répondre à une touche de la table des raccourcis, écrire l'infobulle d'un geste avec sa touche — sont des points d'accroche que 40-tuiles.js (les
   // vignettes) et 99-init.js (la barre, les raccourcis) renseignent au chargement ; n'importe quel module appelle vue.render() sans savoir qui répond. Avant, 99-init.js remplaçait
   // « render » à chaud, ce qui supposait de savoir dans quel ordre tout se chargeait.
-  const vue = { render() {}, syncButtons() {}, updateSelectionUI() {}, touche() { return false; } };
+  const vue = { render() {}, syncButtons() {}, updateSelectionUI() {}, touche() { return false; }, infobulle(base) { return base; } };
 
   function prendreEtat() {
     const e = {};

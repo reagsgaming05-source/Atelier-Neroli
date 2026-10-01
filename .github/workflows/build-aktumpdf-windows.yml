@@ -173,11 +173,16 @@ jobs:
           export AKTUM_CHROMIUM="$(cd ../test-e2e && node -p "require('@playwright/test').chromium.executablePath()")"
           node faire-les-documents.js "$GITHUB_WORKSPACE/documents"
           test "$(ls "$GITHUB_WORKSPACE/documents"/*.pdf | wc -l)" -eq 4
+          # la page de référence des composants : un fichier HTML autonome, lisible hors ligne, tiré de la feuille de style
+          node faire-reference-composants.js "$GITHUB_WORKSPACE/documents"
+          test -s "$GITHUB_WORKSPACE/documents/Reference-des-composants.html"
 
       - uses: actions/upload-artifact@v4
         with:
           name: documents
-          path: documents/*.pdf
+          path: |
+            documents/*.pdf
+            documents/*.html
           retention-days: 7
           if-no-files-found: error
 
@@ -280,6 +285,7 @@ jobs:
           Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'guide\Aktum-PDF-mode-d-emploi.pdf') dist\AktumPDF\Mode-d-emploi.pdf
           New-Item -ItemType Directory -Force -Path dist\AktumPDF\Documents | Out-Null
           Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'documents\*.pdf') dist\AktumPDF\Documents\
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'documents\*.html') dist\AktumPDF\Documents\
           Copy-Item build\LICENCE.txt dist\AktumPDF\LICENCE.txt
           Copy-Item build\MENTIONS-TIERCES.txt dist\AktumPDF\MENTIONS-TIERCES.txt
           Copy-Item build\LISEZMOI-portable.txt dist\AktumPDF\LISEZMOI-portable.txt
@@ -618,8 +624,10 @@ jobs:
           set -euo pipefail
           # Le dossier de sortie s'appelle mac-universal, mac-arm64 ou mac selon
           # l'architecture : on prend celui qui porte le paquet.
-          paquet=$(find dist -maxdepth 2 -name "AktumPDF.app" -print -quit)
-          test -n "$paquet" || { echo "::error::AktumPDF.app introuvable dans dist/"; exit 1; }
+          # le paquet s'appelle « Aktum PDF.app » (le nom du produit, avec son espace) ; il est posé dans l'archive sous
+          # « AktumPDF.app », comme le dossier, le zip et l'exécutable : un nom de fichier sans espace
+          paquet=$(find dist -maxdepth 2 -name "*.app" -print -quit)
+          test -n "$paquet" || { echo "::error::le paquet .app est introuvable dans dist/"; exit 1; }
           echo "paquet : $paquet"
           rm -rf dist/AktumPDF && mkdir -p dist/AktumPDF
           ditto "$paquet" dist/AktumPDF/AktumPDF.app
@@ -628,6 +636,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/guide/Aktum-PDF-mode-d-emploi.pdf" dist/AktumPDF/Mode-d-emploi.pdf
           mkdir -p dist/AktumPDF/Documents
           cp "$GITHUB_WORKSPACE"/documents/*.pdf dist/AktumPDF/Documents/
+          cp "$GITHUB_WORKSPACE"/documents/*.html dist/AktumPDF/Documents/
           cp build/LICENCE.txt dist/AktumPDF/LICENCE.txt
           cp build/MENTIONS-TIERCES.txt dist/AktumPDF/MENTIONS-TIERCES.txt
           cp build/LISEZMOI-mac.txt dist/AktumPDF/LISEZMOI-mac.txt

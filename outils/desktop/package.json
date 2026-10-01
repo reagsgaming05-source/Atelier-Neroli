@@ -30,8 +30,8 @@
   },
   "build": {
     "appId": "ch.atelier-neroli.aktum-pdf",
-    "productName": "AktumPDF",
-    "artifactName": "${productName}-${version}.${ext}",
+    "productName": "Aktum PDF",
+    "artifactName": "AktumPDF-${version}.${ext}",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -41,6 +41,7 @@
       "langue.js",
       "langue-de.json",
       "raccourcis.json",
+      "marque.json",
       "traducteur.js",
       "ou-ranger.js",
       "version-posee.js",
@@ -63,12 +64,14 @@
     ],
     "asar": true,
     "win": {
+      "executableName": "AktumPDF",
       "target": [
         "dir"
       ],
       "icon": "build/icon.ico"
     },
     "linux": {
+      "executableName": "AktumPDF",
       "target": [
         "dir"
       ],
@@ -78,6 +81,7 @@
       "cache": ".electron-cache"
     },
     "mac": {
+      "executableName": "AktumPDF",
       "target": [
         {
           "target": "dir",

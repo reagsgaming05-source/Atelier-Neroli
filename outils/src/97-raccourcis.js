@@ -28,6 +28,7 @@
     try { if (Object.keys(o).length) localStorage.setItem(CLE_TOUCHES, JSON.stringify(o)); else localStorage.removeItem(CLE_TOUCHES); }
     catch (e) { signaler('Raccourcis clavier', e, 'info'); }
     envoyerLesAccelerateurs();
+    poserLesInfobulles();
   }
   function touchesSeulesActives() {
     try { return localStorage.getItem(CLE_TOUCHES_SEULES) !== '0'; } catch (e) { return true; }
@@ -82,6 +83,39 @@
   }
   // Un geste, dans la langue affichée ; « Enregistrer » devient « Exporter le PDF » dans le navigateur.
   const libelleDeCommande = c => tr(c.id === 'enregistrer' && !state.bureau ? 'Exporter le PDF' : c.libelle);
+
+  // L'infobulle d'un geste, avec sa touche : « Ouvrir des PDF ou des images (Ctrl+O) ». La touche est celle de la personne, écrite
+  // dans la langue affichée ; un geste d'une seule lettre n'en montre pas quand ces touches sont coupées.
+  function touchesAffichees(id) {
+    const c = RACCOURCIS.commandes.find(x => x.id === id);
+    if (!c || (c.uneLettre && !touchesSeulesActives())) return '';
+    const t = touchesDe(c)[0];
+    return t ? libelleTouche(t).split('\u0000').join('+') : '';
+  }
+  function infobulle(base, id) {
+    const t = touchesAffichees(id);
+    return tr(base) + (t ? ' (' + t + ')' : '');
+  }
+  // Les boutons que la page pose d'avance : leur infobulle suit la table, au démarrage, à chaque changement de touche ou de langue.
+  const INFOBULLES = [
+    ['#btn-open', 'Ouvrir des PDF ou des images', 'ouvrir'], ['#btn-undo', 'Annuler', 'annuler'], ['#btn-redo', 'Rétablir', 'retablir'],
+    ['.vue-mode[data-vue="lecture"]', 'Lire le document', 'lecture'], ['.vue-mode[data-vue="organiser"]', 'Organiser les pages', 'organiser'],
+    ['#zoom-moins', 'Réduire', 'zoom-moins'], ['#zoom-plus', 'Agrandir', 'zoom-plus'],
+    ['#btn-select-all', 'Tout sélectionner', 'tout-selectionner'], ['#btn-search', 'Rechercher du texte', 'rechercher'],
+    ['#btn-print', 'Imprimer', 'imprimer'], ['#sel-rot-left', 'Pivoter à gauche', 'pivoter-gauche'],
+    ['.onglet .x', 'Fermer cet onglet', 'fermer-onglet'], ['#onglet-plus', 'Nouvel onglet', 'nouvel-onglet'],
+  ];
+  function poserLesInfobulles() {
+    INFOBULLES.forEach(([sel, base, id]) => { $$(sel).forEach(b => { b.title = infobulle(base, id); }); });
+    const b = $('#btn-replier');
+    if (b) {
+      const info = infobulle(b.getAttribute('aria-expanded') === 'false' ? 'Déplier le panneau' : 'Replier le panneau', 'panneau');
+      b.title = info; b.setAttribute('aria-label', info);
+    }
+    // « Enregistrer » est « Exporter le PDF » dans le navigateur ; dans l'application, il réécrit le fichier ouvert (40-tuiles.js l'écrit alors)
+    if (!state.bureau && el.btnExport) el.btnExport.title = infobulle('Exporter le PDF', 'enregistrer');
+    else if (state.bureau) vue.syncButtons();
+  }
 
   // Les lignes de la fenêtre d'aide : [[touches], libellé], rangées par groupe, dans l'ordre de la table.
   function groupesDeRaccourcis() {

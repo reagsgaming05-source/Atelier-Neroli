@@ -1,0 +1,12 @@
+{
+  "_": "La marque, en un seul endroit : sa palette, ses polices, et le fond de la fenêtre avant que la page ne soit peinte. L'application (outils/src/style.css), le site (site/src/app/globals.css), l'icône (outils/src/marque.svg) et l'application fenêtrée (desktop/main.js) y puisent ; test/marque.test.js vérifie qu'ils disent tous la même chose.",
+  "papier": "#FBFAF7",
+  "encre": "#10151A",
+  "signet": "#D4322A",
+  "signet-fonce": "#AF1C14",
+  "signet-pli": "#F2705C",
+  "action": "#2F6AE0",
+  "action-survol": "#2859C6",
+  "fond-fenetre": { "sombre": "#191F25", "clair": "#EDEFF2" },
+  "polices": { "titre": "Instrument Serif", "interface": "Geist", "chiffre": "Geist Mono" }
+}

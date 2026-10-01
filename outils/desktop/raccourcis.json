@@ -22,7 +22,7 @@
  {"id": "lecture", "touches": ["Ctrl+Shift+1"], "libelle": "Lire", "groupe": "Affichage", "menu": true},
  {"id": "organiser", "touches": ["Ctrl+Shift+2"], "libelle": "Organiser les pages", "groupe": "Affichage", "menu": true},
  {"id": "deux-pages", "touches": ["Ctrl+Shift+3"], "libelle": "Deux pages côte à côte", "groupe": "Affichage", "menu": true},
- {"id": "zoom-plus", "touches": ["Ctrl+=", "Ctrl++"], "libelle": "Agrandir", "groupe": "Affichage", "menu": true},
+ {"id": "zoom-plus", "touches": ["Ctrl++", "Ctrl+="], "libelle": "Agrandir", "groupe": "Affichage", "menu": true},
  {"id": "zoom-moins", "touches": ["Ctrl+-"], "libelle": "Réduire", "groupe": "Affichage", "menu": true},
  {"id": "zoom-page", "touches": ["Ctrl+0"], "libelle": "Page entière", "groupe": "Affichage", "menu": true},
  {"id": "zoom-100", "touches": ["Ctrl+1"], "libelle": "Taille réelle (100 %)", "groupe": "Affichage"},

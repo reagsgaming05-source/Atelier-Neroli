@@ -1,5 +1,5 @@
 // Tire de src/marque.svg toutes les icônes du dépôt : celles du site
-// installable, celle de la fenêtre Electron, celles du lanceur Go, et les deux
+// installable, celle du site de vente, celle de la fenêtre Electron, celles du lanceur Go, et les deux
 // fichiers .ico posés sur les exécutables Windows.
 //
 // À lancer quand le dessin de la marque change — « npm run icones » dans
@@ -72,6 +72,8 @@ function ico(images) {
   // Le site sert le dessin tel quel, sans les commentaires qui l'expliquent.
   const nu = dessin.replace(/<!--[\s\S]*?-->\n?\s*/g, '');
   fs.writeFileSync(path.join(RACINE, 'docs', 'icon.svg'), nu);
+  // Le site de vente porte la même marque, pas une autre dessinée à côté : son icône d'onglet est ce fichier.
+  fs.writeFileSync(path.join(RACINE, 'site', 'src', 'app', 'icon.svg'), nu);
   const nav = await chromium.launch({ executablePath: process.env.AKTUM_CHROMIUM || undefined });
   const page = await nav.newPage();
 
@@ -83,7 +85,7 @@ function ico(images) {
     return page.screenshot({ omitBackground: true });
   }
 
-  const faits = [['docs/icon.svg', 'vectoriel', nu.length]];
+  const faits = [['docs/icon.svg', 'vectoriel', nu.length], ['site/src/app/icon.svg', 'vectoriel', nu.length]];
   for (const [relatif, taille] of PNG) {
     const png = await rendre(taille);
     fs.writeFileSync(path.join(RACINE, relatif), png);

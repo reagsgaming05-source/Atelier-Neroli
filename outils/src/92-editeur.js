@@ -7,7 +7,7 @@
   // (`inert` retire le focus et les clics, aria-hidden le dit) ; le focus entre à l'ouverture, Tab y tourne, et il
   // retourne à ce qui l'avait quand on referme.
   const FOND_DE_L_EDITEUR = ['#app-toolbar', '#app-main', '#app-status', '#selbar'];
-  function edFond(inerte) {
+  function edFondInerte(inerte) {
     FOND_DE_L_EDITEUR.forEach(sel => {
       const n = $(sel);
       if (!n) return;
@@ -29,7 +29,7 @@
     if (ed.root.hidden) { ed.retour = document.activeElement; ed.retourPage = pageId; ed.retourOutil = ed.retour && ed.retour.dataset ? ed.retour.dataset.tool : null; }
     ed.root.hidden = false;
     document.body.style.overflow = 'hidden';
-    edFond(true);
+    edFondInerte(true);
     edSyncTools();
     edRenderPage();
     const premier = edCibles()[0];
@@ -43,7 +43,7 @@
     edFermerSaisie();
     ed.root.hidden = true;
     document.body.style.overflow = '';
-    edFond(false);
+    edFondInerte(false);
     ed.pageId = null; ed.sel = null;
     vue.render();
     // Le focus retourne là où il était : le bouton qui a ouvert l'éditeur, ou la vignette de la page quand c'est elle
@@ -95,7 +95,7 @@
     done.addEventListener('click', closeEditor);
     const bandeau = document.createElement('div'); bandeau.className = 'ed-bandeau';
     const spacer2 = document.createElement('span'); spacer2.className = 'tb-spacer';
-    const imprimer = edBtn(IC.print, 'Imprimer (Ctrl+P)', dialogImprimer);
+    const imprimer = edBtn(IC.print, vue.infobulle('Imprimer', 'imprimer'), dialogImprimer);
     imprimer.id = 'ed-print';
     head.append(title, nav, spacer, bandeau, spacer2, imprimer, zoomSel, done);
 

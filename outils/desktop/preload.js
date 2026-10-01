@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('AktumDesktop', {
   definirMenuOutils: (liste) => ipcRenderer.send('aktum:menu-outils', liste),
   // Les touches du menu : celles de la table (raccourcis.json), telles que la personne les a réglées.
   definirAccelerateurs: (o) => ipcRenderer.send('aktum:accelerateurs', o),
+  definirTheme: (mode) => ipcRenderer.send('aktum:theme', mode),
   // Un petit nombre de réglages de l'application (voir main.js) : « toujoursEnOnglet ».
   lireReglage: (cle) => ipcRenderer.invoke('aktum:lire-reglage', cle),
   ecrireReglage: (cle, valeur) => ipcRenderer.invoke('aktum:ecrire-reglage', cle, valeur),
