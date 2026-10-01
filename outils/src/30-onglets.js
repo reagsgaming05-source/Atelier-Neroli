@@ -252,7 +252,7 @@
       { label: 'Pivoter à droite' + s, icon: IC.rotR, touche: 'R', run: () => rotatePages(ids, 90) },
       { label: 'Pivoter à gauche' + s, icon: IC.rotL, touche: 'Maj+R', run: () => rotatePages(ids, -90) },
       { sep: true },
-      { label: 'Modifier la page…', icon: IC.pencil, touche: 'Entrée', run: () => openEditor(id) },
+      { label: 'Ouvrir l\'éditeur de page', icon: IC.pencil, touche: 'Entrée', run: () => openEditor(id) },
       { label: 'Ajouter un signet', icon: IC.signet, touche: 'Ctrl+B', run: () => ajouterSignet(id) },
       { label: 'Copier le texte de la page', icon: IC.txt, run: async () => { const t = await getPageText(p); const ok = t.trim() && await copierTexte(t); toast(ok ? 'Texte de la page copié.' : (t.trim() ? 'Le presse-papiers est inaccessible ici.' : 'Cette page n\'a pas de texte (scan sans reconnaissance ?).'), ok ? '' : 'warn'); } },
       { sep: true },

@@ -288,9 +288,16 @@
     }
   }
 
+  // Les pages que désigne une plage « 3-7, 12 » (numéros du document) : null pour « toutes » (champ vide).
+  function pagesVisees(plage) {
+    const t = String(plage || '').trim();
+    return t ? new Set(lirePlages(t, state.pages.length).pages) : null;
+  }
   async function drawWatermark(doc, page, p, fonts) {
     const wm = state.watermark;
     if (!wm) return;
+    const visees = pagesVisees(wm.pages);
+    if (visees && !visees.has(pageIndex(p.id) + 1)) return;
     const g = pageGeom(p);
     const font = await getFont(doc, fonts, wm.font, wm.bold);
     const o = { text: wm.text, size: wm.size, font, color: wm.color, opacity: wm.opacity, angle: wm.angle, align: 'center' };
@@ -318,6 +325,8 @@
     const st = state.stamp;
     if (!st) return;
     if (st.skipFirst && ctx.i === 0) return;
+    const visees = pagesVisees(st.pages);
+    if (visees && !visees.has(pageIndex(p.id) + 1)) return;
     const g = pageGeom(p);
     const font = await getFont(doc, fonts, st.font, st.bold);
     const m = st.margin;

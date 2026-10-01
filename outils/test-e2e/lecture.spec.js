@@ -122,7 +122,7 @@ test('la légende et le bouton restent lisibles à l\'écran', async ({ app, pag
   await expect(legende).toHaveAttribute('aria-label', /^Page 1 sur 2/);
   expect(await legende.evaluate((e) => getComputedStyle(e, '::after').content)).toContain('1 / 2');
   const bouton = page.locator('#lecture .feuille-vue .retoucher').first();
-  await expect(bouton).toHaveAttribute('aria-label', 'Modifier cette page');
+  await expect(bouton).toHaveAttribute('aria-label', 'Ouvrir l\'éditeur de cette page');
   expect(await bouton.evaluate((e) => getComputedStyle(e, '::after').content)).toContain('Modifier');
 });
 

@@ -52,7 +52,7 @@
     const num = document.createElement('span'); num.className = 'num';
     const ret = document.createElement('button');
     ret.type = 'button'; ret.className = 'retoucher';
-    ret.setAttribute('aria-label', 'Modifier cette page');
+    ret.setAttribute('aria-label', 'Ouvrir l\'éditeur de cette page');
     ret.appendChild(icon(IC.pencil));
     ret.addEventListener('click', e => { e.stopPropagation(); openEditor(+f.dataset.id); });
     f.append(cv, attente, num, ret);

@@ -6,7 +6,7 @@ test('la page hors ligne démarre sans réseau et charge son exemple', async ({ 
   await app.pretAvecExemple();
   expect(await app.nbPages()).toBe(6);
   await expect(page.locator('#doc-list .doc-name')).toHaveCount(1);
-  await expect(page.locator('#doc-list .badge')).toHaveText('Exemple');
+  await expect(page.locator('#doc-list .badge:not(.form)')).toHaveText('Exemple');
   // Hors ligne veut dire hors ligne : rien n'est allé chercher un script.
   const dehors = await page.evaluate(() => performance.getEntriesByType('resource')
     .map((r) => r.name).filter((n) => /^https?:/.test(n)));
@@ -52,7 +52,7 @@ test('retirer des pages, puis les récupérer avec Ctrl+Z', async ({ app, page }
   await app.selectionner(2, 4);
   await page.click('#sel-delete');
   await expect(page.locator('#pages .tile')).toHaveCount(3);
-  expect(await app.dernier()).toContain('2 pages retirées');
+  expect(await app.dernier()).toContain('2 pages supprimées');
   await page.click('#btn-undo');
   await expect(page.locator('#pages .tile')).toHaveCount(5);
 });

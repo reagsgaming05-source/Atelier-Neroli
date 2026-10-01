@@ -252,7 +252,7 @@
     x.addEventListener('click', visiteFermer);
     tete.append(h, compteur, x);
     const texte = document.createElement('p'); texte.className = 'dec-texte';
-    texte.textContent = fin ? tr('Vous avez vu l\'essentiel : chercher, réorganiser, caviarder, imprimer. Le menu Outils porte les trente autres outils, et « ? » liste tous les raccourcis. Remplacez l\'exemple par vos documents quand vous voulez : ouvrez-les, il s\'efface.') : tr(VISITE[n].texte);
+    texte.textContent = fin ? tr('Vous avez vu l\'essentiel : chercher, réorganiser, caviarder, imprimer. Le menu Outils porte tous les autres outils, et « ? » liste tous les raccourcis. Remplacez l\'exemple par vos documents quand vous voulez : ouvrez-les, il s\'efface.') : tr(VISITE[n].texte);
     c.append(tete, texte);
     const rang = document.createElement('div'); rang.className = 'dec-actions';
     if (!fin) {

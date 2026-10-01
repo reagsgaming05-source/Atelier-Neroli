@@ -356,7 +356,7 @@
     }
 
     dialog({
-      title: 'Détecter les pages vides', icon: IC.vide, wide: true, submitOnEnter: false,
+      title: 'Détecter les pages vides', icon: IC.vide, libre: true, submitOnEnter: false,
       build: b => {
         b.append(field('Sensibilité', sensi, 'Strict ne retient que les pages sans la moindre marque. Normal tolère un numéro de page. Tolérant accepte un pied de page court et le grain d\'un scanner.'));
         b.append(info);
@@ -366,7 +366,7 @@
       onOpen: () => {},
       actions: [
         { label: 'Fermer', onClick: c => { jeton++; c(); } },
-        { label: 'Retirer les pages cochées', primary: true, onClick: close => {
+        { label: 'Supprimer les pages cochées', primary: true, onClick: close => {
           const ids = [];
           cases.forEach((input, id) => { if (input.checked) ids.push(id); });
           if (!ids.length) { toast('Aucune page cochée.', 'warn'); return; }

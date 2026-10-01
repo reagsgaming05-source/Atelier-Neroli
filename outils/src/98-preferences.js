@@ -7,6 +7,7 @@
   // =====================================================================
   const MEMOIRES = [
     ['Réglages du filigrane', ['aktum-reglage-filigrane'], 'Le texte, la taille et la position du dernier filigrane posé.'],
+    ['Configurations enregistrées', ['aktum-configs-filigrane', 'aktum-configs-entete', 'aktum-configs-proprietes'], 'Les jeux de réglages nommés (filigrane, en-tête et pied de page, propriétés) que vous avez enregistrés.'],
     ['Tampons mémorisés', ['aktum-tampons'], 'Les tampons personnels (« Reçu le… ») que vous avez créés.'],
     ['Signatures mémorisées', ['aktum-signatures'], 'Les signatures dessinées sur ce poste : des images de votre main.'],
     ['Position de la signature', ['aktum-reglage-signature-position'], 'L\'endroit où vous posez d\'habitude votre signature sur une page.'],

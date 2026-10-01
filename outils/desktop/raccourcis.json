@@ -35,7 +35,7 @@
  {"id": "page-precedente", "touches": ["PageUp"], "libelle": "Page précédente", "groupe": "Navigation"},
  {"id": "premiere-page", "touches": ["Home"], "libelle": "Première page", "groupe": "Navigation"},
  {"id": "derniere-page", "touches": ["End"], "libelle": "Dernière page", "groupe": "Navigation"},
- {"id": "supprimer-pages", "touches": ["Delete", "Backspace"], "libelle": "Retirer les pages sélectionnées", "groupe": "Pages"},
+ {"id": "supprimer-pages", "touches": ["Delete", "Backspace"], "libelle": "Supprimer les pages sélectionnées", "groupe": "Pages"},
  {"id": "pivoter-droite", "touches": ["R"], "libelle": "Pivoter à droite", "groupe": "Pages", "uneLettre": true},
  {"id": "pivoter-gauche", "touches": ["Shift+R"], "libelle": "Pivoter à gauche", "groupe": "Pages", "uneLettre": true},
  {"id": "deselectionner", "touches": ["Escape"], "libelle": "Désélectionner", "groupe": "Pages"},

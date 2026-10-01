@@ -138,12 +138,13 @@
   const avisGraves = () => journal.reduce((t, j) => (j.niveau !== 'info' ? t + (j.fois || 1) : t), 0);
   function majJournal() {
     if (!el.btnJournal) return;
-    const n = journal.length;
+    // Le même compte partout : chaque signalement, répétitions comprises (un avertissement répété quatre fois est quatre signalements).
+    const n = journal.reduce((t, j) => t + (j.fois || 1), 0);
     const graves = avisGraves();
-    el.btnJournal.hidden = !n;
+    el.btnJournal.hidden = !journal.length;
     el.btnJournal.querySelector('.n').textContent = n;
     el.btnJournal.classList.toggle('grave', graves > 0);
-    el.btnJournal.title = plural(n, 'avis', 'avis') + ' dans le journal de la session' + (graves ? ', dont ' + plural(graves, 'avertissement', 'avertissements') : '');
+    el.btnJournal.title = tr('Journal de la session') + ' : ' + plural(n, 'signalement', 'signalements') + (graves ? ' (' + graves + ' ' + tr('à vérifier') + ')' : '');
   }
 
   // Une opération longue s'interrompt d'un clic : chaque boucle regarde si

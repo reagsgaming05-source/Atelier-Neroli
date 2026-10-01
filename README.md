@@ -352,11 +352,13 @@ Si le navigateur ne peut pas être téléchargé sur le poste, `AKTUM_CHROMIUM=/
 indique celui qui est déjà là.
 
 `outils/src/` est la seule source, et **la seule chose versionnée**. L'application y vit en
-morceaux : `page.html` (l'ossature et cinq repères), `style.css`, `marque.svg`, et quarante-neuf modules
+morceaux : `page.html` (l'ossature et cinq repères), `style.css`, `marque.svg`, et cinquante-trois modules
 `NN-nom.js` lus dans l'ordre de leurs numéros — `00-socle`, `01-langue` et `05-etat` d'abord, puis
 les outils généraux (mesure, couleurs, icônes, fenêtres, opérations sur les pages), la
 lecture et les vignettes, l'écriture dans les flux PDF et l'assemblage, les outils un par un
-(OCR, comparaison, dossier de pièces, lots, recherche, tableau vers Excel), l'éditeur de page,
+(OCR, comparaison, dossier de pièces, lots, vérification d'accessibilité, document d'exemple et visite
+guidée, recherche, tableau vers Excel), l'éditeur de page, le panneau d'outils, la table des raccourcis
+(`97-raccourcis`, lue dans `desktop/raccourcis.json`) et les préférences (`98-preferences`),
 et `99-init` qui met tout en marche. `assembler.js` les recolle en une page unique — une
 substitution de texte, sans reformatage ni réordonnancement.
 

@@ -9,7 +9,7 @@ test('clic droit sur une vignette : le menu de la page', async ({ app, page }) =
   const menu = page.locator('.menu-ctx');
   await expect(menu).toBeVisible();
   await expect(menu).toContainText('Pivoter à droite');
-  await expect(menu).toContainText('Modifier la page');
+  await expect(menu).toContainText('Ouvrir l\'éditeur de page');
   await expect(menu).toContainText('Ajouter un signet');
   await expect(menu).toContainText('Supprimer');
 });

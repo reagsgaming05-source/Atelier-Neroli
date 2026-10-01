@@ -51,7 +51,7 @@ test.describe('les messages d\'état s\'entendent', () => {
     await app.vue('organiser');
     await page.locator('#pages .tile').first().click();
     await page.keyboard.press('Delete');
-    await expect(page.locator('#last')).toContainText(/retirée/);
+    await expect(page.locator('#last')).toContainText(/supprimée/);
     // une erreur est une alerte, le reste un statut
     const roles = await page.evaluate(() => {
       // le toast se lit par son attribut : on déclenche un message d'erreur et un message simple par les gestes de l'application

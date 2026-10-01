@@ -34,16 +34,16 @@ async function lancer(app, p, operation, fichiersChoisis, apres) {
   return app.recolter(() => p.locator('.dialog').getByRole('button', { name: 'Lancer' }).click());
 }
 
-test('« Retirer les pages vides » sur trois fichiers : une archive, et le document ouvert n\'est pas touché', async ({ app, page: p }) => {
+test('« Supprimer les pages vides » sur trois fichiers : une archive, et le document ouvert n\'est pas touché', async ({ app, page: p }) => {
   test.setTimeout(240000);
   await app.ouvrir('ouvert.pdf', pdfDe([page('Document ouvert un'), page('Document ouvert deux')]));
   const { nom, octets } = await lancer(app, p, 'vides', fichiers());
   expect(nom).toMatch(/^lot-vides-\d{4}-\d{2}-\d{2}\.zip$/);
   const entrees = await lireLArchive(p, octets);
   expect(Array.from(entrees.keys()).sort()).toEqual(['a-sans-vides.pdf', 'b-sans-vides.pdf', 'c-sans-vides.pdf']);
-  expect(compterPages(entrees.get('a-sans-vides.pdf')), 'a : une page vide retirée').toBe(2);
+  expect(compterPages(entrees.get('a-sans-vides.pdf')), 'a : une page vide supprimée').toBe(2);
   expect(compterPages(entrees.get('b-sans-vides.pdf')), 'b : rien à retirer').toBe(2);
-  expect(compterPages(entrees.get('c-sans-vides.pdf')), 'c : deux pages vides retirées').toBe(2);
+  expect(compterPages(entrees.get('c-sans-vides.pdf')), 'c : deux pages vides supprimées').toBe(2);
   const textes = await textesDuPdf(p, entrees.get('c-sans-vides.pdf'));
   expect(textes.join(' ')).toMatch(/C page deux/);
   expect(textes.join(' ')).toMatch(/C page quatre/);
@@ -106,7 +106,7 @@ test('la détection des pages vides : les pages blanches se cochent, celles qui 
   await app.outil('vides');
   // l'analyse se fait, puis le décompte
   await expect(p.locator('.dialog')).toContainText('2 pages vides détectées sur 5', { timeout: 60000 });
-  await p.locator('.dialog').getByRole('button', { name: /Retirer/ }).click();
+  await p.locator('.dialog').getByRole('button', { name: /Supprimer/ }).click();
   await expect.poll(() => app.nbPages(), { timeout: 30000 }).toBe(3);
   const { octets } = await app.exporter();
   const textes = await textesDuPdf(p, octets);

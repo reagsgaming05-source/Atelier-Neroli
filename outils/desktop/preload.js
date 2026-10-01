@@ -4,7 +4,7 @@
  * plus tard, les commandes du menu, le résultat d'un enregistrement, la liste
  * des imprimantes et l'impression directe.
  */
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const arg = (nom) => { const a = process.argv.find((x) => x.startsWith('--' + nom + '=')); return a ? a.slice(nom.length + 3) : ''; };
 contextBridge.exposeInMainWorld('AktumDesktop', {
   version: arg('aktum-version'),
@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('AktumDesktop', {
   ecrire: (chemin, octets, opts) => ipcRenderer.invoke('aktum:ecrire', Object.assign({ chemin, octets }, opts || {})),
   liberer: (chemins) => ipcRenderer.invoke('aktum:liberer', chemins),
   recents: () => ipcRenderer.invoke('aktum:recents'),
+  // Un document déposé sur la fenêtre ou choisi dans le champ de fichier : son chemin, pour que « Récents » le retienne comme les autres.
+  cheminDe: (fichier) => { try { return webUtils.getPathForFile(fichier); } catch (e) { return ''; } },
+  noterRecents: (chemins) => ipcRenderer.send('aktum:noter-recents', chemins),
   lireRecent: (chemin) => ipcRenderer.invoke('aktum:lire-recent', chemin),
   recupEcrire: (o) => ipcRenderer.invoke('aktum:recup-ecrire', o),
   recupListe: () => ipcRenderer.invoke('aktum:recup-liste'),

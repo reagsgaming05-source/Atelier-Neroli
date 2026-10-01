@@ -75,6 +75,43 @@ d'avancement se voie et que « Annuler » réponde. Pour un document lourd, le d
 une seconde copie du fichier en mémoire (400 Mo au plus) ; au-delà, ou au moindre souci, l'application
 dessine comme avant.
 
+**Un premier lancement qui montre quelque chose.** Le document d'exemple est un dossier de commune
+imaginaire — un préavis, un tableau, un formulaire à remplir, un courrier numérisé, un procès-verbal,
+une page à signer — au lieu d'une page de vente. « Aide ▸ Découvrir Aktum PDF en 5 minutes » guide
+quatre gestes (chercher, réorganiser, caviarder, imprimer) dans une petite carte qui ne bloque rien.
+Après la connexion, un écran dit « Ouverture de votre dossier… » au lieu d'une fenêtre qui disparaît.
+Un fichier « donnees-par-utilisateur.txt.txt » (l'Explorateur cache les extensions) est reconnu, et
+« À propos » dit quel fichier de réglage a été lu. L'archive est allégée des langues inutiles de
+Chromium (près de 40 Mo).
+
+**Une interface plus lisible, plus rapide à prendre en main.** Les contrastes passent le seuil
+d'accessibilité dans les deux thèmes, la fenêtre tient à partir de 873 px de large (le panneau passe
+au-dessus du document en dessous), les trente et un outils se voient d'un coup d'œil, rangés en groupes
+qui se replient, avec des synonymes (« biffer », « livret »…) ; le menu Outils reprend la même liste ;
+le menu Édition (annuler, couper, copier, coller) existe. Les polices de l'interface sont embarquées,
+les icônes ont un seul dessin, les boutons occupés, enfoncés ou désactivés se voient. Le logiciel, le
+site et l'icône parlent la même langue visuelle : mêmes polices, même bleu, même marque.
+
+**Le clavier à vous.** Une seule table de raccourcis décrit chaque geste : le menu, la fenêtre « ? » et
+les infobulles disent la même chose. Fichier ▸ Préférences permet de changer une touche (un conflit est
+refusé et nommé), de couper les touches à une lettre (R, V, H…), de choisir d'ouvrir les documents dans
+un onglet, et d'oublier un à un les réglages que l'application retient. Nouveaux gestes : F3 / Ctrl+G
+(occurrence suivante), Ctrl+Maj+N (aller à la page), Page préc./suiv., Début, Fin, Ctrl+K (chercher
+un outil), Ctrl+, (préférences).
+
+**Un aperçu avant d'appliquer.** Le filigrane, l'en-tête, le pied de page et la numérotation montrent
+leur effet sur la page, à chaque frappe ; ils se posent sur toutes les pages ou sur une plage
+(« 3-7, 12 »). Des configurations nommées se rangent, se rappellent et se suppriment (filigrane,
+en-tête, propriétés). « Commentaires du document » et « Détecter les pages vides » sont des volets : le
+document reste utilisable derrière. La barre de sélection prend une plage de pages et des choix
+rapides (impaires, paires, inverser).
+
+**Accessible au clavier et au lecteur d'écran.** L'éditeur de page est une vraie fenêtre modale (le
+focus y entre, y tourne, et revient) ; la grille de pages s'utilise aux flèches ; les messages d'état
+s'annoncent ; les pages de la vue Lire sont des régions nommées. « Vérifier l'accessibilité » dit, sur
+le poste, ce qu'un lecteur d'écran ne pourrait pas lire dans le document tel qu'il serait exporté (langue,
+titre, figures sans texte, pages qui ne sont qu'une image) — sans remplacer un contrôle PDF/UA complet.
+
 **Et aussi** : les caractères que le PDF ne sait pas écrire dans un champ ou un tampon sont
 signalés (plus de « Miloševi? » silencieux) ; plus de limite de 800 signets ; « Réduire la
 taille » refuse de rendre un fichier plus gros ; Ctrl+Z juste après l'ouverture ne vide plus
@@ -88,6 +125,10 @@ l'espace de travail ; un journal qui dit ce qui s'est mal passé, au lieu de se 
 - **Les mots de passe actuels continuent de marcher**, même de quatre ou cinq caractères ;
   ils sont refaits au nouveau coût à la prochaine connexion. Chaque compte reçoit alors son
   code de récupération, une fois : il faut le noter.
+- **Deux touches ont changé.** Lire et Organiser passent de Ctrl+1 / Ctrl+2 à Ctrl+Maj+1 / Ctrl+Maj+2 :
+  Ctrl+1 et Ctrl+2 règlent maintenant le zoom (taille réelle, largeur de la page), comme dans Acrobat.
+  Tout geste se remet où l'on veut dans Fichier ▸ Préférences.
+- Dans les menus et les fenêtres, « Retirer » des pages devient « Supprimer » : un seul mot pour un seul acte.
 - Rien d'autre à refaire. Vos tampons, signatures, récents et le travail mis de côté sont
   conservés.
 

@@ -77,8 +77,7 @@ test.describe('la visite guidée', () => {
     await expect(carte(page)).toBeVisible();
     // la carte est au-dessus de l'éditeur : on la lit pendant qu'on essaie
     await carte(page).getByRole('button', { name: 'Étape suivante' }).evaluate((b) => { const r = b.getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); if (e !== b && !b.contains(e)) throw new Error('la carte est recouverte par ' + (e && e.className)); });
-    await page.keyboard.press('Escape');
-    await page.keyboard.press('Escape');
+    await page.locator('.editor').getByRole('button', { name: 'Terminer' }).click();
     await expect(page.locator('.editor')).toBeHidden();
     // 4. l'impression, puis la fin
     await carte(page).getByRole('button', { name: 'Étape suivante' }).click();
@@ -123,5 +122,42 @@ test.describe('la visite guidée', () => {
     await expect(carte(page)).toContainText('Schritt 1 von 4');
     await expect(carte(page)).toContainText('Im Dokument suchen');
     await expect(carte(page).getByRole('button', { name: '«Budget» suchen' })).toBeVisible();
+  });
+});
+
+test.describe('« Vérifier l\'accessibilité »', () => {
+  test('dit les manques d\'un document, sur le poste : le scan de l\'exemple n\'a aucun texte à lire', async ({ app, page }) => {
+    await app.pretAvecExemple();
+    await app.outil('access');
+    await expect(page.locator('.access-verdict')).toBeVisible({ timeout: 60000 });
+    await expect(page.locator('.access-verdict')).toContainText('1 manque à corriger');
+    await expect(page.locator('.access-liste.ko')).toContainText('1 page est une image sans texte (p. 4)');
+    // le balisage n'est pas demandé : le rapport le dit, et propose d'aller régler
+    await expect(page.locator('.access-liste.avis')).toContainText('balisage n\'est pas demandé');
+    await expect(page.locator('.dialog.libre')).toBeVisible();
+  });
+
+  test('un document dont tout le texte est lisible et titré : aucun manque', async ({ app, page }) => {
+    const { pdfTexte } = require('./aide');
+    await app.pretAvecExemple();
+    await app.ouvrir('lisible.pdf', pdfTexte(['Un texte lisible.']));
+    await app.outil('props');
+    await page.fill('#pr-title', 'Un titre');
+    await page.locator('.dlg-foot').getByRole('button', { name: 'Enregistrer' }).click();
+    await app.outil('access');
+    await expect(page.locator('.access-verdict')).toBeVisible({ timeout: 60000 });
+    // l'exemple a cédé la place au document : plus de scan, et le titre est posé
+    await expect(page.locator('.access-verdict')).toContainText('Aucun manque relevé');
+    await expect(page.locator('.access-liste.ko')).toHaveCount(0);
+  });
+
+  test('en allemand', async ({ app, page }) => {
+    await page.addInitScript(() => { try { localStorage.setItem('aktum-langue', 'de'); } catch (e) { /* sans mémoire */ } });
+    await page.reload();
+    await app.pretAvecExemple();
+    await app.outil('access');
+    await expect(page.locator('.access-verdict')).toContainText('Mangel zu korrigieren', { timeout: 60000 });
+    const lu = await page.locator('.access-rapport').innerText();
+    expect(lu).not.toMatch(/manque|balisage|lecteur d'écran/);
   });
 });

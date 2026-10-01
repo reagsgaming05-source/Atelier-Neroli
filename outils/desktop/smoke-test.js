@@ -127,7 +127,7 @@ async function tournerPage(win, n) {
   console.log('menu Outils :', JSON.stringify(groupes));
   verifier(['Organiser', 'Modifier', 'Exporter', 'Protéger', 'Document'].every((g) => groupes.includes(g)), 'les groupes du volet sont dans le menu Outils');
   const toutes = outils.filter((i) => i.filles).reduce((a, i) => a.concat(i.filles), []);
-  verifier(toutes.length >= 30 && toutes.includes('Pages vierges') && toutes.includes('Caviarder une zone') && toutes.includes('Vérifier les signatures'), 'les trente outils sont dans le menu Outils (' + toutes.length + ')');
+  verifier(toutes.length >= 31 && toutes.includes('Pages vierges') && toutes.includes('Caviarder une zone') && toutes.includes('Vérifier les signatures'), 'les trente et un outils sont dans le menu Outils (' + toutes.length + ')');
   const edition = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.find((i) => i.label === 'Édition').submenu.items.filter((i) => i.label).map((i) => i.label + (i.accelerator ? ' [' + i.accelerator + ']' : '')));
   console.log('menu Édition :', JSON.stringify(edition));
   verifier(edition.length === 6 && edition.some((l) => /Couper/.test(l)) && edition.some((l) => /Coller/.test(l)) && edition.some((l) => /Tout sélectionner \[CmdOrCtrl\+A\]/.test(l)), 'le menu Édition a ses touches');
@@ -251,6 +251,14 @@ async function tournerPage(win, n) {
   const fenetresApres = app.windows().length;
   console.log('toujours en onglet : fenêtres', fenetresAvant, '->', fenetresApres, '| documents :', JSON.stringify(await docsPartout()));
   verifier(fenetresApres === fenetresAvant, 'aucune fenêtre de plus quand le réglage est actif');
+
+  // 6a. Un document déposé ou choisi dans le champ de fichier entre aussi dans « Récents » (tous les chemins d'ouverture)
+  const pdf4 = path.join(dossier, 'quatrieme.pdf');
+  fs.writeFileSync(pdf4, fabriquerPdf(1));
+  const fenetreChamp = app.windows()[0];
+  await fenetreChamp.setInputFiles('#file-input', pdf4);
+  await attendre(async () => { try { return JSON.parse(fs.readFileSync(path.join(donnees, 'recents.json'), 'utf8')).includes(pdf4); } catch (e) { return false; } }, 20000, 'récent alimenté par le champ de fichier');
+  verifier(true, 'le champ de fichier alimente « Récents »');
 
   // 6. « Aide › Découvrir Aktum PDF en 5 minutes » : le menu ouvre l'exemple (dans un nouvel onglet, le travail n'est pas touché)
   //    et la carte de la visite guidée.

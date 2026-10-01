@@ -734,6 +734,8 @@
     background: var(--survol); border: 1px solid var(--trait-champ); color: var(--texte);
   }
   .moveto input:focus { border-color: var(--focus); background: var(--relief); }
+  .choix-pages input { width: 92px; text-align: left; }
+  .choix-pages select { height: var(--h-2); padding: 0 var(--e-2); border-radius: var(--r-2); border: 1px solid var(--trait-champ); background: var(--relief); color: var(--texte); font: inherit; font-size: var(--t-2); max-width: 150px; }
   .moveto .go { height: var(--h-2); padding: 0 var(--e-3); border-radius: var(--r-2); border: 1px solid var(--trait); background: var(--survol); font-weight: 500; transition: background .14s, color .14s, border-color .14s; }
   .moveto .go:hover { background: var(--bleu); color: var(--bleu-encre); border-color: transparent; }
 
@@ -789,6 +791,35 @@
   .toast.error { border-left-color: var(--rouge); }
 
   /* ---------- fenêtres ---------- */
+  /* ---------- le rapport d'accessibilité ---------- */
+  .access-rapport { display: flex; flex-direction: column; gap: var(--e-2); }
+  .access-verdict { margin: 0; padding: var(--e-3) var(--e-4); border-radius: var(--r-2); font-weight: 600; font-size: var(--t-3); }
+  .access-verdict.ok { background: color-mix(in srgb, var(--vert) 16%, transparent); color: var(--vert); }
+  .access-verdict.ko { background: var(--rouge-ombre); color: var(--rouge); }
+  .access-titre { margin: var(--e-3) 0 0; font-size: var(--t-2); color: var(--texte-2); text-transform: uppercase; letter-spacing: .08em; }
+  .access-liste { margin: 0; padding-left: var(--e-5); display: flex; flex-direction: column; gap: var(--e-1); font-size: var(--t-2); line-height: 1.45; }
+  .access-liste.ko li::marker { color: var(--rouge); }
+  .access-liste.avis li::marker { color: var(--ambre); }
+  .access-liste.ok li::marker { color: var(--vert); }
+
+  /* ---------- les configurations nommées ---------- */
+  .configs { display: flex; flex-wrap: wrap; gap: var(--e-2); align-items: center; }
+  .configs select, .configs input { height: var(--h-3); padding: 0 var(--e-3); border-radius: var(--r-2); border: 1px solid var(--trait-champ); background: var(--encre); color: var(--texte); font: inherit; min-width: 0; }
+  .configs select { flex: 1 1 150px; max-width: 220px; }
+  .configs input { flex: 1 1 150px; }
+  .configs .tb-btn { height: var(--h-3); border-color: var(--trait); background: var(--relief); }
+
+  /* ---------- l'aperçu d'un réglage (filigrane, en-tête et pied de page) : les champs d'un côté, la page de l'autre ---------- */
+  .reglage-deux { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: var(--e-5); align-items: start; }
+  .reglage-colonne { display: flex; flex-direction: column; gap: var(--e-3); min-width: 0; }
+  .apercu-reglage { position: sticky; top: 0; display: flex; flex-direction: column; gap: var(--e-2); }
+  .apercu-feuille { position: relative; container-type: inline-size; width: 100%; background: #fff; border: 1px solid var(--trait); box-shadow: var(--ombre-feuille); border-radius: var(--r-0); overflow: hidden; }
+  .apercu-feuille img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .apercu-couche { position: absolute; inset: 0; pointer-events: none; }
+  .apercu-texte { position: absolute; white-space: nowrap; line-height: 1; transform-origin: center; }
+  .apercu-legende { color: var(--texte-3); font-size: var(--t-1); text-align: center; }
+  @media (max-width: 720px) { .reglage-deux { grid-template-columns: 1fr; } .apercu-reglage { position: static; max-width: 190px; } }
+
   /* ---------- la visite guidée : une petite carte qui ne bloque rien (au-dessus de l'éditeur et des fenêtres : on la lit pendant qu'on essaie) ---------- */
   .decouverte {
     position: fixed; left: var(--e-4); bottom: calc(var(--h-3) + var(--e-6)); z-index: 88; width: min(340px, calc(100vw - 2 * var(--e-4)));

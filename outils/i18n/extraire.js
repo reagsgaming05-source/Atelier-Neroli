@@ -55,6 +55,7 @@ const estUnMotif = m => {
   if (MOTIFS_RETENUS.indexOf(m) >= 0) return true;
   if (/\bconst \w+ =|=> \{|\bself\.|\bawait\b/.test(m)) return false;   // du code (le travailleur de rendu)
   const fixe = m.replace(/\{\d+\}/g, '');
+  if (/^\s*(rotate|translate|scale|rgba?|hsla?)\(/.test(fixe) || /^-[a-z]+$/.test(fixe)) return false;   // un morceau de style (« rotate(45deg) ») ou d'identifiant (« x-aide »)
   if (/\b(rg|RG|Tf|Tm|Tj|TJ|re|gs|cm|BDC|EMC)\b|^[\s\/]*[A-Za-z]{1,3}[\s\d]*$/.test(fixe) && !/[a-zà-ÿ]{4,}/.test(fixe)) return false;   // opérateurs de PDF
   // Un mot de liaison entre deux morceaux (« {0} sur {1} », « {0} à {1} ») se traduit, bien qu'il ne soit pas une phrase.
   if (/\s[A-Za-zÀ-ÿ]{2,}\s/.test(fixe) && /[a-zà-ÿ]/.test(fixe)) return true;

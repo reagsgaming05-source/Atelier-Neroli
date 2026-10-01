@@ -6,7 +6,7 @@
   //  cours n'est pas touché, et les résultats partent dans une archive.
   // =====================================================================
   const LOTS = [
-    ['vides', 'Retirer les pages vides'],
+    ['vides', 'Supprimer les pages vides'],
     ['compresser', 'Réduire la taille (150 ppp)'],
     ['numeroter', 'Numéroter les pages (pied de page)'],
     ['proteger', 'Protéger par mot de passe'],
@@ -35,7 +35,7 @@
             const restantes = state.pages.filter(p => !ids.has(p.id));
             if (!restantes.length) { rapport.push(f.name + ' : toutes les pages sont vides, rien à garder'); continue; }
             sorties.push({ nom: base + tr('-sans-vides.pdf'), octets: await buildPdf(restantes, { noInPlace: ids.size > 0 }) });
-            rapport.push(f.name + ' : ' + (ids.size ? plural(ids.size, 'page vide retirée', 'pages vides retirées') : 'aucune page vide'));
+            rapport.push(f.name + ' : ' + (ids.size ? plural(ids.size, 'page vide supprimée', 'pages vides supprimées') : 'aucune page vide'));
           } else if (op === 'compresser') {
             const avant = state.sources.reduce((a, s) => a + s.bytes.byteLength, 0);
             const octets = await buildPdf(state.pages, { rasterize: true, dpi: 150, quality: 0.72, noInPlace: true });
@@ -296,12 +296,141 @@
     vue.render();
   }
 
+  // L'aperçu d'un réglage posé sur la page qu'on lit, avant l'export : la vignette de la page, et par-dessus ce que le réglage y écrira
+  // (le filigrane, l'en-tête et le pied de page), refait à chaque frappe. La mise en page est celle de l'export — des positions en
+  // pourcentage de la page, des tailles en points de la page (unités « cqw » : 1 % de la largeur de la feuille montrée) ; les polices
+  // sont des approximations de Helvetica, Times et Courier, pas leur rendu exact.
+  const FAMILLES_APERCU = { Helvetica: 'Helvetica, Arial, sans-serif', Times: '"Times New Roman", Times, serif', Courier: '"Courier New", Courier, monospace' };
+  function apercuReglage(peindre) {
+    const boite = document.createElement('div'); boite.className = 'apercu-reglage';
+    const p = state.pages.find(x => x.id === pageCouranteId());
+    if (!p) { boite.hidden = true; return { noeud: boite, maj() {} }; }
+    const g = pageGeom(p);
+    const feuille = document.createElement('div'); feuille.className = 'apercu-feuille';
+    feuille.style.aspectRatio = g.Wd.toFixed(2) + ' / ' + g.Hd.toFixed(2);
+    const th = thumbs.get(pkey(p));
+    // La vignette si elle existe ; sinon la page telle qu'elle est dessinée en lecture (les vignettes ne se font qu'en vue Organiser).
+    let image = th && th.status === 'done' ? th.url : '';
+    if (!image) {
+      const cv = $('#lecture .feuille-vue[data-id="' + p.id + '"] canvas');
+      try { if (cv && cv.width > 10) image = cv.toDataURL('image/jpeg', 0.7); } catch (e) { signaler('Aperçu du réglage', e, 'info'); }
+    }
+    if (image) { const img = document.createElement('img'); img.alt = ''; img.src = image; feuille.appendChild(img); }
+    const couche = document.createElement('div'); couche.className = 'apercu-couche'; couche.setAttribute('aria-hidden', 'true'); couche.setAttribute('translate', 'no');
+    feuille.appendChild(couche);
+    const legende = document.createElement('div'); legende.className = 'apercu-legende';
+    legende.textContent = tr('Aperçu sur la page') + ' ' + (pageIndex(p.id) + 1);
+    boite.append(feuille, legende);
+    const mesure = document.createElement('canvas').getContext('2d');
+    // Un texte à la position (x, y) de la page, en points, mesurée depuis le coin haut gauche ; `align` dit de quel côté du texte est x.
+    const texte = (t, x, y, o) => {
+      const s = document.createElement('span'); s.className = 'apercu-texte'; s.textContent = t;
+      s.style.left = (x / g.Wd * 100).toFixed(3) + '%'; s.style.top = (y / g.Hd * 100).toFixed(3) + '%';
+      s.style.fontSize = (o.size / g.Wd * 100).toFixed(3) + 'cqw';
+      s.style.fontFamily = FAMILLES_APERCU[o.font] || FAMILLES_APERCU.Helvetica;
+      s.style.fontWeight = o.bold ? '700' : '400';
+      s.style.color = o.color; if (o.opacity != null) s.style.opacity = String(o.opacity);
+      const dx = o.align === 'right' ? '-100%' : o.align === 'left' ? '0' : '-50%';
+      s.style.transform = 'translate(' + dx + ', ' + (o.centre ? '-50%' : '-100%') + ')' + (o.angle ? ' rotate(' + (-o.angle) + 'deg)' : '');
+      couche.appendChild(s);
+    };
+    const largeur = (t, o) => { mesure.font = (o.bold ? 'bold ' : '') + o.size + 'px ' + (FAMILLES_APERCU[o.font] || FAMILLES_APERCU.Helvetica); return mesure.measureText(t).width; };
+    return { noeud: boite, maj() { couche.replaceChildren(); try { peindre({ g, p, texte, largeur }); } catch (e) { signaler('Aperçu du réglage', e, 'info'); } } };
+  }
+  // Les champs d'un côté, l'aperçu de l'autre.
+  function reglageAvecApercu(champs, apercu) {
+    const r = document.createElement('div'); r.className = 'reglage-deux';
+    champs.classList.add('reglage-champs');
+    r.append(champs, apercu.noeud);
+    return r;
+  }
+
+  // Des configurations nommées : « Brouillon », « Courrier officiel »… Le réglage d'une fenêtre se range sous un nom, se rappelle d'un
+  // choix, se supprime. Elles restent sur ce poste, avec les autres mémoires (Préférences › Ce que l'application retient), jamais
+  // dans un document. `lire()` rend les valeurs de la fenêtre, `poser(valeurs)` les y remet.
+  const CLES_CONFIGS = { filigrane: 'aktum-configs-filigrane', entete: 'aktum-configs-entete', proprietes: 'aktum-configs-proprietes' };
+  function configsLire(type) {
+    try {
+      const l = JSON.parse(localStorage.getItem(CLES_CONFIGS[type]) || '[]');
+      return Array.isArray(l) ? l.filter(c => c && typeof c.nom === 'string' && c.nom && c.valeurs && typeof c.valeurs === 'object') : [];
+    } catch (e) { signaler('Configurations nommées', e, 'info'); return []; }
+  }
+  function configsEcrire(type, liste) {
+    try { if (liste.length) localStorage.setItem(CLES_CONFIGS[type], JSON.stringify(liste)); else localStorage.removeItem(CLES_CONFIGS[type]); }
+    catch (e) { signaler('Configurations nommées', e, 'info'); toast('La configuration n\'a pas pu être gardée sur ce poste.', 'warn'); }
+  }
+  function selecteurDeConfigs(type, lire, poser) {
+    const rang = document.createElement('div'); rang.className = 'configs';
+    const choix = document.createElement('select'); choix.id = 'cfg-' + type; choix.setAttribute('aria-label', tr('Configurations enregistrées'));
+    const nom = document.createElement('input'); nom.type = 'text'; nom.id = 'cfg-nom-' + type; nom.autocomplete = 'off'; nom.maxLength = 40;
+    nom.placeholder = tr('Nom de la configuration'); nom.setAttribute('aria-label', tr('Nom de la configuration'));
+    const garder = document.createElement('button'); garder.type = 'button'; garder.className = 'tb-btn'; garder.textContent = tr('Enregistrer');
+    const retirer = document.createElement('button'); retirer.type = 'button'; retirer.className = 'tb-btn'; retirer.textContent = tr('Supprimer la configuration');
+    const remplir = (choisie) => {
+      choix.replaceChildren();
+      const premiere = document.createElement('option'); premiere.value = ''; premiere.textContent = configsLire(type).length ? tr('Configurations…') : tr('Aucune configuration enregistrée');
+      choix.appendChild(premiere);
+      configsLire(type).forEach(c => { const o = document.createElement('option'); o.value = c.nom; o.textContent = c.nom; choix.appendChild(o); });
+      choix.value = choisie || '';
+      choix.disabled = !configsLire(type).length;
+      retirer.disabled = !choix.value;
+    };
+    choix.addEventListener('change', () => {
+      retirer.disabled = !choix.value;
+      const c = configsLire(type).find(x => x.nom === choix.value);
+      if (c) { nom.value = c.nom; poser(c.valeurs); setLast(tr('Configuration « {0} » reprise.').replace('{0}', c.nom)); }
+    });
+    garder.addEventListener('click', () => {
+      const n = nom.value.trim();
+      if (!n) { toast('Donnez un nom à la configuration.', 'warn'); nom.focus(); return; }
+      const liste = configsLire(type).filter(x => x.nom.toLowerCase() !== n.toLowerCase());
+      liste.push({ nom: n, valeurs: lire() });
+      liste.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+      configsEcrire(type, liste.slice(0, 30));
+      remplir(n);
+      setLast(tr('Configuration « {0} » enregistrée sur ce poste.').replace('{0}', n));
+    });
+    retirer.addEventListener('click', () => {
+      const n = choix.value; if (!n) return;
+      configsEcrire(type, configsLire(type).filter(x => x.nom !== n));
+      nom.value = '';
+      remplir('');
+      setLast(tr('Configuration « {0} » supprimée.').replace('{0}', n));
+    });
+    remplir('');
+    rang.append(choix, nom, garder, retirer);
+    return groupOf('Configurations', [rang]);
+  }
+  // Remet une valeur dans un champ, et le dit à ce qui l'écoute (l'aperçu).
+  function poserChamp(c, v) {
+    if (v == null) return;
+    if (c.type === 'checkbox') c.checked = !!v; else c.value = v;
+    c.dispatchEvent(new Event('input', { bubbles: true })); c.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // Le champ « Pages » des réglages posés sur le document : vide pour toutes les pages, ou une plage « 3-7, 12 » (la même lecture
+  // partout : impression, division, sélection). Rend un message si elle n'est pas comprise ou ne désigne rien, sinon rien.
+  function champPages(id, valeur) {
+    const i = input(id, 'text', valeur || '', { placeholder: tr('Toutes les pages') });
+    i.setAttribute('aria-describedby', id + '-aide');
+    return i;
+  }
+  function verdictPages(texte) {
+    const t = String(texte || '').trim();
+    if (!t) return '';
+    const r = lirePlages(t, state.pages.length);
+    if (r.ignores.length) return tr('Plage de pages non comprise :') + ' ' + r.ignores.join(', ') + '. ' + tr('Écrivez par exemple 3-7, 12.');
+    if (!r.pages.length) return tr('Cette plage ne désigne aucune page.');
+    return '';
+  }
+
   function toolWatermark() {
-    const origine = { text: tr('CONFIDENTIEL'), font: 'Helvetica', bold: true, size: 60, color: '#FF0000', opacity: 0.18, angle: 45, mode: 'center' };
+    const origine = { text: tr('CONFIDENTIEL'), font: 'Helvetica', bold: true, size: 60, color: '#FF0000', opacity: 0.18, angle: 45, mode: 'center', pages: '' };
     // Sans filigrane posé, on reprend le dernier réglage appliqué : le même
     // texte, la même teinte, d'un document au suivant.
     const memo = !state.watermark && reglageLire('filigrane');
-    const wm = state.watermark || Object.assign({}, origine, memo || {});
+    const wm = state.watermark || Object.assign({}, origine, memo || {}, memo ? { pages: '' } : {});   // les pages visées ne suivent pas d'un document à l'autre
+    const pagesEl = champPages('wm-pages', wm.pages);
     const text = input('wm-text', 'text', wm.text);
     const size = input('wm-size', 'number', wm.size, { min: 6, max: 300 });
     const angle = input('wm-angle', 'number', wm.angle, { min: -180, max: 180 });
@@ -312,17 +441,35 @@
     const font = select('wm-font', [['Helvetica', 'Helvetica'], ['Times', 'Times'], ['Courier', 'Courier']], wm.font);
     const bold = checkbox('wm-bold', 'Gras', wm.bold);
     const mode = select('wm-mode', [['center', 'Au centre'], ['tile', 'Répété en mosaïque'], ['top', 'En haut'], ['bottom', 'En bas']], wm.mode);
+    const apercu = apercuReglage(({ g, p: page, texte, largeur }) => {
+      const t = text.value; if (!t) return;
+      const visees = pagesVisees(pagesEl.value);
+      if (visees && !visees.has(pageIndex(page.id) + 1)) return;
+      const o = { size: clampInt(size.value, 6, 300) || 60, font: font.value, bold: bold.input.checked, color: color.value, opacity: (clampInt(opacity.value, 3, 100) || 18) / 100, angle: clampInt(angle.value, -180, 180) || 0, align: 'center', centre: true };
+      if (mode.value === 'tile') {
+        const stepX = Math.max(120, largeur(t, o) * 1.5), stepY = Math.max(90, o.size * 4);
+        for (let y = stepY / 2; y < g.Hd + stepY; y += stepY) for (let x = stepX / 2; x < g.Wd + stepX; x += stepX) texte(t, x, y, o);
+      } else texte(t, g.Wd / 2, g.Hd * (mode.value === 'top' ? 0.16 : mode.value === 'bottom' ? 0.86 : 0.5), o);
+    });
+    [text, size, angle, color, opacity, font, mode, bold.input, pagesEl].forEach(c => { c.addEventListener('input', apercu.maj); c.addEventListener('change', apercu.maj); });
     dialog({
-      title: 'Filigrane', icon: IC.water,
+      title: 'Filigrane', icon: IC.water, wide: true,
       build: b => {
-        b.append(field('Texte', text));
-        b.append(rowOf([field('Police', font), field('Taille', size), field('Angle (°)', angle)]));
+        const champs = document.createElement('div'); champs.className = 'reglage-colonne';
+        champs.append(selecteurDeConfigs('filigrane',
+          () => ({ text: text.value, font: font.value, bold: bold.input.checked, size: size.value, color: color.value, opacity: opacity.value, angle: angle.value, mode: mode.value }),
+          v => { poserChamp(text, v.text); poserChamp(font, v.font); poserChamp(bold.input, v.bold); poserChamp(size, v.size); poserChamp(color, v.color); poserChamp(opacity, v.opacity); poserChamp(angle, v.angle); poserChamp(mode, v.mode); opVal.textContent = opacity.value + ' %'; }));
+        champs.append(field('Texte', text));
+        champs.append(rowOf([field('Police', font), field('Taille', size), field('Angle (°)', angle)]));
         const cw = field('Couleur', color);
         const ow = field('Opacité', opacity); ow.appendChild(opVal);
-        b.append(rowOf([cw, ow, field('Disposition', mode)]));
-        b.append(bold);
-        b.append(note('Le filigrane est dessiné par-dessus le contenu, sur toutes les pages, au moment de l\'export.'
+        champs.append(rowOf([cw, ow, field('Disposition', mode)]));
+        champs.append(bold);
+        champs.append(field('Pages', pagesEl, 'Toutes les pages, ou une plage : 3-7, 12.'));
+        champs.append(note('Le filigrane est dessiné par-dessus le contenu, sur toutes les pages, au moment de l\'export.'
           + (memo ? ' Réglage repris du dernier filigrane appliqué.' : '')));
+        b.append(reglageAvecApercu(champs, apercu));
+        apercu.maj();
       },
       actions: [
         memo ? { label: 'Réglages d\'origine', onClick: close => { reglageEcrire('filigrane', null); close(); toolWatermark(); } } : null,
@@ -330,12 +477,14 @@
         { label: 'Annuler', onClick: c => c() },
         { label: 'Appliquer', primary: true, onClick: close => {
           if (!text.value.trim()) { toast('Indiquez le texte du filigrane.', 'warn'); return; }
+          const refus = verdictPages(pagesEl.value);
+          if (refus) { toast(refus, 'warn'); return; }
           snapshot();
           state.watermark = {
             text: text.value, font: font.value, bold: bold.input.checked,
             size: clampInt(size.value, 6, 300) || 60, color: color.value,
             opacity: (clampInt(opacity.value, 3, 100) || 18) / 100,
-            angle: clampInt(angle.value, -180, 180) || 0, mode: mode.value,
+            angle: clampInt(angle.value, -180, 180) || 0, mode: mode.value, pages: pagesEl.value.trim(),
           };
           reglageEcrire('filigrane', state.watermark);
           state.touched = true; vue.render(); close();
@@ -349,14 +498,15 @@
     const cleMemo = preset === 'number' ? 'numerotation' : 'entete';
     const origine = {
       headerLeft: '', headerCenter: '', headerRight: '', footerLeft: '', footerCenter: '', footerRight: '',
-      font: 'Helvetica', bold: false, size: 9, color: '#444444', margin: 28, start: 1, skipFirst: false, batesPrefix: '', batesDigits: 4,
+      font: 'Helvetica', bold: false, size: 9, color: '#444444', margin: 28, start: 1, skipFirst: false, batesPrefix: '', batesDigits: 4, pages: '',
     };
     if (preset === 'number') origine.footerCenter = '{p} / {n}';
     // Sans réglage posé sur ce document, on reprend le dernier appliqué (le texte
     // d'en-tête de la commune, la forme de numérotation), mais jamais le premier
     // numéro : chaque document recommence à 1.
     const memo = !state.stamp && reglageLire(cleMemo);
-    const st = state.stamp || Object.assign({}, origine, memo || {}, memo ? { start: 1 } : {});
+    const st = state.stamp || Object.assign({}, origine, memo || {}, memo ? { start: 1, pages: '' } : {});
+    const pagesEl = champPages('st-pages', st.pages);
     const mk = (id, v) => input(id, 'text', v);
     const hl = mk('st-hl', st.headerLeft), hc = mk('st-hc', st.headerCenter), hr = mk('st-hr', st.headerRight);
     const fl = mk('st-fl', st.footerLeft), fc = mk('st-fc', st.footerCenter), fr = mk('st-fr', st.footerRight);
@@ -368,16 +518,39 @@
     const skip = checkbox('st-skip', 'Ne rien afficher sur la première page', st.skipFirst);
     const bpre = input('st-bpre', 'text', st.batesPrefix);
     const bdig = input('st-bdig', 'number', st.batesDigits, { min: 1, max: 10 });
+    const apercu = apercuReglage(({ g, p: page, texte }) => {
+      const i = pageIndex(page.id);
+      if (skip.input.checked && i === 0) return;
+      const visees = pagesVisees(pagesEl.value);
+      if (visees && !visees.has(i + 1)) return;
+      const taille = clampInt(size.value, 5, 40) || 9, m = clampInt(margin.value, 6, 120) || 28;
+      const num = (clampInt(start.value, 0, 99999) || 1) + i;
+      const ctx = { i, p: num, n: state.pages.length, date: todayStr(), file: safeBase(el.filename.value), bates: (bpre.value || '') + pad(num, clampInt(bdig.value, 1, 10) || 4) };
+      const o = { size: taille, font: font.value, bold: st.bold, color: color.value };
+      [[hl, m, m + taille, 'left'], [hc, g.Wd / 2, m + taille, 'center'], [hr, g.Wd - m, m + taille, 'right'],
+        [fl, m, g.Hd - m, 'left'], [fc, g.Wd / 2, g.Hd - m, 'center'], [fr, g.Wd - m, g.Hd - m, 'right']].forEach(([champ, x, y, align]) => {
+        const t = stampText(champ.value, ctx);
+        if (t) texte(t, x, y, Object.assign({ align }, o));
+      });
+    });
+    [hl, hc, hr, fl, fc, fr, font, size, color, margin, start, bpre, bdig, skip.input, pagesEl].forEach(c => { c.addEventListener('input', apercu.maj); c.addEventListener('change', apercu.maj); });
     dialog({
       title: preset === 'number' ? 'Numéroter les pages' : 'En-tête et pied de page', icon: IC.header, wide: true,
       build: b => {
-        b.append(groupOf('En-tête', [rowOf([field('Gauche', hl), field('Centre', hc), field('Droite', hr)])]));
-        b.append(groupOf('Pied de page', [rowOf([field('Gauche', fl), field('Centre', fc), field('Droite', fr)])]));
-        b.append(rowOf([field('Police', font), field('Taille', size), field('Couleur', color), field('Marge (pt)', margin)], true));
-        b.append(rowOf([field('Premier numéro', start), field('Préfixe Bates', bpre, 'Pour {bates}'), field('Chiffres Bates', bdig)], true));
-        b.append(skip);
-        b.append(note('Codes disponibles : {p} numéro de page, {n} nombre de pages, {date} date du jour, {file} nom du fichier, {bates} numérotation Bates.'
+        const champs = document.createElement('div'); champs.className = 'reglage-colonne';
+        champs.append(selecteurDeConfigs('entete',
+          () => ({ hl: hl.value, hc: hc.value, hr: hr.value, fl: fl.value, fc: fc.value, fr: fr.value, font: font.value, size: size.value, color: color.value, margin: margin.value, bpre: bpre.value, bdig: bdig.value, skip: skip.input.checked }),
+          v => { [[hl, v.hl], [hc, v.hc], [hr, v.hr], [fl, v.fl], [fc, v.fc], [fr, v.fr], [font, v.font], [size, v.size], [color, v.color], [margin, v.margin], [bpre, v.bpre], [bdig, v.bdig], [skip.input, v.skip]].forEach(([c, x]) => poserChamp(c, x)); }));
+        champs.append(groupOf('En-tête', [rowOf([field('Gauche', hl), field('Centre', hc), field('Droite', hr)])]));
+        champs.append(groupOf('Pied de page', [rowOf([field('Gauche', fl), field('Centre', fc), field('Droite', fr)])]));
+        champs.append(rowOf([field('Police', font), field('Taille', size), field('Couleur', color), field('Marge (pt)', margin)], true));
+        champs.append(rowOf([field('Premier numéro', start), field('Préfixe Bates', bpre, 'Pour {bates}'), field('Chiffres Bates', bdig)], true));
+        champs.append(skip);
+        champs.append(field('Pages', pagesEl, 'Toutes les pages, ou une plage : 3-7, 12. Le premier numéro suit la place de la page dans le document.'));
+        champs.append(note('Codes disponibles : {p} numéro de page, {n} nombre de pages, {date} date du jour, {file} nom du fichier, {bates} numérotation Bates.'
           + (memo ? ' Réglage repris du dernier appliqué.' : '')));
+        b.append(reglageAvecApercu(champs, apercu));
+        apercu.maj();
       },
       actions: [
         memo ? { label: 'Réglages d\'origine', onClick: close => { reglageEcrire(cleMemo, null); close(); toolStamp(preset); } } : null,
@@ -393,6 +566,9 @@
           };
           const any = ['headerLeft', 'headerCenter', 'headerRight', 'footerLeft', 'footerCenter', 'footerRight'].some(k => next[k].trim());
           if (!any) { toast('Renseignez au moins une zone.', 'warn'); return; }
+          const refus = verdictPages(pagesEl.value);
+          if (refus) { toast(refus, 'warn'); return; }
+          next.pages = pagesEl.value.trim();
           snapshot();
           reglageEcrire(cleMemo, next);
           state.stamp = next; state.touched = true; vue.render(); close();
@@ -412,6 +588,9 @@
     dialog({
       title: 'Propriétés du document', icon: IC.info,
       build: b => {
+        b.append(selecteurDeConfigs('proprietes',
+          () => ({ auteur: a.value, sujet: s.value, mots: k.value, langue: langue.value, balise: balise.input.checked }),
+          v => { poserChamp(a, v.auteur); poserChamp(s, v.sujet); poserChamp(k, v.mots); poserChamp(langue, v.langue); poserChamp(balise.input, v.balise); }));
         b.append(field('Titre', t, 'Affiché dans la barre de la fenêtre ; indispensable à l\'accessibilité.'));
         b.append(rowOf([field('Auteur', a), field('Sujet', s)]));
         b.append(field('Mots-clés', k, 'Séparés par des virgules.'));

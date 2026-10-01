@@ -682,6 +682,14 @@ function setupIpc() {
     return true;
   });
   ipcMain.handle('aktum:recents', () => lireRecents().filter((c) => fs.existsSync(c)));
+  // Les documents ouverts par glisser-déposer ou par le champ de fichier : tous les chemins d'ouverture alimentent « Récents ».
+  // Seuls comptent des chemins absolus de fichiers existants, d'une extension que l'application ouvre.
+  ipcMain.on('aktum:noter-recents', (_e, chemins) => {
+    if (!Array.isArray(chemins)) return;
+    chemins.slice(0, 50).forEach((c) => {
+      if (typeof c === 'string' && path.isAbsolute(c) && EXTENSIONS.includes(path.extname(c).toLowerCase())) { try { if (fs.statSync(c).isFile()) ajouterRecent(c); } catch (err) { /* disparu entre-temps */ } }
+    });
+  });
   // La page d'accueil rouvre un récent : seulement un chemin de la liste, jamais un autre.
   ipcMain.handle('aktum:lire-recent', (_e, chemin) => {
     if (typeof chemin !== 'string' || !lireRecents().includes(chemin) || !fs.existsSync(chemin)) return [];

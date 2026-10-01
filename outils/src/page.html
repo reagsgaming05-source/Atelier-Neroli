@@ -138,7 +138,7 @@
           <dt>Numéro</dt><dd>Saisir la position voulue sous la page</dd>
           <dt>Double-clic</dt><dd>Ouvrir l'éditeur de page</dd>
           <dt><kbd>Maj</kbd> + clic</dt><dd>Sélectionner une plage</dd>
-          <dt><kbd>Suppr</kbd></dt><dd>Retirer la sélection</dd>
+          <dt><kbd>Suppr</kbd></dt><dd>Supprimer la sélection</dd>
           <dt><kbd>?</kbd></dt><dd>Tous les raccourcis</dd>
         </dl>
       </section>
@@ -214,6 +214,18 @@
 <div class="selbar" id="selbar" hidden role="group" aria-label="Actions sur la sélection">
   <span class="count" id="sel-count"></span>
   <span class="sep"></span>
+  <div class="moveto choix-pages">
+    <label for="sel-plage" title="Sélectionner des pages par leurs numéros : 3-7, 12">Pages</label>
+    <input type="text" id="sel-plage" autocomplete="off" spellcheck="false" placeholder="3-7, 12" aria-label="Pages à sélectionner, par exemple 3-7, 12">
+    <select id="sel-rapide" aria-label="Sélection rapide">
+      <option value="">Sélection rapide</option>
+      <option value="tout">Toutes les pages</option>
+      <option value="impaires">Pages impaires</option>
+      <option value="paires">Pages paires</option>
+      <option value="inverser">Inverser la sélection</option>
+    </select>
+  </div>
+  <span class="sep"></span>
   <div class="moveto">
     <label for="moveto" title="Déplacer la sélection à partir de ce numéro de page">Position</label>
     <input type="text" id="moveto" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="Numéro de la position cible">
@@ -234,9 +246,9 @@
     <!--@ic:doc-->
     <span class="lbl">Extraire</span>
   </button>
-  <button class="tb-btn danger" id="sel-delete" type="button" title="Retirer les pages sélectionnées (Suppr)">
+  <button class="tb-btn danger" id="sel-delete" type="button" title="Supprimer les pages sélectionnées (Suppr)">
     <!--@ic:trash-->
-    <span class="lbl">Retirer</span>
+    <span class="lbl">Supprimer</span>
   </button>
   <span class="sep"></span>
   <button class="tb-btn" id="sel-clear" type="button" title="Désélectionner (Échap)">

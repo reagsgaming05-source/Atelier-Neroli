@@ -43,7 +43,7 @@
     ids.forEach(id => state.selected.delete(id));
     state.touched = true;
     vue.render();
-    setLast(plural(ids.length, 'page retirée', 'pages retirées') + ' · Ctrl+Z pour annuler');
+    setLast(plural(ids.length, 'page supprimée', 'pages supprimées') + ' · Ctrl+Z pour annuler');
   }
 
   function duplicatePages(ids) {

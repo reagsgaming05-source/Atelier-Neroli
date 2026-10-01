@@ -76,14 +76,14 @@ for (const [nom, locale] of [['français', 'fr-CH'], ['allemand', 'de-CH']]) {
 test.describe('le panneau d\'outils', () => {
   test.use({ viewport: { width: 1366, height: 768 } });
 
-  test('les trente outils y sont, chacun une fois, tous colorés, et la moitié se voit sans défiler', async ({ app, page }) => {
+  test('les trente et un outils y sont, chacun une fois, tous colorés, et la moitié se voit sans défiler', async ({ app, page }) => {
     await app.pretAvecExemple();
     await page.click('#tab-tools');
     const outils = await page.evaluate(() => [...document.querySelectorAll('#tool-groups .tool')].map((b) => {
       const r = b.getBoundingClientRect(), panneau = document.querySelector('#pane-tools').getBoundingClientRect();
       return { id: b.dataset.tool, teinte: !!b.querySelector('svg').style.color, visible: r.bottom <= panneau.bottom + 1 && r.top >= panneau.top };
     }));
-    expect(outils.length).toBeGreaterThanOrEqual(30);
+    expect(outils.length).toBeGreaterThanOrEqual(31);
     expect(new Set(outils.map((o) => o.id)).size, 'un outil apparaît deux fois').toBe(outils.length);
     expect(outils.filter((o) => !o.teinte).map((o) => o.id), 'outils sans couleur (clé de TEINTES_OUTILS fausse)').toEqual([]);
     expect(outils.filter((o) => o.visible).length, 'outils visibles à 1366 × 768').toBeGreaterThanOrEqual(14);

@@ -57,6 +57,7 @@
       ] },
       { id: 'document', title: 'Document', items: [
         { id: 'props', name: 'Propriétés', sub: 'Titre, auteur, langue, accessibilité', icon: IC.info, need: 'pages', mots: 'titre auteur mots-clés métadonnées langue accessibilité balisé', run: toolProperties, active: () => !!(state.meta.title || state.meta.author || state.meta.subject || state.meta.keywords || state.meta.balise) },
+        { id: 'access', name: 'Vérifier l\'accessibilité', sub: 'Titre, langue, balisage, pages sans texte', icon: IC.check, need: 'pages', mots: 'accessibilité accessible lecteur écran balisage pdf/ua handicap malvoyant wcag contrôle vérifier langue titre', run: toolAccessibilite },
         { id: 'search', name: 'Rechercher, remplacer, caviarder', sub: 'Un mot, un nom, un numéro : dans tout le document', icon: IC.search, need: 'pages', mots: 'chercher trouver remplacer biffer rédaction noircir masquer', run: toolSearch },
         { id: 'tableau', name: 'Copier un tableau', sub: 'Vers Excel, en colonnes', icon: IC.tableau, need: 'pages', mots: 'excel csv colonnes lignes extraire tableau', run: toolTableau },
         { id: 'ocr', name: 'Reconnaître le texte', sub: 'OCR local : un scan devient cherchable', icon: IC.ocr, need: 'pages', mots: 'ocr scan scanner numériser texte cherchable lisible', run: toolOcr, active: () => state.pages.some(p => p.ocr) },
@@ -78,7 +79,7 @@
       edit('Dessiner à main levée', 'Un trait libre sur la page', 'crayon stylo trait libre dessin', 'draw'),
       edit('Ajouter un champ à remplir', 'Créer un champ de formulaire', 'formulaire champ saisie case', 'champ'),
       edit('Insérer une image', 'Poser une image ou un logo', 'logo photo image tampon signature', 'image'),
-      lot('Retirer les pages vides', 'Dans plusieurs fichiers', 'blanches scan nettoyer', 'vides'),
+      lot('Supprimer les pages vides', 'Dans plusieurs fichiers', 'blanches scan nettoyer', 'vides'),
       lot('Réduire la taille de plusieurs fichiers', 'Compression en série', 'compresser optimiser alléger poids', 'compresser'),
       lot('Numéroter les pages de plusieurs fichiers', 'Numérotation en série', 'numérotation pied de page pagination', 'numeroter'),
       lot('Protéger plusieurs fichiers par mot de passe', 'Chiffrement en série', 'chiffrer mot de passe protéger', 'proteger'),
@@ -99,7 +100,7 @@
     number: '#E68619', form: '#2D9D5F', serie: '#2D9D5F', commentaires: '#E68619',
     archiver: '#6E7681', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', compress: '#E68619', flatten: '#2680EB',
     caviarder: '#D7373F', password: '#D7373F', certificat: '#D83790', signatures: '#2680EB',
-    props: '#6E7681', search: '#2680EB', tableau: '#2D9D5F', ocr: '#8C5AE8', comparer: '#0D9F8F',
+    props: '#6E7681', access: '#2D9D5F', search: '#2680EB', tableau: '#2D9D5F', ocr: '#8C5AE8', comparer: '#0D9F8F',
   };
 
 

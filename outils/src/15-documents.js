@@ -4,11 +4,22 @@
   function isPdf(f) { return /\.pdf$/i.test(f.name) || f.type === 'application/pdf'; }
   function isImage(f) { return /\.(png|jpe?g|webp)$/i.test(f.name) || /^image\/(png|jpeg|webp)$/.test(f.type); }
 
+  // Un document déposé sur la fenêtre ou choisi par le champ de fichier ne passe pas par « Ouvrir » : l'application fenêtrée ne connaît pas
+  // son chemin. Elle le demande au fichier lui-même, pour que « Récents » le retienne comme les autres (tous les chemins d'ouverture).
+  function noterLesRecents(files) {
+    const b = window.AktumDesktop;
+    if (!b || typeof b.cheminDe !== 'function' || typeof b.noterRecents !== 'function') return;
+    try {
+      const chemins = files.filter(f => f instanceof File && !f.chemin).map(f => b.cheminDe(f)).filter(Boolean);
+      if (chemins.length) b.noterRecents(chemins);
+    } catch (e) { signaler('Fichiers récents', e, 'info'); }
+  }
   async function addFiles(fileList) {
     const files = Array.from(fileList || []).filter(f => isPdf(f) || isImage(f));
     const rejected = Array.from(fileList || []).length - files.length;
     if (rejected) toast(plural(rejected, 'fichier ignoré', 'fichiers ignorés') + ' : seuls les PDF et les images sont acceptés.', 'warn');
     if (!files.length) return;
+    noterLesRecents(files);
     dropSampleIfUntouched();
     const images = files.filter(isImage);
     const pdfs = files.filter(isPdf);

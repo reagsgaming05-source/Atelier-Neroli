@@ -31,7 +31,7 @@
     tools.setAttribute('role', 'group');
     [['rotl', IC.rotL, 'Pivoter à gauche'], ['rotr', IC.rotR, 'Pivoter à droite'], ['|'],
      ['left', IC.left, 'Déplacer d\'une position vers la gauche'], ['pos', IC.hash, 'Déplacer vers un numéro de page précis'], ['right', IC.right, 'Déplacer d\'une position vers la droite'], ['|'],
-     ['edit', IC.pencil, 'Ouvrir l\'éditeur de page'], ['del', IC.trash, 'Retirer cette page']].forEach(spec => {
+     ['edit', IC.pencil, 'Ouvrir l\'éditeur de page'], ['del', IC.trash, 'Supprimer cette page']].forEach(spec => {
       if (spec[0] === '|') { const s = document.createElement('span'); s.className = 'sep'; tools.appendChild(s); return; }
       const b = document.createElement('button');
       b.type = 'button'; b.dataset.act = spec[0]; b.title = spec[2];

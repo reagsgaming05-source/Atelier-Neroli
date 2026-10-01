@@ -151,7 +151,7 @@
       zoom: $('#zoom'), summary: $('#summary'), last: $('#last'),
       progress: $('#progress'), progressBar: $('#progress-bar'),
       btnAnnulerOp: $('#btn-annuler-op'), btnJournal: $('#btn-journal'),
-      selbar: $('#selbar'), selCount: $('#sel-count'), moveto: $('#moveto'), movetoGo: $('#moveto-go'),
+      selbar: $('#selbar'), selCount: $('#sel-count'), moveto: $('#moveto'), movetoGo: $('#moveto-go'), selPlage: $('#sel-plage'), selRapide: $('#sel-rapide'),
       selRotLeft: $('#sel-rot-left'), selRotRight: $('#sel-rot-right'), selDup: $('#sel-dup'),
       selExtract: $('#sel-extract'), selDelete: $('#sel-delete'), selClear: $('#sel-clear'),
       toast: $('#toast'),
@@ -335,6 +335,33 @@
       const t = tiles.get(ids[0]);
       if (t) t.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
+    // « Pages » de la barre de sélection : une plage « 3-7, 12 » remplace la sélection (la même lecture que partout) ; les choix rapides
+    // font le reste : toutes les pages, les impaires, les paires, l'inverse de la sélection.
+    const choisirUnePlage = () => {
+      const t = el.selPlage.value.trim();
+      if (!t || !state.pages.length) return;
+      const r = lirePlages(t, state.pages.length);
+      if (r.ignores.length) { toast(tr('Plage de pages non comprise :') + ' ' + r.ignores.join(', ') + '. ' + tr('Écrivez par exemple 3-7, 12.'), 'warn'); return; }
+      if (!r.pages.length) { toast('Cette plage ne désigne aucune page.', 'warn'); return; }
+      state.selected.clear();
+      r.pages.forEach(n => state.selected.add(state.pages[n - 1].id));
+      vue.updateSelectionUI();
+      setLast(plural(r.pages.length, 'page sélectionnée', 'pages sélectionnées') + ' : ' + formaterPlages(r.pages));
+    };
+    el.selPlage.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); choisirUnePlage(); } else if (e.key === 'Escape') { e.preventDefault(); el.selPlage.blur(); } });
+    el.selRapide.addEventListener('change', () => {
+      const choix = el.selRapide.value;
+      el.selRapide.value = '';
+      if (!choix || !state.pages.length) return;
+      const avant = new Set(state.selected);
+      state.selected.clear();
+      state.pages.forEach((p, i) => {
+        const pris = choix === 'tout' ? true : choix === 'impaires' ? i % 2 === 0 : choix === 'paires' ? i % 2 === 1 : !avant.has(p.id);
+        if (pris) state.selected.add(p.id);
+      });
+      vue.updateSelectionUI();
+      setLast(plural(state.selected.size, 'page sélectionnée', 'pages sélectionnées'));
+    });
     el.movetoGo.addEventListener('click', commitMoveTo);
     el.moveto.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commitMoveTo(); } else if (e.key === 'Escape') { e.preventDefault(); el.moveto.blur(); } });
     el.moveto.addEventListener('focus', () => requestAnimationFrame(() => el.moveto.select()));

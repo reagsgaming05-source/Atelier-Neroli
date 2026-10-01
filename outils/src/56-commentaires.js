@@ -107,7 +107,7 @@
       info.textContent = total ? plural(total, 'commentaire', 'commentaires') + ' dans le document. Cochez ceux à retirer : ils disparaîtront du PDF exporté.' : 'Aucun commentaire dans les documents ouverts.';
     })();
     api = dialog({
-      title: 'Commentaires du document', icon: IC.info, wide: true, submitOnEnter: false,
+      title: 'Commentaires du document', icon: IC.info, libre: true, submitOnEnter: false,
       build: b => {
         b.append(note('Les notes, surlignages, tampons et autres commentaires déjà présents dans les PDF ouverts. Ce que vous avez ajouté ici se règle dans l\'éditeur de page.'));
         b.append(info);
