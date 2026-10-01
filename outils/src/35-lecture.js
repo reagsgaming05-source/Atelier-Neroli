@@ -29,7 +29,10 @@
   const lectureDeux = () => state.dispo === 'deux' && state.pages.length > 1;
 
   function lectureCle(p) {
-    return [pkey(p), p.rot, Math.round(lectureZ * 100), p.ann.length, p.piece || '', p.ocr ? 'ocr' + (p.ocr.mots ? p.ocr.mots.length : 0) : '', (p.retraits || []).join('+'),
+    // La mesure de la page fait partie de la clé : au remplacement de l'exemple, les pages d'un vrai document se mesurent après le premier
+    // dessin (841,89 pt supposés, 842 réels), et la toile gardait un pixel de trop (715 pour 714 affichés) faute de nouveau dessin.
+    const g = pageGeom(p);
+    return [pkey(p), p.rot, Math.round(lectureZ * 100), g.Wd.toFixed(2) + 'x' + g.Hd.toFixed(2), p.ann.length, p.piece || '', p.ocr ? 'ocr' + (p.ocr.mots ? p.ocr.mots.length : 0) : '', (p.retraits || []).join('+'),
       p.ann.map(a => a.id + ':' + Math.round((a.x || 0) * 10) + ':' + (a.text || '').length).join()].join('|');
   }
 
