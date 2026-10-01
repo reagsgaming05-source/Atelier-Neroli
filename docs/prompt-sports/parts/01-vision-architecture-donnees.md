@@ -8,13 +8,13 @@
 
 ### 1.1.1 Vision en une phrase
 
-**[NOM_APP_SPORTS] est le carnet de bord et le coach unique de toute la vie sportive d'une personne** : il enregistre ce qu'elle fait (courir, marcher, rouler, jouer au foot, au tennis…), comprend ce que cela coûte à son corps, et ajuste en continu entraînement, récupération et nutrition, y compris la musculation et les repas gérés dans [NOM_APP_FIT].
+**[NOM_APP_SPORTS] est le carnet de bord et le coach unique de toute la vie cardio d'une personne** : il enregistre ce qu'elle fait (courir, marcher, randonner, rouler), comprend ce que cela coûte à son corps, et ajuste en continu entraînement, récupération et nutrition, y compris la musculation et les repas gérés dans [NOM_APP_FIT].
 
 ### 1.1.2 Promesse utilisateur (testable)
 
 | # | Promesse | Test d'acceptation produit |
 |---|----------|----------------------------|
-| P1 | « Je n'ai plus à arbitrer seul entre mes sports. » | Un utilisateur qui court 3x, joue au foot 1x et fait 2 séances de muscu reçoit un plan hebdomadaire où la séance jambes n'est jamais la veille de la sortie longue. |
+| P1 | « Je n'ai plus à arbitrer seul entre mes disciplines. » | Un utilisateur qui court 3x, roule 1x et fait 2 séances de muscu reçoit un plan hebdomadaire où la séance jambes n'est jamais la veille de la sortie longue. |
 | P2 | « Mon enregistrement ne me lâche jamais. » | Une sortie de 4 h en mode avion, app tuée par l'OS deux fois, est récupérée avec moins de 30 s de trou cumulé. |
 | P3 | « On me dit la vérité sur ma forme. » | Chaque estimation (VO2max, forme, temps de course prévu) affiche une plage de confiance et sa source. |
 | P4 | « Mes données m'appartiennent. » | Export complet en un geste (GPX/FIT/JSON), suppression de compte effective sous 30 jours, zones de confidentialité masquant domicile et travail. |
@@ -22,18 +22,18 @@
 
 ### 1.1.3 Différenciateur n°1 : le coach unique transversal
 
-Le coach n'est pas un module de l'app : c'est une **couche transverse** qui lit un modèle unifié de la vie sportive (charge, sommeil, nutrition, blessures, agenda, objectifs) et écrit des recommandations dans trois canaux : plan d'entraînement, récupération, nutrition. Règle d'architecture : **aucun module sportif ne calcule sa propre recommandation**. Il publie des événements (`activity.completed`, `match.finished`, `injury.reported`) et consomme des directives du coach (voir Partie 5). Conséquence : ajouter le padel ne demande ni refonte du coach ni nouvelle logique de charge, seulement un adaptateur de charge sportif (section 1.5.4).
+Le coach n'est pas un module de l'app : c'est une **couche transverse** qui lit un modèle unifié de la vie sportive (charge, sommeil, nutrition, blessures, agenda, objectifs) et écrit des recommandations dans trois canaux : plan d'entraînement, récupération, nutrition. Règle d'architecture : **aucun module sportif ne calcule sa propre recommandation**. Il publie des événements (`activity.completed`, `injury.reported`) et consomme des directives du coach (voir Partie 5). Conséquence : ajouter une discipline cardio (natation, ski de fond…) ne demande ni refonte du coach ni nouvelle logique de charge, seulement un adaptateur de charge (section 1.5.4). Ces disciplines ne sont pas spécifiées dans ce prompt : le moteur doit seulement rester extensible.
 
 ### 1.1.4 Positionnement face à l'existant
 
-Principe : on n'est pas « un Strava de plus ». On est **le seul endroit où un coupeur de foot du dimanche qui court le mardi et soulève le jeudi obtient un plan cohérent**.
+Principe : on n'est pas « un Strava de plus ». On est **le seul endroit où un coureur qui roule le week-end et soulève le jeudi obtient un plan cohérent**.
 
 | Concurrent | Ce qu'il fait très bien | Sa limite | Notre réponse | Ce qu'on ne copie PAS |
 |---|---|---|---|---|
-| Strava | Social, segments, base installée | Pas de coach adaptatif réel, paywall sur l'analyse, sports d'équipe quasi absents | Coach transverse, analyse de base gratuite | Segments comme moteur central (risques de sécurité en voie publique) ; flux d'activité public par défaut |
+| Strava | Social, segments, base installée | Pas de coach adaptatif réel, paywall sur l'analyse, pas de lien avec la musculation et la nutrition | Coach transverse, analyse de base gratuite | Segments comme moteur central (risques de sécurité en voie publique) ; flux d'activité public par défaut |
 | Komoot | Planification d'itinéraires, rando | Peu d'entraînement, pas de charge | Itinéraire adapté à la forme du jour (Partie 4) | Paiement par région de carte |
 | AllTrails | Catalogue de sentiers, avis | Qualité inégale des traces, peu d'offline gratuit | Traces vérifiées, offline dans Sports | Notes de sentiers anonymes non modérées |
-| Runna | Plans de course très bien écrits | Course uniquement, plan figé hors vie réelle | Plan qui s'adapte à un match raté ou une nuit courte | Tarif unique cher sans palier gratuit |
+| Runna | Plans de course très bien écrits | Course uniquement, plan figé hors vie réelle | Plan qui s'adapte à une séance manquée, une nuit courte ou une séance de muscu la veille | Tarif unique cher sans palier gratuit |
 | TrainingPeaks | Modèle de charge (TSS, CTL/ATL/TSB) | Interface de coach pro, courbe d'apprentissage | Même rigueur, présentée en langage simple | Jargon brut par défaut (disponible en mode avancé) |
 | Garmin Connect | Données capteurs profondes | Verrouillé à la montre, UX datée | Import de toutes montres, une seule vue | Dépendance matérielle |
 | Hevy | Journal de musculation fluide | Mono-sport | Intégration native avec [NOM_APP_FIT] | Duplication de la muscu (on lit Fit, on ne la refait pas) |
@@ -50,7 +50,7 @@ Légende : ● natif et solide, ◐ partiel/payant, ○ absent.
 | Enregistrement GPS fiable offline | ● | ● | ● | ◐ | ◐ | ○ | ● | ◐ |
 | Rando + cartes offline | ● | ◐ | ● | ● | ○ | ○ | ◐ | ○ |
 | Plan adaptatif multi-sports | ● | ○ | ○ | ○ | ◐ | ◐ | ◐ | ○ |
-| Sports d'équipe/duel (score, stats) | ● | ○ | ○ | ○ | ○ | ○ | ○ | ○ |
+| Plan lié à la musculation et à la nutrition | ● (via Fit) | ○ | ○ | ○ | ○ | ◐ | ○ | ○ |
 | Charge unifiée tous sports + muscu | ● | ◐ | ○ | ○ | ○ | ● | ◐ | ○ |
 | Nutrition liée à la charge | ● (via Fit) | ○ | ○ | ○ | ○ | ○ | ○ | ○ |
 | Sécurité (suivi live, détection de chute) | ● | ◐ | ◐ | ◐ | ○ | ○ | ◐ | ○ |
@@ -67,15 +67,15 @@ Chaque persona sert de **scénario de recette** : l'assistant crée un fichier `
 | ID | Persona | Âge | Contexte |
 |---|---|---|---|
 | P1 | Camille, la coureuse débutante | 29 | Prépare ses premiers 10 km |
-| P2 | Karim, le footballeur amateur polyvalent | 34 | Foot le jeudi et dimanche, court un peu |
+| P2 | Karim, le traileur | 34 | Trail 2x/semaine, musculation d'appoint |
 | P3 | Hélène, la randonneuse de week-end | 52 | Rando 1 à 2 jours par semaine, parfois en solo |
 | P4 | Thomas, le cycliste de commuting devenu gravel | 41 | Vélo-travail 4x/semaine, sorties longues |
-| P5 | Inès, la triathlète amateur | 37 | Course, vélo, natation, charge élevée |
-| P6 | Lucas, le lycéen multi-sports | 16 | Basket en club, tennis, mineur |
+| P5 | Inès, la duathlète amateur | 37 | Course et vélo enchaînés, charge élevée |
+| P6 | Lucas, le lycéen coureur de demi-fond | 16 | Club d'athlétisme, course sur piste et cross, mineur |
 | P7 | Marc, le retraité actif | 67 | Marche, vélo électrique, santé |
 | P8 | Sofia, la coach indépendante | 33 | Entraîne 25 clients, vend des plans |
 | P9 | Paul, l'utilisateur Fit pur qui découvre le sport | 27 | Muscu 4x, veut cardio sans perdre ses gains |
-| P10 | Amina, la capitaine d'équipe de padel | 31 | Organise matchs et classement entre amis |
+| P10 | Amina, l'animatrice d'un club de course | 31 | Organise sorties collectives et défis entre membres |
 
 ### 1.2.1 Détail des personas
 
@@ -87,11 +87,11 @@ Chaque persona sert de **scénario de recette** : l'assistant crée un fichier `
 - Conversion : Sports vers la semaine 4 quand le plan adaptatif devient décisif (jamais bloquer une séance en cours).
 - Cas limite : Camille déclare une douleur au genou ; le coach doit proposer repos et consultation, jamais « continuer progressivement ».
 
-**P2 Karim (foot + course, Plan : Ultra)**
-- Objectifs : tenir 90 min de match sans tirer sur les ischios, perdre 4 kg.
-- Frustrations : les apps de course ignorent le foot ; son match du dimanche « n'existe pas » dans sa charge ; il court trop le lendemain.
-- Parcours : saisit son match en 30 s (ou l'enregistre avec la montre), le coach affiche « charge élevée, footing léger interdit, mobilité + 2,5 L d'eau », propose un repas riche en glucides le soir via Fit.
-- Fonctions clés : charge foot (Partie 6), statistiques de match, coach transverse, nutrition liée.
+**P2 Karim (trail et musculation, Plan : Ultra)**
+- Objectifs : finir un trail de 42 km / 2 000 m D+ en 7 h, garder sa force de jambes, perdre 4 kg sans perdre de muscle.
+- Frustrations : les apps de course ignorent sa muscu ; il enchaîne séance jambes puis sortie longue ; ses descentes le détruisent et aucune app ne le mesure.
+- Parcours : importe ses sorties de montre, le coach affiche « charge excessive en descente (D- cumulé 1 800 m), séance de gainage au lieu de la muscu jambes jeudi », propose un repas riche en glucides le soir via Fit.
+- Fonctions clés : charge avec composante dénivelé négatif (Partie 5), plan trail, interférence muscu/course, nutrition de course liée.
 - Conversion : Ultra dès qu'il active le lien avec Fit.
 
 **P3 Hélène (randonnée, Plan : Sports)**
@@ -112,9 +112,9 @@ Chaque persona sert de **scénario de recette** : l'assistant crée un fichier `
 - Fonctions clés : charge unifiée, plan multi-disciplines, nutrition de course, import de montre, export vers coach externe.
 
 **P6 Lucas (mineur, Plan : Gratuit via compte parent)**
-- Objectifs : suivre ses matchs de basket, progresser au tennis.
-- Contraintes légales : < 15 ans (France) consentement parental ; jamais de publicité ciblée, profil privé forcé, pas de messages avec inconnus, pas de recommandations de perte de poids (Partie 8).
-- Fonctions clés : statistiques de match, équipe, défis amicaux sans classement public.
+- Objectifs : progresser sur 1 500 m et en cross avec son club d'athlétisme.
+- Contraintes légales : < 15 ans (France) consentement parental ; jamais de publicité ciblée, profil privé forcé, pas de messages avec inconnus, pas de recommandations de perte de poids ni de plans à fort volume (Partie 8).
+- Fonctions clés : journal de séances, défis amicaux sans classement public, plafonds de charge adaptés à l'âge.
 
 **P7 Marc (senior, Plan : Gratuit ou Sports)**
 - Objectifs : 8 000 pas/jour, rester actif après un problème cardiaque stabilisé.
@@ -130,9 +130,9 @@ Chaque persona sert de **scénario de recette** : l'assistant crée un fichier `
 - Objectifs : ajouter du cardio sans perdre en force.
 - Fonctions clés : le coach détecte l'interférence (cardio long la veille d'une séance jambes), ajuste plan Fit et plan Sports ; identité partagée, pas de nouvelle inscription.
 
-**P10 Amina (capitaine padel, Plan : Gratuit puis Sports)**
-- Objectifs : organiser des matchs, suivre un classement interne.
-- Fonctions clés : équipes, rencontres, invitations, scores, classement Elo simple (Partie 6), partage vers messagerie externe.
+**P10 Amina (animatrice d'un club de course, Plan : Gratuit puis Sports)**
+- Objectifs : organiser des sorties collectives hebdomadaires, lancer des défis de club, rassurer les nouvelles recrues.
+- Fonctions clés : clubs, événements (sortie du mardi 19 h), invitations, défis de club, partage vers messagerie externe, parcours partagés (Partie 7).
 
 ### 1.2.2 Règle d'usage
 Toute fonctionnalité de la roadmap (Partie 8) doit citer au moins un persona qui en bénéficie. Une fonctionnalité sans persona est refusée.
@@ -189,7 +189,7 @@ Chaque principe a une **règle exécutable** : en cas de doute pendant le dével
 | Alpha (interne, 20 testeurs) | Enregistrement endurance, sync | 0 perte de données sur 200 sorties |
 | Bêta fermée (500) | + plans, cartes offline | Activation ≥ 40 %, J7 ≥ 18 % |
 | Lancement endurance | Abonnements Sports/Ultra | 10 000 comptes, conversion ≥ 3 % |
-| Phase 2 | Foot, basket, tennis | 25 % des actifs ont ≥ 1 match enregistré/mois |
+| Phase 2 | Approfondissement par discipline (course, vélo, rando, Partie 6) | 25 % des actifs utilisent un plan spécifique à leur discipline |
 | Phase 3 | Sports extensibles, marketplace | 50 coachs actifs, 5 % du CA |
 
 ### 1.4.4 Garde-fous (métriques à ne pas dégrader)
@@ -244,11 +244,12 @@ Capteurs (GPS, FC, BLE) → Recorder (client) → SQLite locale (points toutes l
 | `activities` | Activités, tours, flux de points, import/export GPX/FIT/TCX | media |
 | `geo` | Itinéraires, POI, cartes hors ligne, élévation, snapping | activities |
 | `safety` | Suivi live, détection de chute, contacts de confiance | geo, notifications |
-| `load` | Charge d'entraînement tous sports, fatigue, forme | activities, matches, fit-bridge |
+| `load` | Charge d'entraînement toutes disciplines, fatigue, forme | activities, fit-bridge |
 | `health` | Sommeil, FC repos, VFC, blessures, signaux de santé | profile |
 | `coach` | Moteur de directives, IA conversationnelle, garde-fous | load, health, plans, fit-bridge |
 | `plans` | Plans, séances, blocs, adaptation | coach |
-| `teamsports` | Équipes, matchs, compétitions, statistiques, Elo | activities, social |
+| `disciplines` | Spécificités course, vélo, rando (zones, métriques, règles) | activities, load |
+| `clubs` | Clubs d'endurance, événements collectifs | social, geo |
 | `social` | Amis, fil, commentaires, messages, signalements, modération | identity |
 | `gamification` | Défis, trophées, séries bienveillantes | activities, social |
 | `marketplace` | Coachs, produits, ventes, versements | billing, plans |
@@ -262,7 +263,7 @@ Capteurs (GPS, FC, BLE) → Recorder (client) → SQLite locale (points toutes l
 **Règle de dépendance** : les flèches vont du haut vers le bas du tableau ; interdiction de cycle ; un module n'accède aux tables d'un autre que via son interface publique (`index.ts` / API interne). Une règle de lint (`dependency-cruiser` ou équivalent) l'impose en CI.
 
 ### 1.5.4 Adaptateurs de charge par sport
-Le module `load` expose `LoadAdapter { sport; compute(activity|match, athleteProfile): LoadResult }` avec `LoadResult = { load_au: number, method: string, confidence: 'low'|'medium'|'high', components: {...} }`. Exemples : course = rTSS (allure/seuil) ou TRIMP si FC ; vélo = TSS (puissance) ; marche/rando = charge par dénivelé et durée ; foot = TRIMP + distance à haute intensité ; tennis = durée × intensité estimée. Ajouter un sport = ajouter un adaptateur et un fichier de tests de référence, rien d'autre.
+Le module `load` expose `LoadAdapter { sport; compute(activity, athleteProfile): LoadResult }` avec `LoadResult = { load_au: number, method: string, confidence: 'low'|'medium'|'high', components: {...} }`. Exemples : course = rTSS (allure/seuil) ou TRIMP si FC ; vélo = TSS (puissance) ; marche/rando = charge par dénivelé et durée ; trail = rTSS corrigée du dénivelé positif et négatif. Ajouter une discipline (natation, ski de fond…) = ajouter un adaptateur et un fichier de tests de référence, rien d'autre.
 
 ### 1.5.5 Événements internes
 Bus interne (en processus au départ, file de messages ensuite) avec enveloppe versionnée :
@@ -279,7 +280,7 @@ Bus interne (en processus au départ, file de messages ensuite) avec enveloppe v
 }
 ```
 
-Événements minimum : `activity.completed|updated|deleted`, `match.finished`, `plan.generated|adapted`, `injury.reported|resolved`, `entitlement.changed`, `consent.changed`, `account.deletion_requested`, `follow.created`, `challenge.joined|completed`. Règle : un consommateur est **idempotent** (il stocke `event.id` traité) et tolère `version` inconnue (ignore les champs ajoutés, rejette une version majeure inconnue vers une file de rejeu).
+Événements minimum : `activity.completed|updated|deleted`, `plan.generated|adapted`, `injury.reported|resolved`, `entitlement.changed`, `consent.changed`, `account.deletion_requested`, `follow.created`, `challenge.joined|completed`. Règle : un consommateur est **idempotent** (il stocke `event.id` traité) et tolère `version` inconnue (ignore les champs ajoutés, rejette une version majeure inconnue vers une file de rejeu).
 
 ---
 
@@ -310,7 +311,7 @@ Bus interne (en processus au départ, file de messages ensuite) avec enveloppe v
 | Plan et séances | Serveur gagne pour la structure, client gagne pour le statut | `status=done` posé hors-ligne est conservé ; une séance replanifiée par le coach entre-temps est signalée à l'utilisateur |
 | Objectifs, préférences | Dernier écrivain gagnant | |
 | Matériel (kilométrage) | Recalculé | Somme dérivée des activités ; pas de valeur éditée directement sauf offset |
-| Match en cours multi-appareils | Journal d'événements (append-only) | Les événements (but, faute) sont fusionnés par union, ordonnés par `occurred_at` puis `device_id` ; le score est une projection |
+| Sortie collective (événement de club) | Journal d'inscriptions (append-only) | Les inscriptions/désinscriptions sont fusionnées par union, ordonnées par `occurred_at` ; la liste des participants est une projection |
 | Commentaires/messages | Append-only | Pas de conflit ; suppression = marqueur |
 | Suppression vs modification | Suppression gagne | Sauf corbeille : restaurable 7 jours |
 | Droits/abonnement | Serveur uniquement | Jamais écrits par le client |
@@ -338,8 +339,8 @@ Bus interne (en processus au départ, file de messages ensuite) avec enveloppe v
 ### 1.5.11 Recherche
 Au lancement, **Postgres seul** : `pg_trgm` (utilisateurs, clubs, lieux), `tsvector` français (itinéraires, publications), PostGIS (`ST_DWithin` pour « autour de moi »). Basculer vers un moteur dédié (Meilisearch ou Typesense) seulement si la latence p95 de recherche dépasse 300 ms ou si le catalogue dépasse 5 millions de documents.
 
-### 1.5.12 Temps réel (suivi en direct, matchs)
-- WebSocket (ou SSE pour le sens serveur→client) pour : suivi live d'une sortie par des proches, score d'un match partagé, messages.
+### 1.5.12 Temps réel (suivi en direct)
+- WebSocket (ou SSE pour le sens serveur→client) pour : suivi live d'une sortie par des proches, position des participants à une sortie de club (opt-in), messages.
 - Position live : envoi toutes les 10 s en mouvement, 60 s à l'arrêt, avec tampon si offline ; la page de suivi public (lien sans compte) expire à la fin de l'activité + 2 h et n'expose jamais l'identité complète ni les zones masquées.
 - Dégradation : si le temps réel est indisponible, repli sur polling toutes les 15 s. Détails sécurité dans la Partie 4.
 
@@ -510,7 +511,7 @@ create table laps (
 );
 ```
 
-### 1.7.3 Géographie, plans, charge, équipes, droits
+### 1.7.3 Géographie, plans, charge, clubs, droits
 
 ```sql
 create table routes (
@@ -545,7 +546,7 @@ create table training_plans (
 create table planned_sessions (
   id text primary key, plan_id text not null references training_plans(id) on delete cascade,
   user_id text not null, scheduled_on date not null, sport text not null,
-  kind text check (kind in ('easy','long','tempo','intervals','recovery','strength_ref','match','rest','cross')),
+  kind text check (kind in ('easy','long','tempo','intervals','recovery','strength_ref','race','rest','cross')),
   blocks jsonb not null,                       -- [{type:'warmup',duration_s:600,target:{zone:2}}, ...]
   target_load_au numeric(6,1), status text not null default 'planned'
     check (status in ('planned','done','skipped','moved','adapted')),
@@ -579,39 +580,33 @@ create table gear (
   name text not null, retired_at timestamptz, alert_after_m int, offset_m int not null default 0
 );
 
--- ÉQUIPES, MATCHS
-create table clubs (id text primary key, name text not null, sport text, city text, created_by text, visibility text default 'private');
-create table teams (
-  id text primary key, club_id text references clubs(id), name text not null, sport text not null,
-  owner_id text not null, visibility text default 'private', invite_code text unique
+-- CLUBS ET ÉVÉNEMENTS (endurance uniquement)
+create table clubs (
+  id text primary key,                         -- clb_
+  name text not null, discipline text not null check (discipline in ('run','ride','hike','walk','multi')),
+  city text, owner_id text not null references accounts(id),
+  visibility text not null default 'private' check (visibility in ('private','invite','public')),
+  invite_code text unique, created_at timestamptz not null default now(), deleted_at timestamptz
 );
-create table team_members (
-  team_id text references teams(id), user_id text references accounts(id),
-  role text check (role in ('owner','captain','player','guest')), jersey_no smallint, position text,
-  joined_at timestamptz default now(), left_at timestamptz, primary key (team_id, user_id)
+create table club_members (
+  club_id text references clubs(id), user_id text references accounts(id),
+  role text not null check (role in ('owner','admin','member')),
+  joined_at timestamptz default now(), left_at timestamptz, primary key (club_id, user_id)
 );
-create table players (                         -- joueur non inscrit (invité, adversaire)
-  id text primary key, display_name text not null, linked_user_id text references accounts(id), created_by text not null
+create table events (
+  id text primary key,                         -- evt_
+  club_id text references clubs(id), organizer_id text not null references accounts(id),
+  title text not null, discipline text not null, starts_at timestamptz not null, tz text not null,
+  meeting_point geography(Point,4326),         -- [G]
+  route_id text references routes(id), pace_group jsonb, max_participants int,
+  kind text check (kind in ('group_run','group_ride','group_hike','race','virtual')),
+  status text default 'scheduled' check (status in ('scheduled','cancelled','done')),
+  updated_at timestamptz not null, version int default 1
 );
-create table competitions (
-  id text primary key, name text not null, sport text not null, format text check (format in ('league','knockout','ladder','friendly')),
-  rules jsonb, starts_on date, ends_on date, created_by text
-);
-create table matches (
-  id text primary key, sport text not null, competition_id text references competitions(id),
-  home_team_id text, away_team_id text, played_at timestamptz not null, venue text, venue_location geography(Point,4326),
-  status text check (status in ('scheduled','live','finished','cancelled')), score jsonb, -- projection du journal
-  activity_id text references activities(id), created_by text not null, updated_at timestamptz not null, version int default 1
-);
-create table match_events (                    -- journal append-only
-  id text primary key, match_id text not null references matches(id) on delete cascade,
-  type text not null, player_id text, team_id text, minute numeric(5,1), occurred_at timestamptz not null,
-  payload jsonb, device_id text, schema_version smallint not null default 1
-);
-create table match_player_stats (
-  match_id text references matches(id), player_id text references players(id),
-  minutes_played numeric(5,1), stats jsonb not null,   -- clés selon sport (voir Partie 6)
-  primary key (match_id, player_id)
+create table event_registrations (             -- append-only, projection = participants
+  id text primary key, event_id text not null references events(id) on delete cascade,
+  user_id text not null references accounts(id), action text not null check (action in ('join','leave','waitlist')),
+  occurred_at timestamptz not null, device_id text
 );
 
 -- DROITS ET ACHATS (détail Partie 2)
@@ -640,7 +635,7 @@ create table consents (
 
 | Entité | Champs clés | Contraintes / index | Rétention | Sensibilité |
 |---|---|---|---|---|
-| `challenges` | id, title, kind (`distance|duration|streak|team`), rules jsonb, starts_at, ends_at, visibility, created_by | check `ends_at > starts_at` ; max 365 j | 2 ans après fin | — |
+| `challenges` | id, title, kind (`distance|duration|elevation|streak|club`), rules jsonb, starts_at, ends_at, visibility, created_by | check `ends_at > starts_at` ; max 365 j | 2 ans après fin | — |
 | `challenge_participants` | challenge_id, user_id, progress jsonb, joined_at | PK composite | idem | — |
 | `trophies` / `user_trophies` | code unique, tier, criteria jsonb / user_id, trophy_code, earned_at, activity_id | unique (user_id, trophy_code, tier) | durée du compte | — |
 | `follows` | follower_id, followee_id, status (`pending|accepted|blocked`) | unique ; index inverse | durée du compte | [P] |
@@ -658,7 +653,7 @@ create table consents (
 | `audit_log` | id, actor_id, actor_type, action, target_type, target_id, diff jsonb, ip_hash, at | append-only, index (target_type, target_id, at) | 12 mois (13 pour accès support) | [P] |
 | `imports` | id, user_id, source, file_ref, status, error_code, created_at | — | fichier 30 j | [G] |
 | `live_sessions` | id, activity_id, share_token_hash, contacts jsonb, last_position, last_seen_at, expires_at | token haché ; expiration forcée | 7 jours après fin | [G] |
-| `sports` | code pk, family (`endurance|team|racket|water`), load_adapter, stat_schema jsonb, enabled | catalogue extensible | — | — |
+| `sports` | code pk, family (`endurance`, extensible), discipline (`run|ride|hike|walk`), load_adapter, stat_schema jsonb, enabled | catalogue extensible | — | — |
 
 ### 1.7.5 Règles de rétention et données sensibles
 - **Flux GPS bruts** : conservés tant que le compte existe (principe D7) ; archivés à froid après 24 mois. **Positions du suivi live** : supprimées 7 jours après la fin.
@@ -668,7 +663,7 @@ create table consents (
 ### 1.7.6 Soft delete, audit, anonymisation
 - **Soft delete** : `deleted_at` posé, ligne exclue par les index partiels et les vues `active_*`. Purge dure par `retention.sweep` après 7 jours (activités), 30 jours (publications), sauf conservation légale. Un élément supprimé reste dans le flux de pull comme **tombstone** (`id`, `deleted_at`) 90 jours pour que les appareils hors ligne se mettent à jour.
 - **Audit** : toute opération sensible (changement de droits, accès support à des données, export, suppression, changement de consentement, accès d'un coach à un client) écrit dans `audit_log`, dans la même transaction. Aucune modification ni suppression de cette table en applicatif (rôle sans `UPDATE/DELETE`).
-- **Anonymisation** : à la suppression, `anonymize_user(account_id)` remplace `display_name` par « Ancien utilisateur », `handle` par `deleted_<hash>`, vide e-mail et avatar, conserve les contenus agrégés non identifiants (statistiques de match d'une équipe) avec `linked_user_id = null`. Pour l'analytics et les jeux de test : généralisation des positions (arrondi 3 décimales ≈ 100 m), bruit sur la date de naissance (±6 mois), suppression des zones de confidentialité.
+- **Anonymisation** : à la suppression, `anonymize_user(account_id)` remplace `display_name` par « Ancien utilisateur », `handle` par `deleted_<hash>`, vide e-mail et avatar, conserve les contenus agrégés non identifiants (statistiques agrégées d'un club) avec `linked_user_id = null`. Pour l'analytics et les jeux de test : généralisation des positions (arrondi 3 décimales ≈ 100 m), bruit sur la date de naissance (±6 mois), suppression des zones de confidentialité.
 
 ### 1.7.7 Migrations et versionnement des schémas
 - **Migrations** : outil unique (`[STACK_MIGRATIONS]` : Drizzle Kit, Prisma Migrate ou Atlas), fichiers SQL versionnés, jamais modifiés après fusion. Règle **expand / migrate / contract** : (1) ajouter colonne nullable, (2) double écriture et backfill par job, (3) basculer la lecture, (4) supprimer dans une release ultérieure. Chaque migration doit être réversible ou accompagnée d'un plan de retour écrit. Test CI : appliquer toutes les migrations sur une base vide **et** sur un dump anonymisé de staging.
@@ -683,18 +678,18 @@ create table consents (
 ### 1.8.1 Fixtures
 Dossier `fixtures/` versionné (fichiers ≤ 2 Mo chacun, sans donnée réelle) :
 - `gpx/` : 12 traces réalistes générées par script reproductible (graine fixe) : course 10 km urbaine, trail 18 km 900 m D+, rando 15 km avec pause de 1 h, vélo 80 km, trace avec tunnel (perte GPS de 90 s), trace avec saut GPS de 400 m, trace avec timestamps non monotones, trace à 0 point d'altitude, trace de 6 h, trace traversant le méridien de changement de date (cas test), trace à l'arrêt total (bruit GPS), trace très courte (< 50 m).
-- `fit/` : 8 fichiers (course avec FC, vélo avec puissance et cadence, natation en bassin, activité multi-sports, fichier tronqué, fichier avec champs développeurs, doublon d'un GPX, fichier d'une version de firmware ancienne).
-- `matches/` : journaux d'événements de 6 matchs (foot avec prolongation, basket 4 quart-temps, tennis 3 sets avec tie-break, match abandonné, match édité hors ligne depuis 2 appareils, match avec joueur invité).
+- `fit/` : 8 fichiers (course avec FC, vélo avec puissance et cadence, activité multi-disciplines (course + vélo), fichier tronqué, fichier avec champs développeurs, doublon d'un GPX, fichier d'une version de firmware ancienne).
+- `events/` : 4 sorties de club (course avec 3 groupes d'allure, rando avec désistements de dernière minute, événement annulé, inscription faite hors ligne depuis 2 appareils).
 - `streams/` : flux binaires pour tests de compression (aller-retour sans perte à 1e-7°).
 
 ### 1.8.2 Utilisateurs seed
-Un utilisateur par persona (section 1.2), mot de passe local `dev-only`, domaine `@example.test`. Chacun a un historique de 6 mois généré avec une **charge réaliste** (progression, semaine de repos toutes les 4 semaines, 1 blessure pour Camille, 1 coupure de 3 semaines pour Marc). Karim possède un lien Fit actif avec 20 séances de muscu ; Sofia a 25 clients dont 3 avec consentement retiré ; Lucas est mineur avec compte parent.
+Un utilisateur par persona (section 1.2), mot de passe local `dev-only`, domaine `@example.test`. Chacun a un historique de 6 mois généré avec une **charge réaliste** (progression, semaine de repos toutes les 4 semaines, 1 blessure pour Camille, 1 coupure de 3 semaines pour Marc). Karim possède un lien Fit actif avec 20 séances de muscu ; Sofia a 25 clients dont 3 avec consentement retiré ; Lucas est mineur avec compte parent ; Amina anime un club de 40 membres.
 
 ### 1.8.3 Scénarios de bout en bout (obligatoires en CI nocturne)
 1. Enregistrement 4 h avec 2 coupures réseau et un kill d'app → activité complète, un seul enregistrement serveur.
 2. Doublon montre + téléphone → proposition de fusion, pas de fusion silencieuse.
 3. Achat Ultra sur mobile → droits `fit.*` et `sports.*` actifs en < 10 s ; remboursement → droits retirés au prochain cycle de réconciliation.
-4. Match saisi par deux appareils hors ligne → score identique après sync.
+4. Inscription à une sortie de club faite par deux appareils hors ligne → liste de participants identique après sync.
 5. Suppression de compte → aucun enregistrement `[P]` ou `[G]` après J+30 (requête de contrôle automatisée).
 6. Utilisateur Gratuit qui revient de Sports → lecture seule de ses plans, aucune donnée perdue.
 7. Horloge du téléphone décalée de 2 h → dates d'activité cohérentes.
@@ -731,7 +726,7 @@ Un script `pnpm seed:dev` recrée tout en < 60 s ; `pnpm seed:scale` génère 10
 
 ### 1.9.3 Branches, commits, revues
 - **Branches** : trunk-based, branches courtes `feat/<module>-<sujet>`, `fix/…`, `chore/…` (vie ≤ 3 jours), fusion par squash après CI verte.
-- **Commits** : Conventional Commits (`feat(load): ajoute l'adaptateur tennis`), un sujet par commit, corps expliquant le pourquoi.
+- **Commits** : Conventional Commits (`feat(load): ajoute la correction de dénivelé négatif en trail`), un sujet par commit, corps expliquant le pourquoi.
 - **Revue** : 1 relecteur minimum, 2 pour `entitlements`, `billing`, `identity`, `sync`, migrations et tout code touchant des données `[S]`/`[G]`. Checklist de PR : tests, droits vérifiés côté serveur, aucun log sensible, états offline/erreur, accessibilité, flag si risque, doc mise à jour.
 
 ### 1.9.4 Définition de « terminé » (DoD)

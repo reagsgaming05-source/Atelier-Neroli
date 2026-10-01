@@ -256,13 +256,13 @@ Cible : **WCAG 2.2 niveau AA** sur tous les écrans, AAA sur les métriques d'en
 ### 8.6.2 Montres et fabricants
 | Plateforme | Voie officielle (hypothèse) | Valeur | Difficulté | Risques | Plan B | Phase |
 |---|---|---|---|---|---|---|
-| Apple Watch | App watchOS native + HealthKit (séance autonome, GPS, FC) | Très haute | Haute | Cycle de revue, contraintes batterie | Contrôle à distance depuis le téléphone | 5 |
-| Wear OS | App Wear OS + Health Services | Haute | Haute | Fragmentation | Synchronisation via Health Connect | 6 |
-| Garmin | Connect Developer Program (Health API, Activity API, Training API pour pousser des séances) ; app Connect IQ en option | Très haute | Moyenne | Accès sous accord commercial, quotas | Import FIT manuel ; passage par Strava ou Health Connect | 5 |
-| Polar | Polar AccessLink (activités, sommeil) | Moyenne | Faible | Quotas par client | Import FIT | 7 |
-| Suunto | API partenaire sur demande | Moyenne | Moyenne | Accès par partenariat | Import FIT/GPX | 7 |
+| Apple Watch | App watchOS native + HealthKit (séance autonome, GPS, FC) | Très haute | Haute | Cycle de revue, contraintes batterie | Contrôle à distance depuis le téléphone | 7 |
+| Wear OS | App Wear OS + Health Services | Haute | Haute | Fragmentation | Synchronisation via Health Connect | 7 |
+| Garmin | Connect Developer Program (Health API, Activity API, Training API pour pousser des séances) ; app Connect IQ en option | Très haute | Moyenne | Accès sous accord commercial, quotas | Import FIT manuel ; passage par Strava ou Health Connect | 7 |
+| Polar | Polar AccessLink (activités, sommeil) | Moyenne | Faible | Quotas par client | Import FIT | 8 |
+| Suunto | API partenaire sur demande | Moyenne | Moyenne | Accès par partenariat | Import FIT/GPX | 8 |
 | Coros | API partenaire sur demande | Moyenne | Moyenne | Accès restreint | Import FIT | 8 |
-| Wahoo | API Cloud (séances, activités) | Moyenne (vélo) | Faible | Conditions d'usage | Import FIT | 7 |
+| Wahoo | API Cloud (séances, activités) | Moyenne (vélo) | Faible | Conditions d'usage | Import FIT | 9 (home-trainer) |
 | Fitbit | Web API (Google) | Moyenne | Moyenne | Évolution vers Health Connect | Health Connect | 8 |
 Priorisation : couverture par Apple Santé et Health Connect d'abord (couvre indirectement la plupart des montres), puis Garmin (public sportif), puis Watch natives. Chaque fournisseur est derrière une interface `ProviderConnector` (auth OAuth, import, webhooks, révocation, quotas) pour qu'ajouter un fournisseur n'impacte pas le domaine ; stockage des jetons chiffrés ; respect du retrait de consentement (suppression des données du fournisseur sur demande).
 
@@ -348,3 +348,66 @@ Propriétés communes : `app_version`, `platform`, `locale`, `plan_tier` (free/s
 - **Dépendances** : inventaire (SBOM), mise à jour automatisée (Renovate/Dependabot), vérification des licences (pas de GPL dans l'app), audit des vulnérabilités à chaque build, verrouillage des versions, revue manuelle des nouvelles dépendances.
 
 ---
+
+## 8.9 Sécurité
+
+### 8.9.1 Modèle de menaces (STRIDE appliqué)
+Actifs à protéger : position (domicile, habitudes, trajets), données de santé (FC, sommeil, blessures, poids), identité, jetons de fournisseurs, droits d'abonnement, échanges avec le coach.
+| STRIDE | Menace concrète | Contre-mesures obligatoires |
+|---|---|---|
+| Usurpation (Spoofing) | Prise de compte, faux jeton d'abonnement, faux appareil de suivi | MFA optionnel puis recommandé, OAuth/Passkeys, vérification serveur des reçus App Store/Play, jetons courts + rotation, signature des requêtes sensibles |
+| Falsification (Tampering) | Séance modifiée pour tricher aux défis, trace GPS falsifiée, modification de plan | Validation serveur de plausibilité (vitesse, dénivelé, signature d'appareil), journal d'audit, signatures sur les fichiers importés |
+| Répudiation | « Je n'ai pas résilié / partagé » | Journal immuable des consentements, achats, partages et suppressions |
+| Divulgation (Information disclosure) | IDOR sur activités, fuite du domicile via carte ou suivi en direct, logs contenant des positions, sauvegardes en clair | Contrôle d'accès par ressource, zones de confidentialité côté serveur, jetons de suivi aléatoires, chiffrement, logs expurgés |
+| Déni de service | Rafale d'uploads, scraping des itinéraires, saturation du coach IA (coût) | Limites de débit, quotas par palier, files d'attente, plafonds de coût IA, protections réseau |
+| Élévation de privilèges | Utilisateur gratuit accédant aux fonctions Ultra, accès au back-office, injection de prompt faisant exécuter une action | Droits vérifiés côté serveur (Partie 2), séparation des rôles, coach sans accès en écriture aux comptes ni aux paiements, listes d'outils autorisés |
+
+### 8.9.2 Authentification et autorisation
+- Sessions : jeton d'accès 15 min, jeton de rafraîchissement à rotation et détection de réutilisation ; révocation par appareil ; déconnexion à distance.
+- **Autorisation par ressource** : toute lecture/écriture vérifie propriétaire, relation d'amitié, ou jeton de partage ; la logique est centralisée (politique unique, pas de vérifications dispersées) ; règle « refus par défaut ».
+- **Tests d'IDOR** : pour chaque route avec identifiant, un test automatique appelle la ressource d'un utilisateur A avec le jeton d'un utilisateur B, d'un anonyme et d'un utilisateur d'un palier insuffisant et exige 403/404 uniforme ; la CI échoue si une route n'a pas son test (couverture générée depuis OpenAPI).
+- Identifiants non devinables (UUID v4/ULID), jamais séquentiels.
+
+### 8.9.3 Chiffrement et secrets
+- Transit : TLS 1.2+ (1.3 préféré), HSTS ; repos : chiffrement du disque et de la base par le fournisseur ; **champs sensibles** (jetons de fournisseurs, notes médicales, blessures) chiffrés au niveau applicatif avec clés gérées par un KMS et rotation annuelle ; clés par environnement.
+- Secrets : gestionnaire dédié [GESTIONNAIRE_SECRETS] ; jamais dans le dépôt, les images ou les journaux ; analyse de secrets en pré-commit et en CI ; rotation immédiate en cas de fuite ; clés de l'app mobile limitées (restrictions par identifiant de paquet, domaines).
+
+### 8.9.4 Durcissement mobile
+- Stockage sécurisé : Keychain (iOS) / Keystore + EncryptedSharedPreferences (Android) pour jetons ; base locale des séances chiffrée (SQLCipher ou équivalent) car elle contient des positions ; pas de données sensibles dans les captures d'écran de multitâche ni dans les sauvegardes cloud non chiffrées.
+- Jailbreak/root : détection **informative** (signal de risque pour le serveur, pas de blocage de l'utilisateur) ; blocage uniquement des fonctionnalités à enjeu (défis classés, paiements).
+- **Pinning de certificat** : à discuter. Recommandation : épingler la clé publique (pas le certificat) avec deux clés de secours et un mécanisme de désactivation à distance ; ne pas l'activer avant d'avoir la rotation maîtrisée, car une erreur bloque tous les utilisateurs.
+- Obfuscation du code de release, protection du débogage, intégrité de l'app (App Attest / Play Integrity) pour les appels sensibles.
+- Liens profonds : valider tous les paramètres, ne jamais exécuter d'action destructive par lien sans confirmation.
+
+### 8.9.5 Sécurité des API et suivi en direct
+- Limites de débit par utilisateur, IP et route (ex. connexion 5/min, upload de séance 30/h, coach selon le palier) ; validation stricte des schémas, taille maximale (fichier de trace 50 Mo), protection contre les bombes de décompression de fichiers GPX/FIT ; requêtes paramétrées ; en-têtes de sécurité ; CORS restreint ; anti-abus (détection de scraping, comptes jetables).
+- **Suivi en direct** : jeton de partage aléatoire de 128 bits, expirant (durée choisie, 24 h par défaut), révocable en un tap ; la page du proche n'affiche que la position récente et le tracé du jour (pas l'historique, ni l'adresse de départ si zone de confidentialité) ; notification à l'utilisateur à chaque consultation si activée ; arrêt automatique à la fin de séance ; position affinée seulement si l'utilisateur déclenche le SOS.
+- **Données de santé et localisation** : accès interne par rôle et motif, journalisé ; pas de données réelles en environnement de test (jeux synthétiques) ; pseudonymisation dans l'entrepôt analytique ; zones de confidentialité (rayon par défaut 200 m autour du domicile et du travail) appliquées à l'export, au partage, aux cartes d'amis et aux classements.
+
+### 8.9.6 Journalisation, détection et incident
+- Journaux structurés sans position précise ni contenu de santé ni jeton ; conservation 12 mois pour la sécurité, 30 jours pour le débogage ; alertes sur anomalies (pics de 401/403, accès massifs, exports en masse, connexions impossibles géographiquement).
+- **Runbook d'incident** : (1) détecter et classer (sévérité 1 à 4) ; (2) nommer un responsable d'incident ; (3) contenir (révoquer jetons, couper un flag, isoler un service) ; (4) préserver les preuves ; (5) évaluer l'impact sur les personnes ; (6) **notifier la CNIL sous 72 h** si violation de données personnelles présentant un risque, et les personnes concernées si risque élevé (voir 8.10) ; (7) corriger, communiquer (8.12), faire un retour d'expérience sans reproche sous 5 jours ouvrés. Un exercice à blanc par semestre.
+- **Tests d'intrusion** : prestataire externe avant le lancement public puis annuellement, périmètre : API, mobile, back-office, flux de paiement, coach (injection de prompt) ; remédiation des critiques sous 7 jours, des élevées sous 30 jours.
+- **Divulgation responsable** : page `security.txt`, adresse dédiée, politique de bonne foi, accusé de réception sous 3 jours, correction selon sévérité, remerciements ; programme de primes envisagé après 12 mois.
+- **Sauvegardes et reprise** : sauvegardes continues de la base avec restauration à un instant donné ; copie quotidienne chiffrée dans une autre région de l'UE ; **RPO ≤ 15 min, RTO ≤ 4 h** (service dégradé en lecture en 1 h) ; test de restauration trimestriel, documenté ; les enregistrements locaux sur téléphone sont une seconde protection (la séance n'est supprimée localement qu'après confirmation serveur).
+
+---
+
+## 8.10 Conformité et juridique
+
+> Les points suivants sont des orientations de conception, pas un avis juridique : fais valider par un juriste/DPO avant lancement ; marque `À VÉRIFIER` ce qui dépend d'un texte récent.
+
+| Sujet | Exigences et décisions de conception |
+|---|---|
+| **RGPD** | Base légale par finalité (exécution du contrat pour l'enregistrement et le coach ; consentement explicite pour données de santé, analytics, marketing) ; **registre des traitements** tenu dans `docs/legal/registre.md` (finalité, données, base légale, durée, destinataires, transferts, sécurité) ; **AIPD/DPIA obligatoire** (données de santé + géolocalisation à grande échelle + profilage) avant le développement des Phases 3 et 4 et mise à jour à chaque changement majeur ; droits : accès, rectification, portabilité (export GPX/FIT/JSON), effacement (suppression de compte avec délai de grâce de 30 jours puis effacement des sauvegardes sous 90 jours), opposition, limitation, retrait du consentement ; traitement des demandes sous 1 mois ; **DPO** désigné ou référent (à trancher selon l'échelle) ; contrats de sous-traitance (art. 28) avec chaque fournisseur (hébergeur, analytics, e-mail, météo, IA, support) ; hébergement UE privilégié ; **transferts hors UE** (ex. fournisseur d'IA ou d'analytics américain) : clauses contractuelles types + évaluation d'impact du transfert, ou fournisseur UE/option de résidence en UE |
+| **Données de santé (HDS)** | L'hébergement certifié HDS (France) s'impose lorsqu'un hébergeur stocke des données de santé collectées dans le cadre d'une activité de prévention, de diagnostic ou de soins. Une app de sport/bien-être grand public n'est en principe pas dans ce périmètre, mais la frontière est interprétative : **À VÉRIFIER avec un juriste** ; recommandation : hébergeur UE avec certification HDS disponible, pour pouvoir basculer à faible coût ; ne jamais présenter l'app comme dispositif médical |
+| **App Store et Google Play** | Santé : pas de diagnostic ni de promesse médicale, pas de données de santé pour la publicité, justification de chaque permission ; localisation en arrière-plan : déclaration de finalité, vidéo de démonstration pour Play, texte d'usage explicite pour iOS, fonctionnalité visible et nécessaire ; abonnements : prix, durée, renouvellement, essai affichés clairement, restauration des achats, achat intégré pour le numérique sauf exceptions admises (règles de redirection vers paiement externe à vérifier selon région) ; contenus générés par IA : signalement, filtre, voie de signalement dans l'app ; suppression de compte accessible dans l'app (obligatoire) ; étiquettes de confidentialité (Privacy Nutrition Labels, Data Safety) exactes |
+| **Mineurs** | Âge minimum : 15 ans en France pour consentir seul (autorisation parentale en dessous) ; recommandation : réserver l'app aux 16 ans et plus au lancement, avec écran d'âge neutre ; pas de coach conversationnel ni de profil public pour un mineur identifié ; aucune publicité ciblée ; plans d'entraînement prudents |
+| **Loi sur l'IA de l'UE** | Le coach conversationnel est un système à **risque limité** (obligations de transparence : informer l'utilisateur qu'il parle à une IA, étiqueter les contenus générés) ; éviter toute fonction qui basculerait en haut risque ou en pratique interdite (pas d'inférence d'émotions, pas de score social, pas de manipulation) ; documentation technique du modèle utilisé, journal d'évaluation (8.8) ; calendrier d'application progressive : **À VÉRIFIER** |
+| **DSA** | Si contenu d'utilisateurs public (itinéraires, commentaires, photos) : mécanisme de signalement, procédure de notification et action, motivation des décisions de modération, point de contact, rapports de transparence si applicable, traitement des signalements sous délai raisonnable (voir Partie 7) |
+| **Consommation** | Informations précontractuelles claires, **résiliation aussi simple que la souscription** (bouton « Résilier » dans l'app ou lien vers la gestion de l'abonnement du store), droit de rétractation de 14 jours encadré pour le numérique (renonciation exprimée à l'achat), rappel avant renouvellement annuel, aucun dark pattern (pas de case pré-cochée, pas de sortie cachée), prix TTC affichés |
+| **Mentions médicales** | « Cette application ne remplace pas un avis médical. Consulte un médecin avant de commencer ou reprendre une activité, surtout si tu as une maladie cardiaque, une douleur ou un doute » : à l'onboarding (acceptation consignée), dans les plans et dans les CGU ; questionnaire d'aptitude (type PAR-Q) avant plan intensif |
+| **Propriété intellectuelle** | Données cartographiques : OpenStreetMap sous licence ODbL (attribution « © les contributeurs d'OpenStreetMap » et obligations de partage des bases dérivées à analyser avant de publier des itinéraires dérivés) ; IGN, fournisseurs de tuiles, Copernicus : respecter les licences et les conditions d'usage commercial ; polices et icônes : licences vérifiées ; contenus utilisateurs : licence limitée d'hébergement et d'affichage ; contenus des coachs de la marketplace : contrat de cession/licence |
+| **Assurance** | Responsabilité civile professionnelle et cyber-assurance ; aucune garantie de sécurité en montagne : CGU et avertissements (météo, itinéraire, connectivité) ; SOS ne remplace pas les secours |
+| **CGU / CGV / confidentialité** | Rédigées en français clair par un juriste, versionnées, acceptation consignée avec version et date, notification des changements substantiels ; politique de confidentialité par couches |
+| **Conservation** | Séances et profil : durée du compte + 30 jours ; journaux de sécurité : 12 mois ; factures : 10 ans (obligation comptable) ; analytics bruts : 13 mois ; comptes inactifs : avertissement puis suppression après 24 mois d'inactivité |
