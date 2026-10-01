@@ -756,6 +756,48 @@ function initialiserLaLangue() {
   });
 }
 
+// Les touches du menu : la table des raccourcis (raccourcis.json), telle que la page l'a réglée. Avant que la page n'ait
+// parlé, ce sont les touches d'origine.
+const TABLE_TOUCHES = require('./raccourcis.json').commandes;
+let TOUCHES_REGLEES = null;   // { id: [touches] } envoyé par la page
+const TOUCHE_UTILISABLE = /^([A-Z0-9]|F([1-9]|1\d|2[0-4])|Left|Right|Up|Down|Home|End|PageUp|PageDown|Tab|Space|Enter|Backspace|Delete|Plus|[,\-=.\/;'\[\]\\`])$/;
+function enAccelerateur(combo) {
+  const m = /^((?:(?:Ctrl|Alt|Shift)\+)*)(.+)$/.exec(combo);
+  if (!m) return null;
+  const NOMS = { ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down', '+': 'Plus' };
+  const touche = NOMS[m[2]] || m[2];
+  if (!TOUCHE_UTILISABLE.test(touche)) return null;
+  const mods = m[1].split('+').filter(Boolean).map((x) => (x === 'Ctrl' ? (touche === 'Tab' ? 'Ctrl' : 'CmdOrCtrl') : x));
+  return mods.concat(touche).join('+');
+}
+function accel(id) {
+  const c = TABLE_TOUCHES.find((x) => x.id === id);
+  if (!c) return undefined;
+  let touches = TOUCHES_REGLEES && Array.isArray(TOUCHES_REGLEES[id]) ? TOUCHES_REGLEES[id] : c.touches;
+  // Rétablir : Cmd+Maj+Z sous macOS, Ctrl+Y ailleurs
+  if (id === 'retablir' && process.platform === 'darwin') touches = touches.filter((t) => /Shift/.test(t)).concat(touches);
+  for (const t of touches) { const a = enAccelerateur(t); if (a) return a; }
+  return undefined;
+}
+ipcMain.on('aktum:accelerateurs', (_e, o) => {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return;
+  const propre = {};
+  for (const c of TABLE_TOUCHES) {
+    const t = o[c.id];
+    if (Array.isArray(t) && t.length <= 4 && t.every((x) => typeof x === 'string' && x.length <= 40)) propre[c.id] = t;
+  }
+  TOUCHES_REGLEES = propre;
+  buildMenu();
+});
+// Quelques réglages de l'application, lisibles et modifiables depuis les préférences de la page : une liste fermée.
+const REGLAGES_PAGE = { toujoursEnOnglet: 'boolean' };
+ipcMain.handle('aktum:lire-reglage', (_e, cle) => (REGLAGES_PAGE[cle] ? lireReglages()[cle] === true : null));
+ipcMain.handle('aktum:ecrire-reglage', (_e, cle, valeur) => {
+  if (!REGLAGES_PAGE[cle] || typeof valeur !== REGLAGES_PAGE[cle]) return false;
+  const r = lireReglages(); r[cle] = valeur; ecrireReglages(r);
+  return true;
+});
+
 // Les outils du volet, tels que la page les envoie (voir src/96-panneau.js) : [{ titre, outils: [{ id, nom }] }].
 // Rien n'est jamais exécuté d'ici : une entrée du menu renvoie à la page son identifiant, et c'est elle qui sait quoi faire.
 let MENU_OUTILS = null;
@@ -789,26 +831,20 @@ function buildMenu() {
     {
       label: 'Fichier',
       submenu: [
-        { label: 'Ouvrir…', accelerator: 'CmdOrCtrl+O', click: ouvrirDocuments },
+        { id: 'ouvrir', label: 'Ouvrir…', accelerator: accel('ouvrir'), click: ouvrirDocuments },
         {
           label: 'Récents',
           submenu: (lireRecents().length ? lireRecents().map((c) => ({ brut: true, label: path.basename(c), sublabel: path.dirname(c), click: () => ouvrirRecent(c) })) : [{ label: 'Aucun fichier récent', enabled: false }])
             .concat([{ type: 'separator' }, { label: 'Effacer la liste', click: viderRecents }]),
         },
-        { label: 'Ajouter au document…', accelerator: 'CmdOrCtrl+Shift+O', click: ajouterDocuments },
-        { label: 'Nouvel onglet', accelerator: 'CmdOrCtrl+T', click: () => envoyer('nouvel-onglet') },
+        { id: 'ajouter', label: 'Ajouter au document…', accelerator: accel('ajouter'), click: ajouterDocuments },
+        { id: 'nouvel-onglet', label: 'Nouvel onglet', accelerator: accel('nouvel-onglet'), click: () => envoyer('nouvel-onglet') },
         { label: 'Nouvelle fenêtre', accelerator: 'CmdOrCtrl+N', click: () => createWindow([]) },
-        {
-          type: 'checkbox',
-          label: 'Toujours ouvrir en onglet',
-          checked: toujoursEnOnglet(),
-          toolTip: 'Un double-clic sur un PDF depuis le bureau l\'ajoute à la fenêtre ouverte, au lieu d\'en ouvrir une seconde.',
-          click: (item) => { const r = lireReglages(); r.toujoursEnOnglet = !!item.checked; ecrireReglages(r); },
-        },
+        { id: 'preferences', label: 'Préférences…', accelerator: accel('preferences'), click: () => envoyer('preferences') },
         { type: 'separator' },
-        { id: 'enregistrer', label: 'Enregistrer', accelerator: 'CmdOrCtrl+S', click: () => envoyer('enregistrer') },
-        { id: 'enregistrer-sous', label: 'Enregistrer sous…', accelerator: 'CmdOrCtrl+Shift+S', click: () => envoyer('exporter') },
-        { label: 'Imprimer…', accelerator: 'CmdOrCtrl+P', click: () => envoyer('imprimer') },
+        { id: 'enregistrer', label: 'Enregistrer', accelerator: accel('enregistrer'), click: () => envoyer('enregistrer') },
+        { id: 'enregistrer-sous', label: 'Enregistrer sous…', accelerator: accel('exporter'), click: () => envoyer('exporter') },
+        { id: 'imprimer', label: 'Imprimer…', accelerator: accel('imprimer'), click: () => envoyer('imprimer') },
         { type: 'separator' },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
         ...(RANGEMENT.ou === 'comptes' && PROFIL ? [
@@ -831,7 +867,7 @@ function buildMenu() {
           },
         }] : []),
         { type: 'separator' },
-        { label: 'Fermer l\'onglet', accelerator: 'CmdOrCtrl+W', click: () => envoyer('fermer-onglet') },
+        { id: 'fermer-onglet', label: 'Fermer l\'onglet', accelerator: accel('fermer-onglet'), click: () => envoyer('fermer-onglet') },
         { label: 'Fermer la fenêtre', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
         // Pas d'accélérateur écrit à la main : le système sait comment on quitte (Alt+F4 sous Windows, Cmd+Q sous macOS).
         { label: 'Quitter', role: 'quit' },
@@ -843,29 +879,29 @@ function buildMenu() {
       // de saisie (le système fait) ou le document (l'application fait).
       label: 'Édition',
       submenu: [
-        { label: 'Annuler l\'action', accelerator: 'CmdOrCtrl+Z', click: () => envoyer('annuler') },
-        { label: 'Rétablir l\'action', accelerator: 'CmdOrCtrl+Shift+Z', click: () => envoyer('retablir') },
+        { id: 'annuler', label: 'Annuler l\'action', accelerator: accel('annuler'), click: () => envoyer('annuler') },
+        { id: 'retablir', label: 'Rétablir l\'action', accelerator: accel('retablir'), click: () => envoyer('retablir') },
         { type: 'separator' },
         { label: 'Couper', role: 'cut' },
         { label: 'Copier', role: 'copy' },
         { label: 'Coller', role: 'paste' },
         { type: 'separator' },
-        { label: 'Tout sélectionner', accelerator: 'CmdOrCtrl+A', click: () => envoyer('tout-selectionner') },
+        { id: 'tout-selectionner', label: 'Tout sélectionner', accelerator: accel('tout-selectionner'), click: () => envoyer('tout-selectionner') },
       ],
     },
     {
       label: 'Affichage',
       submenu: [
-        { label: 'Lire', accelerator: 'CmdOrCtrl+1', click: () => envoyer('lecture') },
-        { label: 'Organiser les pages', accelerator: 'CmdOrCtrl+2', click: () => envoyer('organiser') },
-        { label: 'Deux pages côte à côte', accelerator: 'CmdOrCtrl+Shift+2', click: () => envoyer('deux-pages') },
+        { id: 'lecture', label: 'Lire', accelerator: accel('lecture'), click: () => envoyer('lecture') },
+        { id: 'organiser', label: 'Organiser les pages', accelerator: accel('organiser'), click: () => envoyer('organiser') },
+        { id: 'deux-pages', label: 'Deux pages côte à côte', accelerator: accel('deux-pages'), click: () => envoyer('deux-pages') },
         { type: 'separator' },
-        { label: 'Onglet suivant', accelerator: 'Ctrl+Tab', click: () => envoyer('onglet-suivant') },
-        { label: 'Onglet précédent', accelerator: 'Ctrl+Shift+Tab', click: () => envoyer('onglet-precedent') },
+        { id: 'onglet-suivant', label: 'Onglet suivant', accelerator: accel('onglet-suivant'), click: () => envoyer('onglet-suivant') },
+        { id: 'onglet-precedent', label: 'Onglet précédent', accelerator: accel('onglet-precedent'), click: () => envoyer('onglet-precedent') },
         { type: 'separator' },
-        { label: 'Agrandir', accelerator: 'CmdOrCtrl+=', click: () => envoyer('zoom-plus') },
-        { label: 'Réduire', accelerator: 'CmdOrCtrl+-', click: () => envoyer('zoom-moins') },
-        { label: 'Page entière', accelerator: 'CmdOrCtrl+0', click: () => envoyer('zoom-page') },
+        { id: 'zoom-plus', label: 'Agrandir', accelerator: accel('zoom-plus'), click: () => envoyer('zoom-plus') },
+        { id: 'zoom-moins', label: 'Réduire', accelerator: accel('zoom-moins'), click: () => envoyer('zoom-moins') },
+        { id: 'zoom-page', label: 'Page entière', accelerator: accel('zoom-page'), click: () => envoyer('zoom-page') },
         { type: 'separator' },
         { label: 'Thème clair ou sombre', click: () => envoyer('theme') },
         { label: 'Plein écran', role: 'togglefullscreen' },
@@ -874,8 +910,8 @@ function buildMenu() {
     {
       label: 'Outils',
       submenu: [
-        { label: 'Rechercher, remplacer, caviarder…', accelerator: 'CmdOrCtrl+F', click: () => envoyer('rechercher') },
-        { label: 'Ajouter un signet', accelerator: 'CmdOrCtrl+B', click: () => envoyer('signet') },
+        { id: 'rechercher', label: 'Rechercher, remplacer, caviarder…', accelerator: accel('rechercher'), click: () => envoyer('rechercher') },
+        { id: 'signet', label: 'Ajouter un signet', accelerator: accel('signet'), click: () => envoyer('signet') },
         { type: 'separator' },
         // Les trente outils du volet, par groupe : les mêmes noms, dans la langue affichée (la page les a déjà traduits).
         ...(MENU_OUTILS
@@ -886,7 +922,7 @@ function buildMenu() {
     {
       label: 'Aide',
       submenu: [
-        { label: 'Raccourcis clavier', accelerator: 'F1', click: () => envoyer('raccourcis') },
+        { id: 'raccourcis', label: 'Raccourcis clavier', accelerator: accel('raccourcis'), click: () => envoyer('raccourcis') },
         {
           label: 'Langue',
           submenu: [

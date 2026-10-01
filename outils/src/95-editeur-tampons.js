@@ -426,6 +426,8 @@
     if (ed.saisie) return;
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'textarea' || tag === 'input' || tag === 'select') return;
+    // Les touches de l'éditeur (un outil par lettre, les pages voisines) viennent de la table des raccourcis.
+    if (vue.touche(e, 'editeur')) return;
     if (e.key === 'Escape') { e.preventDefault(); if (ed.sel != null) { ed.sel = null; edDrawOverlay(); } else closeEditor(); }
     else if (e.key === 'Delete' || e.key === 'Backspace') {
       if (ed.sel == null) return;
@@ -434,9 +436,7 @@
       snapshot();
       p.ann = p.ann.filter(a => a.id !== ed.sel);
       ed.sel = null; state.touched = true; edDrawOverlay();
-    } else if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); edGo(-1); }
-    else if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); edGo(1); }
-    else if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); edRenderPage(); }
+    } else if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); edRenderPage(); }
     else if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); dialogImprimer(); }
   }, true);
 

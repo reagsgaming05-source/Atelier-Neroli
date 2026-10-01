@@ -36,4 +36,9 @@ contextBridge.exposeInMainWorld('AktumDesktop', {
   // La liste des outils du volet, rangée par groupe et déjà dans la langue affichée : le menu « Outils » la reprend telle
   // quelle, de sorte que ses entrées sont celles du volet, jamais une seconde liste à tenir à jour.
   definirMenuOutils: (liste) => ipcRenderer.send('aktum:menu-outils', liste),
+  // Les touches du menu : celles de la table (raccourcis.json), telles que la personne les a réglées.
+  definirAccelerateurs: (o) => ipcRenderer.send('aktum:accelerateurs', o),
+  // Un petit nombre de réglages de l'application (voir main.js) : « toujoursEnOnglet ».
+  lireReglage: (cle) => ipcRenderer.invoke('aktum:lire-reglage', cle),
+  ecrireReglage: (cle, valeur) => ipcRenderer.invoke('aktum:ecrire-reglage', cle, valeur),
 });

@@ -89,7 +89,7 @@ const puce = async (f) => (await f.locator('#licence-ligne').isVisible()) ? (awa
   assert.match(await puce(s.f), /Essai : 45 jours restants/, 'quarante-cinq jours au premier lancement');
   assert.ok(fs.existsSync(path.join(p.profil, 'Aktum PDF', 'essai.json')), 'l\'ancre est dans le profil, hors du dossier de l\'application');
   // L'enregistrement marche pendant l'essai.
-  await s.f.keyboard.press('Control+2'); await s.f.keyboard.press('Escape');
+  await s.f.keyboard.press('Control+Shift+2'); await s.f.keyboard.press('Escape');
   await s.f.click('#pages .tile:nth-child(1)'); await s.f.click('#sel-rot-right');
   await s.f.click('#btn-export');
   await s.f.waitForSelector('#ecr-remplacer', { state: 'visible', timeout: 10000 });

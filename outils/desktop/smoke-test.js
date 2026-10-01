@@ -78,7 +78,7 @@ const dernier = (win) => win.evaluate(() => document.querySelector('#last').text
 const menuClic = (app, id) => app.evaluate(({ Menu }, id) => { const it = Menu.getApplicationMenu().getMenuItemById(id); if (!it) throw new Error('menu absent : ' + id); it.click(); }, id);
 // Sélectionne la n-ième page (vue Organiser) et la pivote par la barre de sélection.
 async function tournerPage(win, n) {
-  await win.keyboard.press('Control+2');
+  await win.keyboard.press('Control+Shift+2');
   await win.keyboard.press('Escape');   // un clic sur une vignette l'ajoute à la sélection : on repart de rien
   await win.click('#pages .tile:nth-child(' + n + ')');
   await win.click('#sel-rot-right');
@@ -131,6 +131,26 @@ async function tournerPage(win, n) {
   const edition = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.find((i) => i.label === 'Édition').submenu.items.filter((i) => i.label).map((i) => i.label + (i.accelerator ? ' [' + i.accelerator + ']' : '')));
   console.log('menu Édition :', JSON.stringify(edition));
   verifier(edition.length === 6 && edition.some((l) => /Couper/.test(l)) && edition.some((l) => /Coller/.test(l)) && edition.some((l) => /Tout sélectionner \[CmdOrCtrl\+A\]/.test(l)), 'le menu Édition a ses touches');
+  // Les touches du menu sont celles de la table des raccourcis ; une touche changée dans les préférences passe au menu.
+  const accelerateurs = () => app.evaluate(({ Menu }) => {
+    const r = {};
+    const parcourir = (items) => items.forEach((i) => { if (i.id) r[i.id] = i.accelerator || null; if (i.submenu) parcourir(i.submenu.items); });
+    parcourir(Menu.getApplicationMenu().items);
+    return r;
+  });
+  const avant = await accelerateurs();
+  console.log('touches du menu :', JSON.stringify({ ouvrir: avant.ouvrir, lecture: avant.lecture, 'onglet-suivant': avant['onglet-suivant'], 'zoom-page': avant['zoom-page'] }));
+  verifier(avant.ouvrir === 'CmdOrCtrl+O' && avant.lecture === 'CmdOrCtrl+Shift+1' && avant['onglet-suivant'] === 'Ctrl+Tab' && avant['zoom-page'] === 'CmdOrCtrl+0', 'le menu prend ses touches dans la table');
+  await menuClic(app, 'preferences');
+  await win.waitForSelector('.prefs-ligne[data-commande="zoom-page"]', { state: 'visible', timeout: 15000 });
+  await win.locator('.prefs-ligne[data-commande="zoom-page"] button', { hasText: 'Changer' }).click();
+  await win.keyboard.press('Control+9');
+  await attendre(async () => (await accelerateurs())['zoom-page'] === 'CmdOrCtrl+9', 10000, 'la touche changée passe au menu');
+  await win.locator('.prefs-ligne[data-commande="zoom-page"] button', { hasText: 'Rétablir' }).click();
+  await attendre(async () => (await accelerateurs())['zoom-page'] === 'CmdOrCtrl+0', 10000, 'la touche rétablie revient au menu');
+  verifier(true, 'une touche changée passe au menu, et revient');
+  await win.click('.dialog .dlg-head .x');
+  await win.waitForSelector('.dialog', { state: 'detached' });
   // une entrée du menu lance l'outil, comme un clic dans le volet
   await app.evaluate(({ Menu }) => {
     const g = Menu.getApplicationMenu().items.find((i) => i.label === 'Outils').submenu.items.find((i) => i.label === 'Organiser');

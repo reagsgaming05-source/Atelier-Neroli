@@ -19,6 +19,8 @@ const IGNORES = ['Deutsch', 'Français', 'MAP * ~NOTFOUND , EXCLUDE ', 'Aktum PD
   'compte créé', 'code de récupération créé', 'code de récupération refait', 'mot de passe changé', 'mot de passe changé avec le code de récupération', 'mot de passe posé après réinitialisation',
   'SIGNATURE-REFUSEE : ', 'fiche de version : ', 'usage : node fiche-de-version.js windows|mac <destination>', 'usage : verifier-maj.js <archive.zip>',
   'Diagnostic-Aktum-PDF-', 'Electron ', ' – Chromium ', 'Windows', ' — commit ', 'Alt+F4', 'Ctrl+Tab', 'Ctrl+Shift+Tab',
+  // les noms de touches d'Electron (enAccelerateur, dans main.js) : du code, jamais affichés
+  'CmdOrCtrl', 'Ctrl', 'Tab', 'Up', 'Down', 'Left', 'Right', 'Plus',
   // les raisons que la vérification de licence rend à l'informaticien : lues dans le rapport de diagnostic
   ];
 

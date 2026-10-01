@@ -259,11 +259,6 @@
     };
     try { if (localStorage.getItem('aktum-panneau-replie')) poserLeRepli(true); } catch (e) { signaler('Préférence d\'affichage', e, 'info'); }
     btnReplier.addEventListener('click', () => poserLeRepli(!espace.classList.contains('replie')));
-    window.addEventListener('keydown', e => {
-      if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || (e.key || '').toLowerCase() !== 'b') return;
-      e.preventDefault();
-      poserLeRepli(!espace.classList.contains('replie'));
-    });
     el.btnOpen.addEventListener('click', () => openPicker('onglet'));
     el.btnAdd.addEventListener('click', () => openPicker(''));
     el.btnChoose.addEventListener('click', () => openPicker(''));
@@ -596,35 +591,68 @@
     document.addEventListener('mouseup', finLasso);
     window.addEventListener('blur', finLasso);
 
-    // --- global keys
+    // --- les touches : la table (desktop/raccourcis.json) dit lesquelles ; ici, les fonctions qu'elles lancent.
+    // Une action n'agit que si elle peut (`quand`) : sans document, Ctrl+F laisse la touche au navigateur.
+    const sansTuile = e => !(e && e.target && e.target.closest && e.target.closest('.tile'));
+    const pagesSel = () => state.selected.size > 0;
+    const enLecture = () => state.vue === 'lecture' && state.pages.length > 0;
+    const pageLue = () => clampInt(el.pageNum.value, 1, state.pages.length) || 1;
+    const outilsOuverts = () => { const t = $('#tab-tools'); if (t) t.click(); };
+    Object.assign(ACTIONS, {
+      annuler: { agit: () => undo() },
+      retablir: { agit: () => redoAction() },
+      'tout-selectionner': { quand: () => state.pages.length > 0, agit: () => selectAll() },
+      ouvrir: { agit: () => openPicker('onglet') },
+      ajouter: { agit: () => openPicker('') },
+      'nouvel-onglet': { agit: () => nouvelOnglet() },
+      'fermer-onglet': { agit: () => fermerOnglet(ongletActif) },
+      'onglet-suivant': { agit: () => ongletVoisin(1) },
+      'onglet-precedent': { agit: () => ongletVoisin(-1) },
+      signet: { agit: () => { if (state.pages.length) ajouterSignet(); } },
+      enregistrer: { agit: () => enregistrer() },
+      exporter: { agit: () => { if (state.pages.length && !state.busy) exportPages(state.pages, safeBase(el.filename.value) + '.pdf'); } },
+      imprimer: { agit: () => { if (state.pages.length && !state.busy) dialogImprimer(); } },
+      rechercher: { quand: () => state.pages.length > 0, agit: () => toolSearch() },
+      // « Suivant » et « Précédent » du panneau de recherche, quel que soit le focus ; fermé, F3 le rouvre.
+      'occurrence-suivante': { quand: () => state.pages.length > 0, agit: () => { const b = $('#se-suiv'); if (b) b.click(); else toolSearch(); } },
+      'occurrence-precedente': { quand: () => state.pages.length > 0, agit: () => { const b = $('#se-prec'); if (b) b.click(); else toolSearch(); } },
+      'filtre-outils': { agit: () => { outilsOuverts(); const q = $('#outil-q'); if (q) { q.focus(); q.select(); } } },
+      preferences: { agit: () => toolPreferences() },
+      raccourcis: { agit: () => toolHelp() },
+      lecture: { agit: () => changerVue('lecture') },
+      organiser: { agit: () => changerVue('organiser') },
+      'deux-pages': { agit: () => { changerVue('lecture'); poserDispo(state.dispo === 'deux' ? 'une' : 'deux'); } },
+      'zoom-plus': { quand: enLecture, agit: () => pas(1) },
+      'zoom-moins': { quand: enLecture, agit: () => pas(-1) },
+      'zoom-page': { quand: enLecture, agit: () => poserZoom('page') },
+      'zoom-100': { quand: enLecture, agit: () => poserZoom('1') },
+      'zoom-largeur': { quand: enLecture, agit: () => poserZoom('largeur') },
+      panneau: { agit: () => poserLeRepli(!espace.classList.contains('replie')) },
+      // Aller à la page : le champ de la barre d'état, déjà là, prend le focus (Entrée y mène)
+      'aller-page': { quand: enLecture, agit: () => { el.pageNum.focus(); el.pageNum.select(); } },
+      'page-suivante': { quand: enLecture, agit: () => lectureAller(Math.min(state.pages.length, pageLue() + 1)) },
+      'page-precedente': { quand: enLecture, agit: () => lectureAller(Math.max(1, pageLue() - 1)) },
+      'premiere-page': { quand: enLecture, agit: () => lectureAller(1) },
+      'derniere-page': { quand: enLecture, agit: () => lectureAller(state.pages.length) },
+      'supprimer-pages': { quand: e => pagesSel() && sansTuile(e), agit: () => deletePages(selectedInOrder()) },
+      'pivoter-droite': { quand: e => pagesSel() && sansTuile(e), agit: () => rotatePages(selectedInOrder(), 90) },
+      'pivoter-gauche': { quand: e => pagesSel() && sansTuile(e), agit: () => rotatePages(selectedInOrder(), -90) },
+      deselectionner: { agit: () => { if (annulation.actif) demanderAnnulation(); else clearSelection(); } },
+    });
+    // L'éditeur de page : un outil par touche, et ses deux pages voisines
+    ['select', 'edittext', 'text', 'highlight', 'box', 'draw', 'redact', 'champ', 'tampon', 'sign', 'image'].forEach(outil => {
+      ACTIONS['ed-' + outil] = { quand: () => ed.root && !ed.root.hidden, agit: () => { const b = $('.ed-tool[data-tool="' + outil + '"]', ed.root); if (b) b.click(); } };
+    });
+    ACTIONS['ed-precedente'] = { quand: () => ed.root && !ed.root.hidden, agit: () => edGo(-1) };
+    ACTIONS['ed-suivante'] = { quand: () => ed.root && !ed.root.hidden, agit: () => edGo(1) };
+    envoyerLesAccelerateurs();
+
     document.addEventListener('keydown', e => {
       if (ed.root && !ed.root.hidden) return;
       if (openDlg) return;
       const tag = (e.target.tagName || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); }
-      else if (mod && ((e.key === 'y' || e.key === 'Y') || (e.shiftKey && (e.key === 'z' || e.key === 'Z')))) { e.preventDefault(); redoAction(); }
-      else if (mod && (e.key === 'a' || e.key === 'A') && state.pages.length) { e.preventDefault(); selectAll(); }
-      else if (mod && (e.key === 'o' || e.key === 'O')) { e.preventDefault(); openPicker(e.shiftKey ? '' : 'onglet'); }
-      else if (mod && (e.key === 't' || e.key === 'T')) { e.preventDefault(); nouvelOnglet(); }
-      else if (mod && (e.key === 'w' || e.key === 'W')) { e.preventDefault(); fermerOnglet(ongletActif); }
-      else if (mod && e.key === 'Tab') { e.preventDefault(); ongletVoisin(e.shiftKey ? -1 : 1); }
-      // Ctrl+B pose un signet ; Ctrl+Maj+B replie le panneau (son propre gestionnaire) : sans cette garde, les deux partaient ensemble.
-      else if (mod && !e.shiftKey && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); if (state.pages.length) ajouterSignet(); }
-      else if (mod && e.shiftKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); if (state.pages.length && !state.busy) exportPages(state.pages, safeBase(el.filename.value) + '.pdf'); }
-      else if (mod && (e.key === 's' || e.key === 'S')) { e.preventDefault(); enregistrer(); }
-      else if (mod && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); if (state.pages.length && !state.busy) dialogImprimer(); }
-      else if (mod && e.key === '1') { e.preventDefault(); changerVue('lecture'); }
-      else if (mod && e.key === '2') { e.preventDefault(); changerVue('organiser'); }
-      else if (mod && state.vue === 'lecture' && (e.key === '+' || e.key === '=')) { e.preventDefault(); pas(1); }
-      else if (mod && state.vue === 'lecture' && e.key === '-') { e.preventDefault(); pas(-1); }
-      else if (mod && state.vue === 'lecture' && e.key === '0') { e.preventDefault(); poserZoom('page'); }
-      else if (mod && (e.key === 'f' || e.key === 'F')) { if (state.pages.length) { e.preventDefault(); toolSearch(); } }
-      else if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); toolHelp(); }
-      else if (e.key === 'Escape') { if (annulation.actif) demanderAnnulation(); else clearSelection(); }
-      else if ((e.key === 'Delete' || e.key === 'Backspace') && state.selected.size && !e.target.closest('.tile')) { e.preventDefault(); deletePages(selectedInOrder()); }
-      else if ((e.key === 'r' || e.key === 'R') && state.selected.size && !e.target.closest('.tile') && !mod) { e.preventDefault(); rotatePages(selectedInOrder(), e.shiftKey ? -90 : 90); }
+      traiterLaTouche(e, 'page');
     });
 
     window.addEventListener('beforeunload', e => {
@@ -677,34 +705,21 @@
     state.bureau = !!bureau;
     if (bureau) {
       const commandeBureau = nom => {
-        if (nom === 'exporter') { if (state.pages.length && !state.busy) exportPages(state.pages, safeBase(el.filename.value) + '.pdf'); }
-        else if (nom === 'enregistrer') enregistrer();
-        else if (nom === 'imprimer') { if (state.pages.length && !state.busy) dialogImprimer(); }
-        else if (nom === 'ouvrir') openPicker('onglet');
-        else if (nom === 'ajouter') openPicker('');
-        else if (nom === 'nouvel-onglet') nouvelOnglet();
-        else if (nom === 'fermer-onglet') fermerOnglet(ongletActif);
-        else if (nom === 'onglet-suivant') ongletVoisin(1);
-        else if (nom === 'onglet-precedent') ongletVoisin(-1);
-        else if (nom === 'rechercher') { if (state.pages.length) toolSearch(); }
-        else if (nom === 'dossier') { if (state.pages.length) toolDossier(); }
+        // Les gestes de la table se lancent comme à la touche. Annuler, Rétablir et Tout sélectionner passent d'abord par
+        // le champ qui a le focus (voir toucheEdition).
+        const a = ACTIONS[nom];
+        if (nom !== 'annuler' && nom !== 'retablir' && nom !== 'tout-selectionner' && a) { if (!a.quand || a.quand(null)) a.agit(null); return; }
+        if (nom === 'dossier') { if (state.pages.length) toolDossier(); }
         else if (nom === 'lots') toolLots();
         else if (nom === 'tableau') { if (state.pages.length) toolTableau(); }
         else if (nom === 'ocr') { if (state.pages.length) toolOcr(); }
         else if (nom === 'comparer') { if (state.pages.length) toolComparer(); }
         else if (nom === 'editeur') { if (state.pages.length) openEditor(pageCouranteId()); }
-        else if (nom === 'lecture' || nom === 'organiser') changerVue(nom);
-        else if (nom === 'zoom-plus') { if (state.vue === 'lecture') pas(1); }
-        else if (nom === 'zoom-moins') { if (state.vue === 'lecture') pas(-1); }
-        else if (nom === 'zoom-page') { if (state.vue === 'lecture') poserZoom('page'); }
-        else if (nom === 'deux-pages') { changerVue('lecture'); poserDispo(state.dispo === 'deux' ? 'une' : 'deux'); }
-        else if (nom === 'signet') { if (state.pages.length) ajouterSignet(); }
         else if (nom.startsWith('outil:')) lancerUnOutil(nom.slice(6));
         else if (nom === 'annuler') toucheEdition('z', false);
         else if (nom === 'retablir') toucheEdition('z', true);
         else if (nom === 'tout-selectionner') toucheEdition('a', false);
         else if (nom === 'theme') el.btnTheme.click();
-        else if (nom === 'raccourcis') toolHelp();
       };
       // La licence : l'état vient de l'application, la page affiche et suspend l'enregistrement
       // quand l'essai est fini. Relue de temps en temps : le fichier peut être posé pendant qu'on travaille.
@@ -752,6 +767,7 @@
   // apparaître les contrôles de zoom, et c'est précisément là qu'elle débordait.
   const rendreLesVignettes = vue.render;
   vue.render = function () { rendreLesVignettes(); renderTools(); planifierAjustementBarre(); };
+  vue.touche = traiterLaTouche;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

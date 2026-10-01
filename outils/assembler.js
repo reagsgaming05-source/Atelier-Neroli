@@ -116,6 +116,14 @@ function svgIcone(nom, registre) {
   return '<svg aria-hidden="true" focusable="false" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + formes + '</svg>';
 }
 
+// La table des raccourcis (desktop/raccourcis.json) : posée dans le module qui la lit, à l'endroit de son repère.
+const REPERE_RACCOURCIS = '/*@raccourcis@*/{ commandes: [], fixes: [] }';
+function raccourcis() {
+  const brut = JSON.parse(fs.readFileSync(path.join(__dirname, 'desktop', 'raccourcis.json'), 'utf8'));
+  // « < » devient « \u003c » : rien, dans les données, ne peut refermer une balise ni ouvrir un commentaire
+  return JSON.stringify({ commandes: brut.commandes, fixes: brut.fixes }).replace(/</g, '\\u003c');
+}
+
 function assembler() {
   let page = lire('page.html');
   const icones = registreIcones();
@@ -127,6 +135,8 @@ function assembler() {
   let js = modules().map(lire).join('');
   if (!js.includes(REPERE_TRADUCTEUR)) throw new Error('repère traducteur introuvable dans src/01-langue.js');
   js = js.replace(REPERE_TRADUCTEUR, () => traducteur());
+  if (!js.includes(REPERE_RACCOURCIS)) throw new Error('repère raccourcis introuvable dans src/97-raccourcis.js');
+  js = js.replace(REPERE_RACCOURCIS, () => raccourcis());
   // Fonction de remplacement plutôt que chaîne : un « $& » dans le code serait
   // sinon interprété par String.replace.
   const feuille = lire('style.css');

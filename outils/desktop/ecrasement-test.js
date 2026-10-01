@@ -57,7 +57,7 @@ async function prete(app, pages) {
   return win;
 }
 async function tourner(win, n) {
-  await win.keyboard.press('Control+2');
+  await win.keyboard.press('Control+Shift+2');
   await win.keyboard.press('Escape');
   await win.click('#pages .tile:nth-child(' + n + ')');
   await win.click('#sel-rot-right');

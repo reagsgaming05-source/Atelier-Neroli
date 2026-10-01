@@ -310,10 +310,11 @@ l'archive que `Compress-Archive` vient d'écrire.
   (Ctrl+Maj+O) combine plusieurs documents, qui se fusionnent à l'export.
 - **Onglets** : Ctrl+T nouvel onglet, Ctrl+W fermer, Ctrl+Tab suivant ; une page glissée sur
   un autre onglet y déménage.
-- **Lire** (Ctrl+1) : le document page à page ou deux pages côte à côte, zoom de 50 à 400 %
-  (Ctrl + molette, Ctrl +/−, Ctrl 0 pour la page entière), signets (volet *Plan*, Ctrl+B),
-  recherche, remplacement et caviardage (Ctrl+F).
-- **Organiser** (Ctrl+2) : glisser les pages, sélection au lasso, pivoter, supprimer, dupliquer,
+- **Lire** (Ctrl+Maj+1) : le document page à page ou deux pages côte à côte (Ctrl+Maj+3), zoom de 50 à
+  400 % (Ctrl + molette, Ctrl +/−, Ctrl 0 pour la page entière, Ctrl 1 pour la taille réelle,
+  Ctrl 2 pour la largeur), de page en page avec Page préc./suiv., Début et Fin, signets (volet
+  *Signets*, Ctrl+B), recherche, remplacement et caviardage (Ctrl+F, F3 pour l'occurrence suivante).
+- **Organiser** (Ctrl+Maj+2) : glisser les pages, sélection au lasso, pivoter, supprimer, dupliquer,
   insérer des pages vierges, retirer les pages vides d'un scan, diviser, redimensionner.
 - **Corriger et annoter** : double-clic sur une page ouvre l'éditeur — correction du texte en
   place, texte, surlignage, cadres, dessin, tampons, signature (mémorisable), image,

@@ -20,8 +20,12 @@ const TEXTES_RETENUS = ['pdf.js indisponible', 'point (1234.50)', '[caviardé]',
   '-extrait.pdf', '-signe.pdf', '-livret', '-par-feuille', '-sans-vides.pdf', '-leger.pdf', '-numerote.pdf', '-protege.pdf',
   'lot-', '-divise.zip', '-images.zip', '-tableau.csv', 'formulaire-', 'images.pdf', '(aucun texte)'];
 
+// Des noms de touches du navigateur (event.key), comparés dans le code et jamais affichés : « Shift » devient « Maj » via la table des noms (src/97-raccourcis.js).
+const TEXTES_ECARTES = ['AltGraph', 'Control', 'Dead', 'Meta', 'Shift', 'Space'];
+
 function estUnTexte(s) {
   const t = s.trim();
+  if (TEXTES_ECARTES.indexOf(t) >= 0) return false;
   if (TEXTES_RETENUS.indexOf(t) >= 0) return true;
   if (['Ae', 'Oe', 'Ue'].indexOf(t) >= 0) return false;                                 // le repliement des trémas d'un nom de fichier
   if (t.length < 2 || !/[A-Za-zÀ-ÿ]/.test(t)) return false;
@@ -130,6 +134,10 @@ function relever(options) {
     }
     for (const c of Object.keys(n)) { const v = n[c]; if (Array.isArray(v)) v.forEach(chercherPlural); else if (v && typeof v.type === 'string') chercherPlural(v); }
   })(ast);
+  // La table des raccourcis (desktop/raccourcis.json) : ses libellés et ses groupes s'affichent, dans la fenêtre d'aide et les préférences.
+  const table = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'desktop', 'raccourcis.json'), 'utf8'));
+  [].concat(table.commandes.map(c => c.libelle), table.commandes.map(c => c.groupe), table.fixes.map(f => f.libelle), table.fixes.map(f => f.groupe))
+    .forEach(t => { if (!litteraux.has(t)) litteraux.set(t, ['desktop/raccourcis.json']); });
   // Le HTML de la page : les textes visibles et les attributs lisibles (title, aria-label, placeholder, alt).
   const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'page.html'), 'utf8');
   const htmlTextes = new Map();

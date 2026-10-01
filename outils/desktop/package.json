@@ -40,6 +40,7 @@
       "main.js",
       "langue.js",
       "langue-de.json",
+      "raccourcis.json",
       "traducteur.js",
       "ou-ranger.js",
       "version-posee.js",

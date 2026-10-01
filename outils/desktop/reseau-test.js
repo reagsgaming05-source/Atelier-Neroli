@@ -123,7 +123,7 @@ async function tenter(app, adresses) {
 
     note('tourner une page et enregistrer');
     // Tourner une page et exporter : la boîte « Enregistrer sous » se règle sur le dossier d'essai.
-    await win.keyboard.press('Control+2');
+    await win.keyboard.press('Control+Shift+2');
     await win.keyboard.press('Escape');
     await win.click('#pages .tile:nth-child(1)');
     await win.click('#sel-rot-right');

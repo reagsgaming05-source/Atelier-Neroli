@@ -132,12 +132,10 @@
   "Se déconnecter d’Aktum PDF ?": "Von Aktum PDF abmelden?",
   "Signée par l’éditeur : oui (clé ": "Vom Herausgeber signiert: ja (Schlüssel ",
   "Thème clair ou sombre": "Helle oder dunkle Darstellung",
-  "Toujours ouvrir en onglet": "Immer in einem Tab öffnen",
   "Tous les fichiers": "Alle Dateien",
   "Tout sélectionner": "Alles auswählen",
   "Traiter plusieurs fichiers…": "Mehrere Dateien bearbeiten…",
   "Trop d’essais. Patientez ": "Zu viele Versuche. Bitte warten Sie ",
-  "Un double-clic sur un PDF depuis le bureau l'ajoute à la fenêtre ouverte, au lieu d'en ouvrir une seconde.": "Ein Doppelklick auf eine PDF-Datei auf dem Desktop fügt sie dem geöffneten Fenster hinzu, statt ein zweites zu öffnen.",
   "Une mise à jour importante est posée à côté de l'application.": "Neben der Anwendung ist eine wichtige Aktualisierung abgelegt.",
   "Une version plus ancienne est posée à côté de l'application.": "Neben der Anwendung ist eine ältere Version abgelegt.",
   "Une version plus récente est posée à côté de l'application.": "Neben der Anwendung ist eine neuere Version abgelegt.",
@@ -162,6 +160,7 @@
   "signature invalide": "ungültige Signatur",
   "À propos de ": "Über ",
   "Éditeur de page": "Seiteneditor",
+  "Préférences…": "Einstellungen…",
   "Édition": "Bearbeiten"
  },
  "profil": {
