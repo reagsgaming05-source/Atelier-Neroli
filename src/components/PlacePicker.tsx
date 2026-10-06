@@ -1,11 +1,17 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Spinner } from './ui';
-import { deviceTimeZone, locate, searchCities } from '../lib/cities';
+import { deviceTimeZone, locate, placeFromTimeZone, searchCities } from '../lib/cities';
 import type { Place } from '../lib/settings';
 
-/** GPS, city search and manual coordinates. Calls `onPick` with the chosen place. */
+// Pages shown inside another site's frame (such as a hosted preview) usually
+// cannot use location, so the city guess comes first there.
+const embedded = typeof window !== 'undefined' && window.top !== window.self;
+
+/** GPS, a guess from the time zone, city search and manual coordinates. Calls `onPick` with the chosen place. */
 export function PlacePicker({ onPick }: { onPick: (p: Place) => void }) {
+  const [suggestion, setSuggestion] = useState<Place | null>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Place[]>([]);
   const [busy, setBusy] = useState(false);
@@ -13,6 +19,14 @@ export function PlacePicker({ onPick }: { onPick: (p: Place) => void }) {
   const [manual, setManual] = useState(false);
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    placeFromTimeZone().then((p) => !cancelled && setSuggestion(p));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,10 +52,13 @@ export function PlacePicker({ onPick }: { onPick: (p: Place) => void }) {
     } catch (e) {
       const code = (e as GeolocationPositionError).code;
       setError(
-        code === 1
-          ? 'Accès à la position refusé. Autorisez-le dans les réglages du navigateur, ou cherchez votre ville.'
-          : 'Position introuvable. Cherchez votre ville ci-dessous.',
+        embedded
+          ? 'La position GPS n’est pas disponible dans cet aperçu. Choisissez votre ville ci-dessous : dans l’application installée, le GPS fonctionne.'
+          : code === 1
+            ? 'Accès à la position refusé. Choisissez votre ville ci-dessous, ou autorisez la position dans les réglages du navigateur.'
+            : 'Position introuvable pour le moment. Choisissez votre ville ci-dessous.',
       );
+      searchInput.current?.focus();
     } finally {
       setBusy(false);
     }
@@ -60,18 +77,32 @@ export function PlacePicker({ onPick }: { onPick: (p: Place) => void }) {
 
   return (
     <div class="stack">
-      <button class="btn block" onClick={useGps} disabled={busy}>
-        <Icon name="locate" size={20} /> {busy ? 'Localisation…' : 'Utiliser ma position'}
-      </button>
+      {suggestion && (
+        <button class={`btn block ${embedded || error ? '' : 'secondary'}`} onClick={() => onPick(suggestion)} style={{ flexDirection: 'column', gap: 0, padding: '8px 18px' }}>
+          <span>
+            <Icon name="pin" size={18} /> Je suis à {suggestion.name}
+          </span>
+          <span class="small" style={{ fontWeight: 450, opacity: 0.8 }}>
+            {suggestion.country} · d’après le fuseau horaire du téléphone
+          </span>
+        </button>
+      )}
+      {!(embedded && error) && (
+        <button class={`btn block ${embedded && suggestion ? 'secondary' : ''}`} onClick={useGps} disabled={busy}>
+          <Icon name="locate" size={20} /> {busy ? 'Localisation…' : 'Utiliser ma position GPS'}
+        </button>
+      )}
       {busy && <Spinner />}
       {error && <div class="notice">{error}</div>}
 
       <div class="search">
         <Icon name="search" size={20} />
         <input
+          ref={searchInput}
+          id="city-search"
           class="input"
           type="search"
-          placeholder="Rechercher une ville…"
+          placeholder="Ou rechercher une ville…"
           value={query}
           onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
           aria-label="Rechercher une ville"

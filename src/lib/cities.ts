@@ -53,11 +53,19 @@ const ALIASES: Record<string, string> = {
   koweit: 'kuwait',
 };
 
+let countryNames: Intl.DisplayNames | null = null;
+try {
+  countryNames = new Intl.DisplayNames(['fr'], { type: 'region' });
+} catch {
+  /* older browsers keep the English names from the dataset */
+}
+
 function toPlace(c: CityRow): Place {
+  const country = countryNames?.of(c[1]) ?? c[2];
   return {
     name: c[0],
     countryCode: c[1],
-    country: c[3] && c[3] !== c[0] ? `${c[3]}, ${c[2]}` : c[2],
+    country: c[3] && c[3] !== c[0] ? `${c[3]}, ${country}` : country,
     lat: c[4],
     lng: c[5],
     tz: c[6],
@@ -95,6 +103,22 @@ export async function nearestCity(lat: number, lng: number): Promise<{ place: Pl
       }
     }
     return best ? { place: toPlace(best), km: bestKm } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Best guess without GPS: the most populous known city in the device's time
+ * zone (e.g. Europe/Paris → Paris). Needs no permission, so it also works
+ * where location is blocked.
+ */
+export async function placeFromTimeZone(tz: string = deviceTimeZone()): Promise<Place | null> {
+  try {
+    const rows = await loadCities();
+    // Rows are sorted by population, so the first match is the largest city.
+    const row = rows.find((c) => c[6] === tz);
+    return row ? toPlace(row) : null;
   } catch {
     return null;
   }
