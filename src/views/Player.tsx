@@ -8,6 +8,7 @@ import { SURAHS } from '../data/surahs';
 import { audioUrl, loadSurah } from '../lib/quran';
 import { navigate } from '../lib/router';
 import { learnStore, settingsStore, useStore } from '../lib/settings';
+import { loadNarration, playSpan, SILENCE, spanFor, type EpisodeNarration, type SpanHandle } from '../lib/narration';
 import { readingTime, speak, speechSupported, stopSpeaking, type SpeakHandle } from '../lib/speech';
 
 type Phase = 'text' | 'verse' | 'recite';
@@ -36,6 +37,11 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const [playing, setPlaying] = useState(false);
   const [ended, setEnded] = useState(false);
   const [verses, setVerses] = useState<{ ar: string[]; tr: string[] } | null>(null);
+  // The episode's recorded narration: undefined while loading, null if it has none.
+  const [narration, setNarration] = useState<EpisodeNarration | null | undefined>(undefined);
+  const narrator = useRef<HTMLAudioElement | null>(null);
+  // Where the narration was paused, to resume mid-sentence.
+  const resume = useRef<{ index: number; phase: Phase; at: number } | null>(null);
 
   const scene = ep?.scenes[index];
   const verseSurah = ep?.scenes.find((s) => s.verse)?.verse?.surah;
@@ -51,6 +57,25 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
       cancelled = true;
     };
   }, [verseSurah, translation]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setNarration(undefined);
+    loadNarration(storyId, episode)
+      .then((n) => {
+        if (cancelled) return;
+        if (n) {
+          narrator.current ??= new Audio();
+          narrator.current.preload = 'auto';
+          narrator.current.src = n.url;
+        }
+        setNarration(n);
+      })
+      .catch(() => !cancelled && setNarration(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [storyId, episode]);
 
   const next = () => {
     if (!ep) return;
@@ -74,15 +99,28 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const nextRef = useRef(next);
   nextRef.current = next;
   useEffect(() => {
-    if (!started || !playing || ended || !scene) return;
+    // Wait for the recording before the first word, so the voice never changes mid-episode.
+    if (!started || !playing || ended || !scene || (prefs.voice && narration === undefined)) return;
     let speech: SpeakHandle | null = null;
+    let recorded: SpanHandle | null = null;
     let audio: HTMLAudioElement | null = null;
     let timer: number | undefined;
     const rate = prefs.rate;
     const after = (fn: () => void, ms = 450) => (timer = window.setTimeout(fn, ms));
+    const pause = (text: string, then: () => void) => (timer = window.setTimeout(then, readingTime(text, rate)));
     const say = (text: string, then: () => void) => {
-      if (prefs.voice && speechSupported()) speech = speak(text, { rate, onEnd: () => after(then) });
-      else timer = window.setTimeout(then, readingTime(text, rate));
+      if (!prefs.voice) return pause(text, then);
+      if (narration && narrator.current) {
+        // A recorded episode never switches to the device voice: an unrecorded
+        // text (an edited scene, another translation) is left to read in silence.
+        const span = spanFor(narration, text);
+        if (!span) return pause(text, then);
+        const saved = resume.current;
+        const from = saved && saved.index === index && saved.phase === phase ? saved.at : undefined;
+        resume.current = null;
+        recorded = playSpan(narrator.current, span, { rate, from, onEnd: () => after(then), onFail: () => pause(text, then) });
+      } else if (speechSupported()) speech = speak(text, { rate, onEnd: () => after(then) });
+      else pause(text, then);
     };
 
     if (phase === 'text') {
@@ -102,13 +140,14 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
 
     return () => {
       speech?.cancel();
+      if (recorded) resume.current = { index, phase, at: recorded.cancel() };
       if (audio) {
         audio.onended = audio.onerror = null;
         audio.pause();
       }
       clearTimeout(timer);
     };
-  }, [started, playing, ended, index, phase, verses, prefs.voice, prefs.recitation, prefs.rate]);
+  }, [started, playing, ended, index, phase, verses, narration, prefs.voice, prefs.recitation, prefs.rate]);
 
   // Keep the screen awake while a story plays.
   useEffect(() => {
@@ -123,7 +162,13 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
     };
   }, [playing]);
 
-  useEffect(() => () => stopSpeaking(), []);
+  useEffect(
+    () => () => {
+      stopSpeaking();
+      narrator.current?.pause();
+    },
+    [],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -140,6 +185,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
 
   const close = () => {
     stopSpeaking();
+    narrator.current?.pause();
     navigate(info?.href ?? '/histoires', true);
   };
 
@@ -155,8 +201,14 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   }
 
   const start = () => {
-    // iOS only lets a page speak after a tap: start the voice from this tap.
-    if (prefs.voice && speechSupported()) speechSynthesis.speak(new SpeechSynthesisUtterance(' '));
+    // iOS only lets a page speak or play sound after a tap: start the voice from this tap.
+    if (prefs.voice && narration !== null) {
+      const a = (narrator.current ??= new Audio());
+      if (!a.src) a.src = SILENCE;
+      a.play().catch(() => {});
+      a.pause();
+    }
+    if (prefs.voice && !narration && speechSupported()) speechSynthesis.speak(new SpeechSynthesisUtterance(' '));
     setStarted(true);
     setPlaying(true);
   };
@@ -210,7 +262,11 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
               </span>
               <span>{episode === 0 ? 'Regarder' : `Regarder l’épisode ${episode + 1}`}</span>
               <small style={{ fontWeight: 450, opacity: 0.8 }}>
-                {prefs.voice && speechSupported() ? 'Avec narration — montez le son' : 'Le texte défile automatiquement'}
+                {!prefs.voice || (narration === null && !speechSupported())
+                  ? 'Le texte défile automatiquement'
+                  : narration === undefined
+                    ? 'Chargement de la voix…'
+                    : 'Avec narration — montez le son'}
               </small>
             </button>
           </div>

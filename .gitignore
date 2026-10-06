@@ -4,3 +4,4 @@ dev-dist
 .data-cache
 *.log
 .DS_Store
+.voices

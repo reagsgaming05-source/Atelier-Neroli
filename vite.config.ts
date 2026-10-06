@@ -51,6 +51,19 @@ export default defineConfig({
         // responses to <audio> range requests breaks playback in some browsers.
         runtimeCaching: [
           {
+            // Story narration: a file's name changes with its content, so a cached copy
+            // never goes stale. The player fetches each file whole once to cache it;
+            // <audio> range requests are then answered from that copy.
+            urlPattern: ({ url }) => url.pathname.includes('/data/narration/') && url.pathname.endsWith('.mp3'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'sakina-narration',
+              rangeRequests: true,
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 150, purgeOnQuotaError: true },
+            },
+          },
+          {
             urlPattern: ({ url }) => url.pathname.includes('/data/'),
             // Instant from cache, refreshed in the background if the data changed.
             handler: 'StaleWhileRevalidate',

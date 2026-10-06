@@ -1,0 +1,90 @@
+name: Narration
+
+# Records the story narration with a free neural French voice whenever the
+# episode scripts change, then commits the audio (public/data/narration/).
+# Only edited episodes are recorded again. Everything runs on the GitHub
+# runner: no paid service, no account, no API key.
+#
+# Voice: Kokoro-82M (Apache 2.0), French voice ff_siwis (SIWIS corpus, CC BY 4.0).
+# docs/voix/ also gets a short sample of other free French voices, to compare.
+
+on:
+  push:
+    paths:
+      - 'src/data/series/**'
+      - 'scripts/narration/**'
+      - '.github/workflows/narration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: narration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install kokoro-onnx soundfile piper-tts
+      - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+
+      - uses: actions/cache@v4
+        with:
+          path: .voices
+          key: voices-v1
+      - name: Download the voices
+        run: |
+          mkdir -p .voices && cd .voices
+          get() { [ -s "$1" ] || curl -fsSL --retry 3 -o "$1" "$2"; }
+          KOKORO=https://github.com/thewh1teagle/kokoro-onnx/releases/download
+          get kokoro-v1.0.onnx "$KOKORO/model-files-v1.0/kokoro-v1.0.onnx" || get kokoro-v1.0.onnx "$KOKORO/model-files-v1.1/kokoro-v1.0.onnx"
+          get voices-v1.0.bin "$KOKORO/model-files-v1.0/voices-v1.0.bin" || get voices-v1.0.bin "$KOKORO/model-files-v1.1/voices-v1.0.bin"
+          PIPER=https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/fr/fr_FR
+          for v in tom/medium siwis/medium upmc/medium; do
+            name="fr_FR-${v%/*}-${v#*/}"
+            get "$name.onnx" "$PIPER/$v/$name.onnx"
+            get "$name.onnx.json" "$PIPER/$v/$name.onnx.json"
+          done
+          ls -la
+
+      - run: node scripts/narration/export.mjs
+
+      - name: Voice samples
+        continue-on-error: true
+        run: |
+          sample() { out="docs/voix/$1.mp3"; shift; [ -f "$out" ] || python scripts/narration/build.py --only adam-0 --sample "$out" "$@"; }
+          sample kokoro-siwis --engine kokoro --model .voices/kokoro-v1.0.onnx --voices .voices/voices-v1.0.bin --voice ff_siwis
+          sample piper-tom --engine piper --model .voices/fr_FR-tom-medium.onnx
+          sample piper-siwis --engine piper --model .voices/fr_FR-siwis-medium.onnx
+          sample piper-pierre --engine piper --model .voices/fr_FR-upmc-medium.onnx --speaker pierre
+
+      - name: Record the narration
+        run: |
+          python scripts/narration/build.py --engine kokoro \
+            --model .voices/kokoro-v1.0.onnx --voices .voices/voices-v1.0.bin --voice ff_siwis \
+            --credit "Kokoro-82M (Apache 2.0), voix ff_siwis (corpus SIWIS, CC BY 4.0)"
+
+      - name: Commit the audio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add public/data/narration docs/voix
+          git diff --cached --quiet && exit 0
+          git commit -q -m "Record the story narration"
+          for i in 1 2 3; do
+            git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            sleep 10
+          done
+          exit 1
