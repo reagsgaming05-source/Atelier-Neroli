@@ -34,8 +34,13 @@ const TABS: { href: string; label: string; icon: IconName; match: string[] }[] =
   { href: '#/', label: 'Accueil', icon: 'home', match: [''] },
   { href: '#/prieres', label: 'Prières', icon: 'clock', match: ['prieres', 'suivi'] },
   { href: '#/coran', label: 'Coran', icon: 'book', match: ['coran'] },
-  { href: '#/qibla', label: 'Qibla', icon: 'compass', match: ['qibla'] },
-  { href: '#/plus', label: 'Plus', icon: 'grid', match: ['plus', 'adhkar', 'tasbih', 'noms', 'calendrier', 'zakat', 'reglages', 'apropos', 'lieu'] },
+  { href: '#/apprendre', label: 'Apprendre', icon: 'learn', match: ['apprendre', 'histoires', 'hadiths', 'quiz', 'noms'] },
+  {
+    href: '#/plus',
+    label: 'Plus',
+    icon: 'grid',
+    match: ['plus', 'qibla', 'adhkar', 'tasbih', 'calendrier', 'zakat', 'reglages', 'apropos', 'lieu', 'rattrapages', 'journee', 'khatm'],
+  },
 ];
 
 export function BottomNav({ section }: { section: string }) {

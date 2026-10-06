@@ -1472,3 +1472,238 @@ table.month tr.friday td:first-child {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* ---------- Goals, quiz, stories ---------- */
+
+.goals {
+  padding: 6px 12px;
+}
+
+.goal {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.goal + .goal {
+  border-top: 1px solid var(--border);
+}
+
+.goal .tick {
+  margin-top: 2px;
+}
+
+.goal .tick:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.goal-title {
+  font-weight: 650;
+  color: var(--text);
+  text-decoration: none;
+}
+
+a.goal-title::after {
+  content: ' ›';
+  color: var(--primary);
+}
+
+.goal-why {
+  margin-top: 2px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.goal.done .goal-title {
+  color: var(--primary);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  text-align: start;
+  font-weight: 550;
+}
+
+.option:not(:disabled):active {
+  background: var(--surface-2);
+}
+
+.option.right {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.option.wrong {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.option.dim {
+  opacity: 0.55;
+}
+
+.option:disabled {
+  cursor: default;
+}
+
+.story-hero {
+  position: relative;
+  overflow: hidden;
+  margin: 4px 0 16px;
+  padding: 24px 18px 20px;
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, var(--hero-2), var(--hero-1) 75%);
+  color: var(--hero-text);
+  text-align: center;
+}
+
+.story-hero .ar {
+  font-size: 2rem;
+  line-height: 1.6;
+  color: #d9b45a;
+}
+
+.story-hero h2 {
+  margin: 2px 0 0;
+  font-size: 1.35rem;
+  text-wrap: balance;
+}
+
+.story-hero p {
+  margin: 4px 0 0;
+  color: var(--hero-muted);
+}
+
+.prose p {
+  margin: 0 0 12px;
+  line-height: 1.7;
+  font-size: 1.02rem;
+}
+
+.prose p:last-child {
+  margin-bottom: 0;
+}
+
+.lessons {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.lessons li {
+  display: flex;
+  gap: 10px;
+  line-height: 1.5;
+}
+
+.lessons li::before {
+  content: '';
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 8px;
+  border: 1.5px solid var(--gold);
+  transform: rotate(45deg);
+}
+
+.passage-verse {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.passage-verse:last-child {
+  border-bottom: 0;
+}
+
+.passage-verse .ar {
+  font-size: 1.55rem;
+  line-height: 2.1;
+  text-align: right;
+}
+
+.passage-verse .tr {
+  margin-top: 4px;
+  line-height: 1.6;
+}
+
+.hadith-text {
+  position: relative;
+  padding-inline-start: 16px;
+  border-inline-start: 3px solid var(--gold);
+  line-height: 1.75;
+}
+
+.step-num {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.guide-step {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.guide-step + .guide-step {
+  border-top: 1px solid var(--border);
+}
+
+.guide-step .ar {
+  margin-top: 8px;
+  font-size: 1.45rem;
+  line-height: 2;
+  text-align: right;
+}
+
+.verse.hifz .ar {
+  filter: blur(7px);
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.verse.hifz.revealed .ar {
+  filter: none;
+}
+
+.page-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.page-mark::before,
+.page-mark::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}

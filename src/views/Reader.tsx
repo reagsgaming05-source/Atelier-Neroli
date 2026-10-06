@@ -3,6 +3,7 @@ import { Icon } from '../components/Icon';
 import { Spinner, Stepper, TopBar, share, toast } from '../components/ui';
 import { SAJDAS, SURAHS, juzOf } from '../data/surahs';
 import { toArabicDigits } from '../lib/hijri';
+import { PAGE_STARTS } from '../lib/khatm';
 import { RECITERS, TRANSLATIONS, audioUrl, loadSurah } from '../lib/quran';
 import { navigate } from '../lib/router';
 import { readingStore, settingsStore, useStore } from '../lib/settings';
@@ -24,7 +25,9 @@ export function Reader({ surah, verse }: { surah: number; verse?: number }) {
   const [panel, setPanel] = useState(false);
   const [playing, setPlaying] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
+  const [revealed, setRevealed] = useState<Set<number>>(new Set());
   const audio = useRef<HTMLAudioElement | null>(null);
+  const repeats = useRef(0);
   const qs = settings.quran;
 
   useEffect(() => {
@@ -80,14 +83,17 @@ export function Reader({ surah, verse }: { surah: number; verse?: number }) {
   // Stop audio when leaving the surah.
   useEffect(() => () => stop(), [surah]);
 
-  const play = (v: number) => {
+  const play = (v: number, repeat = 0) => {
     if (!audio.current) {
       audio.current = new Audio();
       audio.current.preload = 'auto';
     }
     const el = audio.current;
+    repeats.current = repeat;
     el.onended = () => {
-      if (v < info.verses) play(v + 1);
+      // Memorisation: recite the same verse `qs.repeat` times before moving on.
+      if (repeats.current + 1 < qs.repeat) play(v, repeats.current + 1);
+      else if (v < info.verses) play(v + 1);
       else stop();
     };
     el.onerror = () => {
@@ -100,7 +106,7 @@ export function Reader({ surah, verse }: { surah: number; verse?: number }) {
     });
     setPlaying(v);
     setPaused(false);
-    document.getElementById(`v${v}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (repeat === 0) document.getElementById(`v${v}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   };
 
   const stop = () => {
@@ -200,6 +206,41 @@ export function Reader({ surah, verse }: { surah: number; verse?: number }) {
                 onChange={(e) => setSettings((s) => ({ ...s, quran: { ...s.quran, translit: (e.target as HTMLInputElement).checked } }))}
               />
             </label>
+            <label class="row">
+              <span class="grow">
+                Mode mémorisation
+                <span class="small muted" style={{ display: 'block' }}>
+                  Le texte arabe reste flou : récitez de mémoire, puis touchez le verset pour vérifier.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                class="switch"
+                checked={qs.hifz}
+                onChange={(e) => {
+                  setRevealed(new Set());
+                  setSettings((s) => ({ ...s, quran: { ...s.quran, hifz: (e.target as HTMLInputElement).checked } }));
+                }}
+              />
+            </label>
+            <div>
+              <div class="small muted" style={{ marginBottom: '6px' }}>
+                Répéter chaque verset
+              </div>
+              <div class="chip-row">
+                {[1, 3, 5, 10].map((n) => (
+                  <button
+                    class="chip"
+                    aria-pressed={qs.repeat === n}
+                    key={n}
+                    onClick={() => setSettings((s) => ({ ...s, quran: { ...s.quran, repeat: n } }))}
+                  >
+                    {n === 1 ? '1 fois' : `${n} fois`}
+                  </button>
+                ))}
+              </div>
+            </div>
             <label class="field">
               <span>Récitateur</span>
               <select
@@ -237,9 +278,17 @@ export function Reader({ surah, verse }: { surah: number; verse?: number }) {
             {surah !== 1 && surah !== 9 && <div class="ar basmala">{BASMALA}</div>}
             {texts.ar.map((ar, i) => {
               const v = i + 1;
-              const cls = ['verse', v === verse ? 'highlight' : '', v === playing ? 'playing' : ''].join(' ');
+              const cls = [
+                'verse',
+                v === verse ? 'highlight' : '',
+                v === playing ? 'playing' : '',
+                qs.hifz ? 'hifz' : '',
+                revealed.has(v) ? 'revealed' : '',
+              ].join(' ');
+              const page = PAGE_STARTS.get(`${surah}:${v}`);
               return (
                 <article class={cls} id={`v${v}`} data-v={v} key={v}>
+                  {page && v > 1 && <div class="page-mark">Page {page}</div>}
                   <div class="verse-tools">
                     <span class="badge">
                       {surah}:{v}
@@ -260,7 +309,12 @@ export function Reader({ surah, verse }: { surah: number; verse?: number }) {
                       <Icon name="share" size={20} />
                     </button>
                   </div>
-                  <p class="ar" lang="ar" style={{ margin: 0 }}>
+                  <p
+                    class="ar"
+                    lang="ar"
+                    style={{ margin: 0 }}
+                    onClick={qs.hifz ? () => setRevealed((r) => new Set(r).add(v)) : undefined}
+                  >
                     {ar} <span class="verse-num">﴿{toArabicDigits(v)}﴾</span>
                   </p>
                   {texts.translit && <p class="translit" style={{ margin: '6px 0 0' }}>{texts.translit[i]}</p>}

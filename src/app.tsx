@@ -6,10 +6,14 @@ import { useRoute } from './lib/router';
 import { settingsStore, useStore } from './lib/settings';
 import { About } from './views/About';
 import { Calendar } from './views/Calendar';
+import { Goals } from './views/Goals';
+import { HadithList, HadithView, COLLECTIONS, type CollectionId } from './views/Hadiths';
 import { Home } from './views/Home';
 import { Location } from './views/Location';
 import { More } from './views/More';
+import { Khatm } from './views/Khatm';
 import { Prayers } from './views/Prayers';
+import { Qada } from './views/Qada';
 import { Qibla } from './views/Qibla';
 import { QuranIndex } from './views/QuranIndex';
 import { Reader } from './views/Reader';
@@ -24,11 +28,17 @@ import { Zakat } from './views/Zakat';
 const AdhkarIndex = lazy(() => import('./views/Adhkar').then((m) => ({ default: m.AdhkarIndex })));
 const AdhkarCategory = lazy(() => import('./views/Adhkar').then((m) => ({ default: m.AdhkarCategory })));
 const Names = lazy(() => import('./views/Names').then((m) => ({ default: m.Names })));
+const Learn = lazy(() => import('./views/Learn').then((m) => ({ default: m.Learn })));
+const Guide = lazy(() => import('./views/Learn').then((m) => ({ default: m.Guide })));
+const StoriesIndex = lazy(() => import('./views/Stories').then((m) => ({ default: m.StoriesIndex })));
+const ProphetStoryView = lazy(() => import('./views/Stories').then((m) => ({ default: m.ProphetStoryView })));
+const SunnahStoryView = lazy(() => import('./views/Stories').then((m) => ({ default: m.SunnahStoryView })));
+const Quiz = lazy(() => import('./views/Quiz').then((m) => ({ default: m.Quiz })));
 
 export function App() {
   const [settings] = useStore(settingsStore);
   const route = useRoute();
-  const [section = '', param] = route.path;
+  const [section = '', param, param2] = route.path;
 
   // Theme override (auto follows the system).
   useEffect(() => {
@@ -101,6 +111,36 @@ export function App() {
       break;
     case 'apropos':
       page = <About />;
+      break;
+    case 'apprendre':
+      page = param === 'guide' && param2 ? <Guide id={param2} /> : <Learn />;
+      break;
+    case 'histoires':
+      page =
+        param === 'coran' && param2 ? (
+          <ProphetStoryView key={param2} id={param2} />
+        ) : param === 'sunna' && param2 ? (
+          <SunnahStoryView key={param2} id={param2} />
+        ) : (
+          <StoriesIndex />
+        );
+      break;
+    case 'hadiths': {
+      const id = (param in COLLECTIONS ? param : 'nawawi') as CollectionId;
+      page = param2 ? <HadithView key={`${id}${param2}`} id={id} n={Number(param2)} /> : <HadithList id={id} />;
+      break;
+    }
+    case 'quiz':
+      page = <Quiz />;
+      break;
+    case 'journee':
+      page = <Goals />;
+      break;
+    case 'khatm':
+      page = <Khatm />;
+      break;
+    case 'rattrapages':
+      page = <Qada />;
       break;
     default:
       page = <More />;

@@ -1,7 +1,7 @@
 import { Icon } from '../components/Icon';
 import { TopBar, haptic, toast } from '../components/ui';
 import { dayIn, dayKey } from '../lib/prayer';
-import { settingsStore, tasbihStore, useStore } from '../lib/settings';
+import { goalsStore, settingsStore, tasbihStore, useStore } from '../lib/settings';
 
 const PHRASES = [
   { ar: 'سُبْحَانَ اللَّهِ', translit: 'Subḥāna-llāh', fr: 'Gloire à Allah', target: 33 },
@@ -15,6 +15,9 @@ const PHRASES = [
 ];
 
 const TARGETS = [33, 99, 100, 1000, 0];
+
+/** Phrases whose hundredth repetition completes a goal of "Ma journée". */
+const GOAL_FOR_PHRASE: Record<number, string> = { 4: 'istighfar', 5: 'subhanallah' };
 
 export function Tasbih() {
   const [state, setState] = useStore(tasbihStore);
@@ -31,6 +34,10 @@ export function Tasbih() {
     if (settings.tasbihVibrate) haptic(reached ? 120 : 10);
     setState((s) => ({ ...s, count, history: { ...s.history, [today]: (s.history[today] ?? 0) + 1 } }));
     if (reached) {
+      const goal = GOAL_FOR_PHRASE[state.phrase];
+      if (goal && count >= 100) {
+        goalsStore.set((g) => ({ ...g, done: { ...g.done, [today]: { ...g.done[today], [goal]: true } } }));
+      }
       // After 33 SubhanAllah, move on to the next phrase of the post-prayer sequence.
       if (state.phrase < 2 && target === phrase.target) {
         setState((s) => ({ ...s, phrase: s.phrase + 1, count: 0, target: PHRASES[s.phrase + 1].target }));

@@ -1,6 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import { Icon, type IconName } from '../components/Icon';
-import { SectionTitle, TopBar, haptic, share } from '../components/ui';
+import { SectionTitle, TopBar, haptic, share, toast } from '../components/ui';
 import { ADHKAR } from '../data/adhkar';
 import type { Dhikr } from '../data/types';
 import { dayIn, dayKey } from '../lib/prayer';
@@ -24,10 +24,11 @@ function useDailyProgress() {
   const [progress, setProgress] = useStore(adhkarStore);
   const today = dayKey(dayIn(settings.place?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone));
   useEffect(() => {
-    if (progress.date !== today) setProgress({ date: today, done: {} });
+    if (progress.date !== today) setProgress({ date: today, done: {}, complete: {} });
   }, [today, progress.date]);
   const done = progress.date === today ? progress.done : {};
-  return { done, setProgress, today };
+  const complete = progress.date === today ? progress.complete ?? {} : {};
+  return { done, complete, setProgress, today };
 }
 
 export function AdhkarIndex() {
@@ -70,7 +71,7 @@ export function AdhkarIndex() {
 
 export function AdhkarCategory({ id }: { id: string }) {
   const cat = ADHKAR.find((c) => c.id === id);
-  const { done, setProgress, today } = useDailyProgress();
+  const { done, complete, setProgress, today } = useDailyProgress();
   if (!cat) return <AdhkarIndex />;
 
   const totalReps = cat.items.reduce((n, d) => n + d.count, 0);
@@ -80,7 +81,10 @@ export function AdhkarCategory({ id }: { id: string }) {
     const current = done[d.id] ?? 0;
     if (current >= d.count) return;
     haptic(current + 1 === d.count ? 60 : 10);
-    setProgress({ date: today, done: { ...done, [d.id]: current + 1 } });
+    const nextDone = { ...done, [d.id]: current + 1 };
+    const finished = cat.items.every((x) => (nextDone[x.id] ?? 0) >= x.count);
+    setProgress({ date: today, done: nextDone, complete: { ...complete, [cat.id]: finished } });
+    if (finished) toast('Qu’Allah l’accepte de vous ✓');
     if (current + 1 === d.count) {
       // Bring the next unfinished dhikr into view.
       const idx = cat.items.indexOf(d);
@@ -92,7 +96,7 @@ export function AdhkarCategory({ id }: { id: string }) {
   const reset = () => {
     const next = { ...done };
     cat.items.forEach((d) => delete next[d.id]);
-    setProgress({ date: today, done: next });
+    setProgress({ date: today, done: next, complete: { ...complete, [cat.id]: false } });
   };
 
   return (

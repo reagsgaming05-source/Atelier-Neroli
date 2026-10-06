@@ -39,6 +39,14 @@ export function About() {
             l’application.
           </div>
           <div>
+            <b>Hadiths</b> — 40 hadiths d’an-Nawawī, hadiths qudsi et récits de Ṣaḥīḥ al-Bukhārī et Ṣaḥīḥ Muslim : texte arabe et
+            traduction française du projet hadith-api (fawazahmed0), reproduits sans modification avec leur numéro de référence.
+          </div>
+          <div>
+            <b>Histoires des prophètes</b> — résumés rédigés pour l’application à partir des seuls versets cités, qui sont affichés en
+            entier.
+          </div>
+          <div>
             <b>Horaires et qibla</b> — bibliothèque Adhan (Batoul Apps, licence MIT), algorithmes astronomiques de Jean Meeus.
           </div>
           <div>

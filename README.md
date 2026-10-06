@@ -11,6 +11,9 @@ C'est une application web progressive (PWA) : elle s'installe sur l'écran d'acc
 | **Alertes** | Notifications quand l'application est ouverte, et export **agenda (.ics)** des 30 prochains jours avec une alarme à chaque prière : fiable même application fermée. |
 | **Qibla** | Boussole (Android et iPhone), angle depuis le nord et distance jusqu'à la Ka‘ba. |
 | **Coran** | 114 sourates en écriture uthmanie (police Amiri Quran), traductions Hamidullah et Rachid Maach, translittération, récitation verset par verset (7 récitateurs), marque-pages, reprise de lecture, recherche dans la traduction, navigation par juz’, versets de prosternation. |
+| **Histoires** | Les prophètes et les grands récits du Coran (Adam, Nûh, Ibrâhîm, Yûsuf, Mûsâ, Maryam, ‘Îsâ, les Gens de la Caverne…) racontés simplement, avec les versets en arabe et en français, des leçons et un quiz. Récits de la Sunna tirés de Ṣaḥīḥ al-Bukhārī et Muslim (texte du hadith reproduit tel quel). |
+| **Apprendre** | Les 40 hadiths d'an-Nawawī et 40 hadiths qudsi (arabe + français), guides pas à pas (piliers, ablutions, ghusl, tayammum, prière, prières surérogatoires, vendredi), quiz (Coran, noms d'Allah, prophètes, Sunna). |
+| **Pratiquer** | « Ma journée » : bonnes actions du jour avec leur hadith, cochées automatiquement quand on prie, lit ses adhkar ou sa portion de Coran, série de jours réguliers. Plan de lecture du Coran (khatm) en 7 jours à 1 an, sur les 604 pages du mushaf de Médine. Mode mémorisation (texte flouté, répétition des versets). Compteur de prières et de jeûnes à rattraper. Hadith du jour. |
 | **Adhkar** | Matin, soir, après la prière, sommeil, réveil, quotidien, détresse, istikhara, invocations coraniques (Rabbana) — avec compteurs, sources et vertus. |
 | **Tasbih** | Compteur avec objectifs (33/99/100…), enchaînement automatique 33-33-34, vibration. |
 | **Calendrier hégirien** | Calendrier Umm al-Qura, décalage réglable, Ramadan, Aïd, ‘Arafat, ‘Achoura, jours blancs. |
@@ -23,7 +26,7 @@ Toutes les données (position, réglages, marque-pages, suivi) restent sur l'app
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # tests unitaires (horaires, qibla, calendrier, zakat, agenda, adhkar)
+npm test           # tests unitaires (horaires, qibla, calendrier, zakat, agenda, khatm, objectifs, quiz, contenus)
 npm run build      # version de production dans dist/
 ```
 
@@ -77,5 +80,6 @@ Preact + TypeScript + Vite, service worker Workbox (vite-plugin-pwa). Aucune dé
 - Texte coranique : [Tanzil.net](https://tanzil.net) (CC BY 3.0, reproduit sans modification), encodage de Khaled Hosny pour Amiri Quran, via [fawazahmed0/quran-api](https://github.com/fawazahmed0/quran-api).
 - Traductions : Muhammad Hamidullah (Tanzil.net), Rachid Maach ([QuranEnc.com](https://quranenc.com)) — usage non commercial.
 - Adhkar : *Hisn al-Muslim* de Sa‘id al-Qahtani.
+- Hadiths (40 an-Nawawī, qudsi, Ṣaḥīḥ al-Bukhārī, Ṣaḥīḥ Muslim) : [fawazahmed0/hadith-api](https://github.com/fawazahmed0/hadith-api).
 - Horaires : [Adhan](https://github.com/batoulapps/adhan-js) (MIT). Villes : simplemaps.com (CC BY 4.0) via `city-timezones`. Police : Amiri Quran (SIL OFL).
 - Code de l'application : licence MIT.

@@ -2,12 +2,14 @@ import { Icon, type IconName } from '../components/Icon';
 import { SectionTitle, TopBar } from '../components/ui';
 
 const ITEMS: { href: string; icon: IconName; title: string; subtitle: string; gold?: boolean }[] = [
-  { href: '#/adhkar', icon: 'hands', title: 'Adhkar', subtitle: 'Matin, soir, après la prière, sommeil…', gold: true },
+  { href: '#/qibla', icon: 'compass', title: 'Qibla', subtitle: 'Boussole vers la Ka‘ba', gold: true },
+  { href: '#/adhkar', icon: 'hands', title: 'Adhkar', subtitle: 'Matin, soir, après la prière, sommeil…' },
+  { href: '#/journee', icon: 'target', title: 'Ma journée', subtitle: 'Bonnes actions du jour', gold: true },
+  { href: '#/khatm', icon: 'book', title: 'Lire tout le Coran', subtitle: 'Plan de lecture quotidien' },
   { href: '#/tasbih', icon: 'beads', title: 'Tasbih', subtitle: 'Compteur de dhikr' },
-  { href: '#/noms', icon: 'star', title: '99 noms d’Allah', subtitle: 'Al-Asmā’ al-Ḥusnā', gold: true },
-  { href: '#/calendrier', icon: 'calendar', title: 'Calendrier hégirien', subtitle: 'Ramadan, Aïd, jours blancs' },
-  { href: '#/zakat', icon: 'coins', title: 'Zakat', subtitle: 'Calculer l’aumône obligatoire', gold: true },
-  { href: '#/suivi', icon: 'check', title: 'Suivi des prières', subtitle: 'Votre régularité' },
+  { href: '#/calendrier', icon: 'calendar', title: 'Calendrier hégirien', subtitle: 'Ramadan, Aïd, jours blancs', gold: true },
+  { href: '#/rattrapages', icon: 'reset', title: 'Rattrapages', subtitle: 'Prières et jeûnes à rattraper', gold: true },
+  { href: '#/zakat', icon: 'coins', title: 'Zakat', subtitle: 'Calculer l’aumône obligatoire' },
 ];
 
 export function More() {

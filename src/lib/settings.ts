@@ -33,6 +33,10 @@ export interface Settings {
     translit: boolean;
     arabicSize: number;
     reciter: string;
+    /** Memorisation mode: verses stay blurred until tapped. */
+    hifz: boolean;
+    /** How many times each verse is recited before moving on. */
+    repeat: number;
   };
   notify: {
     enabled: boolean;
@@ -54,7 +58,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hijriOffset: 0,
   clock: '24h',
   theme: 'auto',
-  quran: { translation: 'fr-hamidullah', translit: false, arabicSize: 30, reciter: 'Alafasy_128kbps' },
+  quran: { translation: 'fr-hamidullah', translit: false, arabicSize: 30, reciter: 'Alafasy_128kbps', hifz: false, repeat: 1 },
   notify: {
     enabled: false,
     prayers: { fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true },
@@ -93,8 +97,43 @@ export interface TasbihState {
 }
 export const tasbihStore = createStore<TasbihState>('sakina.tasbih', { count: 0, target: 33, phrase: 0, history: {} });
 
-/** Adhkar progress for the current day: dhikr id -> repetitions done. */
-export const adhkarStore = createStore<{ date: string; done: Record<string, number> }>('sakina.adhkar', {
-  date: '',
-  done: {},
+/** Adhkar progress for the current day: dhikr id -> repetitions done, and finished categories. */
+export const adhkarStore = createStore<{ date: string; done: Record<string, number>; complete: Record<string, boolean> }>(
+  'sakina.adhkar',
+  { date: '', done: {}, complete: {} },
+);
+
+export interface GoalsState {
+  /** Goals ticked by hand, per local date. */
+  done: Record<string, Record<string, boolean>>;
+  /** Goals the user chose to hide. */
+  hidden: Record<string, boolean>;
+  /** Share of the day's goals completed, recorded for streaks. */
+  score: Record<string, number>;
+}
+export const goalsStore = createStore<GoalsState>('sakina.goals', { done: {}, hidden: {}, score: {} });
+
+export interface KhatmState {
+  plan: { start: string; days: number; firstPage: number } | null;
+  /** Next page to read, 1..605 (605 = finished). */
+  nextPage: number;
+  /** Pages read per local date. */
+  log: Record<string, number>;
+  completed: number;
+}
+export const khatmStore = createStore<KhatmState>('sakina.khatm', { plan: null, nextPage: 1, log: {}, completed: 0 });
+
+export interface QadaState {
+  prayers: Record<'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha' | 'witr', number>;
+  fasts: number;
+}
+export const qadaStore = createStore<QadaState>('sakina.qada', {
+  prayers: { fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0, witr: 0 },
+  fasts: 0,
+});
+
+/** Stories opened, and best quiz score per quiz id. */
+export const learnStore = createStore<{ read: Record<string, number>; best: Record<string, number> }>('sakina.learn', {
+  read: {},
+  best: {},
 });

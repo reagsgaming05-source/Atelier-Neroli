@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Generates the static data shipped with the app:
 //   public/data/quran/<edition>/<surah>.json   one JSON array of verse strings per surah
+//   public/data/hadith/<collection>.json       40 hadiths of an-Nawawi, 40 hadiths qudsi
 //   public/data/cities.json                    compact world city list for offline search
 //   src/data/quran-meta.json                   surah lengths, juz starts, sajdas, pages
 //
 // Sources (fetched once, cached in .data-cache/):
 //   - Quran text and translations: github.com/fawazahmed0/quran-api (Unlicense),
 //     which redistributes Tanzil.net, quranenc.com and Khaled Hosny's quran-data.
+//   - Hadith: github.com/fawazahmed0/hadith-api (Unlicense).
 //   - Cities: npm package city-timezones (MIT, data from simplemaps.com, CC BY 4.0).
 //
 // Usage: npm run data
@@ -20,6 +22,7 @@ import { createRequire } from 'node:module';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cacheDir = join(root, '.data-cache');
 const API = 'https://raw.githubusercontent.com/fawazahmed0/quran-api/1';
+const HADITH_API = 'https://raw.githubusercontent.com/fawazahmed0/hadith-api/1';
 
 // Verses shown as "verset du jour", rotating by day of the year.
 const DAILY = [
@@ -107,9 +110,11 @@ async function buildQuran() {
   // juz boundaries and verses of prostration.
   const juz = [];
   const sajdas = [];
+  const pages = [];
   const surahs = info.chapters.map((c) => {
     for (const v of c.verses) {
       if (v.juz !== juz.length) juz.push([c.chapter, v.verse]);
+      if (v.page !== pages.length) pages.push([c.chapter, v.verse]);
       if (v.sajda) sajdas.push([c.chapter, v.verse]);
     }
     return {
@@ -121,6 +126,7 @@ async function buildQuran() {
     };
   });
   if (juz.length !== 30) throw new Error(`expected 30 juz, got ${juz.length}`);
+  if (pages.length !== 604) throw new Error(`expected 604 pages, got ${pages.length}`);
 
   const daily = DAILY.map(([s, v]) => ({
     surah: s,
@@ -129,7 +135,7 @@ async function buildQuran() {
     fr: texts['fr-hamidullah'][s - 1][v - 1],
   }));
   await writeFile(join(root, 'src/data/daily.json'), JSON.stringify(daily, null, 1));
-  await writeFile(join(root, 'src/data/quran-meta.json'), JSON.stringify({ surahs, juz, sajdas }, null, 1));
+  await writeFile(join(root, 'src/data/quran-meta.json'), JSON.stringify({ surahs, juz, sajdas, pages }));
   console.log(`✓ quran-meta (${sajdas.length} sajdas)`);
 }
 
@@ -160,5 +166,20 @@ async function buildCities() {
   console.log(`✓ cities (${rows.length})`);
 }
 
+async function buildHadith() {
+  for (const collection of ['nawawi', 'qudsi']) {
+    const ar = await cached(`ara-${collection}.json`, `${HADITH_API}/editions/ara-${collection}.json`);
+    const fr = await cached(`fra-${collection}.json`, `${HADITH_API}/editions/fra-${collection}.json`);
+    const frByNumber = new Map(fr.hadiths.map((h) => [h.hadithnumber, h.text.trim()]));
+    const list = ar.hadiths
+      .map((h) => ({ n: h.hadithnumber, ar: h.text.trim(), fr: frByNumber.get(h.hadithnumber) ?? '' }))
+      .filter((h) => h.ar && h.fr);
+    if (list.length < 40) throw new Error(`${collection}: only ${list.length} hadiths with both texts`);
+    await writeJson(join(root, 'public/data/hadith', `${collection}.json`), list);
+    console.log(`✓ hadith ${collection} (${list.length})`);
+  }
+}
+
 await buildQuran();
+await buildHadith();
 await buildCities();
