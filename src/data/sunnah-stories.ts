@@ -22,48 +22,48 @@ export const SUNNAH_STORIES: SunnahStory[] = [
       '‘Abd Allāh ibn ‘Umar rapporte ce récit du Prophète ﷺ : trois voyageurs des nations précédentes se réfugient dans une grotte dont l’entrée se retrouve bloquée. Chacun invoque alors Allah en mentionnant une bonne action accomplie par crainte de Lui, et la pierre s’écarte peu à peu.',
     lessons: [
       'Il est permis d’invoquer Allah en mentionnant ses propres bonnes œuvres accomplies sincèrement pour Lui.',
-      'La bienfaisance envers les parents : le deuxième homme attendit leur réveil jusqu’à l’aube plutôt que de les priver de leur lait.',
+      'La bienfaisance envers les parents : le premier homme resta debout près d’eux jusqu’au matin plutôt que de les priver de leur lait.',
       'Renoncer à un péché par crainte d’Allah, alors qu’il est à portée de main, est une œuvre immense.',
-      'Rendre à chacun son dû, et même davantage : le premier remit à son ouvrier tout ce que son salaire avait produit.',
+      'Rendre à chacun son dû, et même davantage : le troisième remit à son ouvrier tout ce que son salaire avait produit.',
     ],
     hadith: {
-      collection: 'bukhari',
-      number: '3465',
-      fr: "Rapporté par Ibn `Umar : L’Envoyé d’Allah (ﷺ) a dit : « Trois personnes (des nations précédentes) voyageaient ensemble, et soudain il s’est mis à pleuvoir, alors ils se sont réfugiés dans une grotte. L’entrée de la grotte a été bloquée alors qu’ils étaient à l’intérieur. Ils se dirent : Ô vous ! Rien ne peut vous sauver sauf la vérité, alors que chacun d’entre vous demande l’aide d’Allah en mentionnant une action qu’il pense avoir faite sincèrement (pour plaire à Allah). L’un d’eux dit : Ô Allah ! Tu sais que j’avais un ouvrier qui a travaillé pour moi contre un faraq (trois sa’) de riz, mais il est parti en les laissant (c’est-à-dire son salaire). J’ai semé ce faraq de riz et, avec le rendement, j’ai acheté des vaches pour lui. Plus tard, quand il est revenu me demander son salaire, je lui ai dit : Va vers ces vaches et emmène-les. Il m’a dit : Mais tu ne me dois qu’un faraq de riz. Je lui ai dit : Va vers ces vaches et prends-les, car elles sont le produit de ce faraq (de riz). Il les a donc prises. Ô Allah ! Si Tu considères que j’ai fait cela par crainte de Toi, alors, s’il Te plaît, enlève la pierre. » La pierre bougea un peu de l’entrée de la grotte. Le deuxième dit : « Ô Allah, Tu sais que j’avais de vieux parents à qui j’apportais le lait de mes brebis chaque nuit. Un soir, j’ai été retardé et, quand je suis arrivé, ils dormaient, alors que ma femme et mes enfants pleuraient de faim. Je ne laissais pas ma famille boire avant que mes parents aient bu. Je n’aimais pas les réveiller, mais je n’aimais pas non plus qu’ils dorment sans avoir bu. J’ai donc attendu leur réveil jusqu’à l’aube. Ô Allah ! Si Tu considères que j’ai fait cela par crainte de Toi, alors, s’il Te plaît, enlève la pierre. » La pierre bougea et ils purent voir le ciel. Le troisième dit : « Ô Allah ! Tu sais que j’avais une cousine (la fille de mon oncle paternel) que j’aimais beaucoup et que j’ai voulu séduire, mais elle a refusé, sauf si je lui donnais cent dinars (pièces d’or). J’ai rassemblé la somme et la lui ai donnée, et elle m’a permis de m’approcher d’elle. Mais quand je me suis assis entre ses jambes, elle a dit : Crains Allah, et ne me déshonore pas sauf légalement. Je me suis levé et j’ai laissé les cent dinars pour elle. Ô Allah ! Si Tu considères que j’ai fait cela par crainte de Toi, alors, s’il Te plaît, enlève la pierre. » Alors Allah les a sauvés et ils sont sortis de la grotte",
+      collection: 'muslim',
+      number: '2743.01',
+      fr: 'Rapporté par Abdullah b. \'Umar : Le Messager d’Allah ﷺ a dit : « Trois personnes partirent en voyage. Elles furent surprises par la pluie et durent se réfugier dans une grotte au flanc d’une montagne. Une pierre tomba alors à l’entrée et les bloqua complètement. L’un d’eux dit aux autres : “Rappelez-vous une bonne action que vous avez faite pour Allah, puis invoquez Allah, le Très-Haut, afin qu’Il nous délivre de ce malheur.” L’un d’eux dit : “Ô Allah, j’avais des parents âgés, une femme et de jeunes enfants. Je m’occupais du troupeau et, le soir, je trayais les bêtes et je servais d’abord le lait à mes parents. Un jour, j’ai dû partir loin pour chercher du fourrage et je ne suis revenu qu’au soir, trouvant mes parents endormis. J’ai trait les animaux comme d’habitude et j’ai apporté le lait à mes parents, restant debout près d’eux sans vouloir les réveiller, et je n’ai pas voulu donner le lait à mes enfants avant eux. Mes enfants pleuraient à mes pieds. Je suis resté ainsi, mes parents et moi, jusqu’au matin. Ô Allah, si Tu sais que j’ai fait cela pour Te plaire, délivre-nous de ce malheur.” (La pierre bougea un peu et ils purent voir le ciel.) Le deuxième dit : “Ô Allah, j’avais une cousine que j’aimais plus que tout. Je voulais avoir une relation avec elle, mais elle refusa sauf si je lui donnais cent dinars. J’ai eu beaucoup de mal à rassembler cette somme, puis je la lui ai donnée. Quand j’allais commettre l’acte, elle m’a dit : ‘Serviteur d’Allah, crains Allah et ne brise pas le sceau (de la chasteté) sauf de façon licite.’ Je me suis alors levé. Ô Allah, si Tu sais que j’ai fait cela pour Te plaire, délivre-nous de ce malheur.” (La situation s’améliora un peu pour eux.) Le troisième dit : “Ô Allah, j’ai employé un ouvrier pour une mesure de riz. Après son travail, je lui ai donné son dû, mais il n’a pas voulu l’accepter. J’ai alors semé ce riz, qui a donné une grande récolte, et je suis devenu riche en vaches et en troupeaux. Il est revenu me voir et m’a dit : ‘Crains Allah et ne sois pas injuste envers moi concernant mon dû.’ Je lui ai dit : ‘Prends ce troupeau de vaches et de moutons.’ Il m’a dit : ‘Crains Allah et ne te moque pas de moi.’ Je lui ai répondu : ‘Je ne me moque pas de toi. Prends les vaches et les troupeaux.’ Il les a donc pris. Ô Allah, si Tu sais que j’ai fait cela pour Te plaire, facilite-nous la sortie de ce malheur.” Et Allah les délivra complètement. »',
     },
     quiz: [
       {
-        q: 'Pour quel salaire l’ouvrier du premier homme avait-il travaillé ?',
+        q: 'Dans le récit de la grotte, pour quel salaire l’ouvrier du troisième homme avait-il travaillé ?',
         options: [
           'Cent dinars',
-          'Un faraq de riz',
+          'Une mesure de riz',
           'Une brebis pleine',
           'Une chamelle',
         ],
         answer: 1,
-        ref: 'Al-Bukhārī 3465',
+        ref: 'Muslim 2743',
       },
       {
-        q: 'Jusqu’à quand le deuxième homme attendit-il le réveil de ses parents ?',
+        q: 'Dans le récit de la grotte, jusqu’à quand le premier homme resta-t-il près de ses parents endormis ?',
         options: [
           'Jusqu’à minuit',
           'Jusqu’au soir suivant',
-          'Jusqu’à l’aube',
+          'Jusqu’au matin',
           'Il les réveilla aussitôt',
         ],
         answer: 2,
-        ref: 'Al-Bukhārī 3465',
+        ref: 'Muslim 2743',
       },
       {
-        q: 'Que se passa-t-il après l’invocation du deuxième homme ?',
+        q: 'Dans le récit de la grotte, que se passa-t-il après l’invocation du premier homme ?',
         options: [
           'La pierre se brisa en morceaux',
           'Rien ne bougea',
           'Un passant les entendit',
-          'La pierre bougea et ils purent voir le ciel',
+          'La pierre bougea un peu et ils purent voir le ciel',
         ],
         answer: 3,
-        ref: 'Al-Bukhārī 3465',
+        ref: 'Muslim 2743',
       },
     ],
   },
@@ -85,7 +85,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Qu’a demandé l’aveugle lorsque l’ange l’a interrogé sur ce qu’il préférait ?',
+        q: 'Qu’a demandé l’aveugle lorsque l’ange l’a interrogé sur ce qu’il préférait le plus ?',
         options: [
           'Des chameaux',
           'De beaux cheveux',
@@ -96,7 +96,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 3464',
       },
       {
-        q: 'Quelle richesse l’aveugle a-t-il reçue ?',
+        q: 'Quelle richesse l’ange donna-t-il à l’aveugle ?',
         options: [
           'Une chamelle pleine',
           'Une brebis pleine',
@@ -137,7 +137,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Que répondait le garçon à ceux qui lui demandaient la guérison ?',
+        q: 'Dans le récit du garçon et du roi, que répondait le garçon à ceux qui lui demandaient la guérison ?',
         options: [
           '« Apportez-moi des cadeaux »',
           '« Je ne guéris personne, c’est Allah qui guérit »',
@@ -148,7 +148,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Muslim 3005',
       },
       {
-        q: 'Quelle parole le roi devait-il prononcer en tirant la flèche ?',
+        q: 'Quelle parole le roi devait-il prononcer en tirant la flèche sur le garçon ?',
         options: [
           '« Au nom du roi »',
           '« Par ma puissance »',
@@ -159,7 +159,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Muslim 3005',
       },
       {
-        q: 'Que dirent les gens après la mort du garçon ?',
+        q: 'Que dirent les gens après la mort du garçon tué par la flèche du roi ?',
         options: [
           '« Nous croyons au Seigneur de ce garçon ! »',
           '« Gloire au roi ! »',
@@ -200,7 +200,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Muslim 2550',
       },
       {
-        q: 'Qui le nouveau-né désigna-t-il comme son père ?',
+        q: 'Qui le nouveau-né désigna-t-il comme son père, innocentant ainsi Jurayj ?',
         options: [
           'Jurayj',
           'Un marchand',
@@ -241,7 +241,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Combien de personnes l’homme avait-il tuées avant de rencontrer le moine ?',
+        q: 'Combien de personnes l’homme qui chercha à se repentir avait-il tuées avant de rencontrer le moine ?',
         options: [
           'Dix',
           'Cinquante',
@@ -252,7 +252,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 3470',
       },
       {
-        q: 'Qui se disputèrent à son sujet après sa mort ?',
+        q: 'Qui se disputèrent au sujet du meurtrier repenti, mort en chemin ?',
         options: [
           'Les habitants des deux villages',
           'Les anges de la miséricorde et les anges du châtiment',
@@ -263,7 +263,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 3470',
       },
       {
-        q: 'De combien était-il plus proche du village vers lequel il se rendait ?',
+        q: 'De combien le meurtrier repenti était-il plus proche du village vers lequel il se rendait ?',
         options: [
           'D’un empan',
           'D’un jour de marche',
@@ -304,7 +304,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 2363',
       },
       {
-        q: 'Comment Allah a-t-il accueilli son geste ?',
+        q: 'Comment Allah a-t-il accueilli le geste de l’homme qui donna à boire au chien ?',
         options: [
           'Il l’a remercié et lui a pardonné',
           'Il l’a rendu riche',
@@ -315,7 +315,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 2363',
       },
       {
-        q: 'Selon la réponse du Prophète ﷺ, pour quelles créatures y a-t-il une récompense ?',
+        q: 'Interrogé sur le bien fait aux animaux, pour quelles créatures le Prophète ﷺ a-t-il dit qu’il y a une récompense ?',
         options: [
           'Uniquement pour les humains',
           'Uniquement pour les animaux domestiques',
@@ -345,7 +345,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Avec quoi la femme attacha-t-elle sa chaussure pour puiser l’eau ?',
+        q: 'Avec quoi la femme qui abreuva le chien attacha-t-elle sa chaussure pour puiser l’eau ?',
         options: [
           'Une corde',
           'Sa ceinture',
@@ -356,7 +356,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 3321',
       },
       {
-        q: 'Qu’a obtenu cette femme pour son geste ?',
+        q: 'Qu’a obtenu la femme pécheresse pour avoir abreuvé le chien ?',
         options: [
           'Le pardon d’Allah',
           'Une grande richesse',
@@ -386,18 +386,18 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Pourquoi cette femme a-t-elle été punie ?',
+        q: 'Qu’avait fait la femme entrée en Enfer à cause d’un chat ?',
         options: [
           'Elle avait volé un chat',
           'Elle avait enfermé un chat jusqu’à sa mort',
-          'Elle avait chassé un chien',
+          'Elle l’avait chassé de sa maison',
           'Elle avait vendu un chat',
         ],
         answer: 1,
         ref: 'Al-Bukhārī 3482',
       },
       {
-        q: 'Que pouvait faire le chat s’il avait été laissé libre ?',
+        q: 'Selon le hadith de la femme et du chat, que pouvait faire le chat s’il avait été laissé libre ?',
         options: [
           'Rentrer chez son maître',
           'Boire à la rivière',
@@ -427,7 +427,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Qui l’emprunteur proposa-t-il comme témoin et comme garant ?',
+        q: 'Qui l’emprunteur des mille dinars proposa-t-il comme témoin et comme garant ?',
         options: [
           'Son frère',
           'Le juge de la ville',
@@ -438,7 +438,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 2291',
       },
       {
-        q: 'Comment l’emprunteur fit-il partir l’argent ?',
+        q: 'Comment l’emprunteur des mille dinars fit-il partir l’argent ?',
         options: [
           'Par un messager',
           'Dans un morceau de bois jeté à la mer',
@@ -449,7 +449,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 2291',
       },
       {
-        q: 'Pourquoi le prêteur emporta-t-il le morceau de bois chez lui ?',
+        q: 'Pourquoi le prêteur des mille dinars emporta-t-il chez lui le morceau de bois trouvé au bord de la mer ?',
         options: [
           'Pour en faire du bois de chauffage',
           'Pour le vendre',
@@ -479,7 +479,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Qu’a trouvé l’acheteur dans le terrain ?',
+        q: 'Qu’a trouvé l’acheteur dans le terrain qu’il venait d’acheter ?',
         options: [
           'Une source d’eau',
           'Un pot rempli d’or',
@@ -490,7 +490,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 3472',
       },
       {
-        q: 'Que proposa l’homme qui les départagea ?',
+        q: 'Que proposa l’arbitre à l’acheteur et au vendeur du terrain ?',
         options: [
           'Partager l’or en deux parts égales',
           'Rendre le terrain au vendeur',
@@ -519,18 +519,18 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Qu’a trouvé l’homme sur la route ?',
+        q: 'Qu’a retiré du chemin l’homme à qui Allah a pardonné pour ce geste ?',
         options: [
           'Une pierre',
           'Un animal blessé',
           'Une branche d’arbre épineuse',
-          'Un trou',
+          'Des éclats de verre',
         ],
         answer: 2,
         ref: 'Al-Bukhārī 2472',
       },
       {
-        q: 'Qu’a fait Allah pour lui ?',
+        q: 'Qu’a fait Allah pour l’homme qui retira la branche épineuse du chemin ?',
         options: [
           'Il l’a remercié et lui a pardonné',
           'Il l’a rendu riche',
@@ -560,7 +560,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Comment les gens avaient-ils réparti leurs places dans le bateau ?',
+        q: 'Dans la parabole du bateau, comment les passagers avaient-ils réparti leurs places ?',
         options: [
           'Selon leur richesse',
           'Par tirage au sort',
@@ -571,7 +571,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 2493',
       },
       {
-        q: 'Que voulaient faire ceux du bas ?',
+        q: 'Dans la parabole du bateau, que voulaient faire les passagers du bas ?',
         options: [
           'Monter tous sur le pont',
           'Changer de place avec ceux du haut',
@@ -582,7 +582,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 2493',
       },
       {
-        q: 'Que se passe-t-il si ceux du haut les en empêchent ?',
+        q: 'Dans la parabole du bateau, que se passe-t-il si ceux du haut empêchent ceux du bas d’agir ?',
         options: [
           'Tout le monde est sauvé',
           'Seuls ceux du haut sont sauvés',
@@ -612,7 +612,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Que demanda l’homme à ses fils avant de mourir ?',
+        q: 'Que demanda à ses fils, avant de mourir, l’homme qui redoutait le châtiment d’Allah ?',
         options: [
           'De donner ses biens aux pauvres',
           'De brûler son corps et d’en disperser la cendre',
@@ -623,7 +623,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 3481',
       },
       {
-        q: 'Quelle raison donna-t-il à Allah ?',
+        q: 'Quelle raison l’homme qui avait fait brûler son corps donna-t-il à Allah ?',
         options: [
           'La peur de ses fils',
           'La pauvreté',
@@ -663,7 +663,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Muslim 2747',
       },
       {
-        q: 'Que portait la monture du voyageur ?',
+        q: 'Dans la parabole du voyageur, que portait sa monture perdue ?',
         options: [
           'Ses marchandises',
           'Son or',
@@ -674,7 +674,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Muslim 2747',
       },
       {
-        q: 'Que dit le voyageur sous l’effet de sa joie ?',
+        q: 'Que dit le voyageur, sous l’effet de sa joie, en retrouvant sa monture ?',
         options: [
           '« Ô Seigneur, Tu es mon serviteur et je suis Ton Seigneur »',
           '« Louange à Allah »',
@@ -703,7 +703,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
     },
     quiz: [
       {
-        q: 'Que pensa l’homme en se rendant au Paradis ?',
+        q: 'Que pensa le dernier homme à entrer au Paradis en s’y rendant ?',
         options: [
           'Qu’il était fermé',
           'Qu’il était déjà plein',
@@ -714,7 +714,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 6571',
       },
       {
-        q: 'Que lui fut-il accordé ?',
+        q: 'Qu’Allah accorda-t-il au dernier homme à entrer au Paradis ?',
         options: [
           'Une seule demeure',
           'Ce qu’il avait possédé sur terre',
@@ -725,7 +725,7 @@ export const SUNNAH_STORIES: SunnahStory[] = [
         ref: 'Al-Bukhārī 6571',
       },
       {
-        q: 'Comment le Messager d’Allah ﷺ réagit-il en rapportant la réponse de l’homme ?',
+        q: 'Comment le Prophète ﷺ réagit-il en rapportant la réponse du dernier homme à entrer au Paradis ?',
         options: [
           'Il sourit au point que ses dents de devant étaient visibles',
           'Il pleura',

@@ -110,28 +110,30 @@ describe('structure des récits de la Sunna', () => {
 });
 
 describe('texte du hadith verbatim (HADITH_BUKHARI_FR, HADITH_MUSLIM_FR)', () => {
-    it.skipIf(!HADITH_BUKHARI_FR || !HADITH_MUSLIM_FR)(
-      'reprend exactement le texte de hadith-api pour chaque numéro cité',
-      async () => {
-        const [bukhari, muslim] = await Promise.all([
-          readEdition(HADITH_BUKHARI_FR!),
-          readEdition(HADITH_MUSLIM_FR!),
-        ]);
-        const byNumber = {
-          bukhari: new Map(bukhari.hadiths.map((h) => [String(h.hadithnumber), h.text])),
-          muslim: new Map(
-            muslim.hadiths
-              .filter((h) => h.arabicnumber != null && h.arabicnumber !== '')
-              .map((h) => [String(h.arabicnumber), h.text]),
-          ),
-        };
-        for (const s of SUNNAH_STORIES) {
-          const where = `${s.id} (${s.hadith.collection} ${s.hadith.number})`;
-          const expected = byNumber[s.hadith.collection].get(s.hadith.number);
-          expect(expected, `${where} : numéro introuvable`).toBeDefined();
-          expect(s.hadith.fr, where).toBe(expected);
-          expect(s.hadith.fr.length, where).toBeGreaterThanOrEqual(200);
-        }
-      },
-    );
+  it.skipIf(!HADITH_BUKHARI_FR || !HADITH_MUSLIM_FR)(
+    'reprend exactement le texte de hadith-api pour chaque numéro cité',
+    async () => {
+      const [bukhari, muslim] = await Promise.all([
+        readEdition(HADITH_BUKHARI_FR!),
+        readEdition(HADITH_MUSLIM_FR!),
+      ]);
+      const byNumber = {
+        bukhari: new Map(
+          bukhari.hadiths.map((h): [string, string] => [String(h.hadithnumber), h.text]),
+        ),
+        muslim: new Map(
+          muslim.hadiths
+            .filter((h) => h.arabicnumber != null && h.arabicnumber !== '')
+            .map((h): [string, string] => [String(h.arabicnumber), h.text]),
+        ),
+      };
+      for (const s of SUNNAH_STORIES) {
+        const where = `${s.id} (${s.hadith.collection} ${s.hadith.number})`;
+        const expected = byNumber[s.hadith.collection].get(s.hadith.number);
+        expect(expected, `${where} : numéro introuvable`).toBeDefined();
+        expect(s.hadith.fr, where).toBe(expected);
+        expect(s.hadith.fr.length, where).toBeGreaterThanOrEqual(200);
+      }
+    },
+  );
 });
