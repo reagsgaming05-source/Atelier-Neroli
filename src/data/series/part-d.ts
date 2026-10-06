@@ -173,7 +173,7 @@ export const SERIES_D: Series[] = [
             sky: 'storm', ground: 'sea', motifs: ['boat', 'wind'],
           },
           {
-            text: 'Le garçon dit au roi qu’il ne pourrait le tuer qu’en rassemblant les gens, et en tirant une flèche de son carquois en disant : « Au nom d’Allah, le Seigneur de ce garçon. » Le roi fit ainsi, et le garçon mourut. Les gens dirent : « Nous croyons au Seigneur de ce garçon ! »',
+            text: 'Le garçon dit au roi qu’il ne pourrait le tuer qu’en rassemblant les gens, et en tirant une de ses flèches en disant : « Au nom d’Allah, le Seigneur de ce garçon. » Le roi fit ainsi, et le garçon mourut. Les gens dirent : « Nous croyons au Seigneur de ce garçon ! »',
             sky: 'day', ground: 'city', motifs: ['palace', 'light'],
           },
           {
