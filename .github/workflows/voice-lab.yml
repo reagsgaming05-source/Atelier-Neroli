@@ -1,0 +1,68 @@
+name: Voice lab
+
+# Records the same short passage with several free French voices, so they can be
+# compared by ear before recording the whole narration. Results are committed to
+# docs/voix-lab/. Nothing here is shipped in the app.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/narration/lab.py'
+      - '.github/workflows/voice-lab.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [xtts, chatterbox, edge]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+      - name: Install ${{ matrix.engine }}
+        run: |
+          pip install --upgrade pip
+          case "${{ matrix.engine }}" in
+            xtts) pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu && pip install coqui-tts ;;
+            chatterbox) pip install chatterbox-tts ;;
+            edge) pip install edge-tts ;;
+          esac
+      - run: python scripts/narration/lab.py ${{ matrix.engine }} out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voices-${{ matrix.engine }}
+          path: out/*.mp3
+          if-no-files-found: error
+
+  publish:
+    needs: sample
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: voices-*
+          path: docs/voix-lab
+          merge-multiple: true
+      - run: |
+          ls -la docs/voix-lab
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add docs/voix-lab
+          git diff --cached --quiet && exit 0
+          git commit -q -m "Voice lab samples"
+          for i in 1 2 3; do
+            git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            sleep 10
+          done
+          exit 1
