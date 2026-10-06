@@ -103,7 +103,7 @@ export const SERIES_D: Series[] = [
             sky: 'dusk', ground: 'valley', motifs: ['camel', 'path'],
           },
           {
-            text: 'L’homme refusa, disant qu’il avait trop d’obligations. L’ange lui rappela qu’il était un lépreux pauvre, et qu’Allah lui avait tout donné. Il répondit qu’il avait hérité ces biens de ses ancêtres. « Si tu mens, dit l’ange, qu’Allah te rende comme avant. »',
+            text: 'L’homme refusa : il avait trop d’obligations. L’ange lui rappela qu’il était un lépreux pauvre, et qu’Allah lui avait tout donné, mais il prétendit avoir hérité ces biens de ses ancêtres. « Si tu mens, dit l’ange, qu’Allah te rende comme avant. »',
             sky: 'dusk', ground: 'valley', motifs: ['camel', 'dark-clouds'],
           },
           {
@@ -173,7 +173,7 @@ export const SERIES_D: Series[] = [
             sky: 'storm', ground: 'sea', motifs: ['boat', 'wind'],
           },
           {
-            text: 'Le garçon dit au roi qu’il ne pourrait le tuer qu’en rassemblant les gens, et en tirant une flèche en disant : « Au nom d’Allah, le Seigneur de ce garçon. » Le roi fit ainsi, et le garçon mourut. Les gens dirent : « Nous croyons au Seigneur de ce garçon ! »',
+            text: 'Le garçon dit au roi qu’il ne pourrait le tuer qu’en rassemblant les gens, et en tirant une flèche de son carquois en disant : « Au nom d’Allah, le Seigneur de ce garçon. » Le roi fit ainsi, et le garçon mourut. Les gens dirent : « Nous croyons au Seigneur de ce garçon ! »',
             sky: 'day', ground: 'city', motifs: ['palace', 'light'],
           },
           {
@@ -281,7 +281,7 @@ export const SERIES_D: Series[] = [
             sky: 'dawn', ground: 'plain', motifs: ['house', 'path'],
           },
           {
-            text: 'Puis Il ordonna de mesurer la distance entre lui et les deux villages. On le trouva plus proche, d’un empan, du village où il se rendait. Ainsi, il fut pardonné.',
+            text: 'Puis Il ordonna aux anges de mesurer la distance entre lui et les deux villages. On le trouva plus proche, d’un empan, du village où il se rendait. Ainsi, il fut pardonné.',
             sky: 'dawn', ground: 'plain', motifs: ['footprints', 'light'],
           },
           {
@@ -681,7 +681,7 @@ export const SERIES_D: Series[] = [
             sky: 'dusk', ground: 'plain', motifs: ['path', 'light'],
           },
           {
-            text: 'Il s’y rendra, mais il lui semblera qu’il est déjà plein. Il reviendra et dira : « Seigneur, je l’ai trouvé plein. »',
+            text: 'Il s’y rendra, mais il pensera qu’il est déjà plein. Il reviendra et dira : « Seigneur, je l’ai trouvé plein. »',
             sky: 'day', ground: 'garden', motifs: ['palms', 'spring'],
           },
           {
@@ -719,7 +719,7 @@ export const SERIES_D: Series[] = [
             sky: 'dawn', ground: 'sea', motifs: ['light', 'book'],
           },
           {
-            text: 'Un jour, Moussa parlait aux Bani Israël. On lui demanda : « Qui est le plus savant des hommes ? » Il répondit : « C’est moi. » Allah le lui reprocha, car il n’avait pas attribué la science à Allah.',
+            text: 'Un jour, Moussa parlait aux Bani Israël. On lui demanda : « Qui est le plus savant des hommes ? » Il répondit : « C’est moi le plus savant. » Allah le lui reprocha, car il n’avait pas attribué la science à Allah.',
             sky: 'day', ground: 'city', motifs: ['pillars', 'scroll'],
           },
           {
@@ -755,7 +755,7 @@ export const SERIES_D: Series[] = [
             sky: 'dusk', ground: 'plain', motifs: ['path', 'dark-clouds'],
           },
           {
-            text: 'Dans une ville, les habitants refusèrent de les accueillir. Al-Khidr répara un mur prêt à s’effondrer. « Tu aurais pu demander un salaire », dit Moussa. « C’est ici que nos chemins se séparent », répondit al-Khidr.',
+            text: 'Dans une ville, ils demandèrent à manger, mais les habitants refusèrent de les accueillir. Al-Khidr répara un mur prêt à s’effondrer. « Tu aurais pu demander un salaire », dit Moussa. « C’est ici que nos chemins se séparent », répondit al-Khidr.',
             sky: 'dusk', ground: 'city', motifs: ['wall', 'ruins'],
           },
           {
