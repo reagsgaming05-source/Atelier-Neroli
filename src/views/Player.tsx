@@ -163,7 +163,8 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
 
   const isLast = episode + 1 >= series.episodes.length;
   const verse = scene.verse;
-  const showVerse = verse && phase !== 'text';
+  // The verse stays on screen for the whole scene, so it can be read when paused.
+  const showVerse = !!verse;
   const toggle = (key: 'voice' | 'recitation') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
 
   return (

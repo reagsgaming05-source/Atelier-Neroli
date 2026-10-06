@@ -208,7 +208,7 @@ export const SERIES_B: Series[] = [
             motifs: ['sea-split', 'path'],
           },
           {
-            text: 'Voilà bien un signe, mais la plupart des gens ne croient pas. Et ton Seigneur est le Tout-Puissant, le Très Miséricordieux. Comme Moussa, gardons confiance : Allah est avec nous.',
+            text: 'Voilà bien un signe, mais la plupart des gens ne croient pas. Et ton Seigneur est le Tout-Puissant, le Très Miséricordieux. Comme Moussa, gardons confiance en notre Seigneur.',
             sky: 'dusk',
             ground: 'sea',
             motifs: ['light', 'birds'],
@@ -275,7 +275,7 @@ export const SERIES_B: Series[] = [
         title: 'Le veau du Samiri',
         scenes: [
           {
-            text: 'Moussa s’était hâté vers son Seigneur, en avance sur son peuple. « Ils suivent mes traces, dit-il, et je me suis hâté vers Toi, Seigneur, pour que Tu sois satisfait. »',
+            text: 'Moussa s’était hâté vers son Seigneur, en avance sur son peuple. Allah lui en demanda la raison. « Ils suivent mes traces, répondit-il, et je me suis hâté vers Toi pour que Tu sois satisfait. »',
             sky: 'day',
             ground: 'mountains',
             motifs: ['light', 'path'],
@@ -313,7 +313,7 @@ export const SERIES_B: Series[] = [
             verse: { surah: 20, verse: 90 },
           },
           {
-            text: 'Ils avaient répondu : « Nous y resterons attachés jusqu’au retour de Moussa. » À son retour, Moussa demanda à Haroun pourquoi il ne l’avait pas suivi. Haroun avait craint de diviser les Enfants d’Israël.',
+            text: 'Ils avaient répondu : « Nous y resterons attachés jusqu’au retour de Moussa. » À son retour, Moussa demanda à Haroun pourquoi il ne l’avait pas suivi. Haroun craignait qu’on lui reproche d’avoir divisé les Enfants d’Israël.',
             sky: 'night',
             ground: 'desert',
             motifs: ['tent', 'crescent'],
@@ -604,7 +604,7 @@ export const SERIES_B: Series[] = [
             motifs: ['light', 'clouds'],
           },
           {
-            text: 'Allah donne la royauté à qui Il veut. Talout, choisi pour son savoir et sa force, allait maintenant partir avec ses troupes.',
+            text: 'Allah donne la royauté à qui Il veut. Talout, élu par Allah et doté de savoir et de force, allait maintenant partir avec ses troupes.',
             sky: 'dusk',
             ground: 'plain',
             motifs: ['tent', 'path'],
@@ -717,7 +717,7 @@ export const SERIES_B: Series[] = [
             motifs: ['sun', 'clouds'],
           },
           {
-            text: 'Allah dit :',
+            text: 'Écoutons ce que dit Allah :',
             sky: 'dawn',
             ground: 'mountains',
             motifs: ['birds', 'light'],
@@ -828,7 +828,7 @@ export const SERIES_B: Series[] = [
             motifs: ['palace', 'pillars'],
           },
           {
-            text: 'Allah dit :',
+            text: 'Allah dit à ce propos :',
             sky: 'day',
             ground: 'city',
             motifs: ['light', 'scroll'],
@@ -952,7 +952,7 @@ export const SERIES_B: Series[] = [
             verse: { surah: 27, verse: 44 },
           },
           {
-            text: 'Souleymane avait tout reçu, et il voyait en chaque grâce une épreuve : serai-je reconnaissant, ou ingrat ? Plus Allah nous donne, plus nous devons Le remercier.',
+            text: 'Devant le trône, Souleymane avait dit : cette grâce de mon Seigneur m’éprouve, serai-je reconnaissant ou ingrat ? Plus Allah nous donne, plus nous devons Le remercier.',
             sky: 'dusk',
             ground: 'garden',
             motifs: ['light', 'palms'],
