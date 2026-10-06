@@ -1,15 +1,14 @@
 import { useEffect } from 'preact/hooks';
-import { BottomNav, ToastHost } from './components/ui';
+import { Suspense, lazy } from 'preact/compat';
+import { BottomNav, Spinner, ToastHost } from './components/ui';
 import { scheduleAlerts } from './lib/notify';
 import { useRoute } from './lib/router';
 import { settingsStore, useStore } from './lib/settings';
 import { About } from './views/About';
-import { AdhkarCategory, AdhkarIndex } from './views/Adhkar';
 import { Calendar } from './views/Calendar';
 import { Home } from './views/Home';
 import { Location } from './views/Location';
 import { More } from './views/More';
-import { Names } from './views/Names';
 import { Prayers } from './views/Prayers';
 import { Qibla } from './views/Qibla';
 import { QuranIndex } from './views/QuranIndex';
@@ -19,6 +18,12 @@ import { Tasbih } from './views/Tasbih';
 import { Tracker } from './views/Tracker';
 import { Welcome } from './views/Welcome';
 import { Zakat } from './views/Zakat';
+
+// Text-heavy screens load on demand to keep the first load small; the service
+// worker still precaches them for offline use.
+const AdhkarIndex = lazy(() => import('./views/Adhkar').then((m) => ({ default: m.AdhkarIndex })));
+const AdhkarCategory = lazy(() => import('./views/Adhkar').then((m) => ({ default: m.AdhkarCategory })));
+const Names = lazy(() => import('./views/Names').then((m) => ({ default: m.Names })));
 
 export function App() {
   const [settings] = useStore(settingsStore);
@@ -67,7 +72,7 @@ export function App() {
     case 'coran': {
       const n = Number(param);
       const v = Number(route.query.get('v')) || undefined;
-      page = n >= 1 && n <= 114 ? <Reader key={n} surah={n} verse={v} /> : <QuranIndex initialTab={route.query.get('tab') ?? undefined} />;
+      page = n >= 1 && n <= 114 ? <Reader key={n} surah={n} verse={v} /> : <QuranIndex tab={route.query.get('tab') ?? undefined} />;
       break;
     }
     case 'qibla':
@@ -103,7 +108,9 @@ export function App() {
 
   return (
     <div class="app">
-      <main>{page}</main>
+      <main>
+        <Suspense fallback={<Spinner />}>{page}</Suspense>
+      </main>
       <BottomNav section={section} />
       <ToastHost />
     </div>

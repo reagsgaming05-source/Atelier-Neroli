@@ -52,7 +52,7 @@ export function AdhkarIndex() {
                     {complete > 0 && ` · ${complete}/${total} aujourd’hui`}
                   </div>
                 </div>
-                <span class="surah-name-ar" style={{ fontSize: '1.1rem' }}>
+                <span class="surah-name-ar" style={{ fontSize: '1.1rem', maxWidth: '35%', textAlign: 'right' }}>
                   {cat.titleAr}
                 </span>
               </a>

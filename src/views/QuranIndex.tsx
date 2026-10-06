@@ -3,13 +3,18 @@ import { Icon } from '../components/Icon';
 import { Spinner, TopBar } from '../components/ui';
 import { JUZ_STARTS, SURAHS, normalizeLatin } from '../data/surahs';
 import { searchTranslation, type SearchHit } from '../lib/quran';
+import { navigate } from '../lib/router';
 import { readingStore, settingsStore, useStore } from '../lib/settings';
 import { toArabicDigits } from '../lib/hijri';
 
 type Tab = 'sourates' | 'juz' | 'favoris' | 'recherche';
 
-export function QuranIndex({ initialTab }: { initialTab?: string }) {
-  const [tab, setTab] = useState<Tab>((initialTab as Tab) || 'sourates');
+const TABS: Tab[] = ['sourates', 'juz', 'favoris', 'recherche'];
+
+export function QuranIndex({ tab: tabParam }: { tab?: string }) {
+  // The tab lives in the URL so links and the back button land on the right one.
+  const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : 'sourates';
+  const setTab = (t: Tab) => navigate(t === 'sourates' ? '/coran' : `/coran?tab=${t}`, true);
   const [reading] = useStore(readingStore);
   const [filter, setFilter] = useState('');
 
