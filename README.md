@@ -1,1 +1,81 @@
-# Atelier-Neroli
+# Sakina — سَكِينَة
+
+Application musulmane **gratuite, sans publicité, sans compte et sans pistage**, utilisable hors-ligne.
+C'est une application web progressive (PWA) : elle s'installe sur l'écran d'accueil d'Android comme d'iPhone, sans passer par un store.
+
+## Fonctionnalités
+
+| | |
+|---|---|
+| **Horaires de prière** | Calcul astronomique local (bibliothèque [Adhan](https://github.com/batoulapps/adhan-js)), 19 méthodes dont UOIF 12°, 15°, 18°, Ligue islamique mondiale, Umm al-Qura, Maroc, Algérie, Tunisie, Diyanet, ISNA… Asr majoritaire ou hanafite, règles pour hautes latitudes, ajustements à la minute, tableau du mois, imsak, milieu et dernier tiers de la nuit. |
+| **Alertes** | Notifications quand l'application est ouverte, et export **agenda (.ics)** des 30 prochains jours avec une alarme à chaque prière : fiable même application fermée. |
+| **Qibla** | Boussole (Android et iPhone), angle depuis le nord et distance jusqu'à la Ka‘ba. |
+| **Coran** | 114 sourates en écriture uthmanie (police Amiri Quran), traductions Hamidullah et Rachid Maach, translittération, récitation verset par verset (7 récitateurs), marque-pages, reprise de lecture, recherche dans la traduction, navigation par juz’, versets de prosternation. |
+| **Adhkar** | Matin, soir, après la prière, sommeil, réveil, quotidien, détresse, istikhara, invocations coraniques (Rabbana) — avec compteurs, sources et vertus. |
+| **Tasbih** | Compteur avec objectifs (33/99/100…), enchaînement automatique 33-33-34, vibration. |
+| **Calendrier hégirien** | Calendrier Umm al-Qura, décalage réglable, Ramadan, Aïd, ‘Arafat, ‘Achoura, jours blancs. |
+| **Et aussi** | 99 noms d'Allah, calcul de la zakat, suivi personnel des prières, verset du jour, thème clair/sombre. |
+
+Toutes les données (position, réglages, marque-pages, suivi) restent sur l'appareil.
+
+## Démarrer
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm test           # tests unitaires (horaires, qibla, calendrier, zakat, agenda, adhkar)
+npm run build      # version de production dans dist/
+```
+
+Les données du Coran et des villes sont déjà générées dans `public/data/` et `src/data/`. Pour les régénérer depuis les sources :
+
+```bash
+npm run data
+```
+
+### Vérifier les adhkar contre la source
+
+Les textes arabes des adhkar sont comparés automatiquement à Hisn al-Muslim et au texte coranique :
+
+```bash
+curl -sLo /tmp/hisn.json https://raw.githubusercontent.com/rn0x/hisn_almuslim_json/main/hisn_almuslim.json
+curl -sLo /tmp/quran-ar.json https://raw.githubusercontent.com/fawazahmed0/quran-api/1/editions/ara-qurankhaledhosn.json
+HISN_JSON=/tmp/hisn.json QURAN_AR_JSON=/tmp/quran-ar.json npx vitest run tests/adhkar.test.ts
+```
+
+## Mise en ligne gratuite (GitHub Pages)
+
+1. Dans le dépôt GitHub : **Settings → Pages → Source : GitHub Actions**.
+2. Fusionner sur `main` : le workflow `deploy.yml` teste, construit et publie l'application sur `https://<compte>.github.io/<dépôt>/`.
+3. Ouvrir ce lien sur le téléphone puis « Ajouter à l'écran d'accueil » (Safari : bouton Partager ; Chrome : menu ⋮ → Installer).
+
+N'importe quel hébergement statique convient aussi (Netlify, Cloudflare Pages…). Pour un sous-dossier, construire avec `BASE=/sous-dossier/ npm run build`.
+
+## Architecture
+
+```
+src/
+  lib/        logique sans interface : prière, hégire, qibla, zakat, agenda, notifications, stockage
+  data/       sourates, adhkar, 99 noms, métadonnées du Coran
+  views/      un écran par fichier (Accueil, Prières, Coran, Qibla, Adhkar…)
+  components/ éléments réutilisables
+public/data/  texte du Coran par sourate et liste des villes (mis en cache à la demande)
+scripts/      génération des données
+tests/        tests Vitest
+```
+
+Preact + TypeScript + Vite, service worker Workbox (vite-plugin-pwa). Aucune dépendance serveur.
+
+## Limites connues
+
+- Une application web ne peut pas se réveiller seule à heure fixe une fois fermée : d'où l'export agenda pour des alertes fiables. Des notifications « push » nécessiteraient un serveur.
+- La récitation audio est diffusée depuis everyayah.com et demande une connexion.
+- Le début des mois hégiriens dépend de l'observation du croissant : le calendrier est une estimation, ajustable de ±2 jours.
+
+## Sources et licences
+
+- Texte coranique : [Tanzil.net](https://tanzil.net) (CC BY 3.0, reproduit sans modification), encodage de Khaled Hosny pour Amiri Quran, via [fawazahmed0/quran-api](https://github.com/fawazahmed0/quran-api).
+- Traductions : Muhammad Hamidullah (Tanzil.net), Rachid Maach ([QuranEnc.com](https://quranenc.com)) — usage non commercial.
+- Adhkar : *Hisn al-Muslim* de Sa‘id al-Qahtani.
+- Horaires : [Adhan](https://github.com/batoulapps/adhan-js) (MIT). Villes : simplemaps.com (CC BY 4.0) via `city-timezones`. Police : Amiri Quran (SIL OFL).
+- Code de l'application : licence MIT.

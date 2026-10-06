@@ -1,0 +1,66 @@
+/// <reference types="vitest/config" />
+import { defineConfig } from 'vite';
+import preact from '@preact/preset-vite';
+import { VitePWA } from 'vite-plugin-pwa';
+
+// BASE lets the app live under a sub-path, e.g. https://<user>.github.io/<repo>/
+const base = process.env.BASE ?? '/';
+
+export default defineConfig({
+  base,
+  plugins: [
+    preact(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: false,
+      includeAssets: ['icons/*.svg', 'icons/*.png'],
+      manifest: {
+        name: 'Sakina — Prière, Coran, Qibla',
+        short_name: 'Sakina',
+        description:
+          'Horaires de prière, qibla, Coran, adhkar et tasbih. Gratuit, sans publicité, sans pistage, utilisable hors-ligne.',
+        lang: 'fr',
+        dir: 'ltr',
+        start_url: base,
+        scope: base,
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#0f2a24',
+        theme_color: '#0f2a24',
+        categories: ['lifestyle', 'education', 'books'],
+        icons: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+        shortcuts: [
+          { name: 'Horaires de prière', url: `${base}#/prieres` },
+          { name: 'Coran', url: `${base}#/coran` },
+          { name: 'Qibla', url: `${base}#/qibla` },
+          { name: 'Tasbih', url: `${base}#/tasbih` },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Quran text and the city list are cached on first use (or all at once
+        // from Settings → "Télécharger le Coran") rather than at install time.
+        globIgnores: ['data/**'],
+        importScripts: ['sw-notifications.js'],
+        navigateFallback: 'index.html',
+        // Audio from everyayah.com is left to the browser: serving cached opaque
+        // responses to <audio> range requests breaks playback in some browsers.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/data/'),
+            // Instant from cache, refreshed in the background if the data changed.
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'sakina-data', expiration: { maxEntries: 1000 } },
+          },
+        ],
+      },
+    }),
+  ],
+  test: {
+    environment: 'node',
+  },
+});
