@@ -1,8 +1,8 @@
 import { distanceKm } from './prayer';
 import type { Place } from './settings';
 
-/** [name, country code, country, region, lat, lng, timezone, population] */
-type CityRow = [string, string, string, string, number, number, string, number];
+/** [name, country code, country, region, lat, lng, timezone, population, postcodes (Switzerland)] */
+type CityRow = [string, string, string, string, number, number, string, number, string?];
 
 let citiesPromise: Promise<CityRow[]> | null = null;
 
@@ -33,8 +33,25 @@ const ALIASES: Record<string, string> = {
   alger: 'algiers',
   londres: 'london',
   bruxelles: 'brussels',
-  geneve: 'geneva',
   'le caire': 'cairo',
+  geneva: 'geneve',
+  bale: 'basel',
+  berne: 'bern',
+  lucerne: 'luzern',
+  'saint gall': 'st gallen',
+  'st gall': 'st gallen',
+  soleure: 'solothurn',
+  schaffhouse: 'schaffhausen',
+  bienne: 'biel bienne',
+  coire: 'chur',
+  thoune: 'thun',
+  zoug: 'zug',
+  morat: 'murten',
+  glaris: 'glarus',
+  schwytz: 'schwyz',
+  granges: 'grenchen',
+  berthoud: 'burgdorf',
+  'saint moritz': 'st moritz',
   caire: 'cairo',
   'al qods': 'jerusalem',
   moscou: 'moscow',
@@ -60,10 +77,11 @@ try {
   /* older browsers keep the English names from the dataset */
 }
 
-function toPlace(c: CityRow): Place {
+function toPlace(c: CityRow, postcode?: string): Place {
   const country = countryNames?.of(c[1]) ?? c[2];
   return {
     name: c[0],
+    postcode: postcode ?? c[8]?.split(' ')[0],
     countryCode: c[1],
     country: c[3] && c[3] !== c[0] ? `${c[3]}, ${country}` : country,
     lat: c[4],
@@ -73,20 +91,34 @@ function toPlace(c: CityRow): Place {
   };
 }
 
-export async function searchCities(query: string, limit = 12): Promise<Place[]> {
+/** Cities matching `query`, those of `preferCountry` (ISO code) first, then by population. */
+export async function searchCities(query: string, limit = 12, preferCountry?: string): Promise<Place[]> {
   let q = fold(query);
   if (q.length < 2) return [];
   q = ALIASES[q] ?? q;
   const rows = await loadCities();
+  // Swiss postcodes: "1003" finds Lausanne.
+  if (/^\d{2,4}$/.test(q)) {
+    const out: Place[] = [];
+    for (const c of rows) {
+      const code = c[8]?.split(' ').find((z) => z.startsWith(q));
+      if (code) out.push(toPlace(c, code));
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
   const starts: CityRow[] = [];
   const contains: CityRow[] = [];
   for (const c of rows) {
     const name = fold(c[0]);
     if (name.startsWith(q)) starts.push(c);
     else if (name.includes(q) || fold(`${c[0]} ${c[2]}`).startsWith(q)) contains.push(c);
-    if (starts.length >= limit) break;
   }
-  return [...starts, ...contains].slice(0, limit).map(toPlace);
+  // Rows are sorted by population; a stable sort keeps that order within each group.
+  const local = (c: CityRow) => (preferCountry && c[1] === preferCountry ? 0 : 1);
+  starts.sort((a, b) => local(a) - local(b));
+  contains.sort((a, b) => local(a) - local(b));
+  return [...starts, ...contains].slice(0, limit).map((c) => toPlace(c));
 }
 
 /** Closest known city, used to name a GPS position and suggest a calculation method. */

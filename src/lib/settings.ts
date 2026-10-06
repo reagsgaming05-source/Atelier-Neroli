@@ -6,6 +6,8 @@ export type PrayerId = 'fajr' | 'sunrise' | 'dhuhr' | 'asr' | 'maghrib' | 'isha'
 
 export interface Place {
   name: string;
+  /** Postcode, when known (Swiss localities). */
+  postcode?: string;
   country?: string;
   countryCode?: string;
   lat: number;

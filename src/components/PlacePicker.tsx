@@ -32,7 +32,7 @@ export function PlacePicker({ onPick }: { onPick: (p: Place) => void }) {
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
-        const r = await searchCities(query);
+        const r = await searchCities(query, 12, suggestion?.countryCode);
         if (!cancelled) setResults(r);
       } catch {
         if (!cancelled) setError('Liste des villes indisponible hors-ligne pour le moment.');
@@ -42,7 +42,7 @@ export function PlacePicker({ onPick }: { onPick: (p: Place) => void }) {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [query]);
+  }, [query, suggestion]);
 
   const useGps = async () => {
     setBusy(true);
@@ -102,7 +102,7 @@ export function PlacePicker({ onPick }: { onPick: (p: Place) => void }) {
           id="city-search"
           class="input"
           type="search"
-          placeholder="Ou rechercher une ville…"
+          placeholder="Ou rechercher une ville ou un NPA…"
           value={query}
           onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
           aria-label="Rechercher une ville"
@@ -117,7 +117,10 @@ export function PlacePicker({ onPick }: { onPick: (p: Place) => void }) {
               <Icon name="pin" size={20} />
               <div class="grow">
                 <div class="title">{p.name}</div>
-                <div class="subtitle">{p.country}</div>
+                <div class="subtitle">
+                  {p.postcode ? `${p.postcode} · ` : ''}
+                  {p.country}
+                </div>
               </div>
             </button>
           ))}

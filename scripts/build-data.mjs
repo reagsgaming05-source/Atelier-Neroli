@@ -9,7 +9,9 @@
 //   - Quran text and translations: github.com/fawazahmed0/quran-api (Unlicense),
 //     which redistributes Tanzil.net, quranenc.com and Khaled Hosny's quran-data.
 //   - Hadith: github.com/fawazahmed0/hadith-api (Unlicense).
-//   - Cities: npm package city-timezones (MIT, data from simplemaps.com, CC BY 4.0).
+//   - Cities: npm package city-timezones (MIT, data from simplemaps.com, CC BY 4.0);
+//     every Swiss locality from npm package swiss-zipcodes (MIT, GeoNames postal
+//     codes, CC BY 4.0).
 //
 // Usage: npm run data
 
@@ -139,31 +141,126 @@ async function buildQuran() {
   console.log(`✓ quran-meta (${sajdas.length} sajdas)`);
 }
 
+const round4 = (x) => Math.round(x * 1e4) / 1e4;
+
+function km(lat1, lng1, lat2, lng2) {
+  const rad = Math.PI / 180;
+  const a =
+    Math.sin(((lat2 - lat1) * rad) / 2) ** 2 +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(((lng2 - lng1) * rad) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(a));
+}
+
+const CANTONS = {
+  AG: 'Argovie', AI: 'Appenzell Rhodes-Intérieures', AR: 'Appenzell Rhodes-Extérieures', BE: 'Berne',
+  BL: 'Bâle-Campagne', BS: 'Bâle-Ville', FR: 'Fribourg', GE: 'Genève', GL: 'Glaris', GR: 'Grisons', JU: 'Jura',
+  LU: 'Lucerne', NE: 'Neuchâtel', NW: 'Nidwald', OW: 'Obwald', SG: 'Saint-Gall', SH: 'Schaffhouse', SO: 'Soleure',
+  SZ: 'Schwytz', TG: 'Thurgovie', TI: 'Tessin', UR: 'Uri', VD: 'Vaud', VS: 'Valais', ZG: 'Zoug', ZH: 'Zurich',
+};
+
+// Postcodes reserved for companies and PO boxes ("Bern Swisscom", "Lausanne
+// Veillon"): their postcode is kept, under the locality's own name.
+const BUSINESS_SUFFIX =
+  /\s+(Voice Pub|PostFinance|Verarb\.zentr\.|Swisscom|Weihnachten|D4|K|Vögele|Ifolor|Adm cant|Veillon|Redoute|Mutuel|Versich\.|R Digest|IBRS local|Caselle)$/;
+
+/** Folds accents and punctuation for name comparisons. */
+const foldName = (s) =>
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z]+/g, ' ')
+    .trim();
+
+/** English names in the world list → Swiss local names. */
+const SWISS_EXONYMS = { geneva: 'geneve', lucerne: 'luzern', biel: 'biel bienne', berne: 'bern', 'saint gallen': 'st gallen' };
+
+/**
+ * Every Swiss locality with a postcode. Post-office variants ("Lausanne 26",
+ * "Basel PF OC") are merged into their locality, which keeps all its postcodes.
+ */
+function swissLocalities() {
+  const require = createRequire(import.meta.url);
+  const entries = require('swiss-zipcodes/src/data_geonames.json');
+  const groups = [];
+  for (const e of entries) {
+    const name = e.place
+      .replace(/\s+\d+(\s.*)?$/, '')
+      .replace(BUSINESS_SUFFIX, '')
+      .replace(/(\s+[A-Z]{2,})+$/, '')
+      .trim();
+    const lat = Number(e.latitude);
+    const lng = Number(e.longitude);
+    if (!name || !Number.isFinite(lat) || !Number.isFinite(lng) || !CANTONS[e.state_code]) continue;
+    // Same name in the same canton within 20 km is the same locality.
+    let g = groups.find((x) => x.name === name && x.canton === e.state_code && km(x.points[0][0], x.points[0][1], lat, lng) < 20);
+    if (!g) {
+      g = { name, canton: e.state_code, points: [], zips: new Set() };
+      groups.push(g);
+    }
+    g.points.push([lat, lng, e.place === name]);
+    g.zips.add(e.zipcode);
+  }
+  // Place each locality at its most common coordinate, preferring entries named exactly like it.
+  for (const g of groups) {
+    const exact = g.points.filter((p) => p[2]);
+    const counts = new Map();
+    for (const [lat, lng] of exact.length ? exact : g.points) {
+      const key = `${lat},${lng}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const [best] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+    [g.lat, g.lng] = best.split(',').map(Number);
+  }
+  // A few postcodes of a city sit just across a canton border (Basel 4040 in
+  // Basel-Landschaft): fold them into the city rather than listing it twice.
+  groups.sort((a, b) => b.zips.size - a.zips.size);
+  for (let i = groups.length - 1; i >= 0; i--) {
+    const g = groups[i];
+    const main = groups.find((x, j) => j < i && x.name === g.name && km(x.lat, x.lng, g.lat, g.lng) < 10);
+    if (main) {
+      g.zips.forEach((z) => main.zips.add(z));
+      groups.splice(i, 1);
+    }
+  }
+  return groups;
+}
+
 async function buildCities() {
   const require = createRequire(import.meta.url);
   const cities = require('city-timezones/data/cityMap.json');
+  const swiss = swissLocalities();
+  const unmatched = [];
   const seen = new Set();
   const rows = [];
   for (const c of cities) {
     if (!c.timezone || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue;
+    if (c.iso2 === 'CH') {
+      // Replaced by the complete Swiss list; hand its population, for ranking, to the
+      // nearby locality of the same name (the one with most postcodes if several).
+      const wanted = SWISS_EXONYMS[foldName(c.city)] ?? foldName(c.city);
+      const target = swiss
+        .filter((g) => foldName(g.name) === wanted && km(c.lat, c.lng, g.lat, g.lng) < 25)
+        .sort((a, b) => b.zips.size - a.zips.size)[0];
+      if (target) target.pop = Math.max(target.pop ?? 0, Math.round(c.pop ?? 0));
+      else unmatched.push(c.city);
+      continue;
+    }
     const key = `${c.city}|${c.iso2}|${c.lat.toFixed(1)}|${c.lng.toFixed(1)}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    // [name, country code, country, region, lat, lng, timezone, population]
-    rows.push([
-      c.city,
-      c.iso2,
-      c.country,
-      c.province ?? '',
-      Math.round(c.lat * 1e4) / 1e4,
-      Math.round(c.lng * 1e4) / 1e4,
-      c.timezone,
-      Math.round(c.pop ?? 0),
-    ]);
+    // [name, country code, country, region, lat, lng, timezone, population, postcodes?]
+    rows.push([c.city, c.iso2, c.country, c.province ?? '', round4(c.lat), round4(c.lng), c.timezone, Math.round(c.pop ?? 0)]);
+  }
+  for (const g of swiss) {
+    const zips = [...g.zips].sort();
+    // Localities without a known population rank by their number of postcodes.
+    rows.push([g.name, 'CH', 'Switzerland', CANTONS[g.canton], round4(g.lat), round4(g.lng), 'Europe/Zurich', g.pop ?? zips.length, zips.join(' ')]);
   }
   rows.sort((a, b) => b[7] - a[7]);
   await writeJson(join(root, 'public/data/cities.json'), rows);
-  console.log(`✓ cities (${rows.length})`);
+  console.log(`✓ cities (${rows.length}, of which ${swiss.length} in Switzerland)`);
+  if (unmatched.length) console.log(`  Swiss cities ranked by postcodes only: ${unmatched.join(', ')}`);
 }
 
 async function buildHadith() {
