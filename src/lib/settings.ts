@@ -48,6 +48,8 @@ export interface Settings {
     sound: boolean;
   };
   tasbihVibrate: boolean;
+  /** Illustrated stories: narration voice, verse recitation, speech rate. */
+  stories: { voice: boolean; recitation: boolean; rate: number };
   onboarded: boolean;
 }
 
@@ -68,6 +70,7 @@ export const DEFAULT_SETTINGS: Settings = {
     sound: true,
   },
   tasbihVibrate: true,
+  stories: { voice: true, recitation: true, rate: 1 },
   onboarded: false,
 };
 

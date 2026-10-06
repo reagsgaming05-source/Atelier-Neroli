@@ -31,7 +31,7 @@ export function Learn() {
             </span>
             <strong>Histoires des prophètes</strong>
             <span>
-              {PROPHET_STORIES.length} récits du Coran · {storiesRead} lu{storiesRead > 1 ? 's' : ''}
+              {PROPHET_STORIES.length} séries illustrées et racontées · {storiesRead} ouverte{storiesRead > 1 ? 's' : ''}
             </span>
           </a>
           <a class="tile" href="#/histoires">

@@ -126,8 +126,8 @@ export function Home() {
           <span class="tile-icon gold">
             <Icon name="scroll" />
           </span>
-          <strong>Histoires</strong>
-          <span>Les prophètes et les récits de la Sunna</span>
+          <strong>Histoires en séries</strong>
+          <span>Illustrées et racontées à voix haute</span>
         </a>
         <a class="tile" href="#/quiz">
           <span class="tile-icon">

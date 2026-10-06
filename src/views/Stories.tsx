@@ -1,62 +1,140 @@
 import { useEffect, useState } from 'preact/hooks';
 import { Icon } from '../components/Icon';
 import { QuizRunner } from '../components/QuizRunner';
+import { SceneArt } from '../components/SceneArt';
+import { getSeries } from '../data/series';
 import { SectionTitle, Spinner, TopBar, share } from '../components/ui';
 import { PROPHET_STORIES } from '../data/prophets';
 import { SUNNAH_STORIES } from '../data/sunnah-stories';
 import { SURAHS } from '../data/surahs';
-import type { ProphetStory, QuranPassage, SunnahStory } from '../data/types';
+import type { ProphetStory, QuranPassage, Scene, SunnahStory } from '../data/types';
 import { toArabicDigits } from '../lib/hijri';
 import { fromBank } from '../lib/quiz';
 import { TRANSLATIONS, loadSurah } from '../lib/quran';
+import { navigate } from '../lib/router';
 import { learnStore, settingsStore, useStore } from '../lib/settings';
 
-export function StoriesIndex() {
+const FALLBACK_COVER: Scene = { text: '', sky: 'night', ground: 'desert', motifs: ['crescent'] };
+
+/** First scene of a story's series, used as its poster. */
+function cover(storyId: string): Scene {
+  return getSeries(storyId)?.episodes[0]?.scenes[0] ?? FALLBACK_COVER;
+}
+
+function watchedCount(storyId: string, read: Record<string, number>): number {
+  const series = getSeries(storyId);
+  return series ? series.episodes.filter((_, i) => read[`ep-${storyId}-${i}`]).length : 0;
+}
+
+function SeriesCard({ id, href, title, ar, sub }: { id: string; href: string; title: string; ar?: string; sub: string }) {
   const [learn] = useStore(learnStore);
+  const series = getSeries(id);
+  const watched = watchedCount(id, learn.read);
+  const done = series && watched === series.episodes.length;
+  const c = cover(id);
+  return (
+    <a class="series-card" href={href}>
+      <SceneArt sky={c.sky} ground={c.ground} motifs={c.motifs} still label={title} />
+      {ar && (
+        <span class="ar" lang="ar">
+          {ar}
+        </span>
+      )}
+      {done && (
+        <span class="watched" aria-label="Regardée">
+          <Icon name="check" size={16} />
+        </span>
+      )}
+      <span class="info">
+        <b>{title}</b>
+        <small>
+          {series ? (series.episodes.length > 1 ? `${series.episodes.length} épisodes` : '1 épisode') : sub}
+          {series && watched > 0 && !done ? ` · ${watched} vu${watched > 1 ? 's' : ''}` : ''}
+        </small>
+      </span>
+    </a>
+  );
+}
+
+export function StoriesIndex() {
   return (
     <>
-      <TopBar title="Histoires" subtitle="قَصَص" backTo="/apprendre" />
+      <TopBar title="Histoires" subtitle="Des séries illustrées et racontées" backTo="/apprendre" />
       <div class="page">
         <p class="muted" style={{ margin: '0 4px 6px' }}>
           « Dans leurs récits il y a certes une leçon pour les gens doués d’intelligence. » (Coran 12:111)
         </p>
         <SectionTitle>Les prophètes et les récits du Coran</SectionTitle>
-        <div class="list">
-          {PROPHET_STORIES.map((s, i) => (
-            <a class="list-item" href={`#/histoires/coran/${s.id}`} key={s.id}>
-              <span class="badge star">{i + 1}</span>
-              <div class="grow">
-                <div class="title">{s.name}</div>
-                <div class="subtitle">
-                  {s.title}
-                  {learn.read[`story-${s.id}`] ? ' · lu' : ''}
-                </div>
-              </div>
-              <span class="surah-name-ar" style={{ fontSize: '1.05rem', maxWidth: '38%', textAlign: 'right' }}>
-                {s.nameAr}
-              </span>
-            </a>
+        <div class="series-grid">
+          {PROPHET_STORIES.map((s) => (
+            <SeriesCard key={s.id} id={s.id} href={`#/histoires/coran/${s.id}`} title={s.name} ar={s.nameAr.split(' ')[0]} sub={s.title} />
           ))}
         </div>
         <SectionTitle>Récits de la Sunna</SectionTitle>
-        <div class="list">
+        <div class="series-grid">
           {SUNNAH_STORIES.map((s) => (
-            <a class="list-item" href={`#/histoires/sunna/${s.id}`} key={s.id}>
-              <span class="badge">
-                <Icon name="scroll" size={20} />
-              </span>
-              <div class="grow">
-                <div class="title">{s.title}</div>
-                <div class="subtitle">
-                  {collectionLabel(s.hadith.collection)} {s.hadith.number.split('.')[0]}
-                  {learn.read[`sunna-${s.id}`] ? ' · lu' : ''}
-                </div>
-              </div>
-              <Icon name="chevron" size={18} />
-            </a>
+            <SeriesCard key={s.id} id={s.id} href={`#/histoires/sunna/${s.id}`} title={s.title} sub={`${collectionLabel(s.hadith.collection)} ${s.hadith.number.split('.')[0]}`} />
           ))}
         </div>
+        <p class="small muted" style={{ margin: '14px 4px' }}>
+          Les illustrations ne représentent jamais les prophètes ni aucune personne : seulement des lieux, des objets et des symboles.
+        </p>
       </div>
+    </>
+  );
+}
+
+/** Poster, "watch" button and episode list of a story's series. */
+function SeriesHeader({ id, title, ar, subtitle }: { id: string; title: string; ar?: string; subtitle: string }) {
+  const [learn] = useStore(learnStore);
+  const series = getSeries(id);
+  const c = cover(id);
+  const firstUnwatched = series ? series.episodes.findIndex((_, i) => !learn.read[`ep-${id}-${i}`]) : -1;
+  const resume = firstUnwatched < 0 ? 0 : firstUnwatched;
+  return (
+    <>
+      <div class="series-hero">
+        <SceneArt sky={c.sky} ground={c.ground} motifs={c.motifs} label={title} />
+        <div class="overlay">
+          {ar && (
+            <div class="ar" lang="ar">
+              {ar}
+            </div>
+          )}
+          <h2>{title}</h2>
+          <div style={{ opacity: 0.85 }}>{subtitle}</div>
+          {series && (
+            <button class="btn" onClick={() => navigate(`/serie/${id}/${resume + 1}`)}>
+              <Icon name="play" size={18} />
+              {resume > 0 ? `Reprendre · épisode ${resume + 1}` : series.episodes.length > 1 ? 'Regarder la série' : 'Regarder l’histoire'}
+            </button>
+          )}
+        </div>
+      </div>
+      {series && series.episodes.length > 1 && (
+        <>
+          <SectionTitle>{series.episodes.length} épisodes</SectionTitle>
+          <div class="list">
+            {series.episodes.map((ep, i) => {
+              const s = ep.scenes[0];
+              return (
+                <a class="episode-row" href={`#/serie/${id}/${i + 1}`} key={i}>
+                  <span class="thumb">
+                    <SceneArt sky={s.sky} ground={s.ground} motifs={s.motifs} still label={ep.title} />
+                  </span>
+                  <span class="grow">
+                    <span class="small muted" style={{ display: 'block' }}>
+                      Épisode {i + 1} · {ep.scenes.length} scènes
+                    </span>
+                    <span style={{ fontWeight: 650 }}>{ep.title}</span>
+                  </span>
+                  {learn.read[`ep-${id}-${i}`] ? <Icon name="check" size={20} style={{ color: 'var(--primary)' }} /> : <Icon name="play" size={20} />}
+                </a>
+              );
+            })}
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -201,13 +279,8 @@ export function ProphetStoryView({ id }: { id: string }) {
     <>
       <TopBar title={story.name} subtitle={story.title} backTo="/histoires" />
       <div class="page">
-        <div class="story-hero">
-          <div class="ar" lang="ar">
-            {story.nameAr}
-          </div>
-          <h2>{story.name}</h2>
-          <p>{story.title}</p>
-        </div>
+        <SeriesHeader id={story.id} title={story.name} ar={story.nameAr} subtitle={story.title} />
+        <SectionTitle>Le récit</SectionTitle>
         <div class="card prose">
           {story.summary.map((p, i) => (
             <p key={i}>{p}</p>
@@ -234,11 +307,8 @@ export function SunnahStoryView({ id }: { id: string }) {
     <>
       <TopBar title={story.title} subtitle={ref} backTo="/histoires" />
       <div class="page">
-        <div class="story-hero">
-          <Icon name="scroll" size={30} />
-          <h2>{story.title}</h2>
-          <p>Récit rapporté dans le Ṣaḥīḥ de {collectionLabel(story.hadith.collection)}</p>
-        </div>
+        <SeriesHeader id={story.id} title={story.title} subtitle={`Récit rapporté dans le Ṣaḥīḥ de ${collectionLabel(story.hadith.collection)}`} />
+        <SectionTitle>Introduction</SectionTitle>
         <div class="card prose">
           <p>{story.intro}</p>
         </div>
@@ -260,6 +330,9 @@ export function SunnahStoryView({ id }: { id: string }) {
         </article>
         <Lessons lessons={story.lessons} />
         <StoryQuiz id={`sunna-${story.id}`} bank={story.quiz} />
+        <p class="small muted" style={{ marginTop: '10px' }}>
+          La version illustrée raconte ce hadith avec des mots simples ; le texte exact est ci-dessus.
+        </p>
         <NextLink list={SUNNAH_STORIES} current={story.id} base="sunna" label={(s: SunnahStory) => s.title} />
         <p class="small muted" style={{ marginTop: '14px' }}>
           Traduction française du hadith : projet hadith-api (fawazahmed0).

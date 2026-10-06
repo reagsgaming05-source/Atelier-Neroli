@@ -34,6 +34,7 @@ const StoriesIndex = lazy(() => import('./views/Stories').then((m) => ({ default
 const ProphetStoryView = lazy(() => import('./views/Stories').then((m) => ({ default: m.ProphetStoryView })));
 const SunnahStoryView = lazy(() => import('./views/Stories').then((m) => ({ default: m.SunnahStoryView })));
 const Quiz = lazy(() => import('./views/Quiz').then((m) => ({ default: m.Quiz })));
+const Player = lazy(() => import('./views/Player').then((m) => ({ default: m.Player })));
 
 export function App() {
   const [settings] = useStore(settingsStore);
@@ -132,6 +133,9 @@ export function App() {
     }
     case 'quiz':
       page = <Quiz />;
+      break;
+    case 'serie':
+      page = <Player key={`${param}-${param2}`} storyId={param ?? ''} episode={Math.max(0, (Number(param2) || 1) - 1)} />;
       break;
     case 'journee':
       page = <Goals />;

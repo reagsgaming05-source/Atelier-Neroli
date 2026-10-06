@@ -34,7 +34,7 @@ const TABS: { href: string; label: string; icon: IconName; match: string[] }[] =
   { href: '#/', label: 'Accueil', icon: 'home', match: [''] },
   { href: '#/prieres', label: 'Prières', icon: 'clock', match: ['prieres', 'suivi'] },
   { href: '#/coran', label: 'Coran', icon: 'book', match: ['coran'] },
-  { href: '#/apprendre', label: 'Apprendre', icon: 'learn', match: ['apprendre', 'histoires', 'hadiths', 'quiz', 'noms'] },
+  { href: '#/apprendre', label: 'Apprendre', icon: 'learn', match: ['apprendre', 'histoires', 'hadiths', 'quiz', 'noms', 'serie'] },
   {
     href: '#/plus',
     label: 'Plus',

@@ -101,3 +101,53 @@ export interface LearnGuide {
   sections: { title: string; steps: LearnStep[] }[];
   notes?: string[];
 }
+
+/** Time of day / weather of an illustrated scene. */
+export type Sky = 'dawn' | 'day' | 'dusk' | 'night' | 'storm';
+
+/** Landscape of an illustrated scene. */
+export type Ground = 'desert' | 'sea' | 'mountains' | 'valley' | 'garden' | 'city' | 'river' | 'plain' | 'cave' | 'none';
+
+/**
+ * Elements drawn in a scene. No people, prophets or angels are ever drawn:
+ * only places, objects, animals and symbols.
+ */
+export const MOTIFS = [
+  // sky
+  'sun', 'moon', 'crescent', 'stars', 'bright-star', 'clouds', 'dark-clouds', 'rain', 'lightning', 'wind',
+  // water
+  'flood', 'sea-split', 'ark', 'boat', 'big-fish', 'spring',
+  // light and fire
+  'light', 'fire', 'lamp',
+  // plants
+  'palm', 'palms', 'tree', 'withered', 'wheat', 'gourd', 'dates',
+  // buildings and places
+  'kaaba', 'tent', 'house', 'palace', 'tower', 'ruins', 'pillars', 'wall', 'prison', 'well', 'cave-mouth', 'throne',
+  // animals
+  'camel', 'birds', 'hoopoe', 'ants', 'sheep', 'elephant', 'cows',
+  // objects and symbols
+  'staff', 'tablets', 'book', 'scroll', 'coins', 'gold', 'shirt', 'cradle', 'table', 'stones', 'path', 'footprints', 'key',
+] as const;
+
+export type Motif = (typeof MOTIFS)[number];
+
+export interface Scene {
+  /** Narration read aloud: 1 to 3 short sentences, no references or brackets. */
+  text: string;
+  sky: Sky;
+  ground: Ground;
+  motifs?: Motif[];
+  /** A verse shown in Arabic with its translation, then recited. */
+  verse?: { surah: number; verse: number };
+}
+
+export interface Episode {
+  title: string;
+  scenes: Scene[];
+}
+
+/** The illustrated, narrated version of a story: one episode per Quran passage, or a single episode for a hadith story. */
+export interface Series {
+  storyId: string;
+  episodes: Episode[];
+}

@@ -1707,3 +1707,424 @@ a.goal-title::after {
   height: 1px;
   background: var(--border);
 }
+
+/* ---------- Illustrated scenes ---------- */
+
+.scene-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.scene-art .anim-twinkle { animation: twinkle 3.2s ease-in-out infinite; }
+.scene-art .anim-pulse { animation: pulse 4s ease-in-out infinite; }
+.scene-art .anim-drift { animation: drift 30s linear infinite alternate; }
+.scene-art .anim-drift-slow { animation: drift 50s linear infinite alternate; }
+.scene-art .anim-rain { animation: rain 0.7s linear infinite; }
+.scene-art .anim-flash { animation: flash 5s steps(1) infinite; }
+.scene-art .anim-wind { animation: wind 6s ease-in-out infinite; }
+.scene-art .anim-wave { animation: wave 5s ease-in-out infinite alternate; }
+.scene-art .anim-wave-slow { animation: wave 8s ease-in-out infinite alternate-reverse; }
+.scene-art .anim-bob { animation: bob 4s ease-in-out infinite; }
+.scene-art .anim-swim { animation: swim 9s ease-in-out infinite alternate; }
+.scene-art .anim-drops { animation: bob 1.6s ease-in-out infinite; }
+.scene-art .anim-rays { animation: rays 9s ease-in-out infinite alternate; }
+.scene-art .anim-flicker { animation: flicker 0.9s ease-in-out infinite alternate; }
+.scene-art .anim-sway { animation: sway 5s ease-in-out infinite alternate; }
+.scene-art .anim-fall { animation: fall 3.5s linear infinite; }
+.scene-art .anim-fly { animation: fly 14s ease-in-out infinite alternate; }
+.scene-art .anim-march { animation: march 3s ease-in-out infinite alternate; }
+.scene-art .anim-shimmer { animation: pulse 6s ease-in-out infinite; }
+
+.scene-art.still * {
+  animation: none !important;
+}
+
+@keyframes twinkle { 50% { opacity: 0.25; } }
+@keyframes pulse { 50% { transform: scale(1.06); opacity: 0.85; } }
+@keyframes drift { to { transform: translateX(26px); } }
+@keyframes rain { to { transform: translate(-6px, 24px); } }
+@keyframes flash { 0%, 92% { opacity: 0; } 93%, 96% { opacity: 1; } 97% { opacity: 0; } }
+@keyframes wind { 50% { transform: translateX(14px); opacity: 0.25; } }
+@keyframes wave { to { transform: translateX(-18px); } }
+@keyframes bob { 50% { transform: translateY(4px) rotate(0.6deg); } }
+@keyframes swim { to { transform: translateX(24px); } }
+@keyframes rays { to { transform: rotate(4deg); opacity: 0.8; } }
+@keyframes flicker { to { transform: scale(1.04, 0.95); } }
+@keyframes sway { to { transform: rotate(2deg); } }
+@keyframes fall { from { transform: translateY(-30px); opacity: 0; } 15% { opacity: 1; } to { transform: translateY(70px); opacity: 0; } }
+@keyframes fly { to { transform: translate(40px, -10px); } }
+@keyframes march { to { transform: translateX(10px); } }
+
+/* ---------- Story player ---------- */
+
+.player-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: #050a14;
+  color: #f4efe1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.player-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.player-stage .kenburns {
+  position: absolute;
+  inset: 0;
+  animation: kenburns 16s ease-out forwards;
+}
+
+.player-stage .kenburns.reverse {
+  animation-name: kenburns-out;
+}
+
+.player-stage .fade-in {
+  animation: fade-in 0.9s ease both;
+}
+
+@keyframes kenburns { from { transform: scale(1.02); } to { transform: scale(1.12) translateY(-2%); } }
+@keyframes kenburns-out { from { transform: scale(1.12) translateY(-2%); } to { transform: scale(1.02); } }
+@keyframes fade-in { from { opacity: 0; } }
+
+.player-top {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 2;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 24px;
+  background: linear-gradient(180deg, rgb(0 0 0 / 55%), transparent);
+}
+
+.player-bars {
+  display: flex;
+  gap: 4px;
+}
+
+.player-bars span {
+  flex: 1;
+  height: 3px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 28%);
+  overflow: hidden;
+}
+
+.player-bars span i {
+  display: block;
+  height: 100%;
+  background: #fff;
+  transition: width 0.25s linear;
+}
+
+.player-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.player-title .grow {
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.player-title b {
+  display: block;
+  font-size: 1rem;
+}
+
+.player-screen .icon-btn {
+  color: #f4efe1;
+}
+
+.player-tap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.player-tap button {
+  border: 0;
+  background: transparent;
+}
+
+.player-caption {
+  position: relative;
+  z-index: 2;
+  padding: 18px 20px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  background: linear-gradient(180deg, #0b1424, #050a14);
+  min-height: 34%;
+  max-height: 52%;
+  overflow-y: auto;
+}
+
+.player-caption .narration {
+  font-size: 1.18rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.player-caption .verse-ar {
+  margin-top: 12px;
+  font-family: var(--font-ar);
+  direction: rtl;
+  text-align: right;
+  font-size: 1.6rem;
+  line-height: 2;
+  color: #e9c977;
+}
+
+.player-caption .verse-fr {
+  margin-top: 6px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #cfd8d2;
+}
+
+.player-caption .verse-ref {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: #8fa39a;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 14px;
+}
+
+.player-controls .play {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 0;
+  background: #d9b45a;
+  color: #1b1a12;
+  display: grid;
+  place-items: center;
+}
+
+.player-controls .toggle {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 25%);
+  background: transparent;
+  color: #f4efe1;
+  font-size: 0.8rem;
+}
+
+.player-controls .toggle[aria-pressed='false'] {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.player-start {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 35%);
+}
+
+.player-start button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-weight: 650;
+  font-size: 1.05rem;
+}
+
+.player-start button span:first-child {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: #d9b45a;
+  color: #1b1a12;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 40%);
+}
+
+.player-end {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: rgb(5 10 20 / 82%);
+  text-align: center;
+}
+
+.player-end h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  text-wrap: balance;
+}
+
+/* Series cards */
+
+.series-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 560px) {
+  .series-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.series-card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius);
+  aspect-ratio: 3 / 4;
+  max-width: 100%;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+  background: #0b1424;
+}
+
+.series-card .scene-art {
+  position: absolute;
+  inset: 0;
+}
+
+.series-card .info {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 36px 12px 12px;
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 75%));
+}
+
+.series-card .info b {
+  display: block;
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.series-card .info small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.series-card .ar {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #f3dc9b;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 60%);
+}
+
+.series-card .watched {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #d9b45a;
+  color: #1b1a12;
+}
+
+.episode-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  text-decoration: none;
+}
+
+.episode-row + .episode-row {
+  border-top: 1px solid var(--border);
+}
+
+.episode-row .thumb {
+  position: relative;
+  width: 72px;
+  height: 86px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.series-hero {
+  position: relative;
+  overflow: hidden;
+  margin: 4px 0 16px;
+  border-radius: var(--radius);
+  aspect-ratio: 4 / 3;
+  max-width: 100%;
+  max-height: 60vh;
+  width: 100%;
+}
+
+.series-hero .scene-art {
+  position: absolute;
+  inset: 0;
+}
+
+.series-hero .overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 18px;
+  background: linear-gradient(180deg, transparent 30%, rgb(0 0 0 / 70%));
+  color: #fff;
+}
+
+.series-hero .overlay .ar {
+  font-size: 1.6rem;
+  line-height: 1.5;
+  color: #f3dc9b;
+}
+
+.series-hero .overlay h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  text-wrap: balance;
+}
+
+.series-hero .overlay .btn {
+  align-self: flex-start;
+  margin-top: 10px;
+  background: #d9b45a;
+  color: #1b1a12;
+}
