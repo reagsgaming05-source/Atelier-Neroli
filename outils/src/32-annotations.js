@@ -111,17 +111,50 @@
     if (a.type === 'champ') {
       const gEl = document.createElementNS(SVGNS, 'g');
       gEl.setAttribute('data-ann', a.id);
+      const genre = genreDeChamp(a);
+      const fond = a.fond || '#F2F6FC', bord = a.bordure || '#7A8899';
+      const trait = (n) => { n.setAttribute('fill', 'none'); n.setAttribute('stroke', bord); n.setAttribute('stroke-width', 1.4); n.setAttribute('stroke-linecap', 'round'); n.setAttribute('stroke-linejoin', 'round'); n.setAttribute('vector-effect', 'non-scaling-stroke'); return n; };
+      if (genre === 'radio') {
+        const c = document.createElementNS(SVGNS, 'ellipse');
+        c.setAttribute('cx', a.x + a.w / 2); c.setAttribute('cy', a.y + a.h / 2); c.setAttribute('rx', Math.max(0, a.w / 2)); c.setAttribute('ry', Math.max(0, a.h / 2));
+        c.setAttribute('fill', fond); c.setAttribute('stroke', bord); c.setAttribute('stroke-width', 1); c.setAttribute('vector-effect', 'non-scaling-stroke');
+        gEl.appendChild(c);
+        if (a.valeur) {
+          const pt = document.createElementNS(SVGNS, 'ellipse');
+          pt.setAttribute('cx', a.x + a.w / 2); pt.setAttribute('cy', a.y + a.h / 2); pt.setAttribute('rx', Math.max(0, a.w / 4)); pt.setAttribute('ry', Math.max(0, a.h / 4));
+          pt.setAttribute('fill', a.encre || '#111111');
+          gEl.appendChild(pt);
+        }
+        return gEl;
+      }
       const r = document.createElementNS(SVGNS, 'rect');
       r.setAttribute('x', a.x); r.setAttribute('y', a.y);
       r.setAttribute('width', Math.max(0, a.w)); r.setAttribute('height', Math.max(0, a.h));
-      r.setAttribute('fill', a.fond || '#F2F6FC');
-      r.setAttribute('stroke', a.bordure || '#7A8899');
+      r.setAttribute('fill', fond);
+      r.setAttribute('stroke', bord);
       r.setAttribute('stroke-width', 1);
       r.setAttribute('vector-effect', 'non-scaling-stroke');
+      if (genre === 'signature') r.setAttribute('stroke-dasharray', '4 3');
       gEl.appendChild(r);
+      if (genre === 'case') {
+        if (a.valeur) {
+          const v = document.createElementNS(SVGNS, 'path');
+          v.setAttribute('d', 'M' + (a.x + a.w * 0.2) + ' ' + (a.y + a.h * 0.55) + 'L' + (a.x + a.w * 0.42) + ' ' + (a.y + a.h * 0.76) + 'L' + (a.x + a.w * 0.8) + ' ' + (a.y + a.h * 0.25));
+          gEl.appendChild(trait(v));
+        }
+        return gEl;
+      }
+      if (genre === 'liste') {
+        const f = document.createElementNS(SVGNS, 'path');
+        const cx = a.x + a.w - Math.min(12, a.w / 3), cy = a.y + a.h / 2, d = Math.min(3.5, a.h / 5);
+        f.setAttribute('d', 'M' + (cx - d) + ' ' + (cy - d / 2) + 'L' + (cx + d) + ' ' + (cy - d / 2) + 'L' + cx + ' ' + (cy + d) + 'Z');
+        f.setAttribute('fill', bord);
+        gEl.appendChild(f);
+      }
       const corps = champTaille(a);
-      const dedans = a.valeur || '';
-      const gris = !dedans && !!(a.libelle || '').trim();
+      const dedans = genre === 'signature' ? '' : (a.valeur || '');
+      const marque = genre === 'signature' ? 'Signature' : (a.libelle || '').trim();
+      const gris = !dedans && !!marque;
       if (dedans || gris) {
         const t = document.createElementNS(SVGNS, 'text');
         t.setAttribute('x', a.x + 2.5);
@@ -130,7 +163,7 @@
         t.setAttribute('font-family', 'Helvetica, Arial, sans-serif');
         t.setAttribute('fill', gris ? '#8A98A8' : (a.encre || '#111111'));
         t.setAttribute('xml:space', 'preserve');
-        t.textContent = dedans || a.libelle;
+        t.textContent = dedans || marque;
         gEl.appendChild(t);
       }
       return gEl;

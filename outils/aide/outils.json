@@ -220,6 +220,19 @@
    "attention": "Un formulaire signé est modifié par le remplissage : sa signature n'est plus valable."
   },
   {
+   "id": "champs-auto",
+   "nom": "Reconnaître les champs",
+   "groupe": "modifier",
+   "quoi": "Repère dans un formulaire « à plat » (une page sans champs) les lignes, les pointillés, les cadres vides et les cases à cocher, et propose d'y poser de vrais champs à remplir.",
+   "etapes": [
+    "Choisissez les pages à parcourir : la liste des champs probables s'affiche, avec la page et l'intitulé trouvé à côté.",
+    "Décochez ce qui n'est pas un champ (les cas incertains sont décochés d'avance).",
+    "Cliquez « Ajouter les champs » : ils se posent sur la page ; ouvrez l'éditeur de page pour les retoucher."
+   ],
+   "effet": "Rien n'est posé avant votre accord. Les champs ajoutés sont écrits dans le PDF à l'export ; Ctrl+Z les retire d'un coup.",
+   "attention": "La reconnaissance lit le dessin de la page : un scan (une image) n'a ni lignes ni cadres à lire, et ses champs se tracent à la main. Les positions sont à contrôler : un pointillé tapé au clavier est mesuré par approximation."
+  },
+  {
    "id": "serie",
    "nom": "Remplir en série (CSV)",
    "groupe": "modifier",

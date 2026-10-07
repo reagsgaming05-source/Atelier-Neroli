@@ -314,38 +314,92 @@
   // Les champs à remplir sont de vraies cases de formulaire PDF : elles
   // restent renseignables dans Acrobat, dans un navigateur, partout. Elles
   // sont posées même sur une page convertie en image : ce sont des objets à
-  // part, qui se posent par-dessus.
-  async function poserChamps(doc, page, p, fonts, pris) {
+  // part, qui se posent par-dessus. ctx : { pris, radios } — les noms déjà
+  // pris dans le document, et les groupes de boutons radio déjà créés (un
+  // groupe peut s'étendre sur plusieurs pages).
+  async function poserChamps(doc, page, p, fonts, ctx) {
     const champs = (p.ann || []).filter(a => a.type === 'champ' && a.w > 2 && a.h > 2);
     if (!champs.length) return;
     const g = pageGeom(p);
     const form = doc.getForm();
     const police = await getFont(doc, fonts, 'Helvetica', false, false);
+    const pris = ctx.pris;
     for (const a of champs) {
       try {
         const r = rectToUser({ x: a.x, y: a.y, w: a.w, h: a.h }, g);
         if (r.w <= 0 || r.h <= 0) continue;
-        const nomChamp = champNom(a, pris);
-        const f = form.createTextField(nomChamp);
-        // L'info-bulle (/TU) est ce qu'un lecteur d'écran annonce pour le champ : à défaut d'autre
-        // libellé, le nom du champ plutôt que rien.
-        try { f.acroField.dict.set(PDFLib.PDFName.of('TU'), PDFLib.PDFHexString.fromText(String(a.libelle || nomChamp))); } catch (e) { signaler('Description du champ', e, 'info'); }
-        if (a.multi) f.enableMultiline();
-        if (a.valeur) f.setText(String(a.valeur));
-        f.addToPage(page, {
-          x: r.x, y: r.y, width: r.w, height: r.h, font: police,
+        const genre = genreDeChamp(a);
+        const aspect = {
+          x: r.x, y: r.y, width: r.w, height: r.h,
           textColor: pdfColor(a.encre || '#111111'),
           backgroundColor: a.fond ? pdfColor(a.fond) : undefined,
           borderColor: a.bordure ? pdfColor(a.bordure) : undefined,
           borderWidth: a.bordure ? 1 : 0,
           rotate: PDFLib.degrees(g.total),
-        });
+        };
+        // L'info-bulle (/TU) est ce qu'un lecteur d'écran annonce pour le champ : la description, à défaut l'intitulé, à défaut le nom.
+        const infobulle = (f, nom) => { try { f.acroField.dict.set(PDFLib.PDFName.of('TU'), PDFLib.PDFHexString.fromText(String(a.description || a.libelle || nom))); } catch (e) { signaler('Description du champ', e, 'info'); } };
+        const attributs = f => { if (a.obligatoire) f.enableRequired(); if (a.lecture) f.enableReadOnly(); };
+        if (genre === 'signature') {
+          // pdf-lib ne crée pas de champ de signature : un champ /Sig vide, rattaché à la page et au formulaire.
+          const nom = champNom(a, pris);
+          const ctxPdf = doc.context;
+          const dict = ctxPdf.obj({
+            Type: 'Annot', Subtype: 'Widget', FT: 'Sig', T: PDFLib.PDFHexString.fromText(nom),
+            TU: PDFLib.PDFHexString.fromText(String(a.description || a.libelle || nom)),
+            Rect: [r.x, r.y, r.x + r.w, r.y + r.h], F: 4, P: page.ref,
+          });
+          const ref = ctxPdf.register(dict);
+          page.node.addAnnot(ref);
+          const acro = form.acroForm;
+          acro.addField(ref);
+          continue;
+        }
+        if (genre === 'case') {
+          const nomChamp = champNom(a, pris);
+          const f = form.createCheckBox(nomChamp);
+          infobulle(f, nomChamp); attributs(f);
+          f.addToPage(page, aspect);
+          if (a.valeur) f.check();
+          continue;
+        }
+        if (genre === 'radio') {
+          const groupe = String(a.groupe || a.libelle || 'Choix').trim() || 'Choix';
+          let rg = ctx.radios.get(groupe);
+          if (!rg) {
+            rg = form.createRadioGroup(champNom({ libelle: groupe }, pris));
+            infobulle(rg, groupe); attributs(rg);
+            ctx.radios.set(groupe, rg);
+          }
+          const choix = String(a.choix || a.libelle || (tr('Choix') + ' ' + (rg.getOptions().length + 1))).trim();
+          let nomChoix = choix, n = 1;
+          while (rg.getOptions().indexOf(nomChoix) >= 0) { n++; nomChoix = choix + ' ' + n; }
+          rg.addOptionToPage(nomChoix, page, aspect);
+          if (a.valeur) rg.select(nomChoix);
+          continue;
+        }
+        const nomChamp = champNom(a, pris);
+        let f;
+        if (genre === 'liste') {
+          f = form.createDropdown(nomChamp);
+          const choix = optionsDeChamp(a);
+          if (choix.length) f.addOptions(choix);
+          if (a.valeur && choix.indexOf(a.valeur) >= 0) f.select(a.valeur);
+        } else {
+          f = form.createTextField(nomChamp);
+          if (a.multi) f.enableMultiline();
+          if (a.valeur) f.setText(String(a.valeur));
+        }
+        infobulle(f, nomChamp); attributs(f);
+        f.addToPage(page, Object.assign({ font: police }, aspect));
         // Après addToPage, jamais avant : c'est lui qui pose l'entrée /DA que
         // setFontSize modifie. Avant, la bibliothèque levait MissingDAEntryError,
         // que le catch avalait — et le champ n'était pas créé, sans un mot.
         f.setFontSize(champTaille(a));
       } catch (e) { signaler('Champ de formulaire', e, 'erreur'); }
     }
+    // Un clavier qui suit les champs dans l'ordre de la page : ni de gauche à droite sur toute la feuille, ni dans le désordre de la création.
+    try { page.node.set(PDFLib.PDFName.of('Tabs'), PDFLib.PDFName.of('S')); } catch (e) { signaler('Ordre de tabulation', e, 'info'); }
   }
 
   // Les pages que désigne une plage « 3-7, 12 » (numéros du document) : null pour « toutes » (champ vide).

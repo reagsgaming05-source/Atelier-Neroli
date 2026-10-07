@@ -191,7 +191,7 @@
     let retire = false;
     const ote = (d, k) => { const n = PDFName.of(k); if (d.has(n)) { d.delete(n); retire = true; } };
 
-    // 1. Signatures : plus de /Perms, plus de /SigFlags, plus de champ signé.
+    // 1. Signatures : plus de /Perms, plus de /SigFlags, plus de champ signé. Une zone de signature encore vide, elle, n'a rien à détruire : elle reste.
     //    Le /ByteRange recopié pointerait sur des octets quelconques.
     try { ote(out.catalog, 'Perms'); } catch (e) { signaler('Certification du document non retirée', e); }
     try {
@@ -203,7 +203,7 @@
           const gardes = [];
           for (let i = 0; i < champs.size(); i++) {
             const f = out.context.lookup(champs.get(i));
-            if (f instanceof PDFDict && proprFT(out, f) === '/Sig') { retire = true; continue; }
+            if (f instanceof PDFDict && proprFT(out, f) === '/Sig' && proprEstSignee(out, f)) { retire = true; continue; }
             gardes.push(champs.get(i));
           }
           form.set(PDFName.of('Fields'), out.context.obj(gardes));
@@ -220,7 +220,7 @@
         let sig = false;
         for (let i = 0; i < annots.size(); i++) {
           const a = out.context.lookup(annots.get(i));
-          if (a instanceof PDFDict && nomPdf(a, 'Subtype') === '/Widget' && proprFT(out, a) === '/Sig') { sig = true; continue; }
+          if (a instanceof PDFDict && nomPdf(a, 'Subtype') === '/Widget' && proprFT(out, a) === '/Sig' && proprEstSignee(out, a)) { sig = true; continue; }
           gardees.push(annots.get(i));
         }
         if (sig) { page.node.set(PDFName.of('Annots'), out.context.obj(gardees)); retire = true; }

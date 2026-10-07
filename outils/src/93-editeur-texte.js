@@ -641,7 +641,7 @@
         opacity: ed.tool === 'highlight' ? ed.style.opacity : 1,
         width: ed.style.width,
       };
-      if (ed.tool === 'champ') Object.assign(ed.pending, champNeuf());
+      if (ed.tool === 'champ') Object.assign(ed.pending, champNeuf(ed.champGenre));
       if (ed.tool === 'lien') Object.assign(ed.pending, { cibleType: 'url', url: '', cibleId: null, libelle: '' });
       if (ed.tool === 'underline' || ed.tool === 'strike') ed.pending.color = ed.style.textColor;
     } else if (type === 'arrow') {
@@ -704,6 +704,8 @@
     const p = edPage();
     if (gst.type === 'rect') {
       const a = ed.pending; ed.pending = null;
+      // Une case et un bouton radio sont carrés : on garde le plus petit côté tracé.
+      if (a && a.type === 'champ' && (a.genre === 'case' || a.genre === 'radio')) { const c = Math.min(a.w, a.h); a.w = a.h = c; }
       if (a && a.w > 3 && a.h > 3) { edCommit(a); } else edDrawOverlay();
     } else if (gst.type === 'arrow') {
       const a = ed.pending; ed.pending = null;

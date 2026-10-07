@@ -403,27 +403,72 @@
 
   // Le panneau d'un champ à remplir.
   function edSideChamp(sel, p, change) {
+    const genres = select('ch-genre', GENRES_DE_CHAMP, sel ? genreDeChamp(sel) : (ed.champGenre || 'texte'));
+    genres.addEventListener('change', () => {
+      if (sel) {
+        change(() => {
+          sel.genre = genres.value;
+          // une case et un bouton radio sont carrés
+          if (genres.value === 'case' || genres.value === 'radio') { const c = Math.min(sel.w, sel.h); sel.w = sel.h = c; }
+        });
+        edSide();
+      } else { ed.champGenre = genres.value; edSide(); }
+    });
+    ed.side.appendChild(field('Genre', genres, 'Du texte à taper, une case à cocher, un choix dans une liste, un bouton radio (les boutons du même groupe forment un seul choix), ou une zone de signature à laisser vide.'));
     if (!sel) {
       ed.side.appendChild(note('Faites glisser sur la page pour tracer un champ, à l\'endroit et à la taille voulus. '
-        + 'Dans le PDF exporté, n\'importe qui pourra écrire dedans, avec Acrobat ou un simple navigateur.'));
+        + 'Dans le PDF exporté, n\'importe qui pourra le remplir, avec Acrobat ou un simple navigateur.'));
       return;
     }
+    const genre = genreDeChamp(sel);
     const lib = input('ch-lib', 'text', sel.libelle || '');
     lib.placeholder = 'Nom, Prénom, Date…';
     lib.addEventListener('input', () => change(() => { sel.libelle = lib.value; }));
-    ed.side.appendChild(field('Intitulé', lib, 'Sert d\'étiquette au champ dans le PDF, et s\'affiche en gris tant qu\'il est vide.'));
+    ed.side.appendChild(field('Intitulé', lib, genre === 'radio' ? 'Le nom du groupe, si le champ « Groupe » est vide.' : 'Sert d\'étiquette au champ dans le PDF, et s\'affiche en gris tant qu\'il est vide.'));
+    const desc = input('ch-desc', 'text', sel.description || '');
+    desc.placeholder = 'Ce que dit un lecteur d\'écran';
+    desc.addEventListener('input', () => change(() => { sel.description = desc.value; }));
+    ed.side.appendChild(field('Description', desc, 'Annoncée par un lecteur d\'écran en arrivant sur le champ : « Nom de l\'enfant », « Adresse de facturation ». À défaut, l\'intitulé.'));
 
-    const val = input('ch-val', 'text', sel.valeur || '');
-    val.addEventListener('input', () => change(() => { sel.valeur = val.value; }));
-    ed.side.appendChild(field('Texte déjà inscrit', val, 'Laissez vide pour un champ à remplir par la suite.'));
-
-    const t = input('ch-size', 'number', sel.size || 11, { min: 5, max: 48, step: 0.5 });
-    t.addEventListener('change', () => change(() => { sel.size = Math.min(48, Math.max(5, parseFloat(t.value) || 11)); }));
-    ed.side.appendChild(field('Taille (pt)', t, 'La taille du texte tapé dans le champ.'));
-
-    const ml = checkbox('ch-multi', 'Plusieurs lignes', sel.multi);
-    ml.input.addEventListener('change', () => change(() => { sel.multi = ml.input.checked; }));
-    ed.side.appendChild(ml);
+    if (genre === 'texte') {
+      const val = input('ch-val', 'text', sel.valeur || '');
+      val.addEventListener('input', () => change(() => { sel.valeur = val.value; }));
+      ed.side.appendChild(field('Texte déjà inscrit', val, 'Laissez vide pour un champ à remplir par la suite.'));
+      const t = input('ch-size', 'number', sel.size || 11, { min: 5, max: 48, step: 0.5 });
+      t.addEventListener('change', () => change(() => { sel.size = Math.min(48, Math.max(5, parseFloat(t.value) || 11)); }));
+      ed.side.appendChild(field('Taille (pt)', t, 'La taille du texte tapé dans le champ.'));
+      const ml = checkbox('ch-multi', 'Plusieurs lignes', sel.multi);
+      ml.input.addEventListener('change', () => change(() => { sel.multi = ml.input.checked; }));
+      ed.side.appendChild(ml);
+    } else if (genre === 'liste') {
+      const ops = document.createElement('textarea'); ops.id = 'ch-options'; ops.rows = 5; ops.value = sel.options || '';
+      ops.addEventListener('input', () => change(() => { sel.options = ops.value; }));
+      ed.side.appendChild(field('Choix proposés', ops, 'Un choix par ligne : c\'est la liste que la personne verra en cliquant sur le champ.'));
+      const val = input('ch-val', 'text', sel.valeur || '');
+      val.addEventListener('input', () => change(() => { sel.valeur = val.value; }));
+      ed.side.appendChild(field('Choix déjà fait', val, 'Doit être l\'un des choix ci-dessus ; laissez vide pour ne rien présélectionner.'));
+    } else if (genre === 'case' || genre === 'radio') {
+      if (genre === 'radio') {
+        const gr = input('ch-groupe', 'text', sel.groupe || '');
+        gr.placeholder = 'Mode de paiement';
+        gr.addEventListener('input', () => change(() => { sel.groupe = gr.value; }));
+        ed.side.appendChild(field('Groupe', gr, 'Les boutons qui portent le même groupe forment un seul choix : en cocher un décoche les autres.'));
+        const ch = input('ch-choix', 'text', sel.choix || '');
+        ch.placeholder = 'Virement';
+        ch.addEventListener('input', () => change(() => { sel.choix = ch.value; }));
+        ed.side.appendChild(field('Ce que ce bouton répond', ch, 'La valeur qui sera enregistrée dans le formulaire quand ce bouton est choisi.'));
+      }
+      const co = checkbox('ch-coche', genre === 'case' ? 'Cochée d\'avance' : 'Choisi d\'avance', !!sel.valeur);
+      co.input.addEventListener('change', () => change(() => { sel.valeur = co.input.checked ? '1' : ''; }));
+      ed.side.appendChild(co);
+    } else if (genre === 'signature') {
+      ed.side.appendChild(note('Une zone laissée vide, où la personne signera avec son propre logiciel. Elle n\'est pas signée ici.'));
+    }
+    const ob = checkbox('ch-oblig', 'Obligatoire', !!sel.obligatoire);
+    ob.input.addEventListener('change', () => change(() => { sel.obligatoire = ob.input.checked; }));
+    const le = checkbox('ch-lecture', 'Lecture seule', !!sel.lecture);
+    le.input.addEventListener('change', () => change(() => { sel.lecture = le.input.checked; }));
+    ed.side.append(ob, le);
 
     const cf = input('ch-fond', 'color', sel.fond || '#F2F6FC');
     cf.addEventListener('input', () => change(() => { sel.fond = cf.value; }));

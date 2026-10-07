@@ -15,7 +15,7 @@ const modules = () => fs.readdirSync(SRC).filter(f => f.endsWith('.js')).sort().
 
 // Un texte « pour humain » : pas un sélecteur, une classe, un type MIME, une expression régulière…
 // Des textes que les règles de forme écartent à tort : repérés à la main, ils sont toujours retenus.
-const TEXTES_RETENUS = ['pdf.js indisponible', 'point (1234.50)', '[caviardé]', 'CONFIDENTIEL',
+const TEXTES_RETENUS = ['incertain', 'pdf.js indisponible', 'point (1234.50)', '[caviardé]', 'CONFIDENTIEL',
   // les morceaux de noms de fichiers que le logiciel propose : traduits, ils ne ressemblent pas à des phrases
   '-extrait.pdf', '-signe.pdf', '-livret', '-par-feuille', '-sans-vides.pdf', '-leger.pdf', '-numerote.pdf', '-protege.pdf',
   'lot-', '-divise.zip', '-images.zip', '-tableau.csv', 'formulaire-', 'images.pdf', '(aucun texte)', 'Helvetica, Times ou Courier.'];

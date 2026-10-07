@@ -388,6 +388,7 @@
     // Les noms déjà portés par les formulaires d'origine, pour ne pas les
     // écraser avec un champ ajouté ici.
     const nomsPris = new Set();
+    const groupesRadio = new Map();
     try { out.getForm().getFields().forEach(f => nomsPris.add(f.getName())); } catch (e) { signaler('Noms des champs de formulaire', e); }
     const file = safeBase(el.filename.value);
     const bates = state.stamp && state.stamp.batesPrefix != null ? state.stamp : null;
@@ -425,7 +426,7 @@
         const dessine = p.ann.some(a => !enCommentaire(a) && a.type !== 'champ');
         await baliser(balisage, dessine ? PB : null, 'Div', {}, () => drawAnnotations(out, page, p, fonts, images, enPlace));
       }
-      await poserChamps(out, page, p, fonts, nomsPris);
+      await poserChamps(out, page, p, fonts, { pris: nomsPris, radios: groupesRadio });
       await poserAnnotationsReelles(out, page, p, fonts);
       // Le texte reconnu forme un paragraphe ; l'image dessous est un artefact.
       await baliser(balisage, p.ocr && p.ocr.mots && p.ocr.mots.length ? PB : null, 'P', {}, () => poserTexteOcr(out, page, p, fonts));

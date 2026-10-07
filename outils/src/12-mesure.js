@@ -12,12 +12,19 @@
   // dans Acrobat comme dans n'importe quelle visionneuse.
   let champNumero = 0;
 
-  function champNeuf() {
+  // Les genres de champ : du texte, une case à cocher, une liste déroulante, un bouton radio (les boutons qui portent le même
+  // groupe forment un seul choix), une zone de signature à laisser vide.
+  const GENRES_DE_CHAMP = [['texte', 'Texte'], ['case', 'Case à cocher'], ['liste', 'Liste déroulante'], ['radio', 'Bouton radio'], ['signature', 'Signature']];
+  const genreDeChamp = a => (a && a.genre) || 'texte';
+  function champNeuf(genre) {
     return {
-      type: 'champ', nom: '', valeur: '', libelle: '',
+      type: 'champ', genre: genre || 'texte', nom: '', valeur: '', libelle: '', description: '', obligatoire: false, lecture: false,
+      options: '', groupe: '', choix: '',
       size: 11, multi: false, bordure: '#7A8899', fond: '#F2F6FC', encre: '#111111',
     };
   }
+  // Les choix d'une liste, un par ligne.
+  const optionsDeChamp = a => String(a && a.options || '').split(/\r?\n/).map(t => t.trim()).filter(Boolean);
 
   // Le nom sert d'étiquette dans le PDF : il doit rester unique et lisible.
   function champNom(a, pris) {
