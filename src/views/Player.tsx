@@ -48,6 +48,8 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const [verses, setVerses] = useState<{ ar: string[]; tr: string[] } | null>(null);
   // The episode's recorded narration: undefined while loading, null if it has none.
   const [narration, setNarration] = useState<EpisodeNarration | null | undefined>(undefined);
+  // The recording could not be played here (blocked, offline, unsupported): the text is read in silence.
+  const [audioFailed, setAudioFailed] = useState(false);
   const narrator = useRef<HTMLAudioElement | null>(null);
   // Nature sounds under the voice, created from the first tap.
   const ambience = useRef<Ambience | null>(null);
@@ -73,6 +75,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   useEffect(() => {
     let cancelled = false;
     setNarration(undefined);
+    setAudioFailed(false);
     loadNarration(storyId, episode)
       .then((n) => {
         if (cancelled) return;
@@ -130,7 +133,15 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
         const saved = resume.current;
         const from = saved && saved.index === index && saved.phase === phase ? saved.at : undefined;
         resume.current = null;
-        recorded = playSpan(narrator.current, span, { rate, from, onEnd: () => after(then), onFail: () => pause(text, then) });
+        recorded = playSpan(narrator.current, span, {
+          rate,
+          from,
+          onEnd: () => after(then),
+          onFail: () => {
+            setAudioFailed(true);
+            pause(text, then);
+          },
+        });
       } else if (speechSupported()) speech = speak(text, { rate, onEnd: () => after(then) });
       else pause(text, then);
     };
@@ -307,7 +318,9 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
                   ? 'Le texte défile automatiquement'
                   : narration === undefined
                     ? 'Chargement de la voix…'
-                    : 'Avec narration — montez le son'}
+                    : narration
+                      ? `Voix enregistrée : ${narration.voice || 'narrateur'} — montez le son`
+                      : 'Voix de l’appareil — montez le son'}
               </small>
             </button>
           </div>
@@ -362,6 +375,11 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
               {SURAHS[verse.surah - 1].name}, verset {verse.verse}
               {phase === 'recite' ? ' · récitation' : ''}
             </div>
+          </div>
+        )}
+        {audioFailed && (
+          <div class="small" role="status" style={{ marginTop: '8px', opacity: 0.85 }}>
+            L’audio de cet épisode ne se charge pas ici : le texte défile en silence.
           </div>
         )}
         <div class="player-toggles">

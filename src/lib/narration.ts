@@ -15,11 +15,13 @@ export type Span = [number, number];
 export interface EpisodeNarration {
   url: string;
   spans: Record<string, Span>;
+  /** Short name of the voice, e.g. "Gemini" or "Kokoro-82M". */
+  voice: string;
 }
 
 interface NarrationIndex {
   voice: string;
-  episodes: Record<string, { file: string; spans: Record<string, Span> }>;
+  episodes: Record<string, { file: string; spans: Record<string, Span>; voice?: string }>;
 }
 
 /** FNV-1a over UTF-16 code units: short, stable id for a text (8 hex digits). */
@@ -57,7 +59,8 @@ export async function loadNarration(storyId: string, episode: number): Promise<E
   // With the service worker, fetch the whole file once so it is cached for offline
   // listening; the <audio> element itself only asks for byte ranges.
   if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) fetch(url).catch(() => {});
-  return { url, spans: entry.spans };
+  const full = entry.voice ?? (await loadIndex())?.voice ?? '';
+  return { url, spans: entry.spans, voice: full.split('(')[0].trim() };
 }
 
 export function spanFor(narration: EpisodeNarration, text: string): Span | undefined {
