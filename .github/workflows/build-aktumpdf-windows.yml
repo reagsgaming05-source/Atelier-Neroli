@@ -798,7 +798,9 @@ jobs:
           choix=non-signe; [ "${{ steps.certificat.outputs.signe }}" = "oui" ] && choix=signe
           node -e "const fs=require('fs');const t=fs.readFileSync('build/LISEZMOI-mac.txt','utf8');if(!t.includes('{{PREMIER_LANCEMENT}}'))process.exit(1);fs.writeFileSync('dist/AktumPDF/LISEZMOI-mac.txt',t.replace('{{PREMIER_LANCEMENT}}',fs.readFileSync('build/mac-premier-lancement-'+process.argv[1]+'.txt','utf8').trimEnd()))" "$choix"
           ! grep -q '{{' dist/AktumPDF/LISEZMOI-mac.txt
-          if [ "$choix" = "non-signe" ]; then ! grep -qi "notarisée par" dist/AktumPDF/LISEZMOI-mac.txt || { echo "::error::le LISEZMOI promet une notarisation qui n'a pas eu lieu"; exit 1; }; fi
+          # La promesse, c'est « signée et notarisée » ; le texte non signé dit au contraire « n'est PAS notarisée par Apple » (la formule « notarisée par » seule s'y trouve donc aussi).
+          if [ "$choix" = "non-signe" ]; then ! tr '\n' ' ' < dist/AktumPDF/LISEZMOI-mac.txt | grep -qiE "signée et +notarisée" || { echo "::error::le LISEZMOI promet une notarisation qui n'a pas eu lieu"; exit 1; }; fi
+          if [ "$choix" = "signe" ]; then tr '\n' ' ' < dist/AktumPDF/LISEZMOI-mac.txt | grep -qiE "signée et +notarisée" || { echo "::error::le LISEZMOI ne dit pas que cette construction est signée et notarisée"; exit 1; }; fi
           cp build/Mettre-a-jour.command dist/AktumPDF/Mettre-a-jour.command
           chmod +x dist/AktumPDF/Mettre-a-jour.command
           # La fiche de version voyage à la racine du dossier : c'est elle que
