@@ -51,23 +51,23 @@ const PULL_BACK: Shot = { x: 150, y: 205, k: 1.14 };
 
 /** Framings that exist whatever the scene holds: sky, horizon, ground. */
 const DETAILS: Shot[] = [
-  { x: 82, y: 96, k: 1.55 },
-  { x: 220, y: 100, k: 1.5 },
-  { x: 150, y: 236, k: 1.75 },
-  { x: 74, y: 280, k: 1.6 },
-  { x: 232, y: 276, k: 1.6 },
-  { x: 150, y: 150, k: 1.35 },
+  { x: 82, y: 110, k: 1.3 },
+  { x: 220, y: 112, k: 1.3 },
+  { x: 150, y: 236, k: 1.35 },
+  { x: 74, y: 270, k: 1.3 },
+  { x: 232, y: 266, k: 1.3 },
+  { x: 150, y: 160, k: 1.2 },
 ];
 
 /** A framing for one measured element: close enough to see it, never so close that it is lost. */
 export function shotOn(box: Box): Shot {
   const size = Math.max(box.w, box.h * 0.8, 1);
-  return { x: clamp(box.x, 20, 280), y: clamp(box.y, 40, 330), k: clamp(190 / size, 1.3, 2.0) };
+  return { x: clamp(box.x, 20, 280), y: clamp(box.y, 40, 330), k: clamp(150 / size, 1.15, 1.5) };
 }
 
-const SKY_SHOT: Shot = { x: 150, y: 92, k: 1.5 };
-const GROUND_SHOT: Shot = { x: 150, y: 290, k: 1.55 };
-const HORIZON_SHOT: Shot = { x: 150, y: 232, k: 1.4 };
+const SKY_SHOT: Shot = { x: 150, y: 100, k: 1.3 };
+const GROUND_SHOT: Shot = { x: 150, y: 280, k: 1.35 };
+const HORIZON_SHOT: Shot = { x: 150, y: 232, k: 1.25 };
 
 /** What the camera looks at when the picture says so (an object, the sky, the ground, the horizon). */
 export function focusShot(boxes: Box[], focus?: string): Shot | undefined {

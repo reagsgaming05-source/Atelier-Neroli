@@ -1875,8 +1875,10 @@ a.goal-title::after {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 50% 45%, transparent 55%, rgb(0 0 0 / 38%) 100%),
-    radial-gradient(ellipse at 100% 0%, rgb(255 190 110 / 16%), transparent 55%);
+    radial-gradient(ellipse at 50% 45%, transparent 60%, rgb(20 8 0 / 30%) 100%),
+    radial-gradient(ellipse at 85% 8%, rgb(255 196 120 / 30%), transparent 60%),
+    linear-gradient(to top, rgb(255 150 70 / 14%), transparent 45%);
+  mix-blend-mode: soft-light;
   animation: leak 16s ease-in-out infinite alternate;
 }
 
