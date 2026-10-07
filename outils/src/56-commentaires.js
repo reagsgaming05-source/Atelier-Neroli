@@ -117,6 +117,8 @@
       actions: [
         { label: 'Annuler', onClick: c => c() },
         { label: 'Tout retirer', onClick: () => { cases.forEach(x => { x.cb.checked = true; }); } },
+        { id: 'cm-synthese-csv', label: 'Synthèse (CSV)', onClick: () => vue.syntheseCommentaires(cases, 'csv') },
+        { id: 'cm-synthese-pdf', label: 'Synthèse (PDF)', onClick: () => vue.syntheseCommentaires(cases, 'pdf') },
         { label: 'Appliquer', primary: true, onClick: close => {
           snapshot('Retirer des commentaires');
           let retires = 0;
@@ -336,7 +338,9 @@
     // Le balisage se refait avec le fichier : celui d'un document balisé qu'on réécrirait sur place resterait faux.
     const meta0 = specs.length ? purgeMeta(state.meta, specs) : state.meta;
     const veutBalise = opts.balise != null ? !!opts.balise : !!(meta0 && meta0.balise);
-    const inPlace = !rasterSet.size && !opts.noInPlace && !opts.archivage && !veutBalise && !caviarde && canExportInPlace(pages);
+    // Un nettoyage refait le fichier page par page : rien du fichier d'origine (information, XMP, pièces jointes, scripts) ne passe.
+    const nettoyage = opts.sansNettoyage ? null : state.nettoyage;
+    const inPlace = !rasterSet.size && !opts.noInPlace && !opts.archivage && !veutBalise && !caviarde && !nettoyage && canExportInPlace(pages);
     let out, mapped;
     if (inPlace) {
       out = await sourceDoc(state.sources[0], false);
@@ -439,14 +443,39 @@
     // Les liens que l'éditeur vient de poser vers une page du document (et ceux du sommaire d'un dossier) se résolvent ici : toutes
     // les pages existent, et chacune sait où elle est.
     try { reposerLiens(out, mapped); } catch (e) { signaler('Liens', e); }
+    if (nettoyage) {
+      const b = nettoyerLesPages(out, mapped.map(x => x.page), nettoyage);
+      opts.bilanNettoyage = b;
+    }
     // L'arbre de structure se pose une fois toutes les pages écrites.
     if (balisage) { balisage.terminer(); opts.balisee = true; }
     opts.rapportBalisage = balisage ? controlerBalisage(out) : null;
 
-    poserSignets(out, mapped, specs.length ? purgeSignets(state.signets, specs) : state.signets);
+    poserSignets(out, mapped, nettoyage && nettoyage.signets ? [] : (specs.length ? purgeSignets(state.signets, specs) : state.signets));
 
-    const m = specs.length ? purgeMeta(state.meta, specs) : state.meta;
+    let m = specs.length ? purgeMeta(state.meta, specs) : state.meta;
+    if (nettoyage && nettoyage.meta) m = Object.assign({}, m, { title: '', author: '', subject: '', keywords: '' });
     out.setCreator(APP);
+    // Le producteur dit quel logiciel a écrit le fichier, version comprise (et non « pdf-lib ») : c'est ce que le support lit en premier.
+    out.setProducer(APP + ' ' + APP_VERSION);
+    // L'identifiant du fichier (/ID) : la première moitié reste celle du fichier d'origine quand il en avait une, la seconde change à chaque
+    // écriture — c'est ainsi qu'un lecteur sait que deux fichiers sont deux états du même document, et qu'un archiviste les distingue.
+    // Un fichier chiffré a le sien, posé par le chiffrement.
+    if (!(state.security && FEAT.encrypt)) {
+      try {
+        const { PDFHexString } = PDFLib;
+        const hasard = () => { const b = new Uint8Array(16); crypto.getRandomValues(b); return Array.from(b, x => x.toString(16).padStart(2, '0')).join(''); };
+        const avant = out.context.trailerInfo.ID;
+        let premier = '';
+        try {
+          const v0 = avant && avant.size && avant.size() ? avant.get(0) : null;
+          if (v0 instanceof PDFHexString) premier = v0.asString().toLowerCase();
+          else if (v0 && v0.asString) premier = v0.asString().split('').map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+        } catch (_) { premier = ''; }
+        if (!/^[0-9a-f]{32}$/.test(premier)) premier = hasard();
+        out.context.trailerInfo.ID = out.context.obj([PDFHexString.of(premier), PDFHexString.of(hasard())]);
+      } catch (e) { signaler('Identifiant du fichier', e, 'info'); }
+    }
     if (m.title) out.setTitle(m.title); if (m.author) out.setAuthor(m.author);
     if (m.subject) out.setSubject(m.subject);
     if (m.keywords) out.setKeywords(m.keywords.split(/[,;]\s*/).filter(Boolean));

@@ -53,6 +53,7 @@
       stamp: state.stamp && Object.assign({}, state.stamp),
       security: state.security && JSON.parse(JSON.stringify(state.security)),
       flatten: state.flatten,
+      nettoyage: state.nettoyage && Object.assign({}, state.nettoyage),
       touched: state.touched,
       signets: JSON.parse(JSON.stringify(state.signets || [])),
       purges: (state.purges || []).map(x => Object.assign({}, x)),
@@ -69,6 +70,7 @@
     state.stamp = h.stamp;
     state.security = h.security;
     state.flatten = h.flatten;
+    state.nettoyage = h.nettoyage || null;
     state.touched = h.touched;
     state.signets = h.signets || [];
     state.purges = h.purges || [];

@@ -10,6 +10,7 @@
   // texte) vient en dernier. Les trois dernières se règlent avec une configuration nommée, enregistrée depuis leur fenêtre.
   const LOTS = [
     ['vides', 'Supprimer les pages vides'],
+    ['ocr', 'Reconnaître le texte des scans (OCR)'],
     ['numeroter', 'Numéroter les pages (pied de page)'],
     ['entete', 'En-tête et pied de page (configuration enregistrée)'],
     ['filigrane', 'Filigrane (configuration enregistrée)'],
@@ -22,7 +23,7 @@
   ];
   const LOTS_FINALES = ['compresser', 'separer', 'texte'];
   const LOTS_A_CONFIG = { entete: 'entete', filigrane: 'filigrane', proprietes: 'proprietes' };
-  const LOTS_SUFFIXES = { vides: '-sans-vides', numeroter: '-numerote', entete: '-entete', filigrane: '-filigrane', proprietes: '-proprietes', proteger: '-protege', compresser: '-leger' };
+  const LOTS_SUFFIXES = { vides: '-sans-vides', ocr: '-ocr', numeroter: '-numerote', entete: '-entete', filigrane: '-filigrane', proprietes: '-proprietes', proteger: '-protege', compresser: '-leger' };
   const LOTS_MAX = 3;
   // Les réglages d'une configuration nommée, posés sur le document de travail (voir les fenêtres d'en-tête, de filigrane, de propriétés).
   function lotPoserConfig(op, c) {
@@ -71,6 +72,21 @@
               if (!restantes.length) { rapport.push(f.name + ' : toutes les pages sont vides, rien à garder'); abandon = true; break; }
               state.pages = restantes; retirees += ids.size;
               notes.push(ids.size ? plural(ids.size, 'page vide supprimée', 'pages vides supprimées') : 'aucune page vide');
+            } else if (e.op === 'ocr') {
+              // Les pages sans texte (un scan) sont lues ; celles qui en ont déjà un sont laissées telles quelles.
+              const choixLangue = params.langueOcr || 'fra';
+              const moteur = await ocrMoteur(choixLangue.split('+'), null);
+              let faites = 0, faibles = 0;
+              for (const p of state.pages) {
+                if (annulationDemandee()) break;
+                if (p.ocr || !(await pageSansTexte(p))) continue;
+                const r = await ocrPage(p, moteur);
+                p.ocr = { mots: r.mots, texte: r.texte, conf: r.conf, langues: choixLangue, quand: Date.now() };
+                textCache.set(pkey(p), r.texte); ocrCache.add(pkey(p));
+                faites++;
+                if (r.mots.length && r.conf < OCR_SEUIL_CONFIANCE) faibles++;
+              }
+              notes.push(faites ? plural(faites, 'page reconnue', 'pages reconnues') + (faibles ? ' (' + plural(faibles, 'page se lit mal', 'pages se lisent mal') + ')' : '') : 'aucune page sans texte');
             } else if (e.op === 'numeroter') {
               state.stamp = { headerLeft: '', headerCenter: '', headerRight: '', footerLeft: '', footerCenter: '{p} / {n}', footerRight: '',
                 font: 'Helvetica', bold: false, size: 9, color: '#444444', margin: 28, start: 1, skipFirst: false, batesPrefix: '', batesDigits: 4 };
@@ -120,6 +136,8 @@
       poserEtat(sauve);
       state.silencieux = false;
       vue.render();
+      // Le moteur de reconnaissance pèse deux cents mégaoctets : un lot fini le rend à la mémoire.
+      if (etapes.some(e => e.op === 'ocr')) { try { await ocrLiberer(); } catch (e) { signaler('OCR', e, 'info'); } }
     }
     return { sorties, rapport };
   }
@@ -164,6 +182,9 @@
       cfg.setAttribute('aria-label', tr('Configuration à appliquer'));
       return { choix, cfg };
     });
+    const ocrLangue = select('lots-ocr-langue', [['fra', 'Français'], ['fra+deu', 'Français et allemand'], ['deu', 'Allemand']], codeLangue() === 'de' ? 'deu' : 'fra');
+    const ocrWrap = field('Langue de la reconnaissance', ocrLangue, 'La langue du texte imprimé des scans. Seules les pages sans texte sont lues : une page qui en a déjà un reste telle quelle.');
+    ocrWrap.hidden = true;
     const pw = input('lots-pw', 'password', ''), pwo = input('lots-pwo', 'password', '');
     const pwWrap = rowOf([field('Mot de passe d\'ouverture', pw), field('Mot de passe propriétaire', pwo, 'Facultatif')]);
     pwWrap.hidden = true;
@@ -192,6 +213,7 @@
         if (LOTS_FINALES.includes(e.choix.value)) fini = true;
       });
       pwWrap.hidden = !etapes.some(e => e.choix.value === 'proteger');
+      ocrWrap.hidden = !etapes.some(e => e.choix.value === 'ocr');
     };
     etapes.forEach(e => e.choix.addEventListener('change', majEtapes));
     majEtapes();
@@ -204,7 +226,7 @@
         b.append(inp);
         b.append(liste);
         etapes.forEach((e, k) => b.append(field(k ? 'Puis' : 'Traitement', e.choix), e.cfg));
-        b.append(pwWrap);
+        b.append(pwWrap, ocrWrap);
         b.append(note('Jusqu\'à trois opérations se suivent sur chaque fichier, dans l\'ordre choisi ; celle qui produit les fichiers (réduire, séparer, extraire le texte) vient en dernier.'));
         b.append(note('Chaque fichier est traité à part, le document ouvert n\'est pas touché. Les résultats sont réunis dans une archive ZIP (un seul fichier : enregistré tel quel).'));
       },
@@ -219,7 +241,7 @@
         const quoi = quoiSuit.map(e => e.op).join('-');
         setBusy('Traitement du lot…', 0, { annuler: true });
         try {
-          const r = await traiterLots(fichiers.slice(), quoiSuit, { pw: pw.value, pwo: pwo.value }, (nom, i, n) => setBusy('Lot : ' + nom + ' (' + (i + 1) + '/' + n + ')', i / n, { annuler: true }));
+          const r = await traiterLots(fichiers.slice(), quoiSuit, { pw: pw.value, pwo: pwo.value, langueOcr: ocrLangue.value }, (nom, i, n) => setBusy('Lot : ' + nom + ' (' + (i + 1) + '/' + n + ')', i / n, { annuler: true }));
           const jour = new Date().toISOString().slice(0, 10);
           if (!r.sorties.length) toast('Aucun fichier produit. ' + r.rapport.join(' · '), 'warn');
           else if (r.sorties.length === 1 || !FEAT.zip) {

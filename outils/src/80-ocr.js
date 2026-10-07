@@ -11,6 +11,8 @@
     worker: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
     core: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0/tesseract-core-simd-lstm.wasm.js',
   };
+  // Sous ce taux de confiance moyen, une page est dite « mal lue » : le texte reconnu sert à chercher, pas à republier.
+  const OCR_SEUIL_CONFIANCE = 75;
   const ocr = { moteur: null, langues: '', workerUrl: null, embarque: !!document.getElementById('tess-worker-src'), avancement: null };
   // Le moteur pèse quelque deux cents mégaoctets. Il reste en place tant qu'on
   // s'en sert — reconnaître une seconde page ne doit pas le recharger — mais il
@@ -270,14 +272,14 @@
             textCache.set(pkey(p), r.texte);
             ocrCache.add(pkey(p));
             mots += r.mots.length; faites++;
-            if (r.mots.length && r.conf < 60) faibles++;
+            if (r.mots.length && r.conf < OCR_SEUIL_CONFIANCE) faibles++;
             await nextFrame();
           }
           state.touched = true;
           vue.render();
           const bilan = plural(mots, 'mot reconnu', 'mots reconnus') + ' sur ' + plural(faites, 'page', 'pages');
           setLast((interrompu ? 'Reconnaissance interrompue : ' : 'Texte reconnu : ') + bilan);
-          toast(bilan + (interrompu ? ' avant l\'arrêt.' : '.') + (faibles ? ' ' + plural(faibles, 'page se lit mal', 'pages se lisent mal') + ' : vérifiez le résultat.' : ''), faibles || interrompu ? 'warn' : null);
+          toast(bilan + (interrompu ? ' avant l\'arrêt.' : '.') + (faibles ? ' ' + plural(faibles, 'page se lit mal', 'pages se lisent mal') + ' : le texte reconnu sert à chercher, pas à republier — relisez-le avant tout autre usage.' : ''), faibles || interrompu ? 'warn' : null);
         } catch (e) { toast(messageDEchec('La reconnaissance du texte', e), 'error'); }
         finally { setBusy(''); }
       } }],

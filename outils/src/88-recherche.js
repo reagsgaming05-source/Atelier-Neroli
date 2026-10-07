@@ -117,8 +117,9 @@
   // et la page convertie en image à l'export — le texte disparaît vraiment.
   // `choix(idPage, rang)` : seulement certaines occurrences (le rang est celui de l'occurrence dans sa page). Dans ce cas le terme n'est
   // pas retenu pour l'export : il ne s'agit plus de le retirer de tout le fichier, mais de masquer ce qui a été choisi.
-  async function caviarderPartout(terme, casse, avancement, mot, accents, ailleurs, choix) {
+  async function caviarderPartout(terme, casse, avancement, mot, accents, ailleurs, choix, motif) {
     const spec = { terme, casse: !!casse, mot: !!mot, accents: !!accents };
+    if (motif) spec.motif = motif;
     let occurrences = 0, pages = 0;
     const ajouts = [];
     const tour = cadence();
@@ -147,7 +148,7 @@
     ajouts.forEach(({ p, a }) => { a.id = ++uid; p.ann.push(a); });
     // Le terme est retenu : l'export le cherchera sur toutes les surfaces du
     // fichier, pas seulement à l'endroit où l'on a vu le mot.
-    if (!choix && !state.purges.some(x => x.terme === spec.terme && x.casse === spec.casse && x.mot === spec.mot && x.accents === spec.accents)) state.purges.push(spec);
+    if (!choix && !state.purges.some(x => x.terme === spec.terme && x.casse === spec.casse && x.mot === spec.mot && x.accents === spec.accents && (x.motif || '') === (spec.motif || ''))) state.purges.push(spec);
     state.touched = true;
     vue.render();
     return { occurrences, pages };
@@ -156,8 +157,8 @@
   // Remplacer partout : chaque bloc où le terme apparaît devient une
   // retouche, exactement comme si on l'avait corrigé à la main dans
   // l'éditeur — même fond relevé, mêmes polices, même mise en page.
-  async function remplacerPartout(terme, nouveau, casse, avancement, mot) {
-    const rx = regexDe(terme, casse, mot);
+  async function remplacerPartout(terme, nouveau, casse, avancement, mot, motif) {
+    const rx = motif ? regexDuMotif(motif) : regexDe(terme, casse, mot);
     let occurrences = 0, pages = 0;
     const neufs = [], touchees = [];
     const tour = cadence();
@@ -310,6 +311,8 @@
     rempl.placeholder = 'Texte de remplacement';
     const casse = checkbox('se-casse', 'Respecter la casse', false);
     const mot = checkbox('se-mot', 'Mot entier', false);
+    // Un motif plutôt qu'un mot : toutes les écritures d'un numéro AVS, d'un IBAN, d'un téléphone suisse…
+    const motif = select('se-motif', [['', 'Un mot ou une expression (écrite ci-dessus)']].concat(Object.keys(MOTIFS).map(k => [k, MOTIFS[k].libelle])), '');
     // Par défaut « Muller » trouve « Müller » : pour caviarder, manquer un nom
     // parce qu'on a oublié le tréma est pire que d'en noircir un de trop.
     const accents = checkbox('se-accents', 'Respecter les accents', false);
@@ -349,7 +352,8 @@
       } else allerPage(o.pid);
     };
     async function run() {
-      const term = q.value.trim();
+      const motifId = motif.value;
+      const term = motifId ? tr(MOTIFS[motifId].libelle) : q.value.trim();
       const my = ++token;
       results.replaceChildren();
       total = 0; occ = []; cur = -1; ailleurs = null; exclues = new Set();
@@ -361,6 +365,7 @@
       info.textContent = 'Recherche…';
       let found = 0;
       const spec = { terme: term, casse: casse.input.checked, mot: mot.input.checked, accents: accents.input.checked };
+      if (motifId) Object.assign(spec, { motif: motifId, casse: false, mot: false, accents: false });
       // Les résultats se montrent au fur et à mesure : le premier est visible dès qu'il est trouvé, sur n'importe
       // quel document, et la recherche reste fluide parce qu'elle ne garde la main que pendant un budget de temps.
       const marques = new Map();
@@ -483,6 +488,7 @@
     q.addEventListener('input', () => { clearTimeout(deb); deb = setTimeout(run, 260); });
     q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (occ.length) aller(cur + (e.shiftKey ? -1 : 1)); } });
     casse.input.addEventListener('change', run);
+    motif.addEventListener('change', () => { q.disabled = !!motif.value; casse.input.disabled = mot.input.disabled = accents.input.disabled = !!motif.value; run(); });
     mot.input.addEventListener('change', run);
     accents.input.addEventListener('change', run);
     prec.addEventListener('click', () => aller(cur - 1));
@@ -505,6 +511,7 @@
       build: b => {
         b.append(field('Recherche', q, 'Le mot, le nom ou le numéro à trouver dans tout le document. Entrée passe à l\'occurrence suivante.'));
         b.append(rowOf([casse, mot, accents], true));
+        b.append(field('Ou un modèle', motif, 'Trouve toutes les écritures d\'un numéro AVS, d\'un IBAN, d\'un téléphone suisse, d\'une adresse de courriel… sans en connaître la valeur. Attention : un modèle attrape volontiers un peu large ; relisez la liste avant de caviarder.'));
         b.append(nav);
         b.append(info);
         b.append(infoCache);
@@ -516,7 +523,7 @@
       actions: [
         { label: 'Fermer', onClick: c => c() },
         { id: 'se-caviarder', label: 'Caviarder tout', peril: true, onClick: async close => {
-          const term = q.value.trim();
+          const term = motif.value ? tr(MOTIFS[motif.value].libelle) : q.value.trim();
           if (term.length < 2 || !(total || (ailleurs && ailleurs.total))) return;
           const entier = mot.input.checked;
           // Caviarder retire le texte du fichier : c'est le geste qu'une
@@ -535,21 +542,21 @@
           token++; close();
           setBusy('Caviardage de « ' + term + ' »…', 0, { annuler: true });
           try {
-            const r = await caviarderPartout(term, casse.input.checked, (i, n) => setBusy('Caviardage… page ' + (i + 1) + '/' + n, i / n, { annuler: true }), entier, accents.input.checked, !!(dehors && dehors.total), choix);
+            const r = await caviarderPartout(term, casse.input.checked, (i, n) => setBusy('Caviardage… page ' + (i + 1) + '/' + n, i / n, { annuler: true }), entier, accents.input.checked, !!(dehors && dehors.total), choix, motif.value || null);
             const dit = r.occurrences ? plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + ' sur ' + plural(r.pages, 'page', 'pages') : (dehors && dehors.total ? '« ' + term + ' » caviardé hors de la page affichée (' + decrireAilleurs(dehors) + ')' : '');
             setLast(dit ? dit + ' · Ctrl+Z pour annuler' : 'Aucune occurrence trouvée sur la page.');
-            if (dit) toast(dit + '. Le texte masqué est retiré du fichier à l\'export ; la page reste nette.');
+            if (dit) toast(dit + '. Le texte masqué est retiré du fichier à l\'export (une page dont le texte ne peut pas être retiré proprement est convertie en image, et l\'export le dit).');
           } catch (e) { if (e && e.annule) { toast('Caviardage annulé : rien n\'a été changé.', 'warn'); return; } toast(messageDEchec('Le caviardage', e), 'error'); }
           finally { setBusy(''); }
         } },
         { id: 'se-remplacer', label: 'Remplacer tout', primary: true, onClick: async close => {
-          const term = q.value.trim();
+          const term = motif.value ? tr(MOTIFS[motif.value].libelle) : q.value.trim();
           if (term.length < 2 || !total) return;
           const entier = mot.input.checked;
           token++; close();
           setBusy('Remplacement de « ' + term + ' »…', 0, { annuler: true });
           try {
-            const r = await remplacerPartout(term, rempl.value, casse.input.checked, (i, n) => setBusy('Remplacement… page ' + (i + 1) + '/' + n, i / n, { annuler: true }), entier);
+            const r = await remplacerPartout(term, rempl.value, casse.input.checked, (i, n) => setBusy('Remplacement… page ' + (i + 1) + '/' + n, i / n, { annuler: true }), entier, motif.value || null);
             setLast(r.occurrences ? plural(r.occurrences, 'occurrence remplacée', 'occurrences remplacées') + ' sur ' + plural(r.pages, 'page', 'pages') + ' · Ctrl+Z pour annuler' : 'Rien à remplacer : le texte n\'est pas modifiable (scan sans OCR ?).');
             if (!r.occurrences) toast('Aucun bloc modifiable ne contient « ' + term + ' ». Sur un scan, lancez d\'abord la reconnaissance de texte.', 'warn');
           } catch (e) { if (e && e.annule) { toast('Remplacement annulé : rien n\'a été changé.', 'warn'); return; } toast(messageDEchec('Le remplacement', e), 'error'); }

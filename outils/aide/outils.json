@@ -103,7 +103,7 @@
    "quoi": "Applique la même suite d'opérations à plusieurs fichiers, sans les ouvrir un à un.",
    "etapes": [
     "Choisissez les fichiers.",
-    "Choisissez jusqu'à trois opérations : pages vides, compression, numérotation, mot de passe, images en PDF, séparation, extraction du texte.",
+    "Choisissez jusqu'à trois opérations : pages vides, reconnaissance de texte, compression, numérotation, mot de passe, images en PDF, séparation, extraction du texte.",
     "Lancez : chaque fichier est traité à part et les résultats sont réunis dans une archive ZIP."
    ],
    "effet": "Le document ouvert n'est pas touché. Un compte rendu dit, fichier par fichier, ce qui a réussi et ce qui a échoué, avec la cause.",
@@ -227,7 +227,8 @@
    "quoi": "Liste les commentaires déjà présents dans un PDF reçu, et permet de les retirer.",
    "etapes": [
     "Ouvrez le PDF reçu : la liste montre les commentaires qu'il contient.",
-    "Cochez ceux à retirer, ou « Tout retirer », puis appliquez."
+    "Cochez ceux à retirer, ou « Tout retirer », puis appliquez.",
+    "« Synthèse (CSV) » ou « Synthèse (PDF) » réunit tous les commentaires en une liste : page, type, auteur, date, texte."
    ],
    "effet": "Les commentaires retirés ne partent pas dans l'export. Ctrl+Z les rend avant l'export.",
    "attention": "Les ajouter, c'est l'éditeur de page ; ici on ne fait que lister et retirer."
@@ -290,6 +291,19 @@
    ],
    "effet": "Le destinataire ne peut plus modifier les valeurs ni déplacer les annotations. Avant l'export, « Retirer l'aplatissement » ou Ctrl+Z revient en arrière.",
    "attention": "Après l'export, c'est irréversible pour le destinataire : envoyez-lui, si nécessaire, une copie non aplatie."
+  },
+  {
+   "id": "nettoyer",
+   "nom": "Nettoyer le document",
+   "groupe": "proteger",
+   "quoi": "Retire du fichier exporté ce qu'il garde sans le dire : métadonnées, fichiers joints, scripts, aperçus, commentaires, signets.",
+   "etapes": [
+    "Cochez ce qui doit partir : les métadonnées, les fichiers joints et les scripts sont cochés d'office.",
+    "Cochez aussi les commentaires et les signets si le document part à l'extérieur.",
+    "Appliquez : le nettoyage se fait à l'export ; la ligne de modifications sous la barre le rappelle."
+   ],
+   "effet": "Le fichier exporté est refait page par page, sans ces éléments. Le document ouvert reste intact, et Ctrl+Z annule le réglage.",
+   "attention": "Après un caviardage, cochez au moins les métadonnées : un nom noirci sur la page peut rester dans le titre ou l'auteur du fichier."
   },
   {
    "id": "caviarder",

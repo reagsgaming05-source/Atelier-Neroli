@@ -277,7 +277,7 @@
       sources: e.sources.filter(s => !s.isSample).map(s => ({ id: s.id, name: s.name, chemin: s.chemin || '', genere: !!s.genere, fichier: recupNomFichier(s), formValues: s.formValues || null })),
       pages: e.pages.map(p => ({ id: p.id, src: p.src, index: p.index, rot: p.rot || 0, ann: p.ann || [], piece: p.piece || null, ocr: p.ocr || null, pieceN: p.pieceN || 0, intercalaire: p.intercalaire || 0, sommaire: p.sommaire || 0, retraits: p.retraits || [] })),
       signets: e.signets || [], purges: e.purges || [], meta: e.meta || null, watermark: e.watermark || null, stamp: e.stamp || null, security: e.security || null,
-      flatten: !!e.flatten, figerAnnotations: !!e.figerAnnotations, dossier: e.dossier || null,
+      flatten: !!e.flatten, nettoyage: e.nettoyage || null, figerAnnotations: !!e.figerAnnotations, dossier: e.dossier || null,
     };
   }
   async function sauvegarderRecuperation() {
@@ -358,7 +358,7 @@
     state.purges = (m.purges || []).map(x => Object.assign({}, x));
     if (m.meta) state.meta = m.meta;
     state.watermark = m.watermark || null; state.stamp = m.stamp || null; state.security = m.security || null;
-    state.flatten = !!m.flatten; state.figerAnnotations = !!m.figerAnnotations;
+    state.flatten = !!m.flatten; state.nettoyage = m.nettoyage || null; state.figerAnnotations = !!m.figerAnnotations;
     state.dossier = m.dossier ? Object.assign({}, m.dossier, { srcId: idsSrc.get(m.dossier.srcId) || null, signature: '' }) : null;
     state.chemin = m.chemin || ''; state.ecraserOk = false;
     state.history = []; state.redo = []; state.selected.clear();

@@ -42,6 +42,24 @@
     return { plat, carte };
   }
 
+  // Les motifs qu'on cherche et qu'on caviarde sans connaître la valeur : un numéro AVS, un IBAN, un téléphone. Chaque motif est une
+  // expression régulière posée sur le texte sans accents ni coupures ; elle trouve les écritures usuelles (avec des points, des espaces,
+  // des tirets, ou rien). Elle attrape volontiers un peu large : pour caviarder, un numéro de trop noirci vaut mieux qu'un numéro oublié.
+  const MOTIFS = {
+    avs: { libelle: 'Numéro AVS (756.xxxx.xxxx.xx)', rx: '(?<![\\d.])756[.\\s-]?\\d{4}[.\\s-]?\\d{4}[.\\s-]?\\d{2}(?!\\d)' },
+    iban: { libelle: 'IBAN suisse ou liechtensteinois', rx: '\\b(?:CH|LI)\\d{2}(?:[ ]?[0-9A-Z]{4}){4}[ ]?[0-9A-Z]\\b' },
+    telephone: { libelle: 'Numéro de téléphone suisse', rx: '(?<![\\d])(?:(?:\\+|00)41[\\s.-]?\\(?0?\\)?[\\s.-]?|0)\\d{2}[\\s.-]?\\d{3}[\\s.-]?\\d{2}[\\s.-]?\\d{2}(?!\\d)' },
+    courriel: { libelle: 'Adresse de courriel', rx: '[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}.-]+\\.[\\p{L}]{2,}' },
+    date: { libelle: 'Date (31.12.2026 ou 31/12/26)', rx: '(?<![\\d])(?:0?[1-9]|[12]\\d|3[01])[./](?:0?[1-9]|1[0-2])[./](?:19|20)?\\d{2}(?!\\d)' },
+    ide: { libelle: 'Numéro d\'identification des entreprises (CHE-123.456.789)', rx: '\\bCHE[-.\\s]?\\d{3}[.\\s]?\\d{3}[.\\s]?\\d{3}\\b' },
+    plaque: { libelle: 'Plaque de véhicule (VD 123456)', rx: '\\b(?:AG|AI|AR|BE|BL|BS|FR|GE|GL|GR|JU|LU|NE|NW|OW|SG|SH|SO|SZ|TG|TI|UR|VD|VS|ZG|ZH)[ -]?\\d{3,6}\\b' },
+    montant: { libelle: 'Montant en francs (CHF 1\'250.50)', rx: '(?:CHF|Fr\\.)\\s?\\d[\\d\'’ ]*(?:[.,]\\d{1,2})?' },
+  };
+  // L'expression d'un motif, prête à servir (drapeau global, sans casse, Unicode) ; null si le motif est inconnu.
+  function regexDuMotif(id) {
+    const m = MOTIFS[id];
+    return m ? new RegExp(m.rx, 'giu') : null;
+  }
   // Les occurrences d'un terme dans un texte : [début, fin[ dans ce texte.
   // Insensible aux accents (sauf demande contraire), à la casse (sauf demande
   // contraire) et aux coupures de fin de ligne. Un caviardage manque plutôt
@@ -51,9 +69,15 @@
     const pliee = !spec.accents;
     const base = pliee ? plierAccents(texte) : texte;
     const { plat, carte } = sansCesures(base);
-    const t = pliee ? plierAccents(spec.terme) : spec.terme;
-    const corps = String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const rx = new RegExp(spec.mot ? '(?<![\\p{L}\\p{N}_])' + corps + '(?![\\p{L}\\p{N}_])' : corps, (spec.casse ? 'g' : 'gi') + 'u');
+    let rx;
+    if (spec.motif) {
+      rx = regexDuMotif(spec.motif);
+      if (!rx) return [];
+    } else {
+      const t = pliee ? plierAccents(spec.terme) : spec.terme;
+      const corps = String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      rx = new RegExp(spec.mot ? '(?<![\\p{L}\\p{N}_])' + corps + '(?![\\p{L}\\p{N}_])' : corps, (spec.casse ? 'g' : 'gi') + 'u');
+    }
     const out = [];
     let m;
     while ((m = rx.exec(plat)) && out.length < 5000) {
@@ -209,6 +233,56 @@
   // Applique la purge à un document déjà assemblé : sur chaque page, ses
   // métadonnées propres et les annotations qui portent le terme ; puis le
   // ramasse-miettes. Rend un décompte pour le journal.
+  // « Nettoyer le document » : ce qu'un fichier garde sans le dire, retiré à l'export selon ce que la personne a coché. Le document est
+  // toujours refait page par page (jamais écrit sur place), si bien que le dictionnaire d'information d'origine, les métadonnées XMP, les
+  // pièces jointes du fichier, les scripts du document, ses actions d'ouverture et les versions antérieures ne sont pas reportés : il ne reste
+  // à retirer que ce que les pages portent elles-mêmes.
+  const NETTOYAGE_DEFAUT = { meta: true, pj: true, scripts: true, vignettes: true, annots: false, signets: false };
+  const NETTOYAGE_LIBELLES = [
+    ['meta', 'Métadonnées : titre, auteur, sujet, mots-clés, logiciel d\'origine, dates et XMP'],
+    ['pj', 'Fichiers joints'],
+    ['scripts', 'Scripts et actions (JavaScript, ouverture automatique)'],
+    ['vignettes', 'Aperçus de pages et données propres au logiciel d\'origine'],
+    ['annots', 'Commentaires et annotations (notes, surlignages, tampons, dessins)'],
+    ['signets', 'Signets'],
+  ];
+  function nettoyerLesPages(out, pagesPdf, o) {
+    const { PDFName, PDFDict, PDFArray } = PDFLib;
+    const ctx = out.context, N = k => PDFName.of(k);
+    const bilan = { annots: 0, pj: 0, scripts: 0, pages: pagesPdf.length };
+    pagesPdf.forEach(page => {
+      const nd = page.node;
+      if (o.vignettes) ['Thumb', 'PieceInfo', 'Metadata', 'LastModified'].forEach(k => nd.delete(N(k)));
+      if (o.scripts && nd.has(N('AA'))) { nd.delete(N('AA')); bilan.scripts++; }
+      let annots = null;
+      try { annots = nd.Annots(); } catch (_) { annots = null; }
+      if (!annots) return;
+      const garde = [];
+      annots.asArray().forEach(item => {
+        const a = ctx.lookup(item);
+        if (!(a instanceof PDFDict)) { garde.push(item); return; }
+        const sub = a.get(N('Subtype')); const st = sub ? sub.toString().slice(1) : '';
+        if (o.pj && st === 'FileAttachment') { bilan.pj++; return; }
+        if (o.annots && st !== 'Link' && st !== 'Widget' && st !== 'FileAttachment') { bilan.annots++; return; }
+        if (o.scripts) {
+          const act = ctx.lookup(a.get(N('A')));
+          const s = act instanceof PDFDict ? act.get(N('S')) : null;
+          if (s && /JavaScript|Launch|ImportData|SubmitForm|GoToR/.test(s.toString())) { a.delete(N('A')); bilan.scripts++; }
+          if (a.has(N('AA'))) { a.delete(N('AA')); bilan.scripts++; }
+        }
+        if (o.vignettes) ['PieceInfo', 'LastModified'].forEach(k => a.delete(N(k)));
+        garde.push(item);
+      });
+      if (garde.length !== annots.size()) nd.set(N('Annots'), ctx.obj(garde));
+    });
+    if (o.scripts) {
+      // Les champs de formulaire portent leurs propres actions, au niveau du dictionnaire des champs.
+      try {
+        out.getForm().getFields().forEach(f => { const d = f.acroField.dict; if (d.has(N('AA'))) { d.delete(N('AA')); bilan.scripts++; } });
+      } catch (_) { /* pas de formulaire */ }
+    }
+    return bilan;
+  }
   function purgerLeDocument(out, pagesPdf, specs) {
     const { PDFName } = PDFLib;
     let notes = 0;

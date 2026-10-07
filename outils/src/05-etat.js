@@ -14,6 +14,8 @@
     stamp: null,
     security: null,
     flatten: false,
+    // « Nettoyer le document » : ce que l'export retire du fichier (métadonnées, pièces jointes, scripts…), ou null.
+    nettoyage: null,
     // On ouvre sur le document ; la table de montage est le second mode.
     vue: 'lecture', zoomLecture: 'page', impressionDirecte: false, bureau: false, messageBusy: '',
     // Le plan du document : des signets, chacun vers une page, avec ses sous-signets.
@@ -38,7 +40,7 @@
   function etatVierge() {
     return {
       sources: [], pages: [], selected: new Set(), anchor: null, history: [], redo: [], touched: false, hueIdx: 0, filenameDirty: false,
-      meta: { title: '', author: '', subject: '', keywords: '', balise: false, langue: 'fr' }, watermark: null, stamp: null, security: null, flatten: false,
+      meta: { title: '', author: '', subject: '', keywords: '', balise: false, langue: 'fr' }, watermark: null, stamp: null, security: null, flatten: false, nettoyage: null,
       signets: [], purges: [], figerAnnotations: false, dossier: null, nomFichier: '',
       // Le fichier que « Enregistrer » réécrit (application), la confirmation
       // déjà donnée pour ce fichier, et la clé du dépôt de récupération.
@@ -62,7 +64,7 @@
   // sélection, répondre à une touche de la table des raccourcis, écrire l'infobulle d'un geste avec sa touche — sont des points d'accroche que 40-tuiles.js (les
   // vignettes) et 99-init.js (la barre, les raccourcis) renseignent au chargement ; n'importe quel module appelle vue.render() sans savoir qui répond. Avant, 99-init.js remplaçait
   // « render » à chaud, ce qui supposait de savoir dans quel ordre tout se chargeait.
-  const vue = { render() {}, syncButtons() {}, updateSelectionUI() {}, touche() { return false; }, infobulle(base) { return base; } };
+  const vue = { syntheseCommentaires() {}, render() {}, syncButtons() {}, updateSelectionUI() {}, touche() { return false; }, infobulle(base) { return base; } };
 
   function prendreEtat() {
     const e = {};
