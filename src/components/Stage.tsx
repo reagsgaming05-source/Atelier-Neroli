@@ -100,6 +100,14 @@ export function Stage({
     setSlots((all) => (all.at(-1)!.sig === signature ? all : [...all, { id: pictureKey, sig: signature, seed, sky, ground, motifs, painting }].slice(-2)));
   }, [pictureKey]);
 
+  // The painting of the picture on screen arrives late, or the look is changed: it takes the place of the drawing at once.
+  useLayoutEffect(() => {
+    setSlots((all) => {
+      const last = all.at(-1)!;
+      return last.id === pictureKey && last.painting !== painting ? [...all.slice(0, -1), { ...last, painting, sig: signature }] : all;
+    });
+  }, [painting]);
+
   // Once the old picture is covered, it goes.
   useEffect(() => {
     if (slots.length < 2) return;
@@ -127,7 +135,7 @@ export function Stage({
     setStep(0);
     // Moves between framings take most of the time available: the camera is always drifting.
     setLeg(Math.max(ms / Math.max(planned.length - 1, 1), 1800));
-  }, [pictureKey, shownId]);
+  }, [pictureKey, shownId, slots.at(-1)?.painting]);
 
   useEffect(() => {
     if (!playing || step >= route.length - 1) return;

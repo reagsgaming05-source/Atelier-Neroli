@@ -118,8 +118,8 @@ export function planPainting(count: number, seed: number, from?: Shot): Shot[] {
   const route: Shot[] = [start];
   let side = rand() < 0.5 ? -1 : 1;
   for (let i = 1; i < Math.max(count, 2); i++) {
-    const k = i % 2 ? 1.18 + rand() * 0.14 : 1.05 + rand() * 0.08;
-    route.push({ x: 150 + side * (22 + rand() * 30), y: 150 + rand() * 90, k });
+    const k = i % 2 ? 1.12 + rand() * 0.1 : 1.03 + rand() * 0.05;
+    route.push({ x: 150 + side * (14 + rand() * 22), y: 150 + rand() * 90, k });
     side = -side;
   }
   return route;
