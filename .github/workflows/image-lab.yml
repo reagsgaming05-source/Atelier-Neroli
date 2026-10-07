@@ -7,7 +7,7 @@ name: Image lab
 on:
   push:
     paths:
-      - 'scripts/images/**'
+      - 'scripts/images/lab.py'
       - '.github/workflows/image-lab.yml'
 
 permissions:
