@@ -35,7 +35,7 @@
       } catch (e) {
         console.error(e);
         if (e && e.cancelled) setLast('Ouverture annulée');
-        else toast(e && e.message ? e.message : 'Impossible de lire ' + f.name, 'error');
+        else toast(e && e.humain ? e.message : messageDEchec('La lecture de « ' + f.name + ' »', e), 'error');
       }
     }
     if (images.length) {
@@ -46,7 +46,7 @@
         setLast(plural(src.count, 'image convertie', 'images converties') + ' en pages');
       } catch (e) {
         console.error(e);
-        toast('Les images n\'ont pas pu être converties : ' + (e.message || e), 'error');
+        toast(messageDEchec('La conversion des images', e), 'error');
       }
     }
     sablier('');
@@ -62,7 +62,7 @@
         if (pw === null) { const err = new Error('annulé'); err.cancelled = true; throw err; }
         return openWithPdfjs(name, bytes, pw);
       }
-      throw new Error(refusDOuverture(name, bytes, e));
+      throw Object.assign(new Error(refusDOuverture(name, bytes, e)), { humain: true });
     }
   }
   // Pourquoi un fichier ne s'ouvre pas : trois cas, trois phrases — un fichier vide, un fichier qui n'est pas un PDF (une extension qui

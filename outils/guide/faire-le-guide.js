@@ -46,14 +46,12 @@ const CAPTURES = path.join(__dirname, 'captures');
     .filter((i) => !i.complete || !i.naturalWidth).map((i) => i.getAttribute('src')));
   if (manquantes.length) throw new Error('Images absentes : ' + manquantes.join(', '));
 
-  const pied = `<div style="width:100%;padding:0 16mm;font:8pt 'Liberation Sans',Arial,sans-serif;color:#8892a0;display:flex;justify-content:space-between">
-    <span>Aktum PDF — mode d'emploi</span><span class="pageNumber"></span></div>`;
   await page.pdf({
     path: sortie, format: 'A4', printBackground: true, tagged: true, outline: true,
-    displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: pied,
     margin: { top: '16mm', bottom: '16mm', left: '16mm', right: '16mm' },
   });
   await nav.close();
+  await require('../docs/finir-le-pdf').finirLePdf(sortie, { titre: 'Aktum PDF — mode d\'emploi', sujet: 'Mode d\'emploi d\'Aktum PDF', mots: ['Aktum PDF', 'mode d\'emploi'], auteur: process.env.EDITEUR_NOM || '', pied: 'Aktum PDF — mode d\'emploi' });
   try { fs.unlinkSync(copie); } catch (e) { /* déjà parti */ }
 
   const ko = Math.round(fs.statSync(sortie).size / 1024);

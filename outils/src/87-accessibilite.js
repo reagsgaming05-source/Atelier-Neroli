@@ -84,8 +84,7 @@
       liste('Relevé', r.bons, 'ok');
       setLast(r.problemes.length ? plural(r.problemes.length, 'manque d\'accessibilité relevé', 'manques d\'accessibilité relevés') : 'Accessibilité : aucun manque relevé');
     }).catch(e => {
-      signaler('Vérification de l\'accessibilité', e);
-      zone.replaceChildren(note('La vérification n\'a pas pu aboutir : ' + (e && e.message ? e.message : e), 'warn'));
+      zone.replaceChildren(note(messageDEchec('La vérification de l\'accessibilité', e), 'warn'));
     }).finally(() => setBusy(''));
     return api;
   }

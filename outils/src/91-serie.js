@@ -230,7 +230,7 @@
       if (!f) return;
       try {
         csv = lireCsv(await fichierTexte(f));
-      } catch (e) { signaler('Lecture du CSV', e, 'erreur'); toast('Ce fichier n\'a pas pu être lu : ' + e.message, 'error'); return; }
+      } catch (e) { toast(messageDEchec('La lecture du tableau', e), 'error'); return; }
       if (!csv.entetes.length || !csv.lignes.length) {
         infoCsv.textContent = f.name + ' : il faut une ligne d\'en-têtes et au moins une ligne de données.';
         infoCsv.classList.add('warn'); csv = null; dessinerLiens(); maj(); return;
@@ -326,7 +326,7 @@
       if (avis > 0) toast(plural(avis, 'avis pendant la série', 'avis pendant la série') + ' : voir le journal, en bas de la fenêtre.', 'warn');
     } catch (e) {
       if (e && e.annule) { setLast('Série annulée'); toast('Série annulée : rien n\'a été écrit.', 'warn'); }
-      else { console.error(e); toast('Échec de la série : ' + (e && e.message ? e.message : e), 'error'); }
+      else { toast(messageDEchec('La série', e), 'error'); }
     } finally {
       state.flatten = avant.flatten; src.formValues = avant.valeurs; state.security = avant.securite;
       setBusy('');

@@ -52,7 +52,7 @@
     } catch (e) {
       console.error(e);
       try { await window.aktumEnregistrerAbandon(jeton); } catch (e) { signaler('Abandon de la récupération', e, 'info'); }
-      toast('L\'enregistrement a échoué : ' + (e && e.message ? e.message : e), 'error');
+      toast(messageDEchec('L\'enregistrement', e), 'error');
       return 'echec';
     }
   }
@@ -123,7 +123,7 @@
     } catch (e) {
       if (e && e.annule) { setLast('Export annulé'); toast('Export annulé.', 'warn'); return null; }
       console.error(e);
-      toast('Échec de l\'assemblage : ' + (e && e.message ? e.message : e), 'error');
+      toast(messageDEchec('L\'assemblage du document', e), 'error');
       return null;
     } finally { setBusy(''); }
   }
@@ -232,7 +232,7 @@
     } catch (e) {
       if (e && e.annule) { setLast('Enregistrement annulé'); toast('Enregistrement annulé.', 'warn'); return; }
       signaler('Enregistrer', e);
-      toast('Échec de l\'enregistrement : ' + (e && e.message ? e.message : e), 'error');
+      toast(messageDEchec('L\'enregistrement', e), 'error');
     } finally { setBusy(''); }
   }
   // Le document vient d'être écrit : il n'est plus « modifié », son dépôt de
@@ -392,7 +392,7 @@
             for (const r of liste) {
               setBusy('Récupération de « ' + (r.titre || 'document') + ' »…');
               try { await restaurerRecuperation(r.cle); }
-              catch (e) { signaler('Récupération', e); toast('« ' + (r.titre || 'document') + ' » n\'a pas pu être récupéré : ' + (e && e.message ? e.message : e), 'error'); }
+              catch (e) { signaler('Récupération', e); toast(messageDEchec('La récupération de « ' + (r.titre || 'document') + ' »', e), 'error'); }
             }
             setBusy('');
           })();

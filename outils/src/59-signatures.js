@@ -175,7 +175,7 @@
         return { ok: await subtle.verify({ name: 'ECDSA', hash: hachage }, cle, brute, donnees) };
       }
       return { ok: false, raison: 'Type de clé non pris en charge par ce logiciel (' + oidCle + ').', nonPrisEnCharge: true };
-    } catch (e) { return { ok: false, raison: 'La vérification a échoué : ' + (e && e.message ? e.message : e) }; }
+    } catch (e) { signaler('Vérification d\'une signature', e, 'info'); return { ok: false, raison: 'La vérification n\'a pas pu aboutir [' + analyserEchec(e).code + '] : le détail est au journal.' }; }
   }
 
   // La chaîne de certificats jointe : chaque certificat est-il signé par le suivant ?
@@ -202,7 +202,7 @@
   async function verifierCms(cms, donnees, sousFiltre) {
     const subtle = (globalThis.crypto || {}).subtle;
     let ci;
-    try { ci = derNoeud(cms, 0, cms.length); } catch (e) { return { etat: 'illisible', raison: 'La signature n\'est pas lisible (' + e.message + ').' }; }
+    try { ci = derNoeud(cms, 0, cms.length); } catch (e) { signaler('Lecture d\'une signature', e, 'info'); return { etat: 'illisible', raison: 'La signature n\'est pas lisible [' + analyserEchec(e).code + '] : le détail est au journal.' }; }
     try {
       if (derOid(ci.enfants[0]) !== '1.2.840.113549.1.7.2') return { etat: 'illisible', raison: 'Ce n\'est pas une signature PKCS#7.' };
       const sd = ci.enfants[1].enfants[0].enfants;
@@ -268,7 +268,7 @@
       if (!v.ok) return Object.assign(res, { etat: 'alteree', raison: v.raison || 'La signature ne correspond pas au certificat joint : elle a été falsifiée ou le fichier a été altéré.' });
       Object.assign(res, await chaineLire(signataire, certs));
       return Object.assign(res, { etat: 'intacte' });
-    } catch (e) { return { etat: 'illisible', raison: 'La signature n\'a pas pu être lue (' + (e && e.message ? e.message : e) + ').' }; }
+    } catch (e) { signaler('Lecture d\'une signature', e, 'info'); return { etat: 'illisible', raison: 'La signature n\'a pas pu être lue [' + analyserEchec(e).code + '] : le détail est au journal.' }; }
   }
 
   // Les signatures d'un fichier PDF, dans l'ordre où elles ont été apposées, chacune contrôlée.

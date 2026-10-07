@@ -277,7 +277,7 @@
           const bilan = plural(mots, 'mot reconnu', 'mots reconnus') + ' sur ' + plural(faites, 'page', 'pages');
           setLast((interrompu ? 'Reconnaissance interrompue : ' : 'Texte reconnu : ') + bilan);
           toast(bilan + (interrompu ? ' avant l\'arrêt.' : '.') + (faibles ? ' ' + plural(faibles, 'page se lit mal', 'pages se lisent mal') + ' : vérifiez le résultat.' : ''), faibles || interrompu ? 'warn' : null);
-        } catch (e) { console.error(e); toast('La reconnaissance a échoué : ' + (e && e.message ? e.message : e), 'error'); }
+        } catch (e) { toast(messageDEchec('La reconnaissance du texte', e), 'error'); }
         finally { setBusy(''); }
       } }],
     });

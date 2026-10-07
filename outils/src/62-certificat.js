@@ -295,6 +295,6 @@
     } catch (e) {
       if (e && e.annule) { setLast('Signature annulée'); toast('Signature annulée.', 'warn'); return; }
       signaler('Signature avec un certificat', e, 'erreur');
-      toast('Échec de la signature : ' + (e && e.message ? e.message : e), 'error');
+      toast(messageDEchec('La signature', e), 'error');
     } finally { setBusy(''); }
   }

@@ -8,9 +8,7 @@ partagé ou sur une clé : il fonctionne depuis n'importe où.
 
 PREMIER LANCEMENT
 -----------------
-Normalement, un double-clic suffit : l'application est signée et notarisée par
-Apple, ce qui la rend ouvrable sur n'importe quel Mac, y compris un poste
-d'entreprise, sans demander de mot de passe administrateur.
+{{PREMIER_LANCEMENT}}
 
 Si votre Mac refuse quand même — vous avez une version plus ancienne, ou votre
 informatique applique une règle plus stricte —, une seule fois :

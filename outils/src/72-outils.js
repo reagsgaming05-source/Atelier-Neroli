@@ -46,7 +46,7 @@
           state.selected = new Set(added);
           vue.render();
           setLast(plural(n, 'page vierge insérée', 'pages vierges insérées'));
-        } catch (e) { console.error(e); toast('Échec de l\'insertion : ' + e.message, 'error'); }
+        } catch (e) { toast(messageDEchec('L\'insertion des pages', e), 'error'); }
         finally { setBusy(''); }
       } }],
     });

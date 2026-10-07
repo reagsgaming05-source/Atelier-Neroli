@@ -121,6 +121,35 @@
     if (niveau === 'erreur') console.error(contexte + ' :', e); else if (niveau !== 'info') console.warn(contexte + ' :', e);
     majJournal();
   }
+  // Quand une opération échoue, la personne lit une phrase française qui dit ce qui s'est passé, ce qu'elle peut faire et une référence
+  // à citer au support — jamais le message brut de la bibliothèque (en anglais, sans issue : « This method should not be called. »),
+  // qui va au journal, sous la même référence. `quoi` : « L'archivage », « La signature »…
+  const CAUSES_ECHEC = [
+    ['MEM', /out of memory|allocation failed|array buffer allocation|invalid (typed )?array length|maximum call stack|RangeError/i,
+      'la mémoire de ce poste ne suffit pas pour ce document', 'Fermez les autres documents ou traitez moins de pages à la fois, puis recommencez.'],
+    ['MDP', /password|encrypt|decrypt|crypt/i,
+      'le document est protégé par un mot de passe', 'Rouvrez-le en donnant le mot de passe, puis recommencez.'],
+    ['FICHIER', /invalid pdf|no pdf header|xref|trailer|unexpected end|failed to parse|corrupt|malformed|invalid object|unable to parse|bad (ref|object)|stream/i,
+      'le fichier est incomplet ou abîmé', 'Rouvrez-le depuis son origine, ou réparez-le avec l\'application qui l\'a produit.'],
+    ['DISQUE', /ENOSPC|no space|quota|disk full|EBUSY|EACCES|EPERM|permission|read-only|locked/i,
+      'l\'écriture a été refusée (disque plein, fichier tenu par un autre programme ou droits manquants)', 'Choisissez un autre dossier, fermez le fichier s\'il est ouvert ailleurs, puis recommencez.'],
+    ['COMPOSANT', /failed to fetch|network|load failed|importScripts|worker|wasm|WebAssembly/i,
+      'un composant du logiciel n\'a pas pu être chargé', 'Fermez puis rouvrez l\'application, et recommencez.'],
+    ['POLICE', /font|glyph|encoding|cmap|WinAnsi/i,
+      'une police du document n\'a pas pu être lue ou écrite', 'Recommencez avec « Convertir en images » si l\'outil le propose, ou avec une autre police.'],
+  ];
+  // La cause d'un échec, dite en français, avec sa référence : { code, cause, action }.
+  function analyserEchec(e) {
+    const brut = e && e.message ? e.message : String(e == null ? '' : e);
+    let cat = ['INCONNU', null, 'la cause n\'a pas pu être identifiée', 'Recommencez ; si cela se reproduit, joignez le rapport de diagnostic à votre demande d\'aide (Aide › Rapport de diagnostic pour le support…).'];
+    for (const c of CAUSES_ECHEC) if (c[1].test(brut)) { cat = c; break; }
+    return { code: 'E-' + cat[0], cause: tr(cat[2]), action: tr(cat[3]) };
+  }
+  function messageDEchec(quoi, e) {
+    const a = analyserEchec(e);
+    signaler(quoi + ' — échec [' + a.code + ']', e, 'erreur');
+    return tr(quoi) + tr(' n\'a pas abouti : ') + a.cause + '. ' + a.action + ' [' + a.code + ']';
+  }
   // Le journal de la session pour le rapport de diagnostic de l'application de bureau : des
   // copies, jamais l'objet vivant. Le rapport le nettoie avant de le montrer (desktop/diagnostic.js).
   window.aktumDiagnostic = () => journal.map(j => ({ quand: j.quand.getTime(), niveau: j.niveau, contexte: j.contexte, msg: j.msg, fois: j.fois || 1 }));

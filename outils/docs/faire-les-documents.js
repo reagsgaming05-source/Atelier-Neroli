@@ -15,6 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require(path.join(__dirname, '..', 'desktop', 'node_modules', 'playwright-core'));
+const { finirLePdf } = require('./finir-le-pdf');
 
 // En jours ouvrables. Tenables par une personne seule : accusé de réception sous un à deux jours,
 // jamais de promesse de correctif à heure fixe.
@@ -59,10 +60,10 @@ const DOCUMENTS = [
     const refusees = [];
     page.on('requestfailed', (r) => refusees.push(r.url()));
     await page.goto('file://' + tmp, { waitUntil: 'load' });
-    const pied = `<div style="width:100%;padding:0 16mm;font:8pt 'Liberation Sans',Arial,sans-serif;color:#8892a0;display:flex;justify-content:space-between"><span>${PRODUIT} ${version} — ${titre}</span><span class="pageNumber"></span></div>`;
-    await page.pdf({ path: path.join(sortie, nom), format: 'A4', printBackground: true, tagged: true, outline: true, displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: pied, margin: { top: '16mm', bottom: '16mm', left: '16mm', right: '16mm' } });
+    await page.pdf({ path: path.join(sortie, nom), format: 'A4', printBackground: true, tagged: true, outline: true, margin: { top: '16mm', bottom: '16mm', left: '16mm', right: '16mm' } });
     await page.close();
     fs.unlinkSync(tmp);
+    await finirLePdf(path.join(sortie, nom), { titre: titre + ' — ' + PRODUIT, sujet: titre + ', ' + PRODUIT + ' ' + version, mots: [PRODUIT, titre], auteur: e.EDITEUR_NOM || '', pied: PRODUIT + ' ' + version + ' — ' + titre });
     if (refusees.length) throw new Error(source + ' : ressources non chargées : ' + refusees.join(', '));
     console.log(nom + ' — ' + Math.round(fs.statSync(path.join(sortie, nom)).size / 1024) + ' Ko');
   }

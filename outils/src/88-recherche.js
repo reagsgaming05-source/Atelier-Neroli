@@ -538,7 +538,7 @@
             const dit = r.occurrences ? plural(r.occurrences, 'occurrence caviardée', 'occurrences caviardées') + ' sur ' + plural(r.pages, 'page', 'pages') : (dehors && dehors.total ? '« ' + term + ' » caviardé hors de la page affichée (' + decrireAilleurs(dehors) + ')' : '');
             setLast(dit ? dit + ' · Ctrl+Z pour annuler' : 'Aucune occurrence trouvée sur la page.');
             if (dit) toast(dit + '. Le texte masqué est retiré du fichier à l\'export ; la page reste nette.');
-          } catch (e) { if (e && e.annule) { toast('Caviardage annulé : rien n\'a été changé.', 'warn'); return; } console.error(e); toast('Échec du caviardage : ' + e.message, 'error'); }
+          } catch (e) { if (e && e.annule) { toast('Caviardage annulé : rien n\'a été changé.', 'warn'); return; } toast(messageDEchec('Le caviardage', e), 'error'); }
           finally { setBusy(''); }
         } },
         { id: 'se-remplacer', label: 'Remplacer tout', primary: true, onClick: async close => {
@@ -551,7 +551,7 @@
             const r = await remplacerPartout(term, rempl.value, casse.input.checked, (i, n) => setBusy('Remplacement… page ' + (i + 1) + '/' + n, i / n, { annuler: true }), entier);
             setLast(r.occurrences ? plural(r.occurrences, 'occurrence remplacée', 'occurrences remplacées') + ' sur ' + plural(r.pages, 'page', 'pages') + ' · Ctrl+Z pour annuler' : 'Rien à remplacer : le texte n\'est pas modifiable (scan sans OCR ?).');
             if (!r.occurrences) toast('Aucun bloc modifiable ne contient « ' + term + ' ». Sur un scan, lancez d\'abord la reconnaissance de texte.', 'warn');
-          } catch (e) { if (e && e.annule) { toast('Remplacement annulé : rien n\'a été changé.', 'warn'); return; } console.error(e); toast('Échec du remplacement : ' + e.message, 'error'); }
+          } catch (e) { if (e && e.annule) { toast('Remplacement annulé : rien n\'a été changé.', 'warn'); return; } toast(messageDEchec('Le remplacement', e), 'error'); }
           finally { setBusy(''); }
         } },
       ],

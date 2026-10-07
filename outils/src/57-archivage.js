@@ -107,7 +107,7 @@
     } catch (e) {
       if (e && e.annule) { setLast('Archivage annulé'); toast('Archivage annulé.', 'warn'); return; }
       console.error(e);
-      toast('Échec de l\'archivage : ' + (e && e.message ? e.message : e), 'error');
+      toast(messageDEchec('L\'archivage', e), 'error');
     } finally { setBusy(''); }
   }
 

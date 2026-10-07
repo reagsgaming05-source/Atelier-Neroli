@@ -1,0 +1,3 @@
+Normalement, un double-clic suffit : l'application est signée et notarisée par
+Apple, ce qui la rend ouvrable sur n'importe quel Mac, y compris un poste
+d'entreprise, sans demander de mot de passe administrateur.

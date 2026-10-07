@@ -651,7 +651,11 @@ jobs:
           cp "$GITHUB_WORKSPACE"/documents/*.html dist/AktumPDF/Documents/
           cp build/LICENCE.txt dist/AktumPDF/LICENCE.txt
           cp build/MENTIONS-TIERCES.txt dist/AktumPDF/MENTIONS-TIERCES.txt
-          cp build/LISEZMOI-mac.txt dist/AktumPDF/LISEZMOI-mac.txt
+          # Le premier paragraphe du LISEZMOI dit ce qui est vrai de CETTE construction : notarisée par Apple seulement si le certificat a été fourni.
+          choix=non-signe; [ "${{ steps.certificat.outputs.signe }}" = "oui" ] && choix=signe
+          node -e "const fs=require('fs');const t=fs.readFileSync('build/LISEZMOI-mac.txt','utf8');if(!t.includes('{{PREMIER_LANCEMENT}}'))process.exit(1);fs.writeFileSync('dist/AktumPDF/LISEZMOI-mac.txt',t.replace('{{PREMIER_LANCEMENT}}',fs.readFileSync('build/mac-premier-lancement-'+process.argv[1]+'.txt','utf8').trimEnd()))" "$choix"
+          ! grep -q '{{' dist/AktumPDF/LISEZMOI-mac.txt
+          if [ "$choix" = "non-signe" ]; then ! grep -qi "notarisée par" dist/AktumPDF/LISEZMOI-mac.txt || { echo "::error::le LISEZMOI promet une notarisation qui n'a pas eu lieu"; exit 1; }; fi
           cp build/Mettre-a-jour.command dist/AktumPDF/Mettre-a-jour.command
           chmod +x dist/AktumPDF/Mettre-a-jour.command
           # La fiche de version voyage à la racine du dossier : c'est elle que

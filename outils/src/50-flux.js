@@ -726,7 +726,29 @@
   // Ce qu'il faut réécrire dans le flux pour que cette correction prenne
   // effet — sans rien déplacer d'autre. Rend null si le cas sort de ce que
   // l'on sait faire proprement : on recouvrira alors, comme avant.
-  const fxNon = r => { try { (window.__fxDiag = window.__fxDiag || []).push(r); } catch (e) { signaler('Diagnostic de correction', e, 'info'); } signaler('Correction posée par-dessus plutôt que réécrite dans la page', r, 'info'); return null; };
+  // Les quatorze raisons pour lesquelles une correction se pose par-dessus plutôt que dans la page, dites en français : le journal est fait
+  // pour être copié et envoyé au support, et « bout ambigu » n'y dit rien à personne. Le texte brut reste dans `__fxDiag`, pour les essais.
+  const FX_RAISONS = {
+    'pas d ancres': 'le texte d\'origine n\'a pas pu être situé dans le contenu de la page',
+    'style change': 'la correction change la police, la taille ou la couleur du texte',
+    'aucune ancre touchee': 'aucun morceau de texte de la page n\'est concerné par la correction',
+    'morceaux non contigus': 'le texte corrigé est réparti sur des morceaux qui ne se suivent pas',
+    'morceaux sur des lignes differentes': 'le texte corrigé est réparti sur plusieurs lignes',
+    'changement a cheval': 'la correction commence dans un morceau de texte et finit dans un autre',
+    'affichage sans police': 'le texte est affiché sans police identifiable',
+    'bout ambigu': 'le morceau à remplacer apparaît plusieurs fois dans la même ligne',
+    'lettre hors police': 'une lettre de la correction n\'existe pas dans la police de la page',
+    'largeur inconnue': 'la largeur d\'une lettre de la correction n\'est pas connue',
+    'trop long a gauche': 'la correction est trop longue : elle déborderait à gauche',
+    'trop long pour la place': 'la correction est trop longue pour la place disponible',
+  };
+  const fxRaison = r => {
+    if (FX_RAISONS[r]) return FX_RAISONS[r];
+    if (/^aucun affichage en /.test(r)) return 'aucun texte n\'est affiché à cet endroit de la page';
+    if (/^bout introuvable/.test(r)) return 'le morceau à remplacer est introuvable dans la ligne';
+    return r;
+  };
+  const fxNon = r => { try { (window.__fxDiag = window.__fxDiag || []).push(r); } catch (e) { signaler('Diagnostic de correction', e, 'info'); } signaler('Correction posée par-dessus plutôt que réécrite dans la page', fxRaison(r), 'info'); return null; };
   function fxEdit(a, shows, g) {
     const o = a.origine;
     if (!o || !o.ancres.length) return fxNon('pas d ancres');

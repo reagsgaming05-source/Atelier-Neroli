@@ -294,7 +294,7 @@
           state.selected.clear();
           vue.render();
           setLast('Dossier constitué : ' + plural(o.pieces.length, 'pièce', 'pièces') + ', ' + plural(state.pages.length, 'page', 'pages') + ' · Ctrl+Z pour défaire');
-        } catch (e) { console.error(e); toast('Le dossier n\'a pas pu être constitué : ' + e.message, 'error'); }
+        } catch (e) { toast(messageDEchec('La constitution du dossier', e), 'error'); }
         finally { setBusy(''); }
       } }],
     });

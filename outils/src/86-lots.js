@@ -114,7 +114,7 @@
             sorties.push({ nom: base + suffixe + '.pdf', octets: await buildPdf(state.pages, optsBase) });
           }
           rapport.push(f.name + ' : ' + notes.join(' · '));
-        } catch (e) { console.error(e); rapport.push(f.name + ' : échec (' + (e && e.message ? e.message : e) + ')'); }
+        } catch (e) { signaler('Lot : ' + f.name, e, 'erreur'); const a = analyserEchec(e); rapport.push(f.name + ' : échec — ' + a.cause + ' [' + a.code + ']'); }
       }
     } finally {
       poserEtat(sauve);
@@ -239,7 +239,7 @@
               b.append(ul);
             },
           });
-        } catch (e) { console.error(e); toast('Échec du traitement : ' + e.message, 'error'); }
+        } catch (e) { toast(messageDEchec('Le traitement', e), 'error'); }
         finally { setBusy(''); }
       } }],
     });
@@ -304,7 +304,7 @@
             for (const f of files) await deliver(f.bytes, f.name);
           }
           setLast(plural(files.length, 'fichier créé', 'fichiers créés'));
-        } catch (e) { console.error(e); toast('Échec de la division : ' + e.message, 'error'); }
+        } catch (e) { toast(messageDEchec('La division', e), 'error'); }
         finally { setBusy(''); }
       } }],
     });
@@ -362,7 +362,7 @@
           const bytes = await out.save();
           await replaceProject(bytes, safeBase(el.filename.value) + tr('-redimensionné.pdf'));
           setLast('Pages redimensionnées');
-        } catch (e) { console.error(e); toast('Échec du redimensionnement : ' + e.message, 'error'); }
+        } catch (e) { toast(messageDEchec('Le redimensionnement', e), 'error'); }
         finally { setBusy(''); }
       } }],
     });
@@ -699,7 +699,7 @@
         snapshot();
         state.meta = { title: t.value.trim(), author: a.value.trim(), subject: s.value.trim(), keywords: k.value.trim(), balise: balise.input.checked, langue: langue.value };
         state.touched = true; vue.render(); close();
-        setLast('Propriétés enregistrées');
+        setLast('Propriétés retenues : elles seront écrites dans le fichier à l\'enregistrement');
       } }],
     });
   }
@@ -744,7 +744,7 @@
           snapshot();
           state.security = { userPassword: up.value, ownerPassword: op.value || up.value, permissions };
           state.touched = true; vue.render(); close();
-          setLast('Protection par mot de passe activée');
+          setLast('Protection par mot de passe retenue : elle sera appliquée au fichier à l\'enregistrement');
         } },
       ].filter(Boolean),
     });
@@ -859,7 +859,7 @@
             await deliver(out, base + tr('-images.zip'), 'application/zip');
           } else { for (const f of files) await deliver(f.blob, f.name, f.blob.type); }
           setLast(plural(files.length, 'image exportée', 'images exportées'));
-        } catch (e) { console.error(e); toast('Échec de l\'export : ' + e.message, 'error'); }
+        } catch (e) { toast(messageDEchec('L\'export', e), 'error'); }
         finally { setBusy(''); }
       } }],
     });
@@ -878,7 +878,7 @@
       const empty = parts.every(p => /\(aucun texte\)/.test(p));
       await deliver(txt, safeBase(el.filename.value) + '.txt', 'text/plain');
       if (empty) toast('Aucun texte n\'a été trouvé : le document est probablement un scan. La reconnaissance de texte n\'est pas disponible ici.', 'warn');
-    } catch (e) { console.error(e); toast('Échec de l\'extraction : ' + e.message, 'error'); }
+    } catch (e) { toast(messageDEchec('L\'extraction', e), 'error'); }
     finally { setBusy(''); }
   }
 

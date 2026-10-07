@@ -1,0 +1,4 @@
+Cette version n'est PAS notarisée par Apple : l'éditeur n'a pas encore posé son
+certificat de développeur dans la chaîne de construction. Au premier lancement,
+macOS refuse donc d'ouvrir l'application par un double-clic. Il faut l'ouvrir
+une fois par le clic droit, comme décrit ci-dessous.

@@ -154,7 +154,7 @@
     } catch (e) {
       if (e && e.annule) { toast('Impression annulée.', 'warn'); return null; }
       console.error(e);
-      toast('Échec de la préparation : ' + (e && e.message ? e.message : e), 'error');
+      toast(messageDEchec('La préparation de l\'impression', e), 'error');
       return null;
     } finally { setBusy(''); }
   }
@@ -218,7 +218,7 @@
     } catch (e) {
       console.error(e);
       setBusy('');
-      toast('Impossible de préparer l\'impression : ' + (e && e.message ? e.message : e), 'error');
+      toast(messageDEchec('La préparation de l\'impression', e), 'error');
       return;
     } finally { try { if (doc) doc.destroy(); } catch (e) { signaler('Document d\'impression', e, 'info'); } }
     setBusy('');
@@ -240,7 +240,7 @@
       }).then(r => {
         if (r && r.ok) setLast(plural(combien, 'page envoyée', 'pages envoyées') + ' à l\'impression');
         else toast('L\'impression a échoué : ' + ((r && r.erreur) || 'imprimante indisponible'), 'error');
-      }).catch(e => toast('L\'impression a échoué : ' + (e && e.message ? e.message : e), 'error'))
+      }).catch(e => toast(messageDEchec('L\'impression', e), 'error'))
         .finally(() => setTimeout(finir, 300));
       return;
     }

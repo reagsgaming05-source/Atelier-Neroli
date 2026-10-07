@@ -115,7 +115,7 @@
           }
           setBusy('');
           afficherComparaison({ nomA: srcA.name, nomB: nomBTexte, docA, docB, pages, srcA, srcBId });
-        } catch (e) { setBusy(''); if (e && e.annule) { toast('Comparaison annulée.', 'warn'); return; } console.error(e); toast('La comparaison a échoué : ' + e.message, 'error'); }
+        } catch (e) { setBusy(''); if (e && e.annule) { toast('Comparaison annulée.', 'warn'); return; } toast(messageDEchec('La comparaison', e), 'error'); }
       } }],
     });
   }
@@ -253,7 +253,7 @@
         if (state.pages.some(p => p.ocr)) { state.touched = true; vue.render(); }
         majResume();
         montrer();
-      } catch (e) { signaler('Comparaison', e); toast('La reconnaissance a échoué : ' + (e && e.message ? e.message : e), 'error'); }
+      } catch (e) { toast(messageDEchec('La reconnaissance du texte', e), 'error'); }
       finally { setBusy(''); btnOcr.hidden = !sansTexte().length; btnOcr.disabled = false; }
     });
     const btnAspect = document.createElement('button');
@@ -275,7 +275,7 @@
         majResume();
         if (!aspect) voirAspect.input.click();
         montrer();
-      } catch (e) { if (!(e && e.annule)) { signaler('Comparaison', e); toast('La comparaison a échoué : ' + e.message, 'error'); } }
+      } catch (e) { if (!(e && e.annule)) { toast(messageDEchec('La comparaison', e), 'error'); } }
       finally { setBusy(''); btnAspect.disabled = false; }
     });
     const majNav = () => {
