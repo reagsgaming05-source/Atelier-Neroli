@@ -1,19 +1,14 @@
 name: Narration
 
-# Records the story narration with a free neural French voice whenever the
-# episode scripts change, then commits the audio (public/data/narration/).
-# Only edited episodes are recorded again. Everything runs on the GitHub
-# runner: no paid service, no account, no API key.
+# Records the story narration with a free neural French voice (run by hand),
+# then commits the audio (public/data/narration/). Episodes recorded elsewhere
+# (marked "custom" in the index, see align.yml) are left alone. Everything runs
+# on the GitHub runner: no paid service, no account, no API key.
 #
 # Voice: Kokoro-82M (Apache 2.0), French voice ff_siwis (SIWIS corpus, CC BY 4.0).
 # docs/voix/ also gets a short sample of other free French voices, to compare.
 
 on:
-  push:
-    paths:
-      - 'src/data/series/**'
-      - 'scripts/narration/**'
-      - '.github/workflows/narration.yml'
   workflow_dispatch:
 
 permissions:

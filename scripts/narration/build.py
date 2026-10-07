@@ -170,6 +170,8 @@ def main():
         ).hexdigest()[:8]
         name = f"{key}.{signature}.mp3"
         entry = index["episodes"].get(key)
+        if entry and entry.get("custom") and not args.force:
+            continue  # recorded elsewhere (align.py): keep that voice
         if not args.force and entry and entry["file"] == name and (args.out / name).exists():
             continue
 

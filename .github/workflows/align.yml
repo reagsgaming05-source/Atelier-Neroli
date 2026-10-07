@@ -1,0 +1,54 @@
+name: Align a recording
+
+# Puts a recording made elsewhere (e.g. read by Gemini in Google AI Studio) into the app:
+# a free speech recognizer finds where each text starts and ends, then the audio and its
+# timings are committed to public/data/narration/. Recordings go in narration-source/<episode>.mp3.
+
+on:
+  workflow_dispatch:
+    inputs:
+      episodes:
+        description: 'Episode keys, space-separated (e.g. nuh-1)'
+        default: 'nuh-1'
+      voice:
+        description: 'Voice credit'
+        default: 'Gemini (Google AI Studio)'
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install faster-whisper numpy
+      - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+      - run: node scripts/narration/export.mjs
+      - name: Align
+        run: |
+          for e in ${{ inputs.episodes }}; do
+            echo "=== $e"
+            python scripts/narration/align.py "$e" "narration-source/$e.mp3" --voice "${{ inputs.voice }}"
+          done
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add public/data/narration
+          git diff --cached --quiet && exit 0
+          git commit -q -m "Add recorded episodes: ${{ inputs.episodes }}"
+          for i in 1 2 3; do
+            git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            sleep 10
+          done
+          exit 1
