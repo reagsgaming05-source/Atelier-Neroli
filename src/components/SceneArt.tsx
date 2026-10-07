@@ -664,18 +664,100 @@ const DEPTH: Motif[] = [
 const SKY_LAYER = new Set<Motif>(['sun', 'moon', 'crescent', 'stars', 'bright-star', 'clouds', 'dark-clouds', 'lightning', 'birds', 'light', 'wind']);
 const WEATHER = new Set<Motif>(['rain', 'stones', 'prison']);
 
+/** Dark shapes at the edges of the frame, drawn in front of everything: they give depth when the camera moves. */
+const FOREGROUND: Record<Ground, (p: Palette) => JSX.Element | null> = {
+  none: () => null,
+  desert: (p) => (
+    <g fill={p.ink} opacity="0.88">
+      <path d="M-10 360v-34q40-14 80 4t30 30z" />
+      <path d="M230 360q10-30 50-34t40 10v24z" />
+      <Blades x={252} color={p.ink} />
+    </g>
+  ),
+  sea: (p) => (
+    <g fill={p.ink} opacity="0.9">
+      <path d="M-10 360v-40q22-18 44-8t24 48z" />
+      <path d="M262 360q-6-24 14-34t34 6v28z" />
+    </g>
+  ),
+  mountains: (p) => (
+    <g fill={p.ink} opacity="0.9">
+      <path d="M-10 360v-50l24-16 30 8 18 58z" />
+      <path d="M236 360l14-34 26-14 34 20v28z" />
+    </g>
+  ),
+  valley: (p) => (
+    <g fill={p.ink} opacity="0.88">
+      <path d="M-10 360v-44l26-12 26 10 14 46z" />
+      <path d="M240 360l10-30 28-10 32 18v22z" />
+      <Blades x={38} color={p.ink} />
+    </g>
+  ),
+  garden: (p) => (
+    <g fill={p.ink} opacity="0.9">
+      <Blades x={20} color={p.ink} tall />
+      <Blades x={272} color={p.ink} tall />
+      <path d="M-10 360v-22q40-12 80 4v18zM230 360v-18q40-14 80 0v18z" />
+    </g>
+  ),
+  city: (p) => (
+    <g fill={p.ink} opacity="0.88">
+      <path d="M-10 360v-30h60v30zM250 360v-24h60v24z" />
+    </g>
+  ),
+  river: (p) => (
+    <g fill={p.ink} opacity="0.9">
+      <Blades x={24} color={p.ink} tall />
+      <Blades x={262} color={p.ink} tall />
+      <path d="M-10 360v-18q50-8 100 4v14z" />
+    </g>
+  ),
+  plain: (p) => (
+    <g fill={p.ink} opacity="0.88">
+      <Blades x={30} color={p.ink} />
+      <Blades x={266} color={p.ink} />
+      <path d="M-10 360v-16q60-10 120 2v14z" />
+    </g>
+  ),
+  cave: (p) => (
+    <g fill={p.ink} opacity="0.95">
+      <path d="M-10 -10h60q-14 70-34 110-6-60-26-60z" />
+      <path d="M250 -10h60v60q-20 10-30 60-14-50-30-120z" />
+      <path d="M40 360l10-34 10 34zM236 360l12-40 12 40z" />
+    </g>
+  ),
+};
+
+/** A tuft of grass, drawn as a few swaying blades. */
+function Blades({ x, color, tall = false }: { x: number; color: string; tall?: boolean }) {
+  const h = tall ? 62 : 38;
+  return (
+    <g class="anim-sway" style={{ transformOrigin: `${x}px 360px` }} fill={color}>
+      {[-14, -7, 0, 7, 14].map((d, i) => (
+        <path key={i} d={`M${x + d - 2.5} 362q${d / 3} -${h * 0.55} ${d * 0.9 + (i % 2 ? 3 : -3)} -${h - (i % 3) * 8}q-2 ${h * 0.5} 6 ${h - (i % 3) * 8}z`} />
+      ))}
+    </g>
+  );
+}
+
+/**
+ * `layer` lets the stage move the sky, the land and the foreground at different
+ * speeds (parallax); by default the whole picture is drawn at once.
+ */
 export function SceneArt({
   sky,
   ground,
   motifs = [],
   still = false,
   label,
+  layer = 'all',
 }: {
   sky: Sky;
   ground: Ground;
   motifs?: Motif[];
   still?: boolean;
   label?: string;
+  layer?: 'all' | 'sky' | 'land' | 'fore';
 }) {
   const p = PALETTES[sky];
   const id = `g${sky}`;
@@ -686,6 +768,7 @@ export function SceneArt({
   const weather = motifs.filter((m) => WEATHER.has(m));
   // Night skies always get a few stars, so a night scene never looks empty.
   const autoStars = sky === 'night' && !motifs.includes('stars');
+  const all = layer === 'all';
   return (
     <svg
       viewBox="0 0 300 360"
@@ -693,6 +776,7 @@ export function SceneArt({
       class={`scene-art ${still ? 'still' : ''}`}
       role="img"
       aria-label={label ?? 'Illustration'}
+      aria-hidden={all ? undefined : 'true'}
     >
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
@@ -701,25 +785,48 @@ export function SceneArt({
           <stop offset="1" stop-color={p.sky[2]} />
         </linearGradient>
       </defs>
-      <rect x="-10" y="-10" width="320" height="380" fill={`url(#${id})`} />
-      {autoStars && MOTIF_DRAW.stars(p, sky)}
-      {skyMotifs.map((m) => (
-        <g key={m}>{MOTIF_DRAW[m](p, sky)}</g>
-      ))}
-      {GROUNDS[ground](p)}
-      {groundMotifs.map((m) => (
-        <g key={m}>{MOTIF_DRAW[m](p, sky)}</g>
-      ))}
-      {weather.map((m) => (
-        <g key={m}>{MOTIF_DRAW[m](p, sky)}</g>
-      ))}
-      <rect x="-10" y="-10" width="320" height="380" fill="url(#vignette)" />
-      <defs>
-        <radialGradient id="vignette" cx="0.5" cy="0.45" r="0.75">
-          <stop offset="0.6" stop-color="#000" stop-opacity="0" />
-          <stop offset="1" stop-color="#000" stop-opacity="0.35" />
-        </radialGradient>
-      </defs>
+      {(all || layer === 'sky') && (
+        <>
+          <rect x="-10" y="-10" width="320" height="380" fill={`url(#${id})`} />
+          {autoStars && MOTIF_DRAW.stars(p, sky)}
+          {skyMotifs.map((m) => (
+            <g key={m} data-m={m}>
+              {MOTIF_DRAW[m](p, sky)}
+            </g>
+          ))}
+        </>
+      )}
+      {(all || layer === 'land') && (
+        <>
+          {GROUNDS[ground](p)}
+          {groundMotifs.map((m) => (
+            <g key={m} data-m={m}>
+              {MOTIF_DRAW[m](p, sky)}
+            </g>
+          ))}
+        </>
+      )}
+      {(all || layer === 'fore') && (
+        <>
+          {weather.map((m) => (
+            <g key={m} data-m={m}>
+              {MOTIF_DRAW[m](p, sky)}
+            </g>
+          ))}
+          {layer === 'fore' && FOREGROUND[ground](p)}
+        </>
+      )}
+      {all && (
+        <>
+          <rect x="-10" y="-10" width="320" height="380" fill="url(#vignette)" />
+          <defs>
+            <radialGradient id="vignette" cx="0.5" cy="0.45" r="0.75">
+              <stop offset="0.6" stop-color="#000" stop-opacity="0" />
+              <stop offset="1" stop-color="#000" stop-opacity="0.35" />
+            </radialGradient>
+          </defs>
+        </>
+      )}
     </svg>
   );
 }

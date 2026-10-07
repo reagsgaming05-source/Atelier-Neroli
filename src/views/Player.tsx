@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../components/Icon';
 import { Ambience, AMBIENCE_LEVEL, createAudioContext, sceneMix } from '../lib/ambience';
-import { SceneArt } from '../components/SceneArt';
+import { Stage } from '../components/Stage';
+import { sceneSeed } from '../lib/direction';
 import { PROPHET_STORIES } from '../data/prophets';
 import { getSeries } from '../data/series';
 import { SUNNAH_STORIES } from '../data/sunnah-stories';
@@ -50,6 +51,8 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const [narration, setNarration] = useState<EpisodeNarration | null | undefined>(undefined);
   // The recording could not be played here (blocked, offline, unsupported): the text is read in silence.
   const [audioFailed, setAudioFailed] = useState(false);
+  // How far the narration has got through the scene's text, 0 to 1: lights up the words as they are told.
+  const [progress, setProgress] = useState(0);
   const narrator = useRef<HTMLAudioElement | null>(null);
   // Nature sounds under the voice, created from the first tap.
   const ambience = useRef<Ambience | null>(null);
@@ -172,6 +175,21 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
     };
   }, [started, playing, ended, index, phase, verses, narration, prefs.voice, prefs.recitation, prefs.rate]);
 
+  useEffect(() => setProgress(0), [index, episode]);
+  useEffect(() => {
+    if (!started || !playing || ended || phase !== 'text' || !scene) return;
+    const span = narration && prefs.voice ? spanFor(narration, scene.text) : undefined;
+    const length = span ? ((span[1] - span[0]) * 1000) / prefs.rate : readingTime(scene.text, prefs.rate);
+    const origin = Date.now() - progress * length;
+    const id = window.setInterval(() => {
+      const audio = narrator.current;
+      // With a recording, follow the sound itself (minus the silence it keeps at both ends); otherwise follow the clock.
+      const p = span && audio && !audio.paused ? (audio.currentTime - span[0] - 0.25) / (span[1] - span[0] - 0.75) : (Date.now() - origin) / length;
+      setProgress(Math.min(1, Math.max(0, p)));
+    }, 120);
+    return () => clearInterval(id);
+  }, [started, playing, ended, phase, index, narration, prefs.voice, prefs.rate]);
+
   // Nature sounds follow the scene: they fade with it, and fall silent when paused.
   useEffect(() => {
     if (!started || !scene) return;
@@ -265,6 +283,13 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
     setPlaying(true);
   };
 
+  // How long the scene lasts, to pace the camera: the recorded span, or a reading time, plus the verse.
+  const recordedSpan = narration && prefs.voice ? spanFor(narration, scene.text) : undefined;
+  const sceneMs = (recordedSpan ? ((recordedSpan[1] - recordedSpan[0]) * 1000) / prefs.rate : readingTime(scene.text, prefs.rate)) + (scene.verse ? 6000 : 0);
+
+  const words = scene.text.split(' ');
+  const lit = phase === 'text' ? Math.round(progress * words.length * 1.04) : words.length;
+
   const isLast = episode + 1 >= series.episodes.length;
   const verse = scene.verse;
   // The verse stays on screen for the whole scene, so it can be read when paused.
@@ -274,9 +299,17 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   return (
     <div class="player-screen" role="dialog" aria-label={`${info.title}, ${ep.title}`}>
       <div class="player-stage">
-        <div class={`kenburns fade-in ${index % 2 ? 'reverse' : ''}`} key={index}>
-          <SceneArt sky={scene.sky} ground={scene.ground} motifs={scene.motifs} still={!playing} label={scene.text} />
+        <div class="stage-fade" key={index}>
+          <Stage sky={scene.sky} ground={scene.ground} motifs={scene.motifs} seed={sceneSeed(scene.text)} ms={sceneMs} playing={playing} label={scene.text} />
         </div>
+
+        {started && index === 0 && !ended && (
+          <div class="title-card" key={`${storyId}-${episode}`}>
+            <small>{series.episodes.length > 1 ? `Épisode ${episode + 1}` : 'Récit'}</small>
+            <h2>{ep.title}</h2>
+            {info.ar && <span class="ar" lang="ar">{info.ar}</span>}
+          </div>
+        )}
 
         <div class="player-top">
           <div class="player-bars" aria-hidden="true">
@@ -364,7 +397,13 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
       </div>
 
       <div class="player-caption" aria-live="polite">
-        <div class="narration">{scene.text}</div>
+        <div class="narration">
+          {words.map((w, i) => (
+            <span key={i} class={i < lit ? 'w on' : 'w'}>
+              {w}{' '}
+            </span>
+          ))}
+        </div>
         {showVerse && verses && (
           <div class="fade-in">
             <div class="verse-ar" lang="ar">

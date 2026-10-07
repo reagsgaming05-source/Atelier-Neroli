@@ -1795,6 +1795,272 @@ a.goal-title::after {
 @keyframes kenburns-out { from { transform: scale(1.12) translateY(-2%); } to { transform: scale(1.02); } }
 @keyframes fade-in { from { opacity: 0; } }
 
+/* ---------- The stage: scenes shot like a film ---------- */
+
+.stage-fade {
+  position: absolute;
+  inset: 0;
+  animation: fade-in 1.1s ease both;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #050a14;
+}
+
+.stage-layer {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.42, 0, 0.3, 1);
+  will-change: transform;
+}
+
+/* Vignette, a warm light leak that drifts, and film grain. */
+.stage-grade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 45%, transparent 55%, rgb(0 0 0 / 38%) 100%),
+    radial-gradient(ellipse at 100% 0%, rgb(255 190 110 / 16%), transparent 55%);
+  animation: leak 16s ease-in-out infinite alternate;
+}
+
+.stage-grade::after {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  opacity: 0.1;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 0.8s steps(5) infinite;
+}
+
+@keyframes leak { to { transform: translate(-4%, 3%); opacity: 0.8; } }
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-9px, 6px); }
+  50% { transform: translate(7px, -10px); }
+  75% { transform: translate(-5px, -4px); }
+  100% { transform: translate(10px, 8px); }
+}
+
+/* Atmosphere floating in front of the picture. */
+.fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.fx i {
+  position: absolute;
+  display: block;
+  left: calc(var(--x) * 1%);
+  top: calc(var(--y) * 1%);
+  animation-duration: calc(var(--t) * 1s);
+  animation-delay: calc(var(--d) * 1s);
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+.stage-fx.paused i { animation-play-state: paused; }
+
+.fx-dust i {
+  width: calc(var(--s) * 1px);
+  height: calc(var(--s) * 1px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 243 205 / 95%), rgb(255 243 205 / 0%) 70%);
+  box-shadow: 0 0 8px rgb(255 232 170 / 60%);
+  animation-name: mote;
+}
+
+.fx-fireflies i {
+  width: calc(var(--s) * 2.4px);
+  height: calc(var(--s) * 2.4px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(236 255 160), rgb(220 255 120 / 0%) 70%);
+  box-shadow: 0 0 10px rgb(220 255 120 / 70%);
+  animation-name: wander, blink;
+  animation-timing-function: ease-in-out, ease-in-out;
+  animation-direction: alternate, normal;
+  animation-duration: calc(var(--t) * 1s), 3.4s;
+}
+
+.fx-embers i {
+  width: calc(var(--s) * 1.1px);
+  height: calc(var(--s) * 1.1px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 214 120), rgb(255 120 40 / 0%) 70%);
+  box-shadow: 0 0 6px rgb(255 140 50 / 80%);
+  animation-name: ember;
+  animation-duration: calc(var(--t) * 0.4s);
+  animation-timing-function: ease-out;
+}
+
+.fx-sand i {
+  width: calc(var(--w) * 1px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(255 232 190 / 55%), transparent);
+  animation-name: sand;
+}
+
+.fx-mist i {
+  left: -30%;
+  top: calc(var(--y) * 0.8%);
+  width: 160%;
+  height: 36%;
+  background: radial-gradient(ellipse at center, rgb(230 238 245 / 24%), transparent 70%);
+  animation-name: mist;
+  animation-duration: calc(var(--t) * 3s);
+  animation-timing-function: ease-in-out;
+  animation-direction: alternate;
+}
+
+.fx-mist.sky-storm i { background: radial-gradient(ellipse at center, rgb(170 180 196 / 30%), transparent 70%); }
+.fx-mist.sky-night i { background: radial-gradient(ellipse at center, rgb(130 160 200 / 16%), transparent 70%); }
+
+.fx-rays { mix-blend-mode: screen; }
+
+.fx-rays i {
+  left: calc(var(--x) * 0.8%);
+  top: -12%;
+  width: calc(var(--w) * 0.5% + 10%);
+  height: 125%;
+  transform-origin: top center;
+  /* Soft on all sides: fades along its length and towards its edges. */
+  background: linear-gradient(90deg, transparent, rgb(255 240 190 / 34%) 50%, transparent);
+  mask-image: linear-gradient(180deg, #000, transparent 80%);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 80%);
+  animation-name: sway-ray;
+  animation-timing-function: ease-in-out;
+  animation-direction: alternate;
+}
+
+.fx-leaves i {
+  top: 0;
+  width: 8px;
+  height: 5px;
+  border-radius: 0 100% 0 100%;
+  background: #7ba35a;
+  animation-name: leaf;
+}
+
+.fx-leaves i:nth-child(even) { background: #b88b4a; }
+
+.fx-birds i {
+  top: calc(6% + var(--y) * 0.3%);
+  left: 0;
+  width: 24px;
+  height: 11px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 11'%3E%3Cpath d='M1 8q5.5-9 11 0 5.5-9 11 0' fill='none' stroke='%23161a22' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  animation-name: bird, flap;
+  animation-duration: calc(var(--t) * 1.8s), 0.5s;
+  animation-direction: normal, alternate;
+  animation-timing-function: linear, ease-in-out;
+}
+
+.fx-clouds i {
+  left: calc(var(--x) * 1% - 30%);
+  width: calc(var(--w) * 3px + 140px);
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgb(255 255 255 / 24%), transparent 70%);
+  animation-name: cloud;
+}
+
+.fx-clouds.sky-storm i { background: radial-gradient(ellipse at center, rgb(60 68 82 / 55%), transparent 70%); }
+.fx-clouds.sky-dusk i { background: radial-gradient(ellipse at center, rgb(255 170 120 / 26%), transparent 70%); }
+.fx-clouds.sky-dawn i { background: radial-gradient(ellipse at center, rgb(255 205 170 / 28%), transparent 70%); }
+
+@keyframes mote {
+  0% { opacity: 0; transform: translate(0, 0); }
+  20%, 80% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(34px, -72px); }
+}
+@keyframes wander {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(34px, -28px); }
+  100% { transform: translate(-22px, 20px); }
+}
+@keyframes blink { 0%, 100% { opacity: 0.08; } 50% { opacity: 1; } }
+@keyframes ember {
+  0% { opacity: 0; transform: translate(0, 0) scale(1); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(var(--s) * 7px - 14px), -200px) scale(0.3); }
+}
+@keyframes sand {
+  0% { opacity: 0; transform: translateX(-80px); }
+  10%, 70% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(120vw); }
+}
+@keyframes mist { from { transform: translateX(-7%); } to { transform: translateX(9%); } }
+@keyframes sway-ray {
+  from { opacity: 0.25; transform: rotate(-27deg); }
+  to { opacity: 0.8; transform: rotate(-19deg); }
+}
+@keyframes leaf {
+  0% { opacity: 0; transform: translate(0, -8vh) rotate(0); }
+  10% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(90px, 110vh) rotate(560deg); }
+}
+@keyframes bird {
+  from { transform: translate(-14vw, 0); }
+  50% { transform: translate(55vw, -5vh); }
+  to { transform: translate(118vw, -1vh); }
+}
+@keyframes flap { from { scale: 1 1; } to { scale: 1 0.35; } }
+@keyframes cloud { from { transform: translateX(-45vw); } to { transform: translateX(150vw); } }
+
+/* Episode title card, over the first shot. */
+.title-card {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 0 28px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgb(5 10 20 / 55%), rgb(5 10 20 / 15%) 75%);
+  animation: title-card 4.6s ease both;
+}
+
+.title-card small {
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #d9b45a;
+  font-size: 0.72rem;
+}
+
+.title-card h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 6vw, 2.3rem);
+  font-weight: 650;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 60%);
+}
+
+.title-card .ar {
+  font-family: 'Amiri Quran', serif;
+  color: #e8cd8d;
+  font-size: 1.6rem;
+}
+
+@keyframes title-card {
+  0% { opacity: 0; transform: scale(0.97); }
+  18%, 70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.03); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-layer { transition-duration: 0.01ms !important; }
+  .fx, .stage-grade::after { display: none; }
+}
+
 .player-top {
   position: absolute;
   inset: 0 0 auto 0;
@@ -1872,6 +2138,13 @@ a.goal-title::after {
   line-height: 1.6;
   text-wrap: pretty;
 }
+
+.player-caption .narration .w {
+  opacity: 0.42;
+  transition: opacity 0.35s ease;
+}
+
+.player-caption .narration .w.on { opacity: 1; }
 
 .player-caption .verse-ar {
   margin-top: 12px;
