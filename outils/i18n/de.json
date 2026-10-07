@@ -2256,7 +2256,32 @@
   "word docx texte modifier convertir traitement de texte libreoffice": "word docx text bearbeiten umwandeln konvertieren textverarbeitung libreoffice",
   "XObject": "XObject",
   "Zone de saisie": "Eingabebereich",
-  "Zoom de la page": "Zoom der Seite"
+  "Zoom de la page": "Zoom der Seite",
+  "Arrêter": "Anhalten",
+  "Aucun texte à lire. Sur un scan, lancez d'abord la reconnaissance de texte.": "Kein Text zum Vorlesen. Bei einem Scan starten Sie zuerst die Texterkennung.",
+  "Aucune voix n'est installée sur ce poste. La lecture n'utilise que les voix de l'ordinateur (Windows : réglages « Heure et langue » ; macOS : « Accessibilité › Contenu énoncé ») : rien n'est envoyé sur internet.": "Auf diesem Arbeitsplatz ist keine Stimme installiert. Das Vorlesen verwendet nur Stimmen des Computers (Windows: Einstellungen «Zeit und Sprache»; macOS: «Bedienungshilfen › Gesprochene Inhalte»): Es wird nichts ins Internet gesendet.",
+  "Ce poste n'a pas de synthèse vocale : la lecture à voix haute n'est pas disponible.": "Dieser Arbeitsplatz hat keine Sprachausgabe: Das Vorlesen ist nicht verfügbar.",
+  "Choisissez les pages à lire, et la voix (celle qui correspond à la langue du document est proposée d'abord).": "Wählen Sie die vorzulesenden Seiten und die Stimme (die zur Sprache des Dokuments passende wird zuerst vorgeschlagen).",
+  "De 0,6 fois la vitesse normale à 1,6 fois. Elle change au morceau suivant, sans recommencer.": "Von 0.6 bis 1.6 mal die normale Geschwindigkeit. Sie ändert sich beim nächsten Abschnitt, ohne neu zu beginnen.",
+  "De la page affichée à la fin": "Von der angezeigten Seite bis zum Ende",
+  "La lecture suit le texte du document, titres et tableaux compris, et fait défiler la page lue. Un scan se lit seulement une fois son texte reconnu.": "Das Vorlesen folgt dem Text des Dokuments einschliesslich Titeln und Tabellen und blättert zur gelesenen Seite. Ein Scan wird erst vorgelesen, wenn sein Text erkannt ist.",
+  "La page affichée seulement": "Nur die angezeigte Seite",
+  "La voix a refusé de lire ce texte. Essayez une autre voix.": "Die Stimme hat das Vorlesen dieses Textes verweigert. Versuchen Sie eine andere Stimme.",
+  "Le document n'est pas modifié. Seules les voix installées sur ce poste sont utilisées : le texte ne part nulle part.": "Das Dokument wird nicht verändert. Es werden nur auf diesem Arbeitsplatz installierte Stimmen verwendet: Der Text geht nirgendwohin.",
+  "Lecture à voix haute terminée": "Vorlesen beendet",
+  "Lecture arrêtée.": "Vorlesen angehalten.",
+  "lecture audio voix parler synthèse vocale malvoyant écouter relire": "vorlesen audio stimme sprechen sprachausgabe sehbehindert zuhören nachlesen",
+  "Lecture terminée.": "Vorlesen beendet.",
+  "Lire à voix haute": "Vorlesen",
+  "Pause": "Pause",
+  "Réglez la vitesse si besoin, puis lancez « Lire ». « Pause » suspend, « Arrêter » interrompt ; fermer la boîte arrête aussi la lecture.": "Stellen Sie bei Bedarf die Geschwindigkeit ein und starten Sie dann «Lesen». «Pause» unterbricht, «Anhalten» beendet; auch das Schliessen des Fensters beendet das Vorlesen.",
+  "Reprendre": "Fortsetzen",
+  "Sans voix installée sur le poste, l'outil le dit et ne lit rien. Un scan se lit seulement une fois son texte reconnu. La qualité des voix dépend de celles que Windows ou macOS fournit.": "Ist auf dem Arbeitsplatz keine Stimme installiert, sagt das Werkzeug es und liest nichts vor. Ein Scan wird erst vorgelesen, wenn sein Text erkannt ist. Die Qualität der Stimmen hängt von denen ab, die Windows oder macOS liefert.",
+  "Seules les voix installées sur ce poste sont proposées. La voix qui correspond à la langue du document est choisie d'abord.": "Es werden nur auf diesem Arbeitsplatz installierte Stimmen angeboten. Die zur Dokumentsprache passende Stimme wird zuerst gewählt.",
+  "Une voix de l'ordinateur lit le texte du document, titres et tableaux compris, pendant qu'on suit la page à l'écran.": "Eine Stimme des Computers liest den Text des Dokuments vor, einschliesslich Titeln und Tabellen, während man die Seite am Bildschirm verfolgt.",
+  "Une voix du poste dit le texte ; rien ne sort": "Eine Stimme des Arbeitsplatzes liest den Text vor; nichts verlässt ihn",
+  "Vitesse": "Geschwindigkeit",
+  "Voix": "Stimme"
  },
  "motifs": {
   "\n• … et {0}.": "\n• … und {0}.",
@@ -2542,7 +2567,8 @@
   "Une action « {0} » ({1}) est interdite dans un PDF/A.": "Eine Aktion «{0}» ({1}) ist in einem PDF/A nicht erlaubt.",
   "Une action nommée « {0} » ({1}) est interdite dans un PDF/A.": "Eine Aktion mit dem Namen «{0}» ({1}) ist in einem PDF/A nicht erlaubt.",
   "Une annotation « {0} » n'a pas d'apparence : un PDF/A l'exige.": "Eine Anmerkung «{0}» hat kein Erscheinungsbild: Ein PDF/A verlangt dies.",
-  "Une annotation « {0} » n'est pas imprimable ou est cachée : un PDF/A l'exige imprimable et visible.": "Eine Anmerkung «{0}» ist nicht druckbar oder verborgen: Ein PDF/A verlangt sie druckbar und sichtbar."
+  "Une annotation « {0} » n'est pas imprimable ou est cachée : un PDF/A l'exige imprimable et visible.": "Eine Anmerkung «{0}» ist nicht druckbar oder verborgen: Ein PDF/A verlangt sie druckbar und sichtbar.",
+  "Lecture : page {0} ({1} sur {2})…": "Vorlesen: Seite {0} ({1} von {2})…"
  },
  "html": {
   ".pdf": ".pdf",

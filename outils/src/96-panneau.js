@@ -64,6 +64,7 @@
         { id: 'search', name: 'Rechercher, remplacer, caviarder', sub: 'Un mot, un nom, un numéro : dans tout le document', icon: IC.search, need: 'pages', mots: 'chercher trouver remplacer biffer rédaction noircir masquer', run: toolSearch },
         { id: 'tableau', name: 'Copier un tableau', sub: 'Vers Excel, en colonnes', icon: IC.tableau, need: 'pages', mots: 'excel csv colonnes lignes extraire tableau', run: toolTableau },
         { id: 'ocr', name: 'Reconnaître le texte', sub: 'OCR local : un scan devient cherchable', icon: IC.ocr, need: 'pages', mots: 'ocr scan scanner numériser texte cherchable lisible', run: toolOcr, active: () => state.pages.some(p => p.ocr) },
+        { id: 'voix', name: 'Lire à voix haute', sub: 'Une voix du poste dit le texte ; rien ne sort', icon: IC.voix, need: 'pages', mots: 'lecture audio voix parler synthèse vocale malvoyant écouter relire', run: toolVoix },
         { id: 'comparer', name: 'Comparer deux versions', sub: 'Côte à côte, mots ajoutés ou retirés', icon: IC.compare, need: 'pages', mots: 'différences versions modifications comparaison côte à côte', run: toolComparer },
       ] },
     ];
@@ -107,7 +108,7 @@
     dossier: '#D83790', resize: '#2680EB', lots: '#E68619',
     signer: '#D83790', edit: '#8C5AE8', 'caviarder-zone': '#D7373F', tampon: '#E68619', watermark: '#D83790', stamp: '#0D9F8F',
     number: '#E68619', form: '#2D9D5F', serie: '#2D9D5F', commentaires: '#E68619',
-    archiver: '#6E7681', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', 'exp-word': '#2680EB', compress: '#E68619', flatten: '#2680EB',
+    archiver: '#6E7681', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', 'exp-word': '#2680EB', voix: '#8C5AE8', compress: '#E68619', flatten: '#2680EB',
     caviarder: '#D7373F', nettoyer: '#0D9F8F', password: '#D7373F', certificat: '#D83790', signatures: '#2680EB',
     props: '#6E7681', access: '#2D9D5F', search: '#2680EB', tableau: '#2D9D5F', ocr: '#8C5AE8', comparer: '#0D9F8F',
   };

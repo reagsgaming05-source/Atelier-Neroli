@@ -64,7 +64,7 @@
   // sélection, répondre à une touche de la table des raccourcis, écrire l'infobulle d'un geste avec sa touche — sont des points d'accroche que 40-tuiles.js (les
   // vignettes) et 99-init.js (la barre, les raccourcis) renseignent au chargement ; n'importe quel module appelle vue.render() sans savoir qui répond. Avant, 99-init.js remplaçait
   // « render » à chaud, ce qui supposait de savoir dans quel ordre tout se chargeait.
-  const vue = { syntheseCommentaires() {}, render() {}, syncButtons() {}, updateSelectionUI() {}, touche() { return false; }, infobulle(base) { return base; } };
+  const vue = { syntheseCommentaires() {}, async blocsDePage() { return []; }, render() {}, syncButtons() {}, updateSelectionUI() {}, touche() { return false; }, infobulle(base) { return base; } };
 
   function prendreEtat() {
     const e = {};

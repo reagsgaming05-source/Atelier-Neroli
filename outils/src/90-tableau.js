@@ -164,6 +164,8 @@
     if (!out.length && p.ocr && p.ocr.mots) p.ocr.mots.forEach(m => out.push({ str: m.t, x: m.x, base: ocrBase(m), w: m.w, size: ocrCorps(m) }));
     return out;
   }
+  // La lecture à voix haute (83-voix.js), écrite avant ce module, passe par la vue pour avoir la structure de la page.
+  vue.blocsDePage = async p => blocsDePage(await morceauxDePage(p));
   // Un montant tel qu'il est écrit (1'234.50, CHF 1 234,50, 1'234.-) devient
   // un nombre qu'Excel reconnaît, avec le séparateur décimal choisi.
   const RX_MONTANT = /^\s*(?:CHF|SFr\.?|Fr\.?|€|EUR|USD|\$)?\s*([-+−]?)\s*(\d{1,3}(?:[ '’  ]\d{3})+|\d+)(?:[.,](\d{1,2}|-|–|—))?\s*(?:CHF|SFr\.?|Fr\.?|€|EUR|USD|\$)?\s*$/i;

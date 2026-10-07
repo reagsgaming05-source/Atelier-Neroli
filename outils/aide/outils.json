@@ -446,6 +446,18 @@
    "attention": "Un scan droit, net et bien contrasté se lit mieux. Relisez : une reconnaissance n'est jamais exacte à 100 %."
   },
   {
+   "id": "voix",
+   "nom": "Lire à voix haute",
+   "groupe": "document",
+   "quoi": "Une voix de l'ordinateur lit le texte du document, titres et tableaux compris, pendant qu'on suit la page à l'écran.",
+   "etapes": [
+    "Choisissez les pages à lire, et la voix (celle qui correspond à la langue du document est proposée d'abord).",
+    "Réglez la vitesse si besoin, puis lancez « Lire ». « Pause » suspend, « Arrêter » interrompt ; fermer la boîte arrête aussi la lecture."
+   ],
+   "effet": "Le document n'est pas modifié. Seules les voix installées sur ce poste sont utilisées : le texte ne part nulle part.",
+   "attention": "Sans voix installée sur le poste, l'outil le dit et ne lit rien. Un scan se lit seulement une fois son texte reconnu. La qualité des voix dépend de celles que Windows ou macOS fournit."
+  },
+  {
    "id": "comparer",
    "nom": "Comparer deux versions",
    "groupe": "document",
