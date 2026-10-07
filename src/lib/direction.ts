@@ -108,6 +108,23 @@ export function planShots(boxes: Box[], count: number, seed: number, focus?: str
   return [start, ...route.slice(0, count - 1)];
 }
 
+/**
+ * The camera's route through a painting: slow pushes and drifts, never closer than it can bear
+ * (the painting is a flat picture), starting from where the camera is.
+ */
+export function planPainting(count: number, seed: number, from?: Shot): Shot[] {
+  const rand = rng(seed);
+  const start = from ?? { x: 150, y: 190, k: 1.04 };
+  const route: Shot[] = [start];
+  let side = rand() < 0.5 ? -1 : 1;
+  for (let i = 1; i < Math.max(count, 2); i++) {
+    const k = i % 2 ? 1.18 + rand() * 0.14 : 1.05 + rand() * 0.08;
+    route.push({ x: 150 + side * (22 + rand() * 30), y: 150 + rand() * 90, k });
+    side = -side;
+  }
+  return route;
+}
+
 export interface Stage {
   w: number;
   h: number;

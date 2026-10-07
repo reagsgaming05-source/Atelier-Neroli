@@ -5,6 +5,7 @@ import { Stage } from '../components/Stage';
 import { getBeats } from '../data/storyboards';
 import { sceneSeed } from '../lib/direction';
 import { pictureAt, picturesOf } from '../lib/storyboard';
+import { hasPaintings, loadPaintings, LOOKS, paintingKey, paintingUrl, type Look } from '../lib/paintings';
 import { PROPHET_STORIES } from '../data/prophets';
 import { getSeries } from '../data/series';
 import { SUNNAH_STORIES } from '../data/sunnah-stories';
@@ -41,6 +42,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const [settings, setSettings] = useStore(settingsStore);
   const [, setLearn] = useStore(learnStore);
   const prefs = settings.stories;
+  const look: Look = prefs.look ?? 'book';
   const translation = settings.quran.translation === 'none' ? 'fr-hamidullah' : settings.quran.translation;
 
   const [index, setIndex] = useState(0);
@@ -64,6 +66,24 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
 
   const scene = ep?.scenes[index];
   const verseSurah = ep?.scenes.find((s) => s.verse)?.verse?.surah;
+
+  // Painted pictures, if the stories have some; the ones about to be told are fetched ahead.
+  const [found, setFound] = useState<Awaited<ReturnType<typeof loadPaintings>> | null>(null);
+  useEffect(() => {
+    loadPaintings().then(setFound);
+  }, []);
+  useEffect(() => {
+    if (!found || look === 'draw') return;
+    for (const at of [index, index + 1]) {
+      const s = ep?.scenes[at];
+      if (!s) continue;
+      const count = picturesOf(s, getBeats(storyId, episode, at)).length;
+      for (let n = 0; n < count; n++) {
+        const url = paintingUrl(found, look, paintingKey(storyId, episode, at, n));
+        if (url) new Image().src = url;
+      }
+    }
+  }, [found, look, storyId, episode, index]);
 
   // Verse texts for this episode (all its verses come from one surah).
   useEffect(() => {
@@ -296,6 +316,10 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const lastPicture = pictureNo >= pictures.length - 1;
   const pictureMs = Math.max(textMs * (picture.to - picture.from), 2500) + (lastPicture && scene.verse ? 6000 : 0);
 
+  // Painted pictures (when the episode has them in the chosen look) replace the drawing.
+  const painting = found ? paintingUrl(found, look, paintingKey(storyId, episode, index, pictureNo)) : undefined;
+  const paintedLooks = found ? LOOKS.filter((l) => l.id !== 'draw' && hasPaintings(found, l.id as Exclude<Look, 'draw'>, storyId, episode)) : [];
+
   const words = scene.text.split(' ');
   const lit = phase === 'text' ? Math.round(progress * words.length * 1.04) : words.length;
 
@@ -303,6 +327,11 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const verse = scene.verse;
   // The verse stays on screen for the whole scene, so it can be read when paused.
   const showVerse = !!verse;
+  const cycleLook = () => {
+    const ids: Look[] = ['draw', ...paintedLooks.map((l) => l.id)];
+    const next = ids[(ids.indexOf(look) + 1) % ids.length];
+    setSettings((s) => ({ ...s, stories: { ...s.stories, look: next } }));
+  };
   const toggle = (key: 'voice' | 'recitation' | 'ambience' | 'people') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
 
   return (
@@ -320,6 +349,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
           playing={playing}
           label={scene.text}
           people={prefs.people}
+          painting={painting}
         />
 
         {started && index === 0 && !ended && (
@@ -450,6 +480,11 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
           <button class="toggle" aria-pressed={prefs.recitation} onClick={() => toggle('recitation')}>
             Récitation
           </button>
+          {paintedLooks.length > 0 && (
+            <button class="toggle" aria-pressed={look !== 'draw'} onClick={cycleLook} title="Style des images">
+              Images : {LOOKS.find((l) => l.id === look)?.label}
+            </button>
+          )}
           <button class="toggle" aria-pressed={prefs.people} onClick={() => toggle('people')} title="Silhouettes de personnes, sans visage">
             Silhouettes
           </button>

@@ -64,6 +64,16 @@ export default defineConfig({
             },
           },
           {
+            // Painted pictures of the stories: each file is final, so a cached copy never goes stale.
+            urlPattern: ({ url }) => url.pathname.includes('/data/paintings/') && url.pathname.endsWith('.webp'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'sakina-paintings',
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 600, purgeOnQuotaError: true },
+            },
+          },
+          {
             urlPattern: ({ url }) => url.pathname.includes('/data/'),
             // Instant from cache, refreshed in the background if the data changed.
             handler: 'StaleWhileRevalidate',

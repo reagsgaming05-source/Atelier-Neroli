@@ -4,6 +4,7 @@ import {
   cameraTransform,
   effectsFor,
   layerZoom,
+  planPainting,
   planShots,
   rng,
   shotCount,
@@ -26,6 +27,8 @@ interface Slot {
   sky: Sky;
   ground: Ground;
   motifs: Motif[];
+  /** The painted picture, when there is one (the drawn layers are then left out). */
+  painting?: string;
 }
 
 /**
@@ -45,6 +48,7 @@ export function Stage({
   playing,
   label,
   people = true,
+  painting,
 }: {
   /** Changes whenever another picture has to be shown. */
   pictureKey: string;
@@ -61,11 +65,13 @@ export function Stage({
   label?: string;
   /** Show the silhouettes of ordinary people. */
   people?: boolean;
+  /** URL of a painted picture that replaces the drawing. */
+  painting?: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<StageSize>({ w: 390, h: 520 });
-  const signature = `${sky}/${ground}/${[...motifs].sort().join('+')}`;
-  const [slots, setSlots] = useState<Slot[]>([{ id: pictureKey, sig: signature, seed, sky, ground, motifs }]);
+  const signature = painting ?? `${sky}/${ground}/${[...motifs].sort().join('+')}`;
+  const [slots, setSlots] = useState<Slot[]>([{ id: pictureKey, sig: signature, seed, sky, ground, motifs, painting }]);
   // The camera is a spring: it eases towards a target and keeps its speed when the target changes,
   // so that it glides from one framing to the next without ever stopping.
   const camRef = useRef<Shot>(START); // where it is heading
@@ -91,7 +97,7 @@ export function Stage({
 
   // Another picture: if it looks different, it dissolves in over the current one.
   useLayoutEffect(() => {
-    setSlots((all) => (all.at(-1)!.sig === signature ? all : [...all, { id: pictureKey, sig: signature, seed, sky, ground, motifs }].slice(-2)));
+    setSlots((all) => (all.at(-1)!.sig === signature ? all : [...all, { id: pictureKey, sig: signature, seed, sky, ground, motifs, painting }].slice(-2)));
   }, [pictureKey]);
 
   // Once the old picture is covered, it goes.
@@ -114,7 +120,9 @@ export function Stage({
         /* not rendered (hidden tab): the camera falls back to the generic views */
       }
     });
-    const planned = planShots(found, Math.max(shotCount(ms), 2), seed, focus, camRef.current);
+    const planned = slots.at(-1)!.painting
+      ? planPainting(Math.max(shotCount(ms, 5200), 2), seed, camRef.current)
+      : planShots(found, Math.max(shotCount(ms), 2), seed, focus, camRef.current);
     setRoute(planned);
     setStep(0);
     // Moves between framings take most of the time available: the camera is always drifting.
@@ -202,7 +210,20 @@ export function Stage({
 }
 
 function PictureLayers({ slot, fresh, playing, people }: { slot: Slot; fresh: boolean; playing: boolean; people: boolean }) {
-  const effects = useMemo(() => effectsFor(slot), [slot.sig]);
+  // Over a painting, the floating atmosphere stays but the drawn clouds would only be in the way.
+  const effects = useMemo(() => effectsFor(slot).filter((e) => !slot.painting || e !== 'clouds'), [slot.sig]);
+  if (slot.painting) {
+    return (
+      <div class={`stage-slot ${fresh ? 'stage-slot-in' : ''}`} data-slot={slot.id}>
+        <div class="stage-layer" data-layer="land" data-factor={PARALLAX.land}>
+          <img class="stage-painting" src={slot.painting} alt="" decoding="async" draggable={false} />
+        </div>
+        <div class={`stage-layer stage-fx ${playing ? '' : 'paused'}`} data-factor={PARALLAX.fx}>
+          <Atmosphere effects={effects} seed={slot.seed} sky={slot.sky} />
+        </div>
+      </div>
+    );
+  }
   return (
     <div class={`stage-slot ${fresh ? 'stage-slot-in' : ''}`} data-slot={slot.id}>
       <div class="stage-layer" data-layer="sky" data-factor={PARALLAX.sky}>
