@@ -187,7 +187,17 @@
         const kind = fieldKind(f);
         let options = null;
         try { if (typeof f.getOptions === 'function') options = f.getOptions(); } catch (e) { signaler('Liste de choix d\'un champ de formulaire', e); }
-        return { name: f.getName(), kind, value: readField(f, kind), options };
+        // Ce que le champ dit de lui-même : son intitulé (/TU), s'il est en lecture seule ou obligatoire, s'il tient sur plusieurs lignes, sa longueur
+        // maximale, son format (celui que ce logiciel écrit : /AktumFormat), le choix multiple d'une liste.
+        const att = { lecture: false, requis: false, multi: false, maxLen: 0, format: '', multiSelect: false, aide: '' };
+        try { att.lecture = !!f.isReadOnly(); att.requis = !!f.isRequired(); } catch (e) { signaler('Attributs d\'un champ de formulaire', e, 'info'); }
+        try { if (kind === 'text') { att.multi = !!f.isMultiline(); att.maxLen = f.getMaxLength() || 0; } if (kind === 'list') att.multiSelect = !!f.isMultiselect(); } catch (e) { signaler('Attributs d\'un champ de formulaire', e, 'info'); }
+        try {
+          const d = f.acroField.dict;
+          const tu = d.get(PDFLib.PDFName.of('TU')); if (tu && tu.decodeText) att.aide = tu.decodeText();
+          const fmt = d.get(PDFLib.PDFName.of('AktumFormat')); if (fmt && fmt.asString) att.format = fmt.asString().replace(/^\//, '');
+        } catch (e) { signaler('Attributs d\'un champ de formulaire', e, 'info'); }
+        return Object.assign({ name: f.getName(), kind, value: readField(f, kind), options }, att);
       });
       if (src.formFields.length) renderSources();
     } catch (_) { src.formFields = []; }
@@ -197,7 +207,8 @@
       if (kind === 'text') return f.getText() || '';
       if (kind === 'check') return f.isChecked();
       if (kind === 'radio') return f.getSelected() || '';
-      if (kind === 'dropdown' || kind === 'list') return (f.getSelected() || [])[0] || '';
+      if (kind === 'dropdown') return (f.getSelected() || [])[0] || '';
+      if (kind === 'list') return f.isMultiselect() ? (f.getSelected() || []) : ((f.getSelected() || [])[0] || '');
     } catch (e) { signaler('Lecture d\'un champ de formulaire', e); }
     return '';
   }

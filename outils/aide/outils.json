@@ -210,14 +210,14 @@
    "id": "form",
    "nom": "Remplir le formulaire",
    "groupe": "modifier",
-   "quoi": "Remplit les champs, les cases et les listes d'un formulaire PDF.",
+   "quoi": "Remplit les champs, les cases, les boutons radio et les listes d'un formulaire PDF, et contrôle ce que vous tapez.",
    "etapes": [
-    "Saisissez chaque champ dans la liste ; les cases se cochent.",
-    "Choisissez d'aplatir ou non le formulaire.",
-    "Enregistrez, puis exportez."
+    "Saisissez chaque champ dans la liste : l'intitulé du champ est en tête de ligne, un champ en lecture seule est grisé, un champ obligatoire porte une étoile.",
+    "Un format (nombre, date, courriel) ou une longueur faux bloque l'enregistrement et le dit ; un champ obligatoire vide prévient une fois.",
+    "Enregistrez : ce qui est saisi se voit tout de suite sur la page. « Enregistrer les données » écrit un CSV ou un XFDF, que « Reprendre des données » relit."
    ],
-   "effet": "Les valeurs sont gardées avec le document. Si les pages sont réorganisées ou fusionnées, les champs sont aplatis pour conserver ce que vous avez saisi.",
-   "attention": "Un formulaire signé est modifié par le remplissage : sa signature n'est plus valable."
+   "effet": "Les valeurs sont gardées avec le document et ne sont écrites dans le PDF qu'à l'export. Si les pages sont réorganisées ou fusionnées, les champs sont aplatis pour conserver ce que vous avez saisi.",
+   "attention": "Un formulaire signé est modifié par le remplissage : sa signature n'est plus valable. Les contrôles de format se font ici, pas dans le lecteur du destinataire : aucun script n'est écrit dans le PDF."
   },
   {
    "id": "champs-auto",

@@ -139,10 +139,20 @@ export const features: Feature[] = [
     slug: "formulaires",
     name: "Remplir des formulaires",
     category: "Corriger & annoter",
-    summary: "Remplissez les champs d'un formulaire PDF reçu, puis aplatissez-le à l'export.",
+    summary: "Remplissez les champs d'un formulaire PDF reçu, contrôlez la saisie, puis aplatissez-le à l'export.",
     description:
-      "Les champs d'un formulaire PDF standard (AcroForm) se remplissent directement : texte, cases à cocher, listes. À l'export, le formulaire peut être aplati pour figer les valeurs. Les formulaires de type XFA ne sont pas pris en charge.",
-    details: ["Champs, cases et listes", "Formulaires PDF standard (AcroForm)", "Aplatir à l'export"],
+      "Les champs d'un formulaire PDF standard (AcroForm) se remplissent directement : texte (une ou plusieurs lignes), cases à cocher, boutons radio, listes (à choix multiple aussi). L'intitulé du champ, la lecture seule et le caractère obligatoire sont respectés ; le format (nombre, date, courriel) et la longueur sont contrôlés à la saisie, sans script dans le fichier. Ce qui est saisi se voit tout de suite sur la page, et les données s'enregistrent en CSV ou en XFDF et se reprennent. À l'export, le formulaire peut être aplati pour figer les valeurs. Les formulaires de type XFA ne sont pas pris en charge.",
+    details: ["Champs, cases, boutons radio et listes", "Obligatoire, lecture seule, format contrôlés", "Données en CSV ou XFDF, reprises à volonté", "Aplatir à l'export"],
+    icon: "forms",
+  },
+  {
+    slug: "creer-formulaires",
+    name: "Créer des formulaires à remplir",
+    category: "Corriger & annoter",
+    summary: "Tracez des champs sur une page, ou laissez le logiciel proposer ceux d'un formulaire à plat.",
+    description:
+      "Dans l'éditeur de page, on trace des champs : texte, case à cocher, liste déroulante, boutons radio d'un même groupe, zone de signature à laisser vide. Chaque champ peut porter une description lue par les lecteurs d'écran, être obligatoire ou en lecture seule, avoir un format et une longueur maximale. « Reconnaître les champs » repère, dans un formulaire à plat, les lignes, les pointillés, les cadres vides et les petites cases, et propose d'y poser de vrais champs : rien n'est posé avant votre accord. Un scan, qui n'est qu'une image, n'a ni lignes ni cadres à lire : ses champs se tracent à la main.",
+    details: ["Cinq genres de champ", "Description pour les lecteurs d'écran", "Reconnaissance des champs d'un formulaire à plat, à contrôler", "Zone de signature vide (elle ne signe pas)"],
     icon: "forms",
   },
   {

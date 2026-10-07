@@ -19,7 +19,7 @@
   function champNeuf(genre) {
     return {
       type: 'champ', genre: genre || 'texte', nom: '', valeur: '', libelle: '', description: '', obligatoire: false, lecture: false,
-      options: '', groupe: '', choix: '',
+      options: '', groupe: '', choix: '', format: '', maxLen: 0,
       size: 11, multi: false, bordure: '#7A8899', fond: '#F2F6FC', encre: '#111111',
     };
   }

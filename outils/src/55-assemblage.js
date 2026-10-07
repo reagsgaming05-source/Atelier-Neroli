@@ -388,7 +388,10 @@
         } else {
           f = form.createTextField(nomChamp);
           if (a.multi) f.enableMultiline();
-          if (a.valeur) f.setText(String(a.valeur));
+          if (a.maxLen > 0) f.setMaxLength(a.maxLen);
+          if (a.valeur) f.setText(String(a.valeur).slice(0, a.maxLen > 0 ? a.maxLen : undefined));
+          // Le format attendu : un contrôle que ce logiciel fait à la saisie, sans script dans le fichier.
+          if (a.format) { try { f.acroField.dict.set(PDFLib.PDFName.of('AktumFormat'), PDFLib.PDFName.of(String(a.format))); } catch (e) { signaler('Format du champ', e, 'info'); } }
         }
         infobulle(f, nomChamp); attributs(f);
         f.addToPage(page, Object.assign({ font: police }, aspect));
@@ -570,7 +573,8 @@
             if (t === 'text') f.setText(String(v == null ? '' : v));
             else if (t === 'check') { v ? f.check() : f.uncheck(); }
             else if (t === 'dropdown') { if (v) f.select(String(v)); else if (f.clear) f.clear(); }
-            else if (t === 'radio' || t === 'list') { if (v) f.select(String(v)); }
+            else if (t === 'radio') { if (v) f.select(String(v)); }
+            else if (t === 'list') { const l = (Array.isArray(v) ? v : (v ? [String(v)] : [])).map(String); if (l.length) f.select(l); else if (f.clear) f.clear(); }
           } catch (e) { signaler('Champ de formulaire « ' + name + ' »', e); }
         });
       } catch (e) { signaler('Champs de formulaire', e); }

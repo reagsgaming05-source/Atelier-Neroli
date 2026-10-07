@@ -922,33 +922,54 @@
   function toolForm() {
     const withFields = state.sources.filter(s => s.formFields && s.formFields.length);
     if (!withFields.length) {
-      dialog({ title: 'Formulaire', icon: IC.form, build: b => b.append(note('Aucun champ de formulaire n\'a été trouvé dans les documents ouverts. Vous pouvez ajouter du texte avec l\'éditeur de page.')) });
+      dialog({ title: 'Formulaire', icon: IC.form, build: b => b.append(note('Aucun champ de formulaire n\'a été trouvé dans les documents ouverts. Vous pouvez ajouter du texte avec l\'éditeur de page, ou « Reconnaître les champs » d\'un formulaire à plat.')) });
       return;
     }
     let current = withFields[0];
     const picker = select('fm-doc', withFields.map(s => [s.id, s.name]), current.id);
     const list = document.createElement('div'); list.className = 'list';
-    const inputs = new Map();
-    function build() {
+    const inputs = new Map();                 // nom du champ -> { champ, lire(), poser(v) }
+    const GENRES = { text: 'Texte', check: 'Case à cocher', dropdown: 'Liste déroulante', radio: 'Choix', list: 'Liste', button: 'Bouton', signature: 'Signature' };
+    function build(valeursForcees) {
       list.replaceChildren();
       inputs.clear();
-      const vals = current.formValues || {};
+      const vals = valeursForcees || current.formValues || {};
       current.formFields.forEach((f, i) => {
         const row = document.createElement('div'); row.className = 'list-item';
         const g = document.createElement('div'); g.className = 'g';
-        const n = document.createElement('div'); n.className = 'n'; n.textContent = f.name;
+        const n = document.createElement('div'); n.className = 'n'; n.textContent = (f.aide || f.name) + (f.requis ? ' *' : '');
         const s = document.createElement('div'); s.className = 's';
-        s.textContent = { text: 'Texte', check: 'Case à cocher', dropdown: 'Liste déroulante', radio: 'Choix', list: 'Liste', button: 'Bouton', signature: 'Signature' }[f.kind] || 'Champ';
+        const dits = [GENRES[f.kind] || 'Champ'];
+        if (f.aide && f.aide !== f.name) dits.unshift(f.name);
+        if (f.lecture) dits.push('lecture seule');
+        if (f.requis) dits.push('obligatoire');
+        if (f.format) dits.push((FORMATS_DE_CHAMP.find(x => x[0] === f.format) || [0, f.format])[1]);
+        if (f.maxLen) dits.push(f.maxLen + ' signes au plus');
+        s.textContent = dits.map(d => tr(d)).join(' · ');
         g.append(n, s);
         const cur = vals[f.name] !== undefined ? vals[f.name] : f.value;
         let ctrl;
-        if (f.kind === 'check') { const c = checkbox('fm-f' + i, '', !!cur); ctrl = c; inputs.set(f.name, () => c.input.checked); }
-        else if ((f.kind === 'dropdown' || f.kind === 'radio' || f.kind === 'list') && f.options && f.options.length) {
-          const sel = select('fm-f' + i, [['', '—']].concat(f.options.map(o => [o, o])), cur);
-          sel.style.maxWidth = '190px';
-          ctrl = sel; inputs.set(f.name, () => sel.value);
-        } else if (f.kind === 'button' || f.kind === 'signature') { ctrl = document.createElement('span'); ctrl.className = 's'; ctrl.textContent = 'non modifiable'; }
-        else { const t = input('fm-f' + i, 'text', cur == null ? '' : cur); t.style.maxWidth = '190px'; ctrl = t; inputs.set(f.name, () => t.value); }
+        if (f.kind === 'check') { const c = checkbox('fm-f' + i, '', !!cur); ctrl = c; c.input.disabled = !!f.lecture; inputs.set(f.name, { champ: f, lire: () => c.input.checked, poser: v => { c.input.checked = !!v; } }); }
+        else if (f.kind === 'list' && f.multiSelect && f.options && f.options.length) {
+          const sel = select('fm-f' + i, f.options.map(o => [o, o]), '');
+          sel.multiple = true; sel.size = Math.min(5, f.options.length); sel.style.maxWidth = '190px'; sel.disabled = !!f.lecture;
+          const poser = v => { const l = Array.isArray(v) ? v : (v ? [v] : []); Array.from(sel.options).forEach(o => { o.selected = l.indexOf(o.value) >= 0; }); };
+          poser(cur);
+          ctrl = sel; inputs.set(f.name, { champ: f, lire: () => Array.from(sel.selectedOptions).map(o => o.value), poser });
+        } else if ((f.kind === 'dropdown' || f.kind === 'radio' || f.kind === 'list') && f.options && f.options.length) {
+          const sel = select('fm-f' + i, [['', '—']].concat(f.options.map(o => [o, o])), Array.isArray(cur) ? (cur[0] || '') : cur);
+          sel.style.maxWidth = '190px'; sel.disabled = !!f.lecture;
+          ctrl = sel; inputs.set(f.name, { champ: f, lire: () => sel.value, poser: v => { sel.value = Array.isArray(v) ? (v[0] || '') : (v == null ? '' : v); } });
+        } else if (f.kind === 'button' || f.kind === 'signature') { ctrl = document.createElement('span'); ctrl.className = 's'; ctrl.textContent = tr('non modifiable'); }
+        else if (f.kind === 'text' && f.multi) {
+          const t = document.createElement('textarea'); t.id = 'fm-f' + i; t.rows = 3; t.value = cur == null ? '' : cur; t.style.maxWidth = '190px'; t.disabled = !!f.lecture;
+          if (f.maxLen) t.maxLength = f.maxLen;
+          ctrl = t; inputs.set(f.name, { champ: f, lire: () => t.value, poser: v => { t.value = v == null ? '' : v; } });
+        } else {
+          const t = input('fm-f' + i, 'text', cur == null ? '' : cur); t.style.maxWidth = '190px'; t.disabled = !!f.lecture;
+          if (f.maxLen) t.maxLength = f.maxLen;
+          ctrl = t; inputs.set(f.name, { champ: f, lire: () => t.value, poser: v => { t.value = v == null ? '' : v; } });
+        }
         row.append(g, ctrl);
         list.appendChild(row);
       });
@@ -956,19 +977,71 @@
     build();
     picker.addEventListener('change', () => { current = withFields.find(s => String(s.id) === picker.value); build(); });
     const flat = checkbox('fm-flat', 'Aplatir après remplissage (valeurs non modifiables)', state.flatten);
+    const avis = note('', 'warn'); avis.hidden = true;
+    let prevenu = false;
+    // Les valeurs affichées, telles que le document les recevra.
+    const valeursActuelles = () => { const v = {}; inputs.forEach((c, nom) => { v[nom] = c.lire(); }); return v; };
+    // Ce qui ne va pas : un format, une longueur (bloquant) ; un champ obligatoire vide (on prévient une fois).
+    function controler() {
+      const faux = [], vides = [];
+      inputs.forEach((c, nom) => {
+        const v = c.lire();
+        const m = validerChamp(c.champ, v);
+        if (m) faux.push((c.champ.aide || nom) + ' : ' + m);
+        if (c.champ.requis && !c.champ.lecture && (v === '' || v === false || v == null || (Array.isArray(v) && !v.length))) vides.push(c.champ.aide || nom);
+      });
+      return { faux, vides };
+    }
+    const nomDonnees = () => safeBase(baseName(current.name)) + '-donnees';
+    const donnees = (quoi) => {
+      const v = valeursActuelles();
+      if (quoi === 'csv') return deliver(saisiesEnCsv(current.formFields, v), nomDonnees() + '.csv', 'text/csv;charset=utf-8');
+      return deliver(saisiesEnXfdf(current.formFields, v), nomDonnees() + '.xfdf', 'application/vnd.adobe.xfdf');
+    };
+    const charger = document.createElement('input');
+    charger.type = 'file'; charger.id = 'fm-charger'; charger.className = 'sr-only'; charger.tabIndex = -1; charger.accept = '.csv,.tsv,.txt,.xfdf,.xml,text/csv,text/xml,application/xml';
+    charger.addEventListener('change', async () => {
+      const fichier = charger.files && charger.files[0];
+      if (!fichier) return;
+      try {
+        const u8 = new Uint8Array(await fichier.arrayBuffer());
+        let texte; try { texte = new TextDecoder('utf-8', { fatal: true }).decode(u8); } catch (e) { texte = new TextDecoder('windows-1252').decode(u8); }
+        const xml = /xfdf|^\s*<\?xml/i.test(texte.slice(0, 200)) || /\.(xfdf|xml)$/i.test(fichier.name);
+        const r = xml ? saisiesDepuisXfdf(current.formFields, texte) : saisiesDepuisCsv(current.formFields, vue.lireCsv(texte));
+        if (r.erreur) { toast('Ce fichier XFDF est illisible.', 'warn'); return; }
+        const n = Object.keys(r.valeurs).length;
+        if (!n) { toast('Aucun champ de ce formulaire n\'est nommé dans ce fichier : rien n\'a été repris.', 'warn'); return; }
+        Object.keys(r.valeurs).forEach(nom => { const c = inputs.get(nom); if (c && !c.champ.lecture) c.poser(r.valeurs[nom]); });
+        toast(plural(n, 'champ repris', 'champs repris') + ' du fichier' + (r.inconnus.length ? ' (' + plural(r.inconnus.length, 'nom inconnu laissé de côté', 'noms inconnus laissés de côté') + ')' : '') + '. Vérifiez, puis « Enregistrer ».');
+      } catch (e) { toast(messageDEchec('La lecture des données', e), 'error'); }
+    });
+    const bouton = (id, libelle, f) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tb-btn'; b.id = id; b.style.border = '1px solid var(--trait)'; b.textContent = libelle; b.addEventListener('click', f); return b; };
     dialog({
       aide: 'form',
       title: 'Remplir le formulaire', icon: IC.form, wide: true,
       build: b => {
         if (withFields.length > 1) b.append(field('Document', picker, 'Le formulaire à remplir, parmi les documents ouverts.'));
         b.append(list);
+        b.append(avis);
+        b.append(rowOf([
+          bouton('fm-csv', 'Enregistrer les données (CSV)', () => donnees('csv')),
+          bouton('fm-xfdf', 'Enregistrer les données (XFDF)', () => donnees('xfdf')),
+          bouton('fm-charger-bt', 'Reprendre des données…', () => { charger.value = ''; charger.click(); }),
+        ], true));
+        b.append(charger);
         b.append(flat);
-        b.append(note('Si les pages sont réorganisées ou fusionnées, les champs sont aplatis automatiquement pour conserver les valeurs saisies.'));
+        b.append(note('Si les pages sont réorganisées ou fusionnées, les champs sont aplatis automatiquement pour conserver les valeurs saisies. Le CSV enregistré (une ligne d\'en-têtes, une ligne de valeurs) se relit aussi dans « Remplir en série ».'));
       },
-      actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Enregistrer', primary: true, onClick: close => {
+      actions: [{ label: 'Annuler', onClick: c => c() }, { id: 'fm-enregistrer', label: 'Enregistrer', primary: true, onClick: close => {
+        const { faux, vides } = controler();
+        if (faux.length) { avis.hidden = false; avis.textContent = tr('À corriger avant d\'enregistrer :') + ' ' + faux.join(' ; '); return; }
+        if (vides.length && !prevenu) {
+          prevenu = true; avis.hidden = false;
+          avis.textContent = plural(vides.length, 'champ obligatoire est vide', 'champs obligatoires sont vides') + ' : ' + vides.join(', ') + '. ' + tr('Cliquez encore sur « Enregistrer » pour continuer quand même.');
+          return;
+        }
         snapshot('Remplir le formulaire');
-        const vals = {};
-        inputs.forEach((get, name) => { vals[name] = get(); });
+        const vals = valeursActuelles();
         current.formValues = vals;
         state.flatten = flat.input.checked;
         state.touched = true; vue.render(); close();

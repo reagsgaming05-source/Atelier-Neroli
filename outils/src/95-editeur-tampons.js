@@ -441,6 +441,13 @@
       const ml = checkbox('ch-multi', 'Plusieurs lignes', sel.multi);
       ml.input.addEventListener('change', () => change(() => { sel.multi = ml.input.checked; }));
       ed.side.appendChild(ml);
+      const fm = select('ch-format', FORMATS_DE_CHAMP, sel.format || '');
+      fm.addEventListener('change', () => change(() => { sel.format = fm.value; }));
+      ed.side.appendChild(field('Format attendu', fm, 'Contrôlé quand on remplit le formulaire avec ce logiciel (jamais par un script écrit dans le PDF) : un nombre, une date jj.mm.aaaa, une adresse de courriel.'));
+      const ln = input('ch-maxlen', 'number', sel.maxLen || '', { min: 0, max: 5000, step: 1 });
+      ln.placeholder = '0';
+      ln.addEventListener('change', () => change(() => { sel.maxLen = Math.max(0, Math.min(5000, parseInt(ln.value, 10) || 0)); }));
+      ed.side.appendChild(field('Longueur maximale', ln, 'Le nombre de signes que le champ accepte, dans tous les lecteurs de PDF. 0 : pas de limite.'));
     } else if (genre === 'liste') {
       const ops = document.createElement('textarea'); ops.id = 'ch-options'; ops.rows = 5; ops.value = sel.options || '';
       ops.addEventListener('input', () => change(() => { sel.options = ops.value; }));

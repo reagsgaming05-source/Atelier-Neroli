@@ -32,7 +32,7 @@
     // La mesure de la page fait partie de la clé : au remplacement de l'exemple, les pages d'un vrai document se mesurent après le premier
     // dessin (841,89 pt supposés, 842 réels), et la toile gardait un pixel de trop (715 pour 714 affichés) faute de nouveau dessin.
     const g = pageGeom(p);
-    return [pkey(p), p.rot, Math.round(lectureZ * 100), g.Wd.toFixed(2) + 'x' + g.Hd.toFixed(2), p.ann.length, p.piece || '', p.ocr ? 'ocr' + (p.ocr.mots ? p.ocr.mots.length : 0) : '', (p.retraits || []).join('+'),
+    return [pkey(p), p.rot, Math.round(lectureZ * 100), g.Wd.toFixed(2) + 'x' + g.Hd.toFixed(2), p.ann.length, p.piece || '', empreinteDeValeur((srcById(p.src) || {}).formValues), p.ocr ? 'ocr' + (p.ocr.mots ? p.ocr.mots.length : 0) : '', (p.retraits || []).join('+'),
       p.ann.map(a => a.id + ':' + Math.round((a.x || 0) * 10) + ':' + (a.text || '').length).join()].join('|');
   }
 
@@ -100,6 +100,7 @@
       if (peintes.get(p.id) !== cle) return;
       try { await effacerRetraits(cx, page, vp, p); } catch (e) { signaler('Commentaires', e); }
       try { await lectureCoucheTexte(f, p, page, g); } catch (e) { signaler('Couche de texte', e); }
+      try { await lectureSaisies(f, p, page, g); } catch (e) { signaler('Saisies du formulaire', e); }
       page.cleanup();
       const att = f.querySelector('.attente');
       if (att) att.hidden = true;
@@ -112,6 +113,50 @@
     if (vieux) vieux.remove();
     if (p.ann.length || p.piece) f.appendChild(annSvg(p, g, false));
     if (recherche.marques) poserMarquesFeuille(p);
+  }
+
+  // Ce que la personne a saisi dans le formulaire se voit tout de suite sur la page, sans attendre l'export : une couche par-dessus chaque champ
+  // rempli (le texte, la coche, le choix). Le fichier d'origine n'est pas touché : la couche se dessine à partir des valeurs en attente.
+  async function lectureSaisies(f, p, page, g) {
+    const vieux = f.querySelector('.saisies-layer');
+    if (vieux) vieux.remove();
+    const src = srcById(p.src);
+    const vals = src && src.formValues;
+    if (!vals || !Object.keys(vals).length) return;
+    const vp = page.getViewport({ scale: 1, rotation: g.total });
+    const widgets = (await page.getAnnotations()).filter(a => a.subtype === 'Widget' && a.rect && a.fieldName && vals[a.fieldName] !== undefined);
+    if (!widgets.length) return;
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + g.Wd.toFixed(2) + ' ' + g.Hd.toFixed(2));
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.setAttribute('class', 'saisies-layer');
+    const el = (nom, at) => { const n = document.createElementNS(SVGNS, nom); Object.keys(at).forEach(k => n.setAttribute(k, at[k])); return n; };
+    widgets.forEach(a => {
+      const A = pdfjs.Util.applyTransform([a.rect[0], a.rect[1]], vp.transform), B = pdfjs.Util.applyTransform([a.rect[2], a.rect[3]], vp.transform);
+      const x = Math.min(A[0], B[0]), y = Math.min(A[1], B[1]), w = Math.abs(A[0] - B[0]), h = Math.abs(A[1] - B[1]);
+      const v = vals[a.fieldName];
+      svg.appendChild(el('rect', { x, y, width: w, height: h, fill: '#fff' }));
+      if (a.checkBox || a.radioButton) {
+        const choisi = a.checkBox ? !!v : String(v) === String(a.buttonValue);
+        svg.appendChild(a.radioButton
+          ? el('ellipse', { cx: x + w / 2, cy: y + h / 2, rx: w / 2 - 0.5, ry: h / 2 - 0.5, fill: 'none', stroke: '#444', 'stroke-width': 0.8 })
+          : el('rect', { x: x + 0.4, y: y + 0.4, width: w - 0.8, height: h - 0.8, fill: 'none', stroke: '#444', 'stroke-width': 0.8 }));
+        if (choisi) svg.appendChild(a.radioButton
+          ? el('ellipse', { cx: x + w / 2, cy: y + h / 2, rx: w / 4, ry: h / 4, fill: '#111' })
+          : el('path', { d: 'M' + (x + w * 0.2) + ' ' + (y + h * 0.55) + 'L' + (x + w * 0.42) + ' ' + (y + h * 0.78) + 'L' + (x + w * 0.82) + ' ' + (y + h * 0.22), fill: 'none', stroke: '#111', 'stroke-width': Math.max(1, h / 8), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+        return;
+      }
+      const texte = Array.isArray(v) ? v.join(', ') : String(v == null ? '' : v);
+      if (!texte) return;
+      const taille = Math.max(5, Math.min(11, h * 0.68));
+      const lignes = a.multiLine ? texte.split(/\r?\n/) : [texte.replace(/\r?\n/g, ' ')];
+      lignes.slice(0, Math.max(1, Math.floor(h / (taille * 1.2)))).forEach((l, i) => {
+        const t = el('text', { x: x + 2, y: a.multiLine ? y + 2 + taille * 0.85 + i * taille * 1.2 : y + h / 2 + taille * 0.35, 'font-size': taille, 'font-family': 'Helvetica, Arial, sans-serif', fill: '#111', 'xml:space': 'preserve' });
+        t.textContent = l;
+        svg.appendChild(t);
+      });
+    });
+    f.appendChild(svg);
   }
 
   // Le texte de la page, invisible mais sélectionnable par-dessus l'image :

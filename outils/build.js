@@ -145,9 +145,9 @@ noFonts = vidage(noFonts, 'EN_LIGNE', /const EN_LIGNE = true;/, 'const EN_LIGNE 
 // Garde-fou : le code de l'application (hors bibliothèques embarquées, qui
 // portent leurs propres noms d'espaces XML) ne doit contenir aucune adresse
 // réseau. C'est ce que lira un informaticien qui fait un « grep http ».
-// Les identifiants d'espaces de noms XML (W3C, Dublin Core et Adobe pour les métadonnées XMP, Office Open XML pour le .docx) ne sont
+// Les identifiants d'espaces de noms XML (W3C, Dublin Core et Adobe pour les métadonnées XMP, Office Open XML pour le .docx, XFDF d'Adobe) ne sont
 // pas des adresses que l'on appelle : ils désignent un vocabulaire, et ne sont jamais téléchargés.
-const ESPACES_DE_NOMS = /^(https?:\/\/www\.w3\.org\/|http:\/\/purl\.org\/dc\/(elements\/1\.1|terms)\/|http:\/\/ns\.adobe\.com\/pdf\/1\.3\/|http:\/\/schemas\.openxmlformats\.org\/)/;
+const ESPACES_DE_NOMS = /^(https?:\/\/www\.w3\.org\/|http:\/\/purl\.org\/dc\/(elements\/1\.1|terms)\/|http:\/\/ns\.adobe\.com\/(pdf\/1\.3|xfdf)\/|http:\/\/schemas\.openxmlformats\.org\/)/;
 const adresses = (noFonts.match(/https?:\/\/[^\s"'<>)\\]+/g) || []).filter(u => !ESPACES_DE_NOMS.test(u));
 if (adresses.length) throw new Error('adresse réseau dans le code de l\'application livrée : ' + [...new Set(adresses)].join(', '));
 const offline = noFonts.replace('<script>\n(() => {', () => inline + '\n<script>\n(() => {');

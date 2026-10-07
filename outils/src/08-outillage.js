@@ -18,6 +18,15 @@
   const plural = (n, one, many) => formaterNombre(n) + ' ' + (traduction && langue !== 'fr' ? traduction.pluriel(n, one, many, langue) : (n > 1 ? many : one));
   // Les nombres à la suisse, dans les deux langues : l'apostrophe des milliers, le point décimal — « 1’250’000.50 ». Une seule fonction,
   // pour que « 1 250 pages » ne s'écrive pas d'une façon ici et d'une autre dans un document.
+  // Une empreinte courte d'une valeur (texte, nombre, objet) : djb2 sur son écriture JSON. Sert à savoir si quelque chose a changé (une page à
+  // repeindre), jamais à identifier ni à protéger.
+  function empreinteDeValeur(v) {
+    if (v == null) return '';
+    let h = 5381;
+    const t = JSON.stringify(v);
+    for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+    return String(h);
+  }
   function formaterNombre(n, decimales) {
     if (typeof n !== 'number' || !isFinite(n)) return String(n);
     const d = decimales == null ? (Number.isInteger(n) ? 0 : 1) : decimales;

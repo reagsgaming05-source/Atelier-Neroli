@@ -4,8 +4,11 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { extraire } = require('./aide');
 
+// normaliserCle vit dans src/76-saisies.js (le contrôle des saisies s'en sert aussi) : le code du lot d'en-dessous la lit comme variable de la portée.
+global.normaliserCle = extraire('  const normaliserCle =', '  const aSaisir', 'normaliserCle');
 const S = extraire('// @debut-csv', '// @fin-csv',
-  '{ lireCsv, lireOuiNon, choisirOption, planDeSerie, nomDeSerie, marquesInconnues, nomsUniques, normaliserCle, SERIE_MAX }');
+  '{ lireCsv, lireOuiNon, choisirOption, planDeSerie, nomDeSerie, marquesInconnues, nomsUniques, SERIE_MAX }');
+S.normaliserCle = global.normaliserCle;
 
 test('CSV d\'Excel français : point-virgule, BOM, CRLF', () => {
   const r = S.lireCsv('﻿Nom;Prénom;Accord\r\nDupont;Marie;oui\r\nMartin;Léa;non\r\n');

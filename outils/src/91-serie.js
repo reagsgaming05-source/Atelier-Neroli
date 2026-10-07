@@ -12,7 +12,6 @@
   // =====================================================================
   // @debut-csv
   const SERIE_MAX = 1000;
-  const normaliserCle = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
   // Le texte d'un CSV : séparateur reconnu (point-virgule d'Excel en français,
   // virgule, tabulation), guillemets doublés, retours à la ligne dans une
@@ -101,7 +100,12 @@
           const o = choisirOption(brut, f.options || []);
           if (o == null) avis.push(ou + '« ' + brut + ' » n\'est pas un des choix du champ : il reste comme dans le modèle.');
           else valeurs[f.name] = o;
-        } else valeurs[f.name] = brut;
+        } else {
+          valeurs[f.name] = brut;
+          // Le format ou la longueur que le champ attend : dit, mais la valeur s'écrit (la décision revient à celui qui a fait le CSV).
+          const pb = typeof validerChamp === 'function' ? validerChamp(f, brut) : '';
+          if (pb) avis.push(ou + '« ' + brut + ' » : ' + pb + ' (la valeur est écrite quand même).');
+        }
       });
       avis.forEach(a => tous.push(a));
       return { valeurs, avis };
@@ -137,6 +141,7 @@
     });
   }
   // @fin-csv
+  vue.lireCsv = lireCsv;
 
   async function fichierTexte(fichier) {
     const tampon = await fichier.arrayBuffer();
