@@ -120,9 +120,9 @@ export const segments: Segment[] = [
           "Offre chiffrée, bon de commande, facture à 30 jours avec QR-facture suisse et votre référence interne. Ce que votre comptabilité attend, dans le format qu'elle attend.",
       },
       {
-        title: "Sous le seuil du gré à gré",
+        title: "Une procédure à vérifier",
         text:
-          "Le montant annuel reste, dans la plupart des cantons, sous le seuil qui impose une procédure de marché public. C'est à votre secrétariat de le vérifier au regard de votre règlement communal et du droit cantonal des marchés publics.",
+          "La procédure qui s’applique à votre achat dépend de votre canton, de votre règlement communal et de la valeur du marché sur toute sa durée possible, reconductions comprises — pas du seul montant d’une année. C’est à votre secrétariat de la vérifier ; nous chiffrons, sur demande, le montant total sur la durée que vous retenez.",
       },
       {
         title: "Rien à installer",
@@ -156,7 +156,7 @@ export const segments: Segment[] = [
     faq: [
       {
         q: "Faut-il passer par un appel d'offres ?",
-        a: "Dans la plupart des cantons, un abonnement annuel de cet ordre reste sous le seuil du gré à gré pour les services. C'est à votre secrétariat de le vérifier au regard de votre règlement communal et du droit cantonal des marchés publics.",
+        a: "La procédure qui s’applique à votre achat dépend de votre canton, de votre règlement communal et de la valeur du marché sur toute sa durée possible, reconductions comprises — pas du seul montant d’une année. C’est à votre secrétariat de la vérifier ; nous chiffrons, sur demande, le montant total sur la durée que vous retenez.",
       },
       {
         q: "Combien de postes sont compris ?",

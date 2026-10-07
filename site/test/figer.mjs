@@ -21,6 +21,7 @@ import path from "node:path";
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const EXE = process.env.CHROMIUM ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 const SORTIE = process.env.SORTIE ?? path.join(process.cwd(), "vitrine");
+const DATE_FIGEAGE = new Date().toLocaleDateString("fr-CH", { day: "numeric", month: "long", year: "numeric" });
 
 /** Les pages publiques, et le nom de fichier que chacune prend. */
 const PAGES = [
@@ -77,7 +78,7 @@ for (const [url, nom] of PAGES) {
   for (const s of srcs) images[s] = "data:image/png;base64," + Buffer.from(await (await page.request.get(BASE + s)).body()).toString("base64");
 
   const html = await page.evaluate(
-    ([styles, carte, svg, imgs]) => {
+    ([styles, carte, svg, imgs, dateFigee]) => {
       const d = document.cloneNode(true);
       // Sans serveur, le JavaScript de Next ne ferait que produire des erreurs.
       d.querySelectorAll("script, link").forEach((n) => n.remove());
@@ -126,9 +127,15 @@ for (const [url, nom] of PAGES) {
         note.textContent = "Cette présentation n'envoie rien : le formulaire fonctionne sur le site en ligne, pas ici.";
         f.parentNode.insertBefore(note, f);
       });
+      // La date à laquelle cette présentation a été figée : un lecteur qui la trouve sur une clé USB doit savoir de quand elle date.
+      const fige = d.createElement("p");
+      fige.setAttribute("role", "note");
+      fige.setAttribute("style", "margin:0;padding:14px 16px;text-align:center;font-size:13px;color:#555;border-top:1px solid #ddd");
+      fige.textContent = "Présentation figée le " + dateFigee + ". Le site en ligne peut avoir changé depuis.";
+      d.body.appendChild(fige);
       return "<!doctype html>\n" + d.documentElement.outerHTML;
     },
-    [css, NOMS, icone, images],
+    [css, NOMS, icone, images, DATE_FIGEAGE],
   );
 
   writeFileSync(path.join(SORTIE, `${nom}.html`), html);

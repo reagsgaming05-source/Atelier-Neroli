@@ -332,7 +332,7 @@ export const faq = [
   },
   {
     q: "Faut-il passer par un appel d'offres ?",
-    a: "Dans la plupart des cantons, un abonnement annuel de cet ordre reste sous le seuil du gré à gré pour les services. C'est à votre secrétariat de le vérifier au regard de votre règlement et du droit cantonal des marchés publics.",
+    a: "La procédure qui s’applique à votre achat dépend de votre canton, de votre règlement communal et de la valeur du marché sur toute sa durée possible, reconductions comprises — pas du seul montant d’une année. C’est à votre secrétariat de la vérifier ; nous chiffrons, sur demande, le montant total sur la durée que vous retenez.",
   },
   {
     q: "Où passent les documents traités ?",

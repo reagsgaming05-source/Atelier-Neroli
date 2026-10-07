@@ -59,3 +59,12 @@ commit. Le jour où le certificat Windows est acheté, faites le découpage en d
   `recuperer-libs.js` ; `npm run libs && npm run build && npm test`, puis la suite de bout en bout.
 - La nomenclature logicielle (`node outils/editeur/sbom.js <fichier>`) est jointe à chaque publication ; la licence **retenue** de chaque
   composant est dite dans `editeur/sbom.js` (JSZip et node-forge sont offerts sous deux licences : c'est la permissive qui est retenue).
+
+## 4. Les documents de l'éditeur (jamais livrés dans l'archive)
+
+| Fichier | À quoi il sert | Avant de s'en servir |
+| --- | --- | --- |
+| `RECETTE.md` | Liste de recette manuelle (37 points) à jouer sur le zip publié en candidate, avant chaque version stable | — |
+| `DEMONSTRATION.md` | La démonstration de douze minutes, chronométrée, et les réponses honnêtes aux questions qui viennent | Une répétition sur le zip publié |
+| `CONTRAT-OSSATURE.md` | Seize clauses de licence et la partie maintenance, vérifiées contre le produit, avec les points ouverts marqués | **Un juriste**, et l'accord de propriété du code : ce n'est pas un contrat |
+| `FICHE-COMPARATIVE.md` | Le comparatif honnête face aux concurrents, avec les cases où l'on perd | **Vérifier chaque ligne « † » à la source** : brouillon interne, jamais envoyé en l'état |
