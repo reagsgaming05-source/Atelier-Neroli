@@ -19,6 +19,7 @@ import { SceneArt } from './SceneArt';
 const PARALLAX = { sky: 0.5, land: 1, fx: 1.2, fore: 1.5 } as const;
 
 const START: Shot = { x: 150, y: 190, k: 1.04 };
+const STILL: Shot = { x: 150, y: 190, k: 1 };
 
 interface Slot {
   id: string;
@@ -49,6 +50,7 @@ export function Stage({
   label,
   people = true,
   painting,
+  camera = false,
 }: {
   /** Changes whenever another picture has to be shown. */
   pictureKey: string;
@@ -67,6 +69,8 @@ export function Stage({
   people?: boolean;
   /** URL of a painted picture that replaces the drawing. */
   painting?: string;
+  /** Let the camera move; off, the picture is held still and only its atmosphere lives. */
+  camera?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<StageSize>({ w: 390, h: 520 });
@@ -97,7 +101,16 @@ export function Stage({
 
   // Another picture: if it looks different, it dissolves in over the current one.
   useLayoutEffect(() => {
-    setSlots((all) => (all.at(-1)!.sig === signature ? all : [...all, { id: pictureKey, sig: signature, seed, sky, ground, motifs, painting }].slice(-2)));
+    const add = () => setSlots((all) => (all.at(-1)!.sig === signature ? all : [...all, { id: pictureKey, sig: signature, seed, sky, ground, motifs, painting }].slice(-2)));
+    if (!painting) return add();
+    // A painting dissolves in only once it is decoded, so that it never pops in half-drawn.
+    let alive = true;
+    const img = new Image();
+    img.src = painting;
+    (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(() => alive && add());
+    return () => {
+      alive = false;
+    };
   }, [pictureKey]);
 
   // The painting of the picture on screen arrives late, or the look is changed: it takes the place of the drawing at once.
@@ -111,13 +124,23 @@ export function Stage({
   // Once the old picture is covered, it goes.
   useEffect(() => {
     if (slots.length < 2) return;
-    const t = window.setTimeout(() => setSlots((all) => all.slice(-1)), 1400);
+    const t = window.setTimeout(() => setSlots((all) => all.slice(-1)), 2000);
     return () => clearTimeout(t);
   }, [slots.length, slots.at(-1)?.id]);
 
   // Where the objects of the picture are, so the camera can go and look at them; then the route.
   const shownId = slots.at(-1)!.id;
   useLayoutEffect(() => {
+    if (!camera) {
+      // No camera: the whole picture, held still.
+      camRef.current = STILL;
+      Object.assign(body.current, { ...STILL, vx: 0, vy: 0, vk: 0 });
+      Object.assign(aim.current, { ...STILL, vx: 0, vy: 0, vk: 0 });
+      setRoute([STILL]);
+      setStep(0);
+      paint(0);
+      return;
+    }
     const found: Box[] = [];
     root.current?.querySelectorAll<SVGGElement>(`[data-slot="${CSS.escape(shownId)}"] [data-m]`).forEach((g) => {
       try {
@@ -135,7 +158,7 @@ export function Stage({
     setStep(0);
     // Moves between framings take most of the time available: the camera is always drifting.
     setLeg(Math.max(ms / Math.max(planned.length - 1, 1), 1800));
-  }, [pictureKey, shownId, slots.at(-1)?.painting]);
+  }, [pictureKey, shownId, slots.at(-1)?.painting, camera]);
 
   useEffect(() => {
     if (!playing || step >= route.length - 1) return;
@@ -152,8 +175,8 @@ export function Stage({
   const paint = (time = 0) => {
     const b = body.current;
     // A breath of movement, so that even a held shot is alive.
-    const focus = { x: b.x + Math.sin(time / 5200) * 2.4, y: b.y + Math.cos(time / 7100) * 1.7 };
-    const zoom = b.k * (1 + 0.012 * Math.sin(time / 6100));
+    const focus = camera ? { x: b.x + Math.sin(time / 5200) * 2.4, y: b.y + Math.cos(time / 7100) * 1.7 } : { x: b.x, y: b.y };
+    const zoom = camera ? b.k * (1 + 0.012 * Math.sin(time / 6100)) : b.k;
     for (const { el, factor } of layers.current) {
       const { tx, ty, k } = cameraTransform(sizeRef.current, focus, layerZoom(zoom, factor));
       el.style.transform = `translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${k.toFixed(4)})`;
@@ -167,7 +190,7 @@ export function Stage({
   }, [slots.map((x) => x.id).join('|'), size.w, size.h]);
 
   useEffect(() => {
-    if (!playing) return;
+    if (!playing || !camera) return;
     const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     let frame = 0;
     let last = performance.now();
@@ -205,7 +228,7 @@ export function Stage({
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, leg]);
+  }, [playing, leg, camera]);
 
   return (
     <div class="stage" ref={root} role="img" aria-label={label ?? 'Illustration'}>

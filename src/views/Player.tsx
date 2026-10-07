@@ -56,7 +56,10 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   // The recording could not be played here (blocked, offline, unsupported): the text is read in silence.
   const [audioFailed, setAudioFailed] = useState(false);
   // How far the narration has got through the scene's text, 0 to 1: lights up the words as they are told.
-  const [progress, setProgress] = useState(0);
+  // Tagged with its scene, so that a new scene starts at 0 at once (a stale value would flash the wrong picture).
+  const sceneKey = `${episode}-${index}`;
+  const [told, setTold] = useState({ key: sceneKey, p: 0 });
+  const progress = told.key === sceneKey ? told.p : 0;
   const narrator = useRef<HTMLAudioElement | null>(null);
   // Nature sounds under the voice, created from the first tap.
   const ambience = useRef<Ambience | null>(null);
@@ -197,7 +200,6 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
     };
   }, [started, playing, ended, index, phase, verses, narration, prefs.voice, prefs.recitation, prefs.rate]);
 
-  useEffect(() => setProgress(0), [index, episode]);
   useEffect(() => {
     if (!started || !playing || ended || phase !== 'text' || !scene) return;
     const span = narration && prefs.voice ? spanFor(narration, scene.text) : undefined;
@@ -207,7 +209,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
       const audio = narrator.current;
       // With a recording, follow the sound itself (minus the silence it keeps at both ends); otherwise follow the clock.
       const p = span && audio && !audio.paused ? (audio.currentTime - span[0] - 0.25) / (span[1] - span[0] - 0.75) : (Date.now() - origin) / length;
-      setProgress(Math.min(1, Math.max(0, p)));
+      setTold({ key: sceneKey, p: Math.min(1, Math.max(0, p)) });
     }, 120);
     return () => clearInterval(id);
   }, [started, playing, ended, phase, index, narration, prefs.voice, prefs.rate]);
@@ -332,7 +334,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
     const next = ids[(ids.indexOf(look) + 1) % ids.length];
     setSettings((s) => ({ ...s, stories: { ...s.stories, look: next } }));
   };
-  const toggle = (key: 'voice' | 'recitation' | 'ambience' | 'people') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
+  const toggle = (key: 'voice' | 'recitation' | 'ambience' | 'people' | 'camera') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
 
   return (
     <div class="player-screen" role="dialog" aria-label={`${info.title}, ${ep.title}`}>
@@ -350,6 +352,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
           label={scene.text}
           people={prefs.people}
           painting={painting}
+          camera={prefs.camera === true}
         />
 
         {started && index === 0 && !ended && (
@@ -485,6 +488,9 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
               Images : {LOOKS.find((l) => l.id === look)?.label}
             </button>
           )}
+          <button class="toggle" aria-pressed={prefs.camera === true} onClick={() => toggle('camera')} title="Mouvements de caméra dans l'image">
+            Caméra
+          </button>
           <button class="toggle" aria-pressed={prefs.people} onClick={() => toggle('people')} title="Silhouettes de personnes, sans visage">
             Silhouettes
           </button>

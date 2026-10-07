@@ -1852,7 +1852,7 @@ a.goal-title::after {
 
 /* A new picture dissolves in over the previous one, in the same shot. */
 .stage-slot-in {
-  animation: fade-in 1.2s ease both;
+  animation: fade-in 1.8s cubic-bezier(0.45, 0, 0.55, 1) both;
 }
 
 .stage {
