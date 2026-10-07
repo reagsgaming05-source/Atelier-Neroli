@@ -24,6 +24,8 @@ export interface Box extends Focus {
   h: number;
   /** Rank of interest: bigger is looked at earlier. */
   weight: number;
+  /** The object it is, when it is one (see Motif). */
+  motif?: string;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -63,27 +65,47 @@ export function shotOn(box: Box): Shot {
   return { x: clamp(box.x, 20, 280), y: clamp(box.y, 40, 330), k: clamp(190 / size, 1.3, 2.0) };
 }
 
+const SKY_SHOT: Shot = { x: 150, y: 92, k: 1.5 };
+const GROUND_SHOT: Shot = { x: 150, y: 290, k: 1.55 };
+const HORIZON_SHOT: Shot = { x: 150, y: 232, k: 1.4 };
+
+/** What the camera looks at when the picture says so (an object, the sky, the ground, the horizon). */
+export function focusShot(boxes: Box[], focus?: string): Shot | undefined {
+  if (!focus) return undefined;
+  if (focus === 'sky') return SKY_SHOT;
+  if (focus === 'ground') return GROUND_SHOT;
+  if (focus === 'horizon') return HORIZON_SHOT;
+  const box = boxes.find((b) => b.motif === focus && b.w > 1 && b.h > 1);
+  return box ? shotOn(box) : undefined;
+}
+
 /**
- * The camera's route through a scene of `count` shots: it opens wide, visits the
- * scene's elements (biggest first) and the sky, the horizon and the ground, then
- * pulls back, ready to dissolve into the next scene.
+ * The camera's route through a picture of `count` shots (at least 2). It starts from
+ * where the camera is (`from`, or a wide shot), glides towards what the picture is
+ * about (`focus`), then visits other objects, the sky, the horizon and the ground,
+ * so that something new is always in sight.
  */
-export function planShots(boxes: Box[], count: number, seed: number): Shot[] {
-  if (count <= 1) return [WIDE];
+export function planShots(boxes: Box[], count: number, seed: number, focus?: string, from?: Shot): Shot[] {
   const rand = rng(seed);
+  const start = from ?? (rand() < 0.5 ? WIDE : { ...WIDE, x: 120 + rand() * 60 });
+  if (count <= 1) return [start];
+  const main = focusShot(boxes, focus);
   const subjects = boxes
-    .filter((b) => b.w > 3 && b.h > 3 && b.x > -20 && b.x < 320)
+    .filter((b) => b.w > 3 && b.h > 3 && b.x > -20 && b.x < 320 && (!focus || b.motif !== focus))
     .sort((a, b) => b.weight - a.weight)
     .map(shotOn);
   const details = [...DETAILS].sort(() => rand() - 0.5);
-  const route: Shot[] = [];
-  // Alternate subjects and details so that the camera never lingers on the same kind of view.
-  for (let i = 0; route.length < count - 2 && (i < subjects.length || i < details.length); i++) {
+  const route: Shot[] = main ? [main] : [];
+  // Alternate objects and open views so that the camera never lingers on the same kind of view.
+  for (let i = 0; route.length < count - 1 && (i < subjects.length || i < details.length); i++) {
     if (subjects[i]) route.push(subjects[i]);
-    if (route.length < count - 2 && details[i]) route.push(details[i]);
+    if (route.length < count - 1 && details[i]) route.push(details[i]);
   }
-  const start = rand() < 0.5 ? WIDE : { ...WIDE, x: 120 + rand() * 60 };
-  return [start, ...route.slice(0, count - 2), count > 2 ? PULL_BACK : { ...PULL_BACK, k: 1.25 }].slice(0, count);
+  while (route.length < count - 1) route.push(PULL_BACK);
+  // Opening on the object: begin a little further back, so that the camera comes towards it.
+  const first = route[0];
+  if (main && !from) return [{ x: (WIDE.x + first.x) / 2, y: (WIDE.y + first.y) / 2, k: 1.05 }, ...route.slice(0, count - 1)];
+  return [start, ...route.slice(0, count - 1)];
 }
 
 export interface Stage {

@@ -4,6 +4,7 @@ import { MOTIFS } from '../src/data/types';
 import { VIEW, cameraTransform, effectsFor, layerZoom, planShots, sceneSeed, shotCount, shotOn, type Box } from '../src/lib/direction';
 
 const stage = { w: 390, h: 520 };
+const START = { x: 150, y: 190, k: 1.04 };
 const boxes: Box[] = [
   { x: 150, y: 250, w: 90, h: 50, weight: 55 },
   { x: 205, y: 92, w: 60, h: 60, weight: 40 },
@@ -26,11 +27,26 @@ describe('shot plan', () => {
     }
   });
 
-  it('opens wide, closes pulled back, and visits the biggest object', () => {
-    const plan = planShots(boxes, 5, 7);
-    expect(plan[0].k).toBeLessThan(1.1);
-    expect(plan.at(-1)!.k).toBeLessThan(1.2);
-    expect(plan.some((s) => s.x === 150 && s.y === 250)).toBe(true);
+  it('starts where the camera is, then goes to what the picture is about', () => {
+    const here = { x: 40, y: 300, k: 1.6 };
+    const withBoxes: Box[] = boxes.map((b, i) => ({ ...b, motif: ['ark', 'sun', 'sheep'][i] }));
+    const plan = planShots(withBoxes, 3, 7, 'sun', here);
+    expect(plan[0]).toEqual(here);
+    expect(plan[1].x).toBeCloseTo(205, 5);
+    expect(plan[1].y).toBeCloseTo(92, 5);
+    expect(plan).toHaveLength(3);
+  });
+
+  it('can look at the sky, the horizon or the ground', () => {
+    expect(planShots([], 2, 1, 'sky', START)[1].y).toBeLessThan(150);
+    expect(planShots([], 2, 1, 'ground', START)[1].y).toBeGreaterThan(250);
+    expect(Math.abs(planShots([], 2, 1, 'horizon', START)[1].y - 232)).toBeLessThan(5);
+  });
+
+  it('opens a little way back from the object when the camera has no position yet', () => {
+    const withBoxes: Box[] = boxes.map((b, i) => ({ ...b, motif: ['ark', 'sun', 'sheep'][i] }));
+    const [open, target] = planShots(withBoxes, 2, 3, 'ark');
+    expect(open.k).toBeLessThan(target.k);
   });
 
   it('never moves the camera outside the picture or too close', () => {

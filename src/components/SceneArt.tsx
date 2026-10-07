@@ -93,10 +93,182 @@ function scatter(n: number, seed: number, w = 300, h = 200) {
 const lowSun = (sky: Sky) => sky === 'dawn' || sky === 'dusk';
 
 const MOTIF_DRAW: Record<Motif, Draw> = {
+  // ── animals ──
+  dove: () => (
+    <g class="anim-fly">
+      <ellipse cx="96" cy="92" rx="13" ry="6.5" fill="#f6f2e8" />
+      <circle cx="108" cy="88" r="4.6" fill="#f6f2e8" />
+      <path d="M112 88l7 2-7 2z" fill="#d9a05a" />
+      <path d="M92 90q-8-22-26-26 8 20 14 30z" fill="#e8e2d2" class="anim-bob" />
+      <path d="M96 92q10-22 30-20-10 14-20 24z" fill="#fbf8f0" />
+      <path d="M84 94l-14 6 16 0z" fill="#e8e2d2" />
+    </g>
+  ),
+  wolf: () => (
+    <g fill="#5d606a">
+      <path d="M52 296q4-22 26-22 8-10 20-6l12-8 2 12q10 2 12 10l-10 4-6 20h-6l-2-14h-24l-2 14h-6l-2-14q-10 2-14 4z" />
+      <path d="M52 296q-12-6-18-18 14 6 22 12z" />
+      <path d="M108 262l4-12 6 10z" />
+      <circle cx="116" cy="270" r="1.5" fill="#f1e6a8" />
+    </g>
+  ),
+  serpent: () => (
+    <g class="anim-sway" style={{ transformOrigin: '150px 300px' }}>
+      <path d="M92 300q22-30 44-8t40-18q14-8 18 10" fill="none" stroke="#5f7d4c" stroke-width="9" stroke-linecap="round" />
+      <path d="M92 300q22-30 44-8t40-18q14-8 18 10" fill="none" stroke="#86a86a" stroke-width="2.4" stroke-dasharray="3 7" stroke-linecap="round" />
+      <path d="M194 284q8-14 18-12l6 4-8 6z" fill="#5f7d4c" />
+      <path d="M218 276l8 2-6 3" fill="none" stroke="#c0392b" stroke-width="1.2" />
+      <circle cx="206" cy="276" r="1.5" fill="#f4d77a" />
+    </g>
+  ),
+  locusts: (p) => (
+    <g fill={p.ink} opacity="0.85" class="anim-fly">
+      {scatter(26, 21, 250, 170).map((b, i) => (
+        <g key={i} transform={`translate(${25 + b.x} ${40 + b.y}) rotate(${(i * 37) % 60 - 30})`}>
+          <ellipse cx="0" cy="0" rx="4.4" ry="1.6" fill="#8d7a3a" />
+          <path d="M-1 0l-3-5 5 3z" fill="#b7a45a" opacity="0.8" />
+          <path d="M-4 0l-4 2" stroke="#8d7a3a" stroke-width="0.8" />
+        </g>
+      ))}
+    </g>
+  ),
+  dog: (p) => (
+    <g fill={p.ink}>
+      <path d="M214 304q2-20 18-24l-4-18 10 8q8-4 14 2l4 6-8 4q-2 14-8 22z" />
+      <path d="M248 270l8-8 2 10z" />
+      <path d="M214 304q-14 0-16-10 10 6 16 4z" />
+      <circle cx="250" cy="274" r="1.3" fill="#f1e6a8" />
+    </g>
+  ),
+  raven: () => (
+    <g class="anim-fly">
+      <path d="M170 124q16-16 36-8l14-4-8 12q-12 18-38 12z" fill="#16181f" />
+      <path d="M180 120q8-24 32-24-8 10-12 24z" fill="#242836" />
+      <path d="M220 112l10 2-10 4z" fill="#3a3f52" />
+      <circle cx="214" cy="112" r="1.2" fill="#e6e6ef" />
+    </g>
+  ),
+  // ── objects ──
+  planks: (p) => (
+    <g>
+      <g class="anim-grow" style={{ transformOrigin: '150px 270px' }}>
+      <path d="M72 262q28 12 78 12t78-12" fill="none" stroke={p.near} stroke-width="4" />
+      {[88, 104, 120, 136, 150, 164, 180, 196, 212].map((x, i) => (
+        <path key={i} d={`M${x} 270q${(i - 4) * 1.4}-${26 + (i % 3) * 4} ${(i - 4) * 4}-${50 + (i % 2) * 6}`} fill="none" stroke={p.mid} stroke-width="3.4" stroke-linecap="round" />
+      ))}
+      <path d="M72 262l-8-26M228 262l10-26" stroke={p.near} stroke-width="4" stroke-linecap="round" />
+      </g>
+      <g transform="translate(40 292) rotate(-5)">
+        {[0, 7, 14].map((y) => (
+          <rect key={y} x="0" y={y} width="62" height="5.5" rx="1" fill={y === 7 ? '#b98c58' : '#a77d4b'} />
+        ))}
+      </g>
+      <g transform="translate(200 296) rotate(4)">
+        {[0, 7].map((y) => (
+          <rect key={y} x="0" y={y} width="56" height="5.5" rx="1" fill="#b98c58" />
+        ))}
+      </g>
+    </g>
+  ),
+  web: (p) => (
+    <g stroke={p.glow} stroke-width="0.8" fill="none" opacity="0.8">
+      {Array.from({ length: 9 }, (_, i) => {
+        const a = (i / 9) * Math.PI * 2;
+        return <line key={i} x1="150" y1="150" x2={150 + Math.cos(a) * 54} y2={150 + Math.sin(a) * 54} />;
+      })}
+      {[14, 26, 40, 54].map((r) => (
+        <circle key={r} cx="150" cy="150" r={r} stroke-dasharray="5 3" />
+      ))}
+      <circle cx="170" cy="140" r="2.2" fill={p.ink} stroke="none" />
+    </g>
+  ),
+  basket: () => (
+    <g>
+      <ellipse cx="150" cy="300" rx="38" ry="9" fill="#00000030" />
+      <path d="M112 280q4 24 38 24t38-24z" fill="#b5894f" />
+      <ellipse cx="150" cy="280" rx="38" ry="9" fill="#d3a766" />
+      <ellipse cx="150" cy="281" rx="31" ry="6" fill="#8a6434" />
+      {[122, 136, 150, 164, 178].map((x) => (
+        <path key={x} d={`M${x} 286q-2 10 0 16`} stroke="#8a6434" stroke-width="1.2" fill="none" />
+      ))}
+      <path d="M118 292q32 8 64 0M122 300q28 6 56 0" stroke="#8a6434" stroke-width="1.2" fill="none" />
+    </g>
+  ),
+  scales: (p) => (
+    <g class="anim-sway" style={{ transformOrigin: '150px 214px' }}>
+      <rect x="147" y="212" width="6" height="88" fill={GOLD} />
+      <rect x="128" y="298" width="44" height="6" rx="2" fill={GOLD} />
+      <path d="M96 218l108-4" stroke={GOLD} stroke-width="4" stroke-linecap="round" />
+      <circle cx="150" cy="215" r="6" fill={GOLD} />
+      {[[96, 218], [204, 214]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x} ${y}l-20 40M${x} ${y}l20 40`} stroke={p.ink} stroke-width="1" />
+          <path d={`M${x - 24} ${y + 40}q24 16 48 0z`} fill={GOLD} />
+        </g>
+      ))}
+    </g>
+  ),
+  goblet: (p) => (
+    <g>
+      <circle cx="150" cy="268" r="34" fill={p.glow} opacity="0.16" />
+      <path d="M130 244h40q0 24-20 26t-20-26z" fill={GOLD} />
+      <rect x="147" y="270" width="6" height="18" fill={GOLD} />
+      <ellipse cx="150" cy="292" rx="16" ry="4.5" fill="#b8932f" />
+      <path d="M130 244h40" stroke="#f3dc8c" stroke-width="2" />
+    </g>
+  ),
+  bread: () => (
+    <g>
+      <path d="M92 296h116l-8 8H100z" fill="#d6c7a3" />
+      {[[116, 288, 17], [150, 285, 19], [184, 288, 17]].map(([x, y, r], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx={r} ry={r * 0.6} fill="#c68a46" />
+          <path d={`M${x - r * 0.5} ${y - 3}l5 -3M${x} ${y - 4}l5 -3M${x + r * 0.45} ${y - 3}l5 -3`} stroke="#8d5c28" stroke-width="1.4" stroke-linecap="round" />
+        </g>
+      ))}
+    </g>
+  ),
+  flames: (p) => (
+    <g>
+      <ellipse cx="150" cy="292" rx="64" ry="12" fill={p.glow} opacity="0.2" />
+      <circle cx="150" cy="250" r="70" fill="#ff8a30" opacity="0.14" />
+      <g class="anim-flicker" style={{ transformOrigin: '150px 300px' }}>
+        <path d="M96 300q-6-34 12-52 2 14 12 20-4-26 14-50 4 22 18 34 2-14 8-22 20 28 4 70z" fill="#ff5a2a" />
+        <path d="M112 300q-4-26 10-40 2 12 10 14-2-18 12-34 4 16 14 26 12 12 6 34z" fill="#ff9a3c" />
+        <path d="M130 300q-2-16 8-26 2 8 8 10 0-10 8-18 6 14 4 34z" fill="#ffd56a" />
+      </g>
+      <path d="M92 302h116" stroke={p.ink} stroke-width="5" stroke-linecap="round" />
+    </g>
+  ),
+  rock: (p) => (
+    <g>
+      <path d="M118 306l-14-44 26-34 30 10 22-18 34 38-6 48z" fill={p.mid} />
+      <path d="M130 228l30 10 22-18-12 52-26 14z" fill={p.near} opacity="0.7" />
+      <path d="M118 306l-14-44 26-34-6 50z" fill={p.far} opacity="0.55" />
+      <path d="M160 238l-4 24" stroke={p.ink} stroke-width="1.4" opacity="0.5" />
+    </g>
+  ),
+  rope: (p) => (
+    <g class="anim-sway" style={{ transformOrigin: '150px 120px' }}>
+      <line x1="150" y1="110" x2="150" y2="262" stroke="#b79562" stroke-width="3.6" />
+      <line x1="150" y1="110" x2="150" y2="262" stroke="#7a5d34" stroke-width="3.6" stroke-dasharray="2 4" />
+      <circle cx="150" cy="268" r="7" fill="none" stroke="#b79562" stroke-width="3" />
+      <circle cx="150" cy="268" r="1.6" fill={p.ink} />
+    </g>
+  ),
+  jar: () => (
+    <g>
+      <ellipse cx="226" cy="302" rx="24" ry="6" fill="#00000030" />
+      <path d="M206 262q-8 22 4 40 16 8 32 0 12-18 4-40l-6-8 4-6h-34l4 6z" fill="#b86f3e" />
+      <path d="M214 268q-4 14 0 28" stroke="#d99966" stroke-width="3" fill="none" opacity="0.7" />
+      <ellipse cx="226" cy="248" rx="16" ry="4" fill="#7a431f" />
+      <path d="M208 270q18 6 36 0" stroke="#8a4d26" stroke-width="1.5" fill="none" />
+    </g>
+  ),
   sun: (p, sky) => {
     const y = lowSun(sky) ? 205 : 92;
     return (
-      <g>
+      <g class={sky === 'dawn' ? 'anim-sunrise' : sky === 'dusk' ? 'anim-sunset' : ''}>
         <circle cx="205" cy={y} r="58" fill={p.glow} opacity="0.18" />
         <circle cx="205" cy={y} r="34" fill={p.glow} opacity="0.35" />
         <circle cx="205" cy={y} r="22" fill={p.glow} />
@@ -161,7 +333,7 @@ const MOTIF_DRAW: Record<Motif, Draw> = {
     </g>
   ),
   flood: (p) => (
-    <g>
+    <g class="anim-rise">
       <rect x="-10" y="196" width="320" height="180" fill={p.water[1]} />
       <path d="M-10 200q25-10 50 0t50 0 50 0 50 0 50 0 50 0 50 0v20h-350z" fill={p.water[0]} class="anim-wave" />
       <path d="M-30 236q25-8 50 0t50 0 50 0 50 0 50 0 50 0 50 0v10h-350z" fill={p.water[0]} opacity="0.5" class="anim-wave-slow" />
@@ -177,12 +349,14 @@ const MOTIF_DRAW: Record<Motif, Draw> = {
     </g>
   ),
   ark: (p) => (
-    <g class="anim-bob">
-      <path d="M70 222h160l-22 30H92z" fill={p.near} />
-      <rect x="110" y="196" width="80" height="26" rx="2" fill={p.mid} />
-      <path d="M104 198l46-22 46 22z" fill={p.near} />
-      <rect x="128" y="204" width="10" height="10" fill={p.glow} opacity="0.7" />
-      <rect x="162" y="204" width="10" height="10" fill={p.glow} opacity="0.7" />
+    <g class="anim-sail">
+      <g class="anim-bob">
+        <path d="M70 222h160l-22 30H92z" fill={p.near} />
+        <rect x="110" y="196" width="80" height="26" rx="2" fill={p.mid} />
+        <path d="M104 198l46-22 46 22z" fill={p.near} />
+        <rect x="128" y="204" width="10" height="10" fill={p.glow} opacity="0.7" />
+        <rect x="162" y="204" width="10" height="10" fill={p.glow} opacity="0.7" />
+      </g>
     </g>
   ),
   boat: (p) => (
@@ -654,14 +828,14 @@ const GROUNDS: Record<Ground, (p: Palette) => JSX.Element | null> = {
 
 // Back-to-front order of the elements drawn on the landscape.
 const DEPTH: Motif[] = [
-  'flood', 'sea-split', 'path', 'footprints', 'spring', 'ruins', 'pillars', 'wall', 'cave-mouth', 'palace', 'tower',
-  'house', 'tent', 'kaaba', 'tree', 'palms', 'palm', 'withered', 'gourd', 'wheat', 'well', 'ark', 'boat', 'big-fish',
-  'camel', 'elephant', 'cows', 'sheep', 'ants', 'hoopoe', 'throne', 'table', 'cradle', 'tablets', 'staff', 'book',
-  'scroll', 'lamp', 'coins', 'gold', 'key', 'shirt', 'dates', 'fire',
+  'flood', 'sea-split', 'path', 'footprints', 'spring', 'rock', 'ruins', 'pillars', 'wall', 'cave-mouth', 'web', 'palace', 'tower',
+  'house', 'tent', 'kaaba', 'tree', 'palms', 'palm', 'withered', 'gourd', 'wheat', 'well', 'rope', 'planks', 'ark', 'boat', 'big-fish',
+  'camel', 'elephant', 'cows', 'sheep', 'wolf', 'serpent', 'dog', 'ants', 'hoopoe', 'throne', 'table', 'cradle', 'tablets', 'staff', 'book',
+  'scroll', 'lamp', 'coins', 'gold', 'key', 'shirt', 'dates', 'basket', 'jar', 'bread', 'goblet', 'scales', 'fire', 'flames',
 ];
 
 // Motifs that belong in front of the landscape; the rest are drawn in the sky.
-const SKY_LAYER = new Set<Motif>(['sun', 'moon', 'crescent', 'stars', 'bright-star', 'clouds', 'dark-clouds', 'lightning', 'birds', 'light', 'wind']);
+const SKY_LAYER = new Set<Motif>(['sun', 'moon', 'crescent', 'stars', 'bright-star', 'clouds', 'dark-clouds', 'lightning', 'birds', 'light', 'wind', 'dove', 'locusts', 'raven']);
 const WEATHER = new Set<Motif>(['rain', 'stones', 'prison']);
 
 /** Dark shapes at the edges of the frame, drawn in front of everything: they give depth when the camera moves. */
@@ -749,13 +923,17 @@ export function SceneArt({
   ground,
   motifs = [],
   still = false,
+  paused = false,
   label,
   layer = 'all',
 }: {
   sky: Sky;
   ground: Ground;
   motifs?: Motif[];
+  /** No animation at all (thumbnails). */
   still?: boolean;
+  /** Animations stop where they are (the story is paused). */
+  paused?: boolean;
   label?: string;
   layer?: 'all' | 'sky' | 'land' | 'fore';
 }) {
@@ -773,7 +951,7 @@ export function SceneArt({
     <svg
       viewBox="0 0 300 360"
       preserveAspectRatio="xMidYMid slice"
-      class={`scene-art ${still ? 'still' : ''}`}
+      class={`scene-art ${still ? 'still' : ''} ${paused ? 'paused' : ''}`}
       role="img"
       aria-label={label ?? 'Illustration'}
       aria-hidden={all ? undefined : 'true'}

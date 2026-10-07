@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../components/Icon';
 import { Ambience, AMBIENCE_LEVEL, createAudioContext, sceneMix } from '../lib/ambience';
 import { Stage } from '../components/Stage';
+import { getBeats } from '../data/storyboards';
 import { sceneSeed } from '../lib/direction';
+import { pictureAt, picturesOf } from '../lib/storyboard';
 import { PROPHET_STORIES } from '../data/prophets';
 import { getSeries } from '../data/series';
 import { SUNNAH_STORIES } from '../data/sunnah-stories';
@@ -285,7 +287,14 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
 
   // How long the scene lasts, to pace the camera: the recorded span, or a reading time, plus the verse.
   const recordedSpan = narration && prefs.voice ? spanFor(narration, scene.text) : undefined;
-  const sceneMs = (recordedSpan ? ((recordedSpan[1] - recordedSpan[0]) * 1000) / prefs.rate : readingTime(scene.text, prefs.rate)) + (scene.verse ? 6000 : 0);
+  const textMs = recordedSpan ? ((recordedSpan[1] - recordedSpan[0]) * 1000) / prefs.rate : readingTime(scene.text, prefs.rate);
+
+  // The pictures of the scene follow what is being said: the one on screen is the one whose words are being told.
+  const pictures = picturesOf(scene, getBeats(storyId, episode, index));
+  const pictureNo = pictureAt(pictures, phase === 'text' ? progress : 1);
+  const picture = pictures[Math.min(pictureNo, pictures.length - 1)];
+  const lastPicture = pictureNo >= pictures.length - 1;
+  const pictureMs = Math.max(textMs * (picture.to - picture.from), 2500) + (lastPicture && scene.verse ? 6000 : 0);
 
   const words = scene.text.split(' ');
   const lit = phase === 'text' ? Math.round(progress * words.length * 1.04) : words.length;
@@ -299,12 +308,21 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   return (
     <div class="player-screen" role="dialog" aria-label={`${info.title}, ${ep.title}`}>
       <div class="player-stage">
-        <div class="stage-fade" key={index}>
-          <Stage sky={scene.sky} ground={scene.ground} motifs={scene.motifs} seed={sceneSeed(scene.text)} ms={sceneMs} playing={playing} label={scene.text} />
-        </div>
+        <Stage
+          key={`${storyId}-${episode}`}
+          pictureKey={`${index}-${pictureNo}`}
+          sky={picture.sky}
+          ground={picture.ground}
+          motifs={picture.motifs}
+          focus={picture.focus}
+          seed={sceneSeed(scene.text) + pictureNo * 7919}
+          ms={pictureMs}
+          playing={playing}
+          label={scene.text}
+        />
 
         {started && index === 0 && !ended && (
-          <div class="title-card" key={`${storyId}-${episode}`}>
+          <div class="title-card" key={`title-${storyId}-${episode}`}>
             <small>{series.episodes.length > 1 ? `Épisode ${episode + 1}` : 'Récit'}</small>
             <h2>{ep.title}</h2>
             {info.ar && <span class="ar" lang="ar">{info.ar}</span>}

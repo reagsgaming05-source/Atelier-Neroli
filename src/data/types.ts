@@ -127,6 +127,10 @@ export const MOTIFS = [
   'camel', 'birds', 'hoopoe', 'ants', 'sheep', 'elephant', 'cows',
   // objects and symbols
   'staff', 'tablets', 'book', 'scroll', 'coins', 'gold', 'shirt', 'cradle', 'table', 'stones', 'path', 'footprints', 'key',
+  // more animals
+  'dove', 'wolf', 'serpent', 'locusts', 'dog', 'raven',
+  // more objects, to tell more of the stories
+  'planks', 'web', 'basket', 'scales', 'goblet', 'bread', 'flames', 'rock', 'rope', 'jar',
 ] as const;
 
 export type Motif = (typeof MOTIFS)[number];
@@ -140,6 +144,31 @@ export interface Scene {
   /** A verse shown in Arabic with its translation, then recited. */
   verse?: { surah: number; verse: number };
 }
+
+/** What the camera is looking at: an object of the picture, or a part of the frame. */
+export type Focus = Motif | 'sky' | 'ground' | 'horizon';
+
+/**
+ * One picture of a scene. A scene's narration is told over several pictures that
+ * follow each other, each starting at a sentence or a clause of the text, so that
+ * what is on screen is what is being said.
+ */
+export interface Beat {
+  /** Exact words of the scene's text where this picture begins ('' for the first one). */
+  at: string;
+  /** Omitted: the previous picture's value (the scene's own for the first one). */
+  sky?: Sky;
+  ground?: Ground;
+  /** Everything visible in this picture; it replaces the previous list. */
+  motifs?: Motif[];
+  /** What the camera looks at first. */
+  focus?: Focus;
+  /** A deliberate cut to somewhere or some time else: nothing has to carry over from the previous picture. */
+  cut?: boolean;
+}
+
+/** Pictures of the scenes, by "<storyId>-<episode>-<scene>" (all numbers start at 0). */
+export type Storyboard = Record<string, Beat[]>;
 
 export interface Episode {
   title: string;

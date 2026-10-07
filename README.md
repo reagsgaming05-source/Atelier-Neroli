@@ -46,6 +46,17 @@ curl -sLo /tmp/quran-ar.json https://raw.githubusercontent.com/fawazahmed0/quran
 HISN_JSON=/tmp/hisn.json QURAN_AR_JSON=/tmp/quran-ar.json npx vitest run tests/adhkar.test.ts
 ```
 
+### Mise en scène des histoires
+
+Chaque épisode est tourné comme un court film (`src/components/Stage.tsx`, `src/lib/direction.ts`) :
+
+- **Un découpage image par image** (`src/data/storyboards/`, guide : `docs/storyboard-guide.md`). Chaque scène est racontée sur 1 à 5 images qui changent à la phrase ou à la proposition où le texte les évoque : ce qui est à l'écran est ce qui est dit, au moment où on le dit, et les images se suivent (les objets restent, l'heure et la météo évoluent dans l'ordre). Des tests vérifient que chaque scène a son découpage et que d'une image à l'autre quelque chose se prolonge.
+- **Une caméra continue** : elle glisse d'un cadrage à l'autre, vers l'objet dont parle la phrase, sans s'arrêter, y compris d'une scène à l'autre ; une nouvelle image se fond dans la précédente.
+- **Trois plans de profondeur** (ciel, paysage, silhouettes au premier plan) qui défilent à des vitesses différentes, et de l'**atmosphère** (poussière dorée, lucioles, braises, brume, nuages, rayons de lumière, oiseaux…).
+- **Des images qui évoluent** : l'eau du déluge monte, l'arche avance, le soleil se lève ou se couche, la coque se construit.
+- Un titre d'épisode, des sous-titres qui s'illuminent au rythme de la voix, un grain de pellicule.
+- Aucune personne n'est jamais dessinée : des lieux, des objets, des animaux, de la lumière.
+
 ### Narration des histoires
 
 La narration est enregistrée d'avance par une voix neuronale française libre et gratuite ([Kokoro-82M](https://github.com/thewh1teagle/kokoro-onnx), voix `ff_siwis`) : un fichier MP3 par épisode dans `public/data/narration/`, avec dans `index.json` le passage où chaque texte est lu. Le lecteur retrouve chaque texte par son empreinte : une scène modifiée depuis l'enregistrement est simplement laissée à lire en silence, sans changer de voix au milieu d'un épisode.

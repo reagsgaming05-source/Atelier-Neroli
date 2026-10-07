@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { Ground, Motif, Sky } from '../data/types';
+import type { Focus, Ground, Motif, Sky } from '../data/types';
 import {
   cameraTransform,
   effectsFor,
@@ -9,6 +9,7 @@ import {
   shotCount,
   type Box,
   type Effect,
+  type Shot,
   type Stage as StageSize,
 } from '../lib/direction';
 import { SceneArt } from './SceneArt';
@@ -16,34 +17,57 @@ import { SceneArt } from './SceneArt';
 /** How much of the camera's movement each layer follows: the sky is far away, the foreground close. */
 const PARALLAX = { sky: 0.5, land: 1, fx: 1.2, fore: 1.5 } as const;
 
+const START: Shot = { x: 150, y: 190, k: 1.04 };
+
+interface Slot {
+  id: string;
+  sig: string;
+  seed: number;
+  sky: Sky;
+  ground: Ground;
+  motifs: Motif[];
+}
+
 /**
- * One scene shot like a film: the picture is built in three layers that the
- * camera moves across at different speeds, with floating atmosphere in front.
- * The camera never stops: each shot is a slow move towards the next framing.
+ * The film's camera. The picture is built in three layers that the camera crosses at
+ * different speeds, with floating atmosphere in front. The camera never stops: it
+ * glides from one framing to the next, and keeps gliding when the picture changes —
+ * the new picture dissolves in over the old one, in the same shot, like a film.
  */
 export function Stage({
+  pictureKey,
   sky,
   ground,
   motifs = [],
+  focus,
   seed,
   ms,
   playing,
   label,
 }: {
+  /** Changes whenever another picture has to be shown. */
+  pictureKey: string;
   sky: Sky;
   ground: Ground;
   motifs?: Motif[];
-  /** Number that makes the direction of this scene reproducible. */
+  /** What the camera should look at in this picture. */
+  focus?: Focus;
+  /** Makes the direction of this picture reproducible. */
   seed: number;
-  /** How long the scene lasts, to pace its shots. */
+  /** How long the picture stays, to pace the camera. */
   ms: number;
   playing: boolean;
   label?: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<StageSize>({ w: 390, h: 520 });
-  const [boxes, setBoxes] = useState<Box[]>([]);
-  const [shot, setShot] = useState(0);
+  const signature = `${sky}/${ground}/${[...motifs].sort().join('+')}`;
+  const [slots, setSlots] = useState<Slot[]>([{ id: pictureKey, sig: signature, seed, sky, ground, motifs }]);
+  const [cam, setCam] = useState<Shot>(START);
+  const camRef = useRef<Shot>(START);
+  const [route, setRoute] = useState<Shot[]>([START]);
+  const [step, setStep] = useState(0);
+  const [leg, setLeg] = useState(3000);
 
   useLayoutEffect(() => {
     const el = root.current;
@@ -56,58 +80,82 @@ export function Stage({
     return () => watcher.disconnect();
   }, []);
 
-  // Where each object of the picture is, so the camera can go and look at it.
-  const key = `${sky}/${ground}/${motifs.join('+')}`;
+  // Another picture: if it looks different, it dissolves in over the current one.
+  useLayoutEffect(() => {
+    setSlots((all) => (all.at(-1)!.sig === signature ? all : [...all, { id: pictureKey, sig: signature, seed, sky, ground, motifs }].slice(-2)));
+  }, [pictureKey]);
+
+  // Once the old picture is covered, it goes.
+  useEffect(() => {
+    if (slots.length < 2) return;
+    const t = window.setTimeout(() => setSlots((all) => all.slice(-1)), 1400);
+    return () => clearTimeout(t);
+  }, [slots.length, slots.at(-1)?.id]);
+
+  // Where the objects of the picture are, so the camera can go and look at them; then the route.
+  const shownId = slots.at(-1)!.id;
   useLayoutEffect(() => {
     const found: Box[] = [];
-    root.current?.querySelectorAll<SVGGElement>('[data-m]').forEach((g) => {
+    root.current?.querySelectorAll<SVGGElement>(`[data-slot="${CSS.escape(shownId)}"] [data-m]`).forEach((g) => {
       try {
         const b = g.getBBox();
         const far = g.closest('[data-layer="sky"]') ? 0.7 : 1;
-        found.push({ x: b.x + b.width / 2, y: b.y + b.height / 2, w: b.width, h: b.height, weight: Math.min(Math.sqrt(b.width * b.height), 70) * far });
+        found.push({ x: b.x + b.width / 2, y: b.y + b.height / 2, w: b.width, h: b.height, weight: Math.min(Math.sqrt(b.width * b.height), 70) * far, motif: g.dataset.m });
       } catch {
         /* not rendered (hidden tab): the camera falls back to the generic views */
       }
     });
-    setBoxes(found);
-  }, [key]);
+    const planned = planShots(found, Math.max(shotCount(ms), 2), seed, focus, camRef.current);
+    setRoute(planned);
+    setStep(0);
+    // Moves between framings take most of the time available: the camera is always drifting.
+    setLeg(Math.max(ms / Math.max(planned.length - 1, 1), 1800));
+  }, [pictureKey, shownId]);
 
-  const shots = useMemo(() => planShots(boxes, Math.max(shotCount(ms), 2), seed), [boxes, ms, seed]);
-  // Moves between framings take most of the time available: the camera is always drifting.
-  const leg = Math.max(ms / Math.max(shots.length - 1, 1), 1800);
-
-  useEffect(() => setShot(0), [seed, key]);
   useEffect(() => {
-    if (!playing || shot >= shots.length - 1) return;
-    const t = window.setTimeout(() => setShot((s) => s + 1), shot === 0 ? 450 : leg);
+    if (!playing || step >= route.length - 1) return;
+    const t = window.setTimeout(() => {
+      camRef.current = route[step + 1];
+      setCam(route[step + 1]);
+      setStep(step + 1);
+    }, step === 0 ? 400 : leg);
     return () => clearTimeout(t);
-  }, [playing, shot, shots.length, leg]);
+  }, [playing, step, route, leg]);
 
-  const current = shots[Math.min(shot, shots.length - 1)];
   const style = (factor: number) => {
-    const { tx, ty, k } = cameraTransform(size, current, layerZoom(current.k, factor));
+    const { tx, ty, k } = cameraTransform(size, cam, layerZoom(cam.k, factor));
     return {
       transform: `translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${k.toFixed(3)})`,
       transitionDuration: `${Math.round(leg * 0.94)}ms`,
     };
   };
-  const effects = useMemo(() => effectsFor({ sky, ground, motifs }), [key]);
 
   return (
     <div class="stage" ref={root} role="img" aria-label={label ?? 'Illustration'}>
+      {slots.map((slot, i) => (
+        <PictureLayers key={slot.id} slot={slot} fresh={i > 0} playing={playing} style={style} />
+      ))}
+      <div class="stage-grade" aria-hidden="true" />
+    </div>
+  );
+}
+
+function PictureLayers({ slot, fresh, playing, style }: { slot: Slot; fresh: boolean; playing: boolean; style: (factor: number) => Record<string, string> }) {
+  const effects = useMemo(() => effectsFor(slot), [slot.sig]);
+  return (
+    <div class={`stage-slot ${fresh ? 'stage-slot-in' : ''}`} data-slot={slot.id}>
       <div class="stage-layer" data-layer="sky" style={style(PARALLAX.sky)}>
-        <SceneArt sky={sky} ground={ground} motifs={motifs} layer="sky" still={!playing} />
+        <SceneArt sky={slot.sky} ground={slot.ground} motifs={slot.motifs} layer="sky" paused={!playing} />
       </div>
       <div class="stage-layer" data-layer="land" style={style(PARALLAX.land)}>
-        <SceneArt sky={sky} ground={ground} motifs={motifs} layer="land" still={!playing} />
+        <SceneArt sky={slot.sky} ground={slot.ground} motifs={slot.motifs} layer="land" paused={!playing} />
       </div>
       <div class={`stage-layer stage-fx ${playing ? '' : 'paused'}`} style={style(PARALLAX.fx)}>
-        <Atmosphere effects={effects} seed={seed} sky={sky} />
+        <Atmosphere effects={effects} seed={slot.seed} sky={slot.sky} />
       </div>
       <div class="stage-layer" data-layer="fore" style={style(PARALLAX.fore)}>
-        <SceneArt sky={sky} ground={ground} motifs={motifs} layer="fore" still={!playing} />
+        <SceneArt sky={slot.sky} ground={slot.ground} motifs={slot.motifs} layer="fore" paused={!playing} />
       </div>
-      <div class="stage-grade" aria-hidden="true" />
     </div>
   );
 }
