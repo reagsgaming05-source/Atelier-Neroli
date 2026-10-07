@@ -44,6 +44,7 @@ export function Stage({
   ms,
   playing,
   label,
+  people = true,
 }: {
   /** Changes whenever another picture has to be shown. */
   pictureKey: string;
@@ -58,13 +59,21 @@ export function Stage({
   ms: number;
   playing: boolean;
   label?: string;
+  /** Show the silhouettes of ordinary people. */
+  people?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<StageSize>({ w: 390, h: 520 });
   const signature = `${sky}/${ground}/${[...motifs].sort().join('+')}`;
   const [slots, setSlots] = useState<Slot[]>([{ id: pictureKey, sig: signature, seed, sky, ground, motifs }]);
-  const [cam, setCam] = useState<Shot>(START);
-  const camRef = useRef<Shot>(START);
+  // The camera is a spring: it eases towards a target and keeps its speed when the target changes,
+  // so that it glides from one framing to the next without ever stopping.
+  const camRef = useRef<Shot>(START); // where it is heading
+  const body = useRef({ x: START.x, y: START.y, k: START.k, vx: 0, vy: 0, vk: 0 });
+  // A second spring in front of the first: the aim follows the target, the camera follows the aim, so a move
+  // starts gently (no sudden kick) and ends gently.
+  const aim = useRef({ x: START.x, y: START.y, k: START.k, vx: 0, vy: 0, vk: 0 });
+  const layers = useRef<{ el: HTMLElement; factor: number }[]>([]);
   const [route, setRoute] = useState<Shot[]>([START]);
   const [step, setStep] = useState(0);
   const [leg, setLeg] = useState(3000);
@@ -116,45 +125,97 @@ export function Stage({
     if (!playing || step >= route.length - 1) return;
     const t = window.setTimeout(() => {
       camRef.current = route[step + 1];
-      setCam(route[step + 1]);
       setStep(step + 1);
     }, step === 0 ? 400 : leg);
     return () => clearTimeout(t);
   }, [playing, step, route, leg]);
 
-  const style = (factor: number) => {
-    const { tx, ty, k } = cameraTransform(size, cam, layerZoom(cam.k, factor));
-    return {
-      transform: `translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${k.toFixed(3)})`,
-      transitionDuration: `${Math.round(leg * 0.94)}ms`,
-    };
+  // Puts the camera's position on every layer, each moving by its own share (parallax).
+  const sizeRef = useRef(size);
+  sizeRef.current = size;
+  const paint = (time = 0) => {
+    const b = body.current;
+    // A breath of movement, so that even a held shot is alive.
+    const focus = { x: b.x + Math.sin(time / 5200) * 2.4, y: b.y + Math.cos(time / 7100) * 1.7 };
+    const zoom = b.k * (1 + 0.012 * Math.sin(time / 6100));
+    for (const { el, factor } of layers.current) {
+      const { tx, ty, k } = cameraTransform(sizeRef.current, focus, layerZoom(zoom, factor));
+      el.style.transform = `translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${k.toFixed(4)})`;
+    }
   };
+
+  // The layers that exist now (the new picture's appear with it), placed at once.
+  useLayoutEffect(() => {
+    layers.current = [...(root.current?.querySelectorAll<HTMLElement>('.stage-layer') ?? [])].map((el) => ({ el, factor: Number(el.dataset.factor) }));
+    paint(performance.now());
+  }, [slots.map((x) => x.id).join('|'), size.w, size.h]);
+
+  useEffect(() => {
+    if (!playing) return;
+    const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let frame = 0;
+    let last = performance.now();
+    const damp = (current: number, target: number, speed: number, smooth: number, dt: number) => {
+      // Critically damped spring (smooth damp): no overshoot, speed carried over from one target to the next.
+      const omega = 2 / smooth;
+      const x = omega * dt;
+      const decay = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+      const change = current - target;
+      const temp = (speed + omega * change) * dt;
+      return { value: target + (change + temp) * decay, speed: (speed - omega * temp) * decay };
+    };
+    const tick = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      const b = body.current;
+      const t = camRef.current;
+      const smooth = Math.min(Math.max((leg / 1000) * 0.3, 0.8), 2.4);
+      const a = aim.current;
+      if (still) {
+        Object.assign(a, { x: t.x, y: t.y, k: t.k, vx: 0, vy: 0, vk: 0 });
+        Object.assign(b, { x: t.x, y: t.y, k: t.k, vx: 0, vy: 0, vk: 0 });
+      } else {
+        const ax = damp(a.x, t.x, a.vx, smooth, dt);
+        const ay = damp(a.y, t.y, a.vy, smooth, dt);
+        const ak = damp(a.k, t.k, a.vk, smooth * 1.1, dt);
+        Object.assign(a, { x: ax.value, y: ay.value, k: ak.value, vx: ax.speed, vy: ay.speed, vk: ak.speed });
+        const x = damp(b.x, a.x, b.vx, smooth, dt);
+        const y = damp(b.y, a.y, b.vy, smooth, dt);
+        const k = damp(b.k, a.k, b.vk, smooth * 1.1, dt);
+        Object.assign(b, { x: x.value, y: y.value, k: k.value, vx: x.speed, vy: y.speed, vk: k.speed });
+      }
+      paint(now);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [playing, leg]);
 
   return (
     <div class="stage" ref={root} role="img" aria-label={label ?? 'Illustration'}>
       {slots.map((slot, i) => (
-        <PictureLayers key={slot.id} slot={slot} fresh={i > 0} playing={playing} style={style} />
+        <PictureLayers key={slot.id} slot={slot} fresh={i > 0} playing={playing} people={people} />
       ))}
       <div class="stage-grade" aria-hidden="true" />
     </div>
   );
 }
 
-function PictureLayers({ slot, fresh, playing, style }: { slot: Slot; fresh: boolean; playing: boolean; style: (factor: number) => Record<string, string> }) {
+function PictureLayers({ slot, fresh, playing, people }: { slot: Slot; fresh: boolean; playing: boolean; people: boolean }) {
   const effects = useMemo(() => effectsFor(slot), [slot.sig]);
   return (
     <div class={`stage-slot ${fresh ? 'stage-slot-in' : ''}`} data-slot={slot.id}>
-      <div class="stage-layer" data-layer="sky" style={style(PARALLAX.sky)}>
-        <SceneArt sky={slot.sky} ground={slot.ground} motifs={slot.motifs} layer="sky" paused={!playing} />
+      <div class="stage-layer" data-layer="sky" data-factor={PARALLAX.sky}>
+        <SceneArt sky={slot.sky} ground={slot.ground} motifs={slot.motifs} layer="sky" paused={!playing} people={people} ambient />
       </div>
-      <div class="stage-layer" data-layer="land" style={style(PARALLAX.land)}>
-        <SceneArt sky={slot.sky} ground={slot.ground} motifs={slot.motifs} layer="land" paused={!playing} />
+      <div class="stage-layer" data-layer="land" data-factor={PARALLAX.land}>
+        <SceneArt sky={slot.sky} ground={slot.ground} motifs={slot.motifs} layer="land" paused={!playing} people={people} ambient />
       </div>
-      <div class={`stage-layer stage-fx ${playing ? '' : 'paused'}`} style={style(PARALLAX.fx)}>
+      <div class={`stage-layer stage-fx ${playing ? '' : 'paused'}`} data-factor={PARALLAX.fx}>
         <Atmosphere effects={effects} seed={slot.seed} sky={slot.sky} />
       </div>
-      <div class="stage-layer" data-layer="fore" style={style(PARALLAX.fore)}>
-        <SceneArt sky={slot.sky} ground={slot.ground} motifs={slot.motifs} layer="fore" paused={!playing} />
+      <div class="stage-layer" data-layer="fore" data-factor={PARALLAX.fore}>
+        <SceneArt sky={slot.sky} ground={slot.ground} motifs={slot.motifs} layer="fore" paused={!playing} people={people} ambient />
       </div>
     </div>
   );

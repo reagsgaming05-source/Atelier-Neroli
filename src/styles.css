@@ -1741,6 +1741,21 @@ a.goal-title::after {
 .scene-art .anim-sunrise { animation: sunrise 18s ease-out both; }
 .scene-art .anim-sunset { animation: sunset 18s ease-in both; }
 .scene-art .anim-grow { animation: grow 12s ease-out both; }
+/* Life: people, birds, animals. */
+.scene-art .anim-bobwalk { animation: bobwalk 0.8s ease-in-out infinite; }
+.scene-art .anim-sway-s { animation: sway-s 3.4s ease-in-out infinite alternate; }
+.scene-art .anim-step { animation: step 0.8s ease-in-out infinite; }
+.scene-art .anim-step-b { animation: step 0.8s ease-in-out -0.4s infinite; }
+.scene-art .anim-arm { animation: arm 1.2s ease-in-out infinite alternate; transform-origin: 4px -21px; }
+.scene-art .anim-hammer { animation: hammer 0.9s ease-in infinite alternate; transform-origin: 5px -21px; }
+.scene-art .anim-cross { animation: cross 44s linear -17s infinite; }
+.scene-art .anim-cross-slow { animation: cross 70s linear -22s infinite; }
+.scene-art .anim-flap { animation: flap-wings 0.46s ease-in-out infinite alternate; }
+.scene-art .anim-flock { animation: flock 34s linear -12s infinite; }
+.scene-art .anim-leap { animation: leap 6s ease-out infinite; }
+.scene-art .anim-ripple { animation: ripple 6s ease-out infinite; }
+.scene-art .anim-wander { animation: wander-b 9s ease-in-out infinite alternate; }
+.scene-art .anim-wings { animation: wings 0.24s ease-in-out infinite alternate; }
 
 .scene-art.still * {
   animation: none !important;
@@ -1751,6 +1766,24 @@ a.goal-title::after {
 }
 
 @keyframes twinkle { 50% { opacity: 0.25; } }
+@keyframes bobwalk { 50% { transform: translateY(-1.8px); } }
+@keyframes sway-s { from { transform: rotate(-1.1deg); } to { transform: rotate(1.1deg); } }
+@keyframes step { 50% { transform: translateY(-1.8px); } }
+@keyframes arm { from { transform: rotate(-28deg); } to { transform: rotate(16deg); } }
+@keyframes hammer { from { transform: rotate(-62deg); } to { transform: rotate(10deg); } }
+@keyframes cross { from { transform: translateX(-60px); } to { transform: translateX(400px); } }
+@keyframes flap-wings { from { transform: scaleY(1); } to { transform: scaleY(0.22); } }
+@keyframes flock { from { transform: translate(-150px, 6px); } 50% { transform: translate(110px, -10px); } to { transform: translate(380px, 4px); } }
+@keyframes leap {
+  0%, 62% { opacity: 0; transform: translate(0, 4px) rotate(0); }
+  64% { opacity: 1; transform: translate(0, -2px) rotate(-30deg); }
+  78% { opacity: 1; transform: translate(16px, -28px) rotate(20deg); }
+  92% { opacity: 1; transform: translate(32px, -2px) rotate(70deg); }
+  100% { opacity: 0; transform: translate(34px, 4px) rotate(80deg); }
+}
+@keyframes ripple { 0%, 60% { opacity: 0; transform: scale(0.4); } 66% { opacity: 0.9; } 100% { opacity: 0; transform: scale(2.4); } }
+@keyframes wander-b { 0% { transform: translate(0, 0); } 33% { transform: translate(26px, -16px); } 66% { transform: translate(-18px, -26px); } 100% { transform: translate(14px, 6px); } }
+@keyframes wings { from { transform: scaleX(1); } to { transform: scaleX(0.25); } }
 @keyframes rise { from { transform: translateY(54px); } to { transform: translateY(0); } }
 @keyframes sail { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
 @keyframes sunrise { from { transform: translateY(46px); opacity: 0.6; } to { transform: translateY(-4px); opacity: 1; } }
@@ -1833,8 +1866,6 @@ a.goal-title::after {
   position: absolute;
   inset: 0;
   transform-origin: 0 0;
-  transition-property: transform;
-  transition-timing-function: cubic-bezier(0.42, 0, 0.3, 1);
   will-change: transform;
 }
 
@@ -2076,7 +2107,6 @@ a.goal-title::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stage-layer { transition-duration: 0.01ms !important; }
   .fx, .stage-grade::after { display: none; }
 }
 
@@ -2147,8 +2177,9 @@ a.goal-title::after {
   z-index: 2;
   padding: 18px 20px calc(env(safe-area-inset-bottom, 0px) + 12px);
   background: linear-gradient(180deg, #0b1424, #050a14);
-  min-height: 34%;
-  max-height: 52%;
+  /* Always the same height, so that the picture never changes size when the text does. */
+  flex: none;
+  height: 42%;
   overflow-y: auto;
 }
 

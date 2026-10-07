@@ -303,7 +303,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const verse = scene.verse;
   // The verse stays on screen for the whole scene, so it can be read when paused.
   const showVerse = !!verse;
-  const toggle = (key: 'voice' | 'recitation' | 'ambience') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
+  const toggle = (key: 'voice' | 'recitation' | 'ambience' | 'people') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
 
   return (
     <div class="player-screen" role="dialog" aria-label={`${info.title}, ${ep.title}`}>
@@ -319,6 +319,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
           ms={pictureMs}
           playing={playing}
           label={scene.text}
+          people={prefs.people}
         />
 
         {started && index === 0 && !ended && (
@@ -448,6 +449,9 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
           </button>
           <button class="toggle" aria-pressed={prefs.recitation} onClick={() => toggle('recitation')}>
             Récitation
+          </button>
+          <button class="toggle" aria-pressed={prefs.people} onClick={() => toggle('people')} title="Silhouettes de personnes, sans visage">
+            Silhouettes
           </button>
         </div>
         <div class="player-controls">

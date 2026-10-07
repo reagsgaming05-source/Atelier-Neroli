@@ -131,7 +131,20 @@ export const MOTIFS = [
   'dove', 'wolf', 'serpent', 'locusts', 'dog', 'raven',
   // more objects, to tell more of the stories
   'planks', 'web', 'basket', 'scales', 'goblet', 'bread', 'flames', 'rock', 'rope', 'jar',
+  // life: ordinary people as faceless silhouettes (never a prophet, an angel or a Companion), and more animals
+  'folk', 'crowd', 'walkers', 'workers', 'caravan',
+  'horse', 'goat', 'gulls', 'fish', 'butterflies', 'bats',
 ] as const;
+
+/** Silhouettes of ordinary people. They can be hidden in the player. */
+export const PEOPLE: readonly Motif[] = ['folk', 'crowd', 'walkers', 'workers', 'caravan'];
+
+/** Everything that moves by itself: people and animals. */
+export const LIVING: readonly Motif[] = [
+  ...PEOPLE,
+  'camel', 'birds', 'hoopoe', 'ants', 'sheep', 'elephant', 'cows', 'dove', 'wolf', 'serpent', 'locusts', 'dog', 'raven',
+  'horse', 'goat', 'gulls', 'fish', 'butterflies', 'bats', 'big-fish',
+];
 
 export type Motif = (typeof MOTIFS)[number];
 

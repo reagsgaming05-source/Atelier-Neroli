@@ -6,8 +6,11 @@ other, each starting at a sentence or a clause of the text, so that **what is on
 said, at the moment it is said**, and the whole episode flows like a film shot with a camera.
 
 The pictures are paper-cut illustrations assembled from a fixed vocabulary: a sky, a ground (landscape)
-and a list of objects (motifs). **No person, prophet or angel is ever drawn**: tell the story with places,
-objects, animals, weather, light, and what people leave behind (footprints, a staff, a lamp, a path).
+and a list of objects (motifs). **A prophet, an angel, the Prophet ﷺ or a Companion is never drawn**: they
+are told through light, a staff, a lamp, footprints, a path, what they leave behind. **Ordinary people** (the
+notables who mock, the brothers, the crowd, travellers, workers, a caravan, a family) **are drawn as faceless
+silhouettes** with the motifs `folk`, `crowd`, `walkers`, `workers`, `caravan` — and they must be, because
+the story has to be alive.
 
 ## File format
 
@@ -64,6 +67,14 @@ even if it has a single picture.
    report (no invented details such as a dove for Nûh). Keep it modest: no violence, no blood, no idols
    shown; for a prophet's act, show its consequence or the object involved.
 7. Do not repeat the same picture twice in a row; vary `focus` so that the camera has something new to find.
+8. **More pictures, more life.** Show a new picture about every 6 to 8 seconds of narration (one per ~100
+   characters; the tests require `floor(length/110)+1` pictures for scenes longer than 110 characters, up to 5).
+   Put something alive in most pictures (at least 60% overall): people as silhouettes (`folk` when a few talk,
+   `crowd` for a gathering or an army of unbelievers, `walkers` for a journey on foot, `workers` for a building
+   site, `caravan` for travellers with camels), and animals (`birds`, `dove`, `gulls` at sea, `fish`,
+   `butterflies` in a garden, `bats` at night, `sheep`, `goat`, `horse`, `camel`, `dog`, `wolf`...). A person
+   speaking to the prophet, a crowd answering him: show them; the prophet himself is the light, the staff,
+   the footprints, never a figure. Keep the silhouettes for people the text speaks of, not as filler.
 
 ## Vocabulary
 
@@ -74,7 +85,10 @@ even if it has a single picture.
 - plants: `palm`, `palms`, `tree`, `withered` (dead tree), `wheat`, `gourd`, `dates`
 - places: `kaaba`, `tent`, `house`, `palace`, `tower`, `ruins`, `pillars`, `wall`, `prison`, `well`, `cave-mouth`, `throne`
 - animals: `camel`, `birds` (a flock), `hoopoe`, `ants`, `sheep`, `elephant`, `cows`, `dove`, `wolf`, `serpent`,
-  `locusts`, `dog`, `raven`
+  `locusts`, `dog`, `raven`, `horse`, `goat`, `gulls` (sea birds), `fish` (jumping), `butterflies`, `bats`
+- people (faceless silhouettes of ordinary people only): `folk` (a few people standing and talking), `crowd`
+  (a packed gathering), `walkers` (a few people walking), `workers` (people building or carrying), `caravan`
+  (camels and travellers crossing)
 - objects: `staff`, `tablets`, `book`, `scroll`, `coins`, `gold`, `shirt`, `cradle`, `table`, `stones`, `path`,
   `footprints`, `key`, `planks` (a pile of planks, a hull under construction), `web` (spider web), `basket`,
   `scales` (a balance), `goblet`, `bread`, `rock` (a big boulder or rock face), `rope`, `jar` (water jar)

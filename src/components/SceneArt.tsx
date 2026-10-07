@@ -1,5 +1,5 @@
 import type { JSX } from 'preact';
-import type { Ground, Motif, Sky } from '../data/types';
+import { PEOPLE, type Ground, type Motif, type Sky } from '../data/types';
 
 /**
  * Paper-cut style illustrations built from a fixed vocabulary of skies,
@@ -92,7 +92,173 @@ function scatter(n: number, seed: number, w = 300, h = 200) {
 
 const lowSun = (sky: Sky) => sky === 'dawn' || sky === 'dusk';
 
+/** A faceless silhouette of an ordinary person: a robe, a head, a wrap. Never a prophet, an angel or a Companion. */
+function Person({
+  x,
+  y,
+  s = 1,
+  ink,
+  wrap,
+  delay = 0,
+  walk = false,
+  arm = false,
+  load = false,
+}: {
+  x: number;
+  y: number;
+  s?: number;
+  ink: string;
+  wrap: string;
+  delay?: number;
+  walk?: boolean;
+  arm?: boolean;
+  load?: boolean;
+}) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <ellipse cx="0" cy="1.2" rx="8.5" ry="2" fill="#00000028" />
+      <g class={walk ? 'anim-bobwalk' : 'anim-sway-s'} style={{ animationDelay: `${-delay}s` }}>
+        <path d="M-5.4 -23q5.4-3.4 10.8 0l3.8 23h-18.4z" fill={ink} />
+        <circle cx="0" cy="-27.6" r="4" fill={ink} />
+        <path d="M-4.7 -28.4q4.7-6 9.4 0z" fill={wrap} />
+        {load && <path d="M-9 -22l17-6" stroke={ink} stroke-width="2.4" stroke-linecap="round" />}
+        {arm && <path class="anim-arm" d="M4 -21q7 2 9 8" stroke={ink} stroke-width="2.6" fill="none" stroke-linecap="round" style={{ animationDelay: `${-delay}s` }} />}
+        {walk && (
+          <g fill={ink}>
+            <rect class="anim-step" x="-4.2" y="-1" width="3.2" height="3.4" rx="1" style={{ animationDelay: `${-delay}s` }} />
+            <rect class="anim-step-b" x="1" y="-1" width="3.2" height="3.4" rx="1" style={{ animationDelay: `${-delay}s` }} />
+          </g>
+        )}
+      </g>
+    </g>
+  );
+}
+
+/** A bird in flight: two wings that beat, seen from the side. */
+function Bird({ x, y, s = 1, ink, delay = 0 }: { x: number; y: number; s?: number; ink: string; delay?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <g class="anim-flap" style={{ animationDelay: `${-delay}s` }}>
+        <path d="M0 0q-5-7-12-5 5 0 8 3z" fill={ink} />
+        <path d="M0 0q5-7 12-5-5 0-8 3z" fill={ink} />
+      </g>
+      <ellipse cx="0" cy="0.6" rx="2.6" ry="1.5" fill={ink} />
+    </g>
+  );
+}
+
 const MOTIF_DRAW: Record<Motif, Draw> = {
+  // ── people: faceless silhouettes of ordinary people ──
+  folk: (p) => (
+    <g>
+      <Person x={84} y={298} ink={p.ink} wrap={p.glow} delay={0.2} arm />
+      <Person x={110} y={302} s={1.06} ink={p.near} wrap={p.glow} delay={1.1} />
+      <Person x={138} y={297} s={0.94} ink={p.ink} wrap={p.glow} delay={2} arm />
+    </g>
+  ),
+  crowd: (p) => (
+    <g>
+      {Array.from({ length: 16 }, (_, i) => {
+        const row = i % 2;
+        return <Person key={i} x={26 + i * 16.5 + (row ? 7 : 0)} y={290 + row * 14} s={0.88 + (i % 3) * 0.08 + row * 0.1} ink={i % 3 ? p.ink : p.near} wrap={p.glow} delay={(i * 0.37) % 3} arm={i % 5 === 0} />;
+      })}
+    </g>
+  ),
+  walkers: (p) => (
+    <g class="anim-cross">
+      {[0, 1, 2].map((i) => (
+        <Person key={i} x={-20 - i * 26} y={300 + (i % 2) * 6} s={1 - i * 0.04} ink={i === 1 ? p.near : p.ink} wrap={p.glow} delay={i * 0.3} walk load={i === 2} />
+      ))}
+    </g>
+  ),
+  workers: (p) => (
+    <g>
+      <g transform="translate(64 296)">
+        <Person x={0} y={0} ink={p.ink} wrap={p.glow} delay={0.4} />
+        <path class="anim-hammer" d="M5 -21l9-7" stroke={p.ink} stroke-width="2.6" stroke-linecap="round" />
+        <rect class="anim-hammer" x="12" y="-33" width="7" height="4" rx="1" fill={p.ink} />
+      </g>
+      <Person x={244} y={298} ink={p.near} wrap={p.glow} delay={1.2} walk load />
+      <Person x={212} y={302} s={0.95} ink={p.ink} wrap={p.glow} delay={0.8} arm />
+    </g>
+  ),
+  caravan: (p) => (
+    <g class="anim-cross-slow">
+      <Person x={-30} y={304} ink={p.ink} wrap={p.glow} walk />
+      {[0, 1, 2].map((i) => (
+        <g key={i} class="anim-bobwalk" style={{ animationDelay: `${-i * 0.35}s` }}>
+          <g transform={`translate(${20 + i * 70} 300) scale(0.64) translate(-204 -300)`} fill={i === 1 ? p.ink : p.near}>
+            <path d="M170 280q4-26 24-26 10-14 22 0 14-6 18 14l10-20q6-8 12-2l-4 4-12 26-4 30h-6l-2-24h-36l-4 24h-6l-2-24q-8 0-10-2z" />
+            <rect x="188" y="244" width="30" height="16" rx="3" fill={p.mid} />
+          </g>
+        </g>
+      ))}
+    </g>
+  ),
+  horse: (p) => (
+    <g fill={p.ink} class="anim-bobwalk">
+      <path d="M92 292q-10-4-14 6l6 2q8-10 10-4zM96 284q20-12 44-4l12-14 6 4-8 18q2 14-4 22h-5l-2-16q-12 4-26 0l-2 16h-5z" />
+      <path d="M150 268l6-12 6 4-4 12z" />
+      <circle cx="157" cy="262" r="1.2" fill="#f1e6a8" />
+    </g>
+  ),
+  goat: (p) => (
+    <g fill={p.near}>
+      {[[188, 302, 1], [214, 306, 0.85]].map(([x, y, sc], i) => (
+        <g key={i} transform={`translate(${x} ${y}) scale(${sc})`} class="anim-bobwalk" style={{ animationDelay: `${-i * 0.5}s` }}>
+          <ellipse cx="0" cy="-10" rx="12" ry="7" />
+          <path d="M10 -14l8-6 4 4-6 8z" />
+          <path d="M16 -22q2-8 6-9M19 -21q4-6 9-5" stroke={p.ink} stroke-width="1.6" fill="none" />
+          <path d="M20 -12l2 7" stroke={p.ink} stroke-width="1.4" />
+          <rect x="-8" y="-4" width="2.4" height="8" /><rect x="5" y="-4" width="2.4" height="8" />
+        </g>
+      ))}
+    </g>
+  ),
+  gulls: () => (
+    <g class="anim-flock">
+      {[[0, 0], [24, 14], [-22, 18]].map(([dx, dy], i) => (
+        <Bird key={i} x={120 + dx} y={64 + dy} s={1.5} ink="#f4f4f0" delay={i * 0.24} />
+      ))}
+    </g>
+  ),
+  fish: (p) => (
+    <g>
+      <g transform="translate(190 240)">
+        <g class="anim-leap">
+          <path d="M0 0q8-9 18-4 4 3 4 4-1 1-4 4-10 5-18-4z" fill={p.ink} />
+          <path d="M18 0l9-6v12z" fill={p.ink} />
+          <circle cx="5" cy="-1" r="1" fill={p.glow} />
+        </g>
+      </g>
+      <ellipse cx="196" cy="242" rx="16" ry="3" fill="none" stroke={p.glow} stroke-width="0.8" class="anim-ripple" style={{ transformOrigin: '196px 242px' }} />
+    </g>
+  ),
+  butterflies: () => (
+    <g>
+      {[[96, 270, '#f2c14e'], [160, 254, '#e98fa6'], [214, 276, '#8ec5e8']].map(([x, y, c], i) => (
+        <g key={i} transform={`translate(${x} ${y})`}>
+          <g class="anim-wander" style={{ animationDelay: `${-i * 2.3}s` }}>
+            <g class="anim-wings" style={{ animationDelay: `${-i * 0.07}s` }}>
+              <path d="M0 0q-7-8-8-1 0 6 8 1zM0 0q7-8 8-1 0 6-8 1z" fill={c as string} />
+            </g>
+          </g>
+        </g>
+      ))}
+    </g>
+  ),
+  bats: () => (
+    <g fill="#10131c" class="anim-flock">
+      {[[70, 80], [100, 104], [60, 120]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x} ${y})`}>
+          <g class="anim-flap" style={{ animationDelay: `${-i * 0.2}s` }}>
+            <path d="M0 0q-5-6-10-3 3 1 3 4 3-2 7 0zM0 0q5-6 10-3-3 1-3 4-3-2-7 0z" />
+          </g>
+          <ellipse cx="0" cy="1" rx="2" ry="2.6" />
+        </g>
+      ))}
+    </g>
+  ),
   // ── animals ──
   dove: () => (
     <g class="anim-fly">
@@ -577,9 +743,9 @@ const MOTIF_DRAW: Record<Motif, Draw> = {
     </g>
   ),
   birds: (p) => (
-    <g fill="none" stroke={p.ink} stroke-width="2" stroke-linecap="round" class="anim-fly">
-      {scatter(9, 3, 240, 120).map((b, i) => (
-        <path key={i} d={`M${30 + b.x} ${50 + b.y}q6-6 12 0q6-6 12 0`} />
+    <g class="anim-flock">
+      {[[0, 0], [-14, 8], [14, 8], [-28, 16], [28, 16], [-42, 24], [42, 24]].map(([dx, dy], i) => (
+        <Bird key={i} x={110 + dx} y={70 + dy} s={1.15 - (i % 3) * 0.1} ink={p.ink} delay={i * 0.17} />
       ))}
     </g>
   ),
@@ -828,14 +994,14 @@ const GROUNDS: Record<Ground, (p: Palette) => JSX.Element | null> = {
 
 // Back-to-front order of the elements drawn on the landscape.
 const DEPTH: Motif[] = [
-  'flood', 'sea-split', 'path', 'footprints', 'spring', 'rock', 'ruins', 'pillars', 'wall', 'cave-mouth', 'web', 'palace', 'tower',
+  'flood', 'sea-split', 'path', 'footprints', 'spring', 'fish', 'rock', 'ruins', 'pillars', 'wall', 'cave-mouth', 'web', 'palace', 'tower',
   'house', 'tent', 'kaaba', 'tree', 'palms', 'palm', 'withered', 'gourd', 'wheat', 'well', 'rope', 'planks', 'ark', 'boat', 'big-fish',
-  'camel', 'elephant', 'cows', 'sheep', 'wolf', 'serpent', 'dog', 'ants', 'hoopoe', 'throne', 'table', 'cradle', 'tablets', 'staff', 'book',
+  'caravan', 'camel', 'elephant', 'cows', 'sheep', 'goat', 'horse', 'wolf', 'serpent', 'dog', 'crowd', 'folk', 'walkers', 'workers', 'butterflies', 'ants', 'hoopoe', 'throne', 'table', 'cradle', 'tablets', 'staff', 'book',
   'scroll', 'lamp', 'coins', 'gold', 'key', 'shirt', 'dates', 'basket', 'jar', 'bread', 'goblet', 'scales', 'fire', 'flames',
 ];
 
 // Motifs that belong in front of the landscape; the rest are drawn in the sky.
-const SKY_LAYER = new Set<Motif>(['sun', 'moon', 'crescent', 'stars', 'bright-star', 'clouds', 'dark-clouds', 'lightning', 'birds', 'light', 'wind', 'dove', 'locusts', 'raven']);
+const SKY_LAYER = new Set<Motif>(['sun', 'moon', 'crescent', 'stars', 'bright-star', 'clouds', 'dark-clouds', 'lightning', 'birds', 'light', 'wind', 'dove', 'locusts', 'raven', 'gulls', 'bats']);
 const WEATHER = new Set<Motif>(['rain', 'stones', 'prison']);
 
 /** Dark shapes at the edges of the frame, drawn in front of everything: they give depth when the camera moves. */
@@ -918,14 +1084,34 @@ function Blades({ x, color, tall = false }: { x: number; color: string; tall?: b
  * `layer` lets the stage move the sky, the land and the foreground at different
  * speeds (parallax); by default the whole picture is drawn at once.
  */
+/**
+ * Life that a scene has by itself, whatever its storyboard says: birds in the sky, gulls over the sea,
+ * fish jumping, butterflies in a garden, bats at night, a few distant people on the road.
+ */
+function ambientLife(sky: Sky, ground: Ground, motifs: Motif[], people: boolean) {
+  const has = (m: Motif) => motifs.includes(m);
+  const open = ground !== 'cave' && ground !== 'none';
+  const lit = sky === 'day' || sky === 'dawn' || sky === 'dusk';
+  const out: Motif[] = [];
+  if (lit && open && ground !== 'sea' && !has('birds') && !has('dove') && !has('locusts')) out.push('birds');
+  if (ground === 'sea' && sky !== 'night' && sky !== 'storm' && !has('gulls')) out.push('gulls');
+  if ((ground === 'sea' || ground === 'river') && sky !== 'storm' && !has('fish') && !has('flood')) out.push('fish');
+  if (ground === 'garden' && sky === 'day' && !has('butterflies')) out.push('butterflies');
+  if (sky === 'night' && (ground === 'cave' || ground === 'valley' || ground === 'city') && !has('bats')) out.push('bats');
+  const distant = people && lit && ['city', 'plain', 'desert', 'valley', 'garden', 'mountains'].includes(ground) && !PEOPLE.some(has);
+  return { motifs: out, distant };
+}
+
 export function SceneArt({
   sky,
   ground,
-  motifs = [],
+  motifs: allMotifs = [],
   still = false,
   paused = false,
   label,
   layer = 'all',
+  people = true,
+  ambient = false,
 }: {
   sky: Sky;
   ground: Ground;
@@ -936,7 +1122,13 @@ export function SceneArt({
   paused?: boolean;
   label?: string;
   layer?: 'all' | 'sky' | 'land' | 'fore';
+  /** Draw the silhouettes of ordinary people (a setting of the player). */
+  people?: boolean;
+  /** Add the life a place has by itself (birds, gulls, fish, butterflies, bats, distant walkers). */
+  ambient?: boolean;
 }) {
+  const motifs = people ? allMotifs : allMotifs.filter((m) => !PEOPLE.includes(m));
+  const life = ambient ? ambientLife(sky, ground, motifs, people) : { motifs: [] as Motif[], distant: false };
   const p = PALETTES[sky];
   const id = `g${sky}`;
   const skyMotifs = motifs.filter((m) => SKY_LAYER.has(m));
@@ -972,11 +1164,25 @@ export function SceneArt({
               {MOTIF_DRAW[m](p, sky)}
             </g>
           ))}
+          {life.motifs.filter((m) => SKY_LAYER.has(m)).map((m) => (
+            <g key={`life-${m}`}>{MOTIF_DRAW[m](p, sky)}</g>
+          ))}
         </>
       )}
       {(all || layer === 'land') && (
         <>
           {GROUNDS[ground](p)}
+          {life.distant && (
+            <g transform="translate(0 246) scale(0.5)" opacity="0.85">
+              <g class="anim-cross-slow">
+                <Person x={30} y={0} ink={p.ink} wrap={p.glow} walk delay={0.2} />
+                <Person x={6} y={4} ink={p.near} wrap={p.glow} walk delay={0.9} load />
+              </g>
+            </g>
+          )}
+          {life.motifs.filter((m) => !SKY_LAYER.has(m)).map((m) => (
+            <g key={`life-${m}`}>{MOTIF_DRAW[m](p, sky)}</g>
+          ))}
           {groundMotifs.map((m) => (
             <g key={m} data-m={m}>
               {MOTIF_DRAW[m](p, sky)}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SERIES } from '../src/data/series';
 import { STORYBOARD } from '../src/data/storyboards';
-import { MOTIFS, type Beat, type Scene } from '../src/data/types';
+import { LIVING, MOTIFS, type Beat, type Scene } from '../src/data/types';
 
 const SKIES = ['dawn', 'day', 'dusk', 'night', 'storm'];
 const GROUNDS = ['desert', 'sea', 'mountains', 'valley', 'garden', 'city', 'river', 'plain', 'cave', 'none'];
@@ -91,9 +91,25 @@ describe('storyboard coverage', () => {
     expect(missing.slice(0, 20), `${missing.length} scenes without pictures`).toEqual([]);
   });
 
-  it('shows something new about every 12 seconds of narration (about 170 characters)', () => {
-    const long = order.filter((k) => scenes.get(k)!.text.length > 220 && STORYBOARD[k]);
-    const single = long.filter((k) => STORYBOARD[k].length < 2);
-    expect(single.slice(0, 15)).toEqual([]);
+  it('shows something new about every 6 to 8 seconds of narration (about 100 characters)', () => {
+    const tooFew = order.filter((k) => {
+      const length = scenes.get(k)!.text.length;
+      const needed = Math.min(5, Math.floor(length / 110) + (length > 110 ? 1 : 0));
+      return STORYBOARD[k] && STORYBOARD[k].length < needed;
+    });
+    expect(tooFew.slice(0, 15), `${tooFew.length} scenes with too few pictures`).toEqual([]);
+  });
+
+  it('is full of life: people or animals are in most pictures', () => {
+    let pictures = 0;
+    let alive = 0;
+    for (const key of order) {
+      if (!STORYBOARD[key]) continue;
+      for (const r of resolve(scenes.get(key)!, STORYBOARD[key])) {
+        pictures++;
+        if (r.motifs.some((m) => (LIVING as readonly string[]).includes(m))) alive++;
+      }
+    }
+    expect(alive / pictures, `${alive}/${pictures} pictures with something alive`).toBeGreaterThan(0.6);
   });
 });
