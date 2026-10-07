@@ -40,7 +40,9 @@ def transcribe(audio: Path, model_name: str) -> list[tuple[str, float, float]]:
     from faster_whisper import WhisperModel
 
     model = WhisperModel(model_name, device="cpu", compute_type="int8")
-    parts, _ = model.transcribe(str(audio), language="fr", word_timestamps=True, beam_size=5, condition_on_previous_text=False)
+    # Decoded here with ffmpeg: faster-whisper's own decoder breaks on some PyAV versions.
+    pcm = subprocess.run(["ffmpeg", "-v", "error", "-i", str(audio), "-f", "f32le", "-ac", "1", "-ar", "16000", "-"], capture_output=True, check=True).stdout
+    parts, _ = model.transcribe(np.frombuffer(pcm, dtype=np.float32), language="fr", word_timestamps=True, beam_size=5, condition_on_previous_text=False)
     words = []
     for part in parts:
         for w in part.words or []:
