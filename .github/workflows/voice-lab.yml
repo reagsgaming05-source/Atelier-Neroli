@@ -21,25 +21,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        engine: [xtts, chatterbox, edge]
+        include:
+          - { engine: xtts, shard: 0, python: '3.11' }
+          - { engine: kyutai, shard: 0, python: '3.12' }
+          - { engine: kyutai, shard: 1, python: '3.12' }
+          - { engine: kyutai, shard: 2, python: '3.12' }
+          - { engine: kyutai, shard: 3, python: '3.12' }
+          - { engine: kyutai, shard: 4, python: '3.12' }
+    env:
+      SHARD: ${{ matrix.shard }}
+      SHARDS: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python }}
       - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
       - name: Install ${{ matrix.engine }}
         run: |
           pip install --upgrade pip
           case "${{ matrix.engine }}" in
-            xtts) pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu && pip install coqui-tts ;;
+            xtts) pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu && pip install coqui-tts "transformers>=4.47,<5" ;;
+            kyutai) pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install moshi==0.2.11 sphn huggingface_hub ;;
             chatterbox) pip install chatterbox-tts ;;
             edge) pip install edge-tts ;;
           esac
       - run: python scripts/narration/lab.py ${{ matrix.engine }} out
       - uses: actions/upload-artifact@v4
         with:
-          name: voices-${{ matrix.engine }}
+          name: voices-${{ matrix.engine }}-${{ matrix.shard }}
           path: out/*.mp3
           if-no-files-found: error
 
