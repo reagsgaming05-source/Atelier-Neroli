@@ -28,7 +28,27 @@ ROOT = Path(__file__).resolve().parents[2]
 SEGMENTS = ROOT / ".data-cache" / "narration" / "segments.json"
 OUT = ROOT / "public" / "data" / "narration"
 
-LEAD, TAIL = 0.25, 0.5  # silence kept around each text, in seconds, when the neighbours leave room
+# Bump when the way spans are computed changes: recordings aligned with an older version are done again.
+VERSION = 2
+KEEP_AFTER, KEEP_BEFORE = 0.3, 0.25  # silence kept at the end of a text and before the next one, in seconds
+WINDOW = 1.2  # how far from Whisper's estimate a pause is looked for (its timings can be off by a second)
+PENALTY = 0.8  # a pause scores its length minus this much per second away from Whisper's estimate
+MIN_SCORE = 0.3  # below this the voice is taken to run on without a pause, and Whisper is trusted
+
+
+def source_id(audio: Path) -> str:
+    return hashlib.sha1(audio.read_bytes()).hexdigest()[:8]
+
+
+def pending(directory: Path, out: Path) -> list[str]:
+    """Recordings in `directory` that are not yet in the index, or were aligned by an older version."""
+    index = json.loads((out / "index.json").read_text())["episodes"] if (out / "index.json").exists() else {}
+    todo = []
+    for f in sorted(directory.glob("*.mp3")):
+        e = index.get(f.stem)
+        if not e or not e.get("custom") or e.get("align") != VERSION or e.get("source") != source_id(f):
+            todo.append(f.stem)
+    return todo
 
 
 def tokens(text: str) -> list[str]:
@@ -51,7 +71,7 @@ def transcribe(audio: Path, model_name: str) -> list[tuple[str, float, float]]:
     return words
 
 
-def fit(segments, words, duration):
+def fit(segments, words, duration, audio):
     ref, owner = [], []
     for i, s in enumerate(segments):
         t = tokens(s["speak"])
@@ -77,15 +97,49 @@ def fit(segments, words, duration):
         if times[i][0] < times[i - 1][1] - 0.05:
             sys.exit(f"Texts {i - 1} and {i} overlap in time ({times[i - 1][1]:.1f}s > {times[i][0]:.1f}s): the order differs from the recording.")
 
-    # Each text owns the time up to the middle of the silence after it.
-    spans = []
-    for i, (start, end, _) in enumerate(times):
-        prev_end = times[i - 1][1] if i else 0.0
-        next_start = times[i + 1][0] if i + 1 < len(times) else duration
-        lo = max(start - LEAD, (prev_end + start) / 2) if i else 0.0
-        hi = min(end + TAIL, (end + next_start) / 2) if i + 1 < len(times) else duration
-        spans.append([round(max(lo, 0.0), 3), round(min(hi, duration), 3)])
-    return times, spans
+    return times, cut(times, silences(audio, duration), duration)
+
+
+def silences(audio: Path, duration: float) -> list[tuple[float, float]]:
+    """Pauses in the recording, found in the audio itself (more exact than Whisper's word times)."""
+    out = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-i", str(audio), "-af", "silencedetect=noise=-38dB:d=0.2", "-f", "null", "-"],
+        capture_output=True,
+        text=True,
+    ).stderr
+    starts = [max(float(x), 0.0) for x in re.findall(r"silence_start: (-?[\d.]+)", out)]
+    ends = [float(x) for x in re.findall(r"silence_end: ([\d.]+)", out)]
+    if len(starts) > len(ends):
+        ends.append(duration)
+    return list(zip(starts, ends))
+
+
+def cut(times, pauses, duration):
+    """One span per text, cut in the pauses between them: nothing is clipped mid-word."""
+    spans = [[0.0, duration] for _ in times]
+    previous = 0.0
+    print("\nboundary  whisper  chosen  pause")
+    for i in range(len(times) - 1):
+        end, start = times[i][1], times[i + 1][0]
+        guess = (end + start) / 2
+        def score(p):
+            # Paragraph breaks are longer than commas, but a pause far from the estimate is likelier another one.
+            return (p[1] - p[0]) - PENALTY * abs((p[0] + p[1]) / 2 - guess)
+
+        near = [p for p in pauses if abs((p[0] + p[1]) / 2 - guess) <= WINDOW and (p[0] + p[1]) / 2 > previous + 0.4]
+        best = max(near, key=score, default=None)
+        if best and score(best) >= MIN_SCORE:
+            s0, e0 = best
+            middle = (s0 + e0) / 2
+            spans[i][1] = round(min(s0 + KEEP_AFTER, middle), 3)
+            spans[i + 1][0] = round(max(e0 - KEEP_BEFORE, middle), 3)
+            print(f"{i:4d}->{i + 1:<3d} {guess:7.2f} {middle:7.2f}  {e0 - s0:4.2f} s")
+        else:
+            middle = guess  # no pause (the voice runs on): trust Whisper
+            spans[i][1] = spans[i + 1][0] = round(middle, 3)
+            print(f"{i:4d}->{i + 1:<3d} {guess:7.2f} {middle:7.2f}  none (voice runs on)")
+        previous = middle
+    return spans
 
 
 def encode(audio: Path, destination: Path, bitrate: str):
@@ -105,13 +159,19 @@ def encode(audio: Path, destination: Path, bitrate: str):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("episode")
-    ap.add_argument("audio", type=Path)
+    ap.add_argument("episode", nargs="?")
+    ap.add_argument("audio", type=Path, nargs="?")
+    ap.add_argument("--pending", type=Path, metavar="DIR", help="print the recordings of DIR that still have to be aligned")
     ap.add_argument("--voice", default="Gemini (Google AI Studio)")
     ap.add_argument("--model", default="small", help="Whisper model size")
     ap.add_argument("--bitrate", default="64k")
     ap.add_argument("--out", type=Path, default=OUT)
     args = ap.parse_args()
+    if args.pending:
+        print(" ".join(pending(args.pending, args.out)))
+        return
+    if not (args.episode and args.audio):
+        ap.error("episode and audio are required")
 
     data = json.loads(SEGMENTS.read_text())
     episode = next((e for e in data["episodes"] if e["key"] == args.episode), None)
@@ -123,7 +183,7 @@ def main():
     print(f"{len(words)} words heard")
     probe = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(args.audio)], capture_output=True, text=True, check=True)
     duration = float(probe.stdout)
-    times, spans = fit(segments, words, duration)
+    times, spans = fit(segments, words, duration, args.audio)
 
     print("\n  #  start    end   words  chars/s  text")
     for i, ((start, end, ratio), s) in enumerate(zip(times, segments)):
@@ -146,6 +206,8 @@ def main():
         "spans": {s["hash"]: span for s, span in zip(segments, spans)},
         "custom": True,
         "voice": args.voice,
+        "align": VERSION,
+        "source": source_id(args.audio),
     }
     index["episodes"] = dict(sorted(index["episodes"].items()))
     index_path.write_text(json.dumps(index, ensure_ascii=False, separators=(",", ":")) + "\n")

@@ -45,12 +45,7 @@ jobs:
           EPISODES: ${{ inputs.episodes }}
           VOICE: ${{ inputs.voice || 'Gemini (Google AI Studio)' }}
         run: |
-          if [ -z "$EPISODES" ]; then
-            for f in narration-source/*.mp3; do
-              e=$(basename "$f" .mp3)
-              grep -q "\"$e\":{\"file\":\"[^\"]*\",\"spans\":{[^}]*},\"custom\":true" public/data/narration/index.json 2>/dev/null || EPISODES="$EPISODES $e"
-            done
-          fi
+          [ -n "$EPISODES" ] || EPISODES=$(python scripts/narration/align.py --pending narration-source)
           echo "episodes: $EPISODES"
           for e in $EPISODES; do
             echo "=== $e"

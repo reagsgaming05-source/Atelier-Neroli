@@ -55,6 +55,18 @@ describe.skipIf(!index)('recorded narration', () => {
     }
   });
 
+  it.each(episodes)('%s: each text lasts about as long as it takes to read it', (key) => {
+    const cut = key.lastIndexOf('-');
+    const ep = SERIES.find((s) => s.storyId === key.slice(0, cut))!.episodes[Number(key.slice(cut + 1))];
+    const spans = index!.episodes[key].spans;
+    // A span cut in the wrong pause makes one text far too long and its neighbour far too short.
+    const odd = ep.scenes
+      .filter((s) => s.text.length > 80 && spans[textHash(s.text)])
+      .map((s) => ({ text: s.text.slice(0, 40), rate: s.text.length / (spans[textHash(s.text)][1] - spans[textHash(s.text)][0]) }))
+      .filter((s) => s.rate < 5 || s.rate > 30);
+    expect(odd).toEqual([]);
+  });
+
   it.each(episodes)('%s: every scene of the current script is recorded', (key) => {
     const cut = key.lastIndexOf('-');
     const ep = SERIES.find((s) => s.storyId === key.slice(0, cut))!.episodes[Number(key.slice(cut + 1))];
