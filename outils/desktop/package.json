@@ -62,6 +62,7 @@
       "verifier-maj.js",
       "menage.js",
       "droits.js",
+      "reglages.js",
       "cles-publiques.json",
       "comptes.js",
       "preload.js",

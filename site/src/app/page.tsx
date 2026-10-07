@@ -3,10 +3,10 @@ import { ArrowRight, FolderOpen, Monitor, PlayCircle, ShieldCheck, WifiOff } fro
 import { ComparisonTable } from "@/components/comparison-table";
 import { Faq } from "@/components/faq";
 import { FeatureCard } from "@/components/feature-card";
-import { HeroShowcase } from "@/components/hero-showcase";
+import { Capture, HeroShowcase } from "@/components/hero-showcase";
 import { PricingTable } from "@/components/pricing-table";
 import { Reveal } from "@/components/reveal";
-import { DossierVisual, OcrVisual, RedactVisual, Spotlight } from "@/components/spotlights";
+import { Illustration, OcrVisual, RedactVisual, Spotlight } from "@/components/spotlights";
 import { DeploymentTimeline } from "@/components/timeline";
 import { ButtonLink } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -147,7 +147,7 @@ export default async function HomePage() {
               points={["Intercalaires et pièces numérotées", "Pagination continue", "Sommaire et signets refaits automatiquement"]}
               href="/fonctionnalites#dossier"
               cta="Le dossier de pièces"
-              visual={<DossierVisual />}
+              visual={<Capture k="dossier" />}
             />
           </Reveal>
           <Reveal>
@@ -159,7 +159,7 @@ export default async function HomePage() {
               points={["Recherche dans tout le document", "Confirmation du nombre d'occurrences", "Texte de la page : le reste se nettoie à part"]}
               href="/fonctionnalites#caviarder"
               cta="Le caviardage"
-              visual={<RedactVisual />}
+              visual={<Illustration><RedactVisual /></Illustration>}
             />
           </Reveal>
           <Reveal>
@@ -170,7 +170,7 @@ export default async function HomePage() {
               points={["Français et allemand", "Entièrement local", "Texte cherchable dans le PDF exporté"]}
               href="/fonctionnalites#ocr"
               cta="La reconnaissance de texte"
-              visual={<OcrVisual />}
+              visual={<Illustration><OcrVisual /></Illustration>}
             />
           </Reveal>
         </div>

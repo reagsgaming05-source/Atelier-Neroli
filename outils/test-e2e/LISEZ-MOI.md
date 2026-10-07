@@ -28,7 +28,7 @@ silence). Sur un poste de développement sans eux, les scénarios concernés se 
 | **Chiffrement** | `protection.spec.js`, `lots.spec.js` | un mot de passe annoncé qui n'est pas dans les octets (`/Encrypt`), jugé par qpdf. |
 
 Ces gardes se règlent dans `aide.js`. `AKTUM_SANS_VERIFICATEURS=1` (poste Windows de la CI, sans qpdf ni poppler) met la barrière de format de
-côté et laisse de côté les six fichiers de scénarios qui exigent ces outils (`playwright.config.js`) : ils ont déjà joué sur Linux.
+côté et laisse de côté les fichiers de scénarios qui exigent ces outils (ou, pour `visuel.spec.js`, les références d'image faites avec le Chromium de Linux : le dessin des polices y diffère de 0,6 % des pixels sous Windows) (`playwright.config.js`) : ils ont déjà joué sur Linux.
 
 ## La couverture : ce qu'elle dit, et ce qu'elle ne dit pas
 

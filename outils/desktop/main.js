@@ -125,6 +125,9 @@ const droits = require('./droits');
 const { decoder: decoderLeNom } = require('./nom-telechargement');
 const { MARQUEUR, COMPTES, trouverReglage, phraseDuFichier, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const comptes = require('./comptes');
+// Les réglages de l'administrateur (reglages.json à côté de l'exécutable) : lus une fois, au lancement ; sans fichier, les valeurs d'usine.
+const REGLAGES = require('./reglages').lire(PORTABLE_DIR);
+comptes.regler(REGLAGES.valeurs);
 const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = comptes;
 const { examinerLesZips, poserLeJeton, retirerLeJeton, autresPostes, nettoyerLesJetons } = require('./version-posee');
 const signature = require('./signature');
@@ -1101,6 +1104,8 @@ function initialiserLaLangue() {
   const handle = ipcMain.handle.bind(ipcMain);
   ipcMain.handle = (canal, f) => handle(canal, async (...a) => langue.resultat(await f(...a)));
   ipcMain.on('aktum:langue', (e) => { e.returnValue = langue.langue(); });
+  ipcMain.on('aktum:reglages', (e) => { e.returnValue = REGLAGES.valeurs; });
+  ipcMain.on('aktum:mdp-min', (e) => { e.returnValue = comptes.minimumActuel(); });
   ipcMain.handle('aktum:choisir-langue', (_e, l) => langue.choisir(l));
   langue.surChangement((l) => {
     buildMenu();
@@ -1177,6 +1182,19 @@ const OUTILS_PAR_DEFAUT = [
   { label: 'Constituer un dossier de pièces…', click: () => envoyer('dossier') },
   { label: 'Traiter plusieurs fichiers…', click: () => envoyer('lots') },
 ];
+
+// Ce que « À propos » dit des réglages de l'administrateur : lus ou non, et tout ce qui n'a pas été compris.
+function phraseDesReglages() {
+  if (!REGLAGES.fichier) return '';
+  const v = REGLAGES.valeurs;
+  const dits = [];
+  if (!v.miseAJour) dits.push('mises à jour gérées par le service informatique');
+  if (!v.memoriserSignature) dits.push('signatures non mémorisées');
+  if (v.motDePasseMin > 8) dits.push('mot de passe de ' + v.motDePasseMin + ' caractères au moins');
+  return 'Réglages de l’administrateur (' + REGLAGES.fichier + ') : ' + (dits.length ? dits.join(', ') : 'valeurs d’usine')
+    + (REGLAGES.avertissements.length ? '\nNon compris dans ce fichier : ' + REGLAGES.avertissements.join(' ; ') : '') + '\n'
+    + (v.aide ? 'Aide : ' + v.aide + '\n' : '');
+}
 
 function buildMenu() {
   const template = [
@@ -1306,6 +1324,7 @@ function buildMenu() {
               (PROFIL ? 'Compte : ' + PROFIL + '\n' : '') +
               'Dossier des données : ' + app.getPath('userData') + '\n' +
               (POURQUOI[RANGEMENT.pourquoi] || '') + '\n' +
+              phraseDesReglages() +
               phraseDuFichier(RANGEMENT.fichier, RANGEMENT.pourquoi === 'marqueur' ? MARQUEUR : COMPTES) + '\n\n' +
               'Electron ' + process.versions.electron + ' – Chromium ' + process.versions.chrome,
           }),
@@ -1449,6 +1468,11 @@ async function proposerLeDiagnostic() {
 }
 
 async function chercherUneMiseAJour(demandee) {
+  // Le service informatique pose lui-même les mises à jour (reglages.json › miseAJour: false) : rien n'est proposé, ni au lancement ni par le menu.
+  if (!REGLAGES.valeurs.miseAJour) {
+    if (demandee) await direA({ type: 'info', buttons: ['OK'], message: 'Les mises à jour sont gérées par votre service informatique.', detail: 'Cette installation ne propose pas de mise à jour d’elle-même.' + (REGLAGES.valeurs.aide ? '\n\n' + REGLAGES.valeurs.aide : '') });
+    return;
+  }
   // Une archive posée à côté n'est proposée que si elle est signée par l'éditeur :
   // l'application est sur un partage où tout le secrétariat écrit, et sans cette
   // preuve n'importe qui y déposerait un programme que la prochaine personne

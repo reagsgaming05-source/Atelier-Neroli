@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BookOpen, Check, FileText, ScanText, ShieldCheck } from "lucide-react";
+import { Check, FileText, ScanText, ShieldCheck } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
@@ -49,43 +49,16 @@ export function Spotlight({
 
 /* ---------- Visuels ---------- */
 /*
- * Illustrations : aucune donnée réelle (le dépôt est public) et aucune
- * promesse que le logiciel ne tienne pas. Chaque visuel montre un geste que
- * le logiciel fait aujourd'hui.
+ * Illustrations (les captures de l'application sont dans hero-showcase.tsx) : aucune donnée réelle (le dépôt est public) et aucune
+ * promesse que le logiciel ne tienne pas. Chaque visuel montre un geste que le logiciel fait aujourd'hui, et le dit à l'écran :
+ * « Illustration », jamais présentée comme une capture.
  */
-
-export function DossierVisual() {
-  const pieces = [
-    { n: 1, titre: "Rapport de la Municipalité", pages: "p. 3 – 9" },
-    { n: 2, titre: "Annexe technique", pages: "p. 11 – 24" },
-    { n: 3, titre: "Plan de situation", pages: "p. 26 – 27" },
-    { n: 4, titre: "Tableau financier", pages: "p. 29 – 33" },
-  ];
+export function Illustration({ children }: { children: ReactNode }) {
   return (
-    <div className="card relative p-6 sm:p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">Préavis · dossier de pièces</p>
-          <p className="mt-1 font-display text-2xl font-semibold text-ink-900">Sommaire</p>
-        </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-          <BookOpen className="size-3.5" aria-hidden />1 signet par pièce
-        </span>
-      </div>
-      <ol className="mt-5 divide-y divide-line/70">
-        {pieces.map((p) => (
-          <li key={p.n} className="flex items-center gap-4 py-3 text-sm">
-            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-50 font-display font-semibold text-brand-700">{p.n}</span>
-            <span className="flex-1 text-ink-900">{p.titre}</span>
-            <span className="tabular-nums text-ink-400">{p.pages}</span>
-          </li>
-        ))}
-      </ol>
-      <div className="mt-5 flex items-center justify-between rounded-xl bg-canvas-100 px-4 py-3 text-xs text-ink-500">
-        <span>« Pièce n° 3 » posée sur chacune de ses pages</span>
-        <span className="font-semibold text-ink-900">pagination continue</span>
-      </div>
-    </div>
+    <figure>
+      {children}
+      <figcaption className="mt-3 text-xs text-ink-400">Illustration, données fictives : pas une capture de l&rsquo;application.</figcaption>
+    </figure>
   );
 }
 

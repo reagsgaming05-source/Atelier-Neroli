@@ -23,7 +23,7 @@ async function simulerLeBureau(page, o) {
     const pdfBytes = o.pdfB64 ? Uint8Array.from(atob(o.pdfB64), (c) => c.charCodeAt(0)) : null;
     let association = Object.assign({ possible: true, raison: '', inscrit: false, aJour: false }, o.association || {});
     window.AktumDesktop = {
-      version: 'test', construction: '', profil: '', langue: 'fr', electron: 'x', chrome: 'x',
+      version: 'test', construction: '', profil: '', langue: 'fr', electron: 'x', chrome: 'x', reglages: Object.assign({}, o.reglages),
       fichiersInitiaux: () => Promise.resolve(o.initiaux ? o.initiaux.map((f) => Object.assign({}, f, { octets: pdfBytes })) : []),
       onOuvrir() {}, onOuvrirOnglet() {}, onCommande(cb) { window.__commande = cb; }, onEnregistre() {}, onLangue() {},
       recupListe: () => Promise.resolve([]), recupEcrire: () => Promise.resolve({ ok: true }), recupEffacer: () => Promise.resolve(true),
@@ -269,4 +269,24 @@ test('Préférences : depuis un support amovible l\'inscription n\'est pas propo
   await commande(page, 'preferences');
   await expect(page.locator('#pref-assoc-etat')).toContainText('support amovible');
   await expect(page.locator('#pref-assoc-inscrire')).toBeHidden();
+});
+
+// Les réglages de l'administrateur (reglages.json à côté de l'exécutable) : l'application ne propose pas ce que le service informatique a interdit.
+test('l\'administrateur interdit de mémoriser une signature : la case disparaît, rien n\'est écrit, et une signature déjà gardée ne se propose plus', async ({ app, page }) => {
+  await page.addInitScript(() => localStorage.setItem('aktum-signatures', JSON.stringify([{ data: 'data:image/png;base64,iVBORw0KGgo=', w: 100, h: 40, quand: 1 }])));
+  await demarrer(page, app, { reglages: { memoriserSignature: false } });
+  await app.ouvrir('lettre.pdf', pdfDe([[{ x: 70, y: 700, taille: 16, texte: 'Une page' }]]));
+  await page.click('#tab-tools');
+  await page.click('[data-tool="signer"]');
+  await page.waitForSelector('.dialog', { state: 'visible' });
+  await expect(page.locator('#sg-garder'), 'pas de case à cocher').toHaveCount(0);
+  await expect(page.locator('.dialog')).toContainText('Votre service informatique a désactivé la mémorisation des signatures');
+  await expect(page.locator('.signature-item'), 'la signature déjà gardée ne se propose plus').toHaveCount(0);
+  const cv = page.locator('.dialog canvas').first();
+  const b = await cv.boundingBox();
+  await page.mouse.move(b.x + 20, b.y + 30); await page.mouse.down(); await page.mouse.move(b.x + 90, b.y + 60, { steps: 4 }); await page.mouse.up();
+  await page.click('.dialog button:has-text("Insérer")');
+  await page.waitForSelector('.dialog', { state: 'detached' });
+  const gardees = JSON.parse(await page.evaluate(() => localStorage.getItem('aktum-signatures')));
+  expect(gardees, 'rien de neuf n\'est écrit : il reste la seule signature d\'avant').toHaveLength(1);
 });

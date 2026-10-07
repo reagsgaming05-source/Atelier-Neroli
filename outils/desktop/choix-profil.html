@@ -400,6 +400,19 @@
       if (r) dire('erreur-re', r);
     });
   });
+
+  // Quand l'administrateur a relevé la longueur minimale (reglages.json › motDePasseMin), les étiquettes disent la sienne. Le correctif passe après
+  // le traducteur (un tour de boucle plus tard) : l'allemand a d'abord traduit le texte d'usine, puis le nombre y est remplacé.
+  (function () {
+    const MIN = Number(window.comptes && window.comptes.minimum) || 8;
+    if (MIN <= 8) return;
+    const corriger = () => document.querySelectorAll('label').forEach((l) => {
+      const t = l.textContent, n = t.replace(/\b8 (caractères|Zeichen)/, MIN + ' $1');
+      if (n !== t) l.textContent = n;
+    });
+    new MutationObserver(() => setTimeout(corriger, 0)).observe(document.body, { subtree: true, childList: true, characterData: true });
+    setTimeout(corriger, 50);
+  })();
 </script>
 </body>
 </html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Ce que le logiciel ne fait pas encore</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<p class="sur-titre">Pour le service qui évalue, avant d'acheter</p>
+<h1>Ce que le logiciel ne fait pas encore</h1>
+<p class="lede">Une limite dite avant l'achat est une limite assumée ; la même, découverte après, est un défaut. Cette page est la liste des limites connues d'Aktum PDF, version {{VERSION}}, écrite par l'éditeur, avec pour chacune ce qui existe à la place. Elle ne promet aucune date : « pas encore » veut dire « pas dans cette version ».</p>
+
+<h2>Signature, archivage, conformité</h2>
+<table>
+<tr><th>Limite</th><th>Ce qui existe à la place</th></tr>
+<tr><td><strong>Pas de signature électronique qualifiée</strong> (SCSE / ZertES) ni d'horodatage qualifié</td><td>Une signature dessinée (image) ; une signature numérique avancée avec le certificat personnel de la personne (.p12) ; la lecture des signatures des PDF reçus (contenu intact ou modifié, signataire) <em>sans</em> dire si l'autorité du certificat est reconnue. Pour une signature qualifiée : un fournisseur reconnu (non intégré).</td></tr>
+<tr><td><strong>PDF/A : niveaux 2b et 2u seulement</strong> — ni PDF/A-1, ni PDF/A-3, ni niveau « a »</td><td>« Archiver en PDF/A », seul ou par lots, contrôlé à chaque construction par veraPDF. Les pages dont les polices ne peuvent pas être incorporées ne passent en images qu'avec l'accord de la personne.</td></tr>
+<tr><td><strong>Un PDF balisé reçu perd son balisage</strong> quand ses pages sont réassemblées (l'application prévient avant)</td><td>Le balisage des documents produits par l'application (titres, tables des matières, liens, artefacts) ; vérifié par des outils qui ne sont pas les nôtres.</td></tr>
+<tr><td><strong>Les formulaires XFA</strong> sont reconnus et gardés tels quels, pas modifiables</td><td>Les formulaires AcroForm : remplissage, séries depuis un tableau CSV.</td></tr>
+</table>
+
+<h2>Accessibilité et langues</h2>
+<table>
+<tr><th>Limite</th><th>Ce qui existe à la place</th></tr>
+<tr><td><strong>Accessibilité partiellement conforme</strong> (WCAG 2.2 AA) : poser une annotation dans l'éditeur de page se fait à la souris ; <strong>aucun lecteur d'écran réel n'a été essayé</strong> par l'éditeur</td><td>La <em>Déclaration d'accessibilité</em>, critère par critère, avec ses limites ; la navigation au clavier de toute l'interface.</td></tr>
+<tr><td><strong>Interface en français et en allemand</strong> ; le manuel, les documents et le site sont en français ; <strong>pas d'italien</strong></td><td>Le bouton DE/FR dans la barre ; la reconnaissance de texte lit le français et l'allemand. L'allemand n'a pas été relu par un germanophone de métier : à signaler si un terme sonne faux.</td></tr>
+</table>
+
+<h2>Poste de travail et déploiement</h2>
+<table>
+<tr><th>Limite</th><th>Ce qui existe à la place</th></tr>
+<tr><td><strong>Pas d'installateur</strong> (.msi, .intunewin) : c'est une version portable, par choix</td><td>Un dossier à poser sur un partage ou une clé, sans droits d'administrateur ; un script de déploiement fourni (<span class="chemin">Deployer-Aktum-PDF.ps1</span>) pose, met à jour et retire l'application ; le guide d'administration donne les commandes pour le script de connexion, la stratégie de groupe et Intune — <em>non essayés dans un parc réel</em>.</td></tr>
+<tr><td><strong>Windows 10/11 est la plateforme essayée</strong> ; la version Mac est livrée mais l'éditeur ne l'a pas essayée sur de vrais Mac ; <strong>pas de version Linux</strong></td><td>La construction essaie l'application sur Windows et sur macOS à chaque version ; la liste de recette manuelle de l'éditeur est jouée avant chaque version stable.</td></tr>
+<tr><td><strong>Mise à jour complète, pas différentielle</strong> : toute l'application (≈ 290 Mo) se repose à chaque version</td><td>Une mise à jour signée posée sur le partage, vérifiée avant d'être installée, avec retour à la version précédente (chaque version reste téléchargeable).</td></tr>
+<tr><td><strong>Pas de connecteur GEVER</strong> ni de numérisation directe par pilote de scanner</td><td>L'application peut être le programme qui ouvre les PDF, réécrit le fichier là où le GEVER l'a mis ; une « boîte de réception » surveille le dossier où le copieur dépose ses numérisations ; l'envoi par courriel joint le document (Outlook).</td></tr>
+<tr><td><strong>Les mots de passe de comptes ne chiffrent pas les fichiers</strong> : le dossier de données est lisible en clair par qui peut l'ouvrir</td><td>Les droits du dossier (poser le partage en lecture seule pour l'application, données sur un dossier personnel) ; « Effacer mes traces sur ce poste » ; la fiche de protection des données dit tout ce qui est gardé.</td></tr>
+</table>
+
+<h2>Documents et fonctions</h2>
+<table>
+<tr><th>Limite</th><th>Ce qui existe à la place</th></tr>
+<tr><td><strong>Conçu pour des documents jusqu'à 2 000 pages ou 50 Mo</strong> : au-delà, l'application prévient, tout reste possible mais plus lent</td><td>Le traitement par lots de nombreux fichiers.</td></tr>
+<tr><td><strong>Le caviardage ne reconnaît pas de lui-même une donnée personnelle</strong> : il retire ce que la personne désigne (une zone, un mot, un modèle : numéro AVS, IBAN…)</td><td>Un mode « certifié » qui reconstruit le fichier, un journal, et un contrôle indépendant (quatre outils qui ne sont pas les nôtres) sur dix-sept documents piégés à chaque construction.</td></tr>
+<tr><td><strong>Pas de travail à plusieurs en même temps sur le même fichier</strong>, pas de synchronisation, pas de nuage : par construction, rien ne sort du poste</td><td>Le verrou de document (qui l'a ouvert, depuis quand) et la comparaison de date avant d'écraser le travail d'une collègue ; la comparaison de deux versions d'un document.</td></tr>
+<tr><td><strong>L'export vers Word garde les titres, les paragraphes et les sauts de page</strong> ; les tableaux sont défaits, la mise en page n'est pas reproduite</td><td>« Copier un tableau vers Excel » (montants lus en nombres), l'export en texte, l'export en images.</td></tr>
+<tr><td><strong>La reconnaissance de texte (OCR) n'est pas parfaite</strong> : environ 96–98 % des caractères sur les pages de référence de l'éditeur (français, allemand), moins sur un scan abîmé, un manuscrit ou un tableau dense</td><td>L'écran de relecture du texte reconnu (un mot corrigé est ce qui part dans le PDF) ; la mesure est refaite à chaque construction.</td></tr>
+</table>
+
+<h2>Ce qui ne dépend pas du logiciel</h2>
+<p>La base légale du traitement, l'analyse d'impact, la conformité des marchés publics et la conservation des documents relèvent du service qui utilise le logiciel. La <em>Fiche de protection des données</em> décrit des faits techniques ; elle ne remplace pas l'avis du délégué.</p>
+<p class="petit">Un défaut que vous trouvez et qui n'est pas dans cette liste : écrivez à <strong>{{SUPPORT}}</strong> (voir la <em>Procédure de support</em>). La liste est tenue à jour à chaque version.</p>
+</body></html>

@@ -107,10 +107,13 @@
   }
 
   // Les signatures mémorisées sur cet ordinateur.
+  // L'administrateur peut interdire de garder une signature sur le poste (reglages.json › memoriserSignature: false) : rien n'est écrit, et ce qui l'aurait été avant ne se propose plus.
+  const memoSignatureAutorisee = () => { const r = window.AktumDesktop && window.AktumDesktop.reglages; return !(r && r.memoriserSignature === false); };
   function signaturesMemo() {
+    if (!memoSignatureAutorisee()) return [];
     try { const l = JSON.parse(localStorage.getItem('aktum-signatures') || '[]'); return Array.isArray(l) ? l.filter(x => x && typeof x.data === 'string' && x.w > 0 && x.h > 0) : []; } catch (_) { return []; }
   }
-  function signaturesEcrire(liste) { try { localStorage.setItem('aktum-signatures', JSON.stringify(liste.slice(0, 6))); } catch (e) { signaler('Signatures', e); } }
+  function signaturesEcrire(liste) { if (!memoSignatureAutorisee()) return; try { localStorage.setItem('aktum-signatures', JSON.stringify(liste.slice(0, 6))); } catch (e) { signaler('Signatures', e); } }
 
   function edSignature() {
     const wrap = document.createElement('div');
@@ -158,7 +161,8 @@
         if (!memo.hidden) b.append(groupOf('Vos signatures mémorisées — cliquez pour insérer', [memo]));
         b.append(note(memo.hidden ? 'Tracez votre signature avec la souris, le doigt ou le stylet.' : 'Ou tracez-en une nouvelle :'));
         b.append(wrap);
-        b.append(rowOf([field('Couleur', colorSel, 'La couleur du trait de la signature.'), garder], true));
+        b.append(rowOf(memoSignatureAutorisee() ? [field('Couleur', colorSel, 'La couleur du trait de la signature.'), garder] : [field('Couleur', colorSel, 'La couleur du trait de la signature.')], true));
+        if (!memoSignatureAutorisee()) b.append(note('Votre service informatique a désactivé la mémorisation des signatures : celle-ci n\'est pas gardée sur ce poste.'));
         b.append(note('Une signature mémorisée reste sur cet ordinateur (dossier data/ de l\'application) ; elle n\'est jamais écrite dans un PDF sans que vous l\'y posiez. Elle y est écrite en clair : sur un poste partagé, mieux vaut la tracer chaque fois plutôt que la mémoriser.', 'warn'));
       },
       actions: [

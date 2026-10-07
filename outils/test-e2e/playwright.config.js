@@ -11,7 +11,7 @@ module.exports = defineConfig({
   testDir: __dirname,
   testMatch: '*.spec.js',
   // Sur le poste Windows de la CI : pas de qpdf, pikepdf, poppler ni veraPDF. Les scénarios qui jugent le fichier avec eux ont joué sur Linux.
-  testIgnore: process.env.AKTUM_SANS_VERIFICATEURS ? ['archivage.spec.js', 'balisage.spec.js', 'caviardage-surfaces.spec.js', 'certificat.spec.js', 'proprietes.spec.js', 'protection.spec.js'] : [],
+  testIgnore: process.env.AKTUM_SANS_VERIFICATEURS ? ['archivage.spec.js', 'balisage.spec.js', 'caviardage-surfaces.spec.js', 'certificat.spec.js', 'proprietes.spec.js', 'protection.spec.js', 'visuel.spec.js'] : [],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   // Une nouvelle tentative en CI, sauf pour une version STABLE : un test instable qui passe au

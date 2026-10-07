@@ -2567,7 +2567,8 @@
   "Zone de saisie": "Eingabebereich",
   "Zone trop petite : recommencez en la dessinant plus grande.": "Bereich zu klein: Zeichnen Sie ihn grösser und versuchen Sie es erneut.",
   "Zones caviardées, par page": "Geschwärzte Zonen, pro Seite",
-  "Zoom de la page": "Zoom der Seite"
+  "Zoom de la page": "Zoom der Seite",
+  "Votre service informatique a désactivé la mémorisation des signatures : celle-ci n'est pas gardée sur ce poste.": "Ihre IT-Abteilung hat das Speichern von Unterschriften abgeschaltet: Diese wird auf diesem Arbeitsplatz nicht aufbewahrt."
  },
  "motifs": {
   "\n• … et {0}.": "\n• … und {0}.",

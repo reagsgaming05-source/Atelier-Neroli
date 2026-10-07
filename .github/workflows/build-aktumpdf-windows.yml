@@ -354,6 +354,7 @@ jobs:
           Copy-Item build\MENTIONS-TIERCES.txt dist\AktumPDF\MENTIONS-TIERCES.txt
           Copy-Item build\LISEZMOI-portable.txt dist\AktumPDF\LISEZMOI-portable.txt
           Copy-Item build\Mettre-a-jour.cmd dist\AktumPDF\Mettre-a-jour.cmd
+          Copy-Item build\Deployer-Aktum-PDF.ps1 dist\AktumPDF\Deployer-Aktum-PDF.ps1
           # La fiche de version voyage a la racine du dossier : c'est elle que
           # l'application lit dans un zip pose a cote d'elle pour savoir s'il
           # est plus recent que ce qui tourne. Sans elle, la mise a jour ne se
@@ -513,6 +514,45 @@ jobs:
         working-directory: outils/desktop
         shell: pwsh
         run: node menage.js liste dist\AktumPDF
+
+      # Le script de déploiement, joué avec Windows PowerShell 5.1 (celui de Intune et des scripts de connexion) : pose, mise à jour sans toucher à data, retrait.
+      - name: Le script de déploiement pose, met à jour sans toucher à data, et retire
+        working-directory: outils/desktop
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $script = Join-Path (Get-Location) 'dist\AktumPDF\Deployer-Aktum-PDF.ps1'
+          $cible = Join-Path $env:RUNNER_TEMP 'deploiement\Aktum PDF'
+          $dit = { param($quoi, $ok) if ($ok) { Write-Host "  OK  $quoi" } else { throw "ÉCHEC : $quoi" } }
+          Remove-Item -Recurse -Force (Split-Path $cible) -ErrorAction SilentlyContinue
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -Source (Join-Path (Get-Location) 'dist\AktumPDF') -Cible $cible -Silencieux
+          & $dit 'la première pose réussit' ($LASTEXITCODE -eq 0)
+          & $dit "l'exécutable est là" (Test-Path (Join-Path $cible 'AktumPDF.exe'))
+          & $dit 'la liste des fichiers est là' (Test-Path (Join-Path $cible 'LISTE-DES-FICHIERS.txt'))
+          & $dit "le dossier data n'est pas créé par la pose" (-not (Test-Path (Join-Path $cible 'data')))
+          # une personne travaille : ses données, sa licence, un fichier à elle
+          New-Item -ItemType Directory -Force -Path (Join-Path $cible 'data\Marie') | Out-Null
+          Set-Content (Join-Path $cible 'data\Marie\tampons.json') 'MES TAMPONS'
+          Set-Content (Join-Path $cible 'licence.json') 'MA LICENCE'
+          Set-Content (Join-Path $cible 'notes-du-service.txt') 'A MOI'
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -Source (Join-Path (Get-Location) 'dist\AktumPDF') -Cible $cible -Silencieux
+          & $dit 'la seconde pose (mise à jour) réussit' ($LASTEXITCODE -eq 0)
+          & $dit 'les données sont conservées' ((Get-Content (Join-Path $cible 'data\Marie\tampons.json')) -eq 'MES TAMPONS')
+          & $dit 'la licence est conservée' ((Get-Content (Join-Path $cible 'licence.json')) -eq 'MA LICENCE')
+          & $dit 'le fichier personnel est conservé' ((Get-Content (Join-Path $cible 'notes-du-service.txt')) -eq 'A MOI')
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -Cible $cible -Retirer -Silencieux
+          & $dit 'le retrait réussit' ($LASTEXITCODE -eq 0)
+          & $dit "l'exécutable est retiré" (-not (Test-Path (Join-Path $cible 'AktumPDF.exe')))
+          & $dit 'mais pas les données' ((Get-Content (Join-Path $cible 'data\Marie\tampons.json')) -eq 'MES TAMPONS')
+          & $dit 'ni la licence' ((Get-Content (Join-Path $cible 'licence.json')) -eq 'MA LICENCE')
+          & $dit 'ni le fichier personnel' ((Get-Content (Join-Path $cible 'notes-du-service.txt')) -eq 'A MOI')
+          # un chemin mal intentionné dans la liste ne sort pas du dossier
+          Set-Content (Join-Path (Split-Path $cible) 'precieux.txt') 'NE PAS TOUCHER'
+          Set-Content (Join-Path $cible 'LISTE-DES-FICHIERS.txt') "..\precieux.txt`nnotes-du-service.txt`ndata/Marie/tampons.json"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -Cible $cible -Retirer -Silencieux
+          & $dit "un chemin « .. » dans la liste n'atteint rien hors du dossier" ((Get-Content (Join-Path (Split-Path $cible) 'precieux.txt')) -eq 'NE PAS TOUCHER')
+          & $dit 'et data reste, même nommé dans la liste' (Test-Path (Join-Path $cible 'data\Marie\tampons.json'))
+          Remove-Item -Recurse -Force (Split-Path $cible) -ErrorAction SilentlyContinue
 
       - name: Archive zip
         working-directory: outils/desktop

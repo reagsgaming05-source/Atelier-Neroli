@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Comment vérifier que rien ne sort</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<p class="sur-titre">Pour le service informatique, qui ne croit pas sur parole</p>
+<h1>Comment vérifier que rien ne sort du poste</h1>
+<p class="lede">« Aucune donnée ne quitte le poste » est une promesse. Cette page dit comment la vérifier soi-même, en quinze minutes, sans rien nous demander. Version {{VERSION}}.</p>
+
+<h2>1. Le plus simple : le câble débranché</h2>
+<p>Coupez le réseau du poste (câble, Wi-Fi, ou « Mode Avion »), ouvrez l'application, ouvrez un PDF, corrigez-le, caviardez un mot, lancez la reconnaissance de texte sur un scan, enregistrez. <strong>Tout fonctionne</strong> : l'application n'a besoin de rien d'extérieur — ni pour s'ouvrir, ni pour la reconnaissance de texte (le moteur et les modèles de langue français et allemand sont dans le dossier), ni pour les polices, ni pour la licence (un fichier signé, vérifié sur le poste). Ce que la personne ne peut pas faire sans réseau — envoyer un courriel — n'est pas une fonction de l'application.</p>
+
+<h2>2. Regarder ce que le poste émet</h2>
+<ol>
+  <li>Sur un poste d'essai, lancez un observateur de connexions au choix : <em>Moniteur de ressources › Réseau › Connexions TCP</em> (intégré à Windows), <em>TCPView</em> ou <em>Process Monitor</em> (Sysinternals), le journal du pare-feu Windows (<em>Pare-feu avec fonctions avancées de sécurité › Propriétés › Journalisation</em> : « journaliser les paquets ignorés » et « les connexions réussies »), ou la journalisation du pare-feu périmétrique de la commune.</li>
+  <li>Filtrez sur le processus <span class="chemin">AktumPDF.exe</span> (l'application lance aussi des processus enfants du même nom : moteur d'affichage, moteur graphique).</li>
+  <li>Travaillez une quinzaine de minutes comme une secrétaire : ouvrir, corriger, caviarder, reconnaître le texte, imprimer, enregistrer, fermer.</li>
+  <li><strong>Résultat attendu : aucune connexion sortante vers une adresse autre que 127.0.0.1</strong> (la boucle locale du poste). Le moteur d'affichage tente parfois d'ouvrir un port local ; ce n'est pas du réseau.</li>
+</ol>
+<p>L'application n'ouvre aucun port en écoute : le pare-feu n'a rien à autoriser (§10 du guide d'administration).</p>
+
+<h2>3. Pourquoi elle ne peut pas, même par erreur</h2>
+<p>Trois barrières, indépendantes — chacune suffit pour une défaillance des deux autres. Elles sont écrites dans <span class="chemin">desktop/main.js</span>, dont le texte est public (dépôt de l'éditeur) ; voici ce qu'elles font, en trois lignes :</p>
+<table>
+<tr><th>Barrière</th><th>L'extrait</th><th>Ce qui en résulte</th></tr>
+<tr><td>Les noms de domaine ne se résolvent pas</td><td><span class="chemin">appendSwitch('host-resolver-rules', 'MAP * ~NOTFOUND , EXCLUDE 127.0.0.1')</span></td><td>Toute adresse qui n'est pas la boucle locale échoue <em>avant</em> qu'un paquet ne parte.</td></tr>
+<tr><td>Un mandataire fixe et mort sert toutes les sessions</td><td><span class="chemin">appendSwitch('proxy-server', '127.0.0.1:1')</span></td><td>Pas de mandataire du système, pas de détection automatique (WPAD/PAC) : ce qui échapperait au résolveur tombe sur un port fermé.</td></tr>
+<tr><td>Chaque session refuse toute requête non locale</td><td><span class="chemin">session.webRequest.onBeforeRequest(…)</span></td><td>La requête est annulée et comptée, pour que le test puisse dire combien en ont été tentées (zéro).</td></tr>
+</table>
+<p>De plus, la page de l'application porte une politique de sécurité (<span class="chemin">default-src 'none'; connect-src blob: data:</span>) qui interdit au navigateur lui-même d'ouvrir une connexion ; <strong>aucun composant n'est chargé depuis Internet</strong> (la construction échoue si une adresse réseau réapparaît dans le code livré). Le moteur d'affichage est lancé avec ses services en ligne éteints (mises à jour de composants, signalements, synchronisation).</p>
+
+<h2>4. Ce que l'éditeur observe à chaque version</h2>
+<p><strong>Dans l'application empaquetée</strong> : elle est lancée <strong>derrière un mandataire d'observation</strong> qui note toute connexion qui lui parvient ; elle est utilisée pour de vrai (ouvrir, modifier, enregistrer, reconnaître le texte d'une image) ; le test échoue à la moindre connexion. Il commence par lever les barrières pour montrer que l'observateur <em>voit</em> ce qui s'échapperait (deux appels d'essai, http et https), puis les referme : rien n'arrive. C'est <span class="chemin">desktop/reseau-test.js</span>, lisible et rejouable.</p>
+<p><strong>Dans la page</strong> : la suite de bout en bout tente, depuis la page, <strong>six formes d'envoi</strong> vers une adresse inexistante — requête directe (<em>fetch</em>), <em>XMLHttpRequest</em>, image, WebSocket, balise d'envoi, formulaire — et exige que la politique de sécurité de la page les refuse toutes avant qu'un paquet ne parte (<span class="chemin">test-e2e/reseau-page.spec.js</span>).</p>
+
+<h2>5. Ce que cette vérification ne couvre pas</h2>
+<ul>
+  <li>Un poste compromis par ailleurs, ou un composant du système : l'imprimante, le client de messagerie que la personne utilise pour joindre un fichier, un antivirus qui envoie des fichiers à son éditeur.</li>
+  <li>La page d'essai en ligne du site de l'éditeur, qui charge ses composants depuis Internet et <strong>n'est pas destinée à des documents réels</strong> (elle le dit à l'ouverture). Elle n'est pas dans l'archive.</li>
+  <li>L'<strong>attestation d'un tiers</strong> : une capture de trafic par un bureau d'ingénieurs indépendant n'a pas encore été établie ; si votre marché l'exige, demandez-la : l'éditeur la fera faire sur la version que vous achetez.</li>
+</ul>
+<p class="petit">Une observation différente de la vôtre ? Écrivez à <strong>{{SUPPORT}}</strong> avec ce que vous avez observé (version, processus, adresse, heure) : c'est un défaut de niveau 1 (voir la <em>Procédure de support</em>).</p>
+</body></html>

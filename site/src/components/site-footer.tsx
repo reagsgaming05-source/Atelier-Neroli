@@ -3,6 +3,7 @@ import { Logo } from "@/components/logo";
 import { navigation, site } from "@/content/site";
 
 const legal = [
+  { href: "/limites", label: "Limites connues" },
   { href: "/mentions-legales", label: "Mentions légales" },
   { href: "/cgv", label: "Conditions générales" },
   { href: "/confidentialite", label: "Confidentialité" },

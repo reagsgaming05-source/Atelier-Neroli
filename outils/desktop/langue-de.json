@@ -210,7 +210,17 @@
   "Seront effacés : la liste des documents récents, le travail mis de côté (copies de documents modifiés), ": "Gelöscht werden: die Liste der zuletzt geöffneten Dokumente, die zur Seite gelegte Arbeit (Kopien geänderter Dokumente), ",
   "Traces effacées.": "Spuren gelöscht.",
   "Une partie des traces n’a pas pu être effacée.": "Ein Teil der Spuren konnte nicht gelöscht werden.",
-  "Vos documents ne sont pas touchés, ni ceux qui sont ouverts à l’écran. Cela ne peut pas être annulé.": "Ihre Dokumente werden nicht angetastet, auch nicht die auf dem Bildschirm geöffneten. Das lässt sich nicht rückgängig machen."
+  "Vos documents ne sont pas touchés, ni ceux qui sont ouverts à l’écran. Cela ne peut pas être annulé.": "Ihre Dokumente werden nicht angetastet, auch nicht die auf dem Bildschirm geöffneten. Das lässt sich nicht rückgängig machen.",
+  "\nNon compris dans ce fichier : ": "\nIn dieser Datei nicht verstanden: ",
+  " caractères au moins": " Zeichen mindestens",
+  "Aide : ": "Hilfe: ",
+  "Cette installation ne propose pas de mise à jour d’elle-même.": "Diese Installation schlägt von sich aus keine Aktualisierung vor.",
+  "Les mises à jour sont gérées par votre service informatique.": "Aktualisierungen werden von Ihrer IT-Abteilung verwaltet.",
+  "mises à jour gérées par le service informatique": "Aktualisierungen durch die IT-Abteilung verwaltet",
+  "mot de passe de ": "Passwort mit ",
+  "Réglages de l’administrateur (": "Einstellungen des Administrators (",
+  "signatures non mémorisées": "Unterschriften werden nicht gespeichert",
+  "valeurs d’usine": "Werkseinstellungen"
  },
  "profil": {
   ", depuis ": ", seit ",

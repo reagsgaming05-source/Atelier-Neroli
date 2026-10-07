@@ -24,15 +24,37 @@
 <tr><td><strong>Poste par poste</strong></td><td>Peu de postes, pas de serveur</td><td>Chaque poste a sa copie et ses mises à jour à faire. Les données restent dans <span class="chemin">data\</span> à côté de l'exécutable.</td></tr>
 <tr><td><strong>Clé USB</strong></td><td>Dépannage, essai</td><td>Les comptes, tampons et signatures voyagent avec la clé : à ne pas laisser circuler (voir le LISEZMOI).</td></tr>
 </table>
+<h3>Déployer sur plusieurs postes : le script fourni</h3>
+<p><span class="chemin">Deployer-Aktum-PDF.ps1</span>, dans l'archive, copie l'application (sans droits d'administrateur, sans rien écrire dans le registre ni dans Program Files, sans réseau) et pose un raccourci si on le demande. Il refait la même chose pour une mise à jour, <strong>sans jamais toucher à <span class="chemin">data\</span>, à <span class="chemin">licence.json</span> ni à un fichier que la personne a posé</strong>, et il retire l'application de la même façon.</p>
+<table>
+<tr><th>Cas</th><th>Commande</th></tr>
+<tr><td>Un partage pour tout le service (recommandé)</td><td><span class="chemin">.\Deployer-Aktum-PDF.ps1 -Cible '\\serveur\logiciels\AktumPDF'</span> — puis, sur chaque poste, un raccourci vers <span class="chemin">AktumPDF.exe</span> de ce dossier. Donnez aux utilisateurs la <strong>lecture et l'exécution</strong> du dossier de l'application et la <strong>modification de <span class="chemin">data\</span> seulement</strong> ; si vous préférez que le dossier de l'application reste en lecture seule, posez <span class="chemin">donnees-par-utilisateur.txt</span> (voir §3).</td></tr>
+<tr><td>Poste par poste, par personne</td><td><span class="chemin">.\Deployer-Aktum-PDF.ps1 -Raccourcis</span> — copie dans <span class="chemin">%LOCALAPPDATA%\Aktum PDF</span>, raccourci dans le menu Démarrer de la personne. <span class="chemin">-Bureau</span> ajoute le Bureau.</td></tr>
+<tr><td>Script d'ouverture de session, ou stratégie de groupe (Configuration utilisateur › Scripts › Ouverture de session)</td><td><span class="chemin">powershell.exe -NoProfile -ExecutionPolicy Bypass -File \\serveur\logiciels\Aktum-install\Deployer-Aktum-PDF.ps1 -Raccourcis -Silencieux</span> — le script est idempotent : rejoué à chaque ouverture de session, il ne recopie que ce qui a changé.</td></tr>
+<tr><td>Microsoft Intune (application Win32)</td><td>Empaqueter le dossier de l'archive avec « Microsoft Win32 Content Prep Tool » ; installation : la commande ci-dessus, désinstallation : la même avec <span class="chemin">-Retirer -Silencieux</span> ; règle de détection : le fichier <span class="chemin">%LOCALAPPDATA%\Aktum PDF\AktumPDF.exe</span> ; contexte d'installation : <strong>utilisateur</strong>.</td></tr>
+<tr><td>Mettre à jour</td><td>Relancer le script avec le dossier de la nouvelle version (<span class="chemin">-Source</span>), ou utiliser <span class="chemin">Mettre-a-jour.cmd</span> (§7), qui vérifie la signature de l'éditeur avant d'installer.</td></tr>
+<tr><td>Retirer</td><td><span class="chemin">.\Deployer-Aktum-PDF.ps1 -Cible '…' -Retirer</span> : les fichiers livrés par l'archive partent (selon <span class="chemin">LISTE-DES-FICHIERS.txt</span>), pas <span class="chemin">data\</span>.</td></tr>
+</table>
+<p>Le journal du script est <span class="chemin">%TEMP%\aktum-deploiement.log</span> ; son code de sortie est 0 quand tout s'est passé. <em>Limite dite franchement</em> : la construction de l'éditeur essaie le script sur Windows (pose, mise à jour avec des données, retrait, chemin piégé dans la liste) ; <strong>aucun déploiement par stratégie de groupe ni par Intune n'a été essayé dans un vrai parc</strong> : les commandes ci-dessus sont celles du script, à essayer sur un poste pilote d'abord. Le script ne vérifie pas la signature de l'archive : pour une <em>première</em> pose, comparez l'empreinte du zip (le fichier <span class="chemin">.sha256</span> à côté) ; les mises à jour suivantes, elles, sont vérifiées par l'application déjà installée.</p>
 <p>Sur un lecteur réseau, lancer un exécutable de 290 Mo par quinze postes au même moment est un cas à essayer chez vous avant de généraliser : les premiers lancements sont plus lents. Aucune mesure sur votre réseau n'a pu être faite par l'éditeur.</p>
 
-<h2>3. Les deux fichiers de réglage</h2>
-<p>On les crée à côté de l'exécutable, <strong>vides</strong> : leur présence suffit.</p>
+<h2>3. Les fichiers de réglage</h2>
+<p>Les deux premiers se créent à côté de l'exécutable, <strong>vides</strong> : leur présence suffit. Le troisième, <span class="chemin">reglages.json</span>, porte les réglages de l'administrateur (voir plus bas).</p>
 <table>
 <tr><th>Fichier</th><th>Effet</th></tr>
 <tr><td><span class="chemin">donnees-par-utilisateur.txt</span></td><td>Chacune range ses données dans son profil Windows (<span class="chemin">%APPDATA%</span>), pas dans <span class="chemin">data\</span>. À préférer si le dossier de l'application est en lecture seule, ou si vous ne voulez aucun compte à gérer.</td></tr>
 <tr><td><span class="chemin">comptes.txt</span></td><td>Force le fonctionnement par comptes. Une ligne par personne : ces noms apparaissent dans la liste de connexion, sans mot de passe tant que la personne ne s'y est pas connectée.</td></tr>
 </table>
+<h3>reglages.json : ce que l'administrateur règle pour tous les postes</h3>
+<p>Un fichier JSON, lu au lancement, jamais écrit par l'application. Sans lui, rien ne change. Un réglage faux est ignoré (et « Aide › À propos » dit ce qui n'a pas été compris) : il ne bloque rien.</p>
+<table>
+<tr><th>Réglage</th><th>Effet</th></tr>
+<tr><td><span class="chemin">"miseAJour": false</span></td><td>Plus aucune mise à jour proposée, ni à l'ouverture ni par « Aide › Rechercher une mise à jour » : le service informatique pose lui-même les versions.</td></tr>
+<tr><td><span class="chemin">"memoriserSignature": false</span></td><td>Aucune signature manuscrite n'est gardée sur le poste : la case disparaît de la boîte, et une signature déjà gardée ne se propose plus.</td></tr>
+<tr><td><span class="chemin">"motDePasseMin": 12</span></td><td>Longueur minimale d'un mot de passe de compte (de 8 à 64 ; on ne descend pas sous 8).</td></tr>
+<tr><td><span class="chemin">"aide": "Informatique : poste 214"</span></td><td>Une ligne (200 caractères au plus), montrée dans « Aide › À propos » et dans la boîte qui explique que les mises à jour sont gérées par vous.</td></tr>
+</table>
+<p>Pour poser le fichier avec Windows : « Nouveau › Document texte », puis renommer en <span class="chemin">reglages.json</span> (l'application accepte aussi <span class="chemin">reglages.json.txt</span>, que l'Explorateur fabrique quand il masque les extensions).</p>
 <div class="attention"><div class="titre">Le piège classique</div><p>L'Explorateur Windows masque les extensions connues. « Nouveau › Document texte » puis « donnees-par-utilisateur.txt » donne <span class="chemin">donnees-par-utilisateur.txt.txt</span>. L'application le reconnaît désormais : les noms <span class="chemin">….txt.txt</span> et sans extension sont acceptés, et « Aide › À propos » dit quel fichier a été lu, avec le nom exact attendu s'il diffère. Mieux vaut quand même le nommer correctement : activez « Extensions de noms de fichiers » dans l'onglet Affichage, ou créez le fichier depuis une invite de commandes.</p></div>
 <p>Si le dossier de l'application n'est pas inscriptible, l'application range les données dans le profil de la personne <em>sans le dire au lancement</em> ; « Aide › À propos » le mentionne. Deux postes d'un même service peuvent donc se comporter différemment : vérifiez-le à la mise en place.</p>
 

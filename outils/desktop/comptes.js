@@ -38,6 +38,9 @@ const COUT = { N: 131072, r: 8, p: 1, longueur: 32, memoire: 256 * 1024 * 1024 }
 // pour résister, seulement de ne pas coûter une seconde de plus à chaque essai.
 const COUT_CODE = { N: 16384, r: 8, p: 1, longueur: 32, memoire: 64 * 1024 * 1024 };
 const MINIMUM = 8;
+// L'administrateur peut l'élever (reglages.json › motDePasseMin) : jamais l'abaisser sous la valeur d'usine.
+let minimum = MINIMUM;
+function regler(o) { if (o && Number.isInteger(o.motDePasseMin) && o.motDePasseMin >= MINIMUM && o.motDePasseMin <= 64) minimum = o.motDePasseMin; }
 
 // Les mots de passe que n'importe qui essaie en premier. Peu, exprès : une
 // liste de dix mille ferait croire que le reste est bon.
@@ -94,7 +97,7 @@ function aRehacher(fiche) {
 // `nom` : un mot de passe qui est le nom du compte n'en est pas un.
 function motDePasseAcceptable(motDePasse, nom) {
   const m = String(motDePasse == null ? '' : motDePasse);
-  if (m.length < MINIMUM) return 'Le mot de passe doit faire au moins ' + MINIMUM + ' caractères.';
+  if (m.length < minimum) return 'Le mot de passe doit faire au moins ' + minimum + ' caractères.';
   if (m.length > 200) return 'Ce mot de passe est trop long.';
   if (/^(.)\1+$/.test(m)) return 'Ce mot de passe répète le même caractère : choisissez-en un autre.';
   if (COURANTS.has(m.toLowerCase())) return 'Ce mot de passe est l’un des premiers qu’on essaie : choisissez-en un autre.';
@@ -164,7 +167,7 @@ function dernierChangement(fiche) {
 }
 
 module.exports = {
-  FICHE, MINIMUM, COUT, COURANTS, FREIN,
+  FICHE, MINIMUM, COUT, COURANTS, FREIN, regler, minimumActuel: () => minimum,
   sceller, verifier, verifierScelle, protege, aRehacher, motDePasseAcceptable,
   attente, noterEchec, effacerEchecs, messageAttente,
   codeDeRecuperation, normaliserCode, scellerCode, verifierCode,

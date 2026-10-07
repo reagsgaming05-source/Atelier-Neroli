@@ -38,6 +38,8 @@ contextBridge.exposeInMainWorld('AktumDesktop', {
   // La langue de l'application : celle que le processus principal a retenue (réglage, sinon système), et
   // le moyen d'en changer — le menu et la page restent d'accord.
   langue: ipcRenderer.sendSync('aktum:langue'),
+  // Les réglages de l'administrateur (reglages.json) : la page n'en lit que ce qui change ce qu'elle propose.
+  reglages: ipcRenderer.sendSync('aktum:reglages'),
   choisirLangue: (l) => ipcRenderer.invoke('aktum:choisir-langue', l),
   onLangue: (cb) => ipcRenderer.on('aktum:langue', (_e, l) => cb(l)),
   imprimer: (o) => ipcRenderer.invoke('aktum:imprimer', o),

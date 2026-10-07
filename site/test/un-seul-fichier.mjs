@@ -19,7 +19,7 @@ const PAGES = [
   ["index", "accueil"], ["communes", "communes"], ["ecoles", "ecoles"], ["etat", "etat"],
   ["fonctionnalites", "fonctionnalites"], ["tarifs", "tarifs"], ["securite", "securite"],
   ["telecharger", "telecharger"], ["offre", "offre"], ["contact", "contact"], ["cgv", "cgv"],
-  ["mentions-legales", "mentions-legales"], ["confidentialite", "confidentialite"],
+  ["limites", "limites"], ["mentions-legales", "mentions-legales"], ["confidentialite", "confidentialite"],
 ];
 const ANCRE = Object.fromEntries(PAGES.map(([f, a]) => [f + ".html", a]));
 

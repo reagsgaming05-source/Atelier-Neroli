@@ -35,6 +35,7 @@ const PAGES = [
   ["/offre", "offre"],
   ["/contact", "contact"],
   ["/cgv", "cgv"],
+  ["/limites", "limites"],
   ["/mentions-legales", "mentions-legales"],
   ["/confidentialite", "confidentialite"],
 ];
@@ -70,11 +71,17 @@ for (const [url, nom] of PAGES) {
   }
   if (!icone) icone = await (await page.request.get(BASE + "/icon.svg")).text();
 
+  // Les captures de l'application (public/captures/) voyagent dans la page, en base64 : la vitrine n'a ni serveur ni dossier d'images.
+  const srcs = await page.$eval('img[src^="/captures/"]', (l) => [...new Set(l.map((x) => x.getAttribute("src")))]);
+  const images = {};
+  for (const s of srcs) images[s] = "data:image/png;base64," + Buffer.from(await (await page.request.get(BASE + s)).body()).toString("base64");
+
   const html = await page.evaluate(
-    ([styles, carte, svg]) => {
+    ([styles, carte, svg, imgs]) => {
       const d = document.cloneNode(true);
       // Sans serveur, le JavaScript de Next ne ferait que produire des erreurs.
       d.querySelectorAll("script, link").forEach((n) => n.remove());
+      d.querySelectorAll('img[src^="/captures/"]').forEach((i) => { const v = imgs[i.getAttribute("src")]; if (v) i.setAttribute("src", v); i.removeAttribute("loading"); });
       const s = d.createElement("style");
       s.textContent = styles;
       d.head.appendChild(s);
@@ -121,7 +128,7 @@ for (const [url, nom] of PAGES) {
       });
       return "<!doctype html>\n" + d.documentElement.outerHTML;
     },
-    [css, NOMS, icone],
+    [css, NOMS, icone, images],
   );
 
   writeFileSync(path.join(SORTIE, `${nom}.html`), html);

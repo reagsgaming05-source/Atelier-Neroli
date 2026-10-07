@@ -8,6 +8,8 @@ const DOCUMENTS = [
   ['protection-des-donnees.html', 'Fiche-protection-des-donnees.pdf', 'Fiche de protection des données'],
   ['fiche-produit.html', 'Fiche-produit.pdf', 'Fiche produit'],
   ['support.html', 'Procedure-de-support.pdf', 'Procédure de support'],
+  ['verifier-le-reseau.html', 'Verifier-que-rien-ne-sort.pdf', 'Comment vérifier que rien ne sort du poste'],
+  ['limites-connues.html', 'Limites-connues.pdf', 'Ce que le logiciel ne fait pas encore'],
   ['declaration-accessibilite.html', 'Declaration-d-accessibilite.pdf', 'Déclaration d’accessibilité'],
   ['faq.html', 'Questions-frequentes.pdf', 'Questions fréquentes'],
   // une feuille A4 recto verso : deux pages exactement, pas une de plus (le dernier champ le garde)
