@@ -2,13 +2,10 @@ name: Image lab
 
 # Paints sample pictures of one episode with a free image model (on the runner, CPU),
 # to judge the look before painting every scene. Results go to docs/images-lab/.
-# Nothing here is shipped in the app. Runs when this file or scripts/images/ changes.
+# Nothing here is shipped in the app. Run by hand from the Actions tab.
 
 on:
-  push:
-    paths:
-      - 'scripts/images/lab.py'
-      - '.github/workflows/image-lab.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write

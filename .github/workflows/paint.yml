@@ -5,6 +5,7 @@ name: Paint
 # Runs when a prompts file or the script changes. Pictures already painted are kept.
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'scripts/images/prompts/**'
