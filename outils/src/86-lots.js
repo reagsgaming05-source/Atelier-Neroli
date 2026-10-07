@@ -334,6 +334,104 @@
     });
   }
 
+  // Recadrer : ne garder qu'une partie de la page. Les marges se donnent comme on voit la page (haut, droite, bas, gauche) ; la zone
+  // visible du PDF (CropBox) se règle dans l'espace de la page telle qu'elle a été écrite, d'où la correspondance selon son sens.
+  // Retourne { x, y, w, h } dans l'espace du PDF, depuis la zone visible actuelle (vx, vy, vw, vh) et le sens de lecture (0, 90, 180, 270).
+  function zoneRecadree(vue, marges, sens) {
+    const { vx, vy, vw, vh } = vue;
+    const { haut, droite, bas, gauche } = marges;
+    // la marge de chaque bord de l'espace du PDF : gauche, bas, droite, haut
+    const m = ({
+      0: { g: gauche, b: bas, d: droite, h: haut },
+      90: { g: haut, b: gauche, d: bas, h: droite },
+      180: { g: droite, b: haut, d: gauche, h: bas },
+      270: { g: bas, b: droite, d: haut, h: gauche },
+    })[((sens % 360) + 360) % 360] || { g: gauche, b: bas, d: droite, h: haut };
+    return { x: vx + m.g, y: vy + m.b, w: Math.max(1, vw - m.g - m.d), h: Math.max(1, vh - m.b - m.h) };
+  }
+  // Les marges blanches d'une page rendue : jusqu'où le contenu va, d'après les pixels qui ne sont pas du papier.
+  async function margesBlanches(p) {
+    const src = srcById(p.src), g = pageGeom(p);
+    const page = await src.pdfjs.getPage(p.index + 1);
+    const echelle = Math.min(1, 700 / Math.max(g.Wd, g.Hd));
+    const vp = page.getViewport({ scale: echelle, rotation: g.total });
+    const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.ceil(vp.width)); cv.height = Math.max(1, Math.ceil(vp.height));
+    const cx = cv.getContext('2d', { alpha: false, willReadFrequently: true });
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+    await rendrePage(page, src, { canvasContext: cx, viewport: vp }, '#fff').promise;
+    page.cleanup();
+    const d = cx.getImageData(0, 0, cv.width, cv.height).data;
+    let x0 = cv.width, x1 = -1, y0 = cv.height, y1 = -1;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+      const i = (y * cv.width + x) * 4;
+      if (d[i] < 242 || d[i + 1] < 242 || d[i + 2] < 242) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return null;   // une page blanche : rien à recadrer
+    const k = 1 / echelle, tampon = 12;   // douze points de respiration autour du contenu
+    return { gauche: Math.max(0, x0 * k - tampon), haut: Math.max(0, y0 * k - tampon), droite: Math.max(0, (cv.width - 1 - x1) * k - tampon), bas: Math.max(0, (cv.height - 1 - y1) * k - tampon) };
+  }
+  function toolRecadrer() {
+    const mm = id => input(id, 'number', 0, { min: 0, max: 200, step: 1 });
+    const haut = mm('rc-haut'), bas = mm('rc-bas'), gauche = mm('rc-gauche'), droite = mm('rc-droite');
+    const auto = checkbox('rc-auto', 'Rogner automatiquement aux marges blanches', false);
+    const scope = select('rc-scope', [['all', 'Toutes les pages'], ['sel', 'Pages sélectionnées']], state.selected.size ? 'sel' : 'all');
+    auto.input.addEventListener('change', () => { [haut, bas, gauche, droite].forEach(c => { c.disabled = auto.input.checked; }); });
+    dialog({
+      aide: 'recadrer',
+      title: 'Recadrer les pages', icon: IC.resize,
+      build: b => {
+        b.append(note('Retire une bande sur chaque bord de la page. La page devient plus petite ; le contenu garde sa taille.'));
+        b.append(rowOf([field('Haut (mm)', haut, 'La bande retirée en haut de la page, telle qu\'on la voit.'), field('Bas (mm)', bas, 'La bande retirée en bas.')]));
+        b.append(rowOf([field('Gauche (mm)', gauche, 'La bande retirée à gauche.'), field('Droite (mm)', droite, 'La bande retirée à droite.')]));
+        b.append(auto);
+        b.append(field('Appliquer à', scope, 'Ce choix remplace le document ouvert : annulez avec Ctrl+Z si le résultat ne convient pas.'));
+        b.append(note('Attention : ce qui est hors du cadre reste dans le fichier, seulement hors de vue. Pour le faire disparaître (une zone confidentielle sur le bord d\'un plan), caviardez-la d\'abord.', 'warn'));
+      },
+      actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Recadrer', primary: true, onClick: async close => {
+        const mmPt = v => (clampInt(v, 0, 200) || 0) * 72 / 25.4;
+        const fixes = { haut: mmPt(haut.value), bas: mmPt(bas.value), gauche: mmPt(gauche.value), droite: mmPt(droite.value) };
+        if (!auto.input.checked && !(fixes.haut || fixes.bas || fixes.gauche || fixes.droite)) { toast('Indiquez une marge à retirer, ou cochez le rognage automatique.', 'warn'); return; }
+        close();
+        const cibles = scope.value === 'sel' && state.selected.size ? new Set(selectedInOrder()) : null;
+        setBusy('Recadrage…', 0, { annuler: true });
+        try {
+          const marges = new Map();
+          if (auto.input.checked) {
+            let rien = 0;
+            for (let i = 0; i < state.pages.length; i++) {
+              const p = state.pages[i];
+              if (cibles && !cibles.has(p.id)) continue;
+              verifierAnnulation();
+              setBusy('Recherche des marges… page ' + (i + 1) + '/' + state.pages.length, i / state.pages.length, { annuler: true });
+              const m = await margesBlanches(p);
+              if (m) marges.set(p.id, m); else rien++;
+            }
+            if (!marges.size) { toast('Aucune page ne porte de contenu à encadrer : rien n\'a été changé.', 'warn'); return; }
+          }
+          const octets = await buildPdf(state.pages, { noInPlace: true, sansNettoyage: true });
+          const doc = await PDFLib.PDFDocument.load(octets, { updateMetadata: false });
+          const pdfPages = doc.getPages();
+          let faites = 0;
+          state.pages.forEach((p, i) => {
+            if (cibles && !cibles.has(p.id)) return;
+            const m = auto.input.checked ? marges.get(p.id) : fixes;
+            if (!m) return;
+            const pg = pdfPages[i];
+            const cb = pg.getCropBox();
+            const g = pageGeom(p);
+            const z = zoneRecadree({ vx: cb.x, vy: cb.y, vw: cb.width, vh: cb.height }, m, g.total);
+            pg.setCropBox(z.x, z.y, z.w, z.h);
+            faites++;
+          });
+          const sortie = await doc.save();
+          await replaceProject(sortie, safeBase(el.filename.value) + tr('-recadre.pdf'), 'Recadrer les pages');
+          setLast(plural(faites, 'page recadrée', 'pages recadrées') + ' · le fichier d\'origine n\'est pas touché avant l\'export · Ctrl+Z pour annuler');
+        } catch (e) { if (e && e.annule) { toast('Recadrage annulé : rien n\'a été changé.', 'warn'); return; } toast(messageDEchec('Le recadrage', e), 'error'); }
+        finally { setBusy(''); }
+      } }],
+    });
+  }
+
   function toolResize() {
     const size = select('rs-size', [['A4', 'A4 (210 × 297 mm)'], ['A5', 'A5'], ['A3', 'A3'], ['Letter', 'Letter'], ['Legal', 'Legal']], 'A4');
     const orient = select('rs-or', [['auto', 'Conserver l\'orientation de chaque page'], ['portrait', 'Tout en portrait'], ['paysage', 'Tout en paysage']], 'auto');
@@ -915,6 +1013,7 @@
   }
 
   function toolCompress() {
+    const methode = select('cp-methode', [['images', 'Alléger les images, garder le texte'], ['pages', 'Convertir chaque page en image (scans)']], 'images');
     const dpi = select('cp-dpi', [['96', 'Écran — 96 ppp'], ['150', 'Équilibré — 150 ppp'], ['200', 'Qualité — 200 ppp']], '150');
     const q = input('cp-q', 'range', 72, { min: 30, max: 95, step: 1 });
     const qv = document.createElement('span'); qv.className = 'hint'; qv.textContent = '72 %';
@@ -923,8 +1022,14 @@
       aide: 'compress',
       title: 'Réduire la taille du fichier', icon: IC.zap,
       build: b => {
+        b.append(field('Méthode', methode, 'La première réduit les grosses images et laisse le texte tel quel : le fichier reste cherchable. La seconde fait de chaque page une image : le fichier devient le plus léger possible, mais le texte n\'est plus sélectionnable.'));
         b.append(rowOf([field('Résolution', dpi, '96 donne le fichier le plus léger et le texte le moins net ; 200 reste net à l\'impression.'), (() => { const f = field('Qualité des images', q, 'Plus la valeur est basse, plus le fichier est léger et plus l\'image est abîmée. 72 % convient à un document courant.'); f.appendChild(qv); return f; })()]));
-        b.append(note('Chaque page est convertie en image : le fichier devient plus léger mais le texte n\'est plus sélectionnable. Le document ouvert n\'est pas modifié.'));
+        const avis = note('');
+        const majAvis = () => { avis.textContent = methode.value === 'images'
+          ? 'Seules les images trop grosses pour ce qu\'elles montrent sont réduites : le texte, les polices et la mise en page ne changent pas. Un document sans image lourde ne s\'allège pas.'
+          : 'Chaque page est convertie en image : le fichier devient plus léger mais le texte n\'est plus sélectionnable. Le document ouvert n\'est pas modifié.'; };
+        methode.addEventListener('change', majAvis); majAvis();
+        b.append(avis);
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Réduire et exporter', primary: true, onClick: async close => {
         close();
@@ -933,9 +1038,14 @@
         // l'original n'est jamais livré. Convertir en images un document de
         // texte le multipliait par quarante, et le texte n'était plus sélectionnable.
         const refus = bytes => bytes.length >= before
-          ? 'La réduction aurait alourdi le fichier : ' + fmtSize(before) + ' → ' + fmtSize(bytes.length) + '. Elle convertit chaque page en image ; elle ne sert qu\'aux documents scannés ou riches en images. Rien n\'a été enregistré.'
+          ? (methode.value === 'images' ? 'Aucune image n\'était assez lourde pour être allégée : le fichier ne diminue pas (' + fmtSize(before) + ' → ' + fmtSize(bytes.length) + '). Rien n\'a été enregistré.'
+            : 'La réduction aurait alourdi le fichier : ' + fmtSize(before) + ' → ' + fmtSize(bytes.length) + '. Elle convertit chaque page en image ; elle ne sert qu\'aux documents scannés ou riches en images. Rien n\'a été enregistré.')
           : null;
-        const bytes = await exportPages(state.pages, safeBase(el.filename.value) + tr('-leger.pdf'), { rasterize: true, dpi: +dpi.value, quality: (clampInt(q.value, 30, 95) || 72) / 100, noInPlace: true, refuserSi: refus });
+        const qualite = (clampInt(q.value, 30, 95) || 72) / 100;
+        const opts = methode.value === 'images'
+          ? { alleger: { dpi: +dpi.value, qualite }, noInPlace: true, refuserSi: refus }
+          : { rasterize: true, dpi: +dpi.value, quality: qualite, noInPlace: true, refuserSi: refus };
+        const bytes = await exportPages(state.pages, safeBase(el.filename.value) + tr('-leger.pdf'), opts);
         if (bytes) {
           const after = bytes.length;
           const pct = before ? Math.round((1 - after / before) * 100) : 0;

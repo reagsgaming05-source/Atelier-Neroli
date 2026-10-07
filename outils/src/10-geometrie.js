@@ -10,15 +10,17 @@
     const rot = ((p.rot % 360) + 360) % 360;    // extra rotation asked by the user
     const Wd = rot % 180 ? Hb : Wb;             // size as displayed
     const Hd = rot % 180 ? Wb : Hb;
-    return { w: d.w, h: d.h, base, rot, total: (base + rot) % 360, Wb, Hb, Wd, Hd };
+    return { w: d.w, h: d.h, base, rot, total: (base + rot) % 360, Wb, Hb, Wd, Hd, ox: d.ox || 0, oy: d.oy || 0 };
   }
   // Display point (dx, dy from top-left, in points) -> PDF user point.
+  // Le point est compté depuis le coin de la zone visible : un document recadré (CropBox) n'a pas son origine en (0, 0).
   function toUser(dx, dy, g) {
     const { w: W, h: H, total } = g;
-    if (total === 90) return { x: dy, y: dx };
-    if (total === 180) return { x: W - dx, y: dy };
-    if (total === 270) return { x: W - dy, y: H - dx };
-    return { x: dx, y: H - dy };
+    const ox = g.ox || 0, oy = g.oy || 0;
+    if (total === 90) return { x: dy + ox, y: dx + oy };
+    if (total === 180) return { x: W - dx + ox, y: dy + oy };
+    if (total === 270) return { x: W - dy + ox, y: H - dx + oy };
+    return { x: dx + ox, y: H - dy + oy };
   }
   function rectToUser(a, g) {
     const p1 = toUser(a.x, a.y, g), p2 = toUser(a.x + a.w, a.y + a.h, g);

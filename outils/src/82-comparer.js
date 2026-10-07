@@ -28,6 +28,47 @@
     const ajoutes = out.filter(x => x.t === '+').reduce((k, x) => k + x.mots.length, 0);
     return { segments: out, retires, ajoutes };
   }
+  // Le recalage des pages : une page insérée ou retirée ne décale pas toute la suite. Chaque page est réduite à l'ensemble de ses mots ; deux
+  // pages se ressemblent selon la part de mots qu'elles ont en commun, et l'alignement garde, dans l'ordre, les paires qui se ressemblent le
+  // plus. Une page sans équivalent devient une ligne « page retirée » ou « page ajoutée ». Sans aucun texte (deux scans), les pages se
+  // rangent une à une, dans l'ordre : il n'y a rien d'autre pour les relier.
+  const SIMILITUDE_MIN = 0.3;
+  function motsDePage(t) { return new Set(String(t || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(m => m.length > 1)); }
+  function similitude(a, b) {
+    if (!a.size && !b.size) return 0.31;   // deux pages sans texte : un lien faible, qui garde l'ordre
+    if (!a.size || !b.size) return 0;
+    let commun = 0;
+    const [petit, grand] = a.size <= b.size ? [a, b] : [b, a];
+    petit.forEach(m => { if (grand.has(m)) commun++; });
+    return commun / (a.size + b.size - commun);
+  }
+  function alignerPages(textesA, textesB) {
+    const n = textesA.length, m = textesB.length;
+    const A = textesA.map(motsDePage), B = textesB.map(motsDePage);
+    const w = m + 1;
+    const S = new Float32Array((n + 1) * w);
+    const choix = new Uint8Array((n + 1) * w);   // 1 : paire, 2 : A retirée, 3 : B ajoutée
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = m - 1; j >= 0; j--) {
+        const sim = similitude(A[i], B[j]);
+        const paire = sim >= SIMILITUDE_MIN ? S[(i + 1) * w + j + 1] + sim : -1;
+        const sautA = S[(i + 1) * w + j], sautB = S[i * w + j + 1];
+        let meilleur = Math.max(paire, sautA, sautB);
+        S[i * w + j] = meilleur;
+        // à égalité, la paire l'emporte : deux documents identiques s'alignent page à page
+        choix[i * w + j] = paire === meilleur ? 1 : sautA >= sautB ? 2 : 3;
+      }
+    }
+    const lignes = [];
+    let i = 0, j = 0;
+    while (i < n || j < m) {
+      const c = i < n && j < m ? choix[i * w + j] : (i < n ? 2 : 3);
+      if (c === 1) { lignes.push({ iA: i, iB: j }); i++; j++; }
+      else if (c === 2) { lignes.push({ iA: i, iB: null }); i++; }
+      else { lignes.push({ iA: null, iB: j }); j++; }
+    }
+    return lignes;
+  }
   async function texteDocPage(docjs, i, srcId) {
     if (srcId != null && textCache.has(key(srcId, i))) { const t = textCache.get(key(srcId, i)); if (t) return t; }
     try {
@@ -102,18 +143,27 @@
         setBusy('Comparaison…', 0, { annuler: true });
         try {
           const docA = srcA.pdfjs;
-          const n = Math.max(docA.numPages, docB.numPages);
-          const pages = [];
+          const total = docA.numPages + docB.numPages;
+          const textesA = [], textesB = [];
           const tour = cadence();
-          for (let i = 0; i < n; i++) {
+          for (let i = 0; i < docA.numPages; i++) {
             verifierAnnulation();
-            setBusy('Comparaison… page ' + (i + 1) + '/' + n, i / n, { annuler: true });
-            const tA = i < docA.numPages ? await texteDocPage(docA, i, srcA.id) : '';
-            const tB = i < docB.numPages ? await texteDocPage(docB, i, srcBId) : '';
-            const d = motsDiff(tA, tB);
-            pages.push({ i, tA, tB, diff: d, differe: d.retires + d.ajoutes > 0 || (i >= docA.numPages) || (i >= docB.numPages) });
+            setBusy('Lecture… page ' + (i + 1) + '/' + total, i / total, { annuler: true });
+            textesA.push(await texteDocPage(docA, i, srcA.id));
             await tour();
           }
+          for (let i = 0; i < docB.numPages; i++) {
+            verifierAnnulation();
+            setBusy('Lecture… page ' + (docA.numPages + i + 1) + '/' + total, (docA.numPages + i) / total, { annuler: true });
+            textesB.push(await texteDocPage(docB, i, srcBId));
+            await tour();
+          }
+          setBusy('Comparaison…', 0.95, { annuler: true });
+          const pages = alignerPages(textesA, textesB).map(({ iA, iB }, i) => {
+            const tA = iA != null ? textesA[iA] : '', tB = iB != null ? textesB[iB] : '';
+            const d = motsDiff(tA, tB);
+            return { i, iA, iB, tA, tB, diff: d, differe: d.retires + d.ajoutes > 0 || iA == null || iB == null };
+          });
           setBusy('');
           afficherComparaison({ nomA: srcA.name, nomB: nomBTexte, docA, docB, pages, srcA, srcBId });
         } catch (e) { setBusy(''); if (e && e.annule) { toast('Comparaison annulée.', 'warn'); return; } toast(messageDEchec('La comparaison', e), 'error'); }
@@ -123,9 +173,9 @@
   // Ce qui a changé d'aspect entre deux pages : les deux sont rendues à la
   // même échelle, comparées pixel à pixel (avec un pixel de tolérance pour
   // le lissage), et les écarts ressortent en rouge sur la page B estompée.
-  async function diffVisuel(docA, docB, i, largeur) {
-    const rendre = async doc => {
-      if (i >= doc.numPages) return null;
+  async function diffVisuel(docA, docB, iA, iB, largeur) {
+    const rendre = async (doc, i) => {
+      if (i == null || i >= doc.numPages) return null;
       const page = await doc.getPage(i + 1);
       const v1 = page.getViewport({ scale: 1 });
       const vp = page.getViewport({ scale: largeur / v1.width });
@@ -137,7 +187,7 @@
       page.cleanup();
       return cv;
     };
-    const a = await rendre(docA), b = await rendre(docB);
+    const a = await rendre(docA, iA), b = await rendre(docB, iB);
     const ref = b || a;
     if (!ref) return null;
     const W = ref.width, H = ref.height;
@@ -212,7 +262,7 @@
     nav.append(prev, ou, next);
     const diff = document.createElement('div'); diff.className = 'cmp-diff';
     const liste = () => seulement && differentes.length ? differentes.map(p => p.i) : c.pages.map(p => p.i);
-    const sansTexte = () => c.pages.filter(p => (p.i < c.docA.numPages && !p.tA.trim()) || (p.i < c.docB.numPages && !p.tB.trim()));
+    const sansTexte = () => c.pages.filter(p => (p.iA != null && !p.tA.trim()) || (p.iB != null && !p.tB.trim()));
     // Les pages sans texte (scans) se lisent d'abord, puis se comparent.
     const btnOcr = document.createElement('button');
     btnOcr.type = 'button'; btnOcr.className = 'tb-btn'; btnOcr.id = 'cmp-ocr'; btnOcr.style.border = '1px solid var(--trait)';
@@ -229,26 +279,26 @@
           const pg = cibles[k];
           if (annulationDemandee()) break;
           setBusy('Reconnaissance… page ' + (pg.i + 1) + ' (' + (k + 1) + '/' + cibles.length + ')', k / cibles.length, { annuler: true });
-          if (pg.i < c.docA.numPages && !pg.tA.trim()) {
-            const dansTable = c.srcA ? state.pages.find(p => p.src === c.srcA.id && p.index === pg.i) : null;
+          if (pg.iA != null && !pg.tA.trim()) {
+            const dansTable = c.srcA ? state.pages.find(p => p.src === c.srcA.id && p.index === pg.iA) : null;
             if (dansTable && dansTable.ocr) pg.tA = dansTable.ocr.texte;
             else {
-              const r = await ocrDocPage(c.docA, pg.i, moteur);
+              const r = await ocrDocPage(c.docA, pg.iA, moteur);
               pg.tA = r.texte;
               if (dansTable) { dansTable.ocr = { mots: r.mots, texte: r.texte, conf: r.conf, langues: 'fra', quand: Date.now() }; textCache.set(pkey(dansTable), r.texte); ocrCache.add(pkey(dansTable)); }
             }
           }
-          if (pg.i < c.docB.numPages && !pg.tB.trim()) {
-            const dansTable = c.srcBId ? state.pages.find(p => p.src === c.srcBId && p.index === pg.i) : null;
+          if (pg.iB != null && !pg.tB.trim()) {
+            const dansTable = c.srcBId ? state.pages.find(p => p.src === c.srcBId && p.index === pg.iB) : null;
             if (dansTable && dansTable.ocr) pg.tB = dansTable.ocr.texte;
             else {
-              const r = await ocrDocPage(c.docB, pg.i, moteur);
+              const r = await ocrDocPage(c.docB, pg.iB, moteur);
               pg.tB = r.texte;
               if (dansTable) { dansTable.ocr = { mots: r.mots, texte: r.texte, conf: r.conf, langues: 'fra', quand: Date.now() }; textCache.set(pkey(dansTable), r.texte); ocrCache.add(pkey(dansTable)); }
             }
           }
           pg.diff = motsDiff(pg.tA, pg.tB);
-          pg.differe = pg.diff.retires + pg.diff.ajoutes > 0 || pg.i >= c.docA.numPages || pg.i >= c.docB.numPages || !!pg.aspectDiffere;
+          pg.differe = pg.diff.retires + pg.diff.ajoutes > 0 || pg.iA == null || pg.iB == null || !!pg.aspectDiffere;
         }
         differentes = c.pages.filter(p => p.differe);
         if (state.pages.some(p => p.ocr)) { state.touched = true; vue.render(); }
@@ -267,10 +317,10 @@
         for (let k = 0; k < c.pages.length; k++) {
           verifierAnnulation();
           setBusy('Aspect… page ' + (k + 1) + '/' + c.pages.length, k / c.pages.length, { annuler: true });
-          if (!aspects.has(k)) aspects.set(k, await diffVisuel(c.docA, c.docB, k, 1000));
+          if (!aspects.has(k)) aspects.set(k, await diffVisuel(c.docA, c.docB, c.pages[k].iA, c.pages[k].iB, 1000));
           const r = aspects.get(k);
           c.pages[k].aspectDiffere = !!(r && r.ratio > 0.002);
-          c.pages[k].differe = c.pages[k].diff.retires + c.pages[k].diff.ajoutes > 0 || k >= c.docA.numPages || k >= c.docB.numPages || c.pages[k].aspectDiffere;
+          c.pages[k].differe = c.pages[k].diff.retires + c.pages[k].diff.ajoutes > 0 || c.pages[k].iA == null || c.pages[k].iB == null || c.pages[k].aspectDiffere;
         }
         differentes = c.pages.filter(p => p.differe);
         majResume();
@@ -290,8 +340,8 @@
       const mien = ++jeton;
       majNav();
       const p = c.pages[courante];
-      labA.textContent = 'A · ' + baseName(c.nomA) + (courante < c.docA.numPages ? '' : ' · page absente');
-      labB.textContent = 'B · ' + baseName(c.nomB) + (courante < c.docB.numPages ? '' : ' · page absente');
+      labA.textContent = 'A · ' + baseName(c.nomA) + (p.iA != null ? ' · ' + tr('p. ' + (p.iA + 1)) : ' · ' + tr('page absente : page ajoutée dans B'));
+      labB.textContent = 'B · ' + baseName(c.nomB) + (p.iB != null ? ' · ' + tr('p. ' + (p.iB + 1)) : ' · ' + tr('page absente : page retirée de B'));
       diff.replaceChildren();
       const entete = document.createElement('div'); entete.className = 'cmp-chiffres';
       entete.textContent = p.diff.retires + p.diff.ajoutes
@@ -308,9 +358,9 @@
       diff.appendChild(corps);
       const largeur = Math.max(160, Math.min(380, (grille.clientWidth || 760) / (aspect ? 3 : 2) - 14));
       try {
-        if (courante < c.docA.numPages) await rendreDans(c.docA, courante, cvA, largeur); else { cvA.width = 1; cvA.height = 1; }
+        if (p.iA != null) await rendreDans(c.docA, p.iA, cvA, largeur); else { cvA.width = 1; cvA.height = 1; }
         if (mien !== jeton) return;
-        if (courante < c.docB.numPages) await rendreDans(c.docB, courante, cvB, largeur); else { cvB.width = 1; cvB.height = 1; }
+        if (p.iB != null) await rendreDans(c.docB, p.iB, cvB, largeur); else { cvB.width = 1; cvB.height = 1; }
       } catch (e) { signaler('Comparaison', e); }
     };
     prev.addEventListener('click', () => { const l = liste(); const k = l.indexOf(courante); if (k > 0) { courante = l[k - 1]; montrer(); } });
@@ -332,7 +382,7 @@
       const k = courante;
       labD.textContent = 'Différences d\'aspect…';
       if (!aspects.has(k)) {
-        try { aspects.set(k, await diffVisuel(c.docA, c.docB, k, 1000)); } catch (e) { signaler('Comparaison', e); aspects.set(k, null); }
+        try { aspects.set(k, await diffVisuel(c.docA, c.docB, c.pages[k].iA, c.pages[k].iB, 1000)); } catch (e) { signaler('Comparaison', e); aspects.set(k, null); }
       }
       if (k !== courante) return;
       const r = aspects.get(k);

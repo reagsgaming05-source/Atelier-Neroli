@@ -60,3 +60,14 @@ test('choisir deux fois la même version est refusé', async ({ app, page }) => 
   await page.locator('.dialog').getByRole('button', { name: 'Comparer' }).click();
   await expect(page.locator('#toast')).toContainText('deux versions différentes');
 });
+
+// Le recalage des pages : une page insérée au milieu ne décale pas les suivantes, qui restent identiques à leurs sœurs.
+const sixTexte = (mot) => [ligne('Le conseil communal ' + mot + ' le credit pour la salle polyvalente de la commune')];
+test('une page insérée au milieu : une seule page diffère, les suivantes restent alignées', async ({ app, page }) => {
+  const a = pdfDe([sixTexte('adopte'), [ligne('Tableau du financement : subvention cantonale, emprunt, fonds propres')], [ligne('Proces verbal de la seance : voix, abstentions, municipalite')]]);
+  const b = pdfDe([sixTexte('adopte'), [ligne('Annexe nouvelle : reglement tarifs location heures ouverture de la salle')], [ligne('Tableau du financement : subvention cantonale, emprunt, fonds propres')], [ligne('Proces verbal de la seance : voix, abstentions, municipalite')]]);
+  await comparer(app, page, a, b);
+  await page.waitForSelector('.cmp-chiffres', { timeout: 60000 });
+  await expect(page.locator('.dialog')).toContainText('1 page diffère sur 4');
+  await expect(page.locator('.dialog')).toContainText('page absente');
+});

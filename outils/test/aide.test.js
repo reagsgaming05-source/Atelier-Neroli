@@ -71,7 +71,7 @@ test('chaque « ? » de boîte renvoie à une aide qui existe, et chaque boîte 
     }
   }
   // les outils qui ouvrent une boîte à régler
-  for (const id of ['blank', 'vides', 'select-plage', 'split', 'dossier', 'resize', 'lots', 'watermark', 'stamp', 'number', 'form', 'serie',
+  for (const id of ['blank', 'vides', 'select-plage', 'split', 'dossier', 'recadrer', 'nettoyer', 'resize', 'lots', 'watermark', 'stamp', 'number', 'form', 'serie',
     'commentaires', 'archiver', 'exp-img', 'compress', 'flatten', 'password', 'certificat', 'signatures', 'props', 'access', 'search',
     'tableau', 'ocr', 'comparer', 'cmd-imprimer', 'tampon', 'signer']) {
     assert.ok(posees.has(id), 'la boîte « ' + id + ' » n\'a pas de « ? »');

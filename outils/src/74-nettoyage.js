@@ -9,7 +9,8 @@
     const o = Object.assign({}, NETTOYAGE_DEFAUT, state.nettoyage || {});
     const cases = NETTOYAGE_LIBELLES.map(([cle, libelle]) => { const c = checkbox('net-' + cle, libelle, o[cle]); c.cle = cle; return c; });
     dialog({
-      title: 'Nettoyer le document', icon: IC.vide, aide: 'nettoyer',
+      aide: 'nettoyer',
+      title: 'Nettoyer le document', icon: IC.balai,
       build: b => {
         b.append(note('Ce que le fichier garde sans le dire, retiré à l\'export. Utile avant de publier un document sur un site ou de l\'envoyer à l\'extérieur.'));
         b.append(groupOf('Retirer du fichier', cases));

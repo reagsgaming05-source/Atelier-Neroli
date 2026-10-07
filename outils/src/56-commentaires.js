@@ -504,7 +504,13 @@
     // anciens flux des pages réécrites, les objets d'une version antérieure. pdf-lib
     // écrit tout ce qu'il a en mémoire, et le fichier enflait de ses restes.
     try { ramasserLesObjets(out); } catch (e) { signaler('Nettoyage du fichier', e); }
+    // « Réduire la taille » : les grosses images sont réduites et recompressées, le texte n'est pas touché.
+    if (opts.alleger) {
+      onProgress(0.95, 'Allègement des images…');
+      opts.bilanAllegement = await alegerLesImages(out, opts.alleger);
+    }
     onProgress(1, 'Finalisation…');
-    return out.save();
+    // Les flux d'objets (PDF 1.5) font gagner quelques pour cent de plus : on n'y recourt que pour alléger, jamais pour archiver.
+    return opts.alleger ? out.save({ useObjectStreams: true }) : out.save();
   }
 

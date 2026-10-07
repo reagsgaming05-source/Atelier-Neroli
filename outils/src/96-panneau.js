@@ -21,6 +21,7 @@
         { id: 'select-plage', name: 'Sélectionner par numéros', sub: 'Des pages désignées par « 3-7, 12 »', icon: IC.select, need: 'pages', mots: 'plage intervalle pages numéros choisir paires impaires', run: toolSelectionPlage },
         { id: 'split', name: 'Diviser le document', sub: 'Un ou plusieurs fichiers', icon: IC.deux, need: 'pages', mots: 'découper scinder séparer fractionner extraire pages', run: toolSplit },
         { id: 'dossier', name: 'Constituer un dossier', sub: 'Intercalaires, pièces numérotées, sommaire', icon: IC.dossier, need: 'pages', mots: 'assembler annexe annexes bordereau pièces sommaire intercalaire table des matières joindre', run: toolDossier },
+        { id: 'recadrer', name: 'Recadrer', sub: 'Retire une bande sur chaque bord, ou les marges blanches', icon: IC.rogner, need: 'pages', mots: 'rogner couper marges bordure cadre crop', run: toolRecadrer },
         { id: 'resize', name: 'Redimensionner', sub: 'A4, Letter, marges', icon: IC.resize, need: 'pages', mots: 'format taille marges a4 letter rogner recadrer', run: toolResize },
         { id: 'lots', name: 'Traiter plusieurs fichiers', sub: 'Pages vides, compression, numérotation… en série', icon: IC.grille, mots: 'série lot lots batch plusieurs fichiers dossier compresser numéroter protéger', run: () => toolLots() },
       ] },
@@ -101,7 +102,7 @@
     props: 'Des propriétés sont définies pour ce document', signatures: 'Le document ouvert porte des signatures', ocr: 'Du texte a été reconnu sur ce document',
   };
   const TEINTES_OUTILS = {
-    fusionner: '#2D9D5F', blank: '#2680EB', images: '#8C5AE8', vides: '#0D9F8F', 'select-plage': '#6E7681', split: '#E68619',
+    fusionner: '#2D9D5F', recadrer: '#2680EB', blank: '#2680EB', images: '#8C5AE8', vides: '#0D9F8F', 'select-plage': '#6E7681', split: '#E68619',
     dossier: '#D83790', resize: '#2680EB', lots: '#E68619',
     signer: '#D83790', edit: '#8C5AE8', 'caviarder-zone': '#D7373F', tampon: '#E68619', watermark: '#D83790', stamp: '#0D9F8F',
     number: '#E68619', form: '#2D9D5F', serie: '#2D9D5F', commentaires: '#E68619',

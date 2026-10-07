@@ -155,7 +155,8 @@
       try {
         const page = await src.pdfjs.getPage(i + 1);
         const v = page.view || [0, 0, 595.28, 841.89];
-        dims.set(k, { w: Math.abs(v[2] - v[0]), h: Math.abs(v[3] - v[1]), baseRot: page.rotate || 0 });
+        // ox, oy : le coin bas-gauche de la zone visible (CropBox) dans l'espace du PDF — presque toujours 0, mais pas pour un document recadré
+        dims.set(k, { w: Math.abs(v[2] - v[0]), h: Math.abs(v[3] - v[1]), baseRot: page.rotate || 0, ox: Math.min(v[0], v[2]), oy: Math.min(v[1], v[3]) });
       } catch (_) { dims.set(k, Object.assign({}, DEFAULT_DIM)); }
       if (src.count > 40) await tour(() => setBusy('Analyse des pages… ' + (i + 1) + '/' + src.count, i / src.count));
     }

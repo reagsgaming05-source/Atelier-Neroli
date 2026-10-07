@@ -85,6 +85,18 @@
    "attention": "Chaque document ouvert devient une pièce ; ouvrez d'abord tous les documents du dossier."
   },
   {
+   "id": "recadrer",
+   "nom": "Recadrer",
+   "groupe": "organiser",
+   "quoi": "Ne garde qu'une partie de la page : retire une bande sur chaque bord, ou les marges blanches d'un scan.",
+   "etapes": [
+    "Donnez, en millimètres, la bande à retirer en haut, en bas, à gauche et à droite — ou cochez le rognage automatique.",
+    "Choisissez les pages concernées : toutes ou la sélection."
+   ],
+   "effet": "La page devient plus petite ; le contenu garde sa taille. Le document ouvert est remplacé par sa version recadrée ; Ctrl+Z revient en arrière, et le fichier d'origine reste intact jusqu'à l'export.",
+   "attention": "Ce qui est hors du cadre reste dans le fichier, seulement hors de vue : pour le faire disparaître, caviardez-le d'abord."
+  },
+  {
    "id": "resize",
    "nom": "Redimensionner",
    "groupe": "organiser",
@@ -272,13 +284,14 @@
    "id": "compress",
    "nom": "Réduire la taille",
    "groupe": "exporter",
-   "quoi": "Fait une copie plus légère du document, pour l'envoyer par courriel.",
+   "quoi": "Fait une copie plus légère du document, pour l'envoyer par courriel : en allégeant les images, ou en convertissant chaque page en image.",
    "etapes": [
+    "Choisissez la méthode : « Alléger les images » réduit les grosses images et garde le texte ; « Convertir chaque page en image » convient aux scans.",
     "Choisissez la résolution (96, 150 ou 200 ppp) et la qualité des images.",
-    "Lancez : la copie est enregistrée."
+    "Lancez : la copie est enregistrée, et la taille avant et après est dite."
    ],
-   "effet": "Chaque page est convertie en image : le fichier devient plus léger, mais le texte n'est plus sélectionnable ni cherchable. Le document ouvert n'est pas modifié.",
-   "attention": "Gardez l'original : cette copie ne se « re-convertit » pas en texte."
+   "effet": "Avec l'allègement des images, le texte reste sélectionnable ; avec la conversion en images, il ne l'est plus. Dans les deux cas, le document ouvert n'est pas modifié, et une copie qui ne serait pas plus légère n'est pas enregistrée.",
+   "attention": "Un document sans image lourde ne s'allège pas : le texte pèse peu. Gardez l'original."
   },
   {
    "id": "flatten",
