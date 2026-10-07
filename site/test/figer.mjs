@@ -73,7 +73,7 @@ for (const [url, nom] of PAGES) {
   if (!icone) icone = await (await page.request.get(BASE + "/icon.svg")).text();
 
   // Les captures de l'application (public/captures/) voyagent dans la page, en base64 : la vitrine n'a ni serveur ni dossier d'images.
-  const srcs = await page.$eval('img[src^="/captures/"]', (l) => [...new Set(l.map((x) => x.getAttribute("src")))]);
+  const srcs = await page.$$eval('img[src^="/captures/"]', (l) => [...new Set(l.map((x) => x.getAttribute("src")))]);
   const images = {};
   for (const s of srcs) images[s] = "data:image/png;base64," + Buffer.from(await (await page.request.get(BASE + s)).body()).toString("base64");
 

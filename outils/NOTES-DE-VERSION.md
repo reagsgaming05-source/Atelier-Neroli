@@ -144,6 +144,16 @@ qui laissaient croire qu'un réglage était déjà écrit disent maintenant « �
 **Dates et nombres à la suisse.** 31.12.2026 et 12’345.50, en français comme en allemand, dans l'application et dans ce
 qu'elle écrit dans vos documents (tampons, sommaires, intercalaires).
 
+**Windows et le secrétariat.** Fichier ▸ Préférences propose « Ouvrir les PDF avec Aktum PDF » : un bouton qui dit ce qu’il écrit (dans votre profil seulement, jamais dans le choix que Windows a déjà fait pour vous) et qui le retire de la même façon. « Envoyer par courriel… » ouvre un message Outlook avec le PDF joint — il n’envoie jamais rien tout seul, et sans Outlook il dit comment faire. La boîte de réception du copieur surveille le dossier que vous désignez : elle annonce les nouveaux fichiers (jamais un fichier que le copieur écrit encore), les ouvre, les classe, les supprime après confirmation. À l’impression, un dossier aux formats mêlés (A4, A3) part feuille par feuille sur le bon papier, avec une case « Nuances de gris ». « Copier comme image » prend une page ou une zone dessinée à la souris ; « Afficher le document dans l’Explorateur » existe ; les noms accentués (« Préavis août.pdf ») restent intacts partout ; et si un autre programme tient le fichier (Acrobat Reader, la GEVER, un antivirus), le message le nomme au lieu de renoncer en silence.
+
+**Vos traces, et le moyen de les effacer.** La signature n’est mémorisée que si vous cochez la case, qui dit où (dans le dossier de l’application, en clair). Fichier ▸ Effacer mes traces sur ce poste… retire les récents, le travail mis de côté, les tampons et signatures mémorisés et les copies du glisser — jamais vos documents — après vous avoir dit ce qui part. Le dossier du travail mis de côté est réservé à la personne qui l’a créé, et il ne contient plus le texte reconnu d’un scan (la récupération dit « N pages sont à reconnaître de nouveau »).
+
+**Licence et essai.** Toutes les fonctions sont disponibles pendant 45 jours d’essai, avec le nombre de jours restants à l’écran. Ensuite, un fichier de licence signé (`licence.json`, posé à côté de l’exécutable) donne le droit d’utiliser la version reçue et d’installer les mises à jour jusqu’à une date ; « Aide ▸ À propos » dit où l’on en est. Rien n’est vérifié en ligne.
+
+**Pour l’administrateur.** Un fichier `reglages.json` posé à côté de l’exécutable fixe, pour tout le service, ce que les personnes ne peuvent pas changer : interdire la mémorisation d’une signature, exiger un mot de passe plus long. Le script `Deployer-Aktum-PDF.ps1` pose, met à jour et retire l’application sans droits d’administrateur (script de connexion, stratégie de groupe, Intune), et ne touche jamais au dossier `data` ni à la licence. Chaque archive porte la liste exacte de ses fichiers : une mise à jour retire ceux que la nouvelle version ne livre plus, et seulement ceux-là. Les documents livrés passent à dix : guide d’administration, fiche de protection des données, fiche produit, procédure de support (avec ses délais), « Comment vérifier que rien ne sort », « Ce que le logiciel ne fait pas encore », déclaration d’accessibilité, questions fréquentes, aide-mémoire, formation.
+
+**Une chaîne qu’on peut contrôler.** Chaque bibliothèque embarquée est vérifiée par son empreinte avant d’entrer dans la construction ; une nomenclature de tous les composants (avec leur licence) est jointe à chaque publication ; deux constructions du même état du dépôt donnent les mêmes pages ; l’audit des avis de sécurité est bloquant pour une version stable. La bibliothèque de certificats passe en 1.4.0.
+
 **Et aussi** : les caractères que le PDF ne sait pas écrire dans un champ ou un tampon sont
 signalés (plus de « Miloševi? » silencieux) ; plus de limite de 800 signets ; « Réduire la
 taille » refuse de rendre un fichier plus gros ; Ctrl+Z juste après l'ouverture ne vide plus
@@ -161,6 +171,8 @@ l'espace de travail ; un journal qui dit ce qui s'est mal passé, au lieu de se 
   Ctrl+1 et Ctrl+2 règlent maintenant le zoom (taille réelle, largeur de la page), comme dans Acrobat.
   Tout geste se remet où l'on veut dans Fichier ▸ Préférences.
 - Dans les menus et les fenêtres, « Retirer » des pages devient « Supprimer » : un seul mot pour un seul acte.
+- **La signature n’est plus mémorisée d’office.** Celles que vous aviez gardées le restent ; pour une nouvelle, il faut cocher la case.
+- **Le ménage des mises à jour commence avec cette version.** Une installation qui ne porte pas encore la liste de ses fichiers ne se nettoie pas la première fois (rien n’est retiré : mieux vaut un fichier de trop qu’un fichier de moins) ; les suivantes, si.
 - Rien d'autre à refaire. Vos tampons, signatures, récents et le travail mis de côté sont
   conservés.
 
@@ -169,4 +181,4 @@ l'espace de travail ; un journal qui dit ce qui s'est mal passé, au lieu de se 
 Pas d'équivalent clavier pour poser une annotation dans l'éditeur de page, pas de balisage conservé d'un PDF reçu quand ses pages sont réassemblées (l'application prévient), pas de PDF/UA (le balisage ne couvre pas les titres, listes et tableaux des pages venues d'ailleurs,
 ni les liens et formulaires), pas de signature qualifiée ni d'horodatage, pas de contrôle de
 révocation ni de liste d'autorités de confiance, pas de PDF/A-1, -3 ni de niveau « a » ; l'application
-est en français et en allemand (pas d'italien), et le manuel et le site restent en français. Voir la feuille de route.
+est en français et en allemand (pas d'italien), et le manuel et le site restent en français. La liste complète, dite sans adoucir, est dans le document « Ce que le logiciel ne fait pas encore » (livré avec l'application, et sur le site). Voir la feuille de route.

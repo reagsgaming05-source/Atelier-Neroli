@@ -401,7 +401,7 @@ export const contactSubjects = [
 ];
 
 export const stats = [
-  { k: "26", v: "outils PDF" },
+  { k: "31", v: "outils PDF" },
   { k: "0", v: "connexion pour traiter un document" },
   { k: "1", v: "facture par an, sur bon de commande" },
 ];

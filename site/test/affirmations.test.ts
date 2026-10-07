@@ -79,3 +79,22 @@ for (const fichier of fichiers(RACINE)) {
 test("aucune formulation interdite n'est revenue", () => {
   assert.ok(true);
 });
+
+// Le nombre d'outils se lit à plusieurs endroits (compteur, titres, formules, démo) : il n'a qu'une valeur. L'application garde le même nombre
+// (outils/test-e2e/design.spec.js : « les trente et un outils y sont, chacun une fois »).
+test("le nombre d'outils est le même partout où le site le dit", () => {
+  const dit: { fichier: string; n: string }[] = [];
+  for (const f of fichiers(RACINE)) {
+    const t = readFileSync(f, "utf8");
+    for (const m of t.matchAll(/\b(Trente et un|trente et un|Vingt-six|vingt-six|31|26) outils\b/g)) dit.push({ fichier: path.relative(RACINE, f), n: m[1].toLowerCase() });
+    for (const m of t.matchAll(/Les (31|26) outils/g)) dit.push({ fichier: path.relative(RACINE, f), n: m[1] });
+  }
+  const valeurs = new Set(dit.map((d) => ({ "trente et un": "31", "vingt-six": "26" } as Record<string, string>)[d.n] ?? d.n));
+  assert.deepEqual([...valeurs], ["31"], "le site annonce plusieurs nombres d'outils : " + JSON.stringify(dit));
+});
+
+test("le compteur de l'accueil donne le même nombre d'outils que le texte", async () => {
+  const { stats } = await import("../src/content/site");
+  assert.equal(stats[0].k, "31");
+  assert.equal(stats[0].v, "outils PDF");
+});
