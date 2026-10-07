@@ -31,7 +31,8 @@ const fermer = async (app) => {
   await Promise.race([app.close().catch(() => {}), dormir(20000)]);
   try { processus.kill('SIGKILL'); } catch (_) { /* déjà arrêté */ }
 };
-const menu = (app) => app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.map((i) => i.label));
+// Sous macOS, le premier menu est celui de l’application (le premier, posé par main.js), qui porte le nom de l’application dans chaque langue : il n’est pas à comparer.
+const menu = (app) => app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.filter((_, n) => !(process.platform === 'darwin' && n === 0)).map((i) => i.label));
 const attendre = async (cond, quoi, delai) => {
   const fin = Date.now() + (delai || 15000);
   while (Date.now() < fin) { if (await cond()) return; await dormir(250); }
@@ -39,7 +40,7 @@ const attendre = async (cond, quoi, delai) => {
 };
 // Un clic sur « Français » / « Deutsch » dans Aide ▸ Langue, comme à la souris.
 const choisirDansLeMenu = (app, nom) => app.evaluate(({ Menu }, nom) => {
-  const aide = Menu.getApplicationMenu().items[4];
+  const aide = Menu.getApplicationMenu().items.filter((_, n) => !(process.platform === 'darwin' && n === 0))[4];
   const langue = aide.submenu.items.find((i) => i.submenu);
   langue.submenu.items.find((i) => i.label === nom).click();
 }, nom);
