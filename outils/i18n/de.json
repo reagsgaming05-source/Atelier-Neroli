@@ -2343,7 +2343,13 @@
   "word docx texte modifier convertir traitement de texte libreoffice": "word docx text bearbeiten umwandeln konvertieren textverarbeitung libreoffice",
   "XObject": "XObject",
   "Zone de saisie": "Eingabebereich",
-  "Zoom de la page": "Zoom der Seite"
+  "Zoom de la page": "Zoom der Seite",
+  "Une correction de texte n'a pas pu s'écrire dans la page et son texte d'origine n'a pas pu en être effacé : la page est convertie en image, plutôt que de laisser l'ancien texte caché sous la correction.": "Eine Textkorrektur konnte nicht in die Seite geschrieben werden, und ihr ursprünglicher Text konnte nicht daraus entfernt werden: Die Seite wird in ein Bild umgewandelt, statt den alten Text unter der Korrektur versteckt zu lassen.",
+  "Date de création": "Erstellungsdatum",
+  "Encodage de la police": "Schriftkodierung",
+  "annotation": "Anmerkung",
+  "annotations": "Anmerkungen",
+  "Annotations sans apparence": "Anmerkungen ohne Erscheinungsbild"
  },
  "motifs": {
   "\n• … et {0}.": "\n• … und {0}.",
@@ -2641,7 +2647,8 @@
   "Une action « {0} » ({1}) est interdite dans un PDF/A.": "Eine Aktion «{0}» ({1}) ist in einem PDF/A nicht erlaubt.",
   "Une action nommée « {0} » ({1}) est interdite dans un PDF/A.": "Eine Aktion mit dem Namen «{0}» ({1}) ist in einem PDF/A nicht erlaubt.",
   "Une annotation « {0} » n'a pas d'apparence : un PDF/A l'exige.": "Eine Anmerkung «{0}» hat kein Erscheinungsbild: Ein PDF/A verlangt dies.",
-  "Une annotation « {0} » n'est pas imprimable ou est cachée : un PDF/A l'exige imprimable et visible.": "Eine Anmerkung «{0}» ist nicht druckbar oder verborgen: Ein PDF/A verlangt sie druckbar und sichtbar."
+  "Une annotation « {0} » n'est pas imprimable ou est cachée : un PDF/A l'exige imprimable et visible.": "Eine Anmerkung «{0}» ist nicht druckbar oder verborgen: Ein PDF/A verlangt sie druckbar und sichtbar.",
+  "« {0} » porte {1} (polygone, tampon, signe de correction…) sans apparence enregistrée : ce logiciel ne sait pas les dessiner. Elles restent dans le fichier à l'enregistrement, mais n'apparaissent pas à l'écran ; Acrobat Reader les montre.": "«{0}» enthält {1} (Polygon, Stempel, Korrekturzeichen…) ohne gespeichertes Erscheinungsbild: Diese Software kann sie nicht zeichnen. Sie bleiben beim Speichern in der Datei, erscheinen aber nicht am Bildschirm; Acrobat Reader zeigt sie."
  },
  "html": {
   ".pdf": ".pdf",

@@ -241,6 +241,54 @@
     return m;
   }
 
+  // L'encodage /Differences d'une police simple : des noms de glyphes posés sur des codes, [ 32 /space /exclam 65 /A /B … ]. Beaucoup de
+  // PDF issus de LaTeX, de vieux pilotes d'impression et de générateurs métier n'ont pas d'autre table. Le nom se traduit en lettre par la liste
+  // des noms d'Adobe (l'essentiel : lettres, chiffres, ponctuation, accents du latin, ligatures) ou par la forme « uniXXXX ».
+  const POL_NOMS_PONCTUATION = {
+    space: ' ', exclam: '!', quotedbl: '"', numbersign: '#', dollar: '$', percent: '%', ampersand: '&', quotesingle: '\'', parenleft: '(', parenright: ')',
+    asterisk: '*', plus: '+', comma: ',', hyphen: '-', minus: '\u2212', period: '.', slash: '/', colon: ':', semicolon: ';', less: '<', equal: '=', greater: '>',
+    question: '?', at: '@', bracketleft: '[', backslash: '\\', bracketright: ']', asciicircum: '^', underscore: '_', grave: '`', braceleft: '{', bar: '|',
+    braceright: '}', asciitilde: '~', quoteright: '\u2019', quoteleft: '\u2018', endash: '\u2013', emdash: '\u2014', bullet: '\u2022', ellipsis: '\u2026',
+    quotedblleft: '\u201C', quotedblright: '\u201D', quotesinglbase: '\u201A', quotedblbase: '\u201E', dagger: '\u2020', daggerdbl: '\u2021',
+    perthousand: '\u2030', guilsinglleft: '\u2039', guilsinglright: '\u203A', florin: '\u0192', trademark: '\u2122', Euro: '\u20AC', fi: '\uFB01', fl: '\uFB02',
+    ff: '\uFB00', ffi: '\uFB03', ffl: '\uFB04', circumflex: '\u02C6', tilde: '\u02DC', Scaron: '\u0160', scaron: '\u0161', Zcaron: '\u017D', zcaron: '\u017E',
+    OE: '\u0152', oe: '\u0153', Ydieresis: '\u0178', nbspace: '\u00A0', sfthyphen: '\u00AD', fraction: '\u2044', dotlessi: '\u0131', Lslash: '\u0141', lslash: '\u0142',
+  };
+  const POL_NOMS_LATIN1 = 'exclamdown,cent,sterling,currency,yen,brokenbar,section,dieresis,copyright,ordfeminine,guillemotleft,logicalnot,sfthyphen,registered,macron,degree,plusminus,twosuperior,threesuperior,acute,mu,paragraph,periodcentered,cedilla,onesuperior,ordmasculine,guillemotright,onequarter,onehalf,threequarters,questiondown,Agrave,Aacute,Acircumflex,Atilde,Adieresis,Aring,AE,Ccedilla,Egrave,Eacute,Ecircumflex,Edieresis,Igrave,Iacute,Icircumflex,Idieresis,Eth,Ntilde,Ograve,Oacute,Ocircumflex,Otilde,Odieresis,multiply,Oslash,Ugrave,Uacute,Ucircumflex,Udieresis,Yacute,Thorn,germandbls,agrave,aacute,acircumflex,atilde,adieresis,aring,ae,ccedilla,egrave,eacute,ecircumflex,edieresis,igrave,iacute,icircumflex,idieresis,eth,ntilde,ograve,oacute,ocircumflex,otilde,odieresis,divide,oslash,ugrave,uacute,ucircumflex,udieresis,yacute,thorn,ydieresis'.split(',');
+  const POL_NOMS_CHIFFRES = 'zero,one,two,three,four,five,six,seven,eight,nine'.split(',');
+  function polNomGlyphe(nom) {
+    let n = String(nom || '').replace(/^\//, '');
+    n = n.split('.')[0];
+    if (!n) return '';
+    if (n.length === 1 && /[A-Za-z]/.test(n)) return n;
+    const i = POL_NOMS_CHIFFRES.indexOf(n);
+    if (i >= 0) return String(i);
+    if (Object.prototype.hasOwnProperty.call(POL_NOMS_PONCTUATION, n)) return POL_NOMS_PONCTUATION[n];
+    const l = POL_NOMS_LATIN1.indexOf(n);
+    if (l >= 0) return String.fromCharCode(0xA1 + l);
+    let m = /^uni([0-9A-Fa-f]{4})$/.exec(n) || /^u([0-9A-Fa-f]{4,6})$/.exec(n);
+    if (m) { try { return String.fromCodePoint(parseInt(m[1], 16)); } catch (e) { return ''; } }
+    return '';
+  }
+  // Les codes que /Differences réaffecte : Map code -> lettre (les noms qu'on ne sait pas traduire sont laissés de côté).
+  function polLireDifferences(enc) {
+    const { PDFName, PDFArray } = PDFLib;
+    const sortie = new Map();
+    try {
+      const arr = enc && typeof enc.lookup === 'function' ? enc.lookup(PDFName.of('Differences'), PDFArray) : null;
+      if (!arr) return sortie;
+      let code = 0;
+      for (let i = 0; i < arr.size(); i++) {
+        const v = arr.lookup(i);
+        if (v && typeof v.asNumber === 'function') { code = v.asNumber(); continue; }
+        const ch = polNomGlyphe(polNomPdf(v));
+        if (ch) sortie.set(code, ch);
+        code++;
+      }
+    } catch (e) { signaler('Encodage de la police', e, 'info'); }
+    return sortie;
+  }
+
   function polLargeurs(fd, df) {
     const { PDFName, PDFArray } = PDFLib;
     const w = new Map();
@@ -273,7 +321,7 @@
       } catch (e) { signaler('Largeur manquante d\'une police', e); }
       try {
         const premier = nb(fd.lookup(PDFName.of('FirstChar')));
-        const arr = fd.lookup(PDFName.of('Widths'), PDFArray);
+        const arr = fd.lookupMaybe(PDFName.of('Widths'), PDFArray);
         if (arr && premier != null) {
           for (let i = 0; i < arr.size(); i++) { const v = nb(arr.lookup(i)); if (v != null) w.set(premier + i, v); }
         }
@@ -309,8 +357,20 @@
     if (!codes && !composite) {
       const enc = fd.get(PDFName.of('Encoding'));
       const encNom = polNomPdf(enc);
-      const differences = enc && typeof enc.lookup === 'function';
-      if (!differences && (encNom === 'WinAnsiEncoding' || (!enc && /^(TrueType|Type1|MMType1)$/.test(sous)))) codes = polWinAnsi();
+      const dict = enc && typeof enc.lookup === 'function';
+      if (!dict && (encNom === 'WinAnsiEncoding' || (!enc && /^(TrueType|Type1|MMType1)$/.test(sous)))) codes = polWinAnsi();
+      else if (dict) {
+        // Un encodage qui réaffecte des codes (/Differences) : la table de base (WinAnsi, à défaut de mieux), puis les codes réaffectés par-dessus.
+        const base = polNomPdf(enc.lookup(PDFName.of('BaseEncoding')));
+        const diff = polLireDifferences(enc);
+        if (diff.size && (!base || base === 'WinAnsiEncoding')) {
+          codes = new Map(polWinAnsi());
+          diff.forEach((ch, code) => {
+            codes.forEach((c, k) => { if (c === code) codes.delete(k); });
+            codes.set(ch, code);
+          });
+        }
+      }
     }
     if (!codes) return null;
     const lg = polLargeurs(fd, df);

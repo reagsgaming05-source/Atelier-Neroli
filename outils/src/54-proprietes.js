@@ -55,7 +55,7 @@
     const { PDFName, PDFDict, PDFNumber } = PDFLib;
     const doc = await loadLib(src);
     const cat = doc.catalog;
-    const out = { signatures: 0, certifie: false, pdfa: '', balise: false, pdfua: false, xfa: false, creation: 0 };
+    const out = { signatures: 0, certifie: false, pdfa: '', balise: false, pdfua: false, xfa: false, creation: 0, sansApparence: 0 };
     // La date de création du document : un fichier reconstruit la garde, pour qu'une archive sache de quand date le document et non de quand date la copie.
     try { const d = doc.getCreationDate(); if (d && isFinite(d.getTime())) out.creation = d.getTime(); } catch (e) { signaler('Date de création', e, 'info'); }
     // Signatures : le champ porte une valeur /Sig, ou le formulaire se déclare signé.
@@ -76,6 +76,21 @@
     const conf = /pdfaid:conformance(?:>|\s*=\s*["'])\s*([A-Za-z])/.exec(xmp);
     if (part) out.pdfa = part[1] + (conf ? conf[1].toUpperCase() : 'B');
     out.pdfua = /pdfuaid:part/.test(xmp);
+    // Des annotations sans flux d'apparence que ce logiciel ne sait pas dessiner (polygone, tampon, caret, multimédia…) : le fichier les garde, l'écran
+    // ne les montre pas. Qui reçoit un plan annoté par un bureau technique croirait que l'annotation a disparu.
+    try {
+      const MUETTES = ['/Polygon', '/PolyLine', '/Stamp', '/Caret', '/Sound', '/Movie', '/Screen', '/3D', '/RichMedia', '/Redact', '/Watermark', '/PrinterMark', '/TrapNet'];
+      let n = 0;
+      doc.getPages().forEach(pg => {
+        const annots = pg.node.lookup(PDFName.of('Annots'));
+        if (!annots || typeof annots.size !== 'function') return;
+        for (let i = 0; i < annots.size(); i++) {
+          const a = annots.lookup(i);
+          if (a instanceof PDFDict && MUETTES.indexOf(nomPdf(a, 'Subtype')) >= 0 && !a.has(PDFName.of('AP'))) n++;
+        }
+      });
+      out.sansApparence = n;
+    } catch (e) { signaler('Annotations sans apparence', e, 'info'); }
     // Balisage : une structure, déclarée marquée.
     const marque = doc.context.lookup(cat.get(PDFName.of('MarkInfo')));
     out.balise = cat.has(PDFName.of('StructTreeRoot')) && marque instanceof PDFDict && !!(marque.get(PDFName.of('Marked')) && String(marque.get(PDFName.of('Marked'))) === 'true');
@@ -93,6 +108,7 @@
     if (p.xfa) dits.push('« ' + src.name + ' » est un formulaire XFA, un format que ce logiciel ne sait pas remplir ni modifier. Ouvrez-le dans Adobe Reader pour le remplir ; l\'enregistrer ici peut lui faire perdre son formulaire.');
     if (p.pdfa) dits.push('« ' + src.name + ' » déclare le format d\'archivage PDF/A-' + p.pdfa.toLowerCase() + '. Un filigrane, une numérotation, des annotations, la reconnaissance de texte ou un mot de passe lui feront perdre cette conformité : vous serez prévenu avant l\'enregistrement.');
     if (p.balise) dits.push('« ' + src.name + ' » est balisé pour l\'accessibilité (lecteurs d\'écran). Supprimer, déplacer ou extraire des pages détruit ce balisage.');
+    if (p.sansApparence) dits.push('« ' + src.name + ' » porte ' + plural(p.sansApparence, 'annotation', 'annotations') + ' (polygone, tampon, signe de correction…) sans apparence enregistrée : ce logiciel ne sait pas les dessiner. Elles restent dans le fichier à l\'enregistrement, mais n\'apparaissent pas à l\'écran ; Acrobat Reader les montre.');
     dits.forEach(t => { signaler('Document', t, 'info'); });
     if (dits.length) toast(dits[0] + (dits.length > 1 ? ' (' + (dits.length - 1) + ' autre avis dans le journal)' : ''), 'warn');
   }

@@ -606,7 +606,11 @@
         const vers = new Map();
         const tu = polFlux(fd.lookup(PDFName.of('ToUnicode')));
         if (tu) polLireToUnicode(tu).vers.forEach((code, ch) => { if (!vers.has(code)) vers.set(code, ch); });
-        if (!vers.size && !composite) polWinAnsi().forEach((code, ch) => { if (!vers.has(code)) vers.set(code, ch); });
+        if (!vers.size && !composite) {
+          polWinAnsi().forEach((code, ch) => { if (!vers.has(code)) vers.set(code, ch); });
+          // Les codes que /Differences réaffecte l'emportent sur la table de base.
+          try { const enc = fd.lookup(PDFName.of('Encoding')); if (enc instanceof PDFDict) polLireDifferences(enc).forEach((ch, code) => { vers.set(code, ch); }); } catch (e) { signaler('Encodage de la police', e, 'info'); }
+        }
         let w = lg.w, defaut = lg.defaut;
         if (!w.size && !composite) {
           // Les 14 polices standard n'embarquent pas de table de largeurs :
@@ -780,7 +784,7 @@
 
     // Quel affichage du flux porte ce morceau ?
     const u = toUser(an.dx, an.dy, g);
-    const sh = shows.find(z => Math.abs(z.y - u.y) < 0.8 && u.x >= z.x - 0.8 && u.x <= z.x + z.large + 0.8);
+    let sh = shows.find(z => Math.abs(z.y - u.y) < 0.8 && u.x >= z.x - 0.8 && u.x <= z.x + z.large + 0.8);
     if (!sh) return fxNon('aucun affichage en ' + u.x.toFixed(1) + ',' + u.y.toFixed(1));
     if (!sh.pol || !sh.crochets) return fxNon('affichage sans police');
     // L'espace ajoutée en fin de ligne pour lier deux lignes n'existe pas
@@ -790,8 +794,20 @@
       ancienBout = ancienBout.slice(0, -queue[0].length);
       nouveauBout = nouveauBout.slice(0, -queue[0].length);
     }
-    const k = sh.texte.indexOf(ancienBout);
-    if (k < 0) return fxNon('bout introuvable : ' + JSON.stringify(ancienBout) + ' dans ' + JSON.stringify(sh.texte));
+    let k = sh.texte.indexOf(ancienBout);
+    if (k < 0) {
+      // Une ligne en plusieurs polices (un montant en gras au milieu d'une phrase) tient en plusieurs affichages : le morceau de l'ancre
+      // les déborde. Ce qui change, lui, tient souvent dans un seul : on le cherche, seul, dans les affichages de la ligne — à condition
+      // qu'il n'y en ait qu'un, et qu'une seule fois.
+      const change = vieux.slice(P, finV);
+      const meme = z => Math.abs(z.y - u.y) < 0.8 && z.x >= u.x - 0.8 && z.pol && z.crochets;
+      const porteurs = change.trim() ? shows.filter(z => meme(z) && z.texte.indexOf(change) >= 0) : [];
+      if (porteurs.length === 1 && porteurs[0].texte.indexOf(change, porteurs[0].texte.indexOf(change) + 1) < 0) {
+        sh = porteurs[0];
+        ancienBout = change; nouveauBout = milieu;
+        k = sh.texte.indexOf(ancienBout);
+      } else return fxNon('bout introuvable : ' + JSON.stringify(ancienBout) + ' dans ' + JSON.stringify(sh.texte));
+    }
     if (sh.texte.indexOf(ancienBout, k + 1) >= 0) return fxNon('bout ambigu');
     const avant = sh.texte.slice(0, k), apres = sh.texte.slice(k + ancienBout.length);
     const texteNeuf = avant + nouveauBout + apres;
@@ -871,6 +887,8 @@
   // bouge pas, et plus rien n'est à retrouver par copier-coller.
   function fxEffacerTous(annots, shows, g, exclus, parShowDonne) {
     const parShow = parShowDonne || new Map();
+    // Les blocs dont un morceau n'a pas pu être retrouvé dans le flux : leur texte d'origine reste, lisible, sous le recouvrement.
+    parShow.echecs = parShow.echecs || 0;
     annots.forEach(a => {
       const o = a.origine;
       if (!o || !o.ancres.length) return;
@@ -880,15 +898,44 @@
         if (!bout) continue;
         const u = toUser(an.dx, an.dy, g);
         const sh = shows.find(z => Math.abs(z.y - u.y) < 0.8 && u.x >= z.x - 0.8 && u.x <= z.x + z.large + 0.8);
-        if (!sh || !sh.pol || !sh.crochets || exclus.has(sh)) return;
+        if (!sh || !sh.pol || !sh.crochets || exclus.has(sh)) { parShow.echecs++; return; }
         const k = sh.texte.indexOf(bout);
-        if (k < 0 || sh.texte.indexOf(bout, k + 1) >= 0) return;
+        if (k < 0 || sh.texte.indexOf(bout, k + 1) >= 0) { parShow.echecs++; return; }
         plages.push([sh, k, k + bout.length]);
       }
       // Tout le bloc ou rien : un effacement à moitié serait pire.
       plages.forEach(([sh, d, f]) => { if (!parShow.has(sh)) parShow.set(sh, []); parShow.get(sh).push([d, f]); });
     });
     return parShow;
+  }
+
+  // Le bilan, avant d'écrire : les corrections de texte de cette page tiennent-elles dans le flux ? Une correction qui ne s'y réécrit pas se pose
+  // par-dessus un recouvrement, et son texte d'origine doit alors être effacé du flux — tout ou rien. Si un seul morceau ne peut pas l'être,
+  // l'ancien texte resterait lisible sous la correction (copier-coller, recherche, lecteur d'écran) : la page se convertira en image.
+  function fxCorrectionsBilan(doc, page, p, cache) {
+    const cibles = (p.ann || []).filter(a => a.type === 'edit' && !a.efface && a.origine);
+    if (!cibles.length) return { propre: true };
+    let flux = null, shows = null;
+    try {
+      flux = fxFluxPage(doc, page);
+      if (!flux) return { propre: false };
+      shows = fxAffichages(flux.octets, nom => fxPolice(doc, page, nom, cache));
+    } catch (e) { signaler('Lecture du flux', e); return { propre: false }; }
+    const g = pageGeom(p);
+    const remplacements = [], recouvertes = [];
+    cibles.forEach(a => {
+      let r = null;
+      try { r = fxEdit(a, shows, g); } catch (e) { signaler('Retouche dans le flux', e); }
+      if (r) remplacements.push.apply(remplacements, r); else recouvertes.push(a);
+    });
+    if (!recouvertes.length) return { propre: true };
+    const pris = new Set();
+    shows.forEach(sh => { if (sh.crochets && remplacements.some(r => r.a === sh.crochets[0])) pris.add(sh); });
+    const parShow = new Map();
+    try { fxEffacerTous(recouvertes, shows, g, pris, parShow); } catch (e) { signaler('Effacement dans le flux', e); return { propre: false }; }
+    if (parShow.echecs) return { propre: false };
+    for (const [sh, plages] of parShow) { if ((sh.Tfs * sh.Th) && fxRecrire(sh, plages) == null) return { propre: false }; }
+    return { propre: true };
   }
 
   function fxRetoucher(doc, page, p, cache, renommages, specs) {

@@ -884,6 +884,8 @@
   .dlg-aide li { margin-bottom: var(--e-1); }
   .dlg-aide .pied-aide { margin: var(--e-2) 0 0; font-size: var(--t-2); color: var(--texte-3); }
   .dlg-body { padding: var(--e-5); overflow-y: auto; display: flex; flex-direction: column; gap: var(--e-4); }
+  /* Une liste (résultats d'une recherche, fichiers d'un lot) ne se laisse pas écraser à zéro par une boîte plus haute que la fenêtre : c'est la boîte qui défile. */
+  .dlg-body > .list { flex: none; }
   .dlg-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); padding: var(--e-4) var(--e-5); border-top: 1px solid var(--trait-fin); flex: none; background: var(--encre); }
   .dlg-foot .grow { flex: 1; }
   .dlg-foot .tb-btn { height: var(--h-3); border-color: var(--trait); background: var(--relief); }

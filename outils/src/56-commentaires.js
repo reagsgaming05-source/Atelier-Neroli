@@ -299,7 +299,9 @@
     for (const p of pages) {
       // Archivage : les pages dont les polices ne sont pas incorporées (accord donné) sont converties en image.
       if (rasterAll || (opts.rasterIds && opts.rasterIds.has(p.id))) { rasterSet.add(p.id); continue; }
-      if (!specs.length && !p.ann.some(a => a.type === 'redact' || (a.type === 'edit' && a.efface))) continue;
+      // Une correction de texte qui ne se réécrit pas dans le flux se pose par-dessus un recouvrement : l'ancien texte doit s'effacer du flux, en entier.
+      const corrige = p.ann.some(a => a.type === 'edit' && !a.efface && a.origine);
+      if (!specs.length && !corrige && !p.ann.some(a => a.type === 'redact' || (a.type === 'edit' && a.efface))) continue;
       let bilan = { propre: false, images: [] };
       try {
         const src = srcById(p.src);
@@ -307,6 +309,10 @@
           if (!docsVerif.has(src.id)) docsVerif.set(src.id, await loadLib(src));
           const dv = docsVerif.get(src.id);
           bilan = fxCaviardageBilan(dv, dv.getPages()[p.index], p, policesVerif, specs);
+          if (bilan.propre && corrige && !fxCorrectionsBilan(dv, dv.getPages()[p.index], p, policesVerif).propre) {
+            signaler('Export', 'Une correction de texte n\'a pas pu s\'écrire dans la page et son texte d\'origine n\'a pas pu en être effacé : la page est convertie en image, plutôt que de laisser l\'ancien texte caché sous la correction.', 'warn');
+            bilan = { propre: false, images: [] };
+          }
         }
       } catch (e) { signaler('Caviardage', e); bilan = { propre: false, images: [] }; }
       // Les images concernées sont refaites tout de suite : si cela échoue,
