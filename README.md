@@ -197,8 +197,8 @@ texte* : elle tourne sur le poste, rien n'est envoyé.
 2. Décompressez le zip où vous voulez (Bureau, Documents, clé USB…).
 3. Double-cliquez sur **`AktumPDF.exe`** : l'application demande qui vous êtes, puis s'ouvre.
 
-Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans le registre ni dans
-*Program Files*, aucun navigateur n'est sollicité, aucune donnée ne quitte le PC. Les réglages
+Tout est inclus dans le dossier : rien à installer, rien n'est écrit dans *Program Files* ni dans le registre (sauf si vous le demandez :
+Préférences › « Ouvrir les PDF avec Aktum PDF », pour votre compte seul, retirable d'un clic), aucun navigateur n'est sollicité, aucune donnée ne quitte le PC. Les réglages
 mémorisés (vue, zoom, thème, taille des vignettes) vont dans le sous-dossier `data/` à côté de
 l'exécutable.
 
