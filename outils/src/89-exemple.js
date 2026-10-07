@@ -180,7 +180,7 @@
     p.drawLine({ start: { x: MARGE, y }, end: { x: MARGE + 200, y }, thickness: 0.8, color: rgb(0.3, 0.3, 0.3) });
     p.drawText(t('La secrétaire'), { x: MARGE + 260, y: y + 40, size: 11, font: bold, color: encre });
     p.drawLine({ start: { x: MARGE + 260, y }, end: { x: MARGE + 460, y }, thickness: 0.8, color: rgb(0.3, 0.3, 0.3) });
-    paragraphe(p, 'Essayez : « Signer » (menu Outils) pour tracer une signature, ou « Tampon » pour poser « Reçu le » avec la date du jour.', MARGE, 70, L, { size: 9.5, color: gris, interligne: 13 });
+    paragraphe(p, 'Essayez : « Signature manuscrite » (menu Outils) pour tracer une signature, ou « Tampon » pour poser « Reçu le » avec la date du jour.', MARGE, 70, L, { size: 9.5, color: gris, interligne: 13 });
 
     return doc.save();
   }

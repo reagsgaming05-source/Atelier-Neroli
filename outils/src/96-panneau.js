@@ -28,7 +28,7 @@
       { id: 'modifier', title: 'Modifier', items: [
         // La signature était mentionnée en sous-titre de l'éditeur. Pour un syndic qui doit signer un procès-verbal,
         // c'était introuvable. Elle s'ouvre sur la page qu'on lit, pas sur la première du document.
-        { id: 'signer', name: 'Signer', sub: 'Votre signature en image (pas une signature électronique)', icon: IC.draw, need: 'pages', mots: 'signature parapher manuscrite dessiner', run: () => {
+        { id: 'signer', name: 'Signature manuscrite', sub: 'Votre signature en image (pas une signature électronique)', icon: IC.draw, need: 'pages', mots: 'signature parapher manuscrite dessiner', run: () => {
           openEditor(pageCouranteId());
           edSignature();
         } },

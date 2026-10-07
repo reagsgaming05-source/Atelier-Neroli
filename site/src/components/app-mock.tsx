@@ -19,7 +19,7 @@ export const scenarios: { key: MockScenario; label: string; file: string; chip: 
 const tools: { label: string; icon: typeof FilePen; key: MockScenario | "annotate" | "sign" | "merge" | "compare" }[] = [
   { label: "Corriger", icon: FilePen, key: "edit" },
   { label: "Annoter", icon: Highlighter, key: "annotate" },
-  { label: "Signer", icon: Signature, key: "sign" },
+  { label: "Signature manuscrite", icon: Signature, key: "sign" },
   { label: "Caviarder", icon: EyeOff, key: "redact" },
   { label: "Fusionner", icon: Merge, key: "merge" },
   { label: "Dossier", icon: BookOpen, key: "dossier" },

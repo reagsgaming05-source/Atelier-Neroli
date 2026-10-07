@@ -117,7 +117,7 @@
       ['lien', IC.lien, 'Lien vers une adresse ou une page'],
       ['|'],
       ['tampon', IC.stamp, 'Tampon : Reçu le, Payé, Copie conforme, Visé…'],
-      ['sign', IC.pencil, 'Signer'],
+      ['sign', IC.pencil, 'Signature manuscrite'],
       ['image', IC.image, 'Insérer une image'],
     ];
     TOOLS.forEach(t => {

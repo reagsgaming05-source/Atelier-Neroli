@@ -54,7 +54,7 @@
  {"id": "ed-redact", "touches": ["C"], "libelle": "Caviarder", "groupe": "Éditeur de page", "portee": "editeur", "uneLettre": true},
  {"id": "ed-champ", "touches": ["F"], "libelle": "Ajouter un champ à remplir", "groupe": "Éditeur de page", "portee": "editeur", "uneLettre": true},
  {"id": "ed-tampon", "touches": ["P"], "libelle": "Tampon", "groupe": "Éditeur de page", "portee": "editeur", "uneLettre": true},
- {"id": "ed-sign", "touches": ["S"], "libelle": "Signer", "groupe": "Éditeur de page", "portee": "editeur", "uneLettre": true},
+ {"id": "ed-sign", "touches": ["S"], "libelle": "Signature manuscrite", "groupe": "Éditeur de page", "portee": "editeur", "uneLettre": true},
  {"id": "ed-image", "touches": ["I"], "libelle": "Insérer une image", "groupe": "Éditeur de page", "portee": "editeur", "uneLettre": true},
  {"id": "ed-precedente", "touches": ["Ctrl+ArrowLeft"], "libelle": "Page précédente de l'éditeur", "groupe": "Éditeur de page", "portee": "editeur"},
  {"id": "ed-suivante", "touches": ["Ctrl+ArrowRight"], "libelle": "Page suivante de l'éditeur", "groupe": "Éditeur de page", "portee": "editeur"}

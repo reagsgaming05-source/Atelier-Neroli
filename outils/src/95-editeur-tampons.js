@@ -152,8 +152,9 @@
     remplirMemo();
     api = dialog({
       aide: 'signer',
-      title: 'Signer', icon: IC.pencil, wide: true,
+      title: 'Signature manuscrite', icon: IC.pencil, wide: true,
       build: b => {
+        b.append(note('Une image de votre signature, posée sur la page comme à l\'encre. Ce n\'est pas une signature électronique : elle ne prouve pas que le document n\'a pas changé (pour cela : « Signer avec un certificat »).'));
         if (!memo.hidden) b.append(groupOf('Vos signatures mémorisées — cliquez pour insérer', [memo]));
         b.append(note(memo.hidden ? 'Tracez votre signature avec la souris, le doigt ou le stylet.' : 'Ou tracez-en une nouvelle :'));
         b.append(wrap);

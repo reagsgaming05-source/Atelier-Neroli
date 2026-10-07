@@ -123,7 +123,7 @@
   },
   {
    "id": "signer",
-   "nom": "Signer",
+   "nom": "Signature manuscrite",
    "groupe": "modifier",
    "quoi": "Pose votre signature manuscrite sur une page.",
    "etapes": [

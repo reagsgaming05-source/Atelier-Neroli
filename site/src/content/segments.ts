@@ -73,7 +73,7 @@ export const segments: Segment[] = [
         title: "Le procès-verbal signé",
         text:
           "Le PV de la séance de Municipalité se signe par le syndic et le secrétaire. La signature manuscrite se pose dans le document, avec sa date, sans imprimer puis scanner. Ce n'est pas une signature qualifiée au sens de la SCSE : pour un acte qui l'exige, un cachet électronique réglementé reste nécessaire.",
-        tool: "Signer",
+        tool: "Signature manuscrite",
       },
       {
         title: "Les archives du contrôle des habitants",
