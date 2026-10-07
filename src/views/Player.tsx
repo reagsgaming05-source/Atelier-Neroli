@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../components/Icon';
+import { Ambience, AMBIENCE_LEVEL, createAudioContext, sceneMix } from '../lib/ambience';
 import { SceneArt } from '../components/SceneArt';
 import { PROPHET_STORIES } from '../data/prophets';
 import { getSeries } from '../data/series';
@@ -22,6 +23,14 @@ function storyInfo(storyId: string) {
   return null;
 }
 
+function startAmbience(): Ambience | null {
+  const ctx = createAudioContext();
+  if (!ctx) return null;
+  const amb = new Ambience(ctx);
+  amb.start();
+  return amb;
+}
+
 export function Player({ storyId, episode }: { storyId: string; episode: number }) {
   const series = getSeries(storyId);
   const info = storyInfo(storyId);
@@ -40,6 +49,9 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   // The episode's recorded narration: undefined while loading, null if it has none.
   const [narration, setNarration] = useState<EpisodeNarration | null | undefined>(undefined);
   const narrator = useRef<HTMLAudioElement | null>(null);
+  // Nature sounds under the voice, created from the first tap.
+  const ambience = useRef<Ambience | null>(null);
+  const wantAmbience = prefs.ambience;
   // Where the narration was paused, to resume mid-sentence.
   const resume = useRef<{ index: number; phase: Phase; at: number } | null>(null);
 
@@ -149,6 +161,33 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
     };
   }, [started, playing, ended, index, phase, verses, narration, prefs.voice, prefs.recitation, prefs.rate]);
 
+  // Nature sounds follow the scene: they fade with it, and fall silent when paused.
+  useEffect(() => {
+    if (!started || !scene) return;
+    const active = playing && !ended && wantAmbience;
+    if (active) ambience.current ??= startAmbience();
+    const amb = ambience.current;
+    if (!amb) return;
+    const ctx = amb.ctx as AudioContext;
+    if (!active) {
+      amb.setLevel(0, 0.8);
+      const t = window.setTimeout(() => ctx.suspend().catch(() => {}), 1000);
+      return () => clearTimeout(t);
+    }
+    ctx.resume().catch(() => {});
+    amb.setMix(sceneMix(scene), 3);
+    // Quieter still under the recitation, which is the Quran's own voice.
+    amb.setLevel(phase === 'recite' ? AMBIENCE_LEVEL * 0.35 : AMBIENCE_LEVEL, 1.2);
+  }, [started, playing, ended, index, phase, wantAmbience]);
+
+  useEffect(
+    () => () => {
+      ambience.current?.dispose(0.4);
+      ambience.current = null;
+    },
+    [],
+  );
+
   // Keep the screen awake while a story plays.
   useEffect(() => {
     if (!playing) return;
@@ -209,6 +248,8 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
       a.pause();
     }
     if (prefs.voice && !narration && speechSupported()) speechSynthesis.speak(new SpeechSynthesisUtterance(' '));
+    // The sounds must also be started from this tap.
+    if (wantAmbience) ambience.current ??= startAmbience();
     setStarted(true);
     setPlaying(true);
   };
@@ -217,7 +258,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const verse = scene.verse;
   // The verse stays on screen for the whole scene, so it can be read when paused.
   const showVerse = !!verse;
-  const toggle = (key: 'voice' | 'recitation') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
+  const toggle = (key: 'voice' | 'recitation' | 'ambience') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
 
   return (
     <div class="player-screen" role="dialog" aria-label={`${info.title}, ${ep.title}`}>
@@ -323,10 +364,18 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
             </div>
           </div>
         )}
-        <div class="player-controls">
+        <div class="player-toggles">
           <button class="toggle" aria-pressed={prefs.voice} onClick={() => toggle('voice')}>
             Voix
           </button>
+          <button class="toggle" aria-pressed={wantAmbience} onClick={() => toggle('ambience')}>
+            Ambiance
+          </button>
+          <button class="toggle" aria-pressed={prefs.recitation} onClick={() => toggle('recitation')}>
+            Récitation
+          </button>
+        </div>
+        <div class="player-controls">
           <button class="icon-btn" aria-label="Scène précédente" onClick={prev} disabled={index === 0}>
             <Icon name="back" />
           </button>
@@ -335,9 +384,6 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
           </button>
           <button class="icon-btn" aria-label="Scène suivante" onClick={next}>
             <Icon name="chevron" />
-          </button>
-          <button class="toggle" aria-pressed={prefs.recitation} onClick={() => toggle('recitation')}>
-            Récitation
           </button>
         </div>
       </div>

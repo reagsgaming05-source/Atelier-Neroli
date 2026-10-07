@@ -1915,6 +1915,14 @@ a.goal-title::after {
   place-items: center;
 }
 
+.player-toggles {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.player-toggles .toggle,
 .player-controls .toggle {
   min-height: 34px;
   padding: 0 12px;
@@ -1925,6 +1933,7 @@ a.goal-title::after {
   font-size: 0.8rem;
 }
 
+.player-toggles .toggle[aria-pressed='false'],
 .player-controls .toggle[aria-pressed='false'] {
   opacity: 0.5;
   text-decoration: line-through;

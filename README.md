@@ -59,6 +59,8 @@ python3 scripts/narration/build.py --engine kokoro \
   --model kokoro-v1.0.onnx --voices voices-v1.0.bin --voice ff_siwis
 ```
 
+Sous la voix, des **sons de nature** (vent, mer, eau, pluie, orage, feu, grillons, oiseaux, grotte) sont synthétisés en direct par le navigateur (`src/lib/ambience.ts`, Web Audio) : rien à télécharger, aucun instrument de musique. Chaque scène a les siens selon son ciel, son lieu et ses objets ; un bouton « Ambiance » permet de les couper.
+
 Les noms arabes sont réécrits pour la voix seulement (`LEXICON` dans `export.mjs`), afin d'être bien prononcés en français.
 
 ## Mise en ligne gratuite (GitHub Pages)
