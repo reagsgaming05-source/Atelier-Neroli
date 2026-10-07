@@ -48,6 +48,10 @@ export default function MentionsLegalesPage() {
       <p>
         Le logiciel {site.name}, son interface, ses textes et ses visuels sont protégés par le droit d&rsquo;auteur. Le code source est publié pour que chacun puisse le relire ; cette publication ne confère aucun droit de copie, de modification, de redistribution ni d&rsquo;exploitation commerciale. L&rsquo;abonnement confère un droit d&rsquo;utilisation, non un transfert de propriété. Les composants libres que le logiciel embarque restent sous leurs licences, reproduites dans le fichier MENTIONS-TIERCES.txt livré avec chaque copie.
       </p>
+      <h2>Composants et polices de tiers</h2>
+      <p>
+        Le logiciel s&rsquo;appuie sur des composants libres (affichage et modification des PDF, reconnaissance de texte, polices). Leurs licences et leurs mentions de droit d&rsquo;auteur sont dans le fichier <code>MENTIONS-TIERCES.txt</code> livré avec chaque archive ; la nomenclature de chaque version (composants, versions, licences, empreintes) est jointe à sa publication. Les polices de ce site, Geist et Instrument Serif, sont sous licence SIL Open Font License 1.1 : <a href="/licences-polices.txt">texte de la licence et mentions de droit d&rsquo;auteur</a>.
+      </p>
       <h2>Marques de tiers</h2>
       <p>Adobe et Acrobat sont des marques d&rsquo;Adobe Inc. Microsoft Word, Excel et PowerPoint sont des marques de Microsoft Corporation. Elles sont citées uniquement à des fins de compatibilité et de comparaison.</p>
       <h2>Responsabilité</h2>

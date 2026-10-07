@@ -1,0 +1,36 @@
+{
+  "_lisez-moi": "Les avis de sécurité connus et ACCEPTÉS après relecture, pour que `node editeur/audit-dependances.js` ne bloque que sur ce qui est nouveau. Une exception dit pourquoi, quand elle a été relue, et expire au plus tard six mois après : à l'échéance l'audit se remet à bloquer, et quelqu'un la relit ou la retire.",
+  "avis": [
+    {
+      "manifeste": "libs-manifeste",
+      "paquet": "pdfjs-dist",
+      "id": "GHSA-wgrm-67xf-hhpq",
+      "raison": "Exécution de code par une police d'un PDF malveillant (chemin « eval » de pdf.js). Fermé deux fois dans le produit : les trois appels à getDocument passent isEvalSupported:false, et la politique de sécurité de la page n'accorde pas 'unsafe-eval'. Seul un changement de version majeure (4.x ou plus) corrige l'avis ; la migration est inscrite au suivi, hors de ce lot.",
+      "relu": "2026-10-07",
+      "expire": "2027-03-31"
+    },
+    {
+      "manifeste": "libs-manifeste",
+      "paquet": "tar",
+      "raison": "Douze avis sur l'extraction d'archives tar. Ce paquet n'arrive que par canvas, dépendance OPTIONNELLE de pdfjs-dist pour Node ; il n'est jamais installé ni exécuté : libs/ vient de « npm pack » (une archive dépaquetée, sans installation de dépendances) et build.js n'embarque que build/pdf.min.js et le worker. Rien de tar n'est dans la page, ni dans l'application.",
+      "relu": "2026-10-07",
+      "expire": "2027-03-31"
+    },
+    {
+      "manifeste": "libs-manifeste",
+      "paquet": "node-forge",
+      "id": "GHSA-86w9-cpqp-85rv",
+      "raison": "Vérification d'une signature RSA PKCS#1 v1.5 trop tolérante dans node-forge, sans correctif publié (jusqu'à 1.4.0). Le produit n'appelle jamais la vérification de forge : il ne s'en sert que pour lire un PKCS#12 et fabriquer sa propre signature (src/62-certificat.js) ; les signatures REÇUES sont vérifiées par WebCrypto du navigateur (src/59-signatures.js). test/dependances.test.js garde ce périmètre.",
+      "relu": "2026-10-07",
+      "expire": "2027-03-31"
+    },
+    {
+      "manifeste": "desktop (construction)",
+      "paquet": "http-cache-semantics",
+      "id": "GHSA-ch52-4w7c-c8xp",
+      "raison": "Expression régulière lente (déni de service) dans un outil de construction : electron-builder › @electron/get › got télécharge le binaire Electron sur le poste de construction. Rien de cela n'est dans l'application livrée (l'audit sans outils de construction est propre), et l'entrée est la réponse de github.com pour un fichier dont l'empreinte est vérifiée.",
+      "relu": "2026-10-07",
+      "expire": "2027-03-31"
+    }
+  ]
+}

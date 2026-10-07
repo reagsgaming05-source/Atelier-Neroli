@@ -38,6 +38,10 @@ env:
   # l'application ; la suite de tests n'y refait pas de nouvelle tentative (un test
   # instable qui passe au deuxième essai ne doit pas laisser partir une version stable).
   AKTUM_CANAL: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publier == 'stable')) && 'stable' || 'candidate' }}
+  # Les certificats de signature de code (Windows, Apple) ne sont remis aux étapes de signature que pour `main` et les étiquettes de version :
+  # une branche de travail se construit, se teste et se publie en candidate, mais ne touche à aucune identité de l'éditeur (elle n'est alors
+  # pas signée, et le dit). Le vrai verrou est un « environnement » GitHub à relecture obligatoire : voir outils/docs/guide-administration.html, §9.
+  AKTUM_IDENTITE_PERMISE: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'oui' || 'non' }}
 
 jobs:
   # De bout en bout, sur Linux : l'application entière pilotée dans Chromium,
@@ -48,15 +52,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: "22"
 
       - name: Dépendances
         working-directory: outils
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      # Les dépendances sont auditées (npm audit) contre editeur/avis-acceptes.json : un avis nouveau, ou une exception dont la
+      # relecture est échue, arrête une version STABLE ; une candidate le signale sans s'arrêter (on doit pouvoir l'essayer).
+      - name: Audit des dépendances (bloquant pour une version stable)
+        working-directory: outils
+        continue-on-error: ${{ env.AKTUM_CANAL != 'stable' }}
+        run: node editeur/audit-dependances.js
 
       - name: Bibliothèques de la page (pdf.js, pdf-lib, JSZip, depuis npm)
         working-directory: outils
@@ -68,11 +79,11 @@ jobs:
 
       - name: Dépendances de la suite
         working-directory: outils/test-e2e
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Navigateur de la suite (mis en cache d'une fois sur l'autre)
         id: navigateur
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('outils/test-e2e/package-lock.json') }}
@@ -136,7 +147,7 @@ jobs:
       # client : c'est ce qui était arrivé.
       - name: Dépendances de l'application fenêtrée (Electron, pour photographier le guide)
         working-directory: outils/desktop
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Mode d'emploi (captures de l'application, puis PDF)
         working-directory: outils/guide
@@ -147,7 +158,7 @@ jobs:
           xvfb-run -a node faire-le-guide.js "$GITHUB_WORKSPACE/Aktum-PDF-mode-d-emploi.pdf"
           test -s "$GITHUB_WORKSPACE/Aktum-PDF-mode-d-emploi.pdf"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mode-d-emploi
           path: Aktum-PDF-mode-d-emploi.pdf
@@ -179,7 +190,7 @@ jobs:
           node faire-reference-composants.js "$GITHUB_WORKSPACE/documents"
           test -s "$GITHUB_WORKSPACE/documents/Reference-des-composants.html"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: documents
           path: |
@@ -190,7 +201,7 @@ jobs:
 
       - name: Rapport (en cas d'échec)
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: rapport-e2e
           path: outils/test-e2e/playwright-report
@@ -204,14 +215,14 @@ jobs:
       run:
         working-directory: outils
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: "22"
 
       - name: Dépendances
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Bibliothèques de la page (pdf.js, pdf-lib, JSZip, depuis npm)
         run: npm run libs
@@ -224,7 +235,7 @@ jobs:
 
       - name: Dépendances de l'application fenêtrée
         working-directory: outils/desktop
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Empaqueter (Electron, dossier portable)
         working-directory: outils/desktop
@@ -243,12 +254,13 @@ jobs:
         id: signature-windows
         shell: pwsh
         env:
-          PFX: ${{ secrets.WIN_CERTIFICAT_PFX }}
-          MOT_DE_PASSE: ${{ secrets.WIN_CERTIFICAT_MOT_DE_PASSE }}
+          PFX: ${{ env.AKTUM_IDENTITE_PERMISE == 'oui' && secrets.WIN_CERTIFICAT_PFX || '' }}
+          MOT_DE_PASSE: ${{ env.AKTUM_IDENTITE_PERMISE == 'oui' && secrets.WIN_CERTIFICAT_MOT_DE_PASSE || '' }}
         run: |
           $ErrorActionPreference = 'Stop'
           if (-not $env:PFX) {
-            Write-Host "::warning::Aucun certificat de signature de code (WIN_CERTIFICAT_PFX) : l'exécutable n'est PAS signé. SmartScreen avertira, et AppLocker/WDAC en mode « code signé » le refusera."
+            if ($env:AKTUM_IDENTITE_PERMISE -ne 'oui') { Write-Host "::notice::Construction d'une branche de travail : la signature de code est réservée à main et aux étiquettes de version. L'exécutable n'est pas signé." }
+            else { Write-Host "::warning::Aucun certificat de signature de code (WIN_CERTIFICAT_PFX) : l'exécutable n'est PAS signé. SmartScreen avertira, et AppLocker/WDAC en mode « code signé » le refusera." }
             "signe=non" >> $env:GITHUB_OUTPUT
             exit 0
           }
@@ -266,12 +278,12 @@ jobs:
           "signe=oui" >> $env:GITHUB_OUTPUT
           Write-Host "Exécutable signé et vérifié."
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: mode-d-emploi
           path: ${{ github.workspace }}/guide
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: documents
           path: ${{ github.workspace }}/documents
@@ -412,8 +424,8 @@ jobs:
         working-directory: outils/desktop
         shell: pwsh
         env:
-          PFX: ${{ secrets.WIN_CERTIFICAT_PFX }}
-          MOT_DE_PASSE: ${{ secrets.WIN_CERTIFICAT_MOT_DE_PASSE }}
+          PFX: ${{ env.AKTUM_IDENTITE_PERMISE == 'oui' && secrets.WIN_CERTIFICAT_PFX || '' }}
+          MOT_DE_PASSE: ${{ env.AKTUM_IDENTITE_PERMISE == 'oui' && secrets.WIN_CERTIFICAT_MOT_DE_PASSE || '' }}
           SIGNE: ${{ steps.signature-windows.outputs.signe }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -582,7 +594,7 @@ jobs:
       # upload-artifact@v4 ciblent encore Node 20 : le runner les force sur
       # Node 24 et prévient à chaque exécution. Rien n'est cassé aujourd'hui ;
       # à passer au majeur suivant dès qu'il sort.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: AktumPDF-windows
           path: |
@@ -611,14 +623,14 @@ jobs:
       run:
         working-directory: outils
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: "22"
 
       - name: Dépendances
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Bibliothèques de la page (pdf.js, pdf-lib, JSZip, depuis npm)
         run: npm run libs
@@ -628,7 +640,7 @@ jobs:
 
       - name: Dépendances de l'application fenêtrée
         working-directory: outils/desktop
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       # Le certificat « Developer ID Application », exporté en .p12 puis encodé
       # en base64 dans les secrets du dépôt. Sans lui, la construction continue
@@ -637,8 +649,8 @@ jobs:
       - name: Certificat de signature (s'il est fourni)
         id: certificat
         env:
-          P12: ${{ secrets.MAC_CERTIFICAT_P12 }}
-          MOT_DE_PASSE: ${{ secrets.MAC_CERTIFICAT_MOT_DE_PASSE }}
+          P12: ${{ env.AKTUM_IDENTITE_PERMISE == 'oui' && secrets.MAC_CERTIFICAT_P12 || '' }}
+          MOT_DE_PASSE: ${{ env.AKTUM_IDENTITE_PERMISE == 'oui' && secrets.MAC_CERTIFICAT_MOT_DE_PASSE || '' }}
         run: |
           set -euo pipefail
           if [ -z "$P12" ]; then
@@ -648,7 +660,10 @@ jobs:
             # C'est ce qui a fait échouer la construction Mac.
             echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
             echo "signe=non" >> "$GITHUB_OUTPUT"
-            echo "::warning::Aucun certificat Apple : signature ad hoc. macOS demandera l'accord de chaque utilisateur."
+            if [ "$AKTUM_IDENTITE_PERMISE" != oui ]; then echo "::notice::Construction d'une branche de travail : la signature Apple est réservée à main et aux étiquettes de version (signature ad hoc)."
+            else
+              echo "::warning::Aucun certificat Apple : signature ad hoc. macOS demandera l'accord de chaque utilisateur."
+            fi
             exit 0
           fi
           # Le certificat est posé dans un fichier hors du dépôt : le base64
@@ -679,12 +694,12 @@ jobs:
         # l'étape ci-dessus, qui ne les pose que s'il y a de quoi signer.
         run: npm run dist:mac
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: mode-d-emploi
           path: ${{ github.workspace }}/guide
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: documents
           path: ${{ github.workspace }}/documents
@@ -799,9 +814,9 @@ jobs:
         if: steps.certificat.outputs.signe == 'oui'
         working-directory: outils/desktop
         env:
-          CLE_API: ${{ secrets.MAC_API_CLE_P8 }}
-          CLE_ID: ${{ secrets.MAC_API_CLE_ID }}
-          CLE_EMETTEUR: ${{ secrets.MAC_API_EMETTEUR }}
+          CLE_API: ${{ env.AKTUM_IDENTITE_PERMISE == 'oui' && secrets.MAC_API_CLE_P8 || '' }}
+          CLE_ID: ${{ env.AKTUM_IDENTITE_PERMISE == 'oui' && secrets.MAC_API_CLE_ID || '' }}
+          CLE_EMETTEUR: ${{ env.AKTUM_IDENTITE_PERMISE == 'oui' && secrets.MAC_API_EMETTEUR || '' }}
         run: |
           set -euo pipefail
           paquet=dist/AktumPDF/AktumPDF.app
@@ -930,7 +945,7 @@ jobs:
           critique=""; [ "${{ inputs.critique }}" = "true" ] && critique="--critique"
           node outils/editeur/signer-maj.js "$zip" --plateforme mac --version "$version" --canal "$canal" --commit "$commit" --date "$date" $critique
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: AktumPDF-mac
           path: |
@@ -961,9 +976,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: pose
 
@@ -982,6 +997,12 @@ jobs:
             echo "::warning::Aucune note pour la version $version dans outils/NOTES-DE-VERSION.md"
             echo "Pas de notes écrites pour cette version." > notes-version.md
           fi
+
+      # La nomenclature logicielle (CycloneDX) : ce que la version contient du travail d'autrui, avec la licence retenue et l'empreinte de chaque archive relue.
+      - name: Nomenclature logicielle (SBOM CycloneDX)
+        run: |
+          set -euo pipefail
+          node outils/editeur/sbom.js "sbom/AktumPDF-${{ steps.fiche.outputs.version }}.cdx.json"
 
       # Le zip pèse 120 Mo, et son téléversement échoue de temps en temps (« Error
       # saving asset »). On le pose nous-mêmes, en réessayant, et on ne déclare
@@ -1050,7 +1071,7 @@ jobs:
           } > notes-candidate.md
           [ "$signee" = oui ] || echo "::warning::Archives non signées (secret MAJ_CLE_PRIVEE absent) : candidate publiée sans .signature.json."
           preparer aktumpdf-windows-candidate "Aktum PDF $v — Windows (CANDIDATE, à essayer)" notes-candidate.md candidate
-          poser aktumpdf-windows-candidate pose/AktumPDF-windows/AktumPDF-windows.zip*
+          poser aktumpdf-windows-candidate pose/AktumPDF-windows/AktumPDF-windows.zip* sbom/*.json
           preparer aktumpdf-mac-candidate "Aktum PDF $v — Mac (CANDIDATE, à essayer)" notes-candidate.md candidate
           poser aktumpdf-mac-candidate pose/AktumPDF-mac/AktumPDF-mac.zip*
 
@@ -1082,7 +1103,7 @@ jobs:
             echo "Archives : \`AktumPDF-windows.zip\` et \`AktumPDF-mac.zip\`, chacune avec son \`.sha256\` et sa \`.signature.json\` — à poser ensemble. Construite depuis le commit ${GITHUB_SHA}."
           } > notes-stable.md
           preparer "$tag" "Aktum PDF $v" notes-stable.md stable
-          poser "$tag" pose/AktumPDF-windows/* pose/AktumPDF-mac/*
+          poser "$tag" pose/AktumPDF-windows/* pose/AktumPDF-mac/* sbom/*.json
           # Les liens que les postes connaissent déjà.
           preparer aktumpdf-windows-latest "Aktum PDF — Windows portable (version $v)" notes-stable.md stable
           poser aktumpdf-windows-latest pose/AktumPDF-windows/*

@@ -117,6 +117,7 @@
     archiver: '#6E7681', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', 'exp-word': '#2680EB', voix: '#8C5AE8', compress: '#E68619', flatten: '#2680EB',
     caviarder: '#D7373F', nettoyer: '#0D9F8F', 'caviardage-mode': '#D7373F', password: '#D7373F', certificat: '#D83790', signatures: '#2680EB',
     props: '#6E7681', access: '#2D9D5F', search: '#2680EB', tableau: '#2D9D5F', ocr: '#8C5AE8', comparer: '#0D9F8F',
+    'copier-image': '#8C5AE8', courriel: '#2680EB', arrivees: '#E68619',
   };
 
 

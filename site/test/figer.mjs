@@ -15,7 +15,7 @@
  * Pour montrer le site à quelqu'un avant de l'avoir mis en ligne, cela suffit.
  */
 import { chromium } from "playwright-core";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, copyFileSync } from "node:fs";
 import path from "node:path";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
@@ -88,6 +88,8 @@ for (const [url, nom] of PAGES) {
       d.querySelectorAll("a[href]").forEach((a) => {
         const h = a.getAttribute("href");
         if (!h || !h.startsWith("/")) return;
+        // Le texte des licences des polices voyage à côté des pages (voir plus bas) : le lien reste un lien.
+        if (h === "/licences-polices.txt") { a.setAttribute("href", "licences-polices.txt"); return; }
         const cible = carte[h.split("?")[0].split("#")[0]];
         if (cible) {
           a.setAttribute("href", (cible === "index" ? "index.html" : cible + ".html") + (h.includes("#") ? "#" + h.split("#")[1] : ""));
@@ -127,4 +129,5 @@ for (const [url, nom] of PAGES) {
 }
 
 console.log(`${PAGES.length} pages dans ${SORTIE} — ${polices.size} polices intégrées.`);
+copyFileSync(path.join(process.cwd(), "public", "licences-polices.txt"), path.join(SORTIE, "licences-polices.txt"));
 await navigateur.close();

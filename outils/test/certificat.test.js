@@ -10,7 +10,7 @@ const { extraire } = require('./aide');
 
 // Le même code que celui du paquet navigateur, dans sa version pour Node (le paquet navigateur,
 // lui, est essayé dans un vrai navigateur par la suite de bout en bout).
-global.forge = require(path.join(__dirname, '..', 'libs', 'node-forge-1.3.1', 'lib', 'index.js'));
+global.forge = require(path.join(__dirname, '..', 'libs', 'node-forge-1.4.0', 'lib', 'index.js'));
 global.PDFLib = require(path.join(__dirname, '..', 'libs', 'cantoo-pdf-lib-2.11.0', 'dist', 'pdf-lib.js'));
 const { certificatLire, signerPdf } = extraire('// @debut-certificat', '// @fin-certificat', '{ certificatLire, signerPdf }');
 const { verifierLesSignatures } = extraire('// @debut-signatures', '// @fin-signatures', '{ verifierLesSignatures }');

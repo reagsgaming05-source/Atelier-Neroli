@@ -17,8 +17,20 @@ function commitCourt() {
   if (env) return env.slice(0, 7);
   try { return require('child_process').execSync('git rev-parse --short HEAD', { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch (e) { return ''; }
 }
-const d = new Date();
-const CONSTRUCTION = 'construite le ' + String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear() + (commitCourt() ? ', commit ' + commitCourt() : '');
+// La date n'est PAS celle de l'horloge : deux constructions du même commit doivent donner les mêmes octets. C'est la date du commit
+// (ou SOURCE_DATE_EPOCH, la convention des constructions reproductibles) ; sans dépôt git ni variable, faute de mieux, l'horloge.
+// Les jour, mois et année sont lus en UTC : le fuseau du poste de construction n'y change rien.
+function dateDeConstruction() {
+  const epoch = process.env.SOURCE_DATE_EPOCH;
+  if (/^\d+$/.test(epoch || '')) return new Date(Number(epoch) * 1000);
+  try {
+    const t = require('child_process').execSync('git log -1 --format=%ct', { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    if (/^\d+$/.test(t)) return new Date(Number(t) * 1000);
+  } catch (e) { /* pas de dépôt : l'horloge */ }
+  return new Date();
+}
+const d = dateDeConstruction();
+const CONSTRUCTION = 'construite le ' + String(d.getUTCDate()).padStart(2, '0') + '.' + String(d.getUTCMonth() + 1).padStart(2, '0') + '.' + d.getUTCFullYear() + (commitCourt() ? ', commit ' + commitCourt() : '');
 if (!src.includes("'__CONSTRUCTION__'")) throw new Error('repère de construction introuvable dans la source');
 src = src.replace("'__CONSTRUCTION__'", () => JSON.stringify(CONSTRUCTION));
 // Le numéro de version : un seul, celui de outils/package.json, partout (À propos,
@@ -88,7 +100,7 @@ const langue = code => fs.readFileSync(path.join(LIB, 'tesseract.js-data-' + cod
 const zlib = require('zlib');
 const utifLib = read('utif-3.1.0/UTIF.js');
 const pakoInflate = read('pako-2.1.0/dist/pako_inflate.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
-const forgeLib = read('node-forge-1.3.1/dist/forge.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
+const forgeLib = read('node-forge-1.4.0/dist/forge.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
 const fontkit = read('cantoo-fontkit-2.0.12/dist/fontkit.umd.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
 const POLICES_UNICODE = [
   ['sans-r', 'expo-google-fonts-arimo-0.4.3', '400Regular/Arimo_400Regular.ttf'],
@@ -121,7 +133,7 @@ const inline = [
   '<!-- fontkit 2.0.12 (MIT) ; polices Arimo, Tinos et Cousine (SIL OFL 1.1) -->',
   '<script>' + fontkit + '</script>',
   POLICES_UNICODE,
-  '<!-- node-forge 1.3.1 (BSD-3-Clause) : certificats PKCS#12 et signature numérique -->',
+  '<!-- node-forge 1.4.0 (BSD-3-Clause) : certificats PKCS#12 et signature numérique -->',
   '<script>' + forgeLib + '</script>',
   '<!-- UTIF 3.1.0 (MIT) et pako 2.1.0 (MIT et Zlib) : lecture des images TIFF des scanners -->',
   '<script>' + pakoInflate + '</script>',

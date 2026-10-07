@@ -1,0 +1,43 @@
+# La surveillance des dépendances : cinq manifestes npm et les actions GitHub.
+#
+# - outils/libs-manifeste : le manifeste des bibliothèques que build.js embarque dans la page (libs/). Elles sont
+#   récupérées par `npm pack` et ne figurent dans aucun package.json de l'application : sans ce fichier, personne ne
+#   les surveillerait. test/libs-manifeste.test.js vérifie qu'il dit la même chose que outils/recuperer-libs.js.
+#   Une mise à jour proposée ici n'est reprise qu'en relisant l'archive : l'empreinte SHA-512 de recuperer-libs.js
+#   est à changer à la main, c'est voulu.
+# - outils/desktop : Electron et ses outils de construction.
+# - outils/test-e2e : les outils de test, jamais livrés.
+# - site : le site de vente.
+# - github-actions : les actions sont épinglées par empreinte de commit ; la version lisible suit en commentaire.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /outils/libs-manifeste
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependances, embarque]
+  - package-ecosystem: npm
+    directory: /outils/desktop
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependances, bureau]
+  - package-ecosystem: npm
+    directory: /outils/test-e2e
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 3
+    labels: [dependances, tests]
+  - package-ecosystem: npm
+    directory: /outils
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 3
+    labels: [dependances, tests]
+  - package-ecosystem: npm
+    directory: /site
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependances, site]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 5
+    labels: [dependances, ci]

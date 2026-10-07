@@ -1,0 +1,48 @@
+name: Audit des dépendances
+
+# Un avis de sécurité paraît le jour où personne ne pousse rien : l'audit tourne donc aussi chaque lundi, et pas seulement quand un
+# fichier de dépendances change. Il juge `npm audit` de chaque manifeste contre outils/editeur/avis-acceptes.json (voir
+# outils/editeur/audit-dependances.js) ; un avis nouveau, ou une exception dont la relecture est échue, met cette construction en rouge.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  push:
+    branches: ["main", "claude/**"]
+    paths:
+      - "outils/package.json"
+      - "outils/package-lock.json"
+      - "outils/desktop/package.json"
+      - "outils/desktop/package-lock.json"
+      - "outils/test-e2e/package.json"
+      - "outils/test-e2e/package-lock.json"
+      - "outils/libs-manifeste/**"
+      - "outils/recuperer-libs.js"
+      - "outils/editeur/audit-dependances.js"
+      - "outils/editeur/avis-acceptes.json"
+      - "site/package.json"
+      - "site/package-lock.json"
+      - ".github/workflows/audit-dependances.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: "22"
+
+      # Le manifeste des bibliothèques embarquées dit la même chose que recuperer-libs.js : le contrôle se fait hors réseau.
+      - name: Le manifeste d'audit dit ce que la page embarque
+        working-directory: outils
+        run: node --test test/dependances.test.js
+
+      - name: Audit (npm audit, jugé contre les avis acceptés)
+        working-directory: outils
+        run: node editeur/audit-dependances.js

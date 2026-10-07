@@ -39,9 +39,9 @@ const COMPOSANTS = [
     dependances: 'Inclut restructure, brotli, dfa, fflate, unicode-properties et unicode-trie (MIT), '
       + 'https://github.com/foliojs/restructure, https://github.com/foliojs/brotli.js, https://github.com/foliojs/dfa, '
       + 'https://github.com/101arrowz/fflate, https://github.com/foliojs/unicode-properties, https://github.com/foliojs/unicode-trie' },
-  { nom: 'node-forge', version: '1.3.1', licence: 'BSD-3-Clause (offert au choix en BSD ou GPLv2 ; la BSD est retenue)',
+  { nom: 'node-forge', version: '1.4.0', licence: 'BSD-3-Clause (offert au choix en BSD ou GPLv2 ; la BSD est retenue)',
     auteur: 'Digital Bazaar, Inc. et contributeurs', role: 'lecture des certificats PKCS#12 (.p12, .pfx) et création de la signature numérique',
-    fichier: ['node-forge-1.3.1', 'LICENSE'] },
+    fichier: ['node-forge-1.4.0', 'LICENSE'] },
   { nom: 'UTIF.js', version: '3.1.0', licence: 'MIT', auteur: 'Photopea (Ivan Kutskir) et contributeurs',
     role: 'lecture des images TIFF (scanners : Fax G4, LZW, PackBits, JPEG) pour les convertir en pages', fichier: ['utif-3.1.0', 'LICENSE'] },
   { nom: 'pako (décompression Deflate seule)', version: '2.1.0', licence: 'MIT et Zlib', auteur: 'Vitaly Puzrin, Andrei Tuputcyn',

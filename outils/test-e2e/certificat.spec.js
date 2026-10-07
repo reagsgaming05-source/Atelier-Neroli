@@ -2,7 +2,7 @@
 // de signature tel qu'il est livré, puis le fichier relu — par l'outil de vérification du logiciel et par
 // pdfsig (poppler), qui n'est pas notre code.
 const { test, expect, pdfTexte } = require('./aide');
-const forge = require('../libs/node-forge-1.3.1/lib/index.js');
+const forge = require('../libs/node-forge-1.4.0/lib/index.js');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
