@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Records a short passage with several free French voices, to compare them by ear.
 
-  python scripts/narration/lab.py xtts|chatterbox|edge|kyutai OUT_DIR
+  python scripts/narration/lab.py xtts|chatterbox|edge|kyutai|gemini OUT_DIR
 
 kyutai records one voice per run: SHARD (0..SHARDS-1) picks it from the French voices
 of Kyutai's catalogue, so several runs can work in parallel.
@@ -72,6 +72,67 @@ def edge(out: Path):
     asyncio.run(run())
 
 
+# Gemini voices are directed with a plain-language instruction placed before the text.
+GEMINI_STYLE = (
+    "Lis ce récit en français comme un conteur envoûtant au coin du feu : voix chaude, grave et douce, "
+    "rythme lent, pauses expressives, émotion sincère, un peu de suspense quand l'histoire s'intensifie"
+)
+
+
+def gemini(out: Path):
+    """Google's Gemini speech model through the free AI Studio key (secret GEMINI_API_KEY)."""
+    import base64
+    import json
+    import os
+    import time
+    import urllib.error
+    import urllib.request
+    import wave
+
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key:
+        raise SystemExit("GEMINI_API_KEY is not set: add it in the repository's Settings > Secrets and variables > Actions.")
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent"
+    for voice in ["Charon", "Algenib", "Gacrux", "Sulafat", "Vindemiatrix", "Achernar"]:
+        body = json.dumps(
+            {
+                "contents": [{"parts": [{"text": f"{GEMINI_STYLE} :\n\n{TEXT}"}]}],
+                "generationConfig": {
+                    "responseModalities": ["AUDIO"],
+                    "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}},
+                },
+            }
+        ).encode()
+        for attempt in range(4):
+            request = urllib.request.Request(url, body, {"Content-Type": "application/json", "x-goog-api-key": key})
+            try:
+                with urllib.request.urlopen(request, timeout=180) as response:
+                    reply = json.load(response)
+                break
+            except urllib.error.HTTPError as e:
+                detail = e.read().decode()[:400]
+                print(voice, "HTTP", e.code, detail)
+                if e.code != 429 or attempt == 3:
+                    reply = None
+                    break
+                time.sleep(25 * (attempt + 1))  # free tier: a few requests per minute
+        if not reply:
+            continue
+        try:
+            pcm = base64.b64decode(reply["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
+        except (KeyError, IndexError):
+            print(voice, "no audio in reply:", json.dumps(reply)[:400])
+            continue
+        wav = out / "tmp.wav"
+        with wave.open(str(wav), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(24000)
+            w.writeframes(pcm)
+        to_mp3(wav, out / f"gemini-{voice.lower()}.mp3")
+        time.sleep(22)
+
+
 def kyutai(out: Path):
     import os
 
@@ -106,4 +167,4 @@ def kyutai(out: Path):
 if __name__ == "__main__":
     engine, directory = sys.argv[1], Path(sys.argv[2])
     directory.mkdir(parents=True, exist_ok=True)
-    {"xtts": xtts, "chatterbox": chatterbox, "edge": edge, "kyutai": kyutai}[engine](directory)
+    {"xtts": xtts, "chatterbox": chatterbox, "edge": edge, "kyutai": kyutai, "gemini": gemini}[engine](directory)

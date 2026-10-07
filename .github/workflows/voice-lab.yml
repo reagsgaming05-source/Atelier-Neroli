@@ -6,10 +6,10 @@ name: Voice lab
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'scripts/narration/lab.py'
-      - '.github/workflows/voice-lab.yml'
+    inputs:
+      engines:
+        description: 'Engines to record, space-separated (xtts kyutai gemini)'
+        default: 'gemini'
 
 permissions:
   contents: write
@@ -22,6 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - { engine: gemini, shard: 0, python: '3.11' }
           - { engine: xtts, shard: 0, python: '3.11' }
           - { engine: kyutai, shard: 0, python: '3.12' }
           - { engine: kyutai, shard: 1, python: '3.12' }
@@ -31,23 +32,29 @@ jobs:
     env:
       SHARD: ${{ matrix.shard }}
       SHARDS: 5
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
       - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+        if: ${{ contains(inputs.engines, matrix.engine) }}
       - name: Install ${{ matrix.engine }}
+        if: ${{ contains(inputs.engines, matrix.engine) }}
         run: |
           pip install --upgrade pip
           case "${{ matrix.engine }}" in
-            xtts) pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu && pip install coqui-tts "transformers>=4.47,<5" ;;
+            gemini) ;;
+            xtts) pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu && pip install "coqui-tts[codec]" "transformers>=4.47,<5" ;;
             kyutai) pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install moshi==0.2.11 sphn huggingface_hub ;;
             chatterbox) pip install chatterbox-tts ;;
             edge) pip install edge-tts ;;
           esac
       - run: python scripts/narration/lab.py ${{ matrix.engine }} out
+        if: ${{ contains(inputs.engines, matrix.engine) }}
       - uses: actions/upload-artifact@v4
+        if: ${{ contains(inputs.engines, matrix.engine) }}
         with:
           name: voices-${{ matrix.engine }}-${{ matrix.shard }}
           path: out/*.mp3
