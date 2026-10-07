@@ -17,13 +17,14 @@
     ['proprietes', 'Propriétés du document (configuration enregistrée)'],
     ['proteger', 'Protéger par mot de passe'],
     ['compresser', 'Réduire la taille (150 ppp)'],
+    ['pdfa', 'Archiver en PDF/A-2b (contrôlé)'],
     ['images', 'Convertir les images en PDF'],
     ['separer', 'Séparer : une page par fichier'],
     ['texte', 'Extraire le texte (.txt)'],
   ];
-  const LOTS_FINALES = ['compresser', 'separer', 'texte'];
+  const LOTS_FINALES = ['compresser', 'pdfa', 'separer', 'texte'];
   const LOTS_A_CONFIG = { entete: 'entete', filigrane: 'filigrane', proprietes: 'proprietes' };
-  const LOTS_SUFFIXES = { vides: '-sans-vides', ocr: '-ocr', numeroter: '-numerote', entete: '-entete', filigrane: '-filigrane', proprietes: '-proprietes', proteger: '-protege', compresser: '-leger' };
+  const LOTS_SUFFIXES = { vides: '-sans-vides', ocr: '-ocr', numeroter: '-numerote', entete: '-entete', filigrane: '-filigrane', proprietes: '-proprietes', proteger: '-protege', compresser: '-leger', pdfa: '-pdfa' };
   const LOTS_MAX = 3;
   // Les réglages d'une configuration nommée, posés sur le document de travail (voir les fenêtres d'en-tête, de filigrane, de propriétés).
   function lotPoserConfig(op, c) {
@@ -108,15 +109,28 @@
           const suffixe = suffixes.join('');
           const optsBase = { noInPlace: retirees > 0 };
           if (finale === 'compresser') {
-            const octets = await buildPdf(state.pages, { rasterize: true, dpi: 150, quality: 0.72, noInPlace: true });
-            // Réduire ne doit jamais alourdir : sur un document de texte, convertir
-            // les pages en images multiplie la taille par dix ou plus.
+            // Les grosses images sont allégées et le texte reste du texte. Réduire ne doit jamais alourdir : un document sans image lourde reste tel quel.
+            const octets = await buildPdf(state.pages, { alleger: { dpi: 150, qualite: 0.72 }, noInPlace: true });
             if (octets.length >= poidsSources) {
-              rapport.push(f.name + ' : non réduit — le résultat aurait fait ' + fmtSize(octets.length) + ' contre ' + fmtSize(poidsSources) + ' (document de texte : la conversion en images l\'alourdirait), laissé tel quel');
+              rapport.push(f.name + ' : non réduit — aucune image n\'est assez lourde pour être allégée (' + fmtSize(poidsSources) + ' → ' + fmtSize(octets.length) + '), laissé tel quel');
               continue;
             }
             sorties.push({ nom: base + suffixe + tr(LOTS_SUFFIXES.compresser) + '.pdf', octets });
             notes.push(fmtSize(poidsSources) + ' → ' + fmtSize(octets.length));
+          } else if (finale === 'pdfa') {
+            // L'archivage : reconstruit, contrôlé, déclaré seulement si rien ne s'y oppose. Pas de question posée en cours de lot : les pages dont les polices
+            // manquent sont converties en images si la case est cochée, sinon le fichier n'est pas produit et le rapport dit pourquoi.
+            if (state.security) { rapport.push(f.name + ' : protégé par un mot de passe, un PDF/A ne peut pas être chiffré — laissé de côté'); continue; }
+            const absentes = await pagesSansPolices();
+            if (absentes.length && !params.pdfaImages) {
+              rapport.push(f.name + ' : non archivé — des polices ne sont pas dans le fichier (' + Array.from(new Set(absentes.flatMap(a => a.polices))).slice(0, 4).join(', ') + ') ; cochez la conversion en images pour l\'archiver quand même');
+              continue;
+            }
+            const rap = { niveau: '2B' };
+            const octets = await buildPdf(state.pages, { archivage: rap, rasterIds: new Set(absentes.map(a => a.page.id)), noInPlace: true });
+            if (!rap.conforme) { rapport.push(f.name + ' : non conforme — ' + grouperProblemes(rap.problemes || []).slice(0, 3).join(' ; ')); continue; }
+            sorties.push({ nom: base + suffixe + LOTS_SUFFIXES.pdfa + '.pdf', octets });
+            notes.push('PDF/A-2b, ' + plural(rap.regles, 'point contrôlé', 'points contrôlés') + (absentes.length ? ', ' + plural(absentes.length, 'page convertie en image', 'pages converties en images') : ''));
           } else if (finale === 'separer') {
             const n = state.pages.length;
             for (let k = 0; k < n; k++) sorties.push({ nom: base + suffixe + '-' + pad(k + 1, String(n).length) + '.pdf', octets: await buildPdf([state.pages[k]], { noInPlace: true }) });
@@ -131,6 +145,12 @@
           }
           rapport.push(f.name + ' : ' + notes.join(' · '));
         } catch (e) { signaler('Lot : ' + f.name, e, 'erreur'); const a = analyserEchec(e); rapport.push(f.name + ' : échec — ' + a.cause + ' [' + a.code + ']'); }
+      }
+      // Un lot d'archivage se termine par la liste des empreintes (format de sha256sum) : l'archive qui reçoit les fichiers peut les vérifier.
+      if (finale === 'pdfa' && sorties.length) {
+        const lignes = [];
+        for (const so of sorties) lignes.push(await empreinteSha256(so.octets) + '  ' + so.nom);
+        sorties.push({ nom: 'empreintes.sha256', octets: new TextEncoder().encode(lignes.join('\n') + '\n') });
       }
     } finally {
       poserEtat(sauve);
@@ -185,6 +205,8 @@
     const ocrLangue = select('lots-ocr-langue', [['fra', 'Français'], ['fra+deu', 'Français et allemand'], ['deu', 'Allemand']], codeLangue() === 'de' ? 'deu' : 'fra');
     const ocrWrap = field('Langue de la reconnaissance', ocrLangue, 'La langue du texte imprimé des scans. Seules les pages sans texte sont lues : une page qui en a déjà un reste telle quelle.');
     ocrWrap.hidden = true;
+    const pdfaImages = checkbox('lots-pdfa-images', 'Pour l\'archivage : convertir en images les pages dont des polices ne sont pas dans le fichier (leur texte n\'y sera plus sélectionnable)', false);
+    pdfaImages.hidden = true;
     const pw = input('lots-pw', 'password', ''), pwo = input('lots-pwo', 'password', '');
     const pwWrap = rowOf([field('Mot de passe d\'ouverture', pw), field('Mot de passe propriétaire', pwo, 'Facultatif')]);
     pwWrap.hidden = true;
@@ -214,6 +236,7 @@
       });
       pwWrap.hidden = !etapes.some(e => e.choix.value === 'proteger');
       ocrWrap.hidden = !etapes.some(e => e.choix.value === 'ocr');
+      pdfaImages.hidden = !etapes.some(e => e.choix.value === 'pdfa');
     };
     etapes.forEach(e => e.choix.addEventListener('change', majEtapes));
     majEtapes();
@@ -226,7 +249,7 @@
         b.append(inp);
         b.append(liste);
         etapes.forEach((e, k) => b.append(field(k ? 'Puis' : 'Traitement', e.choix), e.cfg));
-        b.append(pwWrap, ocrWrap);
+        b.append(pwWrap, ocrWrap, pdfaImages);
         b.append(note('Jusqu\'à trois opérations se suivent sur chaque fichier, dans l\'ordre choisi ; celle qui produit les fichiers (réduire, séparer, extraire le texte) vient en dernier.'));
         b.append(note('Chaque fichier est traité à part, le document ouvert n\'est pas touché. Les résultats sont réunis dans une archive ZIP (un seul fichier : enregistré tel quel).'));
       },
@@ -241,7 +264,7 @@
         const quoi = quoiSuit.map(e => e.op).join('-');
         setBusy('Traitement du lot…', 0, { annuler: true });
         try {
-          const r = await traiterLots(fichiers.slice(), quoiSuit, { pw: pw.value, pwo: pwo.value, langueOcr: ocrLangue.value }, (nom, i, n) => setBusy('Lot : ' + nom + ' (' + (i + 1) + '/' + n + ')', i / n, { annuler: true }));
+          const r = await traiterLots(fichiers.slice(), quoiSuit, { pw: pw.value, pwo: pwo.value, langueOcr: ocrLangue.value, pdfaImages: pdfaImages.input.checked }, (nom, i, n) => setBusy('Lot : ' + nom + ' (' + (i + 1) + '/' + n + ')', i / n, { annuler: true }));
           const jour = new Date().toISOString().slice(0, 10);
           if (!r.sorties.length) toast('Aucun fichier produit. ' + r.rapport.join(' · '), 'warn');
           else if (r.sorties.length === 1 || !FEAT.zip) {

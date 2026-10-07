@@ -115,11 +115,11 @@
    "quoi": "Applique la même suite d'opérations à plusieurs fichiers, sans les ouvrir un à un.",
    "etapes": [
     "Choisissez les fichiers.",
-    "Choisissez jusqu'à trois opérations : pages vides, reconnaissance de texte, compression, numérotation, mot de passe, images en PDF, séparation, extraction du texte.",
+    "Choisissez jusqu'à trois opérations : pages vides, reconnaissance de texte, compression, archivage PDF/A-2b, numérotation, mot de passe, images en PDF, séparation, extraction du texte.",
     "Lancez : chaque fichier est traité à part et les résultats sont réunis dans une archive ZIP."
    ],
    "effet": "Le document ouvert n'est pas touché. Un compte rendu dit, fichier par fichier, ce qui a réussi et ce qui a échoué, avec la cause.",
-   "attention": "L'opération qui produit les fichiers (réduire, séparer, extraire le texte) vient en dernier."
+   "attention": "L'opération qui produit les fichiers (réduire, archiver en PDF/A, séparer, extraire le texte) vient en dernier. L'archivage en lot ajoute au ZIP la liste des empreintes SHA-256 (empreintes.sha256) ; un fichier non conforme n'est pas produit et le compte rendu dit pourquoi."
   },
   {
    "id": "signer",
@@ -260,15 +260,16 @@
   },
   {
    "id": "archiver",
-   "nom": "Archiver en PDF/A-2b",
+   "nom": "Archiver en PDF/A",
    "groupe": "exporter",
-   "quoi": "Produit une copie au format d'archivage à long terme PDF/A-2b, et la contrôle.",
+   "quoi": "Produit une copie au format d'archivage à long terme PDF/A (niveau 2b, ou 2u), et la contrôle.",
    "etapes": [
+    "Choisissez le niveau : 2b (le fichier s'affiche toujours pareil) ou 2u (et tout son texte est copiable et cherchable : le niveau que préfèrent les listes des archives cantonales).",
     "Lancez l'archivage : le document est reconstruit avec ses polices embarquées.",
-    "Lisez le verdict : « Archivé en PDF/A-2b », ou la liste de ce qui l'empêche."
+    "Lisez le verdict : « Archivé en PDF/A-2b », ou la liste de ce qui l'empêche. L'empreinte SHA-256 du fichier s'affiche : copiez-la ou enregistrez-la (.sha256) pour que l'archive puisse la vérifier."
    ],
    "effet": "Un contrôleur de conformité intégré vérifie la copie sur ce poste. Le document ouvert n'est pas modifié.",
-   "attention": "Un PDF/A ne peut pas être chiffré : retirez d'abord le mot de passe. Le contrôle intégré ne remplace pas un validateur de référence si une règle l'exige."
+   "attention": "Un PDF/A ne peut pas être chiffré : retirez d'abord le mot de passe. Les niveaux 1b et « a » ne sont pas proposés (le « a » demande un balisage complet) : demandez à votre archive celui qu'elle exige. Le contrôle intégré ne remplace pas veraPDF."
   },
   {
    "id": "exp-img",

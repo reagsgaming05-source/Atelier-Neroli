@@ -249,7 +249,7 @@ export const features: Feature[] = [
   },
   {
     slug: "archiver",
-    name: "Archiver en PDF/A-2b",
+    name: "Archiver en PDF/A",
     category: "Protéger & signer",
     summary: "Un format d'archivage à long terme, contrôlé avant d'être déclaré.",
     description:

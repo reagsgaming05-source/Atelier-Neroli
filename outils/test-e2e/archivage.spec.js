@@ -8,7 +8,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 // Jugement de veraPDF, et, quand il refuse, les règles en cause.
-function valider(octets, nom) {
+function valider(octets, nom, saveur) {
   if (!process.env.VERAPDF) {
     // En intégration continue, ne pas juger n'est pas une option : le scénario échoue.
     if (process.env.CI) throw new Error('veraPDF manque : l\'archivage n\'est pas jugé (définir VERAPDF).');
@@ -17,7 +17,7 @@ function valider(octets, nom) {
   const f = path.join(os.tmpdir(), 'aktum-pdfa-' + process.pid + '-' + nom + '.pdf');
   fs.writeFileSync(f, octets);
   if (process.env.AKTUM_PDFA_SORTIE) { fs.mkdirSync(process.env.AKTUM_PDFA_SORTIE, { recursive: true }); fs.copyFileSync(f, path.join(process.env.AKTUM_PDFA_SORTIE, nom + '.pdf')); }
-  const r = spawnSync(process.env.VERAPDF, ['--flavour', '2b', '--format', 'xml', f], { encoding: 'utf8', timeout: 180000 });
+  const r = spawnSync(process.env.VERAPDF, ['--flavour', saveur || '2b', '--format', 'xml', f], { encoding: 'utf8', timeout: 180000 });
   const sortie = r.stdout + r.stderr;
   const regles = Array.from(sortie.matchAll(/<rule specification="([^"]*)" clause="([^"]*)" testNumber="([^"]*)" status="failed"[^>]*>\s*<description>([^<]*)<\/description>/g))
     .map((m) => m[1] + ' ' + m[2] + '-' + m[3] + ' : ' + m[4]);
@@ -25,9 +25,10 @@ function valider(octets, nom) {
   expect(sortie).toMatch(/isCompliant="true"/);
 }
 
-async function archiver(app, page, { convertir } = {}) {
+async function archiver(app, page, { convertir, niveau } = {}) {
   await app.outil('archiver');
   if (convertir) await page.check('#arch-raster');
+  if (niveau) await page.selectOption('#arch-niveau', niveau);
   const { nom, octets } = await app.recolter(() => page.click('#arch-lancer'));
   return { nom, octets };
 }
@@ -133,4 +134,39 @@ test('un dossier de pièces (sommaire, intercalaires, mention par page) s\'archi
   expect(t[0]).toContain('Sommaire');
   expect(t[0]).toContain('Zürich');
   valider(octets, 'dossier');
+});
+
+test('PDF/A-2u : le niveau que préfèrent les listes cantonales, déclaré 2u, jugé conforme', async ({ app, page }) => {
+  await app.ouvrir('rapport.pdf', await pdfEmbarque(page, { pages: 2 }));
+  const { octets } = await archiver(app, page, { niveau: '2U' });
+  const s = brut(octets);
+  expect(s).toMatch(/pdfaid:part>2</);
+  expect(s).toMatch(/pdfaid:conformance>U</);
+  await expect(page.locator('.dialog')).toContainText('Archivé en PDF/A-2u');
+  valider(octets, 'niveau-2u', '2u');
+});
+
+test('l\'empreinte SHA-256 du fichier archivé est affichée, juste, et s\'enregistre au format de sha256sum', async ({ app, page }) => {
+  await app.ouvrir('rapport.pdf', await pdfEmbarque(page, { pages: 2 }));
+  const { octets } = await archiver(app, page);
+  const attendu = require('crypto').createHash('sha256').update(octets).digest('hex');
+  await expect(page.locator('.dialog')).toContainText(attendu);
+  const { nom, octets: fichier } = await app.recolter(() => page.click('#arch-empreinte'));
+  expect(nom).toBe('rapport-pdfa.pdf.sha256');
+  expect(fichier.toString('utf8')).toBe(attendu + '  rapport-pdfa.pdf\n');
+});
+
+test('la date de création du document d\'origine est gardée dans l\'archive', async ({ app, page }) => {
+  const b64 = await page.evaluate(async () => {
+    const doc = await window.PDFLib.PDFDocument.create();
+    doc.setCreationDate(new Date('2019-03-04T05:06:07Z'));
+    doc.addPage([595, 842]).drawText('Procès-verbal 2019', { x: 60, y: 780, size: 12 });
+    const o = await doc.save({ updateMetadata: false });
+    let t = ''; for (let i = 0; i < o.length; i++) t += String.fromCharCode(o[i]);
+    return btoa(t);
+  });
+  await app.ouvrir('pv-2019.pdf', Buffer.from(b64, 'base64'));
+  const { octets } = await archiver(app, page, { convertir: true });
+  const date = await page.evaluate(async (b64) => (await window.PDFLib.PDFDocument.load(Uint8Array.from(atob(b64), c => c.charCodeAt(0)))).getCreationDate().toISOString(), Buffer.from(octets).toString('base64'));
+  expect(date).toBe('2019-03-04T05:06:07.000Z');
 });

@@ -466,8 +466,8 @@
   <li><strong>Une version allégée</strong> : les pages deviennent des images, et l'application compare les tailles avant et après.</li>
 </ul>
 
-<h3>Archiver en PDF/A-2b</h3>
-<p>Pour une archive communale ou cantonale, l'outil <strong>Archiver en PDF/A-2b</strong> (famille <em>Exporter</em>) écrit le document dans le format d'archivage à long terme (norme ISO 19005-2) : polices incorporées au fichier, ni mot de passe ni script, formulaires aplatis. Le document est reconstruit, <strong>contrôlé</strong>, et n'est déclaré PDF/A-2b que si rien ne s'y oppose.</p>
+<h3>Archiver en PDF/A</h3>
+<p>Pour une archive communale ou cantonale, l'outil <strong>Archiver en PDF/A</strong> (famille <em>Exporter</em>) écrit le document dans le format d'archivage à long terme (norme ISO 19005-2) : polices incorporées au fichier, ni mot de passe ni script, formulaires aplatis. Le document est reconstruit, <strong>contrôlé</strong>, et n'est déclaré PDF/A que si rien ne s'y oppose. Deux niveaux au choix : le <strong>2b</strong> (le fichier s'affiche toujours pareil) et le <strong>2u</strong> (en plus, tout le texte est copiable et cherchable : le niveau que préfèrent les listes des archives cantonales). À la fin, l'<strong>empreinte SHA-256</strong> du fichier s'affiche : copiez-la ou enregistrez-la en <code>.sha256</code> pour que l'archive puisse vérifier plus tard que le fichier est resté celui que vous avez versé. Le <em>traitement par lots</em> sait archiver tout un dossier d'un coup (« Archiver en PDF/A-2b ») et joint la liste des empreintes.</p>
 <ul class="points">
   <li>Les <strong>scripts et fichiers joints</strong> sont retirés, et le logiciel le dit. Un document protégé par mot de passe ne s'archive pas : retirez d'abord la protection.</li>
   <li>Les pages dont les <strong>polices ne sont pas incorporées</strong> au fichier d'origine ne peuvent pas être conformes : le logiciel ne peut pas incorporer une police qu'il n'a pas. Il les nomme, page par page, et propose de les <strong>convertir en images</strong> — leur apparence est gardée, leur texte non (sauf s'il a été lu par la reconnaissance de texte). Rien n'est converti sans votre accord.</li>

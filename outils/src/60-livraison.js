@@ -98,6 +98,9 @@
     return true;
   }
 
+  // Les modules écrits avant celui-ci (l'archivage) livrent un fichier par la vue.
+  vue.livrer = deliver;
+
   async function exportPages(pages, filename, opts) {
     if (!pages.length || state.busy) return null;
     // Une signature, un PDF/A, un balisage que cet export détruit : on le dit

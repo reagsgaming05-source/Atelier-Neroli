@@ -40,9 +40,22 @@
     } else desc = pdfaDict(fd, 'FontDescriptor');
     return !!(desc && (desc.has(PDFName.of('FontFile')) || desc.has(PDFName.of('FontFile2')) || desc.has(PDFName.of('FontFile3'))));
   }
+  // Une police dont on sait toujours dire le texte : un /ToUnicode, ou une police simple dont l'encodage est un encodage connu
+  // (le texte se lit alors par les noms de glyphes). Un PDF/A-2u l'exige de chaque police ; une police CID sans /ToUnicode, non.
+  function pdfaPoliceUnicode(fd) {
+    const { PDFName } = PDFLib;
+    if (fd.has(PDFName.of('ToUnicode'))) return true;
+    const sous = pdfaNom(fd, 'Subtype');
+    if (sous === '/Type0' || sous === '/Type3') return false;
+    const enc = fd.lookup(PDFName.of('Encoding'));
+    if (!enc) return false;
+    if (enc instanceof PDFLib.PDFDict) return enc.has(PDFName.of('BaseEncoding')) || enc.has(PDFName.of('Differences'));
+    return /^\/(WinAnsiEncoding|MacRomanEncoding|StandardEncoding|MacExpertEncoding)$/.test(String(enc));
+  }
   // Les polices que des ressources (page, formulaire, apparence d'annotation) citent sans
-  // les incorporer, par leur nom de base : `sortie` est une Map nom -> true.
-  function pdfaPolicesAbsentes(doc, res, sortie, visite) {
+  // les incorporer, par leur nom de base : `sortie` est une Map nom -> true. `sansUnicode`, s'il est donné,
+  // reçoit de même les polices qui ne portent pas leur correspondance Unicode.
+  function pdfaPolicesAbsentes(doc, res, sortie, visite, sansUnicode) {
     const { PDFDict, PDFStream } = PDFLib;
     if (!(res instanceof PDFDict) || visite.has(res)) return;
     visite.add(res);
@@ -50,12 +63,14 @@
     const polices = pdfaDict(res, 'Font');
     if (polices) polices.entries().forEach(([k, v]) => {
       const fd = cible(v);
-      if (fd instanceof PDFDict && !pdfaPoliceIncorporee(fd)) sortie.set(pdfaNom(fd, 'BaseFont') || String(k), true);
+      if (!(fd instanceof PDFDict)) return;
+      if (!pdfaPoliceIncorporee(fd)) sortie.set(pdfaNom(fd, 'BaseFont') || String(k), true);
+      if (sansUnicode && !pdfaPoliceUnicode(fd)) sansUnicode.set(pdfaNom(fd, 'BaseFont') || String(k), true);
     });
     const xo = pdfaDict(res, 'XObject');
     if (xo) xo.entries().forEach(([, v]) => {
       const x = cible(v);
-      if (x instanceof PDFStream && pdfaNom(x.dict, 'Subtype') === '/Form') pdfaPolicesAbsentes(doc, pdfaDict(x.dict, 'Resources'), sortie, visite);
+      if (x instanceof PDFStream && pdfaNom(x.dict, 'Subtype') === '/Form') pdfaPolicesAbsentes(doc, pdfaDict(x.dict, 'Resources'), sortie, visite, sansUnicode);
     });
   }
   // Les polices non incorporées d'une page, en clair (« Arial », « Helvetica »).
@@ -72,6 +87,7 @@
     const L = PDFLib;
     const { PDFName, PDFDict, PDFArray, PDFStream } = L;
     const o = options || {};
+    const niveauU = o.niveau === '2U';
     const ctx = doc.context;
     const problemes = [];
     let regles = 0;
@@ -125,13 +141,14 @@
 
     // 3 et 6. Polices et annotations, page par page.
     const pages = doc.getPages();
-    regles += 3;
+    regles += niveauU ? 4 : 3;
     pages.forEach((pg, i) => {
       const n = i + 1;
       try {
         const sans = new Map();
+        const sansU = niveauU ? new Map() : null;
         const visite = new Set();
-        pdfaPolicesAbsentes(doc, pg.node.Resources(), sans, visite);
+        pdfaPolicesAbsentes(doc, pg.node.Resources(), sans, visite, sansU);
         const annots = tableau(pg.node, 'Annots');
         if (annots) for (let k = 0; k < annots.size(); k++) {
           const a = annots.lookup(k);
@@ -141,7 +158,7 @@
           const ap = dict(a, 'AP');
           const normal = ap && ap.lookup(PDFName.of('N'));
           const flux = normal instanceof PDFStream ? [normal] : normal instanceof PDFDict ? normal.entries().map(([, v]) => cible(v)).filter(x => x instanceof PDFStream) : [];
-          flux.forEach(f => pdfaPolicesAbsentes(doc, dict(f.dict, 'Resources'), sans, visite));
+          flux.forEach(f => pdfaPolicesAbsentes(doc, dict(f.dict, 'Resources'), sans, visite, sansU));
           if (st !== '/Popup') {
             // Une annotation sans surface (largeur et hauteur nulles) est dispensée d'apparence.
             const rect = tableau(a, 'Rect');
@@ -163,6 +180,10 @@
           const propre = String(base).replace(/^\//, '').replace(/^[A-Z]{6}\+/, '');
           dire('police', n, 'La police « ' + propre + ' » n\'est pas incorporée au fichier : un PDF/A l\'exige.', false);
         });
+        if (sansU) sansU.forEach((_, base) => {
+          const propre = String(base).replace(/^\//, '').replace(/^[A-Z]{6}\+/, '');
+          dire('unicode', n, 'La police « ' + propre + ' » ne dit pas quel texte elle écrit (pas de correspondance Unicode) : le PDF/A-2u l\'exige.', false);
+        });
       } catch (e) { signaler('Contrôle PDF/A', e, 'info'); }
     });
 
@@ -173,7 +194,7 @@
         const meta = cible(cat.get(PDFName.of('Metadata')));
         let xmp = '';
         if (meta instanceof PDFStream) { try { xmp = new TextDecoder().decode(meta.getContents()); } catch (e) { xmp = ''; } }
-        if (!/pdfaid:part(>|=")2/.test(xmp) || !/pdfaid:conformance(>|=")B/i.test(xmp)) dire('metadonnees', 0, 'Les métadonnées XMP ne déclarent pas le niveau PDF/A-2b.', false);
+        if (!/pdfaid:part(>|=")2/.test(xmp) || !(niveauU ? /pdfaid:conformance(>|=")U/i : /pdfaid:conformance(>|=")B/i).test(xmp)) dire('metadonnees', 0, niveauU ? 'Les métadonnées XMP ne déclarent pas le niveau PDF/A-2u.' : 'Les métadonnées XMP ne déclarent pas le niveau PDF/A-2b.', false);
         const oi = tableau(cat, 'OutputIntents');
         if (!oi || !oi.size()) dire('metadonnees', 0, 'Le document n\'a pas d\'intention de sortie (profil de couleur).', false);
       } catch (e) { signaler('Contrôle PDF/A', e, 'info'); }

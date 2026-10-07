@@ -1,6 +1,6 @@
 // Le traitement par lots et la détection des pages vides : jamais couverts jusqu'ici. Trois fichiers passent par
 // le même traitement sans que le document ouvert soit touché ; les résultats se rangent dans une archive.
-const { test, expect, pdfDe, textesDuPdf, compterPages } = require('./aide');
+const { test, expect, pdfDe, textesDuPdf, compterPages, pdfEmbarque, brut } = require('./aide');
 
 const page = (texte) => (texte ? [{ x: 70, y: 700, taille: 16, texte }] : []);
 const fichiers = () => [
@@ -172,4 +172,24 @@ test('la détection des pages vides : les pages blanches se cochent, celles qui 
   const { octets } = await app.exporter();
   const textes = await textesDuPdf(p, octets);
   expect(textes.join(' ')).toMatch(/Premiere.*Troisieme.*Cinquieme/);
+});
+
+test('« Archiver en PDF/A-2b » en lot : les fichiers conformes sont produits avec leurs empreintes, les autres sont dits', async ({ app, page: p }) => {
+  test.setTimeout(240000);
+  await app.ouvrir('ouvert.pdf', pdfDe([page('Document ouvert')]));
+  const bons = [
+    { name: 'a.pdf', mimeType: 'application/pdf', buffer: await pdfEmbarque(p, { pages: 2 }) },
+    { name: 'b.pdf', mimeType: 'application/pdf', buffer: await pdfEmbarque(p, { pages: 1 }) },
+  ];
+  // « c » n'a que la police standard, non incorporée : le PDF/A la refuse, et la conversion en images n'est pas cochée
+  const mauvais = { name: 'c.pdf', mimeType: 'application/pdf', buffer: pdfDe([page('C page un')]) };
+  const { octets } = await lancer(app, p, 'pdfa', bons.concat([mauvais]));
+  const entrees = await lireLArchive(p, octets);
+  expect(Array.from(entrees.keys()).sort()).toEqual(['a-pdfa.pdf', 'b-pdfa.pdf', 'empreintes.sha256']);
+  expect(brut(entrees.get('a-pdfa.pdf'))).toMatch(/pdfaid:conformance>B</);
+  const crypto = require('crypto');
+  const attendu = ['a-pdfa.pdf', 'b-pdfa.pdf'].map(n => crypto.createHash('sha256').update(entrees.get(n)).digest('hex') + '  ' + n).join('\n') + '\n';
+  expect(entrees.get('empreintes.sha256').toString('utf8')).toBe(attendu);
+  await expect(p.locator('.dialog')).toContainText('c.pdf : non archivé');
+  expect(await app.estModifie()).toBe(false);
 });

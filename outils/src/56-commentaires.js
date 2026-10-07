@@ -457,6 +457,7 @@
     let m = specs.length ? purgeMeta(state.meta, specs) : state.meta;
     if (nettoyage && nettoyage.meta) m = Object.assign({}, m, { title: '', author: '', subject: '', keywords: '' });
     out.setCreator(APP);
+    try { const s0 = pages.length ? srcById(pages[0].src) : null; if (s0 && s0.proprietes && s0.proprietes.creation) out.setCreationDate(new Date(s0.proprietes.creation)); } catch (e) { signaler('Date de création', e, 'info'); }
     // Le producteur dit quel logiciel a écrit le fichier, version comprise (et non « pdf-lib ») : c'est ce que le support lit en premier.
     out.setProducer(APP + ' ' + APP_VERSION);
     // L'identifiant du fichier (/ID) : la première moitié reste celle du fichier d'origine quand il en avait une, la seconde change à chaque

@@ -55,7 +55,9 @@
     const { PDFName, PDFDict, PDFNumber } = PDFLib;
     const doc = await loadLib(src);
     const cat = doc.catalog;
-    const out = { signatures: 0, certifie: false, pdfa: '', balise: false, pdfua: false, xfa: false };
+    const out = { signatures: 0, certifie: false, pdfa: '', balise: false, pdfua: false, xfa: false, creation: 0 };
+    // La date de création du document : un fichier reconstruit la garde, pour qu'une archive sache de quand date le document et non de quand date la copie.
+    try { const d = doc.getCreationDate(); if (d && isFinite(d.getTime())) out.creation = d.getTime(); } catch (e) { signaler('Date de création', e, 'info'); }
     // Signatures : le champ porte une valeur /Sig, ou le formulaire se déclare signé.
     const form = doc.context.lookup(cat.get(PDFName.of('AcroForm')));
     if (form instanceof PDFDict) {
@@ -264,12 +266,13 @@
       const fait = corrigerPourPdfa(out);
       rapport.corrections = direCorrections(fait);
       if (retire || fait.joints || fait.actions) ramasserLesObjets(out);
-      let ctrl = controlerPdfa(out);
+      const niveau = rapport.niveau === '2U' ? '2U' : '2B';
+      let ctrl = controlerPdfa(out, { niveau });
       rapport.regles = ctrl.regles;
       rapport.problemes = ctrl.problemes;
       if (!ctrl.problemes.length) {
-        out.convertToPDFA({ conformance: '2B' });
-        ctrl = controlerPdfa(out, { declaration: true });
+        out.convertToPDFA({ conformance: niveau });
+        ctrl = controlerPdfa(out, { declaration: true, niveau });
         rapport.regles = ctrl.regles;
         rapport.problemes = ctrl.problemes;
       }
@@ -280,7 +283,7 @@
       try { out.catalog.delete(PDFName.of('Metadata')); out.catalog.delete(PDFName.of('OutputIntents')); } catch (e) { signaler('Déclaration PDF/A non retirée', e); }
       try { ramasserLesObjets(out); } catch (e) { signaler('Archivage PDF/A', e, 'info'); }
     }
-    return { pdfa: rapport.conforme ? '2B' : '' };
+    return { pdfa: rapport.conforme ? (rapport.niveau === '2U' ? '2U' : '2B') : '' };
   }
 
   // Des caractères que les polices du logiciel ne savent pas écrire : le dire

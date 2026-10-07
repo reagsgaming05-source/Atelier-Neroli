@@ -1,7 +1,7 @@
   // =====================================================================
-  //  Archiver en PDF/A-2b
+  //  Archiver en PDF/A (2b ou 2u)
   //  -------------------------------------------------------------------
-  //  Le format d'archivage à long terme (ISO 19005-2, niveau B) : polices
+  //  Le format d'archivage à long terme (ISO 19005-2, niveau B, ou U — tout le texte a sa correspondance Unicode) : polices
   //  incorporées, ni mot de passe ni script, formulaires aplatis. Le document
   //  est reconstruit, contrôlé (53-conformite.js), et n'est déclaré PDF/A-2b
   //  que si rien ne s'y oppose. Ce que l'on ne peut pas rendre conforme sans
@@ -9,6 +9,13 @@
   //  dit avant, avec la seule solution que ce logiciel sache offrir : convertir
   //  ces pages en images, avec l'accord de l'utilisateur.
   // =====================================================================
+
+  // L'empreinte SHA-256 d'un fichier, en hexadécimal : ce qui permet à une archive de vérifier, des années plus tard, que le fichier reçu est
+  // celui qui a été versé. Écrite aussi au format de sha256sum (« empreinte␣␣nom ») pour qu'un outil du système la relise.
+  async function empreinteSha256(octets) {
+    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', octets));
+    return Array.from(h, b => b.toString(16).padStart(2, '0')).join('');
+  }
 
   // Les pages dont des polices ne sont pas incorporées au fichier d'origine.
   async function pagesSansPolices() {
@@ -44,22 +51,24 @@
     if (!state.pages.length) { toast('Aucune page à archiver.', 'warn'); return; }
     if (state.busy) return;
     if (!FEAT.unicode) {
-      dialog({ title: 'Archiver en PDF/A-2b', icon: IC.save, build: b => b.append(note('Cette copie du logiciel n\'embarque pas les polices nécessaires à l\'archivage. Utilisez la version portable (le fichier Aktum PDF hors ligne).', 'warn')) });
+      dialog({ title: 'Archiver en PDF/A', icon: IC.save, build: b => b.append(note('Cette copie du logiciel n\'embarque pas les polices nécessaires à l\'archivage. Utilisez la version portable (le fichier Aktum PDF hors ligne).', 'warn')) });
       return;
     }
     if (state.security) {
-      dialog({ title: 'Archiver en PDF/A-2b', icon: IC.save, build: b => b.append(note('Ce document est protégé par un mot de passe : un PDF/A ne peut pas être chiffré. Retirez d\'abord la protection (outil « Mot de passe », bouton « Retirer »).', 'warn')) });
+      dialog({ title: 'Archiver en PDF/A', icon: IC.save, build: b => b.append(note('Ce document est protégé par un mot de passe : un PDF/A ne peut pas être chiffré. Retirez d\'abord la protection (outil « Mot de passe », bouton « Retirer »).', 'warn')) });
       return;
     }
     setBusy('Analyse des polices…', 0);
     let absentes = [];
     try { absentes = await pagesSansPolices(); } finally { setBusy(''); }
     const convertir = checkbox('arch-raster', absentes.length ? 'Convertir en images ' + (absentes.length > 1 ? 'ces ' + absentes.length + ' pages' : 'cette page') + ' (le texte n\'y sera plus sélectionnable, sauf si la reconnaissance de texte l\'a lu)' : '', false);
+    const niveau = select('arch-niveau', [['2B', 'PDF/A-2b — le fichier s\'affiche toujours pareil'], ['2U', 'PDF/A-2u — et tout son texte est copiable et cherchable']], '2B');
     dialog({
       aide: 'archiver',
-      title: 'Archiver en PDF/A-2b', icon: IC.save, wide: true,
+      title: 'Archiver en PDF/A', icon: IC.save, wide: true,
       build: b => {
-        b.append(note('Le PDF/A-2b est le format d\'archivage à long terme (norme ISO 19005-2) : polices incorporées au fichier, ni mot de passe ni script, formulaires aplatis. Le document est reconstruit puis contrôlé ; il n\'est déclaré PDF/A-2b que si rien ne s\'y oppose.'));
+        b.append(note('Le PDF/A est le format d\'archivage à long terme (norme ISO 19005-2) : polices incorporées au fichier, ni mot de passe ni script, formulaires aplatis. Le document est reconstruit puis contrôlé ; il n\'est déclaré PDF/A que si rien ne s\'y oppose.'));
+        b.append(field('Niveau', niveau, 'Le 2u est le niveau que préfèrent les listes des archives cantonales : il demande en plus que chaque police dise quel texte elle écrit. Les niveaux 1b (une version plus ancienne, sans transparence) et « a » (un balisage complet de la structure, qu\'aucun logiciel ne fabrique tout seul) ne sont pas proposés : demandez à votre archive celui qu\'elle exige.'));
         if (absentes.length) {
           b.append(note('Des pages utilisent des polices qui ne sont pas dans le fichier d\'origine, ce que le PDF/A interdit :', 'warn'));
           const par = new Map();
@@ -72,19 +81,19 @@
       },
       actions: [
         { label: 'Annuler', onClick: c => c() },
-        { id: 'arch-lancer', label: 'Enregistrer en PDF/A-2b', primary: true, onClick: close => {
+        { id: 'arch-lancer', label: 'Enregistrer en PDF/A', primary: true, onClick: close => {
           if (absentes.length && !convertir.input.checked) { toast('Cochez la conversion des pages en images, ou corrigez ces polices dans le document d\'origine.', 'warn'); return; }
           close();
-          produireArchive(new Set(absentes.map(a => a.page.id)));
+          produireArchive(new Set(absentes.map(a => a.page.id)), niveau.value);
         } },
       ],
     });
   }
 
-  async function produireArchive(rasterIds) {
+  async function produireArchive(rasterIds, niveau) {
     if (state.busy) return;
     const pages = state.pages;
-    const rapport = {};
+    const rapport = { niveau: niveau === '2U' ? '2U' : '2B' };
     const opts = { archivage: rapport, rasterIds, noInPlace: true };
     if (essaiFiniRefuse()) return;
     if (!(await pertesAcceptees(pages, opts))) { setLast('Archivage annulé'); return; }
@@ -97,7 +106,9 @@
       if (!(await caracteresAcceptes())) { setLast('Archivage annulé'); return; }
       if (rapport.conforme) {
         const parti = await deliver(octets, nom, null, {});
-        if (parti) setLast('Archivé en PDF/A-2b : ' + nom);
+        if (parti) setLast(rapport.niveau === '2U' ? 'Archivé en PDF/A-2u : ' + nom : 'Archivé en PDF/A-2b : ' + nom);
+        rapport.empreinte = await empreinteSha256(octets);
+        rapport.nomFichier = nom;
         await montrerRapportArchive(rapport, true);
       } else {
         const garder = await montrerRapportArchive(rapport, false);
@@ -118,11 +129,22 @@
     return new Promise(res => {
       let repondu = false;
       dialog({
-        title: conforme ? 'Archivé en PDF/A-2b' : 'Ce document ne peut pas être déclaré PDF/A-2b', icon: IC.info, wide: true,
+        title: conforme ? (rapport.niveau === '2U' ? 'Archivé en PDF/A-2u' : 'Archivé en PDF/A-2b') : (rapport.niveau === '2U' ? 'Ce document ne peut pas être déclaré PDF/A-2u' : 'Ce document ne peut pas être déclaré PDF/A-2b'), icon: IC.info, wide: true,
         build: b => {
           if (conforme) {
             b.append(note('Le fichier est enregistré. Le contrôle interne a vérifié ' + plural(rapport.regles, 'point', 'points') + ' et n\'a trouvé aucun écart.'));
             (rapport.corrections || []).forEach(c => b.append(note('Corrigé : ' + c + '.')));
+            if (rapport.empreinte) {
+              // L'archive qui reçoit le fichier peut ainsi vérifier, plus tard, qu'il est resté celui qui a été versé.
+              b.append(note('Empreinte SHA-256 du fichier : ' + rapport.empreinte));
+              const ligne = document.createElement('div'); ligne.className = 'row tight';
+              const copier = document.createElement('button'); copier.type = 'button'; copier.className = 'tb-btn'; copier.id = 'arch-copier'; copier.textContent = 'Copier l\'empreinte';
+              copier.addEventListener('click', async () => { if (await copierTexte(rapport.empreinte)) toast('Empreinte copiée.'); });
+              const sauver = document.createElement('button'); sauver.type = 'button'; sauver.className = 'tb-btn'; sauver.id = 'arch-empreinte'; sauver.textContent = 'Enregistrer l\'empreinte (.sha256)';
+              sauver.addEventListener('click', () => vue.livrer(rapport.empreinte + '  ' + rapport.nomFichier + '\n', rapport.nomFichier + '.sha256', 'text/plain'));
+              ligne.append(copier, sauver);
+              b.append(ligne);
+            }
           } else {
             b.append(note('Voici ce qui s\'y oppose :', 'warn'));
             grouperProblemes(rapport.problemes || []).slice(0, 12).forEach(t => b.append(note('• ' + t)));

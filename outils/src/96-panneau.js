@@ -44,7 +44,7 @@
         { id: 'commentaires', name: 'Commentaires du document', sub: 'Ceux déjà dans le PDF reçu : lister, retirer', icon: IC.text, need: 'pages', mots: 'annotations notes remarques relecture retirer supprimer', run: toolCommentaires, active: () => state.pages.some(p => p.retraits && p.retraits.length) },
       ] },
       { id: 'exporter', title: 'Exporter', items: [
-        { id: 'archiver', name: 'Archiver en PDF/A-2b', sub: 'Format d\'archivage à long terme, contrôlé', icon: IC.save, need: 'pages', mots: 'pdf/a pdfa archive archivage conservation long terme', run: toolArchiver },
+        { id: 'archiver', name: 'Archiver en PDF/A', sub: 'Format d\'archivage à long terme (2b ou 2u), contrôlé', icon: IC.save, need: 'pages', mots: 'pdf/a pdfa archive archivage conservation long terme', run: toolArchiver },
         { id: 'exp-img', name: 'Exporter en images', sub: 'PNG ou JPEG', icon: IC.image, need: 'pages', mots: 'png jpg jpeg image convertir', run: toolExportImages },
         { id: 'exp-txt', name: 'Extraire le texte', sub: 'Fichier .txt', icon: IC.txt, need: 'pages', mots: 'txt texte brut copier contenu', run: toolExportText },
         { id: 'exp-word', name: 'Exporter vers Word', sub: 'Texte et tableaux, sans la mise en page (.docx)', icon: IC.txt, need: 'pages', mots: 'word docx texte modifier convertir traitement de texte libreoffice', run: toolWord },
