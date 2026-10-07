@@ -2560,7 +2560,8 @@
   "Zone de saisie": "Eingabebereich",
   "Zone trop petite : recommencez en la dessinant plus grande.": "Bereich zu klein: Zeichnen Sie ihn grösser und versuchen Sie es erneut.",
   "Zones caviardées, par page": "Geschwärzte Zonen, pro Seite",
-  "Zoom de la page": "Zoom der Seite"
+  "Zoom de la page": "Zoom der Seite",
+  "Gros document": "Grosses Dokument"
  },
  "motifs": {
   "\n• … et {0}.": "\n• … und {0}.",
@@ -2878,7 +2879,8 @@
   "Une action « {0} » ({1}) est interdite dans un PDF/A.": "Eine Aktion «{0}» ({1}) ist in einem PDF/A nicht erlaubt.",
   "Une action nommée « {0} » ({1}) est interdite dans un PDF/A.": "Eine Aktion mit dem Namen «{0}» ({1}) ist in einem PDF/A nicht erlaubt.",
   "Une annotation « {0} » n'a pas d'apparence : un PDF/A l'exige.": "Eine Anmerkung «{0}» hat kein Erscheinungsbild: Ein PDF/A verlangt dies.",
-  "Une annotation « {0} » n'est pas imprimable ou est cachée : un PDF/A l'exige imprimable et visible.": "Eine Anmerkung «{0}» ist nicht druckbar oder verborgen: Ein PDF/A verlangt sie druckbar und sichtbar."
+  "Une annotation « {0} » n'est pas imprimable ou est cachée : un PDF/A l'exige imprimable et visible.": "Eine Anmerkung «{0}» ist nicht druckbar oder verborgen: Ein PDF/A verlangt sie druckbar und sichtbar.",
+  "« {0} » compte {1} ({2}) : l'application est conçue pour des documents jusqu'à 2 000 pages ou 50 Mo. Au-delà, tout reste possible, mais la recherche, les aperçus et l'export sont plus lents : prévoyez de la patience et fermez les autres programmes.": "«{0}» umfasst {1} ({2}): Die Anwendung ist für Dokumente bis 2’000 Seiten oder 50 MB ausgelegt. Darüber hinaus bleibt alles möglich, aber Suche, Vorschauen und Export werden langsamer: Haben Sie Geduld und schliessen Sie andere Programme."
  },
  "html": {
   ".pdf": ".pdf",

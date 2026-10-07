@@ -23,7 +23,7 @@ contextBridge.exposeInMainWorld('AktumDesktop', {
   liberer: (chemins) => ipcRenderer.invoke('aktum:liberer', chemins),
   recents: () => ipcRenderer.invoke('aktum:recents'),
   // Un document déposé sur la fenêtre ou choisi dans le champ de fichier : son chemin, pour que « Récents » le retienne comme les autres.
-  cheminDe: (fichier) => { try { return webUtils.getPathForFile(fichier); } catch (e) { return ''; } },
+  cheminDe: (fichier) => { try { const c = webUtils.getPathForFile(fichier); if (c) ipcRenderer.send('aktum:fichier-donne', c); return c; } catch (e) { return ''; } },
   noterRecents: (chemins) => ipcRenderer.send('aktum:noter-recents', chemins),
   lireRecent: (chemin) => ipcRenderer.invoke('aktum:lire-recent', chemin),
   // Glisser une page vers le Bureau : la page est écrite d'avance dans le dossier de données, puis le geste part du système.

@@ -70,7 +70,7 @@
 
   async function openWithPdfjs(name, bytes, password) {
     try {
-      const doc = await pdfjs.getDocument(Object.assign({ data: new Uint8Array(bytes.slice(0)) }, password ? { password } : {})).promise;
+      const doc = await pdfjs.getDocument(Object.assign({ data: new Uint8Array(bytes.slice(0)), isEvalSupported: false }, password ? { password } : {})).promise;
       return { doc, password: password || null };
     } catch (e) {
       if (e && e.name === 'PasswordException') {
@@ -104,6 +104,14 @@
     toast(msg, 'warn');
   }
 
+  // La limite pour laquelle le logiciel est conçu, dite à l'ouverture plutôt que découverte en réunion : au-delà, tout reste possible, en plus lent.
+  const LIMITE_PAGES = 2000, LIMITE_OCTETS = 50 * 1024 * 1024;
+  function avertirDuPoids(nom, pages, octets) {
+    if (pages <= LIMITE_PAGES && octets <= LIMITE_OCTETS) return;
+    const msg = '« ' + nom + ' » compte ' + plural(pages, 'page', 'pages') + ' (' + fmtSize(octets) + ') : l\'application est conçue pour des documents jusqu\'à 2 000 pages ou 50 Mo. Au-delà, tout reste possible, mais la recherche, les aperçus et l\'export sont plus lents : prévoyez de la patience et fermez les autres programmes.';
+    signaler('Gros document', msg, 'info');
+    toast(msg, 'warn');
+  }
   async function addPdfSource(name, bytes, opts) {
     opts = opts || {};
     const opened = await openWithPdfjs(name, bytes, null);
@@ -122,6 +130,7 @@
       mtime: opts.mtimeMs || 0,
     };
     state.sources.push(src);
+    avertirDuPoids(name, doc.numPages, bytes.byteLength);
     const fresh = [];
     for (let i = 0; i < src.count; i++) fresh.push({ id: ++uid, src: src.id, index: i, rot: 0, ann: [] });
     state.pages.push(...fresh);
@@ -281,14 +290,36 @@
   // =====================================================================
   const thumbQueue = [];
   let thumbActive = 0;
+  // Autant de vignettes en parallèle que le poste a de cœurs, moins un : le rendu se fait hors du fil principal pour un document lourd.
+  const THUMB_PARALLELE = Math.max(2, Math.min(6, (navigator.hardwareConcurrency || 4) - 1));
+  // Le cache de vignettes est borné : au-delà, les moins récemment demandées, hors de l'écran, sont libérées (leur adresse est révoquée).
+  // Sans cette borne, mille pages tenaient près de deux gigaoctets de mémoire.
+  const THUMB_MAX = 200;
+  const thumbVisibles = new Set();
+  // Des comptes, rien d'autre (aucun nom, aucun contenu) : ce que le rapport de diagnostic et les essais lisent de la mémoire des aperçus.
+  window.aktumMesures = () => ({ vignettes: thumbOrdre.size, vignettesMax: THUMB_MAX, pages: state.pages.length });
+  const thumbOrdre = new Map();   // clé -> dernier usage (ordre d'insertion = ordre d'usage)
+  function thumbUsage(k) { thumbOrdre.delete(k); thumbOrdre.set(k, true); }
+  function thumbEvincer() {
+    if (thumbOrdre.size <= THUMB_MAX) return;
+    for (const k of Array.from(thumbOrdre.keys())) {
+      if (thumbOrdre.size <= THUMB_MAX) break;
+      const t = thumbs.get(k);
+      if (!t || t.status !== 'done' || thumbVisibles.has(k)) continue;
+      try { if (t.url) URL.revokeObjectURL(t.url); } catch (e) { signaler('Vignette', e, 'info'); }
+      thumbs.delete(k); thumbOrdre.delete(k);
+      // La tuile (hors de l'écran) ne montre plus rien : son image reviendra, redessinée, quand on y retournera.
+      state.pages.forEach(p => { if (pkey(p) === k) { const tl = tiles.get(p.id); const im = tl && tl.querySelector('img'); if (im) im.removeAttribute('src'); } });
+    }
+  }
   function requestThumb(k) {
-    if (thumbs.has(k)) return;
+    if (thumbs.has(k)) { thumbUsage(k); return; }
     thumbs.set(k, { status: 'pending', url: null });
     thumbQueue.push(k);
     pumpThumbs();
   }
   function pumpThumbs() {
-    while (thumbActive < 3 && thumbQueue.length) {
+    while (thumbActive < THUMB_PARALLELE && thumbQueue.length) {
       const k = thumbQueue.shift();
       thumbActive++;
       renderThumb(k).catch(() => {}).then(() => { thumbActive--; pumpThumbs(); });
@@ -314,6 +345,7 @@
       page.cleanup();
       if (!blob) throw new Error('toBlob');
       thumbs.set(k, { status: 'done', url: URL.createObjectURL(blob) });
+      thumbUsage(k); thumbEvincer();
     } catch (e) {
       console.error(e);
       thumbs.set(k, { status: 'error', url: null });
@@ -324,10 +356,12 @@
   const thumbObserver = typeof IntersectionObserver === 'function'
     ? new IntersectionObserver(entries => {
         entries.forEach(en => {
-          if (!en.isIntersecting) return;
           const id = +en.target.dataset.id;
-          const p = state.pages.find(x => x.id === id);
-          if (p) requestThumb(pkey(p));
+          const p = state.pages[pageIndex(id)];
+          if (!p) return;
+          if (!en.isIntersecting) { thumbVisibles.delete(pkey(p)); return; }
+          thumbVisibles.add(pkey(p));
+          requestThumb(pkey(p));
         });
       }, { rootMargin: '400px 0px' })
     : null;

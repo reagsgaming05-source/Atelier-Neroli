@@ -301,7 +301,7 @@
       molette = t;
       pas(e.deltaY < 0 ? 1 : -1);
     }, { passive: false });
-    el.canvas.addEventListener('scroll', () => { if (state.vue === 'lecture') majPageCourante(); }, { passive: true });
+    el.canvas.addEventListener('scroll', () => { if (state.vue === 'lecture') planifierPageCourante(); }, { passive: true });
     const allerPage = () => { lectureAller(el.pageNum.value); el.pageNum.blur(); };
     el.pageNum.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); allerPage(); } });
     el.pageNum.addEventListener('change', allerPage);

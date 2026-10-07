@@ -71,7 +71,11 @@ cp "$ZIP" "$TEMP/maj.zip"
 [ -f "$ZIP.signature.json" ] && cp "$ZIP.signature.json" "$TEMP/maj.zip.signature.json"
 echo "  Vérification de la signature de l'éditeur…"
 APPLI="$DOSSIER/AktumPDF.app/Contents"
-if ! ELECTRON_RUN_AS_NODE=1 "$APPLI/MacOS/AktumPDF" "$APPLI/Resources/app.asar/verifier-maj.js" "$TEMP/maj.zip"; then
+# L'application elle-même, sans fenêtre, dans son mode « vérifier » : son code de sortie ET la ligne qu'elle écrit doivent dire que la signature est bonne.
+rm -f "$TEMP/verif.txt"
+VERIF=0
+"$APPLI/MacOS/AktumPDF" --verifier-maj "$TEMP/maj.zip" "$TEMP/verif.txt" >/dev/null 2>&1 || VERIF=$?
+if [ "$VERIF" -ne 0 ] || ! grep -q '^SIGNATURE-OK' "$TEMP/verif.txt" 2>/dev/null; then
   echo
   echo "  Cette archive n'est pas signée par l'éditeur, ou a été modifiée :"
   echo "  elle n'est PAS installée, et rien n'a été touché. Pour une vraie mise à jour,"

@@ -319,5 +319,6 @@
   function cheminDocument() {
     if (state.chemin) return state.chemin;
     const reels = state.sources.filter(s => !s.isSample && !s.genere);
-    return reels.length === 1 && reels[0].chemin ? reels[0].chemin : '';
+    // Un seul fichier, et un PDF : une image d'où le document est venu n'est jamais réécrite par des octets de PDF.
+    return reels.length === 1 && reels[0].chemin && /\.pdf$/i.test(reels[0].chemin) ? reels[0].chemin : '';
   }

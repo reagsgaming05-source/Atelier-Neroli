@@ -15,6 +15,17 @@
  * un choix explicite (« Ajouter au document… », ou le bouton Ouvrir dans la page).
  */
 const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain, nativeTheme, nativeImage, clipboard } = require('electron');
+
+// Mode « vérifier une archive de mise à jour » : appelé par Mettre-a-jour.cmd / .command, après la fermeture de l'application. Aucune fenêtre,
+// aucun verrou d'instance, aucune donnée touchée : il rend un code (0 signée, 2 refusée) et une ligne écrite dans le fichier donné, puis
+// il sort. C'est ce qui permet de fermer le fusible « runAsNode » : l'exécutable n'est plus un interpréteur JavaScript.
+{
+  const i = process.argv.indexOf('--verifier-maj');
+  if (i >= 0) {
+    const r = require('./verifier-maj').verifierPourLeScript(process.argv[i + 1], process.argv[i + 2]);
+    process.exit(r.code);
+  }
+}
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -414,10 +425,17 @@ const quiTravaille = () => PROFIL || (() => { try { return os.userInfo().usernam
  * elle qu'on comparera avant de l'écraser. Le verrou dit si une autre personne
  * a déjà ce document ouvert ; sinon on le prend, et on le rafraîchit.
  */
+// Les fichiers que la page a le droit de réécrire sur place : ceux que l'application a lus pour elle (ligne de commande, boîte « Ouvrir »,
+// double-clic, dépôt, récents) et ceux qu'une boîte « Enregistrer sous » a écrits. Jamais un chemin que la page inventerait : l'écriture sur
+// place n'est pas un moyen d'écrire n'importe où — une page compromise (un PDF qui ferait exécuter du code dans le moteur) ne s'en sert pas.
+const cheminsReecrivables = new Set();
+const cleDeChemin = (c) => (process.platform === 'win32' ? path.resolve(c).toLowerCase() : path.resolve(c));
+const autoriserLaReecriture = (c) => { if (typeof c === 'string' && c && path.isAbsolute(c)) cheminsReecrivables.add(cleDeChemin(c)); };
 function lire(chemins) {
   const out = [];
   for (const c of chemins) {
     try {
+      autoriserLaReecriture(c);
       const b = fs.readFileSync(c);
       const f = { nom: path.basename(c), octets: new Uint8Array(b.buffer, b.byteOffset, b.length), chemin: c, mtimeMs: 0, verrou: null };
       try { f.mtimeMs = fs.statSync(c).mtimeMs; } catch (e) { /* date inconnue : pas de comparaison possible */ }
@@ -521,7 +539,10 @@ async function recupEcrire(o) {
     await fs.promises.writeFile(path.join(dir, f.nom), Buffer.from(f.octets));
   }
   const tmp = path.join(dir, 'manifeste.json.tmp');
-  await fs.promises.writeFile(tmp, JSON.stringify(o.manifeste));
+  // Le fichier que ce travail réécrirait : la page le dit, mais c'est le processus principal qui atteste qu'il l'avait bien ouvert ou
+  // enregistré (cheminOk) — la page ne peut pas se donner elle-même le droit d'écrire quelque part en passant par la récupération.
+  const m = Object.assign({}, o.manifeste, { cheminOk: !!(o.manifeste && typeof o.manifeste.chemin === 'string' && cheminsReecrivables.has(cleDeChemin(o.manifeste.chemin))) });
+  await fs.promises.writeFile(tmp, JSON.stringify(m));
   await fs.promises.rename(tmp, path.join(dir, 'manifeste.json'));
   recupPurger(o.cle);
   return { ok: true };
@@ -546,6 +567,7 @@ function recupLire(cle) {
   if (!cleValide(cle)) return null;
   const dir = path.join(dossierRecup(), cle);
   const manifeste = JSON.parse(fs.readFileSync(path.join(dir, 'manifeste.json'), 'utf8'));
+  if (manifeste.cheminOk === true && typeof manifeste.chemin === 'string') autoriserLaReecriture(manifeste.chemin);
   const fichiers = fs.readdirSync(dir).filter((f) => f !== 'manifeste.json' && !f.endsWith('.tmp'))
     .map((f) => { const b = fs.readFileSync(path.join(dir, f)); return { nom: f, octets: new Uint8Array(b.buffer, b.byteOffset, b.length) }; });
   return { manifeste, fichiers };
@@ -703,6 +725,7 @@ function setupDownloads() {
     });
     item.once('done', (_e, etat) => {
       if (!contents || contents.isDestroyed()) return;
+      if (etat === 'completed') autoriserLaReecriture(item.getSavePath());
       if (etat === 'completed' && /\.pdf$/i.test(item.getSavePath())) ajouterRecent(item.getSavePath());
       // Sa date de modification, pour que l'enregistrement suivant sache de quel fichier il parle.
       let mtimeMs = 0;
@@ -830,6 +853,8 @@ function setupIpc() {
       // dans le dossier de récupération.
       if (etatLicence().etat === 'essai-fini') return { ok: false, erreur: 'La version d\u2019essai est terminée : l\u2019application n\u2019enregistre plus de nouveau fichier.' };
       if (!o || typeof o.chemin !== 'string' || !path.isAbsolute(o.chemin) || !o.octets) return { ok: false, erreur: 'chemin invalide' };
+      // Seulement un PDF que l'application a lu ou écrit elle-même : tout autre chemin est refusé, quoi que dise la page.
+      if (!/\.pdf$/i.test(o.chemin) || !cheminsReecrivables.has(cleDeChemin(o.chemin))) return { ok: false, erreur: 'Ce fichier n’a pas été ouvert ni enregistré par l’application : l’enregistrement sur place est refusé. Utilisez « Enregistrer sous… ».' };
       // Le fichier a-t-il changé depuis qu'on l'a lu ? Alors quelqu'un d'autre
       // a écrit entre-temps, et l'écraser ferait disparaître son travail sans
       // un mot. On rend la main à la page, qui demande.
@@ -858,6 +883,11 @@ function setupIpc() {
   ipcMain.handle('aktum:recents', () => lireRecents().filter((c) => fs.existsSync(c)));
   // Les documents ouverts par glisser-déposer ou par le champ de fichier : tous les chemins d'ouverture alimentent « Récents ».
   // Seuls comptent des chemins absolus de fichiers existants, d'une extension que l'application ouvre.
+  // Un fichier que la personne a déposé sur la fenêtre ou choisi dans le champ de fichier : la page n'en donne pas le chemin, c'est le préchargement
+  // qui le lit du fichier lui-même (webUtils.getPathForFile) ; seul un fichier réel de la machine peut ainsi être réécrit.
+  ipcMain.on('aktum:fichier-donne', (_e, chemin) => {
+    if (typeof chemin === 'string' && path.isAbsolute(chemin) && EXTENSIONS.includes(path.extname(chemin).toLowerCase())) { try { if (fs.statSync(chemin).isFile()) autoriserLaReecriture(chemin); } catch (err) { /* disparu entre-temps */ } }
+  });
   ipcMain.on('aktum:noter-recents', (_e, chemins) => {
     if (!Array.isArray(chemins)) return;
     chemins.slice(0, 50).forEach((c) => {

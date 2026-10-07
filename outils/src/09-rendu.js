@@ -32,7 +32,7 @@
       const m = e.data;
       try {
         if (m.type === 'ouvrir') {
-          const doc = await pdfjsLib.getDocument(Object.assign({ data: m.donnees, disableFontFace: true, canvasFactory: fabrique, isOffscreenCanvasSupported: true }, m.mdp ? { password: m.mdp } : {})).promise;
+          const doc = await pdfjsLib.getDocument(Object.assign({ data: m.donnees, disableFontFace: true, isEvalSupported: false, canvasFactory: fabrique, isOffscreenCanvasSupported: true }, m.mdp ? { password: m.mdp } : {})).promise;
           docs.set(m.doc, doc);
           postMessage({ id: m.id, ok: true });
         } else if (m.type === 'fermer') {

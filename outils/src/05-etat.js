@@ -89,7 +89,17 @@
   const key = (srcId, index) => srcId + ':' + index;
   const pkey = p => key(p.src, p.index);
   const srcById = id => state.sources.find(s => s.id === id);
-  const pageIndex = id => state.pages.findIndex(p => p.id === id);
+  // Où est cette page : une table identifiant → rang, vérifiée à chaque lecture (un rang qui ne tombe plus sur la page refait la table, une fois).
+  // Un parcours de tout le document à chaque question rendait le dessin des vignettes quadratique sur un gros dossier.
+  let rangsDesPages = new Map();
+  const pageIndex = id => {
+    const i = rangsDesPages.get(id);
+    if (i !== undefined && state.pages[i] && state.pages[i].id === id) return i;
+    rangsDesPages = new Map();
+    state.pages.forEach((p, k) => rangsDesPages.set(p.id, k));
+    const j = rangsDesPages.get(id);
+    return j === undefined ? -1 : j;
+  };
   const selectedInOrder = () => state.pages.filter(p => state.selected.has(p.id)).map(p => p.id);
   const selectedPages = () => state.pages.filter(p => state.selected.has(p.id));
 

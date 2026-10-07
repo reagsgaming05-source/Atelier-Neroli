@@ -400,7 +400,7 @@
   async function relireLaCopie(octets, specs) {
     const restes = [];
     if (!specs.length) return { fait: true, restes };
-    const doc = await pdfjs.getDocument({ data: octets.slice() }).promise;
+    const doc = await pdfjs.getDocument({ data: octets.slice(), isEvalSupported: false }).promise;
     try {
       for (let i = 1; i <= doc.numPages; i++) {
         const pg = await doc.getPage(i);

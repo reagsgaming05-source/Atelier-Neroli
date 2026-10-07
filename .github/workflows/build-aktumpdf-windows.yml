@@ -402,6 +402,49 @@ jobs:
           node maj-test.js dist\AktumPDF\AktumPDF.exe
           Remove-Item dist\AktumPDF\data -Recurse -Force -ErrorAction SilentlyContinue
 
+      # La dernière serrure. Les fusibles d'Electron (package.json › electronFuses) ferment ce que l'application n'utilise pas : l'exécutable
+      # n'est plus un interpréteur JavaScript (runAsNode), NODE_OPTIONS est sans effet, seul app.asar est chargé. L'inspecteur Node (--inspect)
+      # reste ouvert pendant les essais ci-dessus, parce que le pilote qui pilote l'application en a besoin ; il se ferme ICI, sur l'exécutable qui
+      # sera livré. Fermer un fusible change l'exécutable : il est signé de nouveau s'il l'était, la signature est vérifiée, les fusibles sont relus, et
+      # l'application doit encore démarrer (elle tient dix secondes sans s'arrêter).
+      - name: Sceller la dernière serrure (inspecteur Node), et vérifier que l'application démarre
+        timeout-minutes: 8
+        working-directory: outils/desktop
+        shell: pwsh
+        env:
+          PFX: ${{ secrets.WIN_CERTIFICAT_PFX }}
+          MOT_DE_PASSE: ${{ secrets.WIN_CERTIFICAT_MOT_DE_PASSE }}
+          SIGNE: ${{ steps.signature-windows.outputs.signe }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = (Resolve-Path 'dist\AktumPDF\AktumPDF.exe').Path
+          node -e "const f = require('@electron/fuses'); f.flipFuses(process.argv[1], { version: f.FuseVersion.V1, [f.FuseV1Options.EnableNodeCliInspectArguments]: false }).then(() => console.log('inspecteur fermé'))" $exe
+          if ($LASTEXITCODE -ne 0) { throw "Les fusibles n'ont pas pu être scellés." }
+          if ($env:SIGNE -eq 'oui') {
+            $pfx = Join-Path $env:RUNNER_TEMP 'signature2.pfx'
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:PFX))
+            $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1
+            if (-not $signtool) { throw "signtool.exe introuvable sur ce runner." }
+            & $signtool.FullName sign /f $pfx /p $env:MOT_DE_PASSE /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /d "Aktum PDF" $exe
+            if ($LASTEXITCODE -ne 0) { throw "La signature, après le scellage, a échoué." }
+            & $signtool.FullName verify /pa /v $exe
+            if ($LASTEXITCODE -ne 0) { throw "La signature ne se vérifie pas après le scellage." }
+            Remove-Item $pfx -Force
+            Write-Host "Exécutable signé de nouveau et vérifié."
+          }
+          node -e "const f = require('@electron/fuses'); f.getCurrentFuseWire(process.argv[1]).then((w) => { const s = (o) => (w[o] === 48 ? 'fermé' : 'OUVERT'); console.log('runAsNode', s(f.FuseV1Options.RunAsNode), '| NODE_OPTIONS', s(f.FuseV1Options.EnableNodeOptionsEnvironmentVariable), '| inspecteur', s(f.FuseV1Options.EnableNodeCliInspectArguments)); if (w[f.FuseV1Options.RunAsNode] !== 48 || w[f.FuseV1Options.EnableNodeOptionsEnvironmentVariable] !== 48 || w[f.FuseV1Options.EnableNodeCliInspectArguments] !== 48) process.exit(1); })" $exe
+          if ($LASTEXITCODE -ne 0) { throw "Un fusible attendu fermé est resté ouvert." }
+          # Elle démarre encore : ses données vont dans un dossier d'essai, pas à côté de l'exécutable livré.
+          $env:AKTUM_SMOKE_DIR = Join-Path $env:RUNNER_TEMP 'scellage'
+          New-Item -ItemType Directory -Force -Path $env:AKTUM_SMOKE_DIR | Out-Null
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 10
+          if ($p.HasExited) { throw "L'application s'est arrêtée au démarrage après le scellage (code $($p.ExitCode))." }
+          taskkill /F /IM AktumPDF.exe /T 2>$null | Out-Null
+          Start-Sleep -Seconds 2
+          Remove-Item Env:\AKTUM_SMOKE_DIR
+          Write-Host "Fusibles scellés, application démarrée."
+
       - name: Archive zip
         working-directory: outils/desktop
         shell: pwsh

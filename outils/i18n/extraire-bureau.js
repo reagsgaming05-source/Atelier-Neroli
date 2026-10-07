@@ -17,7 +17,7 @@ const RETENUS = [' secondes', ' minutes'];   // la durée d'attente des comptes 
 const IGNORES = ['Deutsch', 'Français', 'MAP * ~NOTFOUND , EXCLUDE ', 'Aktum PDF', 'Blonay PDF', '--nouvelle-fenetre', '-NoProfile', '-NonInteractive', '-Command', 'document invalide', 'AktumPDF-windows.zip', 'illisible :', 'clé invalide', 'chemin invalide', 'page invalide', 'Texte', 'Nom du fichier',
   // le journal des événements d'un compte et les sorties de commande restent en français : ils servent à l'informaticien
   'compte créé', 'code de récupération créé', 'code de récupération refait', 'mot de passe changé', 'mot de passe changé avec le code de récupération', 'mot de passe posé après réinitialisation',
-  'SIGNATURE-REFUSEE : ', 'fiche de version : ', 'usage : node fiche-de-version.js windows|mac <destination>', 'usage : verifier-maj.js <archive.zip>',
+  'SIGNATURE-REFUSEE : ', 'SIGNATURE-REFUSEE : aucune archive donnée', '--verifier-maj', 'fiche de version : ', 'usage : node fiche-de-version.js windows|mac <destination>', 'usage : verifier-maj.js <archive.zip>',
   'Diagnostic-Aktum-PDF-', 'Electron ', ' – Chromium ', 'Windows', ' — commit ', 'Alt+F4', 'Ctrl+Tab', 'Ctrl+Shift+Tab',
   // les noms de touches d'Electron (enAccelerateur, dans main.js) : du code, jamais affichés
   'CmdOrCtrl', 'Ctrl', 'Tab', 'Up', 'Down', 'Left', 'Right', 'Plus', 'AktumPDF',

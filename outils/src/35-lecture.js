@@ -270,14 +270,24 @@
     majPageCourante();
   }
 
+  // Au plus une mise à jour par image : le défilement produit bien plus d'événements que l'écran n'a d'images.
+  let majPageEnAttente = false;
+  function planifierPageCourante() {
+    if (majPageEnAttente) return;
+    majPageEnAttente = true;
+    requestAnimationFrame(() => { majPageEnAttente = false; majPageCourante(); });
+  }
   function majPageCourante() {
     if (!el.pageCourante || state.vue !== 'lecture' || !state.pages.length) return;
     const haut = el.canvas.scrollTop + el.canvas.clientHeight * 0.35;
-    let n = 1;
-    state.pages.forEach((p, i) => {
-      const f = feuilles.get(p.id);
-      if (f && f.offsetTop <= haut) n = i + 1;
-    });
+    // Les feuilles se suivent de haut en bas : la dernière dont le haut est passé se cherche par dichotomie, pas en les lisant toutes
+    // (lire offsetTop force la mise en page : sur mille pages, le défilement tombait à onze images par seconde).
+    let a = 0, b = state.pages.length - 1, n = 1;
+    while (a <= b) {
+      const m = (a + b) >> 1;
+      const f = feuilles.get(state.pages[m].id);
+      if (f && f.offsetTop <= haut) { n = m + 1; a = m + 1; } else b = m - 1;
+    }
     if (document.activeElement !== el.pageNum) el.pageNum.value = String(n);
     el.pageTotal.textContent = '/ ' + state.pages.length;
   }

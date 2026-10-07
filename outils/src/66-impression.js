@@ -193,7 +193,7 @@
     // qui mêle A4 et A3 part en autant d'envois que de suites (voir plus bas), chacun sur son papier.
     const suites = [];            // { format, de, a } — numéros de page de 0 à n−1
     try {
-      doc = await pdfjs.getDocument({ data: octets.slice(0) }).promise;
+      doc = await pdfjs.getDocument({ data: octets.slice(0), isEvalSupported: false }).promise;
       // Assez fin pour que le texte reste net sur le papier, sans faire
       // enfler la page au point de la bloquer sur un gros document.
       // Fine par défaut ; l'utilisateur choisit dans la fenêtre d'impression.
@@ -449,7 +449,7 @@
         const imposes = await imposerPdf(octets, o);
         if (mien !== jeton) return;
         if (doc) { try { doc.destroy(); } catch (e) { signaler('Document d\'impression', e, 'info'); } }
-        doc = await pdfjs.getDocument({ data: imposes.slice(0) }).promise;
+        doc = await pdfjs.getDocument({ data: imposes.slice(0), isEvalSupported: false }).promise;
         if (mien !== jeton) { try { doc.destroy(); } catch (e) { signaler('Document d\'impression', e, 'info'); } doc = null; return; }
         cacheCle = cle;
         total = doc.numPages;

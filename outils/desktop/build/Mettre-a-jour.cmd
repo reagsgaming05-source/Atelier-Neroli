@@ -116,10 +116,13 @@ if errorlevel 1 (
 )
 copy /y "%ZIP%.signature.json" "%ATELIER%\maj.zip.signature.json" >nul 2>&1
 echo   Vérification de la signature de l'éditeur…
-set "ELECTRON_RUN_AS_NODE=1"
-"%DOSSIER%AktumPDF.exe" "%DOSSIER%resources\app.asar\verifier-maj.js" "%ATELIER%\maj.zip"
+rem L'application elle-même, sans fenêtre, dans son mode « vérifier » : « start /wait » pour attendre un programme à fenêtres, et son code de
+rem sortie ET la ligne qu'elle écrit doivent dire que la signature est bonne — l'un sans l'autre ne suffit pas.
+del "%ATELIER%\verif.txt" 2>nul
+start "" /wait "%DOSSIER%AktumPDF.exe" --verifier-maj "%ATELIER%\maj.zip" "%ATELIER%\verif.txt"
 set "VERIF=%ERRORLEVEL%"
-set "ELECTRON_RUN_AS_NODE="
+findstr /b /c:"SIGNATURE-OK" "%ATELIER%\verif.txt" >nul 2>&1
+if errorlevel 1 set "VERIF=2"
 if not "%VERIF%"=="0" (
   echo.
   echo   Cette archive n'est pas signée par l'éditeur, ou a été modifiée :

@@ -98,6 +98,28 @@ async function tournerPage(win, n) {
   let ok = true;
   const verifier = (cond, quoi) => { if (!cond) { ok = false; console.log('ÉCHEC :', quoi); } };
 
+  // Le mode « vérifier une archive » des scripts de mise à jour : sans fenêtre, un code et une ligne. Sans archive valide, il refuse (code 2) — et
+  // l'exécutable n'est plus un interpréteur JavaScript : le fusible « runAsNode » est fermé (package.json › electronFuses).
+  {
+    const { spawnSync } = require('child_process');
+    const sortieVerif = path.join(dossier, 'verif.txt');
+    const cmd = exe ? [exe, ['--verifier-maj', path.join(dossier, 'inexistante.zip'), sortieVerif].concat(process.platform === 'linux' ? ['--no-sandbox'] : [])] : [require('electron'), [path.join(__dirname), '--verifier-maj', path.join(dossier, 'inexistante.zip'), sortieVerif, '--no-sandbox']];
+    const r = spawnSync(cmd[0], cmd[1], { env, timeout: 60000, stdio: 'ignore' });
+    const ligne = fs.existsSync(sortieVerif) ? fs.readFileSync(sortieVerif, 'utf8').trim() : '';
+    console.log('vérifier-maj :', r.status, JSON.stringify(ligne));
+    verifier(r.status === 2 && /^SIGNATURE-REFUSEE/.test(ligne), 'le mode « vérifier une archive » refuse ce qui n\'est pas une archive signée (code 2, ligne écrite)');
+    if (exe) {
+      try {
+        const { getCurrentFuseWire, FuseV1Options } = require('@electron/fuses');
+        const FERME = 48, OUVERT = 49;   // '0' et '1' : la valeur de chaque fusible dans le binaire
+        const f = await getCurrentFuseWire(exe);
+        const etat = (o) => (f[o] === FERME ? 'fermé' : f[o] === OUVERT ? 'ouvert' : '?');
+        console.log('fusibles :', 'runAsNode', etat(FuseV1Options.RunAsNode), '| NODE_OPTIONS', etat(FuseV1Options.EnableNodeOptionsEnvironmentVariable), '| asar seul', etat(FuseV1Options.OnlyLoadAppFromAsar));
+        verifier(f[FuseV1Options.RunAsNode] === FERME && f[FuseV1Options.EnableNodeOptionsEnvironmentVariable] === FERME && f[FuseV1Options.OnlyLoadAppFromAsar] === OUVERT, 'les fusibles d\'Electron sont scellés');
+      } catch (e) { verifier(false, 'lecture des fusibles : ' + (e && e.message)); }
+    }
+  }
+
   let app = await lancer(exe, dossier, env, [pdf]);
   let win = await fenetrePrete(app);
   // le document de la ligne de commande s'ouvre (3 pages), à la place de l'exemple
@@ -186,6 +208,15 @@ async function tournerPage(win, n) {
   verifier(JSON.stringify(fichiers) === JSON.stringify(['essai-modifié.pdf', 'essai.pdf']), 'aucun fichier en plus');
   verifier(/Enregistré : .*essai-modifié\.pdf/.test(await dernier(win)), 'message Enregistré');
 
+  // 2b. L'écriture sur place est contenue : la page ne peut pas faire écrire un chemin que l'application n'a ni lu ni écrit (une page
+  //     compromise n'a pas d'outil pour écrire n'importe où), même un chemin absolu de PDF valable.
+  const intrus = path.join(dossier, 'intrus.pdf');
+  const refus = await win.evaluate((c) => window.AktumDesktop.ecrire(c, new Uint8Array([37, 80, 68, 70])), intrus);
+  console.log('écriture hors fichiers de l\'application :', JSON.stringify(refus).slice(0, 140), '| fichier créé :', fs.existsSync(intrus));
+  verifier(refus && refus.ok === false && /refusé/.test(refus.erreur || '') && !fs.existsSync(intrus), 'l\'écriture sur place est refusée hors des fichiers de l\'application');
+  const refusType = await win.evaluate((c) => window.AktumDesktop.ecrire(c, new Uint8Array([1])), path.join(dossier, 'essai.png'));
+  verifier(refusType && refusType.ok === false && !fs.existsSync(path.join(dossier, 'essai.png')), 'et jamais un autre type de fichier');
+
   // 3. Récupération : une modification non enregistrée est mise de côté, puis
   //    l'application est tuée (comme un plantage) et relancée.
   await tournerPage(win, 2);
@@ -217,7 +248,7 @@ async function tournerPage(win, n) {
   const pdf2 = path.join(dossier, 'autre.pdf');
   fs.writeFileSync(pdf2, fabriquerPdf(2));
   const { spawn } = require('child_process');
-  const seconde = exe ? spawn(exe, [pdf2], { env, stdio: 'ignore' }) : spawn(require('electron'), [path.join(__dirname), pdf2, '--no-sandbox'], { env, stdio: 'ignore' });
+  const seconde = exe ? spawn(exe, [pdf2].concat(process.platform === 'linux' ? ['--no-sandbox'] : []), { env, stdio: 'ignore' }) : spawn(require('electron'), [path.join(__dirname), pdf2, '--no-sandbox'], { env, stdio: 'ignore' });
   seconde.on('error', () => {});
   const win2 = await app.waitForEvent('window', { timeout: 60000 });
   await win2.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });
@@ -244,7 +275,7 @@ async function tournerPage(win, n) {
   const fenetresAvant = app.windows().length;
   const pdf3 = path.join(dossier, 'troisieme.pdf');
   fs.writeFileSync(pdf3, fabriquerPdf(4));
-  const troisieme = exe ? spawn(exe, [pdf3], { env, stdio: 'ignore' }) : spawn(require('electron'), [path.join(__dirname), pdf3, '--no-sandbox'], { env, stdio: 'ignore' });
+  const troisieme = exe ? spawn(exe, [pdf3].concat(process.platform === 'linux' ? ['--no-sandbox'] : []), { env, stdio: 'ignore' }) : spawn(require('electron'), [path.join(__dirname), pdf3, '--no-sandbox'], { env, stdio: 'ignore' });
   troisieme.on('error', () => {});
   await attendre(async () => (await docsPartout()).some((t) => /troisieme\.pdf/.test(t)), 60000, 'document ouvert en onglet');
   // Le processus lancé a passé la main à l'instance unique : on attend qu'il
