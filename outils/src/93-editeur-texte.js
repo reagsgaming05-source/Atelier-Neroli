@@ -668,7 +668,7 @@
     } else if (gst.type === 'move' || gst.type === 'resize') {
       const a = p.ann.find(x => x.id === ed.sel);
       if (!a || !gst.orig) return;
-      if (!gst.snapped) { snapshot(); gst.snapped = true; state.touched = true; }
+      if (!gst.snapped) { snapshot(gst.type === 'move' ? 'Déplacer une annotation' : 'Redimensionner une annotation'); gst.snapped = true; state.touched = true; }
       const dx = pt.x - gst.start.x, dy = pt.y - gst.start.y;
       if (gst.type === 'move') {
         if (a.type === 'draw') a.pts = gst.orig.pts.map(q => [q[0] + dx, q[1] + dy]);
@@ -704,16 +704,19 @@
     }
   }
 
+  // Ce que l'annotation posée s'appelle, pour Annuler et pour la barre d'état.
+  const NOMS_ANNOTATIONS = { highlight: 'Surligner', box: 'Encadrer', redact: 'Caviarder une zone', tampon: 'Poser un tampon', draw: 'Dessiner à main levée', text: 'Ajouter du texte', edit: 'Corriger le texte', image: 'Insérer une image', champ: 'Ajouter un champ à remplir' };
   function edCommit(a) {
     const p = edPage();
-    snapshot();
+    const nom = NOMS_ANNOTATIONS[a.type] || 'Ajouter une annotation';
+    snapshot(nom);
     a.id = ++uid;
     p.ann.push(a);
     ed.sel = a.id;
     state.touched = true;
     if (ed.tool !== 'draw' && ed.tool !== 'edittext' && ed.tool !== 'champ') { ed.tool = 'select'; edSyncTools(); }
     edDrawOverlay();
-    setLast('Annotation ajoutée');
+    setLast(tr('{0} : fait · Ctrl+Z pour annuler').replace('{0}', tr(nom)));
   }
 
   function edPreview() {

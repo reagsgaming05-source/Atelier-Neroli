@@ -143,7 +143,7 @@
     // notes, texte hors de la page) : le caviardage porte alors sur ces
     // surfaces-là, sans rectangle à poser.
     if (!occurrences && !ailleurs) return { occurrences: 0, pages: 0 };
-    snapshot();
+    snapshot('Caviarder dans tout le document');
     ajouts.forEach(({ p, a }) => { a.id = ++uid; p.ann.push(a); });
     // Le terme est retenu : l'export le cherchera sur toutes les surfaces du
     // fichier, pas seulement à l'endroit où l'on a vu le mot.
@@ -206,7 +206,7 @@
       await tour();
     }
     if (!occurrences) return { occurrences: 0, pages: 0 };
-    snapshot();
+    snapshot('Remplacer dans tout le document');
     touchees.forEach(({ p, avant, apres }) => { Object.assign(avant, apres); });
     neufs.forEach(({ p, a }) => { a.id = ++uid; p.ann.push(a); });
     state.touched = true;
@@ -500,15 +500,16 @@
       }
     };
     api = dialog({
+      aide: 'search',
       title: 'Rechercher, remplacer, caviarder', icon: IC.search, libre: true, submitOnEnter: false,
       build: b => {
-        b.append(field('Recherche', q));
+        b.append(field('Recherche', q, 'Le mot, le nom ou le numéro à trouver dans tout le document. Entrée passe à l\'occurrence suivante.'));
         b.append(rowOf([casse, mot, accents], true));
         b.append(nav);
         b.append(info);
         b.append(infoCache);
         b.append(results);
-        b.append(field('Remplacer par', rempl));
+        b.append(field('Remplacer par', rempl, 'Remplace l\'occurrence affichée ou toutes. Laissez vide pour caviarder : le texte est alors détruit, pas seulement caché.'));
         b.append(note('Remplacer tout corrige chaque bloc concerné comme dans l\'éditeur : mêmes polices, même mise en page. Caviarder tout masque chaque occurrence d\'un rectangle noir et retire le texte du fichier à l\'export.'));
       },
       onClose: () => { token++; effacerRecherche(); },

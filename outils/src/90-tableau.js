@@ -167,10 +167,11 @@
     nombres.input.addEventListener('change', montrer);
     decimale.addEventListener('change', montrer);
     dialog({
+      aide: 'tableau',
       title: 'Copier un tableau vers Excel', icon: IC.tableau, wide: true, submitOnEnter: false,
       build: b => {
         b.append(field('Pages', choix, 'Les colonnes sont repérées d\'après les blancs qui traversent les lignes du tableau. Sur plusieurs pages, les lignes se suivent.'));
-        b.append(rowOf([nombres, field('Séparateur décimal', decimale)], true));
+        b.append(rowOf([nombres, field('Séparateur décimal', decimale, 'La virgule pour un Excel en français ou en allemand ; le point pour un Excel anglais.')], true));
         b.append(info);
         b.append(apercu);
       },

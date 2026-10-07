@@ -197,6 +197,7 @@
     majEtapes();
     const suite = () => etapes.map(e => ({ op: e.choix.value, config: e.cfg.value })).filter(e => e.op);
     dialog({
+      aide: 'lots',
       title: 'Traiter plusieurs fichiers', icon: IC.grille, wide: true, submitOnEnter: false,
       build: b => {
         b.append(rowOf([choisir, info], true));
@@ -262,13 +263,14 @@
     });
     const every = input('sp-every', 'number', 2, { min: 1, max: 500 });
     const ranges = input('sp-ranges', 'text', '1-3, 4-6');
-    const everyWrap = field('Nombre de pages par fichier', every);
+    const everyWrap = field('Nombre de pages par fichier', every, 'Le dernier fichier contient ce qui reste.');
     const rangesWrap = field('Plages de pages', ranges, 'Exemple : 1-3, 5, 8-10 — un fichier par plage.');
     everyWrap.hidden = true; rangesWrap.hidden = true;
     dialog({
+      aide: 'split',
       title: 'Diviser le document', icon: IC.deux,
       build: b => {
-        b.append(field('Découpage', mode));
+        b.append(field('Découpage', mode, 'Chaque fichier obtenu reprend le nom du document, suivi d\'un numéro. Le document ouvert n\'est pas modifié.'));
         b.append(everyWrap, rangesWrap);
         b.append(note(FEAT.zip ? 'Les fichiers obtenus sont réunis dans une archive ZIP.' : 'L\'archive ZIP est indisponible : les fichiers seront enregistrés un par un.', FEAT.zip ? null : 'warn'));
       },
@@ -316,10 +318,11 @@
     const margin = input('rs-margin', 'number', 0, { min: 0, max: 120 });
     const scope = select('rs-scope', [['all', 'Toutes les pages'], ['sel', 'Pages sélectionnées']], state.selected.size ? 'sel' : 'all');
     dialog({
+      aide: 'resize',
       title: 'Redimensionner les pages', icon: IC.resize,
       build: b => {
-        b.append(rowOf([field('Format cible', size), field('Orientation', orient)]));
-        b.append(rowOf([field('Marge (points)', margin), field('Appliquer à', scope)]));
+        b.append(rowOf([field('Format cible', size, 'Toutes les pages prennent ce format ; le contenu est mis à l\'échelle sans déformation.'), field('Orientation', orient, '« Conserver » laisse chaque page dans son sens ; les autres choix couchent ou redressent toutes les pages.')]));
+        b.append(rowOf([field('Marge (points)', margin, '72 points font 2,5 cm. 0 laisse le contenu aller jusqu\'au bord de la feuille.'), field('Appliquer à', scope, 'Ce choix remplace le document ouvert : annulez avec Ctrl+Z si le résultat ne convient pas.')]));
         b.append(note('Le contenu est mis à l\'échelle sans déformation et centré. Le document est remplacé par sa version redimensionnée.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Redimensionner', primary: true, onClick: async close => {
@@ -360,17 +363,17 @@
             if (i % 8 === 0) { setBusy('Redimensionnement… ' + (i + 1) + '/' + state.pages.length, i / state.pages.length); await nextFrame(); }
           }
           const bytes = await out.save();
-          await replaceProject(bytes, safeBase(el.filename.value) + tr('-redimensionné.pdf'));
-          setLast('Pages redimensionnées');
+          await replaceProject(bytes, safeBase(el.filename.value) + tr('-redimensionné.pdf'), 'Redimensionner les pages');
+          setLast(tr('Pages redimensionnées en {0} : le fichier d\'origine n\'est pas touché avant l\'export').replace('{0}', size.value));
         } catch (e) { toast(messageDEchec('Le redimensionnement', e), 'error'); }
         finally { setBusy(''); }
       } }],
     });
   }
 
-  async function replaceProject(bytes, name) {
+  async function replaceProject(bytes, name, nom) {
     const buf = bytes.buffer ? bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) : bytes;
-    snapshot();
+    snapshot(nom || 'Remplacer le document');
     const keepMeta = state.meta, keepSec = state.security;
     state.sources = []; state.pages = []; state.selected.clear();
     state.watermark = null; state.stamp = null;
@@ -537,17 +540,18 @@
     });
     [text, size, angle, color, opacity, font, mode, bold.input, pagesEl].forEach(c => { c.addEventListener('input', apercu.maj); c.addEventListener('change', apercu.maj); });
     dialog({
+      aide: 'watermark',
       title: 'Filigrane', icon: IC.water, wide: true,
       build: b => {
         const champs = document.createElement('div'); champs.className = 'reglage-colonne';
         champs.append(selecteurDeConfigs('filigrane',
           () => ({ text: text.value, font: font.value, bold: bold.input.checked, size: size.value, color: color.value, opacity: opacity.value, angle: angle.value, mode: mode.value }),
           v => { poserChamp(text, v.text); poserChamp(font, v.font); poserChamp(bold.input, v.bold); poserChamp(size, v.size); poserChamp(color, v.color); poserChamp(opacity, v.opacity); poserChamp(angle, v.angle); poserChamp(mode, v.mode); opVal.textContent = opacity.value + ' %'; }));
-        champs.append(field('Texte', text));
-        champs.append(rowOf([field('Police', font), field('Taille', size), field('Angle (°)', angle)]));
-        const cw = field('Couleur', color);
-        const ow = field('Opacité', opacity); ow.appendChild(opVal);
-        champs.append(rowOf([cw, ow, field('Disposition', mode)]));
+        champs.append(field('Texte', text, 'Imprimé sur chaque page concernée, par-dessus son contenu : « BROUILLON », « CONFIDENTIEL »…'));
+        champs.append(rowOf([field('Police', font, 'Helvetica (sans empattement), Times (avec) ou Courier (chasse fixe).'), field('Taille', size, 'En points ; le texte du filigrane est centré sur la page.'), field('Angle (°)', angle, '0 pour du texte horizontal, 45 pour une diagonale.')]));
+        const cw = field('Couleur', color, 'Une couleur claire laisse le texte du document lisible.');
+        const ow = field('Opacité', opacity, 'Plus la valeur est basse, plus le filigrane est transparent. Il reste lisible à l\'impression.'); ow.appendChild(opVal);
+        champs.append(rowOf([cw, ow, field('Disposition', mode, 'Un seul texte au centre, répété en mosaïque, ou en haut ou en bas de page.')]));
         champs.append(bold);
         champs.append(field('Pages', pagesEl, 'Toutes les pages, ou une plage : 3-7, 12.'));
         champs.append(note('Le filigrane est dessiné par-dessus le contenu, sur toutes les pages, au moment de l\'export.'
@@ -557,13 +561,13 @@
       },
       actions: [
         memo ? { label: 'Réglages d\'origine', onClick: close => { reglageEcrire('filigrane', null); close(); toolWatermark(); } } : null,
-        state.watermark ? { label: 'Retirer', onClick: close => { snapshot(); state.watermark = null; vue.render(); close(); setLast('Filigrane retiré'); } } : null,
+        state.watermark ? { label: 'Retirer', onClick: close => { snapshot('Retirer le filigrane'); state.watermark = null; vue.render(); close(); setLast('Filigrane retiré : l\'export n\'en portera pas'); } } : null,
         { label: 'Annuler', onClick: c => c() },
         { label: 'Appliquer', primary: true, onClick: close => {
           if (!text.value.trim()) { toast('Indiquez le texte du filigrane.', 'warn'); return; }
           const refus = verdictPages(pagesEl.value);
           if (refus) { toast(refus, 'warn'); return; }
-          snapshot();
+          snapshot('Filigrane');
           state.watermark = {
             text: text.value, font: font.value, bold: bold.input.checked,
             size: clampInt(size.value, 6, 300) || 60, color: color.value,
@@ -574,7 +578,7 @@
           state.touched = true; vue.render(); close();
           setLast('Filigrane « ' + state.watermark.text + ' » appliqué');
           const pose = Object.assign({}, state.watermark);
-          retenirOperation(tr('Filigrane') + ' « ' + pose.text + ' »', () => { snapshot(); state.watermark = Object.assign({}, pose); state.touched = true; vue.render(); setLast('Filigrane « ' + pose.text + ' » appliqué'); });
+          retenirOperation(tr('Filigrane') + ' « ' + pose.text + ' »', () => { snapshot('Filigrane'); state.watermark = Object.assign({}, pose); state.touched = true; vue.render(); setLast('Filigrane « ' + pose.text + ' » appliqué'); });
         } },
       ].filter(Boolean),
     });
@@ -621,16 +625,17 @@
     });
     [hl, hc, hr, fl, fc, fr, font, size, color, margin, start, bpre, bdig, skip.input, pagesEl].forEach(c => { c.addEventListener('input', apercu.maj); c.addEventListener('change', apercu.maj); });
     dialog({
+      aide: preset === 'number' ? 'number' : 'stamp',
       title: preset === 'number' ? 'Numéroter les pages' : 'En-tête et pied de page', icon: IC.header, wide: true,
       build: b => {
         const champs = document.createElement('div'); champs.className = 'reglage-colonne';
         champs.append(selecteurDeConfigs('entete',
           () => ({ hl: hl.value, hc: hc.value, hr: hr.value, fl: fl.value, fc: fc.value, fr: fr.value, font: font.value, size: size.value, color: color.value, margin: margin.value, bpre: bpre.value, bdig: bdig.value, skip: skip.input.checked }),
           v => { [[hl, v.hl], [hc, v.hc], [hr, v.hr], [fl, v.fl], [fc, v.fc], [fr, v.fr], [font, v.font], [size, v.size], [color, v.color], [margin, v.margin], [bpre, v.bpre], [bdig, v.bdig], [skip.input, v.skip]].forEach(([c, x]) => poserChamp(c, x)); }));
-        champs.append(groupOf('En-tête', [rowOf([field('Gauche', hl), field('Centre', hc), field('Droite', hr)])]));
-        champs.append(groupOf('Pied de page', [rowOf([field('Gauche', fl), field('Centre', fc), field('Droite', fr)])]));
-        champs.append(rowOf([field('Police', font), field('Taille', size), field('Couleur', color), field('Marge (pt)', margin)], true));
-        champs.append(rowOf([field('Premier numéro', start), field('Préfixe Bates', bpre, 'Pour {bates}'), field('Chiffres Bates', bdig)], true));
+        champs.append(groupOf('En-tête', [rowOf([field('Gauche', hl, 'Aligné à gauche. Codes : {p} page, {n} nombre de pages, {date}, {file}, {bates}.'), field('Centre', hc, 'Centré. Mêmes codes : {p}, {n}, {date}, {file}, {bates}.'), field('Droite', hr, 'Aligné à droite. Mêmes codes : {p}, {n}, {date}, {file}, {bates}.')])]));
+        champs.append(groupOf('Pied de page', [rowOf([field('Gauche', fl, 'Aligné à gauche, en bas de page. Codes : {p}, {n}, {date}, {file}, {bates}.'), field('Centre', fc, 'Centré en bas de page : la place habituelle d\'un numéro.'), field('Droite', fr, 'Aligné à droite, en bas de page.')])]));
+        champs.append(rowOf([field('Police', font, 'Helvetica, Times ou Courier.'), field('Taille', size, 'En points ; 9 convient à un pied de page.'), field('Couleur', color, 'Gris foncé par défaut : lisible sans voler la page.'), field('Marge (pt)', margin, 'La distance au bord de la feuille. À 28, le texte reste hors de la zone qu\'une imprimante rogne.')], true));
+        champs.append(rowOf([field('Premier numéro', start, 'Le numéro de la première page ; chaque document recommence à 1.'), field('Préfixe Bates', bpre, 'Pour {bates}'), field('Chiffres Bates', bdig, 'Le nombre de chiffres, complété de zéros : 4 donne 0001.')], true));
         champs.append(skip);
         champs.append(field('Pages', pagesEl, 'Toutes les pages, ou une plage : 3-7, 12. Le premier numéro suit la place de la page dans le document.'));
         champs.append(note('Codes disponibles : {p} numéro de page, {n} nombre de pages, {date} date du jour, {file} nom du fichier, {bates} numérotation Bates.'
@@ -640,7 +645,7 @@
       },
       actions: [
         memo ? { label: 'Réglages d\'origine', onClick: close => { reglageEcrire(cleMemo, null); close(); toolStamp(preset); } } : null,
-        state.stamp ? { label: 'Retirer', onClick: close => { snapshot(); state.stamp = null; vue.render(); close(); setLast('En-tête et pied de page retirés'); } } : null,
+        state.stamp ? { label: 'Retirer', onClick: close => { snapshot('Retirer l\'en-tête et le pied de page'); state.stamp = null; vue.render(); close(); setLast('En-tête et pied de page retirés'); } } : null,
         { label: 'Annuler', onClick: c => c() },
         { label: 'Appliquer', primary: true, onClick: close => {
           const next = {
@@ -655,12 +660,12 @@
           const refus = verdictPages(pagesEl.value);
           if (refus) { toast(refus, 'warn'); return; }
           next.pages = pagesEl.value.trim();
-          snapshot();
+          snapshot(preset === 'number' ? 'Numéroter les pages' : 'En-tête et pied de page');
           reglageEcrire(cleMemo, next);
           state.stamp = next; state.touched = true; vue.render(); close();
           setLast('En-tête et pied de page appliqués');
           const pose = Object.assign({}, next);
-          retenirOperation(tr(preset === 'number' ? 'Numéroter les pages' : 'En-tête et pied de page'), () => { snapshot(); state.stamp = Object.assign({}, pose); state.touched = true; vue.render(); setLast('En-tête et pied de page appliqués'); });
+          retenirOperation(tr(preset === 'number' ? 'Numéroter les pages' : 'En-tête et pied de page'), () => { snapshot(preset === 'number' ? 'Numéroter les pages' : 'En-tête et pied de page'); state.stamp = Object.assign({}, pose); state.touched = true; vue.render(); setLast('En-tête et pied de page appliqués'); });
         } },
       ].filter(Boolean),
     });
@@ -674,16 +679,17 @@
     const langue = select('pr-langue', BALISAGE_LANGUES, state.meta.langue || codeLangue());
     const balise = checkbox('pr-balise', 'Balisage d\'accessibilité (PDF balisé pour les lecteurs d\'écran)', !!state.meta.balise);
     dialog({
+      aide: 'props',
       title: 'Propriétés du document', icon: IC.info,
       build: b => {
         b.append(selecteurDeConfigs('proprietes',
           () => ({ auteur: a.value, sujet: s.value, mots: k.value, langue: langue.value, balise: balise.input.checked }),
           v => { poserChamp(a, v.auteur); poserChamp(s, v.sujet); poserChamp(k, v.mots); poserChamp(langue, v.langue); poserChamp(balise.input, v.balise); }));
         b.append(field('Titre', t, 'Affiché dans la barre de la fenêtre ; indispensable à l\'accessibilité.'));
-        b.append(rowOf([field('Auteur', a), field('Sujet', s)]));
+        b.append(rowOf([field('Auteur', a, 'Enregistré dans le document ; lisible par quiconque l\'ouvre.'), field('Sujet', s, 'Enregistré dans le document ; lisible par quiconque l\'ouvre.')]));
         b.append(field('Mots-clés', k, 'Séparés par des virgules.'));
         b.append(groupOf('Accessibilité', [
-          rowOf([field('Langue du document', langue)], true),
+          rowOf([field('Langue du document', langue, 'Lue par les lecteurs d\'écran pour choisir la voix. Indispensable à l\'accessibilité.')], true),
           balise,
           note('Le balisage décrit au lecteur d\'écran la structure du document : le sommaire et les intercalaires d\'un dossier sont de vrais titres et une vraie table des matières ; les numérotations et filigranes sont écartés de la lecture ; chaque page venue d\'un autre fichier forme un bloc, lu dans l\'ordre du fichier d\'origine. Les titres, listes et tableaux de ces pages ne sont pas devinés, et les liens, annotations et champs de formulaire ne sont pas balisés : ce n\'est pas un PDF/UA.'),
         ]));
@@ -696,7 +702,7 @@
         b.append(groupOf('Informations', [dl]));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Enregistrer', primary: true, onClick: close => {
-        snapshot();
+        snapshot('Propriétés du document');
         state.meta = { title: t.value.trim(), author: a.value.trim(), subject: s.value.trim(), keywords: k.value.trim(), balise: balise.input.checked, langue: langue.value };
         state.touched = true; vue.render(); close();
         setLast('Propriétés retenues : elles seront écrites dans le fichier à l\'enregistrement');
@@ -723,6 +729,7 @@
       ['documentAssembly', 'Autoriser la réorganisation des pages'],
     ].map(p => checkbox('se-' + p[0], p[1], p[0] === 'printing' ? sec.permissions.printing !== false : !!sec.permissions[p[0]]));
     dialog({
+      aide: 'password',
       title: 'Protection par mot de passe', icon: IC.lock,
       build: b => {
         b.append(field('Mot de passe d\'ouverture', up, 'Demandé pour ouvrir le document. Laissez vide pour n\'imposer que des autorisations.'));
@@ -731,7 +738,7 @@
         b.append(note('Chiffrement AES-256, appliqué au moment de l\'export. Conservez le mot de passe : il est impossible de le retrouver.'));
       },
       actions: [
-        state.security ? { label: 'Retirer', onClick: close => { snapshot(); state.security = null; vue.render(); close(); setLast('Protection retirée'); } } : null,
+        state.security ? { label: 'Retirer', onClick: close => { snapshot('Retirer la protection'); state.security = null; vue.render(); close(); setLast('Protection retirée : l\'export ne sera pas chiffré'); } } : null,
         { label: 'Annuler', onClick: c => c() },
         { label: 'Appliquer', primary: true, onClick: close => {
           if (!up.value && !op.value) { toast('Indiquez au moins un mot de passe.', 'warn'); return; }
@@ -741,7 +748,7 @@
             permissions[keyName] = keyName === 'printing' ? (w.input.checked ? 'highResolution' : false) : w.input.checked;
           });
           permissions.contentAccessibility = true;
-          snapshot();
+          snapshot('Protection par mot de passe');
           state.security = { userPassword: up.value, ownerPassword: op.value || up.value, permissions };
           state.touched = true; vue.render(); close();
           setLast('Protection par mot de passe retenue : elle sera appliquée au fichier à l\'enregistrement');
@@ -754,6 +761,7 @@
     const flat = checkbox('fl-flat', 'Aplatir les champs de formulaire à l\'export', state.flatten);
     const figer = checkbox('fl-annots', 'Figer aussi les annotations dans la page (surlignages, cadres, dessins, textes, tampons)', state.figerAnnotations);
     dialog({
+      aide: 'flatten',
       title: 'Aplatir le document', icon: IC.flat,
       build: b => {
         b.append(flat);
@@ -762,7 +770,7 @@
         b.append(note('Par défaut, les annotations partent comme de vrais commentaires PDF : dans Acrobat ou un navigateur, le destinataire les voit, peut les déplacer, les modifier ou les retirer. Figées, elles font partie de la page comme de l\'encre. Les corrections de texte, les images, les signatures et les caviardages sont toujours fondus dans la page ; une page caviardée garde son texte net, seules les lettres masquées et, s\'il y a lieu, l\'image sous le rectangle sont refaites.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Appliquer', primary: true, onClick: close => {
-        snapshot(); state.flatten = flat.input.checked; state.figerAnnotations = figer.input.checked; state.touched = true; vue.render(); close();
+        snapshot('Aplatir le document'); state.flatten = flat.input.checked; state.figerAnnotations = figer.input.checked; state.touched = true; vue.render(); close();
         setLast((state.flatten ? 'Champs aplatis à l\'export' : 'Champs conservés') + ' · annotations ' + (state.figerAnnotations ? 'figées' : 'modifiables'));
       } }],
     });
@@ -806,15 +814,16 @@
     picker.addEventListener('change', () => { current = withFields.find(s => String(s.id) === picker.value); build(); });
     const flat = checkbox('fm-flat', 'Aplatir après remplissage (valeurs non modifiables)', state.flatten);
     dialog({
+      aide: 'form',
       title: 'Remplir le formulaire', icon: IC.form, wide: true,
       build: b => {
-        if (withFields.length > 1) b.append(field('Document', picker));
+        if (withFields.length > 1) b.append(field('Document', picker, 'Le formulaire à remplir, parmi les documents ouverts.'));
         b.append(list);
         b.append(flat);
         b.append(note('Si les pages sont réorganisées ou fusionnées, les champs sont aplatis automatiquement pour conserver les valeurs saisies.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Enregistrer', primary: true, onClick: close => {
-        snapshot();
+        snapshot('Remplir le formulaire');
         const vals = {};
         inputs.forEach((get, name) => { vals[name] = get(); });
         current.formValues = vals;
@@ -830,10 +839,11 @@
     const dpi = select('ei-dpi', [['72', '72 ppp (écran)'], ['150', '150 ppp'], ['300', '300 ppp (impression)']], '150');
     const scope = select('ei-scope', [['all', 'Toutes les pages'], ['sel', 'Pages sélectionnées']], state.selected.size ? 'sel' : 'all');
     dialog({
+      aide: 'exp-img',
       title: 'Exporter en images', icon: IC.image,
       build: b => {
-        b.append(rowOf([field('Format', fmt), field('Résolution', dpi)]));
-        b.append(field('Pages', scope));
+        b.append(rowOf([field('Format', fmt, 'PNG ne perd rien (fichiers plus lourds) ; JPEG est plus léger mais perd un peu de netteté.'), field('Résolution', dpi, '72 pour l\'écran, 150 pour un courriel, 300 pour imprimer. Plus c\'est fin, plus les fichiers sont lourds.')]));
+        b.append(field('Pages', scope, 'Toutes les pages, ou celles que vous avez sélectionnées dans la grille.'));
         b.append(note(FEAT.zip ? 'Plusieurs pages sont réunies dans une archive ZIP.' : 'Archive ZIP indisponible : les images seront enregistrées une par une.', FEAT.zip ? null : 'warn'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Exporter', primary: true, onClick: async close => {
@@ -888,9 +898,10 @@
     const qv = document.createElement('span'); qv.className = 'hint'; qv.textContent = '72 %';
     q.addEventListener('input', () => { qv.textContent = q.value + ' %'; });
     dialog({
+      aide: 'compress',
       title: 'Réduire la taille du fichier', icon: IC.zap,
       build: b => {
-        b.append(rowOf([field('Résolution', dpi), (() => { const f = field('Qualité des images', q); f.appendChild(qv); return f; })()]));
+        b.append(rowOf([field('Résolution', dpi, '96 donne le fichier le plus léger et le texte le moins net ; 200 reste net à l\'impression.'), (() => { const f = field('Qualité des images', q, 'Plus la valeur est basse, plus le fichier est léger et plus l\'image est abîmée. 72 % convient à un document courant.'); f.appendChild(qv); return f; })()]));
         b.append(note('Chaque page est convertie en image : le fichier devient plus léger mais le texte n\'est plus sélectionnable. Le document ouvert n\'est pas modifié.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Réduire et exporter', primary: true, onClick: async close => {

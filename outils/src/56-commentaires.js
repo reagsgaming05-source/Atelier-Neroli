@@ -107,6 +107,7 @@
       info.textContent = total ? plural(total, 'commentaire', 'commentaires') + ' dans le document. Cochez ceux à retirer : ils disparaîtront du PDF exporté.' : 'Aucun commentaire dans les documents ouverts.';
     })();
     api = dialog({
+      aide: 'commentaires',
       title: 'Commentaires du document', icon: IC.info, libre: true, submitOnEnter: false,
       build: b => {
         b.append(note('Les notes, surlignages, tampons et autres commentaires déjà présents dans les PDF ouverts. Ce que vous avez ajouté ici se règle dans l\'éditeur de page.'));
@@ -117,7 +118,7 @@
         { label: 'Annuler', onClick: c => c() },
         { label: 'Tout retirer', onClick: () => { cases.forEach(x => { x.cb.checked = true; }); } },
         { label: 'Appliquer', primary: true, onClick: close => {
-          snapshot();
+          snapshot('Retirer des commentaires');
           let retires = 0;
           state.pages.forEach(p => { p.retraits = []; });
           cases.forEach(x => { if (!x.cb.checked) return; retires++; x.pages.forEach(p => { p.retraits = (p.retraits || []).concat([x.c.id]); }); });

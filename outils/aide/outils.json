@@ -1,0 +1,489 @@
+{
+ "outils": [
+  {
+   "id": "fusionner",
+   "nom": "Fusionner des PDF",
+   "groupe": "organiser",
+   "quoi": "Réunit plusieurs fichiers PDF dans un même document de travail.",
+   "etapes": [
+    "Choisissez un ou plusieurs fichiers dans la fenêtre qui s'ouvre.",
+    "Leurs pages s'ajoutent à la suite de celles qui sont déjà ouvertes.",
+    "Réordonnez les pages dans la vue Organiser, puis exportez le résultat."
+   ],
+   "effet": "Aucun fichier n'est modifié : seul l'export écrit un nouveau PDF.",
+   "attention": "Un fichier protégé par un mot de passe vous le demande à l'ouverture."
+  },
+  {
+   "id": "blank",
+   "nom": "Pages vierges",
+   "groupe": "organiser",
+   "quoi": "Insère une ou plusieurs pages blanches dans le document.",
+   "etapes": [
+    "Indiquez le nombre de pages et l'endroit : après la sélection, au début ou à la fin.",
+    "Choisissez un format, ou gardez celui de la page affichée."
+   ],
+   "effet": "Le document ouvert change ; Ctrl+Z défait l'insertion. Le fichier d'origine n'est pas touché avant l'export."
+  },
+  {
+   "id": "images",
+   "nom": "Ajouter des images",
+   "groupe": "organiser",
+   "quoi": "Transforme des photos ou des scans (JPEG, PNG, WebP) en pages du document.",
+   "etapes": [
+    "Choisissez les images dans la fenêtre qui s'ouvre.",
+    "Chaque image devient une page, à la suite des pages existantes."
+   ],
+   "effet": "Les images sont lues sur ce poste ; rien n'est envoyé ailleurs.",
+   "attention": "Une image n'est pas du texte : pour la rendre cherchable, lancez ensuite « Reconnaître le texte »."
+  },
+  {
+   "id": "vides",
+   "nom": "Détecter les pages vides",
+   "groupe": "organiser",
+   "quoi": "Repère les pages blanches d'un document scanné et propose de les retirer.",
+   "etapes": [
+    "Choisissez la sensibilité : Strict, Normal ou Tolérant.",
+    "Contrôlez la liste : chaque page détectée est cochée, avec une vignette.",
+    "Décochez celles à garder, puis supprimez les pages cochées."
+   ],
+   "effet": "Seules les pages cochées sont supprimées, et Ctrl+Z les rend.",
+   "attention": "Une page presque vide (un numéro, un tampon) n'est pas supprimée d'office : elle est proposée, non cochée."
+  },
+  {
+   "id": "select-plage",
+   "nom": "Sélectionner par numéros",
+   "groupe": "organiser",
+   "quoi": "Sélectionne des pages d'après leurs numéros, sans les cliquer une à une.",
+   "etapes": [
+    "Écrivez les numéros : « 3-7, 12 », « 5- » pour aller jusqu'à la fin, « -3 » pour les trois premières.",
+    "Un aperçu dit combien de pages sont désignées et signale celles qui n'existent pas."
+   ],
+   "effet": "La sélection seule change ; le document n'est pas modifié."
+  },
+  {
+   "id": "split",
+   "nom": "Diviser le document",
+   "groupe": "organiser",
+   "quoi": "Découpe le document en plusieurs fichiers.",
+   "etapes": [
+    "Choisissez : une page par fichier, des lots d'un même nombre de pages, ou des plages que vous écrivez.",
+    "Les fichiers sont enregistrés ensemble dans une archive ZIP."
+   ],
+   "effet": "Le document ouvert n'est pas modifié ; les fichiers obtenus portent son nom suivi d'un numéro."
+  },
+  {
+   "id": "dossier",
+   "nom": "Constituer un dossier",
+   "groupe": "organiser",
+   "quoi": "Assemble des pièces en un dossier numéroté, avec intercalaires et sommaire.",
+   "etapes": [
+    "Donnez un titre au dossier et vérifiez l'ordre des pièces.",
+    "Choisissez les intercalaires, la mention de pièce, la numérotation, le sommaire et les signets.",
+    "Validez : les pages d'intercalaires et de sommaire s'insèrent dans le document."
+   ],
+   "effet": "Le sommaire et les intercalaires se refont d'eux-mêmes si vous déplacez ou retirez des pages ensuite. Ctrl+Z défait la constitution.",
+   "attention": "Chaque document ouvert devient une pièce ; ouvrez d'abord tous les documents du dossier."
+  },
+  {
+   "id": "resize",
+   "nom": "Redimensionner",
+   "groupe": "organiser",
+   "quoi": "Met toutes les pages (ou les pages sélectionnées) au même format, par exemple A4.",
+   "etapes": [
+    "Choisissez le format cible, l'orientation et une marge.",
+    "Choisissez les pages concernées : toutes ou la sélection."
+   ],
+   "effet": "Le contenu est mis à l'échelle sans déformation et centré. Le document ouvert est remplacé par sa version redimensionnée ; Ctrl+Z revient en arrière, et le fichier d'origine reste intact jusqu'à l'export.",
+   "attention": "Un document signé perd sa signature dès qu'il est modifié."
+  },
+  {
+   "id": "lots",
+   "nom": "Traiter plusieurs fichiers",
+   "groupe": "organiser",
+   "quoi": "Applique la même suite d'opérations à plusieurs fichiers, sans les ouvrir un à un.",
+   "etapes": [
+    "Choisissez les fichiers.",
+    "Choisissez jusqu'à trois opérations : pages vides, compression, numérotation, mot de passe, images en PDF, séparation, extraction du texte.",
+    "Lancez : chaque fichier est traité à part et les résultats sont réunis dans une archive ZIP."
+   ],
+   "effet": "Le document ouvert n'est pas touché. Un compte rendu dit, fichier par fichier, ce qui a réussi et ce qui a échoué, avec la cause.",
+   "attention": "L'opération qui produit les fichiers (réduire, séparer, extraire le texte) vient en dernier."
+  },
+  {
+   "id": "signer",
+   "nom": "Signer",
+   "groupe": "modifier",
+   "quoi": "Pose votre signature manuscrite sur une page.",
+   "etapes": [
+    "Tracez votre signature avec la souris, le doigt ou le stylet, ou prenez-en une mémorisée.",
+    "Placez-la sur la page, et réglez sa taille."
+   ],
+   "effet": "C'est une image posée sur la page, comme à l'encre. Une signature mémorisée reste sur ce poste et n'est jamais écrite dans un PDF sans que vous l'y posiez.",
+   "attention": "Ce n'est pas une signature électronique : elle ne prouve pas que le document n'a pas changé. Pour cela, utilisez « Signer avec un certificat »."
+  },
+  {
+   "id": "edit",
+   "nom": "Éditeur de page",
+   "groupe": "modifier",
+   "quoi": "Annote une page : texte, surlignage, cadres, dessin, images, tampons, champs, signature.",
+   "etapes": [
+    "Choisissez un outil dans la barre à gauche.",
+    "Cliquez ou tracez sur la page ; réglez couleur, taille et police dans le volet de droite.",
+    "Chaque page se corrige à son tour : passez de l'une à l'autre dans la vue Lecture ou Organiser."
+   ],
+   "effet": "Chaque ajout se défait par Ctrl+Z et se retrouve dans l'export. Les annotations partent comme de vrais commentaires PDF, que le destinataire peut déplacer ou retirer, sauf si vous les figez avec « Aplatir »."
+  },
+  {
+   "id": "caviarder-zone",
+   "nom": "Caviarder une zone",
+   "groupe": "modifier",
+   "quoi": "Masque définitivement une zone de la page : le texte dessous est détruit, pas seulement recouvert.",
+   "etapes": [
+    "Tracez un rectangle sur ce qu'il faut cacher.",
+    "Vérifiez le résultat sur l'aperçu, puis exportez."
+   ],
+   "effet": "À l'export, la page est reconstruite : le texte, les images et les annotations sous la zone n'existent plus dans le fichier. Avant l'export, Ctrl+Z retire la zone.",
+   "attention": "Un caviardage exporté ne se défait pas. Gardez l'original dans un dossier protégé."
+  },
+  {
+   "id": "tampon",
+   "nom": "Tampon",
+   "groupe": "modifier",
+   "quoi": "Pose un tampon : « Reçu le », « Payé », « Copie conforme », « Visé »…",
+   "etapes": [
+    "Choisissez un tampon dans la grille, ou composez le vôtre.",
+    "Réglez la taille et la couleur, puis cliquez sur la page pour le poser."
+   ],
+   "effet": "« {date} » dans le texte est remplacé par la date du jour au moment où vous posez le tampon. Votre tampon peut être gardé pour les prochains documents."
+  },
+  {
+   "id": "watermark",
+   "nom": "Filigrane",
+   "groupe": "modifier",
+   "quoi": "Imprime un texte en travers des pages : « BROUILLON », « CONFIDENTIEL »…",
+   "etapes": [
+    "Écrivez le texte et réglez police, taille, angle, couleur et opacité.",
+    "Choisissez la disposition et les pages concernées.",
+    "Un aperçu montre le résultat sur une page avant que vous appliquiez."
+   ],
+   "effet": "Le filigrane est dessiné par-dessus le contenu au moment de l'export ; « Retirer » l'enlève, et le dernier réglage est repris au prochain document.",
+   "attention": "Il fait partie de la page exportée : il ne se retire plus du fichier que vous avez envoyé."
+  },
+  {
+   "id": "stamp",
+   "nom": "En-tête et pied de page",
+   "groupe": "modifier",
+   "quoi": "Écrit un texte en haut ou en bas de chaque page : titre, date, nom du fichier, numéro.",
+   "etapes": [
+    "Écrivez le texte à gauche, au centre et à droite, en haut et en bas.",
+    "Employez les codes {p} (page), {n} (nombre de pages), {date}, {file}, {bates}.",
+    "Réglez la police, la taille, la marge et les pages concernées."
+   ],
+   "effet": "Le texte est dessiné au moment de l'export ; l'aperçu le montre avant. « Retirer » l'enlève, et le dernier réglage est repris au prochain document.",
+   "attention": "Le texte se pose sur le contenu : gardez une marge suffisante pour ne rien recouvrir."
+  },
+  {
+   "id": "number",
+   "nom": "Numéroter les pages",
+   "groupe": "modifier",
+   "quoi": "Numérote les pages, en simple ou en numérotation Bates (préfixe et chiffres fixes).",
+   "etapes": [
+    "Choisissez la forme : « {p} / {n} » donne « 3 / 12 ».",
+    "Fixez le premier numéro, et les pages à numéroter.",
+    "Pour un dossier juridique, utilisez {bates} avec un préfixe et un nombre de chiffres."
+   ],
+   "effet": "Même mécanisme que l'en-tête et le pied de page : dessiné à l'export, retirable, mémorisé pour le prochain document."
+  },
+  {
+   "id": "form",
+   "nom": "Remplir le formulaire",
+   "groupe": "modifier",
+   "quoi": "Remplit les champs, les cases et les listes d'un formulaire PDF.",
+   "etapes": [
+    "Saisissez chaque champ dans la liste ; les cases se cochent.",
+    "Choisissez d'aplatir ou non le formulaire.",
+    "Enregistrez, puis exportez."
+   ],
+   "effet": "Les valeurs sont gardées avec le document. Si les pages sont réorganisées ou fusionnées, les champs sont aplatis pour conserver ce que vous avez saisi.",
+   "attention": "Un formulaire signé est modifié par le remplissage : sa signature n'est plus valable."
+  },
+  {
+   "id": "serie",
+   "nom": "Remplir en série (CSV)",
+   "groupe": "modifier",
+   "quoi": "Fait une copie remplie du formulaire pour chaque ligne d'un tableau.",
+   "etapes": [
+    "Choisissez le fichier CSV, exporté d'Excel (« Enregistrer sous… › CSV »).",
+    "Reliez chaque colonne à un champ ; les liens évidents sont proposés.",
+    "Donnez un modèle de nom (« {Nom}-{Prénom} ») et choisissez un PDF unique ou une archive ZIP."
+   ],
+   "effet": "Le formulaire ouvert n'est pas modifié. Les champs déjà remplis à la main servent de base ; la ligne du tableau ne remplace que ce qu'elle relie.",
+   "attention": "Contrôlez la première copie avant d'envoyer toutes les autres."
+  },
+  {
+   "id": "commentaires",
+   "nom": "Commentaires du document",
+   "groupe": "modifier",
+   "quoi": "Liste les commentaires déjà présents dans un PDF reçu, et permet de les retirer.",
+   "etapes": [
+    "Ouvrez le PDF reçu : la liste montre les commentaires qu'il contient.",
+    "Cochez ceux à retirer, ou « Tout retirer », puis appliquez."
+   ],
+   "effet": "Les commentaires retirés ne partent pas dans l'export. Ctrl+Z les rend avant l'export.",
+   "attention": "Les ajouter, c'est l'éditeur de page ; ici on ne fait que lister et retirer."
+  },
+  {
+   "id": "archiver",
+   "nom": "Archiver en PDF/A-2b",
+   "groupe": "exporter",
+   "quoi": "Produit une copie au format d'archivage à long terme PDF/A-2b, et la contrôle.",
+   "etapes": [
+    "Lancez l'archivage : le document est reconstruit avec ses polices embarquées.",
+    "Lisez le verdict : « Archivé en PDF/A-2b », ou la liste de ce qui l'empêche."
+   ],
+   "effet": "Un contrôleur de conformité intégré vérifie la copie sur ce poste. Le document ouvert n'est pas modifié.",
+   "attention": "Un PDF/A ne peut pas être chiffré : retirez d'abord le mot de passe. Le contrôle intégré ne remplace pas un validateur de référence si une règle l'exige."
+  },
+  {
+   "id": "exp-img",
+   "nom": "Exporter en images",
+   "groupe": "exporter",
+   "quoi": "Enregistre chaque page comme une image PNG ou JPEG.",
+   "etapes": [
+    "Choisissez PNG ou JPEG, la résolution et les pages.",
+    "Plusieurs images sont réunies dans une archive ZIP."
+   ],
+   "effet": "Le document ouvert n'est pas modifié.",
+   "attention": "Une image n'a plus de texte sélectionnable."
+  },
+  {
+   "id": "exp-txt",
+   "nom": "Extraire le texte",
+   "groupe": "exporter",
+   "quoi": "Enregistre le texte du document dans un fichier .txt.",
+   "etapes": [
+    "Lancez l'extraction : le texte de toutes les pages est réuni dans un fichier."
+   ],
+   "effet": "Le document ouvert n'est pas modifié.",
+   "attention": "Sur un scan, il n'y a pas de texte à extraire : lancez d'abord « Reconnaître le texte »."
+  },
+  {
+   "id": "compress",
+   "nom": "Réduire la taille",
+   "groupe": "exporter",
+   "quoi": "Fait une copie plus légère du document, pour l'envoyer par courriel.",
+   "etapes": [
+    "Choisissez la résolution (96, 150 ou 200 ppp) et la qualité des images.",
+    "Lancez : la copie est enregistrée."
+   ],
+   "effet": "Chaque page est convertie en image : le fichier devient plus léger, mais le texte n'est plus sélectionnable ni cherchable. Le document ouvert n'est pas modifié.",
+   "attention": "Gardez l'original : cette copie ne se « re-convertit » pas en texte."
+  },
+  {
+   "id": "flatten",
+   "nom": "Aplatir",
+   "groupe": "exporter",
+   "quoi": "Fige les champs de formulaire et les annotations : ils deviennent du contenu de la page.",
+   "etapes": [
+    "Cochez ce qui doit être figé : les champs, les annotations.",
+    "Appliquez ; l'export porte le résultat."
+   ],
+   "effet": "Le destinataire ne peut plus modifier les valeurs ni déplacer les annotations. Avant l'export, « Retirer l'aplatissement » ou Ctrl+Z revient en arrière.",
+   "attention": "Après l'export, c'est irréversible pour le destinataire : envoyez-lui, si nécessaire, une copie non aplatie."
+  },
+  {
+   "id": "caviarder",
+   "nom": "Rechercher, remplacer, caviarder",
+   "groupe": "proteger",
+   "quoi": "Trouve un mot, un nom, un numéro dans tout le document, puis le remplace ou le caviarde.",
+   "etapes": [
+    "Écrivez le terme ; les occurrences sont comptées et affichées une à une.",
+    "Caviarder tout : chaque occurrence est masquée par un rectangle noir et détruite dans le texte.",
+    "Vérifiez dans la liste avant de confirmer."
+   ],
+   "effet": "À l'export, la page est reconstruite : le texte caviardé n'existe plus dans le fichier, ni dans ses métadonnées ni dans ses annotations. Avant l'export, Ctrl+Z retire le caviardage.",
+   "attention": "Un document scanné se caviarde après « Reconnaître le texte ». Contrôlez toujours le résultat : un mot écrit autrement (sans accent, coupé en fin de ligne) peut échapper à la recherche."
+  },
+  {
+   "id": "password",
+   "nom": "Mot de passe",
+   "groupe": "proteger",
+   "quoi": "Protège le document exporté par un mot de passe, et règle ce que le lecteur peut faire.",
+   "etapes": [
+    "Choisissez le mot de passe d'ouverture : sans lui, le document ne s'ouvre pas. Laissez-le vide pour n'imposer que des autorisations.",
+    "Au besoin, un mot de passe propriétaire permet de lever les restrictions.",
+    "Réglez les autorisations : impression, copie du texte, modification, annotations, formulaires, réorganisation des pages."
+   ],
+   "effet": "Chiffrement AES-256, appliqué au moment de l'export. « Retirer » enlève la protection avant l'export.",
+   "attention": "Il est impossible de retrouver un mot de passe perdu. Notez-le ailleurs que sur ce poste."
+  },
+  {
+   "id": "certificat",
+   "nom": "Signer avec un certificat",
+   "groupe": "proteger",
+   "quoi": "Signe le document avec votre certificat personnel (fichier .p12 ou .pfx).",
+   "etapes": [
+    "Choisissez le fichier du certificat et donnez son mot de passe.",
+    "Lisez le certificat : le nom du titulaire, l'émetteur et les dates de validité s'affichent.",
+    "Indiquez au besoin le motif et le lieu, puis signez."
+   ],
+   "effet": "La signature prouve que le document n'a pas changé depuis, et qu'elle a été faite avec la clé de ce certificat. Le certificat est lu sur ce poste ; sa clé n'en sort jamais.",
+   "attention": "Toute modification après la signature l'invalide. La valeur juridique dépend du certificat : un certificat reconnu par la loi sur la signature électronique est requis pour une signature qualifiée."
+  },
+  {
+   "id": "signatures",
+   "nom": "Vérifier les signatures",
+   "groupe": "proteger",
+   "quoi": "Contrôle les signatures numériques d'un document reçu : intact ou modifié, signé par qui.",
+   "etapes": [
+    "Ouvrez le document reçu, puis lancez la vérification.",
+    "Lisez, pour chaque signature, le titulaire, la date et l'état d'intégrité."
+   ],
+   "effet": "Le contrôle se fait sur ce poste, sans connexion.",
+   "attention": "Sans réseau, la validité de la chaîne de confiance et de la révocation du certificat n'est pas vérifiée : le contrôle porte sur l'intégrité et l'identité apparente."
+  },
+  {
+   "id": "props",
+   "nom": "Propriétés",
+   "groupe": "document",
+   "quoi": "Fixe le titre, l'auteur, le sujet, les mots-clés et la langue du document.",
+   "etapes": [
+    "Renseignez le titre : il s'affiche dans la barre de la fenêtre du lecteur.",
+    "Choisissez la langue : les lecteurs d'écran s'en servent.",
+    "Cochez le balisage d'accessibilité si le document doit être lu par un lecteur d'écran."
+   ],
+   "effet": "Ces informations partent dans le fichier exporté, et sont lisibles par quiconque l'ouvre. Rien n'est écrit sur le disque avant l'export.",
+   "attention": "Relisez l'auteur : le nom d'une personne qui n'est pas censée apparaître ne doit pas partir chez le destinataire."
+  },
+  {
+   "id": "access",
+   "nom": "Vérifier l'accessibilité",
+   "groupe": "document",
+   "quoi": "Contrôle ce qui rend un document lisible par un lecteur d'écran : titre, langue, balisage, pages sans texte.",
+   "etapes": [
+    "Lancez la vérification.",
+    "Lisez la liste : chaque point dit ce qui manque et comment le corriger."
+   ],
+   "effet": "Le contrôle ne modifie rien. Les corrections se font dans « Propriétés » (titre, langue, balisage).",
+   "attention": "Ce contrôle automatique ne remplace pas la relecture d'une personne : il ne juge ni la clarté du texte ni l'ordre de lecture."
+  },
+  {
+   "id": "search",
+   "nom": "Rechercher, remplacer, caviarder",
+   "groupe": "document",
+   "quoi": "Cherche un mot, un nom ou un numéro dans tout le document, et le remplace ou le caviarde.",
+   "etapes": [
+    "Écrivez le terme ; Entrée passe à l'occurrence suivante.",
+    "Choisissez de respecter la casse, le mot entier, les accents.",
+    "Remplacez l'occurrence affichée ou toutes ; laissez le remplacement vide pour caviarder."
+   ],
+   "effet": "Le remplacement corrige chaque bloc comme dans l'éditeur : mêmes polices, même mise en page. Ctrl+Z défait l'opération.",
+   "attention": "Le caviardage a son propre outil dans « Protéger » : c'est la même boîte."
+  },
+  {
+   "id": "tableau",
+   "nom": "Copier un tableau",
+   "groupe": "document",
+   "quoi": "Copie un tableau du PDF vers Excel, en colonnes.",
+   "etapes": [
+    "Choisissez les pages qui portent le tableau.",
+    "Les colonnes sont repérées d'après les blancs qui traversent les lignes ; l'aperçu les montre.",
+    "Choisissez le séparateur décimal, puis « Copier pour Excel » (à coller dans Excel) ou « Enregistrer en CSV »."
+   ],
+   "effet": "Le document n'est pas modifié ; le résultat est copié dans le presse-papiers ou enregistré dans un fichier.",
+   "attention": "Sur un scan, lancez d'abord « Reconnaître le texte »."
+  },
+  {
+   "id": "ocr",
+   "nom": "Reconnaître le texte",
+   "groupe": "document",
+   "quoi": "Rend un scan cherchable : l'image d'une page devient aussi du texte.",
+   "etapes": [
+    "Choisissez les pages et la langue du texte imprimé.",
+    "Lancez : comptez quelques secondes par page."
+   ],
+   "effet": "Le texte reconnu sert à la recherche, au remplacement, au tableau vers Excel et à la correction dans l'éditeur ; il part dans le PDF exporté, invisible mais sélectionnable. Le calcul se fait sur ce poste. Ctrl+Z défait la reconnaissance.",
+   "attention": "Un scan droit, net et bien contrasté se lit mieux. Relisez : une reconnaissance n'est jamais exacte à 100 %."
+  },
+  {
+   "id": "comparer",
+   "nom": "Comparer deux versions",
+   "groupe": "document",
+   "quoi": "Met deux versions côte à côte et surligne les mots retirés ou ajoutés.",
+   "etapes": [
+    "Choisissez la version A (avant) et la version B (après), parmi les documents ouverts ou un fichier.",
+    "Lisez la comparaison : les différences sont surlignées, page par page."
+   ],
+   "effet": "Aucun des deux documents n'est modifié.",
+   "attention": "Une page scannée se compare après « Reconnaître le texte »."
+  },
+  {
+   "id": "cmd-imprimer",
+   "nom": "Imprimer",
+   "groupe": "commande",
+   "quoi": "Imprime le document, un livret ou plusieurs pages par feuille.",
+   "etapes": [
+    "Choisissez les pages, la disposition, le papier, l'orientation.",
+    "Vérifiez l'aperçu, puis imprimez."
+   ],
+   "effet": "L'impression part sur l'imprimante par défaut de Windows, ou sur celle que vous choisissez. Le document n'est pas modifié.",
+   "attention": "Pour un livret en recto verso, choisissez les bords courts."
+  },
+  {
+   "id": "cmd-exporter",
+   "nom": "Exporter le PDF",
+   "groupe": "commande",
+   "quoi": "Écrit le document tel qu'il est maintenant dans un nouveau fichier PDF.",
+   "etapes": [
+    "Contrôlez la liste des modifications sous la barre : filigrane, en-tête, mot de passe, aplatissement.",
+    "Lancez l'export et choisissez le dossier et le nom."
+   ],
+   "effet": "C'est l'export, et lui seul, qui écrit un fichier. Si vous choisissez le nom du fichier d'origine, l'application le dit et demande confirmation.",
+   "attention": "Après un caviardage, exportez sous un autre nom, puis vérifiez la copie avant d'envoyer."
+  }
+ ],
+ "messages": [
+  {
+   "code": "E-MEM",
+   "titre": "La mémoire du poste ne suffit pas",
+   "quoi": "Le document, ou le traitement demandé, demande plus de mémoire que le poste n'en a de disponible.",
+   "action": "Fermez les autres documents ou traitez moins de pages à la fois, puis recommencez."
+  },
+  {
+   "code": "E-MDP",
+   "titre": "Le document est protégé par un mot de passe",
+   "quoi": "L'opération demandée ne peut pas lire un document chiffré tant que son mot de passe n'a pas été donné.",
+   "action": "Rouvrez le document en donnant le mot de passe, puis recommencez."
+  },
+  {
+   "code": "E-FICHIER",
+   "titre": "Le fichier est incomplet ou abîmé",
+   "quoi": "Le fichier est vide, tronqué, ou n'est pas un PDF : il a pu être coupé pendant un envoi, une copie ou un enregistrement.",
+   "action": "Rouvrez-le depuis son origine, ou réparez-le avec l'application qui l'a produit."
+  },
+  {
+   "code": "E-DISQUE",
+   "titre": "L'écriture a été refusée",
+   "quoi": "Le disque est plein, le fichier est tenu ouvert par un autre programme, ou les droits sur le dossier manquent.",
+   "action": "Choisissez un autre dossier, fermez le fichier s'il est ouvert ailleurs, puis recommencez."
+  },
+  {
+   "code": "E-COMPOSANT",
+   "titre": "Un composant du logiciel n'a pas pu être chargé",
+   "quoi": "Une des parties du logiciel (lecteur de PDF, reconnaissance de texte, chiffrement) ne s'est pas lancée.",
+   "action": "Fermez puis rouvrez l'application, et recommencez."
+  },
+  {
+   "code": "E-POLICE",
+   "titre": "Une police du document pose problème",
+   "quoi": "Une police du document n'a pas pu être lue ou écrite : l'opération a dû s'arrêter plutôt que changer l'aspect du texte.",
+   "action": "Recommencez avec une autre police, ou exportez les pages en images si l'outil le propose."
+  },
+  {
+   "code": "E-INCONNU",
+   "titre": "La cause n'a pas pu être identifiée",
+   "quoi": "Quelque chose d'imprévu s'est passé. Rien n'a été écrit : le document ouvert est intact.",
+   "action": "Recommencez ; si cela se reproduit, joignez le rapport de diagnostic à votre demande d'aide (Aide › Rapport de diagnostic pour le support…)."
+  }
+ ]
+}

@@ -164,7 +164,7 @@
     const set = new Set(ids);
     const moving = state.pages.filter(p => set.has(p.id));
     if (!moving.length) return;
-    snapshot();
+    snapshot('Envoyer des pages dans un autre onglet');
     const e = cible.etat;
     moving.forEach(p => {
       const src = srcById(p.src);

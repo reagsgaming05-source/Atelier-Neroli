@@ -91,13 +91,14 @@
       choisir({ text: t, color: neufCouleur.value, size: parseInt(taille.value, 10) || 14 });
     });
     api = dialog({
+      aide: 'tampon',
       title: 'Poser un tampon', icon: IC.stamp, wide: true, submitOnEnter: false,
       build: b => {
-        b.append(rowOf([field('Taille', taille), field('Couleur', couleur)], true));
+        b.append(rowOf([field('Taille', taille, 'La taille du tampon sur la page.'), field('Couleur', couleur, 'La couleur d\'encre des prochains tampons.')], true));
         b.append(grille);
         b.append(groupOf('Votre tampon', [
           field('Texte', neuf, '{date} est remplacé par la date du jour au moment de poser le tampon.'),
-          rowOf([field('Couleur', neufCouleur), garder, poserNeuf], true),
+          rowOf([field('Couleur', neufCouleur, 'La couleur du tampon que vous créez.'), garder, poserNeuf], true),
         ]));
         b.append(note('Les tampons mémorisés restent sur cet ordinateur (dossier data/ de l\'application), jamais dans le PDF. Cliquez un tampon puis cliquez sur la page pour le poser.'));
       },
@@ -150,12 +151,13 @@
     };
     remplirMemo();
     api = dialog({
+      aide: 'signer',
       title: 'Signer', icon: IC.pencil, wide: true,
       build: b => {
         if (!memo.hidden) b.append(groupOf('Vos signatures mémorisées — cliquez pour insérer', [memo]));
         b.append(note(memo.hidden ? 'Tracez votre signature avec la souris, le doigt ou le stylet.' : 'Ou tracez-en une nouvelle :'));
         b.append(wrap);
-        b.append(rowOf([field('Couleur', colorSel), garder], true));
+        b.append(rowOf([field('Couleur', colorSel, 'La couleur du trait de la signature.'), garder], true));
         b.append(note('Une signature mémorisée reste sur cet ordinateur (dossier data/ de l\'application) ; elle n\'est jamais écrite dans un PDF sans que vous l\'y posiez. Elle y est écrite en clair : sur un poste partagé, mieux vaut la tracer chaque fois plutôt que la mémoriser.', 'warn'));
       },
       actions: [
@@ -208,7 +210,7 @@
     const isTampon = sel ? sel.type === 'tampon' : ed.tool === 'tampon';
     const texteModifiable = isText || (isEdit && !!sel);
 
-    const change = fn => { if (sel) { snapshot(); state.touched = true; } fn(); edDrawOverlay(true); };
+    const change = fn => { if (sel) { snapshot('Modifier une annotation'); state.touched = true; } fn(); edDrawOverlay(true); };
 
     if (isChamp) { edSideChamp(sel, p, change); return; }
     if (isTampon && sel) {
@@ -218,7 +220,7 @@
       c.addEventListener('input', () => change(() => { sel.color = c.value; }));
       const sz = input('ed-size', 'number', Math.round(sel.size * 10) / 10, { min: 6, max: 96, step: 1 });
       sz.addEventListener('change', () => change(() => { sel.size = Math.min(96, Math.max(6, parseFloat(sz.value) || 14)); tamponMesure(sel); }));
-      ed.side.append(field('Texte', t), field('Couleur', c), field('Taille (pt)', sz));
+      ed.side.append(field('Texte', t, 'Le texte du tampon sélectionné.'), field('Couleur', c, 'La couleur de l\'élément sélectionné.'), field('Taille (pt)', sz, 'La taille des caractères, en points.'));
       const memo = document.createElement('button');
       memo.type = 'button'; memo.className = 'tb-btn'; memo.style.border = '1px solid var(--trait)'; memo.style.justifyContent = 'center';
       memo.textContent = 'Mémoriser ce tampon';
@@ -242,7 +244,7 @@
         else if (isText || isDraw) ed.style.textColor = c.value;
         else ed.style.color = c.value;
       }));
-      ed.side.appendChild(field('Couleur', c));
+      ed.side.appendChild(field('Couleur', c, 'La couleur de l\'élément.'));
     }
     if (texteModifiable && !retouche) {
       const s = input('ed-size', 'number', sel ? Math.round(sel.size * 10) / 10 : ed.style.size, { min: 5, max: 96, step: 0.5 });
@@ -258,7 +260,7 @@
       bd.input.addEventListener('change', () => change(() => {
         if (sel) { sel.bold = bd.input.checked; recalcAnn(sel); } else ed.style.bold = bd.input.checked;
       }));
-      ed.side.append(field('Taille (pt)', s), field('Police', f), bd);
+      ed.side.append(field('Taille (pt)', s, 'La taille des caractères, en points ; 11 correspond à du texte courant.'), field('Police', f, 'Doit ressembler à celle du document : Helvetica, Times ou Courier.'), bd);
       if (sel) {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'tb-btn'; b.style.border = '1px solid var(--trait)'; b.style.justifyContent = 'center';
@@ -301,7 +303,7 @@
         : 'Relevée sur la page. À ajuster si le fond n\'est pas uni.'));
       const eff = checkbox('ed-eff', 'Effacer vraiment le texte d\'origine', sel.efface);
       eff.input.addEventListener('change', () => {
-        snapshot();
+        snapshot('Effacer le texte d\'origine');
         sel.efface = eff.input.checked;
         state.touched = true;
         edDrawOverlay(); // panneau reconstruit : l'avertissement doit suivre
@@ -318,7 +320,7 @@
         const v = clampInt(w.value, 1, 24) || 2;
         if (sel) sel.width = v; else ed.style.width = v;
       }));
-      ed.side.appendChild(field('Épaisseur', w));
+      ed.side.appendChild(field('Épaisseur', w, 'En points, de 1 à 24.'));
     }
     if ((sel && sel.type === 'highlight') || (!sel && ed.tool === 'highlight') || isImg) {
       const cur = sel ? (sel.opacity == null ? 0.35 : sel.opacity) : ed.style.opacity;
@@ -327,7 +329,7 @@
         const v = (clampInt(o.value, 5, 100) || 35) / 100;
         if (sel) sel.opacity = v; else ed.style.opacity = v;
       }));
-      ed.side.appendChild(field('Opacité', o));
+      ed.side.appendChild(field('Opacité', o, 'Plus la valeur est basse, plus on voit le texte à travers la marque.'));
     }
     if (sel) {
       const pied = document.createElement('div'); pied.className = 'pied';
@@ -336,7 +338,7 @@
       del.textContent = sel.type === 'edit' ? 'Annuler cette correction' : 'Supprimer';
       del.addEventListener('click', () => {
         edFermerSaisie(true);
-        snapshot();
+        snapshot('Supprimer l\'annotation');
         p.ann = p.ann.filter(a => a.id !== sel.id);
         ed.sel = null; state.touched = true; edDrawOverlay();
       });
@@ -361,7 +363,7 @@
       const all = document.createElement('button');
       all.type = 'button'; all.className = 'tb-btn';
       all.textContent = 'Tout effacer sur cette page';
-      all.addEventListener('click', () => { edFermerSaisie(true); snapshot(); p.ann = []; ed.sel = null; state.touched = true; edDrawOverlay(); });
+      all.addEventListener('click', () => { edFermerSaisie(true); snapshot('Supprimer les annotations de la page'); p.ann = []; ed.sel = null; state.touched = true; edDrawOverlay(); });
       pied.appendChild(all);
     }
   }
@@ -384,7 +386,7 @@
 
     const t = input('ch-size', 'number', sel.size || 11, { min: 5, max: 48, step: 0.5 });
     t.addEventListener('change', () => change(() => { sel.size = Math.min(48, Math.max(5, parseFloat(t.value) || 11)); }));
-    ed.side.appendChild(field('Taille (pt)', t));
+    ed.side.appendChild(field('Taille (pt)', t, 'La taille du texte tapé dans le champ.'));
 
     const ml = checkbox('ch-multi', 'Plusieurs lignes', sel.multi);
     ml.input.addEventListener('change', () => change(() => { sel.multi = ml.input.checked; }));
@@ -397,7 +399,7 @@
     const ce = input('ch-encre', 'color', sel.encre || '#111111');
     ce.addEventListener('input', () => change(() => { sel.encre = ce.value; }));
     const rang = document.createElement('div'); rang.className = 'row tight';
-    rang.append(field('Fond', cf), field('Bordure', cb), field('Texte', ce));
+    rang.append(field('Fond', cf, 'La couleur du fond du champ.'), field('Bordure', cb, 'La couleur du contour du champ.'), field('Texte', ce, 'La couleur du texte saisi.'));
     ed.side.appendChild(rang);
 
     const r = document.createElement('div'); r.className = 'regle';
@@ -408,7 +410,7 @@
     const del = document.createElement('button');
     del.type = 'button'; del.className = 'tb-btn danger'; del.textContent = 'Supprimer ce champ';
     del.addEventListener('click', () => {
-      snapshot();
+      snapshot('Supprimer le champ');
       p.ann = p.ann.filter(a => a.id !== sel.id);
       ed.sel = null; state.touched = true; edDrawOverlay();
     });
@@ -433,7 +435,7 @@
       if (ed.sel == null) return;
       e.preventDefault();
       const p = edPage();
-      snapshot();
+      snapshot('Supprimer l\'annotation');
       p.ann = p.ann.filter(a => a.id !== ed.sel);
       ed.sel = null; state.touched = true; edDrawOverlay();
     } else if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); edRenderPage(); }

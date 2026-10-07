@@ -219,7 +219,7 @@
     const visible = checkbox('cert-visible', 'Poser un cartouche de signature visible', true);
     const page = input('cert-page', 'number', state.pages.length, { min: 1, max: state.pages.length });
     const coin = select('cert-coin', [['bas-droite', 'Bas, à droite'], ['bas-gauche', 'Bas, à gauche'], ['haut-droite', 'Haut, à droite'], ['haut-gauche', 'Haut, à gauche']], 'bas-droite');
-    const zoneVisible = rowOf([field('Page', page), field('Coin', coin)], true);
+    const zoneVisible = rowOf([field('Page', page, 'La page qui porte le cartouche visible ; la signature, elle, couvre tout le document.'), field('Coin', coin, 'Où le cartouche se pose sur la page. Il masque ce qui s\'y trouve : choisissez un coin libre.')], true);
     visible.input.addEventListener('change', () => { zoneVisible.hidden = !visible.input.checked; });
     let bouton = null;
     const majBouton = () => { if (bouton) bouton.disabled = !lu || lu.resume.pasEncoreValide || lu.resume.expire; };
@@ -245,14 +245,15 @@
       majBouton();
     });
     dialog({
+      aide: 'certificat',
       title: 'Signer avec un certificat', icon: IC.lock, wide: true, submitOnEnter: false,
       build: b => {
         b.append(note('Signe le document avec le certificat personnel que vous a remis un prestataire (fichier .p12 ou .pfx). Le certificat est lu sur ce poste, sa clé n\'en sort jamais et n\'est pas gardée ; le mot de passe est redemandé à chaque signature.'));
         b.append(rowOf([choisir, infoFichier], true));
         b.append(inp);
-        b.append(rowOf([field('Mot de passe du certificat', mdp), lire], true));
+        b.append(rowOf([field('Mot de passe du certificat', mdp, 'Celui que vous a remis le prestataire. Il n\'est ni gardé ni écrit nulle part.'), lire], true));
         b.append(infoCert);
-        b.append(rowOf([field('Motif (facultatif)', raison), field('Lieu (facultatif)', lieu)], true));
+        b.append(rowOf([field('Motif (facultatif)', raison, 'Inscrit dans la signature, lisible par qui la vérifie : « Approuvé », « Pour exécution »…'), field('Lieu (facultatif)', lieu, 'Inscrit dans la signature, lisible par qui la vérifie.')], true));
         b.append(visible);
         b.append(zoneVisible);
         b.append(note('La signature prouve que le document n\'a pas changé depuis, et qu\'elle a été faite avec la clé de ce certificat. Sa valeur juridique dépend du certificat (un certificat qualifié d\'un prestataire reconnu n\'a pas la même portée qu\'un autre), pas de ce logiciel. La date est celle de l\'horloge de ce poste : il n\'y a pas d\'horodatage d\'une autorité de temps. Une fois signé, tout changement du fichier se voit.'));

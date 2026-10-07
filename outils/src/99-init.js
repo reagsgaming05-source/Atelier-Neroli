@@ -615,7 +615,7 @@
       'occurrence-precedente': { quand: () => state.pages.length > 0, agit: () => { const b = $('#se-prec'); if (b) b.click(); else toolSearch(); } },
       'filtre-outils': { agit: () => { outilsOuverts(); const q = $('#outil-q'); if (q) { q.focus(); q.select(); } } },
       preferences: { agit: () => toolPreferences() },
-      raccourcis: { agit: () => toolHelp() },
+      raccourcis: { agit: () => { if (aideDeBoite.basculer) aideDeBoite.basculer(); else toolHelp(); } },
       decouverte: { agit: () => { decouvrir().catch(e => signaler('Visite guidée', e)); } },
       lecture: { agit: () => changerVue('lecture') },
       organiser: { agit: () => changerVue('organiser') },
@@ -653,6 +653,7 @@
     envoyerLesAccelerateurs();
     poserLesInfobulles();
     window.addEventListener('aktum-langue', poserLesInfobulles);
+    window.addEventListener('aktum-langue', () => vue.syncButtons());
 
     document.addEventListener('keydown', e => {
       if (ed.root && !ed.root.hidden) return;

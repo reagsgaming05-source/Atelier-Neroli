@@ -873,6 +873,16 @@
   .dlg-head .x { margin-left: auto; width: var(--h-2); height: var(--h-2); border-radius: var(--r-2); border: 0; background: transparent; color: var(--texte-3); display: grid; place-items: center; transition: background .14s, color .14s; }
   .dlg-head .x:hover { background: var(--survol); color: var(--texte); }
   .dlg-head .x svg { width: 14px; height: 14px; }
+  /* « ? » : l'aide de l'outil, dans la boîte. Elle se pose avant la croix, qui garde sa place à l'extrême droite. */
+  .dlg-head .aide { margin-left: auto; width: var(--h-2); height: var(--h-2); border-radius: 50%; border: 1px solid var(--trait); background: transparent; color: var(--texte-2); font-weight: 600; font-size: var(--t-3); display: grid; place-items: center; transition: background .14s, color .14s, border-color .14s; }
+  .dlg-head .aide:hover, .dlg-head .aide[aria-expanded="true"] { background: var(--bleu); border-color: transparent; color: #fff; }
+  .dlg-head .aide + .x { margin-left: 0; }
+  .dlg-aide { border: 1px solid var(--trait-fin); border-left: 3px solid var(--bleu-vif); border-radius: var(--r-2); background: var(--relief); padding: var(--e-3) var(--e-4); font-size: var(--t-3); line-height: 1.55; color: var(--texte-2); }
+  .dlg-aide p { margin: 0 0 var(--e-2); }
+  .dlg-aide .quoi { color: var(--texte); font-weight: 500; }
+  .dlg-aide ol { margin: 0 0 var(--e-2); padding-left: 1.3em; }
+  .dlg-aide li { margin-bottom: var(--e-1); }
+  .dlg-aide .pied-aide { margin: var(--e-2) 0 0; font-size: var(--t-2); color: var(--texte-3); }
   .dlg-body { padding: var(--e-5); overflow-y: auto; display: flex; flex-direction: column; gap: var(--e-4); }
   .dlg-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); padding: var(--e-4) var(--e-5); border-top: 1px solid var(--trait-fin); flex: none; background: var(--encre); }
   .dlg-foot .grow { flex: 1; }

@@ -74,10 +74,11 @@
     const majB = () => { wrapB.hidden = selB.value !== 'fichier'; };
     selB.addEventListener('change', majB); majB();
     dialog({
+      aide: 'comparer',
       title: 'Comparer deux versions', icon: IC.compare,
       build: b => {
-        b.append(field('Version A (avant)', selA));
-        b.append(field('Version B (après)', selB));
+        b.append(field('Version A (avant)', selA, 'Le document de référence : ce qui était avant.'));
+        b.append(field('Version B (après)', selB, 'Le document à contrôler : un autre document ouvert, ou un fichier de votre choix.'));
         b.append(wrapB, inp);
         b.append(note('Les pages sont mises côte à côte, et les mots retirés ou ajoutés sont surlignés. Une page scannée se compare après reconnaissance du texte.'));
       },

@@ -118,7 +118,7 @@
     return sel.length ? sel[0] : state.pages[0].id;
   }
   function retirerSignet(id) {
-    snapshot();
+    snapshot('Retirer un signet');
     const filtre = liste => (liste || []).filter(s => { if (s.id === id) return false; s.enfants = filtre(s.enfants); return true; });
     state.signets = filtre(state.signets);
     state.touched = true;
@@ -155,7 +155,7 @@
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Ajouter', primary: true, onClick: close => {
         const t = titre.value.trim();
         if (!t) { toast('Donnez un titre au signet.', 'warn'); return; }
-        snapshot();
+        snapshot('Ajouter un signet');
         const s = { id: ++uid, titre: t, page: pid, enfants: [] };
         if (sous && sous.input.checked) insererSignet(parent.enfants, s);
         else insererSignet(state.signets, s);
@@ -170,11 +170,11 @@
     const titre = input('sg-titre', 'text', s.titre);
     dialog({
       title: 'Renommer le signet', icon: IC.signet,
-      build: b => b.append(field('Titre', titre)),
+      build: b => b.append(field('Titre', titre, 'Le nom qui s\'affiche dans le panneau des signets ; il ne change pas le document.')),
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Renommer', primary: true, onClick: close => {
         const t = titre.value.trim();
         if (!t) return;
-        snapshot(); s.titre = t; state.touched = true;
+        snapshot('Renommer le signet'); s.titre = t; state.touched = true;
         close(); renderSignets();
       } }],
     });

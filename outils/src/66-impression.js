@@ -303,14 +303,14 @@
     const bordure = checkbox('imp-bord', 'Tracer un cadre autour de chaque page', false);
     const blocNup = document.createElement('div');
     blocNup.className = 'imp-reglages';
-    blocNup.append(field('Pages par feuille', nup), field('Ordre', ordre), bordure);
+    blocNup.append(field('Pages par feuille', nup, 'Plusieurs pages réduites sur une même feuille : plus de papier économisé, mais un texte plus petit.'), field('Ordre', ordre, 'Le sens dans lequel les pages se suivent sur la feuille.'), bordure);
 
     const reliure = select('imp-reliure', [['gauche', 'À gauche'], ['droite', 'À droite']], 'gauche');
     const cotes = select('imp-cotes', [['tous', 'Les deux côtés'], ['recto', 'Recto seulement'], ['verso', 'Verso seulement']], 'tous');
     const blocLivret = document.createElement('div');
     blocLivret.className = 'imp-reglages';
     blocLivret.append(
-      field('Reliure', reliure),
+      field('Reliure', reliure, 'Le côté où la feuille sera reliée ou agrafée : les pages se placent en conséquence.'),
       field('Côtés', cotes, 'Sans recto verso automatique : imprimez les rectos, remettez la pile, puis les versos.'),
       note('Les feuilles sortent dans l\'ordre du pliage, pas dans celui des pages : la première porte la dernière page à côté de la première. C\'est normal — imprimées, empilées et pliées en deux, les pages se lisent dans l\'ordre.'),
       note(state.bureau
@@ -333,8 +333,8 @@
     let champDestination, champDuplex = null, champCopies = null;
     if (bureau) {
       champDestination = field('Imprimante', imprimante, 'Envoi direct à cette imprimante, sans autre fenêtre. « Propriétés… » passe par la fenêtre d\'impression de Windows, avec les réglages du pilote (bac, qualité, options).');
-      champDuplex = field('Recto verso', duplex);
-      champCopies = field('Copies', copies);
+      champDuplex = field('Recto verso', duplex, 'L\'imprimante doit gérer le recto verso. Pour un livret, choisissez les bords courts.');
+      champCopies = field('Copies', copies, 'Le nombre d\'exemplaires, de 1 à 99.');
       bureau.imprimantes().then(liste => {
         if (!Array.isArray(liste) || !liste.length) return;
         imprimante.replaceChildren();
@@ -384,7 +384,7 @@
     const orientation = segmented('imp-orient', [['auto', 'Auto'], ['portrait', 'Portrait'], ['paysage', 'Paysage']], 'auto', v => { o.orientation = v; rafraichir(); });
 
     const faces = select('imp-faces', [['toutes', 'Toutes les pages'], ['impaires', 'Pages impaires seulement'], ['paires', 'Pages paires seulement']], 'toutes');
-    const champFaces = field('Sous-ensemble', faces);
+    const champFaces = field('Sous-ensemble', faces, 'Pour imprimer en recto verso à la main : les pages impaires d\'abord, puis les paires.');
     const inverse = checkbox('imp-inv', 'Ordre inverse, de la dernière à la première', false);
 
     // ------------------------------------------------------------- aperçu
@@ -540,17 +540,18 @@
     };
 
     dialog({
+      aide: 'cmd-imprimer',
       title: 'Imprimer', icon: IC.print, wide: true, submitOnEnter: true,
       build: b => {
         const grille = document.createElement('div'); grille.className = 'imp-grille';
         const gauche = document.createElement('div'); gauche.className = 'imp-reglages';
         gauche.append(
           champDestination,
-          field('Pages à imprimer', seg), champPlage,
-          field('Dimensionnement et gestion des pages', modes),
+          field('Pages à imprimer', seg, 'Tout le document, la page affichée, la sélection, ou une plage que vous écrivez.'), champPlage,
+          field('Dimensionnement et gestion des pages', modes, 'Une page par feuille, plusieurs pages par feuille, ou un livret à plier en deux.'),
           blocNup, blocLivret,
-          field('Papier', papier), field('Mise à l\'échelle', echelle), champPct,
-          field('Orientation', orientation),
+          field('Papier', papier, 'Le format de la feuille dans l\'imprimante. « Comme le document » suit chaque page.'), field('Mise à l\'échelle', echelle), champPct,
+          field('Orientation', orientation, '« Auto » choisit pour chaque page le sens qui la fait tenir le mieux sur la feuille.'),
           champFaces, inverse,
         );
         if (champDuplex) gauche.append(champDuplex, champCopies, bacSelonPage);

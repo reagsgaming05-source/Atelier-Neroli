@@ -188,18 +188,18 @@
 
   function renderChips() {
     const items = [];
-    if (state.watermark) items.push({ label: 'Filigrane', value: state.watermark.text, clear: () => { snapshot(); state.watermark = null; vue.render(); } });
-    if (state.stamp) items.push({ label: 'En-tête / pied de page', value: 'actif', clear: () => { snapshot(); state.stamp = null; vue.render(); } });
-    if (state.security) items.push({ label: 'Mot de passe', value: state.security.userPassword ? 'à l\'ouverture' : 'autorisations', clear: () => { snapshot(); state.security = null; vue.render(); } });
-    if (state.flatten) items.push({ label: 'Aplatir', value: 'à l\'export', clear: () => { snapshot(); state.flatten = false; vue.render(); } });
-    if (state.figerAnnotations) items.push({ label: 'Annotations', value: 'figées', clear: () => { snapshot(); state.figerAnnotations = false; vue.render(); } });
+    if (state.watermark) items.push({ label: 'Filigrane', value: state.watermark.text, clear: () => { snapshot('Retirer le filigrane'); state.watermark = null; vue.render(); } });
+    if (state.stamp) items.push({ label: 'En-tête / pied de page', value: 'actif', clear: () => { snapshot('Retirer l\'en-tête et le pied de page'); state.stamp = null; vue.render(); } });
+    if (state.security) items.push({ label: 'Mot de passe', value: state.security.userPassword ? 'à l\'ouverture' : 'autorisations', clear: () => { snapshot('Retirer la protection'); state.security = null; vue.render(); } });
+    if (state.flatten) items.push({ label: 'Aplatir', value: 'à l\'export', clear: () => { snapshot('Retirer l\'aplatissement'); state.flatten = false; vue.render(); } });
+    if (state.figerAnnotations) items.push({ label: 'Annotations', value: 'figées', clear: () => { snapshot('Dégeler les annotations'); state.figerAnnotations = false; vue.render(); } });
     const retraits = state.pages.reduce((n, p) => n + ((p.retraits || []).length), 0);
-    if (retraits) items.push({ label: 'Commentaires retirés', value: String(retraits), clear: () => { snapshot(); state.pages.forEach(p => { p.retraits = []; peintes.delete(p.id); }); vue.render(); } });
+    if (retraits) items.push({ label: 'Commentaires retirés', value: String(retraits), clear: () => { snapshot('Rétablir les commentaires retirés'); state.pages.forEach(p => { p.retraits = []; peintes.delete(p.id); }); vue.render(); } });
     const m = state.meta;
-    if (m.title || m.author || m.subject || m.keywords) items.push({ label: 'Propriétés', value: m.title || m.author || 'définies', clear: () => { snapshot(); state.meta = { title: '', author: '', subject: '', keywords: '', balise: !!state.meta.balise, langue: state.meta.langue || 'fr' }; vue.render(); } });
-    if (m.balise) items.push({ label: 'Balisage', value: 'PDF balisé (' + (m.langue || 'fr') + ')', clear: () => { snapshot(); state.meta = Object.assign({}, state.meta, { balise: false }); vue.render(); } });
+    if (m.title || m.author || m.subject || m.keywords) items.push({ label: 'Propriétés', value: m.title || m.author || 'définies', clear: () => { snapshot('Effacer les propriétés'); state.meta = { title: '', author: '', subject: '', keywords: '', balise: !!state.meta.balise, langue: state.meta.langue || 'fr' }; vue.render(); } });
+    if (m.balise) items.push({ label: 'Balisage', value: 'PDF balisé (' + (m.langue || 'fr') + ')', clear: () => { snapshot('Retirer le balisage'); state.meta = Object.assign({}, state.meta, { balise: false }); vue.render(); } });
     const anyForm = state.sources.some(s => s.formValues && Object.keys(s.formValues).length);
-    if (anyForm) items.push({ label: 'Formulaire', value: 'rempli', clear: () => { snapshot(); state.sources.forEach(s => { s.formValues = null; }); vue.render(); } });
+    if (anyForm) items.push({ label: 'Formulaire', value: 'rempli', clear: () => { snapshot('Vider le formulaire'); state.sources.forEach(s => { s.formValues = null; }); vue.render(); } });
 
     el.chips.replaceChildren();
     el.chips.hidden = items.length === 0;
@@ -267,7 +267,14 @@
     }
     $$('[data-tool]').forEach(b => {
       const need = b.dataset.need;
-      b.disabled = state.busy || (need === 'pages' && !has) || (need === 'sel' && !state.selected.size) || (need === 'zip' && (!has || !FEAT.zip));
+      const raison = state.busy ? 'Une opération est en cours : attendez qu\'elle se termine.'
+        : (need === 'pages' && !has) ? 'Ouvrez d\'abord un document.'
+        : (need === 'sel' && !state.selected.size) ? 'Sélectionnez d\'abord des pages.'
+        : (need === 'zip' && (!has || !FEAT.zip)) ? (has ? 'Cette fonction n\'est pas disponible dans cette version.' : 'Ouvrez d\'abord un document.') : '';
+      b.disabled = !!raison;
+      // Un outil grisé dit pourquoi : l'infobulle ajoute la raison au sous-titre, et la raison suit la langue.
+      const sub = b.dataset.sub || '';
+      b.title = raison ? (sub ? tr(sub) + ' — ' : '') + tr(raison) : sub;
     });
   }
 

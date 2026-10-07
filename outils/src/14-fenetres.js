@@ -2,6 +2,9 @@
   //  Dialog framework
   // =====================================================================
   let openDlg = null;
+  // L'aide de la boîte ouverte : le module de l'aide (64-aide.js) dit comment la construire, la boîte dit comment
+  // l'ouvrir ou la refermer. F1 passe par ici, au lieu de fermer la boîte pour montrer la page des raccourcis.
+  const aideDeBoite = { construire: null, basculer: null };
   function dialog(o) {
     if (openDlg) openDlg.close();
     const scrim = document.createElement('div');
@@ -20,6 +23,23 @@
     const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.title = 'Fermer'; x.setAttribute('aria-label', 'Fermer');
     x.appendChild(icon(IC.x, { sw: 1.8 }));
     head.append(h2, x);
+    // « ? » : l'aide de l'outil, dans la boîte même, sans la fermer — on lit puis on décide, au lieu de décider puis lire.
+    let basculerAide = null;
+    if (o.aide && aideDeBoite.construire) {
+      const q = document.createElement('button'); q.type = 'button'; q.className = 'aide'; q.textContent = '?';
+      q.title = 'Aide sur cet outil (F1)'; q.setAttribute('aria-label', 'Aide sur cet outil'); q.setAttribute('aria-expanded', 'false');
+      head.insertBefore(q, x);
+      let bloc = null;
+      basculerAide = () => {
+        if (bloc) { bloc.remove(); bloc = null; q.setAttribute('aria-expanded', 'false'); return; }
+        bloc = aideDeBoite.construire(o.aide);
+        if (!bloc) return;
+        body.insertBefore(bloc, body.firstChild);
+        q.setAttribute('aria-expanded', 'true');
+        bloc.scrollIntoView({ block: 'nearest' });
+      };
+      q.addEventListener('click', basculerAide);
+    }
 
     const body = document.createElement('div'); body.className = 'dlg-body';
     const foot = document.createElement('div'); foot.className = 'dlg-foot';
@@ -35,11 +55,13 @@
       conteneur.remove();
       document.removeEventListener('keydown', onKey, true);
       openDlg = null;
+      if (aideDeBoite.basculer === basculerAide) aideDeBoite.basculer = null;
       try { if (revenirA && revenirA.focus && document.contains(revenirA)) revenirA.focus(); } catch (e) { signaler('Retour du focus', e, 'info'); }
       if (o.onClose) o.onClose();
     };
     function onKey(e) {
       if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); }
+      else if (e.key === 'F1' && basculerAide) { e.stopPropagation(); e.preventDefault(); basculerAide(); }
       else if (e.key === 'Enter' && o.submitOnEnter !== false) {
         const t = e.target;
         if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.tagName === 'SELECT')) return;
@@ -80,6 +102,7 @@
     });
     $('#modal-root').appendChild(conteneur);
     openDlg = api;
+    aideDeBoite.basculer = basculerAide;
     const first = dlg.querySelector('input:not([type=hidden]), select, textarea, button.primary');
     if (first) setTimeout(() => { try { first.focus(); if (first.select) first.select(); } catch (e) { signaler('Focus de la fenêtre', e, 'info'); } }, 30);
     return api;
@@ -163,7 +186,7 @@
         icon: IC.lock,
         build: b => {
           b.append(note((retry ? 'Mot de passe incorrect. ' : '') + '« ' + name + ' » demande un mot de passe pour être ouvert.', retry ? 'warn' : null));
-          b.append(field('Mot de passe', pw));
+          b.append(field('Mot de passe', pw, 'Celui qui ouvre ce fichier. Sans lui, personne ne peut le lire : ni vous, ni nous.'));
         },
         onClose: () => { if (!done) res(null); },
         actions: [

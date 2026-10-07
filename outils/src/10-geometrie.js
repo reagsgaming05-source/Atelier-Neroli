@@ -84,8 +84,11 @@
     Array.from(ocrCache).forEach(k => { if (!avecOcr.has(k)) { textCache.delete(k); ocrCache.delete(k); } });
     avecOcr.forEach((t, k) => { textCache.set(k, t); ocrCache.add(k); });
   }
-  function snapshot() {
-    state.history.push(capture());
+  // « nom » : ce que l'action qui va suivre fait, en français (« Filigrane », « Supprimer les pages sélectionnées »).
+  // Annuler et Rétablir le disent, au lieu de « Action annulée ».
+  function snapshot(nom) {
+    const h = capture(); if (nom) h.nom = nom;
+    state.history.push(h);
     if (state.history.length > 60) state.history.shift();
     state.redo = [];
     vue.syncButtons();
@@ -93,15 +96,17 @@
   function undo() {
     const h = state.history.pop();
     if (!h) return;
-    state.redo.push(capture());
+    const r = capture(); if (h.nom) r.nom = h.nom;
+    state.redo.push(r);
     restore(h);
-    vue.render(); setLast('Action annulée');
+    vue.render(); setLast(h.nom ? tr('Annulé : {0}').replace('{0}', tr(h.nom)) : 'Action annulée');
   }
   function redoAction() {
     const h = state.redo.pop();
     if (!h) return;
-    state.history.push(capture());
+    const a = capture(); if (h.nom) a.nom = h.nom;
+    state.history.push(a);
     restore(h);
-    vue.render(); setLast('Action rétablie');
+    vue.render(); setLast(h.nom ? tr('Rétabli : {0}').replace('{0}', tr(h.nom)) : 'Action rétablie');
   }
 

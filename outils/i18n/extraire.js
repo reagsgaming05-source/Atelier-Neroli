@@ -140,6 +140,10 @@ function relever(options) {
   const table = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'desktop', 'raccourcis.json'), 'utf8'));
   [].concat(table.commandes.map(c => c.libelle), table.commandes.map(c => c.groupe), table.fixes.map(f => f.libelle), table.fixes.map(f => f.groupe))
     .forEach(t => { if (!litteraux.has(t)) litteraux.set(t, ['desktop/raccourcis.json']); });
+  // L'aide des outils (aide/outils.json) : ce que le « ? » des boîtes affiche.
+  const aide = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'aide', 'outils.json'), 'utf8'));
+  aide.outils.forEach(o => [o.quoi, o.effet, o.attention].concat(o.etapes || [])
+    .forEach(t => { if (t && !litteraux.has(t)) litteraux.set(t, ['aide/outils.json']); }));
   // Le HTML de la page : les textes visibles et les attributs lisibles (title, aria-label, placeholder, alt).
   const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'page.html'), 'utf8');
   const htmlTextes = new Map();

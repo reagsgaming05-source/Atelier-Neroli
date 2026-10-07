@@ -56,6 +56,7 @@
     try { absentes = await pagesSansPolices(); } finally { setBusy(''); }
     const convertir = checkbox('arch-raster', absentes.length ? 'Convertir en images ' + (absentes.length > 1 ? 'ces ' + absentes.length + ' pages' : 'cette page') + ' (le texte n\'y sera plus sélectionnable, sauf si la reconnaissance de texte l\'a lu)' : '', false);
     dialog({
+      aide: 'archiver',
       title: 'Archiver en PDF/A-2b', icon: IC.save, wide: true,
       build: b => {
         b.append(note('Le PDF/A-2b est le format d\'archivage à long terme (norme ISO 19005-2) : polices incorporées au fichier, ni mot de passe ni script, formulaires aplatis. Le document est reconstruit puis contrôlé ; il n\'est déclaré PDF/A-2b que si rien ne s\'y oppose.'));

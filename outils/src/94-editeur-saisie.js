@@ -283,7 +283,7 @@
   function edEditRuns(a, opts) {
     opts = opts || {};
     edFermerSaisie();
-    if (!opts.nouveau) snapshot();
+    if (!opts.nouveau) snapshot('Corriger le texte');
     const zone = document.createElement('div');
     zone.className = 'ed-riche';
     try { zone.contentEditable = 'plaintext-only'; } catch (e) { signaler('Zone de saisie', e, 'info'); }
@@ -374,7 +374,7 @@
       closed = true;
       const text = ta.value.replace(/\s+$/, '');
       ta.remove();
-      snapshot();
+      snapshot('Modifier le texte');
       if (!text.trim() && !retouche) { p.ann = p.ann.filter(x => x.id !== a.id); ed.sel = null; }
       else { a.text = text; recalcAnn(a); }
       state.touched = true;

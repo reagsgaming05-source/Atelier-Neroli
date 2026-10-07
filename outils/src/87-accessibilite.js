@@ -54,6 +54,7 @@
     const attente = note('Vérification en cours…');
     zone.appendChild(attente);
     const api = dialog({
+      aide: 'access',
       title: 'Vérifier l\'accessibilité', icon: IC.info, libre: true, submitOnEnter: false,
       build: b => {
         b.append(note('Le contrôle se fait sur ce poste, sur le document tel que l\'export le donnerait, balisage demandé. Il relève ce qu\'un lecteur d\'écran ne pourrait pas lire ; il ne remplace pas un contrôle PDF/UA complet.'));

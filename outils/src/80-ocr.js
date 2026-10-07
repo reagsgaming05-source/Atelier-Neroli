@@ -234,9 +234,10 @@
     try { langueMemo = localStorage.getItem('aktum-ocr-langue') || langueMemo; } catch (e) { signaler('Préférence de langue', e, 'info'); }
     const langue = select('ocr-langue', [['fra', 'Français'], ['fra+deu', 'Français et allemand'], ['deu', 'Allemand']], langueMemo);
     dialog({
+      aide: 'ocr',
       title: 'Reconnaître le texte (OCR)', icon: IC.ocr,
       build: b => {
-        b.append(rowOf([field('Pages', quoi), field('Langue', langue)]));
+        b.append(rowOf([field('Pages', quoi, 'La reconnaissance prend quelques secondes par page : limitez-la aux pages dont vous avez besoin.'), field('Langue', langue, 'La langue du texte imprimé. Une mauvaise langue donne un texte truffé de fautes ; choisissez les deux si le document mélange français et allemand.')]));
         b.append(note('Le texte reconnu sert à la recherche, au remplacement, au tableau vers Excel et à la correction dans l\'éditeur ; il part dans le PDF exporté, invisible mais sélectionnable et cherchable. Tout se passe sur cet ordinateur : rien n\'est envoyé.'));
         b.append(note('Comptez quelques secondes par page. Un scan droit, net et bien contrasté se lit mieux.'));
       },
@@ -255,7 +256,7 @@
         try {
           setBusy('Préparation du moteur de reconnaissance…', 0, { annuler: true });
           const moteur = await ocrMoteur(langues, (etat, prog) => setBusy('Préparation… ' + etat, prog || 0, { annuler: true }));
-          snapshot();
+          snapshot('Reconnaître le texte');
           let mots = 0, faibles = 0, faites = 0, interrompu = false;
           const t0 = Date.now();
           for (let i = 0; i < pages.length; i++) {

@@ -31,7 +31,7 @@
   function rotatePages(ids, delta) {
     if (!ids.length) return;
     retenirOperation(tr(delta > 0 ? 'Pivoter à droite' : 'Pivoter à gauche'), () => surLaSelection(i => rotatePages(i, delta)));
-    snapshot();
+    snapshot(delta > 0 ? 'Pivoter à droite' : 'Pivoter à gauche');
     const set = new Set(ids);
     state.pages.forEach(p => {
       if (!set.has(p.id)) return;
@@ -46,7 +46,7 @@
   function deletePages(ids) {
     if (!ids.length) return;
     retenirOperation(tr('Supprimer les pages sélectionnées'), () => surLaSelection(deletePages));
-    snapshot();
+    snapshot('Supprimer les pages sélectionnées');
     const set = new Set(ids);
     state.pages = state.pages.filter(p => !set.has(p.id));
     ids.forEach(id => state.selected.delete(id));
@@ -58,7 +58,7 @@
   function duplicatePages(ids) {
     if (!ids.length) return;
     retenirOperation(tr('Dupliquer les pages'), () => surLaSelection(duplicatePages));
-    snapshot();
+    snapshot('Dupliquer les pages');
     const set = new Set(ids);
     const next = [], created = [];
     state.pages.forEach(p => {
@@ -77,7 +77,7 @@
 
   function applyOrder(next, n, label) {
     if (next.length === state.pages.length && next.every((p, i) => p === state.pages[i])) return false;
-    snapshot();
+    snapshot('Déplacer des pages');
     state.pages = next;
     state.touched = true;
     vue.render();
@@ -110,7 +110,7 @@
   function removeSource(id) {
     const src = srcById(id);
     if (!src) return;
-    snapshot();
+    snapshot('Retirer un document');
     state.sources = state.sources.filter(s => s.id !== id);
     state.pages = state.pages.filter(p => p.src !== id);
     if (!src.isSample) state.touched = true;
@@ -119,7 +119,7 @@
   }
   function reverseOrder() {
     if (state.pages.length < 2) return;
-    snapshot();
+    snapshot('Inverser l\'ordre des pages');
     state.pages.reverse();
     state.touched = true;
     vue.render();

@@ -93,6 +93,12 @@
 
   // Chaque outil porte sa couleur : on le retrouve du coin de l'œil dans la
   // liste, sans avoir à lire.
+  const ETATS_ACTIFS = {
+    watermark: 'Un filigrane est posé sur ce document', stamp: 'Un en-tête ou un pied de page est posé sur ce document',
+    number: 'Une numérotation est posée sur ce document', form: 'Le formulaire est rempli', commentaires: 'Des commentaires reçus sont retirés',
+    flatten: 'Le document sera aplati à l\'export', password: 'Le document sera protégé par un mot de passe à l\'export',
+    props: 'Des propriétés sont définies pour ce document', signatures: 'Le document ouvert porte des signatures', ocr: 'Du texte a été reconnu sur ce document',
+  };
   const TEINTES_OUTILS = {
     fusionner: '#2D9D5F', blank: '#2680EB', images: '#8C5AE8', vides: '#0D9F8F', 'select-plage': '#6E7681', split: '#E68619',
     dossier: '#D83790', resize: '#2680EB', lots: '#E68619',
@@ -156,7 +162,7 @@
       b.dataset.tool = item.id;
       if (item.need) b.dataset.need = item.need;
       // Le sous-titre est une infobulle, lue aussi comme description : la ligne d'outil tient sur deux colonnes.
-      if (item.sub) b.title = item.sub;
+      if (item.sub) { b.title = item.sub; b.dataset.sub = item.sub; }
       const ic = icon(item.icon);
       if (TEINTES_OUTILS[item.id]) ic.style.color = TEINTES_OUTILS[item.id];
       b.appendChild(ic);
@@ -165,7 +171,13 @@
       const s = document.createElement('span'); s.className = 't-sub'; s.textContent = item.sub || '';
       box.append(n, s);
       b.appendChild(box);
-      if (item.active && item.active()) { const d = document.createElement('i'); d.className = 'dot'; d.title = 'Actif'; b.appendChild(d); }
+      // La pastille dit ce qui est réglé, pas seulement que quelque chose l'est : « Actif » ne dit rien à qui la survole.
+      if (item.active && item.active()) {
+        const d = document.createElement('i'); d.className = 'dot';
+        const dit = tr(ETATS_ACTIFS[item.id] || 'Cet outil a déjà été appliqué à ce document');
+        d.title = dit; d.setAttribute('role', 'img'); d.setAttribute('aria-label', dit);
+        b.appendChild(d);
+      }
       b.addEventListener('click', () => { if (!b.disabled) item.run(); });
       return b;
     };

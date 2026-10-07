@@ -14,6 +14,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const { guideAvecRaccourcis } = require('./tableau-raccourcis');
+const { chapitresGeneres } = require('./chapitres-generes');
 const APP = path.join(__dirname, '..', 'desktop');
 process.chdir(__dirname);
 const { chromium } = require(path.join(APP, 'node_modules', 'playwright-core'));
@@ -38,7 +39,7 @@ const CAPTURES = path.join(__dirname, 'captures');
   page.on('requestfailed', (r) => erreurs.push(r.url()));
   // Le tableau des raccourcis est celui de desktop/raccourcis.json, écrit dans une copie voisine le temps d'imprimer.
   const copie = path.join(__dirname, '.guide-imprime.html');
-  fs.writeFileSync(copie, guideAvecRaccourcis(fs.readFileSync(path.join(__dirname, 'guide.html'), 'utf8')));
+  fs.writeFileSync(copie, chapitresGeneres(guideAvecRaccourcis(fs.readFileSync(path.join(__dirname, 'guide.html'), 'utf8'))));
   await page.goto('file://' + copie, { waitUntil: 'load' });
 
   // Une image manquante ne se voit pas dans un PDF : on la fait dire.

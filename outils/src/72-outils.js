@@ -9,11 +9,12 @@
     const where = select('bl-where', [['after', 'Après la sélection'], ['end', 'À la fin'], ['start', 'Au début']], state.selected.size ? 'after' : 'end');
     const orient = segmented('bl-or', [['portrait', 'Portrait'], ['paysage', 'Paysage']], 'portrait');
     dialog({
+      aide: 'blank',
       title: 'Insérer des pages vierges', icon: IC.plus,
       build: b => {
-        b.append(rowOf([field('Nombre de pages', count), field('Position', where)]));
-        b.append(field('Format', size));
-        b.append(field('Orientation', orient));
+        b.append(rowOf([field('Nombre de pages', count, 'De 1 à 100 pages vierges d\'un coup.'), field('Position', where, 'Où les pages vierges viennent s\'insérer dans le document.')]));
+        b.append(field('Format', size, '« Même format » reprend celui de la page affichée.'));
+        b.append(field('Orientation', orient, 'Ne compte que si vous choisissez un format.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Insérer', primary: true, onClick: async close => {
         close();
@@ -356,6 +357,7 @@
     }
 
     dialog({
+      aide: 'vides',
       title: 'Détecter les pages vides', icon: IC.vide, libre: true, submitOnEnter: false,
       build: b => {
         b.append(field('Sensibilité', sensi, 'Strict ne retient que les pages sans la moindre marque. Normal tolère un numéro de page. Tolérant accepte un pied de page court et le grain d\'un scanner.'));
@@ -397,6 +399,7 @@
     };
     txt.addEventListener('input', maj);
     dialog({
+      aide: 'select-plage',
       title: 'Sélectionner des pages par leurs numéros', icon: IC.select,
       build: b => {
         b.append(field('Pages', txt, 'Des numéros, des plages (3-7), « 5- » jusqu\'à la fin, « -3 » jusqu\'à la 3, séparés par des virgules.'));

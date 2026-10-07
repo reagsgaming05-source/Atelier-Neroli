@@ -124,6 +124,13 @@ function raccourcis() {
   return JSON.stringify({ commandes: brut.commandes, fixes: brut.fixes }).replace(/</g, '\\u003c');
 }
 
+// L'aide des outils (aide/outils.json) : posée dans le module qui la lit, à l'endroit de son repère.
+const REPERE_AIDE = '/*@aide@*/{ outils: [], messages: [] }';
+function aide() {
+  const brut = JSON.parse(fs.readFileSync(path.join(__dirname, 'aide', 'outils.json'), 'utf8'));
+  return JSON.stringify(brut).replace(/</g, '\\u003c');
+}
+
 function assembler() {
   let page = lire('page.html');
   const icones = registreIcones();
@@ -137,6 +144,8 @@ function assembler() {
   js = js.replace(REPERE_TRADUCTEUR, () => traducteur());
   if (!js.includes(REPERE_RACCOURCIS)) throw new Error('repère raccourcis introuvable dans src/97-raccourcis.js');
   js = js.replace(REPERE_RACCOURCIS, () => raccourcis());
+  if (!js.includes(REPERE_AIDE)) throw new Error('repère aide introuvable dans src/64-aide.js');
+  js = js.replace(REPERE_AIDE, () => aide());
   // Fonction de remplacement plutôt que chaîne : un « $& » dans le code serait
   // sinon interprété par String.replace.
   const feuille = lire('style.css');

@@ -246,15 +246,16 @@
     relier();
 
     dialog({
+      aide: 'serie',
       title: 'Remplir en série (CSV)', icon: IC.form, wide: true, submitOnEnter: false,
       build: b => {
-        if (sources.length > 1) b.append(field('Formulaire', picker));
+        if (sources.length > 1) b.append(field('Formulaire', picker, 'Le formulaire modèle : une copie en sera faite pour chaque ligne du tableau.'));
         b.append(rowOf([choisir, infoCsv], true));
         b.append(inp);
         b.append(zoneLiens);
         b.append(field('Nom des fichiers', modele, '{n} le numéro de la ligne, {colonne} le contenu d\'une cellule. Exemple : {Nom}-{Prénom}'));
         b.append(exemple);
-        b.append(field('Résultat', sortie));
+        b.append(field('Résultat', sortie, 'Un seul PDF qui réunit toutes les copies, ou un fichier par ligne dans une archive ZIP.'));
         b.append(aplatir);
         b.append(bilan);
         b.append(note('Les champs que vous avez déjà remplis à la main servent de base ; la ligne du tableau ne remplace que ce qu\'elle relie. Chaque copie reprend tout le document tel qu\'il est ouvert, avec ses pages, son filigrane, sa numérotation. Les signets ne sont pas repris dans « Un seul PDF ».'));

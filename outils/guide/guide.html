@@ -115,6 +115,16 @@
   .deux { column-count: 2; column-gap: 9mm; }
   .deux h4 { break-after: avoid; margin-top: 0; }
   .deux > div { break-inside: avoid; margin-bottom: 9pt; }
+
+  /* ---------- les outils, un par un ---------- */
+  h4 .num-outil { color: var(--rouge); margin-right: 6pt; font-weight: 700; }
+  #outils-tete h4, section h4[id^="outil-"] { margin-top: 16pt; font-size: 11pt; break-after: avoid; }
+  p.quoi { margin-bottom: 5pt; }
+  .index { column-count: 3; column-gap: 8mm; font-family: var(--sans); font-size: 8.8pt; }
+  .index .lettre { break-inside: avoid; margin-bottom: 7pt; }
+  .index h4 { margin: 0 0 2pt; color: var(--rouge); font-size: 11pt; }
+  .index p { margin: 0 0 1.5pt; text-align: left; hyphens: manual; }
+  .index .refs { color: var(--gris); font-size: 8pt; }
 </style>
 </head>
 <body>
@@ -158,6 +168,9 @@
     <li>Mettre à jour</li>
     <li>Où sont mes affaires</li>
     <li>Raccourcis clavier</li>
+    <li>Les outils, un par un <span>— ce que chacun change vraiment</span></li>
+    <li>Messages et codes d'erreur</li>
+    <li>Index</li>
   </ol>
 </section>
 
@@ -257,6 +270,9 @@
     <p>Le nombre de pages, le dernier geste effectué, l'avancement des opérations longues avec un bouton pour les interrompre, et le journal de ce qui a été contourné.</p>
   </div>
 </div>
+
+<h3>Une aide dans chaque boîte</h3>
+<p>Chaque boîte d'outil porte, en haut à droite, un bouton <strong>?</strong>. Il ouvre, dans la boîte même, ce que l'outil fait, comment s'en servir et ce qu'il change vraiment — sans la fermer, donc sans perdre vos réglages. <kbd>F1</kbd> fait la même chose ; le même texte se retrouve, outil par outil, au chapitre 16. Un outil grisé dit pourquoi dans son infobulle (« Ouvrez d'abord un document »), et la pastille d'un outil déjà appliqué dit ce qui est réglé.</p>
 
 <h3>Essayer sur un exemple : la visite en cinq minutes</h3>
 <p>Au premier lancement, la table porte déjà un document : un dossier de commune imaginaire de six pages — un préavis, un tableau, un formulaire à remplir, un courrier numérisé, un procès-verbal et une page à signer. Rien n'y est réel : cherchez-y le mot « budget », caviardez le nom de la première page, remplissez le formulaire, faites lire le scan, tracez une signature. <strong>Aide ▸ Découvrir Aktum PDF en 5 minutes</strong> (ou le bouton du même nom dans la fenêtre d'aide, touche <kbd>?</kbd>) guide quatre gestes — chercher, réorganiser, caviarder, imprimer — dans une petite carte qui ne bloque rien : on peut continuer à travailler, elle attend. Si un de vos documents est déjà ouvert, l'exemple s'ouvre dans un onglet à part ; rien n'est touché.</p>
@@ -639,6 +655,30 @@
 <!--@raccourcis-->
 <table><tr><td>(remplacé à l’impression)</td></tr></table>
 <!--@fin-raccourcis-->
+</section>
+
+<!-- =================================================== 16 -->
+<section>
+<h2><span class="num">16</span>Les outils, un par un</h2>
+<!--@outils-->
+<p>(écrit à l’impression, depuis l’aide des outils)</p>
+<!--@fin-outils-->
+</section>
+
+<!-- =================================================== 17 -->
+<section>
+<h2><span class="num">17</span>Messages et codes d'erreur</h2>
+<!--@messages-->
+<p>(écrit à l’impression)</p>
+<!--@fin-messages-->
+</section>
+
+<!-- =================================================== 18 -->
+<section>
+<h2><span class="num">18</span>Index</h2>
+<!--@index-->
+<p>(écrit à l’impression)</p>
+<!--@fin-index-->
 </section>
 
 </body>

@@ -227,9 +227,10 @@
       titres.push(t);
     });
     dialog({
+      aide: 'dossier',
       title: 'Constituer un dossier de pièces', icon: IC.dossier, wide: true, submitOnEnter: false,
       build: b => {
-        b.append(field('Titre du dossier', titre));
+        b.append(field('Titre du dossier', titre, 'Imprimé en tête du sommaire et enregistré comme titre du document.'));
         b.append(groupOf('Les pièces, dans l\'ordre des pages', [liste]));
         b.append(inter, mention, numero, sommaire, signets);
         b.append(note('Chaque document ouvert devient une pièce ; ses pages sont regroupées. Le sommaire et les intercalaires se refont d\'eux-mêmes si vous déplacez ou retirez des pages ensuite, et le PDF enregistré porte toujours les numéros du moment. Ctrl+Z défait le tout.'));
@@ -248,7 +249,7 @@
           let debut = ns + 1;
           o.pieces.forEach(pc => { pc.debut = debut; debut += (o.intercalaires ? 1 : 0) + pc.pages.length; });
           o.totalPages = debut - 1;
-          snapshot();
+          snapshot('Constituer un dossier de pièces');
           let gPages = [];
           if (o.sommaire || o.intercalaires) {
             const bytes = await fabriquerPagesDossier(o);

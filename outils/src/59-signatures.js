@@ -406,9 +406,10 @@
     };
     picker.addEventListener('change', () => { courante = signes.find(s => String(s.id) === picker.value); montrer(); });
     dialog({
+      aide: 'signatures',
       title: 'Vérifier les signatures', icon: IC.info, wide: true,
       build: b => {
-        if (signes.length > 1) b.append(field('Document', picker));
+        if (signes.length > 1) b.append(field('Document', picker, 'Seuls les documents ouverts qui portent une signature sont proposés.'));
         b.append(zone);
         b.append(note('Ce contrôle est fait sur ce poste, avec les fonctions de cryptographie du navigateur : rien n\'est envoyé. Il établit que le contenu signé n\'a pas changé et ce que le certificat dit du signataire. Il ne dit pas si l\'autorité est reconnue, ni si le certificat a été révoqué, et n\'a pas la valeur d\'une validation au sens de la loi fédérale sur la signature électronique.'));
       },
