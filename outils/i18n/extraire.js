@@ -21,7 +21,7 @@ const TEXTES_RETENUS = ['pdf.js indisponible', 'point (1234.50)', '[caviardé]',
   'lot-', '-divise.zip', '-images.zip', '-tableau.csv', 'formulaire-', 'images.pdf', '(aucun texte)', 'Helvetica, Times ou Courier.'];
 
 // Des noms de touches du navigateur (event.key), comparés dans le code et jamais affichés : « Shift » devient « Maj » via la table des noms (src/97-raccourcis.js).
-const TEXTES_ECARTES = ['AltGraph', 'Control', 'Dead', 'Meta', 'Shift', 'Space'];
+const TEXTES_ECARTES = ['AltGraph', 'Control', 'Dead', 'Heading', 'Meta', '_rels/.rels', 'Shift', 'Space'];
 
 function estUnTexte(s) {
   const t = s.trim();

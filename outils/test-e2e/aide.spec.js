@@ -28,7 +28,7 @@ test('F1 ouvre et referme l\'aide de la boîte au lieu de la fermer', async ({ a
   await app.outil('compress');
   await expect(page.locator('.dialog .dlg-aide')).toHaveCount(0);
   await page.keyboard.press('F1');
-  await expect(page.locator('.dialog .dlg-aide')).toContainText('Chaque page est convertie en image');
+  await expect(page.locator('.dialog .dlg-aide')).toContainText('Alléger les images');
   await expect(page.locator('.dialog')).toBeVisible();
   await page.keyboard.press('F1');
   await expect(page.locator('.dialog .dlg-aide')).toHaveCount(0);

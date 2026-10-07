@@ -281,6 +281,19 @@
    "attention": "Sur un scan, il n'y a pas de texte à extraire : lancez d'abord « Reconnaître le texte »."
   },
   {
+   "id": "exp-word",
+   "nom": "Exporter vers Word",
+   "groupe": "exporter",
+   "quoi": "Enregistre le texte et les tableaux du document dans un fichier .docx, que Word ou LibreOffice ouvre et qu'on peut corriger.",
+   "etapes": [
+    "Choisissez les pages : tout le document, les pages sélectionnées ou une seule.",
+    "Cochez « Reconnaître les tableaux » pour que les tableaux restent des tableaux, et « Un saut de page… » pour garder le découpage en pages.",
+    "Lancez l'enregistrement et relisez le résultat dans Word."
+   ],
+   "effet": "Le document ouvert n'est pas modifié. Le fichier .docx ne dit ni qui l'a produit ni d'où il vient.",
+   "attention": "Seuls le texte et les tableaux sont repris : ni les images, ni les polices, ni les couleurs, ni la disposition en colonnes de la page. Un titre est une ligne seule plus grande que le texte. Sur un scan, lancez d'abord « Reconnaître le texte »."
+  },
+  {
    "id": "compress",
    "nom": "Réduire la taille",
    "groupe": "exporter",

@@ -46,6 +46,7 @@
         { id: 'archiver', name: 'Archiver en PDF/A-2b', sub: 'Format d\'archivage à long terme, contrôlé', icon: IC.save, need: 'pages', mots: 'pdf/a pdfa archive archivage conservation long terme', run: toolArchiver },
         { id: 'exp-img', name: 'Exporter en images', sub: 'PNG ou JPEG', icon: IC.image, need: 'pages', mots: 'png jpg jpeg image convertir', run: toolExportImages },
         { id: 'exp-txt', name: 'Extraire le texte', sub: 'Fichier .txt', icon: IC.txt, need: 'pages', mots: 'txt texte brut copier contenu', run: toolExportText },
+        { id: 'exp-word', name: 'Exporter vers Word', sub: 'Texte et tableaux, sans la mise en page (.docx)', icon: IC.txt, need: 'pages', mots: 'word docx texte modifier convertir traitement de texte libreoffice', run: toolWord },
         { id: 'compress', name: 'Réduire la taille', sub: 'Plus léger ; le texte n\'est plus sélectionnable', icon: IC.zap, need: 'pages', mots: 'compresser optimiser alléger poids mégaoctets envoyer par courriel', run: toolCompress },
         { id: 'flatten', name: 'Aplatir', sub: 'Fige champs et annotations (irréversible à l\'export)', icon: IC.flat, need: 'pages', mots: 'figer fusionner annotations champs verrouiller', run: toolFlatten, active: () => state.flatten || state.figerAnnotations },
       ] },
@@ -106,7 +107,7 @@
     dossier: '#D83790', resize: '#2680EB', lots: '#E68619',
     signer: '#D83790', edit: '#8C5AE8', 'caviarder-zone': '#D7373F', tampon: '#E68619', watermark: '#D83790', stamp: '#0D9F8F',
     number: '#E68619', form: '#2D9D5F', serie: '#2D9D5F', commentaires: '#E68619',
-    archiver: '#6E7681', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', compress: '#E68619', flatten: '#2680EB',
+    archiver: '#6E7681', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', 'exp-word': '#2680EB', compress: '#E68619', flatten: '#2680EB',
     caviarder: '#D7373F', nettoyer: '#0D9F8F', password: '#D7373F', certificat: '#D83790', signatures: '#2680EB',
     props: '#6E7681', access: '#2D9D5F', search: '#2680EB', tableau: '#2D9D5F', ocr: '#8C5AE8', comparer: '#0D9F8F',
   };
