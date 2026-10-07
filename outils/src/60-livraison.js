@@ -375,7 +375,7 @@
   }
   function proposerRecuperation(liste) {
     const bureau = window.AktumDesktop;
-    const quand = t => { const d = new Date(t || 0); return pad(d.getDate(), 2) + '.' + pad(d.getMonth() + 1, 2) + '.' + d.getFullYear() + ' à ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2); };
+    const quand = t => { const d = new Date(t || 0); return formaterDate(d) + ' à ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2); };
     dialog({
       title: 'Travail non enregistré retrouvé', icon: IC.info,
       build: b => {

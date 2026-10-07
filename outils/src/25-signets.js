@@ -43,7 +43,7 @@
     };
     const arbre = await conv(plan, 0);
     if (tronque) {
-      const msg = 'Le plan de « ' + src.name + ' » compte plus de ' + LIMITE.toLocaleString(regionLocale()) + ' signets : seuls les premiers sont gardés. Les autres ne seront pas dans le fichier enregistré.';
+      const msg = 'Le plan de « ' + src.name + ' » compte plus de ' + formaterNombre(LIMITE) + ' signets : seuls les premiers sont gardés. Les autres ne seront pas dans le fichier enregistré.';
       signaler('Signets', msg);
       toast(msg, 'warn');
     }

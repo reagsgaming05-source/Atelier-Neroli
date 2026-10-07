@@ -8,7 +8,7 @@ global.ecriture = { unicode: false, actifs: 0, couverture: null };
 global.traduction = null;
 global.langue = 'fr';
 const { winAnsi, releverHorsWinAnsi, oublierPertes, pertesCaracteres } = extraire('  const WINANSI_SUP = ', '  // =====', '{ winAnsi, releverHorsWinAnsi, oublierPertes, pertesCaracteres }');
-const { plural, fmtSize } = extraire('  const plural = ', '  const baseName = ', '{ plural, fmtSize }');
+const { plural, fmtSize, formaterNombre } = extraire('  const plural = ', '  const baseName = ', '{ plural, fmtSize, formaterNombre }');
 
 test('l\'apostrophe typographique et les guillemets français passent tels quels', () => {
   assert.equal(winAnsi('l’été « chaud »'), 'l’été « chaud »');
@@ -46,5 +46,16 @@ test('pluriel et tailles', () => {
   assert.equal(plural(3, 'page', 'pages'), '3 pages');
   assert.equal(fmtSize(512), '512 o');
   assert.equal(fmtSize(2048), '2 Ko');
-  assert.equal(fmtSize(3 * 1024 * 1024), '3,0 Mo');
+  assert.equal(fmtSize(3 * 1024 * 1024), '3.0 Mo');
+});
+// Les nombres s'écrivent à la suisse, dans les deux langues : l'apostrophe des milliers, le point décimal.
+test('nombres à la suisse', () => {
+  assert.equal(formaterNombre(0), '0');
+  assert.equal(formaterNombre(999), '999');
+  assert.equal(formaterNombre(1250000), '1\u2019250\u2019000');
+  assert.equal(formaterNombre(1234.5), '1\u2019234.5');
+  assert.equal(formaterNombre(1234.567, 2), '1\u2019234.57');
+  assert.equal(formaterNombre(-12345), '-12\u2019345');
+  assert.equal(plural(8400, 'occurrence', 'occurrences'), '8\u2019400 occurrences');
+  assert.equal(fmtSize(1500 * 1024 * 1024), '1\u2019500.0 Mo');
 });

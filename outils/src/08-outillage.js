@@ -15,12 +15,20 @@
     if (state.busy) { state.messageBusy = text || ''; return; }
     el.last.textContent = text || '';
   }
-  const plural = (n, one, many) => n + ' ' + (traduction && langue !== 'fr' ? traduction.pluriel(n, one, many, langue) : (n > 1 ? many : one));
+  const plural = (n, one, many) => formaterNombre(n) + ' ' + (traduction && langue !== 'fr' ? traduction.pluriel(n, one, many, langue) : (n > 1 ? many : one));
+  // Les nombres à la suisse, dans les deux langues : l'apostrophe des milliers, le point décimal — « 1’250’000.50 ». Une seule fonction,
+  // pour que « 1 250 pages » ne s'écrive pas d'une façon ici et d'une autre dans un document.
+  function formaterNombre(n, decimales) {
+    if (typeof n !== 'number' || !isFinite(n)) return String(n);
+    const d = decimales == null ? (Number.isInteger(n) ? 0 : 1) : decimales;
+    const [entier, frac] = Math.abs(n).toFixed(d).split('.');
+    return (n < 0 ? '-' : '') + entier.replace(/\B(?=(\d{3})+(?!\d))/g, '\u2019') + (frac ? '.' + frac : '');
+  }
   const dureeTexte = s => s < 60 ? Math.max(1, Math.round(s)) + ' s' : Math.floor(s / 60) + ' min' + (Math.round(s % 60) ? ' ' + pad(Math.round(s % 60), 2) + ' s' : '');
   function fmtSize(bytes) {
-    if (bytes < 1024) return bytes + ' o';
-    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko';
-    return (bytes / (1024 * 1024)).toFixed(1).replace('.', langue === 'de' ? '.' : ',') + ' Mo';
+    if (bytes < 1024) return formaterNombre(bytes) + ' o';
+    if (bytes < 1024 * 1024) return formaterNombre(Math.round(bytes / 1024)) + ' Ko';
+    return formaterNombre(bytes / (1024 * 1024), 1) + ' Mo';
   }
   const baseName = n => n.replace(/\.[a-z0-9]+$/i, '');
   // Le suffixe que prennent les documents modifiés (« rapport-modifié »), dans l'une ou l'autre langue.
@@ -35,11 +43,9 @@
     return Math.min(hi, Math.max(lo, n));
   }
   function pad(n, w) { return String(n).padStart(w, '0'); }
-  function todayStr() {
-    const d = new Date();
-    const sep = langue === 'de' ? '.' : '/';
-    return pad(d.getDate(), 2) + sep + pad(d.getMonth() + 1, 2) + sep + d.getFullYear();
-  }
+  // La date à la suisse, dans les deux langues et dans les documents produits : « 31.12.2026 ».
+  function formaterDate(d) { return pad(d.getDate(), 2) + '.' + pad(d.getMonth() + 1, 2) + '.' + d.getFullYear(); }
+  const todayStr = () => formaterDate(new Date());
   // Le bouton dont le clic vient de lancer l'opération prend l'état « occupé » le temps qu'elle dure : un disque
   // à la place de son icône, au bout du curseur, plutôt qu'un seul signe de vie en bas à gauche de la fenêtre.
   function marquerOccupe(on) {

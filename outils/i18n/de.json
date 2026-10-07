@@ -1793,6 +1793,7 @@
   "{0} 0 {1} {2} {3} {4} c": "{0} 0 {1} {2} {3} {4} c",
   "{0} 0 l": "{0} 0 l",
   "{0} 0 m": "{0} 0 m",
+  "{0} à {1}:{2}": "{0} um {1}:{2}",
   "{0} à l'impression": "{0} beim Drucken",
   "{0} annot.": "{0} Anm.",
   "{0} Cliquez pour les détails.": "{0} Klicken Sie für Details.",
