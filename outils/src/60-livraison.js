@@ -4,10 +4,21 @@
   const hasClaude = !!(window.claude && typeof window.claude.use === 'function');
   const downloadsReady = hasClaude ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
 
+  // Chromium remplace par « download » le nom d'un téléchargement qui n'est pas de l'ASCII pur. Dans l'application fenêtrée, le nom (accents
+  // compris) voyage donc en ASCII — « aktum-u8-<UTF-8 en base64 URL><extension> » — et le processus principal le décode avant de proposer
+  // la boîte « Enregistrer sous » (voir desktop/nom-telechargement.js). Hors de l'application, un nom ASCII passe tel quel.
+  function nomTransporte(filename) {
+    if (!/[^\x20-\x7E]/.test(filename)) return filename;
+    const m = /^(.*?)(\.[A-Za-z0-9]{1,8})?$/.exec(filename);
+    const base = m[1], ext = m[2] || '';
+    let bin = '';
+    new TextEncoder().encode(base).forEach(c => { bin += String.fromCharCode(c); });
+    return 'aktum-u8-' + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') + ext;
+  }
   function fallbackDownload(blob, filename) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = filename;
+    a.download = state.bureau ? nomTransporte(filename) : filename;
     document.body.appendChild(a);
     a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 60000);
@@ -23,6 +34,17 @@
       .replace(/[^\x20-\x7E]/g, '-')
       .replace(/[\\/:*?"<>|]+/g, '-')
       .replace(/-{2,}/g, '-').replace(/\s+/g, ' ').trim();
+    return n || 'document.pdf';
+  }
+  // Dans l'application fenêtrée, le nom proposé à la boîte « Enregistrer sous » de Windows garde ses accents — « Préavis », « Décision »,
+  // « Procès-verbal » : Windows n'y voit aucune difficulté, et les replier obligeait à corriger à chaque enregistrement. Seuls les caractères que
+  // Windows interdit dans un nom changent. Dans un navigateur, le nom reste en ASCII (voir asciiName).
+  function nomDeFichier(name, bureau) {
+    if (!bureau) return asciiName(name);
+    const n = String(name || '').normalize('NFC')
+      .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-')
+      .replace(/-{2,}/g, '-').replace(/\s+/g, ' ').trim()
+      .replace(/[. ]+$/, '');
     return n || 'document.pdf';
   }
   // La fenêtre de l'application propose la boîte « Enregistrer sous » de
@@ -62,7 +84,7 @@
   // il n'est plus « modifié ».
   async function deliver(data, filename, mime, o) {
     if (essaiFiniRefuse()) return false;
-    filename = asciiName(filename);
+    filename = nomDeFichier(filename, state.bureau);
     const blob = data instanceof Blob ? data : new Blob([data], { type: mime || 'application/pdf' });
     state.attenteChemin = null;
     if (state.bureau) {
@@ -118,7 +140,8 @@
       const refus = opts && typeof opts.refuserSi === 'function' ? opts.refuserSi(bytes) : null;
       if (refus) { signaler('Export', refus); toast(refus, 'warn'); setLast('Export refusé : le résultat est plus gros que l\'original'); return null; }
       if (!(await caracteresAcceptes())) { setLast('Export annulé'); return null; }
-      const parti = await deliver(bytes, filename, null, { document: entier });
+      // opts.envoi : l'appelant remet le PDF à autre chose que la boîte « Enregistrer sous » (le message de courriel, voir 77-poste.js).
+      const parti = opts && typeof opts.envoi === 'function' ? await opts.envoi(bytes, filename) : await deliver(bytes, filename, null, { document: entier });
       if (parti && entier && !state.bureau) documentEnregistre('');
       // Le caviardage certifié se termine par son journal, à côté du fichier : il n'est pas dans le PDF (il dit ce qui a été caviardé).
       const j = state.dernierJournal; state.dernierJournal = null;

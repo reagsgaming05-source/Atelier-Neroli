@@ -145,8 +145,12 @@ aucune fiche de compte ne peut y être écrite. L'application ne demande alors p
 connexion et range les données dans le profil Windows de chacun, plutôt que de laisser
 quelqu'un devant une connexion impossible. « Aide › À propos » le dit.
 
-Pour que tous les PDF s'ouvrent avec Aktum PDF : clic droit sur un PDF, « Ouvrir avec »,
-« Choisir une autre application », puis désignez AktumPDF.exe et cochez « Toujours ».
+Pour que tous les PDF s'ouvrent avec Aktum PDF : Préférences › « Ouvrir les PDF avec Aktum PDF »
+› « Proposer Aktum PDF pour ouvrir les PDF… » (une inscription pour votre compte Windows seul,
+sans droits d'administrateur, que « Retirer l'inscription » efface), puis choisissez Aktum PDF
+dans les réglages de Windows (« Ouvrir les réglages de Windows »). Sans l'inscription : clic droit
+sur un PDF, « Ouvrir avec », « Choisir une autre application », puis désignez AktumPDF.exe et
+cochez « Toujours ».
 Chaque PDF double-cliqué s'ouvre dans sa propre fenêtre ; pour combiner plusieurs
 documents, Fichier › Ajouter au document… ou le bouton « Ajouter un document ».
 

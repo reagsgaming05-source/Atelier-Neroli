@@ -170,6 +170,15 @@
     await imprimerEnImages(octets, pages.length, o);
   }
 
+  // La même page en nuances de gris (le filtre du canevas : la luminance, sans teinte).
+  function versLesGris(cv) {
+    const g = document.createElement('canvas');
+    g.width = cv.width; g.height = cv.height;
+    const gx = g.getContext('2d', { alpha: false });
+    gx.filter = 'grayscale(1)';
+    gx.drawImage(cv, 0, 0);
+    return g;
+  }
   // Le document assemblé, rendu page par page, dans une feuille que seule
   // l'imprimante voit. Marche partout, y compris depuis un simple fichier.
   async function imprimerEnImages(octets, combien, o) {
@@ -180,6 +189,9 @@
     // Chaque feuille annonce sa taille au moteur d'impression : sans fenêtre
     // de réglage, c'est ce qui décide du papier et de l'orientation.
     const formats = new Map();   // « largeur hauteur » en mm -> nom de page CSS
+    // Les suites de pages de même format, dans l'ordre : l'impression directe n'envoie qu'UN format de feuille par travail, alors un dossier
+    // qui mêle A4 et A3 part en autant d'envois que de suites (voir plus bas), chacun sur son papier.
+    const suites = [];            // { format, de, a } — numéros de page de 0 à n−1
     try {
       doc = await pdfjs.getDocument({ data: octets.slice(0) }).promise;
       // Assez fin pour que le texte reste net sur le papier, sans faire
@@ -201,12 +213,15 @@
         cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
         await pg.render({ canvasContext: cx, viewport: vp }).promise;
         pg.cleanup();
+        const derniere = suites[suites.length - 1];
+        if (derniere && derniere.format === format) derniere.a = i - 1; else suites.push({ format, de: i - 1, a: i - 1 });
         const f = document.createElement('div');
         f.className = 'page-impression';
         f.style.setProperty('page', formats.get(format));
         const img = document.createElement('img');
         img.alt = '';
-        img.src = cv.toDataURL('image/jpeg', 0.92);
+        // « Nuances de gris » : la page part en gris quel que soit le pilote — une page couleur se facture plus cher sur un copieur sous contrat.
+        img.src = (o && o.gris ? versLesGris(cv) : cv).toDataURL('image/jpeg', 0.92);
         f.appendChild(img);
         hote.appendChild(f);
       }
@@ -230,18 +245,28 @@
       window.removeEventListener('afterprint', finir);
     };
     if (state.bureau) {
-      // La fenêtre de l'application imprime elle-même : l'imprimante
-      // choisie, le recto verso, les copies, la taille de la feuille.
-      const [wmm, hmm] = (formats.keys().next().value || '210mm 297mm').split(' ').map(parseFloat);
-      window.AktumDesktop.imprimer({
-        imprimante: (o && o.imprimante) || '', duplex: (o && o.duplex) || 'simplex', copies: (o && o.copies) || 1,
-        dialogue: !!(o && o.dialogue),
-        paysage: wmm > hmm, largeurMicrons: Math.round(Math.min(wmm, hmm) * 1000), hauteurMicrons: Math.round(Math.max(wmm, hmm) * 1000),
-      }).then(r => {
-        if (r && r.ok) setLast(plural(combien, 'page envoyée', 'pages envoyées') + ' à l\'impression');
-        else toast('L\'impression a échoué : ' + ((r && r.erreur) || 'imprimante indisponible'), 'error');
-      }).catch(e => toast(messageDEchec('L\'impression', e), 'error'))
-        .finally(() => setTimeout(finir, 300));
+      // La fenêtre de l'application imprime elle-même : l'imprimante choisie, le recto verso, les copies, la taille de la feuille — et
+      // la couleur. Un travail ne porte qu'un format de feuille : un dossier de formats mélangés (le plan A3 d'une mise à l'enquête dans
+      // un dossier A4) part en un envoi par suite de pages de même format, chacune avec son papier et son orientation.
+      const pagesDuDom = Array.from(hote.querySelectorAll('.page-impression'));
+      const envoyer = async () => {
+        let parties = 0;
+        for (let k = 0; k < suites.length; k++) {
+          const su = suites[k];
+          pagesDuDom.forEach((f, n) => { f.style.display = n >= su.de && n <= su.a ? '' : 'none'; });
+          const [wmm, hmm] = su.format.split(' ').map(parseFloat);
+          const r = await window.AktumDesktop.imprimer({
+            imprimante: (o && o.imprimante) || '', duplex: (o && o.duplex) || 'simplex', copies: (o && o.copies) || 1,
+            dialogue: !!(o && o.dialogue), gris: !!(o && o.gris),
+            paysage: wmm > hmm, largeurMicrons: Math.round(Math.min(wmm, hmm) * 1000), hauteurMicrons: Math.round(Math.max(wmm, hmm) * 1000),
+          });
+          if (!r || !r.ok) { toast('L\'impression a échoué : ' + ((r && r.erreur) || 'imprimante indisponible') + (k ? ' (' + plural(k, 'envoi est parti', 'envois sont partis') + ')' : ''), 'error'); return; }
+          parties += su.a - su.de + 1;
+        }
+        setLast(plural(parties, 'page envoyée', 'pages envoyées') + ' à l\'impression' + (suites.length > 1 ? ' (' + plural(suites.length, 'envoi', 'envois') + ')' : '') + ((o && o.gris) ? ' · ' + tr('nuances de gris') : ''));
+      };
+      if (suites.length > 1) toast('Ce dossier mêle ' + plural(formats.size, 'format de feuille', 'formats de feuille') + ' : il part en ' + plural(suites.length, 'envoi', 'envois') + ', un par suite de pages de même format.', 'warn');
+      envoyer().catch(e => toast(messageDEchec('L\'impression', e), 'error')).finally(() => setTimeout(finir, 300));
       return;
     }
     window.addEventListener('afterprint', finir);
@@ -330,6 +355,7 @@
     // Chaque page part comme une image : sa finesse se choisit ici.
     const qualite = select('imp-qualite', [['300', 'Fine — 300 ppp'], ['200', 'Normale — 200 ppp'], ['150', 'Rapide — 150 ppp']], state.pages.length > 40 ? '200' : '300');
     const champQualite = field('Qualité', qualite, 'Fine pour un texte net ; Rapide pour un gros document ou un brouillon.');
+    const gris = checkbox('imp-gris', 'Nuances de gris (une page couleur coûte plus cher à tirer)', false);
     let champDestination, champDuplex = null, champCopies = null;
     if (bureau) {
       champDestination = field('Imprimante', imprimante, 'Envoi direct à cette imprimante, sans autre fenêtre. « Propriétés… » passe par la fenêtre d\'impression de Windows, avec les réglages du pilote (bac, qualité, options).');
@@ -527,6 +553,7 @@
       o.duplex = duplex.value;
       o.copies = clampInt(copies.value, 1, 99) || 1;
       o.qualite = qualite.value;
+      o.gris = gris.input.checked;
       clearTimeout(minuteur);
       jeton++;
       if (doc) { try { doc.destroy(); } catch (e) { signaler('Document d\'impression', e, 'info'); } doc = null; }
@@ -555,7 +582,7 @@
           champFaces, inverse,
         );
         if (champDuplex) gauche.append(champDuplex, champCopies, bacSelonPage);
-        gauche.append(champQualite);
+        gauche.append(champQualite, gris);
         grille.append(gauche, bloc);
         b.append(grille);
         rafraichir();

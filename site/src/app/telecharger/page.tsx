@@ -18,7 +18,7 @@ export default function TelechargerPage() {
           <p className="eyebrow">Télécharger</p>
           <h1 className="mt-4 max-w-3xl font-display text-[2.75rem] font-bold leading-[1.02] tracking-tight text-ink-900 sm:text-[3.5rem]">Essayez-le sur vos propres documents.</h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">
-            Pour un logiciel portable, essayer et installer sont le même geste : on décompresse un dossier et on double-clique. Pas de compte à créer, pas de droit administrateur, rien dans le registre.
+            Pour un logiciel portable, essayer et installer sont le même geste : on décompresse un dossier et on double-clique. Pas de compte à créer, pas de droit administrateur, rien dans le registre sauf si vous le demandez.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href={site.downloads.windows} size="lg">

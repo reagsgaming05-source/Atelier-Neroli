@@ -75,7 +75,7 @@ test('Échap interrompt une opération longue : aucun fichier, document inchang�
 
 test('un caviardage interrompu ne laisse aucune marque derrière lui', async ({ app, page }) => {
   test.setTimeout(240000);
-  await app.ouvrir('dossier.pdf', longDossier(600));
+  await app.ouvrir('dossier.pdf', longDossier(900));
   await page.click('#btn-search');
   await page.fill('#se-q', 'Vasilakis');
   await expect.poll(() => page.locator('#se-compte').textContent(), { timeout: 120000 }).not.toBe('');
@@ -83,7 +83,8 @@ test('un caviardage interrompu ne laisse aucune marque derrière lui', async ({ 
   await page.click('#se-caviarder-oui');
   const annuler = page.locator('#btn-annuler-op');
   await expect(annuler).toBeVisible({ timeout: 30000 });
-  await annuler.click();
+  // Échap, pas un clic : le clic attend que le bouton soit « stable » et le trouve parfois déjà parti, l'opération terminée (machine rapide).
+  await page.keyboard.press('Escape');
   await expect(message(page)).toContainText('Caviardage annulé', { timeout: 60000 });
   await expect(message(page)).toContainText('rien n\'a été changé');
   expect(await app.estModifie(), 'le document n\'est pas marqué modifié').toBe(false);

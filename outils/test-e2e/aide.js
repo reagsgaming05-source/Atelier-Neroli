@@ -65,7 +65,7 @@ function pdfDe(pages, opts) {
       const nums = liste.map((d) => { const n = reserver(); poser(n, d); return n + ' 0 R'; });
       annots = ' /Annots [' + nums.join(' ') + ']';
     }
-    poser(e.nPage, '<< /Type /Page /Parent ' + nPages + ' 0 R /MediaBox [0 0 ' + W + ' ' + H + ']'
+    poser(e.nPage, '<< /Type /Page /Parent ' + nPages + ' 0 R /MediaBox [0 0 ' + (e.page.largeur || W) + ' ' + (e.page.hauteur || H) + ']'
       + ' /Resources << /Font << /F1 ' + nPolice + ' 0 R >> >> /Contents ' + e.nFlux + ' 0 R' + annots + ' >>');
   });
   poser(nCatalogue, '<< /Type /Catalog /Pages ' + nPages + ' 0 R >>');

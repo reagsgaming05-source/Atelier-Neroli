@@ -497,7 +497,8 @@
       if (!state.selected.has(id)) { state.selected.clear(); state.selected.add(id); state.anchor = id; vue.updateSelectionUI(); }
       drag.ids = selectedInOrder();
       e.dataTransfer.effectAllowed = 'move';
-      try { e.dataTransfer.setData('text/plain', 'aktum-pages'); } catch (e) { signaler('Glisser-déposer', e, 'info'); }
+      // Un type à nous, pas « text/plain » : une page lâchée dans Word ou un message n'y dépose pas un mot (voir 61-glisser.js pour le vrai glisser vers le Bureau).
+      try { e.dataTransfer.setData('application/x-aktum-pages', '1'); } catch (e) { signaler('Glisser-déposer', e, 'info'); }
       requestAnimationFrame(() => drag.ids.forEach(i => { const x = tiles.get(i); if (x) x.classList.add('dragging'); }));
     });
     el.canvas.addEventListener('dragover', e => {
@@ -728,9 +729,12 @@
         else if (nom === 'retablir') toucheEdition('z', true);
         else if (nom === 'tout-selectionner') toucheEdition('a', false);
         else if (nom === 'theme') el.btnTheme.click();
+        else if (nom === 'afficher-fichier') afficherLeDocument();
       };
       // La licence : l'état vient de l'application, la page affiche et suspend l'enregistrement
       // quand l'essai est fini. Relue de temps en temps : le fichier peut être posé pendant qu'on travaille.
+      vue.ouvrirListe = ouvrirListe;
+      brancherLesArrivees();
       const lireLaLicence = () => { if (typeof bureau.licence === 'function') bureau.licence().then(l => { state.licence = l; majLicence(); }).catch(e => signaler('Licence', e)); };
       lireLaLicence();
       setInterval(lireLaLicence, 10 * 60 * 1000);

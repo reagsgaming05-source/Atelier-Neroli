@@ -37,6 +37,9 @@
           b.append(groupOf('Ouverture des documents', [onglet, note('Concerne un double-clic sur un PDF depuis le bureau ou l\'explorateur, « Ouvrir avec » et la liste des fichiers récents. Sans ce réglage, chaque document s\'ouvre dans sa propre fenêtre. « Ouvrir » et « Nouvel onglet », dans la fenêtre, ouvrent toujours un onglet.')]));
         }
 
+        // --- Le poste : ouvrir les PDF avec l'application, la boîte du copieur (application fenêtrée)
+        if (bureau) groupesDuPoste(bureau).forEach(g => b.append(g));
+
         // --- Annotations : l'auteur qui part dans le fichier
         let auteurCoupe = false;
         try { auteurCoupe = localStorage.getItem(CLE_AUTEUR_ANNOT) === '0'; } catch (e) { signaler('Préférences', e, 'info'); }

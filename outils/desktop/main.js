@@ -2,7 +2,9 @@
  * Aktum PDF – application fenêtrée (Electron).
  *
  * Chaque fenêtre charge la page autonome (app/index.html, produite par `npm run build`
- * dans le dossier parent). Rien n'est installé, rien n'est écrit dans le registre :
+ * dans le dossier parent). Rien n'est installé, et rien n'est écrit dans le registre
+ * tant que la personne ne le demande pas (Préférences › « Ouvrir les PDF avec Aktum PDF » :
+ * une inscription pour son compte seul, que le même bouton efface — voir association.js) :
  * les réglages mémorisés (vue, zoom, thème, taille des vignettes) vont dans le
  * sous-dossier `data/` à côté de l'exécutable, comme pour Décompte DGEO et Caisse
  * écoles. Aucune connexion réseau n'est ouverte par l'application : les documents
@@ -12,7 +14,7 @@
  * PDF ouverts depuis le bureau sont deux documents indépendants. Les combiner est
  * un choix explicite (« Ajouter au document… », ou le bouton Ouvrir dans la page).
  */
-const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain, nativeTheme, nativeImage } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain, nativeTheme, nativeImage, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -94,6 +96,11 @@ const PORTABLE_DIR = process.env.AKTUM_DOSSIER_APP
 
 const SCRIPT_MAJ = require('./ou-ranger').nomDuScriptDeMaj(process.platform);
 const { phraseErreur } = require('./erreurs');
+const association = require('./association');
+const { Surveillance } = require('./arrivees');
+const courriel = require('./courriel');
+const { ecrireSurPlace } = require('./ecriture');
+const { decoder: decoderLeNom } = require('./nom-telechargement');
 const { MARQUEUR, COMPTES, trouverReglage, phraseDuFichier, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const comptes = require('./comptes');
 const { FICHE, sceller, verifier, protege, motDePasseAcceptable } = comptes;
@@ -468,9 +475,15 @@ function ajouterRecent(chemin) {
   if (!chemin) return;
   const l = [chemin].concat(lireRecents().filter((c) => c !== chemin)).slice(0, RECENTS_MAX);
   try { fs.writeFileSync(fichierRecents(), JSON.stringify(l, null, 1)); } catch (e) { /* dossier non inscriptible */ }
+  // La liste « Récent » du clic droit sur l'icône de la barre des tâches (Windows) et du Dock (macOS) : celle de l'application, pas une autre.
+  try { app.addRecentDocument(chemin); } catch (e) { /* plateforme sans liste de documents récents */ }
   buildMenu();
 }
-function viderRecents() { try { fs.unlinkSync(fichierRecents()); } catch (e) { /* déjà vide */ } buildMenu(); }
+function viderRecents() {
+  try { fs.unlinkSync(fichierRecents()); } catch (e) { /* déjà vide */ }
+  try { app.clearRecentDocuments(); } catch (e) { /* plateforme sans liste de documents récents */ }
+  buildMenu();
+}
 
 // Récupération après plantage : chaque onglet modifié dépose son travail
 // (sources et manifeste) dans le dossier de données ; il est effacé après
@@ -587,8 +600,10 @@ const fenetreDe = (sender) => BrowserWindow.fromWebContents(sender);
 // une de trop : « Toujours ouvrir en onglet » (menu Fichier) range les
 // doubles-clics dans la fenêtre déjà ouverte.
 if (!app.requestSingleInstanceLock()) app.quit();
-app.on('second-instance', (_e, argv) => {
-  const liste = lire(fichiersDe(argv));
+// Ce que le système demande d'ouvrir — un double-clic, « Ouvrir avec », un dépôt sur l'icône, la liste « Récent » de la barre des tâches :
+// les documents, dans la fenêtre déjà ouverte si la personne l'a voulu, sinon dans une fenêtre à eux.
+function ouvrirDepuisLeSysteme(chemins, nouvelleFenetre) {
+  const liste = lire(chemins);
   liste.forEach((f) => ajouterRecent(f.chemin));
   const w = fenetreActive();
   if (liste.length) {
@@ -599,8 +614,22 @@ app.on('second-instance', (_e, argv) => {
     } else createWindow(liste);
     return;
   }
+  if (nouvelleFenetre) { createWindow([]); return; }
   if (w) { if (w.isMinimized()) w.restore(); w.focus(); }
+}
+// La tâche « Nouvelle fenêtre » de la liste de sauts de Windows relance l'exécutable avec cet argument.
+const NOUVELLE_FENETRE = '--nouvelle-fenetre';
+app.on('second-instance', (_e, argv) => { ouvrirDepuisLeSysteme(fichiersDe(argv), argv.includes(NOUVELLE_FENETRE)); });
+// macOS ne passe pas un document double-cliqué par la ligne de commande : il envoie « open-file », parfois avant que l'application soit prête.
+const ouvertsAvantLePret = [];
+app.on('open-file', (ev, chemin) => {
+  ev.preventDefault();
+  if (!EXTENSIONS.includes(path.extname(chemin).toLowerCase())) return;
+  if (!app.isReady()) { ouvertsAvantLePret.push(chemin); return; }
+  ouvrirDepuisLeSysteme([chemin], false);
 });
+// Cliquer l'icône du Dock sans fenêtre ouverte en rend une.
+app.on('activate', () => { if (app.isReady() && !fenetres.size) createWindow([]); });
 
 function createWindow(fichiers) {
   const win = new BrowserWindow({
@@ -662,7 +691,8 @@ function createWindow(fichiers) {
 // dans « Téléchargements ». (En test de fumée, AKTUM_SMOKE_DIR fixe le dossier.)
 function setupDownloads() {
   session.defaultSession.on('will-download', (_ev, item, contents) => {
-    const nom = item.getFilename();
+    // Le nom transporte ses accents en ASCII (voir nom-telechargement.js).
+    const nom = decoderLeNom(item.getFilename());
     const ext = path.extname(nom).toLowerCase().replace('.', '');
     const filtres = { pdf: 'Document PDF', zip: 'Archive ZIP', png: 'Image PNG', jpg: 'Image JPEG', txt: 'Texte' };
     if (process.env.AKTUM_SMOKE_DIR) item.setSavePath(path.join(process.env.AKTUM_SMOKE_DIR, nom));
@@ -689,6 +719,96 @@ function setupNetwork() {
   fermerLaSession(session.defaultSession);
 }
 
+
+// =============================================================================
+//  Intégration au poste : « Ouvrir avec », boîte de réception du copieur, courriel, presse-papiers
+// =============================================================================
+// Rien de ce qui suit ne se fait sans un geste de la personne (un bouton, un menu) ; rien ne sort du poste.
+
+// --- « Ouvrir les PDF avec Aktum PDF » (Windows) : voir association.js.
+function lecteurAmovible() {
+  return new Promise((resolve) => {
+    const lecteur = /^([A-Za-z]):/.exec(process.execPath);
+    if (process.platform !== 'win32' || !lecteur) return resolve(false);
+    require('child_process').execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '[System.IO.DriveInfo]::new($env:AKTUM_LECTEUR).DriveType'],
+      { env: Object.assign({}, process.env, { AKTUM_LECTEUR: lecteur[1] }), windowsHide: true, timeout: 8000, encoding: 'utf8' },
+      (err, sortie) => resolve(!err && /Removable/i.test(String(sortie))));
+  });
+}
+async function etatAssociation() {
+  const possible = association.possible(process.platform, process.execPath, process.platform === 'win32' ? await lecteurAmovible() : false);
+  if (process.platform !== 'win32') return { possible: false, raison: possible.raison, inscrit: false, aJour: false };
+  const e = await association.etat(process.execPath);
+  return { possible: possible.ok, raison: possible.raison, inscrit: e.inscrit, aJour: e.aJour };
+}
+// Au lancement : une inscription qui pointe un autre chemin (dossier déplacé) est réécrite. Sans inscription, rien n'est écrit.
+function reparerLInscription() {
+  if (process.platform !== 'win32' || process.env.AKTUM_SMOKE_DIR) return;
+  association.reparerAuLancement(process.execPath).catch(() => { /* le registre ne répond pas : l'inscription reste ce qu'elle était */ });
+}
+async function inscrireLAssociation(sender) {
+  const w = fenetreDe(sender);
+  const etat = await etatAssociation();
+  if (!etat.possible) return { ok: false, erreur: etat.raison };
+  const r = await dialog.showMessageBox(w, {
+    type: 'question', buttons: ['Inscrire', 'Annuler'], defaultId: 0, cancelId: 1, noLink: true, title: APP_TITLE,
+    message: 'Proposer Aktum PDF pour ouvrir les PDF sur ce poste ?',
+    detail: 'Quelques clés sont écrites sous ' + 'HKEY_CURRENT_USER\\Software\\Classes' + ', pour votre compte Windows seulement : aucun droit d’administrateur, aucun autre utilisateur du poste touché. '
+      + 'Aktum PDF apparaît dans « Ouvrir avec » (clic droit sur un PDF) et dans Paramètres › Applications par défaut, où vous le choisissez vous-même. '
+      + 'Le bouton « Retirer l’inscription » efface exactement ces clés.',
+  });
+  if (r.response !== 0) return { ok: false, annule: true };
+  return association.inscrire(process.execPath);
+}
+
+// --- La boîte de réception du copieur : voir arrivees.js.
+let arrivees = null;       // la surveillance, quand un dossier est choisi
+let arriveesErreur = '';
+let arriveesBilan = { total: 0, nouveaux: 0 };
+const lireArrivees = () => { const a = lireReglages().arrivees; return a && typeof a === 'object' ? a : {}; };
+function ecrireArrivees(o) { const r = lireReglages(); r.arrivees = Object.assign({}, lireArrivees(), o); ecrireReglages(r); }
+function diffuserLesArrivees() { fenetres.forEach((w) => { try { if (!w.isDestroyed()) w.webContents.send('aktum:arrivees', arriveesBilan); } catch (e) { /* fenêtre en fermeture */ } }); }
+function demarrerLesArrivees() {
+  const reglage = lireArrivees();
+  if (!reglage.dossier) return;
+  if (!arrivees) {
+    arrivees = new Surveillance({
+      vusJusqua: reglage.vusJusqua || 0,
+      onVu: (ts) => ecrireArrivees({ vusJusqua: ts }),
+      onChange: (e) => { arriveesBilan = { total: e.total, nouveaux: e.nouveaux }; diffuserLesArrivees(); },
+    });
+  }
+  try { arrivees.demarrer(reglage.dossier); arriveesErreur = ''; }
+  catch (e) { arriveesErreur = 'Le dossier n’est pas joignable : ' + reglage.dossier; }
+}
+// Un partage coupé au lancement : on retente chaque minute, sans bruit, tant qu'un dossier est désigné et qu'il ne répond pas.
+setInterval(() => { if (lireArrivees().dossier && (!arrivees || (!arrivees.actif()))) demarrerLesArrivees(); }, 60000).unref();
+async function etatDesArrivees() {
+  const dossier = lireArrivees().dossier || '';
+  return { dossier, actif: !!(arrivees && arrivees.actif()), erreur: dossier && !(arrivees && arrivees.actif()) ? (arriveesErreur || 'Le dossier n’est pas joignable.') : '', total: arriveesBilan.total, nouveaux: arriveesBilan.nouveaux };
+}
+
+// --- Envoyer par courriel : le PDF est écrit dans un dossier de travail, puis joint à un message affiché (jamais envoyé) ; sinon le dossier s'ouvre.
+const dossierCourriel = () => path.join(app.getPath('userData'), 'courriel');
+const COURRIEL_MAX = 10;
+function courrielNettoyer() { try { fs.rmSync(dossierCourriel(), { recursive: true, force: true }); } catch (e) { /* tenu ailleurs : au prochain lancement */ } }
+async function envoyerParCourriel(o) {
+  if (!o || typeof o.nom !== 'string' || !o.octets) return { ok: false, erreur: 'document invalide' };   // jamais montré : la page ne l'envoie pas ainsi
+  const nom = path.basename(o.nom).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').slice(0, 120) || 'document.pdf';
+  const dir = path.join(dossierCourriel(), require('crypto').randomBytes(6).toString('hex'));
+  await fs.promises.mkdir(dir, { recursive: true });
+  const chemin = path.join(dir, /\.pdf$/i.test(nom) ? nom : nom + '.pdf');
+  await fs.promises.writeFile(chemin, Buffer.from(o.octets));
+  try {
+    const dossiers = fs.readdirSync(dossierCourriel()).map((d) => ({ d, t: fs.statSync(path.join(dossierCourriel(), d)).mtimeMs })).sort((a, b) => b.t - a.t);
+    dossiers.slice(COURRIEL_MAX).forEach(({ d }) => fs.rmSync(path.join(dossierCourriel(), d), { recursive: true, force: true }));
+  } catch (e) { /* le ménage se refera */ }
+  const r = await courriel.preparer(chemin, nom, {});
+  if (r.mode === 'outlook') return { ok: true, mode: 'outlook' };
+  shell.showItemInFolder(chemin);
+  return { ok: true, mode: 'dossier', raison: r.raison, chemin };
+}
+
 function setupIpc() {
   ipcMain.handle('aktum:licence', () => etatLicence());
   if (RANGEMENT.ou === 'comptes' && PROFIL) {
@@ -705,7 +825,6 @@ function setupIpc() {
   });
   // Enregistrer : réécrire le fichier ouvert, sur place, sans boîte de dialogue.
   ipcMain.handle('aktum:ecrire', (_e, o) => {
-    let tmp = null;
     try {
       // L'essai est fini : on lit tout, on n'écrit plus rien. Le travail en cours reste
       // dans le dossier de récupération.
@@ -718,18 +837,15 @@ function setupIpc() {
         const c = verrou.conflit(o.chemin, o.mtimeAttendu);
         if (c.conflit) return { ok: false, conflit: true, mtimeMs: c.mtimeMs, taille: c.taille };
       }
-      tmp = o.chemin + '.aktum-tmp';
-      fs.writeFileSync(tmp, Buffer.from(o.octets));
-      fs.renameSync(tmp, o.chemin);
-      tmp = null;
+      // Un temporaire puis un renommage, avec quelques reprises si un programme tient le fichier un instant (voir ecriture.js).
+      ecrireSurPlace(o.chemin, o.octets);
       ajouterRecent(o.chemin);
       let mtimeMs = 0;
       try { mtimeMs = fs.statSync(o.chemin).mtimeMs; } catch (e) { /* tant pis */ }
       try { if (verrou.poser(o.chemin, quiTravaille(), INSTANCE).pose) verrousPoses.add(o.chemin); } catch (e) { /* pas de verrou, pas d'erreur */ }
       return { ok: true, chemin: o.chemin, mtimeMs };
     } catch (err) {
-      // Un échec ne laisse rien derrière lui : le fichier temporaire, à moitié écrit, serait un second document dans le dossier.
-      if (tmp) { try { fs.unlinkSync(tmp); } catch (e) { /* jamais écrit, ou déjà parti */ } }
+      // Un échec ne laisse rien derrière lui : ecrireSurPlace retire son temporaire.
       return { ok: false, code: err && err.code ? String(err.code) : '', erreur: phraseErreur(err) };
     }
   });
@@ -768,7 +884,7 @@ function setupIpc() {
   // ou, avec « dialogue », la fenêtre d'impression de Windows et ses Propriétés.
   ipcMain.handle('aktum:imprimer', (e, o) => new Promise((resolve) => {
     const opts = {
-      silent: !(o && o.dialogue), printBackground: true, color: true,
+      silent: !(o && o.dialogue), printBackground: true, color: !(o && o.gris),
       copies: Math.max(1, Math.min(99, parseInt(o && o.copies, 10) || 1)),
       landscape: !!(o && o.paysage),
       duplexMode: ['simplex', 'shortEdge', 'longEdge'].includes(o && o.duplex) ? o.duplex : 'simplex',
@@ -780,6 +896,79 @@ function setupIpc() {
       e.sender.print(opts, (ok, erreur) => resolve({ ok: !!ok, erreur: ok ? '' : String(erreur || '') }));
     } catch (err) { resolve({ ok: false, erreur: err && err.message ? err.message : String(err) }); }
   }));
+
+  // « Ouvrir les PDF avec Aktum PDF » : l'état, l'inscription, son retrait, et les réglages de Windows où la personne choisit elle-même.
+  ipcMain.handle('aktum:association-etat', () => etatAssociation());
+  ipcMain.handle('aktum:association-inscrire', (e) => inscrireLAssociation(e.sender));
+  ipcMain.handle('aktum:association-retirer', () => association.retirer(process.execPath));
+  ipcMain.handle('aktum:association-reglages', () => { if (process.platform === 'win32') shell.openExternal('ms-settings:defaultapps'); return process.platform === 'win32'; });
+
+  // La boîte de réception du copieur : jamais un chemin reçu de la page — des noms de fichiers du dossier surveillé, et des boîtes du système.
+  ipcMain.handle('aktum:arrivees-etat', () => etatDesArrivees());
+  ipcMain.handle('aktum:arrivees-choisir', async (e) => {
+    const r = await dialog.showOpenDialog(fenetreDe(e.sender), { title: 'Dossier où le copieur dépose ses numérisations', properties: ['openDirectory'], defaultPath: lireArrivees().dossier || undefined });
+    if (r.canceled || !r.filePaths[0]) return etatDesArrivees();
+    ecrireArrivees({ dossier: r.filePaths[0], vusJusqua: Date.now() });
+    if (arrivees) { arrivees.vusJusqua = Date.now(); arrivees.arreter(); }
+    demarrerLesArrivees();
+    return etatDesArrivees();
+  });
+  ipcMain.handle('aktum:arrivees-arreter', () => {
+    if (arrivees) arrivees.arreter();
+    arriveesBilan = { total: 0, nouveaux: 0 }; arriveesErreur = '';
+    const r = lireReglages(); delete r.arrivees; ecrireReglages(r);
+    diffuserLesArrivees();
+    return etatDesArrivees();
+  });
+  ipcMain.handle('aktum:arrivees-liste', async () => {
+    if (!arrivees || !arrivees.actif()) return [];
+    const liste = (await arrivees.sonder()).map((f) => ({ nom: f.nom, taille: f.taille, mtimeMs: f.mtimeMs, stable: f.stable, nouveau: f.nouveau }));
+    arrivees.marquerVu();
+    return liste;
+  });
+  // Ouvrir : lu en mémoire, SANS chemin — le document ne se réécrit pas dans la boîte (il y serait recréé après avoir été classé) ; « Enregistrer sous… » le range où on veut.
+  ipcMain.handle('aktum:arrivees-ouvrir', (_e, nom) => {
+    const c = arrivees && arrivees.cheminDe(nom);
+    if (!c) return [];
+    try { const b = fs.readFileSync(c); return [{ nom: path.basename(c), octets: new Uint8Array(b.buffer, b.byteOffset, b.length), chemin: '', mtimeMs: 0, verrou: null }]; }
+    catch (err) { return []; }
+  });
+  ipcMain.handle('aktum:arrivees-classer', async (e, nom) => {
+    if (!arrivees || !arrivees.cheminDe(nom)) return { ok: false, erreur: 'Ce document n’est plus dans la boîte (quelqu’un l’a peut-être déjà classé).' };
+    const r = await dialog.showOpenDialog(fenetreDe(e.sender), { title: 'Dossier où classer ce document', properties: ['openDirectory', 'createDirectory'], defaultPath: lireArrivees().classerDans || undefined });
+    if (r.canceled || !r.filePaths[0]) return { ok: false, annule: true };
+    ecrireArrivees({ classerDans: r.filePaths[0] });
+    const res = arrivees.classer(nom, r.filePaths[0]);
+    if (res.ok) { res.dossier = r.filePaths[0]; res.nom = path.basename(res.chemin); delete res.chemin; }
+    return res;
+  });
+  ipcMain.handle('aktum:arrivees-supprimer', async (e, nom) => {
+    if (!arrivees || !arrivees.cheminDe(nom)) return { ok: false, erreur: 'Ce document n’est plus dans la boîte.' };
+    const r = await dialog.showMessageBox(fenetreDe(e.sender), {
+      type: 'warning', buttons: ['Supprimer', 'Garder'], defaultId: 1, cancelId: 1, noLink: true, title: APP_TITLE,
+      message: 'Supprimer ce document de la boîte du copieur ?', detail: nom + '\n\n' + 'Le fichier est supprimé du dossier du copieur, sans passer par la corbeille.',
+    });
+    if (r.response !== 0) return { ok: false, annule: true };
+    return arrivees.supprimer(nom);
+  });
+
+  // Envoyer par courriel, afficher dans l'Explorateur, copier une image : de petits services rendus à la page, qui ne peut pas les faire seule.
+  ipcMain.handle('aktum:courriel', async (_e, o) => { try { return await envoyerParCourriel(o); } catch (err) { return { ok: false, erreur: phraseErreur(err) }; } });
+  ipcMain.handle('aktum:afficher-dossier', (_e, chemin) => {
+    if (typeof chemin !== 'string' || !path.isAbsolute(chemin) || !fs.existsSync(chemin)) return false;
+    shell.showItemInFolder(chemin);
+    return true;
+  });
+  ipcMain.handle('aktum:copier-image', (_e, octets) => {
+    try {
+      const b = Buffer.from(octets);
+      if (b.length < 8 || b.length > 80 << 20 || b.readUInt32BE(0) !== 0x89504e47) return false;
+      const img = nativeImage.createFromBuffer(b);
+      if (img.isEmpty()) return false;
+      clipboard.writeImage(img);
+      return true;
+    } catch (err) { return false; }
+  });
 }
 
 const envoyer = (nom) => { const w = fenetreActive(); if (w) w.webContents.send('aktum:commande', nom); };
@@ -915,6 +1104,8 @@ const OUTILS_PAR_DEFAUT = [
 
 function buildMenu() {
   const template = [
+    // Sous macOS, le premier menu est celui de l'application, à son nom (À propos, Masquer, Quitter) : le système le veut ainsi.
+    ...(process.platform === 'darwin' ? [{ role: 'appMenu' }] : []),
     {
       label: 'Fichier',
       submenu: [
@@ -932,6 +1123,8 @@ function buildMenu() {
         { id: 'enregistrer', label: 'Enregistrer', accelerator: accel('enregistrer'), click: () => envoyer('enregistrer') },
         { id: 'enregistrer-sous', label: 'Enregistrer sous…', accelerator: accel('exporter'), click: () => envoyer('exporter') },
         { id: 'imprimer', label: 'Imprimer…', accelerator: accel('imprimer'), click: () => envoyer('imprimer') },
+        { label: 'Envoyer par courriel…', click: () => envoyer('outil:courriel') },
+        { label: process.platform === 'darwin' ? 'Afficher le document dans le Finder' : 'Afficher le document dans l’Explorateur', click: () => envoyer('afficher-fichier') },
         { type: 'separator' },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
         ...(RANGEMENT.ou === 'comptes' && PROFIL ? [
@@ -956,8 +1149,8 @@ function buildMenu() {
         { type: 'separator' },
         { id: 'fermer-onglet', label: 'Fermer l\'onglet', accelerator: accel('fermer-onglet'), click: () => envoyer('fermer-onglet') },
         { label: 'Fermer la fenêtre', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
-        // Pas d'accélérateur écrit à la main : le système sait comment on quitte (Alt+F4 sous Windows, Cmd+Q sous macOS).
-        { label: 'Quitter', role: 'quit' },
+        // Pas d'accélérateur écrit à la main : le système sait comment on quitte (Alt+F4 sous Windows). Sous macOS, « Quitter » est dans le menu de l'application.
+        ...(process.platform === 'darwin' ? [] : [{ label: 'Quitter', role: 'quit' }]),
       ],
     },
     {
@@ -1297,6 +1490,7 @@ app.on('will-quit', () => {
 app.whenReady().then(() => {
   initialiserLaLangue();
   glisserNettoyer();
+  courrielNettoyer();
   if (RANGEMENT.ou === 'comptes' && !PROFIL) {
     ipcMain.handle('aktum:comptes', () => comptesConnus().map((nom) => {
       const fiche = lireFiche(nom);
@@ -1321,7 +1515,11 @@ app.whenReady().then(() => {
   setupDownloads();
   setupIpc();
   buildMenu();
-  const initiaux = lire(fichiersDe(process.argv));
+  demarrerLesArrivees();
+  reparerLInscription();
+  // La liste de sauts de Windows : « Nouvelle fenêtre » à côté des documents récents.
+  if (process.platform === 'win32') { try { app.setUserTasks([{ program: process.execPath, arguments: NOUVELLE_FENETRE, iconPath: process.execPath, iconIndex: 0, title: langue.t('Nouvelle fenêtre'), description: langue.t('Ouvrir une fenêtre vide') }]); } catch (e) { /* liste de sauts indisponible */ } }
+  const initiaux = lire(fichiersDe(process.argv).concat(ouvertsAvantLePret.filter((c) => fs.existsSync(c))));
   initiaux.forEach((f) => ajouterRecent(f.chemin));
   createWindow(initiaux);
   // Seulement là où il y a une installation à mettre à jour : empaquetée, ou

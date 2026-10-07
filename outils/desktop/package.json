@@ -22,7 +22,9 @@
     "licence": "node licence-test.js",
     "reseau": "node reseau-test.js",
     "maj": "node maj-test.js",
-    "dist:mac": "npm run prepare-app && electron-builder --mac dir --universal"
+    "dist:mac": "npm run prepare-app && electron-builder --mac dir --universal",
+    "association": "node association-test.js",
+    "courriel": "node courriel-test.js"
   },
   "devDependencies": {
     "electron": "44.5.1",
@@ -44,6 +46,11 @@
       "raccourcis.json",
       "marque.json",
       "erreurs.js",
+      "ecriture.js",
+      "nom-telechargement.js",
+      "courriel.js",
+      "arrivees.js",
+      "association.js",
       "traducteur.js",
       "ou-ranger.js",
       "version-posee.js",
@@ -64,7 +71,11 @@
       "build/icon-1024.png",
       "build/entitlements.mac.plist"
     ],
-    "electronLanguages": ["fr", "de", "en-US"],
+    "electronLanguages": [
+      "fr",
+      "de",
+      "en-US"
+    ],
     "asar": true,
     "win": {
       "executableName": "AktumPDF",
@@ -100,6 +111,15 @@
       "entitlementsInherit": "build/entitlements.mac.plist",
       "gatekeeperAssess": false,
       "notarize": false
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": "pdf",
+        "name": "Document PDF",
+        "description": "Document PDF",
+        "role": "Editor",
+        "mimeType": "application/pdf"
+      }
+    ]
   }
 }

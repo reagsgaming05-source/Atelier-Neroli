@@ -7,7 +7,7 @@ AKTUM PDF — version portable Windows
 3. Ouvrez vos PDF, travaillez, puis « Exporter le PDF ».
 
 Aucune installation : l'application tient dans ce dossier, rien n'est écrit
-dans le registre ni dans Program Files, aucun navigateur n'est sollicité.
+dans Program Files, ni dans le registre (sauf si vous demandez « Ouvrir les PDF avec Aktum PDF » dans les Préférences), aucun navigateur n'est sollicité.
 Ses réglages vont dans le dossier de l'utilisateur (AppData\Local\Aktum PDF)
 — jamais dans un dossier synchronisé — et le journal aktum.log s'écrit à
 côté de l'exécutable, en cas de problème. Il ne note que ce que fait
@@ -59,7 +59,10 @@ fenêtre : il ramène celle qui est ouverte.
 
 OUVRIR LES PDF EN DOUBLE-CLIQUANT DESSUS
 -----------------------------------------
-Pour que tous les PDF s'ouvrent avec Aktum PDF : clic droit sur un fichier
+Pour que tous les PDF s'ouvrent avec Aktum PDF : dans l'application, Préférences
+› « Ouvrir les PDF avec Aktum PDF » › « Proposer Aktum PDF pour ouvrir les PDF… »
+(une inscription pour votre compte seul, retirable d'un clic), puis choisissez
+Aktum PDF dans les réglages de Windows. Sans cela : clic droit sur un fichier
 PDF, « Ouvrir avec », « Choisir une autre application », puis « Rechercher une
 autre application sur ce PC » et désignez  Aktum PDF.exe . Cochez « Toujours »
 pour en faire le programme par défaut.

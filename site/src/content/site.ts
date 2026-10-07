@@ -298,7 +298,7 @@ export const values = [
   },
   {
     title: "Rien à installer, aucun droit administrateur",
-    text: "Un dossier posé sur le lecteur réseau, un raccourci par poste. Pas d'installation, pas d'écriture dans le registre, aucun service, aucune tâche planifiée. La mise à jour consiste à remplacer ce dossier, une fois, pour tout le monde.",
+    text: "Un dossier posé sur le lecteur réseau, un raccourci par poste. Pas d'installation, aucun service, aucune tâche planifiée. La mise à jour consiste à remplacer ce dossier, une fois, pour tout le monde.",
   },
   {
     title: "Un prix par entité, pas par poste",
@@ -340,7 +340,7 @@ export const faq = [
   },
   {
     q: "Faut-il installer quelque chose sur chaque poste ?",
-    a: "Non. Un dossier posé sur le lecteur réseau et un raccourci par bureau suffisent : aucun droit administrateur, rien dans le registre. La mise à jour consiste à remplacer ce dossier une fois, pour tout le monde.",
+    a: "Non. Un dossier posé sur le lecteur réseau et un raccourci par bureau suffisent : aucun droit administrateur, rien dans le registre sauf si une personne demande, par un bouton, à ouvrir les PDF avec Aktum PDF. La mise à jour consiste à remplacer ce dossier une fois, pour tout le monde.",
   },
   {
     q: "Combien de postes sont compris ?",

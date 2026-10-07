@@ -353,6 +353,21 @@ jobs:
         shell: pwsh
         run: node glisser-test.js dist\AktumPDF\AktumPDF.exe
 
+      # L'intégration au poste, éprouvée contre le vrai Windows : l'inscription « Ouvrir avec » écrit, relit et efface les bonnes clés du registre
+      # (sans toucher à UserChoice ni aux autres programmes), et « Envoyer par courriel » exécute son script PowerShell et prend le repli honnête
+      # quand Outlook manque.
+      - name: Ouvrir avec Aktum PDF — le registre, écrit puis effacé exactement
+        timeout-minutes: 5
+        working-directory: outils/desktop
+        shell: pwsh
+        run: node association-test.js
+
+      - name: Envoyer par courriel — PowerShell, et le repli quand Outlook manque
+        timeout-minutes: 5
+        working-directory: outils/desktop
+        shell: pwsh
+        run: node courriel-test.js
+
       # « Aucune donnée ne quitte le poste » se prouve en regardant, pas en
       # relisant le code. Un mandataire d'observation est posé sur la machine,
       # l'exécutable empaqueté est utilisé pour de bon (ouvrir, tourner,

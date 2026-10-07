@@ -1200,3 +1200,14 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
   }
+
+  /* La boîte de réception du copieur, et la copie d'une zone comme image (src/77-poste.js). */
+  .ar-tete { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); margin-bottom: var(--e-3); }
+  .ar-dossier { flex: 1 1 18rem; min-width: 0; overflow-wrap: anywhere; color: var(--texte-2); }
+  .ar-liste { max-height: 22rem; }
+  .ar-ligne { display: flex; align-items: center; gap: var(--e-2); padding: var(--e-2); border: 1px solid var(--trait); border-radius: var(--r-1); }
+  .ar-texte { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  .ar-detail { font-size: var(--t-2); color: var(--texte-2); }
+  .ar-nouveau { display: inline-block; padding: 0 var(--e-2); border-radius: var(--r-pilule); background: var(--bleu); color: var(--bleu-encre); font-size: var(--t-1); font-weight: 600; }
+  body.en-instantane .feuille-vue { cursor: crosshair; user-select: none; }
+  .instantane-cadre { position: absolute; border: 2px dashed var(--bleu-vif); background: var(--bleu-ombre); pointer-events: none; z-index: 5; }

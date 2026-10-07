@@ -532,6 +532,44 @@
    ],
    "effet": "C'est l'export, et lui seul, qui écrit un fichier. Si vous choisissez le nom du fichier d'origine, l'application le dit et demande confirmation.",
    "attention": "Après un caviardage, exportez sous un autre nom, puis vérifiez la copie avant d'envoyer."
+  },
+  {
+   "id": "courriel",
+   "nom": "Envoyer par courriel",
+   "groupe": "exporter",
+   "quoi": "Prépare un nouveau message dans Outlook avec le PDF en pièce jointe. Le message s'affiche : il ne part que si vous l'envoyez.",
+   "etapes": [
+    "Choisissez le document entier ou les pages sélectionnées, et cochez « Alléger les images » pour un message plus petit.",
+    "Cliquez « Préparer le message » : le PDF est produit comme à l'export, puis joint à un nouveau message.",
+    "Relisez le message dans Outlook, ajoutez le destinataire et envoyez-le vous-même."
+   ],
+   "effet": "Le document ouvert n'est pas modifié. Le PDF préparé reste dans un dossier de travail de l'application, effacé au lancement suivant.",
+   "attention": "Cela marche avec Outlook installé (pas le nouvel Outlook, qu'un autre programme ne peut pas piloter). Sans Outlook, le dossier du PDF s'ouvre et vous le joignez vous-même. Le même avertissement qu'à l'export prévient si une signature ou un caviardage est en jeu."
+  },
+  {
+   "id": "arrivees",
+   "nom": "Arrivées du copieur",
+   "groupe": "organiser",
+   "quoi": "Annonce les numérisations que votre copieur dépose dans un dossier du réseau, et permet de les ouvrir, de les classer ou de les supprimer d'un clic.",
+   "etapes": [
+    "Choisissez une fois le dossier où le copieur dépose ses fichiers : il est surveillé tant que l'application tourne.",
+    "Chaque nouveau document est annoncé ; un fichier que le copieur est encore en train d'écrire attend d'être complet.",
+    "« Ouvrir » le lit dans un onglet, « Classer… » le déplace dans le dossier d'affaire que vous désignez, « Supprimer… » l'efface après confirmation."
+   ],
+   "effet": "Rien n'est déplacé ni supprimé sans votre geste. Un document ouvert depuis la boîte ne se réécrit pas dans la boîte : « Enregistrer sous… » le range où vous voulez.",
+   "attention": "Les documents d'un dossier que plusieurs personnes surveillent sont vus par toutes : une collègue peut classer le fichier avant vous, l'application le dit. Le dossier surveillé se change ou s'arrête depuis la même boîte."
+  },
+  {
+   "id": "copier-image",
+   "nom": "Copier comme image",
+   "groupe": "exporter",
+   "quoi": "Copie la page, ou une zone de la page, comme une image prête à coller dans un message, un traitement de texte ou un tableur.",
+   "etapes": [
+    "Choisissez « La page entière », ou « Une zone à dessiner » puis tracez un cadre à la souris sur la page que vous lisez.",
+    "Collez le résultat (Ctrl+V) là où vous le voulez."
+   ],
+   "effet": "Le document n'est pas modifié. L'image est faite à 200 ppp, annotations comprises.",
+   "attention": "La zone se dessine à la souris, en vue « Lire » ; sans souris, copiez la page entière. Dans un navigateur qui refuse l'accès au presse-papiers, l'image est enregistrée en PNG à la place."
   }
  ],
  "messages": [

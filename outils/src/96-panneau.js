@@ -24,6 +24,7 @@
         { id: 'recadrer', name: 'Recadrer', sub: 'Retire une bande sur chaque bord, ou les marges blanches', icon: IC.rogner, need: 'pages', mots: 'rogner couper marges bordure cadre crop', run: toolRecadrer },
         { id: 'resize', name: 'Redimensionner', sub: 'A4, Letter, marges', icon: IC.resize, need: 'pages', mots: 'format taille marges a4 letter rogner recadrer', run: toolResize },
         { id: 'lots', name: 'Traiter plusieurs fichiers', sub: 'Pages vides, compression, numérotation… en série', icon: IC.grille, mots: 'série lot lots batch plusieurs fichiers dossier compresser numéroter protéger', run: () => toolLots() },
+        ...(posteSait('arriveesEtat') ? [{ id: 'arrivees', name: 'Arrivées du copieur', sub: 'Le dossier où le copieur dépose ses scans : ouvrir, classer', icon: IC.arrivees, mots: 'copieur scanner scan numérisation multifonction boîte de réception dossier surveillé arrivée', run: toolArrivees, active: () => arrivees.nouveaux > 0 }] : []),
       ] },
       { id: 'modifier', title: 'Modifier', items: [
         // La signature était mentionnée en sous-titre de l'éditeur. Pour un syndic qui doit signer un procès-verbal,
@@ -48,6 +49,8 @@
         { id: 'exp-img', name: 'Exporter en images', sub: 'PNG ou JPEG', icon: IC.image, need: 'pages', mots: 'png jpg jpeg image convertir', run: toolExportImages },
         { id: 'exp-txt', name: 'Extraire le texte', sub: 'Fichier .txt', icon: IC.txt, need: 'pages', mots: 'txt texte brut copier contenu', run: toolExportText },
         { id: 'exp-word', name: 'Exporter vers Word', sub: 'Texte et tableaux, sans la mise en page (.docx)', icon: IC.txt, need: 'pages', mots: 'word docx texte modifier convertir traitement de texte libreoffice', run: toolWord },
+        ...(posteSait('courriel') ? [{ id: 'courriel', name: 'Envoyer par courriel', sub: 'Un message Outlook avec le PDF joint, que vous envoyez', icon: IC.courriel, need: 'pages', mots: 'mail courriel email outlook joindre pièce jointe envoyer message', run: toolCourriel }] : []),
+        { id: 'copier-image', name: 'Copier comme image', sub: 'La page, ou une zone, à coller ailleurs', icon: IC.dupliquer, need: 'pages', mots: 'instantané capture extrait copier image presse-papiers zone plan', run: toolCopierImage },
         { id: 'compress', name: 'Réduire la taille', sub: 'Plus léger ; le texte n\'est plus sélectionnable', icon: IC.zap, need: 'pages', mots: 'compresser optimiser alléger poids mégaoctets envoyer par courriel', run: toolCompress },
         { id: 'flatten', name: 'Aplatir', sub: 'Fige champs et annotations (irréversible à l\'export)', icon: IC.flat, need: 'pages', mots: 'figer fusionner annotations champs verrouiller', run: toolFlatten, active: () => state.flatten || state.figerAnnotations },
       ] },

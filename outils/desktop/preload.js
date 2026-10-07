@@ -41,6 +41,24 @@ contextBridge.exposeInMainWorld('AktumDesktop', {
   choisirLangue: (l) => ipcRenderer.invoke('aktum:choisir-langue', l),
   onLangue: (cb) => ipcRenderer.on('aktum:langue', (_e, l) => cb(l)),
   imprimer: (o) => ipcRenderer.invoke('aktum:imprimer', o),
+  // « Ouvrir les PDF avec Aktum PDF » (Windows) : proposé par un bouton des Préférences, retiré par le même bouton.
+  associationEtat: () => ipcRenderer.invoke('aktum:association-etat'),
+  associationInscrire: () => ipcRenderer.invoke('aktum:association-inscrire'),
+  associationRetirer: () => ipcRenderer.invoke('aktum:association-retirer'),
+  associationReglages: () => ipcRenderer.invoke('aktum:association-reglages'),
+  // La boîte de réception du copieur : des NOMS de fichiers du dossier surveillé, jamais des chemins.
+  arriveesEtat: () => ipcRenderer.invoke('aktum:arrivees-etat'),
+  arriveesChoisir: () => ipcRenderer.invoke('aktum:arrivees-choisir'),
+  arriveesArreter: () => ipcRenderer.invoke('aktum:arrivees-arreter'),
+  arriveesListe: () => ipcRenderer.invoke('aktum:arrivees-liste'),
+  arriveesOuvrir: (nom) => ipcRenderer.invoke('aktum:arrivees-ouvrir', nom),
+  arriveesClasser: (nom) => ipcRenderer.invoke('aktum:arrivees-classer', nom),
+  arriveesSupprimer: (nom) => ipcRenderer.invoke('aktum:arrivees-supprimer', nom),
+  onArrivees: (cb) => ipcRenderer.on('aktum:arrivees', (_e, bilan) => cb(bilan)),
+  // Envoyer par courriel (message préparé dans Outlook, ou le dossier du PDF ouvert), afficher un fichier dans son dossier, copier une image.
+  courriel: (o) => ipcRenderer.invoke('aktum:courriel', o),
+  afficherDansLeDossier: (chemin) => ipcRenderer.invoke('aktum:afficher-dossier', chemin),
+  copierImage: (octets) => ipcRenderer.invoke('aktum:copier-image', octets),
   // La liste des outils du volet, rangée par groupe et déjà dans la langue affichée : le menu « Outils » la reprend telle
   // quelle, de sorte que ses entrées sont celles du volet, jamais une seconde liste à tenir à jour.
   definirMenuOutils: (liste) => ipcRenderer.send('aktum:menu-outils', liste),

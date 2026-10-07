@@ -8,6 +8,7 @@ Ce que l'on vérifie, sans rien croire de ce que le logiciel dit de lui-même :
   - chaque feuille de l'arbre (MCID) existe dans le flux de contenu de sa page, dans une séquence BDC ;
   - chaque séquence de contenu à MCID du flux appartient à un élément de l'arbre (aucune orpheline) ;
   - la table des renvois (ParentTree) donne, pour chaque page, le bon élément pour chaque MCID ;
+  - un lien balisé (OBJR) désigne une annotation de sa page, qui renvoie à lui par StructParent et par la table ;
   - les séquences BDC/EMC du flux sont équilibrées ; les artefacts ne portent pas de MCID.
 """
 import json, sys
@@ -90,8 +91,12 @@ def principal(chemin):
                     rapport['erreurs'].append(f'MCID {mcid} de la page {pg+1} cité deux fois')
                 else:
                     cites[(pg, mcid)] = gen
+            elif isinstance(x, pikepdf.Dictionary) and x.get('/Type') == Name.OBJR:
+                # Un objet (ici, l'annotation d'un lien) rattaché à la structure : il doit exister, sur la page nommée, et renvoyer à cet élément.
+                objets_cites.append((gen, x))
             elif isinstance(x, pikepdf.Dictionary):
                 visiter(x, gen)
+    objets_cites = []
     k0 = struct.get('/K')
     for e in (list(k0) if isinstance(k0, pikepdf.Array) else [k0]):
         visiter(e, 0)
@@ -126,6 +131,21 @@ def principal(chemin):
                 continue
             if (i, mcid) in cites and e.objgen != cites[(i, mcid)]:
                 rapport['erreurs'].append(f'page {i+1} : la table des renvois désigne le mauvais élément pour le MCID {mcid}')
+    # 5. Les objets balisés : l'annotation renvoie (StructParent) à l'élément qui la désigne, et la table des renvois le confirme.
+    for gen, objr in objets_cites:
+        obj = objr.get('/Obj')
+        pg = index_page.get(objr['/Pg'].objgen) if '/Pg' in objr else None
+        if obj is None or pg is None:
+            rapport['erreurs'].append(f'élément {gen} : un OBJR sans objet ou sans page')
+            continue
+        annots = pdf.pages[pg].get('/Annots') or []
+        if not any(a.objgen == obj.objgen for a in annots):
+            rapport['erreurs'].append(f'élément {gen} : l\'objet balisé n\'est pas une annotation de la page {pg+1}')
+        sp = obj.get('/StructParent')
+        entree = table.get(int(sp)) if sp is not None else None
+        if entree is None or entree.objgen != gen:
+            rapport['erreurs'].append(f'élément {gen} : le StructParent de l\'annotation ne mène pas à lui')
+        rapport['liens'] = rapport.get('liens', 0) + 1
     return rapport
 
 if __name__ == '__main__':

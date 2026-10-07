@@ -94,7 +94,7 @@ async function tournerPage(win, n) {
   // AKTUM_SMOKE_DIR : les enregistrements y vont sans boîte de dialogue, et les
   // données (récents, récupération) dans son sous-dossier « donnees ».
   const env = { ...process.env, AKTUM_SMOKE_DIR: dossier, AKTUM_LANGUE: 'fr' };   // le test lit les libellés français, quelle que soit la langue du poste
-  const sortie = path.join(dossier, 'essai-modifie.pdf');
+  const sortie = path.join(dossier, 'essai-modifié.pdf');
   let ok = true;
   const verifier = (cond, quoi) => { if (!cond) { ok = false; console.log('ÉCHEC :', quoi); } };
 
@@ -114,7 +114,9 @@ async function tournerPage(win, n) {
   const donnees = await app.evaluate(({ app }) => app.getPath('userData'));
   console.log('titre :', title, '| menu :', JSON.stringify(menu), '| données :', donnees);
   console.log(JSON.stringify(info));
-  verifier(title === 'Aktum PDF' && JSON.stringify(menu) === JSON.stringify(['Fichier', 'Édition', 'Affichage', 'Outils', 'Aide']), 'titre ou menu');
+  // Sous macOS, le premier menu est celui de l'application, à son nom : on ne compare que les cinq autres.
+  const menuDuTravail = process.platform === 'darwin' ? menu.slice(1) : menu;
+  verifier(title === 'Aktum PDF' && JSON.stringify(menuDuTravail) === JSON.stringify(['Fichier', 'Édition', 'Affichage', 'Outils', 'Aide']), 'titre ou menu');
   verifier(info.bureau && info.docs.length === 1 && /essai\.pdf/.test(info.docs[0]) && !info.exemple && info.imprimantes, 'document du lancement');
   verifier(info.bouton === 'Enregistrer', 'bouton Enregistrer');
   // Le menu « Outils » reprend les outils du volet, par groupe : la page envoie sa liste, le menu la montre, et une entrée
@@ -178,11 +180,11 @@ async function tournerPage(win, n) {
   await attendre(() => fs.existsSync(sortie) && compterTournees(fs.readFileSync(sortie)) === 1, 60000, 'réécriture du fichier');
   await win.waitForFunction(() => !/modifié/.test(document.querySelector('#summary').textContent), null, { timeout: 10000 });
   octets = fs.readFileSync(sortie);
-  const fichiers = fs.readdirSync(dossier).filter((f) => f.endsWith('.pdf')).sort();
+  const fichiers = fs.readdirSync(dossier).filter((f) => f.endsWith('.pdf')).map((f) => f.normalize('NFC')).sort();
   console.log('enregistrer :', question, '|', compterPages(octets), 'page(s),', compterTournees(octets), 'tournée(s) | fichiers :', JSON.stringify(fichiers), '|', await dernier(win));
-  verifier(/essai-modifie\.pdf/.test(question) && compterPages(octets) === 3 && compterTournees(octets) === 1, 'enregistrer sur place');
-  verifier(JSON.stringify(fichiers) === JSON.stringify(['essai-modifie.pdf', 'essai.pdf']), 'aucun fichier en plus');
-  verifier(/Enregistré : .*essai-modifie\.pdf/.test(await dernier(win)), 'message Enregistré');
+  verifier(/essai-modifié\.pdf/.test(question) && compterPages(octets) === 3 && compterTournees(octets) === 1, 'enregistrer sur place');
+  verifier(JSON.stringify(fichiers) === JSON.stringify(['essai-modifié.pdf', 'essai.pdf']), 'aucun fichier en plus');
+  verifier(/Enregistré : .*essai-modifié\.pdf/.test(await dernier(win)), 'message Enregistré');
 
   // 3. Récupération : une modification non enregistrée est mise de côté, puis
   //    l'application est tuée (comme un plantage) et relancée.
@@ -280,6 +282,16 @@ async function tournerPage(win, n) {
   const nbOnglets = await fenetreVisite.locator('#onglets .onglet').count();
   console.log('onglets :', nbOnglets, '| documents :', JSON.stringify(await fenetreVisite.evaluate(() => Array.from(document.querySelectorAll('#doc-list .doc-name')).map((e) => e.textContent))));
   verifier(nbOnglets >= 2 && (await fenetreVisite.evaluate(() => /exemple\.pdf/.test(document.querySelector('#doc-list').textContent))), 'l\'exemple s\'ouvre dans un onglet de plus, le travail n\'est pas touché');
+
+  // Le nom proposé à « Enregistrer sous » garde ses accents (« Préavis », « août ») : la boîte de Windows s'en accommode, et les replier
+  // obligeait à corriger à chaque enregistrement. Chromium remplace par « download » un nom qui n'est pas de l'ASCII pur : le nom voyage en
+  // ASCII et le processus principal le décode (nom-telechargement.js) — ce que ce test constate de bout en bout, à la dernière étape pour
+  // ne rien déranger de ce qui précède.
+  await fenetreVisite.fill('#filename', 'Préavis août');
+  await menuClic(app, 'enregistrer-sous');
+  await attendre(() => fs.readdirSync(dossier).some((f) => f.normalize('NFC') === 'Préavis août.pdf'), 60000, 'un fichier nommé avec ses accents');
+  console.log('nom avec accents :', JSON.stringify(fs.readdirSync(dossier).filter((f) => f.endsWith('.pdf')).map((f) => f.normalize('NFC')).sort()));
+  verifier(true, 'le nom garde ses accents');
 
   await app.close();
   await menage(dossier);

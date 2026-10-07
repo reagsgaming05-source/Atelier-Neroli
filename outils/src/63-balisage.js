@@ -19,7 +19,7 @@
   //     le texte reconnu en paragraphes et l'image en artefact.
   //  Ce qu'il ne contient pas : titres, listes et tableaux des pages venues d'ailleurs
   //  (cela se devine mal, et un faux titre est pire que pas de titre), balises des liens,
-  //  des annotations et des champs de formulaire. Ce n'est donc pas un PDF/UA, et il
+  //  des annotations et des champs de formulaire (hormis les lignes cliquables du sommaire d'un dossier, que le logiciel écrit et balise). Ce n'est donc pas un PDF/UA, et il
   //  ne se déclare pas tel. Le contrôleur ci-dessous dit ce qui manque.
   // =====================================================================
   // @debut-balisage
@@ -105,13 +105,31 @@
       terminer() {
         const nom = n => PDFName.of(n);
         const texte = t => (/^[\x20-\x7e]*$/.test(t) ? PDFString.of(t) : PDFHexString.fromText(t));
+        // Les liens que le logiciel a écrits lui-même (la ligne cliquable du sommaire d'un dossier) : chacun est rattaché à la structure par un
+        // élément « Link » qui désigne l'annotation (OBJR), et l'annotation renvoie à cet élément (StructParent). Sans cela, un lien est un
+        // objet que le lecteur d'écran ne sait pas relier au texte. Les liens des pages venues d'ailleurs ne sont pas touchés.
+        const cleLiens = [];
+        pages.forEach(pc => {
+          let annots = null;
+          try { annots = pc.page.node.Annots(); } catch (e) { annots = null; }
+          if (!annots) return;
+          annots.asArray().forEach(item => {
+            const a = ctx.lookup(item);
+            if (!a || !a.get || !a.has(nom('Dest')) || String(a.get(nom('Subtype'))) !== '/Link' || a.has(nom('StructParent'))) return;
+            if (!a.has(nom('Contents'))) return;   // sans description, un lien ne se laisse pas balayer : on ne le prétend pas balisé
+            const e = nouvel('Link', pc.sect, {});
+            e.kids.push({ pc, objr: item });
+            a.set(nom('StructParent'), PDFNumber.of(pages.length + cleLiens.length));
+            cleLiens.push(e);
+          });
+        });
         // Les éléments sans contenu ne sont pas écrits (une page blanche n'a rien à lire).
-        const vivant = e => { if (e.vivant != null) return e.vivant; e.vivant = e.kids.some(k => k.mcid != null || vivant(k)); return e.vivant; };
+        const vivant = e => { if (e.vivant != null) return e.vivant; e.vivant = e.kids.some(k => k.mcid != null || k.objr || vivant(k)); return e.vivant; };
         elements.forEach(vivant);
         const gardes = elements.filter(e => e === racine || e.vivant);
         gardes.forEach(e => {
-          const kids = e.kids.filter(k => k.mcid != null || k.vivant);
-          const k = kids.map(x => (x.mcid != null ? ctx.obj({ Type: 'MCR', Pg: x.pc.page.ref, MCID: x.mcid }) : x.ref));
+          const kids = e.kids.filter(k => k.mcid != null || k.objr || k.vivant);
+          const k = kids.map(x => (x.mcid != null ? ctx.obj({ Type: 'MCR', Pg: x.pc.page.ref, MCID: x.mcid }) : x.objr ? ctx.obj({ Type: 'OBJR', Pg: x.pc.page.ref, Obj: x.objr }) : x.ref));
           const d = { Type: 'StructElem', S: e.role };
           if (e !== racine) d.P = e.parent.ref;
           // Un seul contenu : l'élément le désigne directement.
@@ -131,8 +149,10 @@
           pc.page.node.set(nom('Tabs'), nom('S'));
           nums.push(PDFNumber.of(pc.index), ctx.obj(pc.proprietaires.map(e => (e && e.vivant ? e.ref : null))));
         });
+        // Les liens : leur clé suit celles des pages, dans l'ordre (un arbre de renvois se lit par clés croissantes).
+        cleLiens.forEach((e, i) => nums.push(PDFNumber.of(pages.length + i), e.ref));
         const parentTree = ctx.register(ctx.obj({ Nums: nums }));
-        const struct = ctx.register(ctx.obj({ Type: 'StructTreeRoot', K: racine.ref, ParentTree: parentTree, ParentTreeNextKey: pages.length }));
+        const struct = ctx.register(ctx.obj({ Type: 'StructTreeRoot', K: racine.ref, ParentTree: parentTree, ParentTreeNextKey: pages.length + cleLiens.length }));
         ctx.lookup(racine.ref).set(nom('P'), struct);
         doc.catalog.set(nom('StructTreeRoot'), struct);
         doc.catalog.set(nom('MarkInfo'), ctx.obj({ Marked: true }));

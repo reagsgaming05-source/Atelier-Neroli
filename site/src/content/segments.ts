@@ -164,7 +164,7 @@ export const segments: Segment[] = [
       },
       {
         q: "Et si notre informaticien est externe ?",
-        a: "Il n'a rien à faire. L'application est portable : un dossier sur le lecteur réseau et un raccourci. Pas d'installation, pas de droits administrateur, pas d'écriture dans le registre. La mise à jour consiste à remplacer un dossier, une fois, pour tout le monde.",
+        a: "Il n'a rien à faire. L'application est portable : un dossier sur le lecteur réseau et un raccourci. Pas d'installation, pas de droits administrateur, pas d'écriture dans le registre (sauf si une personne demande, par un bouton, à ouvrir les PDF avec Aktum PDF). La mise à jour consiste à remplacer un dossier, une fois, pour tout le monde.",
       },
       {
         q: "Les documents partent-ils sur Internet ?",

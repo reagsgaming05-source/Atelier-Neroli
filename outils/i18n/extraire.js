@@ -21,7 +21,7 @@ const TEXTES_RETENUS = ['incertain', 'p.', 'pdf.js indisponible', 'point (1234.5
   'lot-', '-divise.zip', '-images.zip', '-tableau.csv', 'formulaire-', 'images.pdf', '(aucun texte)', 'Helvetica, Times ou Courier.'];
 
 // Des noms de touches du navigateur (event.key), comparés dans le code et jamais affichés : « Shift » devient « Maj » via la table des noms (src/97-raccourcis.js).
-const TEXTES_ECARTES = ['Redact', 'AktumFormat', 'Non', 'Off', 'Oui', 'Yes', 'AltGraph', 'Control', 'BaseEncoding', 'Dead', 'Differences', 'Heading', 'Meta', '_rels/.rels', 'Shift', 'Space'];
+const TEXTES_ECARTES = ['grayscale(1)', 'StructParent', 'Redact', 'AktumFormat', 'Non', 'Off', 'Oui', 'Yes', 'AltGraph', 'Control', 'BaseEncoding', 'Dead', 'Differences', 'Heading', 'Meta', '_rels/.rels', 'Shift', 'Space'];
 
 function estUnTexte(s) {
   const t = s.trim();
