@@ -71,7 +71,7 @@
   <li><strong>Canaux</strong> : « stable » est ce qu'on déploie ; « candidate » est une version à essayer d'abord, qu'une installation stable n'accepte pas. Une installation candidate accepte les deux.</li>
   <li><strong>Revenir en arrière</strong> : chaque version publiée reste téléchargeable. Posez le zip signé de la version voulue et demandez « Rechercher une mise à jour » : une version plus ancienne n'est proposée que sur demande, et dite comme telle.</li>
   <li><strong>Première mise à jour vers la 2.1</strong> : les versions d'avant ne savent pas vérifier de signature. Si le zip n'a pas son fichier de signature, décompressez-le par-dessus le dossier à la main (sans toucher à <span class="chemin">data</span>).</li>
-  <li><strong>Ce qui est conservé</strong> : <span class="chemin">data\</span> et tout fichier que vous avez posé dans le dossier. Ce qui n'est plus livré par la nouvelle version reste en place (la copie n'efface rien) : à nettoyer à la main si un diagnostic le demande.</li>
+  <li><strong>Ce qui est conservé</strong> : <span class="chemin">data\</span>, <span class="chemin">licence.json</span>, <span class="chemin">aktum.log</span> et tout fichier que vous avez posé dans le dossier. <strong>Ce qui est retiré</strong> : les fichiers que la version installée livrait et que la nouvelle ne livre plus (chaque version porte la liste de ce qu'elle pose, <span class="chemin">LISTE-DES-FICHIERS.txt</span>) ; jamais autre chose. Une installation qui ne porte pas encore cette liste ne se nettoie pas à la première mise à jour : les fichiers inutiles restent en place, sans effet.</li>
   <li><strong>Notes de version</strong> : <span class="chemin">Notes-de-version.txt</span> dans le dossier, et sur la page de la release.</li>
 </ul>
 

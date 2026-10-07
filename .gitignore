@@ -46,3 +46,6 @@ outils/guide/captures/
 outils/guide/*.pdf
 outils/guide/.guide-imprime.html
 outils/docs/.*.html
+
+# relevé de couverture de la suite de bout en bout (npm run couverture)
+outils/test-e2e/couverture/

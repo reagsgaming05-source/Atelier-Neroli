@@ -2,7 +2,7 @@
 //  - un fichier refusé dit POURQUOI (vide, pas un PDF, incomplet) et ne fait pas disparaître le document d'exemple ;
 //  - une opération interrompue — par le bouton, par Échap — n'écrit rien : ni fichier, ni changement dans le document ;
 //  - un caviardage interrompu ne laisse aucune marque derrière lui.
-const { test, expect, pdfDe, pdfTexte } = require('./aide');
+const { test, expect, pdfDe, pdfTexte, PAGE } = require('./aide');
 
 async function deposer(page, nom, octets, type) {
   await page.setInputFiles('#file-input', { name: nom, mimeType: type || 'application/pdf', buffer: octets });
@@ -90,4 +90,26 @@ test('un caviardage interrompu ne laisse aucune marque derrière lui', async ({ 
   expect(await app.estModifie(), 'le document n\'est pas marqué modifié').toBe(false);
   await app.vue('organiser');
   await expect(page.locator('#pages .tile .flag.ann'), 'aucune marque de caviardage n\'a été posée').toHaveCount(0);
+});
+
+// L'exemple se fabrique en quelques centaines de millisecondes ; un fichier ouvert pendant ce temps (un double-clic au lancement, un dépôt
+// immédiat, un poste lent) ne doit pas se retrouver flanqué de l'exemple, qui arrivait après lui et s'ajoutait. On ralentit sa fabrication
+// pour que la course soit certaine, pas rare.
+test('un fichier ouvert pendant que l\'exemple se prépare n\'est pas rejoint par l\'exemple', async ({ page }) => {
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const creer = window.PDFLib.PDFDocument.create.bind(window.PDFLib.PDFDocument);
+      window.PDFLib.PDFDocument.create = async (...a) => { await new Promise((r) => setTimeout(r, 3500)); return creer(...a); };
+    });
+  });
+  await page.goto(PAGE);
+  await page.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });
+  await deposer(page, 'tot.pdf', pdfTexte(['Un vrai document']));
+  await page.waitForFunction(() => Array.from(document.querySelectorAll('#doc-list .doc-name')).some((e) => e.textContent.indexOf('tot.pdf') >= 0), null, { timeout: 60000 });
+  // L'exemple aurait fini de se fabriquer 3,5 s après le démarrage : on attend qu'il soit passé.
+  await page.waitForTimeout(5000);
+  const noms = await page.evaluate(() => Array.from(document.querySelectorAll('#doc-list .doc-name')).map((e) => e.textContent));
+  expect(noms, 'seul le document de la personne est ouvert').toHaveLength(1);
+  expect(noms[0]).toContain('tot.pdf');
+  expect(await page.evaluate(() => Number(document.querySelector('#summary').textContent.replace(/\D.*/, '')))).toBe(1);
 });

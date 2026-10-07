@@ -120,6 +120,29 @@ async function tournerPage(win, n) {
     }
   }
 
+  // Le mode « ménage » des scripts de mise à jour : sur un faux dossier d'installation, il retire ce que la nouvelle liste ne livre plus, et seulement cela.
+  {
+    const { spawnSync } = require('child_process');
+    const poste = path.join(dossier, 'faux-poste');
+    fs.mkdirSync(path.join(poste, 'data'), { recursive: true });
+    fs.mkdirSync(path.join(poste, 'vieux'), { recursive: true });
+    fs.writeFileSync(path.join(poste, 'data', 'tampons.json'), 'MES TAMPONS');
+    fs.writeFileSync(path.join(poste, 'vieux', 'a.dll'), 'ancien');
+    fs.writeFileSync(path.join(poste, 'reste.bin'), 'nouveau');
+    fs.writeFileSync(path.join(poste, 'notes-du-service.txt'), 'A MOI');
+    const ancienne = path.join(dossier, 'ancienne-liste.txt'), nouvelle = path.join(dossier, 'nouvelle-liste.txt'), sortieMenage = path.join(dossier, 'menage.txt');
+    fs.writeFileSync(ancienne, 'reste.bin\nvieux/a.dll\ndata/tampons.json\n../hors.txt\n');
+    fs.writeFileSync(nouvelle, 'reste.bin\n');
+    const cmd = exe ? [exe, ['--menage', poste, ancienne, nouvelle, sortieMenage].concat(process.platform === 'linux' ? ['--no-sandbox'] : [])] : [require('electron'), [path.join(__dirname), '--menage', poste, ancienne, nouvelle, sortieMenage, '--no-sandbox']];
+    const r = spawnSync(cmd[0], cmd[1], { env, timeout: 60000, stdio: 'ignore' });
+    const ligne = fs.existsSync(sortieMenage) ? fs.readFileSync(sortieMenage, 'utf8').trim() : '';
+    console.log('ménage :', r.status, JSON.stringify(ligne));
+    verifier(r.status === 0 && /^MENAGE-OK 1 /.test(ligne), 'le mode « ménage » retire un fichier et le dit (code 0, ligne écrite)');
+    verifier(!fs.existsSync(path.join(poste, 'vieux')), 'le fichier que la nouvelle liste ne livre plus est parti, et son dossier vidé aussi');
+    verifier(fs.existsSync(path.join(poste, 'reste.bin')) && fs.readFileSync(path.join(poste, 'data', 'tampons.json'), 'utf8') === 'MES TAMPONS' && fs.readFileSync(path.join(poste, 'notes-du-service.txt'), 'utf8') === 'A MOI',
+      'le ménage ne touche ni à ce que la nouvelle version livre, ni à data, ni à un fichier personnel');
+  }
+
   let app = await lancer(exe, dossier, env, [pdf]);
   let win = await fenetrePrete(app);
   // le document de la ligne de commande s'ouvre (3 pages), à la place de l'exemple
@@ -226,6 +249,22 @@ async function tournerPage(win, n) {
   const manifeste = JSON.parse(fs.readFileSync(manifestes()[0], 'utf8'));
   console.log('récupération :', manifeste.titre, '|', manifeste.pages.length, 'pages,', manifeste.pages.filter((p) => p.rot === 90).length, 'tournée(s) | fichier :', manifeste.chemin);
   verifier(manifeste.pages.length === 3 && manifeste.pages.filter((p) => p.rot === 90).length === 2 && manifeste.chemin === sortie, 'manifeste de récupération');
+  // Le travail mis de côté est réservé à la personne : 0700 et 0600 sous macOS et Linux ; sous Windows, ni « Utilisateurs », ni « Tout le monde », ni « Utilisateurs authentifiés » n'y gardent un droit.
+  {
+    const dossierDepot = path.dirname(manifestes()[0]);
+    if (process.platform === 'win32') {
+      const q = require('child_process').spawnSync('icacls', [dossierRecup], { encoding: 'utf8' });
+      const acl = String(q.stdout || '');
+      console.log('droits du travail mis de côté :', acl.replace(/\s+/g, ' ').slice(0, 300));
+      verifier(q.status === 0 && !/(Everyone|Tout le monde|BUILTIN\\Users|Utilisateurs|Authenticated Users|Utilisateurs authentifiés)/i.test(acl.replace(dossierRecup, '')), 'le dossier du travail mis de côté n\'est lisible ni par « Utilisateurs » ni par « Tout le monde »');
+    } else {
+      const droit = (p) => (fs.statSync(p).mode & 0o777).toString(8);
+      console.log('droits du travail mis de côté :', droit(dossierRecup), droit(dossierDepot), droit(manifestes()[0]));
+      verifier(droit(dossierRecup) === '700' && droit(dossierDepot) === '700' && droit(manifestes()[0]) === '600', 'le dossier du travail mis de côté est réservé à la personne (0700, 0600)');
+    }
+    // Le manifeste ne garde pas le texte reconnu : seulement le fait qu'il est à refaire.
+    verifier(!JSON.stringify(manifeste).includes('"texte"') && !JSON.stringify(manifeste).includes('"mots"'), 'le manifeste ne contient ni le texte reconnu ni ses mots');
+  }
   tuer(app);
   app = await relancer(exe, dossier, env, []);
   win = await fenetrePrete(app);
@@ -323,6 +362,23 @@ async function tournerPage(win, n) {
   await attendre(() => fs.readdirSync(dossier).some((f) => f.normalize('NFC') === 'Préavis août.pdf'), 60000, 'un fichier nommé avec ses accents');
   console.log('nom avec accents :', JSON.stringify(fs.readdirSync(dossier).filter((f) => f.endsWith('.pdf')).map((f) => f.normalize('NFC')).sort()));
   verifier(true, 'le nom garde ses accents');
+
+  // « Effacer mes traces sur ce poste » : un seul menu, une confirmation ; les récents, le travail mis de côté et les réglages mémorisés partent, les documents restent.
+  {
+    const avant = { recents: fs.existsSync(path.join(donnees, 'recents.json')), recup: fs.existsSync(path.join(donnees, 'recuperation')) };
+    await app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 0 }); });
+    const lance = await app.evaluate(({ Menu }) => {
+      const cherche = (items) => { for (const it of items) { if (it.label === 'Effacer mes traces sur ce poste…') return it; if (it.submenu) { const r = cherche(it.submenu.items); if (r) return r; } } return null; };
+      const it = cherche(Menu.getApplicationMenu().items);
+      if (!it) return false;
+      it.click();
+      return true;
+    });
+    verifier(lance, 'le menu « Effacer mes traces sur ce poste… » existe');
+    await attendre(() => !fs.existsSync(path.join(donnees, 'recents.json')) && !fs.existsSync(path.join(donnees, 'recuperation')), 15000, 'traces effacées');
+    console.log('traces :', JSON.stringify(avant), '→ effacées ; documents intacts :', fs.existsSync(path.join(dossier, 'essai.pdf')) && fs.existsSync(sortie));
+    verifier(fs.existsSync(path.join(dossier, 'essai.pdf')) && fs.existsSync(sortie), 'les documents ne sont pas touchés par l\'effacement des traces');
+  }
 
   await app.close();
   await menage(dossier);

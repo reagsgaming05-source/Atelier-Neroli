@@ -80,12 +80,13 @@ test('retirer une pièce entière : le sommaire le dit par un tiret', async ({ a
   const { octets } = await app.exporter();
   const pages = await textesDuPdf(page, octets);
   expect(pages[0]).toContain('Pièce n° 1');
-  // La pièce partie n'annonce plus de page.
-  expect(/Pièce n°\s*2\s*—/.test(pages[0]) || /Pièce n°\s*2/.test(pages[0])).toBe(true);
+  // La pièce partie n'annonce plus de page : un tiret à la place du numéro, et le sommaire ne compte plus que quatre pages.
+  expect(pages[0]).toMatch(/Pièce n°\s*2\s+annexe\s*—/);
+  expect(pages[0]).toContain('2 pièces · 4 pages');
   const { annonces, positions } = annoncesEtPositions(pages);
-  Object.keys(annonces).forEach((n) => {
-    if (positions[n]) expect(annonces[n]).toBe(positions[n]);
-  });
+  expect(Object.keys(annonces), 'seule la pièce restante annonce une page').toEqual(['1']);
+  expect(annonces['1'], 'la pièce 1 est annoncée là où elle est').toBe(positions['1']);
+  expect(positions['1'], 'et elle est bien à la page 2, juste après le sommaire').toBe(2);
 });
 
 test('le dossier pose un signet par pièce, et une pagination continue', async ({ app, page }) => {

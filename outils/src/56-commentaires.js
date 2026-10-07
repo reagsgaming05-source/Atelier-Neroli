@@ -276,6 +276,20 @@
   // porte des caractères hors de ce jeu (« ć » de Milošević), il est refait une seconde
   // fois avec des polices incorporées plutôt que d'écrire « ? ». L'archivage en PDF/A
   // (opts.archivage) écrit toujours avec des polices incorporées.
+  // Ce que le fichier reçu a de bancal et que l'écriture ne doit pas reproduire : un fichier qui sort d'ici sort sain, quel que soit l'état de celui
+  // qui est entré. Une page sans /MediaBox (copieur ou générateur défaillant) : chaque lecteur la prendrait à sa façon, on écrit la taille que
+  // cette page a pour nous (Lettre, sauf mention contraire). Un contenu qui renvoie à un objet absent : les lecteurs le disent « abîmé », la page
+  // est écrite vide, et le journal le dit.
+  function soignerLaPage(out, page, p, rang) {
+    let sansTaille = false;
+    try { sansTaille = !page.node.MediaBox(); } catch (e) { sansTaille = true; }   // pdf-lib lève quand la boîte manque
+    if (sansTaille) { try { const g0 = pageGeom(p); page.setMediaBox(g0.ox, g0.oy, g0.w, g0.h); } catch (e) { signaler('Taille de page', e, 'info'); } }
+    try {
+      const cle = PDFLib.PDFName.of('Contents'), ref = page.node.get(cle);
+      if (ref && out.context.lookup(ref) === undefined) { page.node.delete(cle); signaler('Contenu de page', tr('La page {0} renvoyait à un contenu absent du fichier d\'origine : elle est écrite vide.').replace('{0}', rang + 1), 'warn'); }
+    } catch (e) { signaler('Contenu de page', e, 'info'); }
+  }
+
   async function buildPdf(pages, opts) {
     opts = opts || {};
     // Le balisage s'écrit avec des polices incorporées : un lecteur d'écran lit le texte d'une police
@@ -412,7 +426,7 @@
       out = await sourceDoc(state.sources[0], false);
       const docPages = out.getPages();
       mapped = pages.map(p => ({ p, page: docPages[p.index] }));
-      mapped.forEach(({ p, page }) => { try { retirerCommentaires(out, page, p); } catch (e) { signaler('Commentaires', e); } });
+      mapped.forEach(({ p, page }, k) => { try { retirerCommentaires(out, page, p); } catch (e) { signaler('Commentaires', e); } soignerLaPage(out, page, p, k); });
     } else {
       out = await PDFDocument.create();
       const bySource = new Map();
@@ -444,6 +458,7 @@
           placed[k] = page;
         } else {
           out.addPage(placed[k]);
+          soignerLaPage(out, placed[k], p, k);
         }
       }
       mapped = pages.map((p, k) => ({ p, page: placed[k] }));

@@ -116,6 +116,10 @@
     opts = opts || {};
     const opened = await openWithPdfjs(name, bytes, null);
     const doc = opened.doc, password = opened.password;
+    // Un document sans page (un générateur qui a planté en route) s'ouvrirait « à moitié » : une entrée de liste vide, rien à afficher.
+    if (!doc.numPages) { try { doc.destroy(); } catch (e) { /* le lecteur s'en charge */ } throw Object.assign(new Error(tr('« {0} » ne contient aucune page : il n\'y a rien à afficher ni à modifier.').replace('{0}', name)), { humain: true }); }
+    // L'exemple, lui, ne revient pas par-dessus ce que la personne a ouvert pendant qu'il se préparait : le premier document réel l'a déjà remplacé.
+    if (opts.isSample && state.sources.some(x => !x.isSample)) { try { doc.destroy(); } catch (e) { /* le lecteur s'en charge */ } return null; }
     // Ouvrir un document dans un espace vide n'est pas une action qu'on annule :
     // Ctrl+Z juste après l'ouverture ramenait l'espace de travail à rien, et le
     // document disparaissait. Seul ce qu'on AJOUTE à un document déjà là se défait.

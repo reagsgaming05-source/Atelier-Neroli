@@ -148,7 +148,25 @@ if not exist "%SOURCE%\AktumPDF.exe" (
   goto :echec
 )
 
-rem --- 5. Remplacer, sans jamais supprimer ------------------------------------
+rem --- 5. Le menage : ce que l'ancienne version livrait et que la nouvelle ne livre plus
+rem Chaque version livre LISTE-DES-FICHIERS.txt (tout ce que son archive pose, rien d'autre). La liste de ce qui est installe est mise de cote AVANT la
+rem recopie, qui la remplace ; l'application deja installee, sans fenetre, retire la difference. Jamais "data", jamais ce que vous avez pose vous-meme dans
+rem le dossier : seuls les fichiers de l'ancienne liste qui ne sont plus dans la nouvelle partent. Sans l'une des deux listes, rien n'est retire.
+rem (Pas de blocs entre parentheses : le chemin du dossier peut en contenir, "Program Files (x86)".)
+if not exist "%DOSSIER%LISTE-DES-FICHIERS.txt" goto :sans_menage
+if not exist "%SOURCE%\LISTE-DES-FICHIERS.txt" goto :sans_menage
+copy /y "%DOSSIER%LISTE-DES-FICHIERS.txt" "%ATELIER%\ancienne-liste.txt" >nul 2>&1
+del "%ATELIER%\menage.txt" 2>nul
+start "" /wait "%DOSSIER%AktumPDF.exe" --menage "%DOSSIER%." "%ATELIER%\ancienne-liste.txt" "%SOURCE%\LISTE-DES-FICHIERS.txt" "%ATELIER%\menage.txt"
+findstr /b /c:"MENAGE-OK" "%ATELIER%\menage.txt" >nul 2>&1
+if errorlevel 1 goto :menage_incomplet
+echo   Fichiers devenus inutiles retirés.
+goto :sans_menage
+:menage_incomplet
+echo   Le ménage des anciens fichiers n'a pas pu se faire : ils restent en place, sans effet.
+:sans_menage
+
+rem --- 6. Remplacer ------------------------------------------------------------
 rem Pas de /MIR : robocopy recopie et remplace, mais n'efface rien. Le
 rem sous-dossier "data" reste donc intact, ainsi que tout ce que vous auriez
 rem pose dans le dossier.

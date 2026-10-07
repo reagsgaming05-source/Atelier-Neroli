@@ -127,7 +127,7 @@
     cv.addEventListener('pointerup', () => { drawing = false; });
     wrap.appendChild(cv);
     const colorSel = segmented('sg-color', [['#0B2545', 'Bleu'], ['#111111', 'Noir']], '#0B2545', v => { ctx.strokeStyle = v; });
-    const garder = checkbox('sg-garder', 'Mémoriser cette signature sur cet ordinateur', true);
+    const garder = checkbox('sg-garder', 'Mémoriser cette signature dans le dossier de l\'application (data), en clair', false);
     const memo = document.createElement('div'); memo.className = 'signatures';
     let api = null;
     const remplirMemo = () => {

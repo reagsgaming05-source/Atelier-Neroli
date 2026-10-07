@@ -60,6 +60,8 @@
       "diagnostic.js",
       "editeur.json",
       "verifier-maj.js",
+      "menage.js",
+      "droits.js",
       "cles-publiques.json",
       "comptes.js",
       "preload.js",

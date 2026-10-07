@@ -2,9 +2,15 @@
 
 ## Aktum PDF — un logiciel PDF complet dans le navigateur
 
-`outils/aktum-pdf.html` est un fichier HTML autonome qui offre les fonctions
+`outils/aktum-pdf-hors-ligne.html` est un fichier HTML autonome qui offre les fonctions
 d'un logiciel PDF professionnel. Tout le traitement se fait sur l'ordinateur de
-l'utilisateur : aucun fichier n'est envoyé sur un serveur.
+l'utilisateur : aucun fichier n'est envoyé sur un serveur, et le fichier ne charge rien
+d'internet.
+
+> **`outils/aktum-pdf.html` est une version d'essai en ligne, pas la version de travail.** Elle charge
+> ses composants (pdf.js, pdf-lib, JSZip) depuis des serveurs publics : les documents restent dans le
+> navigateur, mais l'adresse du poste est vue de ces serveurs. Elle le dit à l'écran à l'ouverture. Pour des
+> documents réels, utilisez la version portable ou le fichier hors ligne.
 
 ### Organiser
 
@@ -170,7 +176,7 @@ Ce qu'une relecture complète du logiciel a fait ajouter ensuite :
 
 | Fichier | Poids | Internet |
 | --- | --- | --- |
-| `outils/aktum-pdf.html` | 0,5 Mo | requis à l'ouverture, pour charger pdf.js, pdf-lib, JSZip et, à la demande, le moteur OCR |
+| `outils/aktum-pdf.html` (version d'essai en ligne) | 0,5 Mo | requis à l'ouverture, pour charger pdf.js, pdf-lib, JSZip et, à la demande, le moteur OCR ; pas pour des documents réels |
 | `outils/aktum-pdf-hors-ligne.html` | 9 Mo | aucun : les bibliothèques, le moteur OCR et les modèles français et allemand sont inclus dans le fichier |
 
 Les deux fichiers offrent les mêmes fonctions. La version hors ligne convient

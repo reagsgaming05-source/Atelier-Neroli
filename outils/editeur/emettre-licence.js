@@ -55,5 +55,17 @@ fs.copyFileSync(sortie, path.join(essai, 'licence.json'));
 const r = lireLeFichier(essai, lireCles().licence);
 fs.rmSync(essai, { recursive: true, force: true });
 if (!r.ok) { fs.unlinkSync(sortie); console.error('La licence émise ne passe pas la vérification : ' + r.raison); process.exit(1); }
+// Le registre des licences émises : une ligne par émission, sur VOTRE poste (à côté des clés privées, jamais dans le dépôt ni sur le site). Il garde
+// ce qui permet de répondre à « mon fichier ne marche pas » (le corps signé à l'octet près, son empreinte) et de tracer une réémission : même client,
+// nouvelle date. Les noms de clients y sont : c'est une donnée de l'éditeur, à sauvegarder avec les clés, pas à publier.
+try {
+  const registre = path.join(process.env.AKTUM_CLES_DIR || path.join(os.homedir(), 'aktum-cles-privees'), 'registre-licences.jsonl');
+  fs.mkdirSync(path.dirname(registre), { recursive: true });
+  const emises = fs.existsSync(registre) ? fs.readFileSync(registre, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch (e) { return {}; } }) : [];
+  const reemission = emises.some((x) => x.client === client && x.ide === (arg('ide', '')));
+  fs.appendFileSync(registre, JSON.stringify({ quand: aujourdhui.toISOString(), id, client, ide: arg('ide', ''), postes, modele, emise, majJusqu, reemission, cle: connue.id,
+    empreinte: crypto.createHash('sha256').update(fs.readFileSync(sortie)).digest('hex'), corps: signee }) + '\n');
+  console.log('Registre : ' + registre + (reemission ? '  (réémission pour un client déjà servi)' : ''));
+} catch (e) { console.error('Le registre des licences n\'a pas pu être tenu : ' + e.message + ' — notez cette émission à la main.'); }
 console.log('Licence ' + id + ' émise pour « ' + client + ' » : ' + (postes || 'postes illimités') + (postes ? ' postes' : '') + ', mises à jour jusqu’au ' + (majJusqu || '—') + '.');
 console.log('Fichier : ' + sortie + '  (le client le pose sous le nom licence.json à côté de l’exécutable)');

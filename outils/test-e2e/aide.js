@@ -4,10 +4,20 @@
 // Les PDF d'essai sont écrits à la main, octet par octet : rien à installer, et
 // leur contenu est connu au caractère près — c'est ce qui permet d'affirmer
 // qu'un mot a bien disparu d'un fichier caviardé.
-const { test: base, expect } = require('@playwright/test');
+const { test: base, expect: expectDeBase } = require('@playwright/test');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
+const { spawnSync } = require('child_process');
+
+// Un scénario qui n'affirme rien passe toujours : « expect » est donc compté, et un scénario réussi sans une seule affirmation échoue
+// (voir le scénario type, plus bas). Le contrôle des erreurs de la page, que le scénario type fait de lui-même, n'en est pas une.
+let affirmations = 0;
+const expect = Object.assign((...a) => { affirmations++; return expectDeBase(...a); }, expectDeBase, {
+  poll: (...a) => { affirmations++; return expectDeBase.poll(...a); },
+  soft: (...a) => { affirmations++; return expectDeBase.soft(...a); },
+});
 
 // AKTUM_PAGE : une autre page construite (pour comparer deux versions : voir perf.spec.js).
 const FICHIER = process.env.AKTUM_PAGE || path.join(__dirname, '..', 'aktum-pdf-hors-ligne.html');
@@ -217,6 +227,36 @@ async function liensDuPdf(page, octets) {
 }
 
 // ---------------------------------------------------------------------------
+//  La barrière de format : tout PDF que l'application produit passe « qpdf --check »
+// ---------------------------------------------------------------------------
+// Code de sortie 0 : structure saine ; 3 : avertissements (le fichier s'ouvre, mais quelque chose cloche) ; 2 : erreurs. Les deux derniers
+// font échouer le scénario, sauf deux cas assumés : un fichier chiffré dont le mot de passe d'ouverture n'est pas vide (qpdf ne peut pas le
+// lire : le scénario de chiffrement le relit autrement), et un document que le scénario a volontairement abîmé (« tolere »).
+let qpdfAbsent = false;
+const verdictsDeFormat = [];
+function barriereDeFormat(nom, octets, tolere) {
+  if (!octets || octets.length < 8 || octets.subarray(0, 5).toString('latin1') !== '%PDF-') return;   // un zip, une image, un texte : pas un PDF
+  if (qpdfAbsent || process.env.AKTUM_SANS_VERIFICATEURS) return;   // le poste Windows de la CI n'a pas qpdf : la barrière a joué sur Linux
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'aktum-qpdf-'));
+  const f = path.join(dossier, 'sortie.pdf');
+  try {
+    fs.writeFileSync(f, octets);
+    const r = spawnSync('qpdf', ['--check', f], { encoding: 'utf8' });
+    if (r.error && r.error.code === 'ENOENT') {
+      if (process.env.CI) throw new Error('qpdf est requis par la barrière de format (apt-get install qpdf) : il manque sur ce poste, la CI ne passe pas sans.');
+      qpdfAbsent = true; console.warn('qpdf absent : la barrière de format ne joue pas sur ce poste.');
+      return;
+    }
+    const sortie = String(r.stdout || '') + String(r.stderr || '');
+    if (/invalid password|password/i.test(sortie) && r.status === 2) return;   // chiffré avec un mot de passe d'ouverture
+    verdictsDeFormat.push({ nom, statut: r.status });
+    if (r.status !== 0 && !tolere) {
+      throw new Error('qpdf --check refuse « ' + nom + ' » (code ' + r.status + ') :\n' + sortie.split('\n').filter((l) => l.trim()).slice(0, 12).join('\n'));
+    }
+  } finally { fs.rmSync(dossier, { recursive: true, force: true }); }
+}
+
+// ---------------------------------------------------------------------------
 //  Piloter l'application
 // ---------------------------------------------------------------------------
 class App {
@@ -270,11 +310,14 @@ class App {
     await this.page.waitForFunction((n) => document.querySelector('#sel-count').textContent.trim().startsWith(String(n)), rangs.length);
   }
 
-  // Ce que l'application écrit : on récupère le fichier téléchargé.
+  // Ce que l'application écrit : on récupère le fichier téléchargé — et chaque PDF récolté est jugé par qpdf, qui n'est pas notre code :
+  // les scénarios relisent les fichiers avec le pdf.js de la page (juge et partie), la barrière de format les relit avec un autre lecteur.
   async recolter(action) {
     const [dl] = await Promise.all([this.page.waitForEvent('download', { timeout: 90000 }), action()]);
     const chemin = await dl.path();
-    return { nom: dl.suggestedFilename(), octets: fs.readFileSync(chemin) };
+    const octets = fs.readFileSync(chemin);
+    barriereDeFormat(dl.suggestedFilename(), octets);
+    return { nom: dl.suggestedFilename(), octets };
   }
   exporter() { return this.recolter(() => this.page.click('#btn-export')); }
 
@@ -339,24 +382,58 @@ async function pdfEmbarque(page, ajouts) {
 
 
 // ---------------------------------------------------------------------------
+//  La couverture : ce que les scénarios exécutent du code de l'application
+// ---------------------------------------------------------------------------
+// Le programme de l'application est un seul <script> de la page construite. V8 dit, pour chaque plage d'octets de ce script, combien de
+// fois elle a été exécutée ; on garde les plages exécutées, scénario par scénario, et couverture.js les additionne et les rapporte aux
+// modules de outils/src/.
+function enregistrerLaCouverture(entrees) {
+  const dossier = path.join(__dirname, 'couverture');
+  fs.mkdirSync(dossier, { recursive: true });
+  for (const e of entrees) {
+    if (!e.source || e.source.indexOf('APP_CONSTRUCTION') < 0) continue;   // les bibliothèques embarquées n'en sont pas
+    const exec = new Uint8Array(e.source.length);
+    // Les plages sont emboîtées, de la plus large à la plus étroite : la plus étroite dit ce qui s'est passé à cet endroit.
+    for (const fn of e.functions) for (const r of fn.ranges) exec.fill(r.count > 0 ? 1 : 0, r.startOffset, r.endOffset);
+    const plages = [];
+    for (let i = 0; i < exec.length; i++) {
+      if (!exec[i]) continue;
+      let j = i; while (j < exec.length && exec[j]) j++;
+      plages.push([i, j]); i = j;
+    }
+    fs.writeFileSync(path.join(dossier, process.pid + '-' + Date.now() + '-' + Math.floor(Math.random() * 1e6) + '.json'),
+      JSON.stringify({ longueur: e.source.length, empreinte: e.source.slice(0, 200), plages }));
+  }
+}
+
+// ---------------------------------------------------------------------------
 //  Le scénario type : une page ouverte, et aucune erreur JavaScript tolérée
 // ---------------------------------------------------------------------------
 const test = base.extend({
+  // Un scénario réussi sans une seule affirmation ne prouve rien : il échoue.
+  garde: [async ({}, use, testInfo) => {
+    affirmations = 0;
+    await use();
+    if (testInfo.status === 'passed' && affirmations === 0) throw new Error('ce scénario n\'affirme rien (aucun expect) : il passerait quoi qu\'il arrive');
+  }, { auto: true }],
   app: async ({ page }, use) => {
     const erreurs = [];
     page.on('pageerror', (e) => erreurs.push(String(e.message)));
+    // « npm run couverture » : ce que la suite exécute du code de l'application, relevé par le navigateur (voir couverture.js).
+    if (process.env.AKTUM_COUVERTURE) await page.coverage.startJSCoverage({ resetOnNavigation: false });
     await page.goto(PAGE);
     await page.waitForSelector('#app-toolbar', { state: 'visible', timeout: 60000 });
     const app = new App(page);
     await use(app);
+    if (process.env.AKTUM_COUVERTURE) { try { enregistrerLaCouverture(await page.coverage.stopJSCoverage()); } catch (e) { /* la page s'est fermée avant la fin du test */ } }
     // Une exception non rattrapée passe souvent inaperçue à l'écran : ici elle
     // fait échouer le scénario.
-    expect(erreurs, 'la page n\'a levé aucune exception').toEqual([]);
+    expectDeBase(erreurs, 'la page n\'a levé aucune exception').toEqual([]);
   },
 });
 
 module.exports = {
-  test, expect, App, PAGE,
+  test, expect, App, PAGE, barriereDeFormat,
   pdfDe, pdfVide, pdfTexte,
   pdfEmbarque, compterPages, compterTournees, estUnPdf, texteDuFlux, texteDuPdf, textesDuPdf, annotationsDuPdf, liensDuPdf, fluxDecompresses, brut,
 };

@@ -195,7 +195,22 @@
   "Quelques clés sont écrites sous ": "Einige Schlüssel werden geschrieben unter ",
   "Supprimer": "Löschen",
   "Supprimer ce document de la boîte du copieur ?": "Dieses Dokument aus dem Eingang des Kopierers löschen?",
-  "Ce fichier n’a pas été ouvert ni enregistré par l’application : l’enregistrement sur place est refusé. Utilisez « Enregistrer sous… ».": "Diese Datei wurde von der Anwendung weder geöffnet noch gespeichert: Das Speichern an Ort und Stelle wird verweigert. Verwenden Sie «Speichern unter…»."
+  "Ce fichier n’a pas été ouvert ni enregistré par l’application : l’enregistrement sur place est refusé. Utilisez « Enregistrer sous… ».": "Diese Datei wurde von der Anwendung weder geöffnet noch gespeichert: Das Speichern an Ort und Stelle wird verweigert. Verwenden Sie «Speichern unter…».",
+  ", et le nom du compte retenu sur ce poste (le mot de passe sera redemandé au prochain lancement)": ", und der auf diesem Arbeitsplatz gemerkte Kontoname (das Passwort wird beim nächsten Start erneut verlangt)",
+  "Effacer mes traces": "Meine Spuren löschen",
+  "Effacer mes traces sur ce poste ?": "Meine Spuren auf diesem Arbeitsplatz löschen?",
+  "Effacer mes traces sur ce poste…": "Meine Spuren auf diesem Arbeitsplatz löschen…",
+  "la liste des documents récents": "die Liste der zuletzt geöffneten Dokumente",
+  "le nom du compte retenu sur ce poste": "der auf diesem Arbeitsplatz gemerkte Kontoname",
+  "le travail mis de côté": "die zur Seite gelegte Arbeit",
+  "les copies de pages préparées pour le glisser": "die für das Ziehen vorbereiteten Seitenkopien",
+  "les signatures, tampons et réglages mémorisés": "die gespeicherten Unterschriften, Stempel und Einstellungen",
+  "Pour que plus rien de ce qui est affiché ne soit mémorisé, fermez ensuite les documents ouverts.": "Damit nichts von dem, was angezeigt wird, gespeichert bleibt, schliessen Sie anschliessend die geöffneten Dokumente.",
+  "Restent : ": "Übrig bleiben: ",
+  "Seront effacés : la liste des documents récents, le travail mis de côté (copies de documents modifiés), ": "Gelöscht werden: die Liste der zuletzt geöffneten Dokumente, die zur Seite gelegte Arbeit (Kopien geänderter Dokumente), ",
+  "Traces effacées.": "Spuren gelöscht.",
+  "Une partie des traces n’a pas pu être effacée.": "Ein Teil der Spuren konnte nicht gelöscht werden.",
+  "Vos documents ne sont pas touchés, ni ceux qui sont ouverts à l’écran. Cela ne peut pas être annulé.": "Ihre Dokumente werden nicht angetastet, auch nicht die auf dem Bildschirm geöffneten. Das lässt sich nicht rückgängig machen."
  },
  "profil": {
   ", depuis ": ", seit ",

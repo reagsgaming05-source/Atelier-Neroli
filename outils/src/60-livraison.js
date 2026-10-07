@@ -308,7 +308,7 @@
     return {
       version: 1, quand: 0, titre: titreEtat(e), nomFichier: e.nomFichier || '', filenameDirty: !!e.filenameDirty, chemin: e.chemin || '',
       sources: e.sources.filter(s => !s.isSample).map(s => ({ id: s.id, name: s.name, chemin: s.chemin || '', genere: !!s.genere, fichier: recupNomFichier(s), formValues: s.formValues || null })),
-      pages: e.pages.map(p => ({ id: p.id, src: p.src, index: p.index, rot: p.rot || 0, ann: p.ann || [], piece: p.piece || null, ocr: p.ocr || null, pieceN: p.pieceN || 0, intercalaire: p.intercalaire || 0, sommaire: p.sommaire || 0, retraits: p.retraits || [] })),
+      pages: e.pages.map(p => ({ id: p.id, src: p.src, index: p.index, rot: p.rot || 0, ann: p.ann || [], piece: p.piece || null, ocr: p.ocr ? { aRefaire: true, conf: p.ocr.conf, langues: p.ocr.langues, quand: p.ocr.quand } : null, pieceN: p.pieceN || 0, intercalaire: p.intercalaire || 0, sommaire: p.sommaire || 0, retraits: p.retraits || [] })),
       signets: e.signets || [], purges: e.purges || [], meta: e.meta || null, watermark: e.watermark || null, stamp: e.stamp || null, security: e.security || null,
       flatten: !!e.flatten, nettoyage: e.nettoyage || null, figerAnnotations: !!e.figerAnnotations, dossier: e.dossier || null,
     };
@@ -384,7 +384,7 @@
     const idsPage = new Map();
     state.pages = (m.pages || []).filter(p => idsSrc.has(p.src)).map(p => {
       const id = ++uid; idsPage.set(p.id, id);
-      return { id, src: idsSrc.get(p.src), index: p.index, rot: p.rot || 0, ann: (p.ann || []).map(a => Object.assign({}, a, { id: ++uid })), piece: p.piece || null, ocr: p.ocr || null, pieceN: p.pieceN || 0, intercalaire: p.intercalaire || 0, sommaire: p.sommaire || 0, retraits: p.retraits || [] };
+      return { id, src: idsSrc.get(p.src), index: p.index, rot: p.rot || 0, ann: (p.ann || []).map(a => Object.assign({}, a, { id: ++uid })), piece: p.piece || null, ocr: (p.ocr && !p.ocr.aRefaire) ? p.ocr : null, pieceN: p.pieceN || 0, intercalaire: p.intercalaire || 0, sommaire: p.sommaire || 0, retraits: p.retraits || [] };
     });
     const remap = liste => (liste || []).map(sg => ({ id: ++uid, titre: sg.titre, page: idsPage.get(sg.page), enfants: remap(sg.enfants) }));
     state.signets = remap(m.signets);
@@ -403,7 +403,9 @@
     recupStock.set(cle, new Set(Array.from(idsSrc.values())));
     recupSignature.delete(cle);
     vue.render();
-    setLast('Travail récupéré : ' + (m.titre || 'document') + ' · l\'historique d\'annulation (Ctrl+Z) n\'est pas conservé');
+    // Le texte reconnu n'est pas déposé avec le travail mis de côté (il se refait, et il ferait du dépôt une transcription lisible du document) : on dit ce qui est à refaire.
+    const aRefaire = (m.pages || []).filter(p => p.ocr && p.ocr.aRefaire).length;
+    setLast('Travail récupéré : ' + (m.titre || 'document') + ' · l\'historique d\'annulation (Ctrl+Z) n\'est pas conservé' + (aRefaire ? ' · ' + plural(aRefaire, 'page est', 'pages sont') + ' à reconnaître de nouveau (le texte reconnu n\'est pas gardé)' : ''));
     return m;
   }
   function proposerRecuperation(liste) {

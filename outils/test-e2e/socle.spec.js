@@ -134,7 +134,8 @@ test('la barre d\'outils tient à toutes les largeurs, document ouvert compris',
   await app.ouvrir('rapport.pdf', pdfVide(3));
   for (const largeur of [1920, 1600, 1500, 1440, 1366, 1280, 1200, 1100, 1000, 950, 901]) {
     await page.setViewportSize({ width: largeur, height: 820 });
-    await page.waitForTimeout(120);
+    // La barre se remesure à l'image suivante : on attend deux images, pas un délai.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     const etat = await page.evaluate(() => {
       const barre = document.querySelector('#app-toolbar');
       const enregistrer = document.querySelector('#btn-export').getBoundingClientRect();

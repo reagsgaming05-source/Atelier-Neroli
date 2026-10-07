@@ -90,12 +90,17 @@ test('une opération longue s\'interrompt, et rien n\'est écrit', async ({ app,
   expect(ecrit, 'aucun fichier n\'a été produit').toBe(false);
 });
 
-test('le journal recense ce qui a été contourné', async ({ app, page }) => {
+test('le journal recense ce qui a été contourné : rien pour un document sain, la cause pour un fichier abîmé', async ({ app, page }) => {
   await app.ouvrir('rapport.pdf', pdfVide(2));
-  // Rien d'anormal : pas de bouton journal. S'il se montre, le journal dit pourquoi (la cause se lit dans l'échec).
-  if (await page.locator('#btn-journal').isVisible()) {
-    await page.click('#btn-journal');
-    await page.waitForSelector('.dialog', { state: 'visible' });
-    throw new Error('le journal n\'est pas vide :\n' + (await page.locator('.dialog').innerText()).slice(0, 1500));
-  }
+  await expect(page.locator('#btn-journal'), 'un document sain ne laisse rien au journal').toBeHidden();
+  // Un fichier tronqué : le refus est dit à l'écran, et la cause technique reste au journal, pour le support.
+  const entier = pdfDe([[{ x: 70, y: 700, texte: 'Une seule page' }]]);
+  await page.setInputFiles('#file-input', { name: 'tronque.pdf', mimeType: 'application/pdf', buffer: entier.subarray(0, 120) });
+  await expect(page.locator('#toast')).toContainText('incomplet ou abîmé');
+  await expect(page.locator('#btn-journal')).toBeVisible();
+  await page.click('#btn-journal');
+  await page.waitForSelector('.dialog', { state: 'visible' });
+  const journal = await page.locator('.dialog').innerText();
+  expect(journal, 'le journal nomme le fichier en cause').toContain('tronque.pdf');
+  expect(journal.length, 'le journal dit autre chose que son titre').toBeGreaterThan(60);
 });

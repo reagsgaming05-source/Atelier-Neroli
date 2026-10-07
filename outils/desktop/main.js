@@ -26,6 +26,16 @@ const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain, nativeTheme, 
     process.exit(r.code);
   }
 }
+// Mode « ménage » : après la vérification, avant la recopie — retire du dossier ce que la version installée livrait et que la nouvelle ne livre plus
+// (voir menage.js). Même règle : aucune fenêtre, aucune donnée touchée hors de la liste, un code et une ligne dans le fichier donné.
+//   AktumPDF.exe --menage <dossier> <ancienne-liste> <nouvelle-liste> <fichier-de-résultat>
+{
+  const i = process.argv.indexOf('--menage');
+  if (i >= 0) {
+    const r = require('./menage').menagePourLeScript(process.argv[i + 1], process.argv[i + 2], process.argv[i + 3], process.argv[i + 4]);
+    process.exit(r.code);
+  }
+}
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -111,6 +121,7 @@ const association = require('./association');
 const { Surveillance } = require('./arrivees');
 const courriel = require('./courriel');
 const { ecrireSurPlace } = require('./ecriture');
+const droits = require('./droits');
 const { decoder: decoderLeNom } = require('./nom-telechargement');
 const { MARQUEUR, COMPTES, trouverReglage, phraseDuFichier, cheminReseau, ouRanger, nomDeDossier, listerComptes, POURQUOI } = require('./ou-ranger');
 const comptes = require('./comptes');
@@ -509,6 +520,7 @@ function viderRecents() {
 const dossierRecup = () => path.join(app.getPath('userData'), 'recuperation');
 const cleValide = (cle) => typeof cle === 'string' && /^[a-z0-9-]{3,64}$/.test(cle);
 let recupProposee = false;
+let recupDroitsFaits = false;
 // Le travail mis de côté contient des documents : il ne reste pas indéfiniment. Sept jours, dix dépôts au plus (les plus récents) ;
 // celui qu'on est en train d'écrire n'est jamais touché. Dit dans l'aide (« ? »).
 const RECUP_JOURS_MAX = 7, RECUP_DEPOTS_MAX = 10;
@@ -532,17 +544,25 @@ function recupPurger(garde) {
 // Écrit hors du fil principal : sur un partage lent, la fenêtre ne se fige pas le temps d'un dépôt.
 async function recupEcrire(o) {
   if (!o || !cleValide(o.cle)) return { ok: false, erreur: 'clé invalide' };
+  // Le travail mis de côté est une copie intégrale de documents : le dossier est réservé à la personne (voir droits.js), une fois par lancement,
+  // à sa création — les dépôts qu'il reçoit ensuite héritent de ses droits.
+  await fs.promises.mkdir(dossierRecup(), { recursive: true, mode: 0o700 });
+  if (!recupDroitsFaits) {
+    recupDroitsFaits = true;
+    const d = droits.reserverAuProprietaire(dossierRecup());
+    if (!d.ok) console.error('[Aktum PDF] Les droits du dossier du travail mis de côté n\'ont pas pu être restreints : ' + d.sur);
+  }
   const dir = path.join(dossierRecup(), o.cle);
-  await fs.promises.mkdir(dir, { recursive: true });
+  await fs.promises.mkdir(dir, { recursive: true, mode: 0o700 });
   for (const f of o.fichiers || []) {
     if (!f || typeof f.nom !== 'string' || !/^[a-z0-9._-]+$/i.test(f.nom)) continue;
-    await fs.promises.writeFile(path.join(dir, f.nom), Buffer.from(f.octets));
+    await fs.promises.writeFile(path.join(dir, f.nom), Buffer.from(f.octets), { mode: 0o600 });
   }
   const tmp = path.join(dir, 'manifeste.json.tmp');
   // Le fichier que ce travail réécrirait : la page le dit, mais c'est le processus principal qui atteste qu'il l'avait bien ouvert ou
   // enregistré (cheminOk) — la page ne peut pas se donner elle-même le droit d'écrire quelque part en passant par la récupération.
   const m = Object.assign({}, o.manifeste, { cheminOk: !!(o.manifeste && typeof o.manifeste.chemin === 'string' && cheminsReecrivables.has(cleDeChemin(o.manifeste.chemin))) });
-  await fs.promises.writeFile(tmp, JSON.stringify(m));
+  await fs.promises.writeFile(tmp, JSON.stringify(m), { mode: 0o600 });
   await fs.promises.rename(tmp, path.join(dir, 'manifeste.json'));
   recupPurger(o.cle);
   return { ok: true };
@@ -576,6 +596,32 @@ function recupEffacer(cle) {
   if (!cleValide(cle)) return false;
   fs.rmSync(path.join(dossierRecup(), cle), { recursive: true, force: true });
   return true;
+}
+
+// « Effacer mes traces sur ce poste » : ce que l'application garde de la personne et de ses documents, en une seule confirmation — la liste des
+// documents récents (des chemins, donc des noms), le travail mis de côté (des copies de documents), les signatures, tampons et réglages mémorisés, les
+// copies de pages préparées pour le glisser, et le nom du compte retenu dans le profil Windows. Les documents eux-mêmes ne sont pas touchés, ni ceux
+// qui sont ouverts à l'écran ; le dossier du compte (data/<nom>/) s'efface par l'Explorateur, après avoir quitté l'application (guide d'administration).
+async function effacerMesTraces() {
+  const r = await direA({
+    type: 'warning', buttons: ['Effacer mes traces', 'Annuler'], defaultId: 1, cancelId: 1,
+    message: 'Effacer mes traces sur ce poste ?',
+    detail: 'Seront effacés : la liste des documents récents, le travail mis de côté (copies de documents modifiés), '
+      + 'les signatures, tampons et réglages mémorisés'
+      + (RANGEMENT.ou === 'comptes' ? ', et le nom du compte retenu sur ce poste (le mot de passe sera redemandé au prochain lancement)' : '')
+      + '.\n\n' + 'Vos documents ne sont pas touchés, ni ceux qui sont ouverts à l\u2019écran. Cela ne peut pas être annulé.',
+  });
+  if (r.response !== 0) return;
+  const echecs = [];
+  const essai = (quoi, f) => { try { f(); } catch (e) { echecs.push(quoi); } };
+  essai('la liste des documents récents', viderRecents);
+  essai('le travail mis de côté', () => fs.rmSync(dossierRecup(), { recursive: true, force: true }));
+  essai('les copies de pages préparées pour le glisser', glisserNettoyer);
+  try { await session.defaultSession.clearStorageData(); await session.defaultSession.clearCache(); } catch (e) { echecs.push('les signatures, tampons et réglages mémorisés'); }
+  if (RANGEMENT.ou === 'comptes') { if (!ecrireChoix(null)) echecs.push('le nom du compte retenu sur ce poste'); }
+  await direA(echecs.length
+    ? { type: 'warning', buttons: ['OK'], message: 'Une partie des traces n\u2019a pas pu être effacée.', detail: 'Restent : ' + echecs.join(', ') + '. Fermez l\u2019application et recommencez ; sinon supprimez le dossier « data » à la main.' }
+    : { type: 'info', buttons: ['OK'], message: 'Traces effacées.', detail: 'Pour que plus rien de ce qui est affiché ne soit mémorisé, fermez ensuite les documents ouverts.' });
 }
 
 // Glisser une page vers le Bureau : le système exige un fichier qui existe déjà quand le geste commence. La page se prépare donc à
@@ -1157,6 +1203,7 @@ function buildMenu() {
         { label: process.platform === 'darwin' ? 'Afficher le document dans le Finder' : 'Afficher le document dans l’Explorateur', click: () => envoyer('afficher-fichier') },
         { type: 'separator' },
         { label: 'Ouvrir le dossier des données', click: () => shell.openPath(app.getPath('userData')) },
+        { label: 'Effacer mes traces sur ce poste…', click: effacerMesTraces },
         ...(RANGEMENT.ou === 'comptes' && PROFIL ? [
           { label: 'Changer mon mot de passe…', click: () => ouvrirMonCompte('changer') },
           { label: 'Refaire mon code de récupération…', click: () => ouvrirMonCompte('code') },

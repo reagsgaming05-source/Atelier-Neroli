@@ -189,7 +189,9 @@
     try {
       setBusy('Préparation de l\'exemple…');
       const bytes = await makeSample();
-      await addPdfSource('exemple.pdf', bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), { isSample: true, silent: true });
+      if (state.sources.some(s => !s.isSample)) return;   // quelqu'un a déjà ouvert un document : l'exemple n'a plus d'objet
+      const src = await addPdfSource('exemple.pdf', bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), { isSample: true, silent: true });
+      if (!src) return;
       state.history = []; state.redo = [];
       vue.render();
       setLast('Exemple chargé : déplacez une page, annotez-la, ou ouvrez vos propres documents.');
