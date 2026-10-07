@@ -117,6 +117,28 @@
       actions: [
         { label: 'Annuler', onClick: c => c() },
         { label: 'Tout retirer', onClick: () => { cases.forEach(x => { x.cb.checked = true; }); } },
+        { id: 'cm-reprendre', label: 'Reprendre les marques de caviardage', onClick: close => {
+          // Les marques « Redact » d'un PDF reçu (en attente d'application) deviennent des zones de caviardage de ce document : on les relit à l'écran,
+          // on les ajuste dans l'éditeur, puis l'export les applique. La marque d'origine est retirée pour ne pas rester en double.
+          const marques = cases.filter(x => x.c.type === 'Redact' && x.c.rect);
+          if (!marques.length) { toast('Aucune marque de caviardage dans les documents ouverts.', 'warn'); return; }
+          snapshot('Reprendre les marques de caviardage');
+          let n = 0;
+          marques.forEach(x => x.pages.forEach(p => {
+            const r = rectFromUser(x.c.rect, pageGeom(p));
+            p.ann.push({ id: ++uid, type: 'redact', x: r.x, y: r.y, w: r.w, h: r.h, color: '#000000', opacity: 1, width: 1 });
+            p.retraits = (p.retraits || []).concat([x.c.id]);
+            n++;
+          }));
+          // Reprendre des marques, c'est vouloir les appliquer : le mode « marques à relire » (qui ne retire rien) est quitté.
+          const quitte = !!(state.nettoyage && state.nettoyage.caviardage === 'marques');
+          if (quitte) state.nettoyage = null;
+          state.touched = true;
+          state.pages.forEach(p => peintes.delete(p.id));
+          vue.render();
+          close();
+          setLast(plural(n, 'marque reprise', 'marques reprises') + ' comme zones de caviardage' + (quitte ? ' (le mode « marques à relire » est quitté)' : '') + ' : relisez-les, puis exportez · Ctrl+Z pour annuler');
+        } },
         { id: 'cm-synthese-csv', label: 'Synthèse (CSV)', onClick: () => vue.syntheseCommentaires(cases, 'csv') },
         { id: 'cm-synthese-pdf', label: 'Synthèse (PDF)', onClick: () => vue.syntheseCommentaires(cases, 'pdf') },
         { label: 'Appliquer', primary: true, onClick: close => {
@@ -267,6 +289,37 @@
     }
     return octets;
   }
+  // Le journal du caviardage certifié : ce qui a été caviardé, où, quand ; et la relecture de la copie qui vient d'être écrite.
+  async function preparerJournalCaviardage(octets, pages, specs, rasterSet, onProgress) {
+    onProgress(1, 'Relecture de la copie…');
+    const parPage = [], pagesCaviardees = [];
+    pages.forEach((p, k) => {
+      const n = (p.ann || []).filter(a => a.type === 'redact' || (a.type === 'edit' && a.efface)).length;
+      if (n) parPage.push([k + 1, n]);
+      if (rasterSet.has(p.id)) pagesCaviardees.push(k + 1);
+    });
+    const termes = [];
+    for (const s of specs) {
+      const par = [];
+      let total = 0;
+      for (let k = 0; k < pages.length; k++) {
+        const n = occurrencesDe(await getPageText(pages[k]), s).length;
+        if (n) { par.push([k + 1, n]); total += n; }
+      }
+      termes.push({ terme: s.terme, total, parPage: par });
+    }
+    const controle = await relireLaCopie(octets, specs);
+    const d = new Date();
+    const deux = n => String(n).padStart(2, '0');
+    const sources = proprSources(pages);
+    return {
+      info: {
+        nom: sources.map(s => s.name).join(', '), fichier: el.filename.value, quand: formaterDate(d) + ' ' + deux(d.getHours()) + ':' + deux(d.getMinutes()) + ':' + deux(d.getSeconds()),
+        logiciel: APP + ' ' + APP_VERSION, operateur: auteurDesAnnotations() || '', pages: pages.length, pagesCaviardees, parPage, termes,
+        avecTermes: !!(state.nettoyage && state.nettoyage.termes), controle, empreinte: await empreinteSha256(octets),
+      },
+    };
+  }
   async function construirePdf(pages, opts) {
     opts = opts || {};
     // Un dossier de pièces porte un sommaire et des intercalaires qui suivent
@@ -281,6 +334,11 @@
       if (pages.some(p => !vivantes.has(p.id))) pages = pages.filter(p => vivantes.has(p.id));
     }
     const { PDFDocument, degrees } = PDFLib;
+    // Le mode du caviardage (voir 74-nettoyage.js) : certifié, ou simples marques « Redact » à relire — auquel cas rien n'est caviardé dans le fichier.
+    const modeCav = (!opts.sansNettoyage && state.nettoyage && state.nettoyage.caviardage) || '';
+    if (modeCav === 'marques') pages = pages.map(p => ((p.ann || []).some(a => a.type === 'redact') ? Object.assign({}, p, { ann: p.ann.map(a => (a.type === 'redact' ? Object.assign({}, a, { type: 'marque-redact' }) : a)) }) : p));
+    if (modeCav === 'certifie') opts.dpi = Math.max(opts.dpi || 0, 300);
+    state.dernierJournal = null;
     oublierPertes();
     // Les valeurs de formulaire sont écrites par pdf-lib avec la police standard.
     proprSources(pages).forEach(s => { Object.values(s.formValues || {}).forEach(v => { if (typeof v === 'string') releverHorsWinAnsi(v); }); });
@@ -288,7 +346,7 @@
     const rasterAll = !!opts.rasterize;
     // Les termes caviardés partout : à retirer de tout le fichier, pas
     // seulement des endroits où le mot s'est vu.
-    const specs = (state.purges || []).filter(x => x && x.terme);
+    const specs = modeCav === 'marques' ? [] : (state.purges || []).filter(x => x && x.terme);
     const caviarde = specs.length > 0 || pages.some(p => (p.ann || []).some(a => a.type === 'redact' || (a.type === 'edit' && a.efface)));
     const rasterSet = new Set();
     // Une page caviardée reste vectorielle quand ses lettres peuvent être
@@ -299,6 +357,8 @@
     for (const p of pages) {
       // Archivage : les pages dont les polices ne sont pas incorporées (accord donné) sont converties en image.
       if (rasterAll || (opts.rasterIds && opts.rasterIds.has(p.id))) { rasterSet.add(p.id); continue; }
+      // Caviardage certifié : toute page qui porte une zone caviardée devient une image, sans examen de ce que le flux permettrait.
+      if (modeCav === 'certifie' && p.ann.some(a => a.type === 'redact' || (a.type === 'edit' && a.efface))) { rasterSet.add(p.id); continue; }
       // Une correction de texte qui ne se réécrit pas dans le flux se pose par-dessus un recouvrement : l'ancien texte doit s'effacer du flux, en entier.
       const corrige = p.ann.some(a => a.type === 'edit' && !a.efface && a.origine);
       if (!specs.length && !corrige && !p.ann.some(a => a.type === 'redact' || (a.type === 'edit' && a.efface))) continue;
@@ -519,6 +579,10 @@
     }
     onProgress(1, 'Finalisation…');
     // Les flux d'objets (PDF 1.5) font gagner quelques pour cent de plus : on n'y recourt que pour alléger, jamais pour archiver.
-    return opts.alleger ? out.save({ useObjectStreams: true }) : out.save();
+    const octets = opts.alleger ? await out.save({ useObjectStreams: true }) : await out.save();
+    if (modeCav === 'certifie') {
+      try { state.dernierJournal = await preparerJournalCaviardage(octets, pages, specs, rasterSet, onProgress); } catch (e) { signaler('Journal du caviardage', e); }
+    }
+    return octets;
   }
 

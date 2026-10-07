@@ -887,6 +887,13 @@
   .dlg-body { padding: var(--e-5); overflow-y: auto; display: flex; flex-direction: column; gap: var(--e-4); }
   /* Une liste (résultats d'une recherche, fichiers d'un lot) ne se laisse pas écraser à zéro par une boîte plus haute que la fenêtre : c'est la boîte qui défile. */
   .dlg-body > .list { flex: none; }
+  /* Relire le texte reconnu : l'image du mot, ce qui en a été lu, la confiance, « C'est juste ». */
+  .liste-relecture { display: flex; flex-direction: column; gap: var(--e-2); max-height: 52vh; overflow-y: auto; }
+  .liste-relecture .rl-page { margin: var(--e-3) 0 var(--e-1); font-size: var(--t-3); color: var(--texte-3); font-weight: 600; }
+  .rl-mot { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(120px, 170px) 4.5em auto; gap: var(--e-3); align-items: center; }
+  .rl-image { max-width: 100%; max-height: 52px; width: auto; height: auto; border: 1px solid var(--trait); background: #fff; object-fit: contain; justify-self: start; }
+  .rl-mot .s { font-family: var(--chiffre); font-size: var(--t-2); color: var(--texte-3); text-align: right; }
+  .rl-fait { opacity: .55; }
   .dlg-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); padding: var(--e-4) var(--e-5); border-top: 1px solid var(--trait-fin); flex: none; background: var(--encre); }
   .dlg-foot .grow { flex: 1; }
   .dlg-foot .tb-btn { height: var(--h-3); border-color: var(--trait); background: var(--relief); }

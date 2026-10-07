@@ -348,3 +348,72 @@
     res.total = res.metadonnees + res.notes + res.signets + res.texteCache;
     return res;
   }
+
+  // =====================================================================
+  //  Le caviardage certifié : un journal, et une relecture de la copie
+  //  -------------------------------------------------------------------
+  //  Un service juridique ne se contente pas d'un « c'est fait » : il veut savoir quoi, où, quand, par quel logiciel, et que la copie a été
+  //  relue. Le journal le dit ; la relecture rouvre la copie écrite et y cherche chaque terme, dans le texte de chaque page et dans les
+  //  informations du fichier. C'est le contrôle que la secrétaire ferait à la main (« rouvrir la copie, chercher le nom ») — fait pour elle.
+  // =====================================================================
+  // @debut-journal
+  // info : { nom, fichier, quand, logiciel, operateur, pages, pagesCaviardees[], parPage: [[page, zones]], termes: [{ terme, total, parPage: [[page, n]] }],
+  //          avecTermes, controle: { fait, restes: [{ page, terme }] }, empreinte }
+  function journalDeCaviardage(info) {
+    const L = [];
+    const pg = tr('p.');
+    const liste = pp => pp.map(([p, n]) => pg + ' ' + p + ' : ' + n).join(' ; ');
+    L.push(tr('JOURNAL DE CAVIARDAGE'));
+    L.push(tr('Document confidentiel : il décrit ce qui a été caviardé. Ne le diffusez pas avec le dossier.'));
+    L.push('');
+    L.push(tr('Document') + ' : ' + info.nom);
+    L.push(tr('Fichier produit') + ' : ' + info.fichier);
+    L.push(tr('Date et heure') + ' : ' + info.quand);
+    L.push(tr('Logiciel') + ' : ' + info.logiciel);
+    if (info.operateur) L.push(tr('Opérateur') + ' : ' + info.operateur);
+    L.push(tr('Pages du fichier produit') + ' : ' + info.pages);
+    L.push(tr('Pages caviardées, converties en images à 300 ppp') + ' : ' + (info.pagesCaviardees.length ? info.pagesCaviardees.join(', ') : tr('aucune')));
+    L.push('');
+    L.push(tr('Zones caviardées, par page'));
+    L.push('  ' + (info.parPage.length ? liste(info.parPage) : tr('aucune zone')));
+    if (info.termes.length) {
+      L.push('');
+      L.push(tr('Termes caviardés dans tout le document'));
+      info.termes.forEach((t, i) => {
+        const nom = info.avecTermes ? '« ' + t.terme + ' »' : tr('terme') + ' ' + (i + 1);
+        L.push('  ' + nom + ' : ' + t.total + ' ' + tr('occurrences') + (t.parPage.length ? ' (' + liste(t.parPage) + ')' : ''));
+      });
+      if (!info.avecTermes) L.push('  ' + tr('Les termes ne sont pas inscrits dans ce journal, à votre demande.'));
+    }
+    L.push('');
+    L.push(tr('Retiré du fichier') + ' : ' + tr('métadonnées, informations du document, fichiers joints, scripts, vignettes, commentaires, signets.'));
+    L.push(tr('Relecture de la copie') + ' : ' + (!info.controle.fait ? tr('non faite')
+      : info.controle.restes.length ? tr('À VÉRIFIER — un terme caviardé a été retrouvé dans la copie') + ' : ' + info.controle.restes.map(r => (r.page ? pg + ' ' + r.page + ' ' : '') + '« ' + (info.avecTermes ? r.terme : '…') + ' »').join(', ')
+      : tr('aucun terme caviardé ne se retrouve dans le texte des pages ni dans les informations du fichier.')));
+    L.push(tr('Empreinte SHA-256 du fichier produit') + ' : ' + info.empreinte);
+    L.push('');
+    L.push(tr('Ce contrôle automatique ne remplace pas la relecture du document par une personne avant sa publication.'));
+    return L.join('\r\n') + '\r\n';
+  }
+  // @fin-journal
+  // Rouvre la copie écrite et y cherche chaque terme : texte de chaque page, informations du fichier. Rend [{ page, terme }] (page 0 : les informations).
+  async function relireLaCopie(octets, specs) {
+    const restes = [];
+    if (!specs.length) return { fait: true, restes };
+    const doc = await pdfjs.getDocument({ data: octets.slice() }).promise;
+    try {
+      for (let i = 1; i <= doc.numPages; i++) {
+        const pg = await doc.getPage(i);
+        const tc = await pg.getTextContent();
+        const t = tc.items.map(x => x.str).join(' ');
+        specs.forEach(s => { if (occurrencesDe(t, s).length) restes.push({ page: i, terme: s.terme }); });
+        pg.cleanup();
+      }
+      try {
+        const md = await doc.getMetadata();
+        const infos = JSON.stringify(md && md.info || {}) + ' ' + (md && md.metadata && md.metadata.getRaw ? md.metadata.getRaw() : '');
+        specs.forEach(s => { if (occurrencesDe(infos, s).length) restes.push({ page: 0, terme: s.terme }); });
+      } catch (e) { signaler('Relecture de la copie', e, 'info'); }
+    } finally { try { await doc.destroy(); } catch (e) { signaler('Relecture de la copie', e, 'info'); } }
+    return { fait: true, restes };
+  }

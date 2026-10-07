@@ -120,6 +120,13 @@
       if (!(await caracteresAcceptes())) { setLast('Export annulé'); return null; }
       const parti = await deliver(bytes, filename, null, { document: entier });
       if (parti && entier && !state.bureau) documentEnregistre('');
+      // Le caviardage certifié se termine par son journal, à côté du fichier : il n'est pas dans le PDF (il dit ce qui a été caviardé).
+      const j = state.dernierJournal; state.dernierJournal = null;
+      if (parti && j) {
+        const r = j.info.controle;
+        if (r.fait && r.restes.length) toast('Un terme caviardé se retrouve encore dans la copie : voir le journal, qui va s\'enregistrer.', 'warn');
+        await deliver(journalDeCaviardage(j.info), safeBase(baseName(filename)) + tr('-journal-caviardage.txt'), 'text/plain;charset=utf-8');
+      }
       const avis = avisGraves() - avisAvant;
       if (avis > 0) toast(plural(avis, 'avis pendant l\'export', 'avis pendant l\'export') + ' : voir le journal, en bas de la fenêtre.', 'warn');
       return bytes;

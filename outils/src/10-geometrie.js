@@ -22,6 +22,20 @@
     if (total === 270) return { x: W - dy + ox, y: H - dx + oy };
     return { x: dx + ox, y: H - dy + oy };
   }
+  // Le contraire : un point PDF -> le point de la page affichée (en points depuis le coin haut gauche).
+  function fromUser(ux, uy, g) {
+    const { w: W, h: H, total } = g;
+    const ox = g.ox || 0, oy = g.oy || 0;
+    if (total === 90) return { x: uy - oy, y: ux - ox };
+    if (total === 180) return { x: W + ox - ux, y: uy - oy };
+    if (total === 270) return { x: H + oy - uy, y: W + ox - ux };
+    return { x: ux - ox, y: H - (uy - oy) };
+  }
+  // Un rectangle PDF [x0, y0, x1, y1] -> { x, y, w, h } de la page affichée.
+  function rectFromUser(r, g) {
+    const p1 = fromUser(r[0], r[1], g), p2 = fromUser(r[2], r[3], g);
+    return { x: Math.min(p1.x, p2.x), y: Math.min(p1.y, p2.y), w: Math.abs(p2.x - p1.x), h: Math.abs(p2.y - p1.y) };
+  }
   function rectToUser(a, g) {
     const p1 = toUser(a.x, a.y, g), p2 = toUser(a.x + a.w, a.y + a.h, g);
     return { x: Math.min(p1.x, p2.x), y: Math.min(p1.y, p2.y), w: Math.abs(p2.x - p1.x), h: Math.abs(p2.y - p1.y) };

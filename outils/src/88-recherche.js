@@ -466,6 +466,16 @@
       compte.textContent = total ? ((cur >= 0 ? cur + 1 : 0) + ' / ' + total) : '';
       if (total && cur < 0) aller(0);
       majBoutons();
+      // Rien trouvé avec des options strictes : ce que la recherche large trouverait, dit tout de suite — « Müller » cherché avec les accents ne
+      // trouve pas « Muller », et c'est le genre de nom qu'on croit absent alors qu'il est là.
+      if (!found && !motifId && (casse.input.checked || mot.input.checked || accents.input.checked)) {
+        try {
+          const large = { terme: term, casse: false, mot: false, accents: false };
+          let n = 0;
+          for (const p of state.pages) { if (my !== token) return; n += occurrencesDe(await getPageText(p), large).length; }
+          if (n) info.textContent += ' ' + plural(n, 'occurrence', 'occurrences') + ' ' + tr('sans la casse, le mot entier ni les accents imposés : décochez ces options pour les voir.');
+        } catch (e) { signaler('Recherche', e, 'info'); }
+      }
       // Ce que le fichier porte du terme sans l'afficher : métadonnées, notes,
       // pièces jointes, signets, texte hors de la page. Le dire avant de
       // caviarder, sinon « Aucun résultat » laisse croire qu'il n'y a rien.

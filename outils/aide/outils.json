@@ -346,6 +346,19 @@
    "attention": "Après un caviardage, cochez au moins les métadonnées : un nom noirci sur la page peut rester dans le titre ou l'auteur du fichier."
   },
   {
+   "id": "caviardage-mode",
+   "nom": "Mode du caviardage",
+   "groupe": "proteger",
+   "quoi": "Choisit comment les zones caviardées sont traitées à l'export : appliquées, certifiées avec un journal, ou laissées en marques à relire.",
+   "etapes": [
+    "Choisissez le mode : « appliqué » (par défaut), « certifié » (pages en images à 300 ppp, tout nettoyé, journal et relecture de la copie) ou « marques à relire » (rien n'est retiré).",
+    "Si vous voulez les termes dans le journal du mode certifié, cochez-le : le journal devient alors confidentiel.",
+    "Exportez : en mode certifié, le journal s'enregistre à côté du PDF ; en mode marques, les zones sont écrites comme annotations « Redact »."
+   ],
+   "effet": "Le mode ne s'applique qu'à l'export. En mode marques, le texte reste dans le fichier : c'est fait pour être relu puis appliqué (ici avec « Commentaires du document », ou dans Acrobat), jamais pour être publié tel quel.",
+   "attention": "Le mode certifié est lent et lourd : les pages caviardées perdent leur texte sélectionnable. Il ne remplace pas la relecture du document par une personne avant publication."
+  },
+  {
    "id": "caviarder",
    "nom": "Rechercher, remplacer, caviarder",
    "groupe": "proteger",
@@ -458,6 +471,19 @@
    ],
    "effet": "Le texte reconnu sert à la recherche, au remplacement, au tableau vers Excel et à la correction dans l'éditeur ; il part dans le PDF exporté, invisible mais sélectionnable. Le calcul se fait sur ce poste. Ctrl+Z défait la reconnaissance.",
    "attention": "Un scan droit, net et bien contrasté se lit mieux. Relisez : une reconnaissance n'est jamais exacte à 100 %."
+  },
+  {
+   "id": "ocr-relire",
+   "nom": "Relire le texte reconnu",
+   "groupe": "document",
+   "quoi": "Montre, mot par mot, ce que la reconnaissance de texte a lu avec le moins de confiance, à côté de l'image du mot, et laisse le corriger.",
+   "etapes": [
+    "Choisissez la page affichée ou toutes les pages reconnues : les mots mal lus s'affichent, l'image du mot à côté de ce qui en a été lu.",
+    "Tapez la bonne graphie (Entrée passe au mot suivant), ou « C'est juste » si le mot est bon.",
+    "Fermez : le texte reconnu est corrigé et la recherche le lit ainsi."
+   ],
+   "effet": "La correction va dans le texte reconnu de la page, celui qui part invisible dans le PDF exporté ; l'image du scan ne change pas. Ctrl+Z défait la relecture.",
+   "attention": "Seuls les mots lus avec moins de 75 % de confiance sont proposés, sauf si vous demandez tous les mots. Un mot que le moteur a lu avec assurance mais faux ne se voit pas : relisez à l'œil un texte important."
   },
   {
    "id": "voix",

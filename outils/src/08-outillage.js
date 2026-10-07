@@ -18,6 +18,13 @@
   const plural = (n, one, many) => formaterNombre(n) + ' ' + (traduction && langue !== 'fr' ? traduction.pluriel(n, one, many, langue) : (n > 1 ? many : one));
   // Les nombres à la suisse, dans les deux langues : l'apostrophe des milliers, le point décimal — « 1’250’000.50 ». Une seule fonction,
   // pour que « 1 250 pages » ne s'écrive pas d'une façon ici et d'une autre dans un document.
+  // L'empreinte SHA-256 d'un fichier, en hexadécimal : ce qui permet à une archive de vérifier, des années plus tard, que le fichier reçu est
+  // celui qui a été versé. Écrite aussi au format de sha256sum (« empreinte␣␣nom ») pour qu'un outil du système la relise.
+  async function empreinteSha256(octets) {
+    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', octets));
+    return Array.from(h, b => b.toString(16).padStart(2, '0')).join('');
+  }
+
   // Une empreinte courte d'une valeur (texte, nombre, objet) : djb2 sur son écriture JSON. Sert à savoir si quelque chose a changé (une page à
   // repeindre), jamais à identifier ni à protéger.
   function empreinteDeValeur(v) {

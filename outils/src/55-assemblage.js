@@ -75,9 +75,10 @@
   // destinataire retrouve, déplace ou retire dans Acrobat — plutôt qu'un
   // dessin fondu dans la page. À moins d'avoir demandé à tout figer.
   const TYPES_REELS = ['highlight', 'box', 'draw', 'text', 'tampon', 'underline', 'strike', 'arrow', 'note'];
+  // Une marque de caviardage (type interne « marque-redact », voir 56-commentaires.js) : un vrai commentaire « Redact », jamais figé.
   const annotationsReelles = () => !state.figerAnnotations;
   // Un lien est toujours un vrai lien : il n'y a rien à « figer » dans un lien.
-  const enCommentaire = an => an.type === 'lien' || (annotationsReelles() && TYPES_REELS.indexOf(an.type) >= 0);
+  const enCommentaire = an => an.type === 'lien' || an.type === 'marque-redact' || (annotationsReelles() && TYPES_REELS.indexOf(an.type) >= 0);
   // Les adresses qu'un lien peut viser : le web et la messagerie, jamais un fichier local ni un script (un PDF qui lance
   // « javascript: » ou « file: » est exactement ce qu'un service informatique refuse).
   const adresseDeLienPermise = u => /^(https?:\/\/|mailto:)[^\s]+$/i.test(String(u || '').trim());
@@ -196,6 +197,14 @@
             + n(s * 0.2) + ' ' + n(s * 0.7) + ' m ' + n(s * 0.8) + ' ' + n(s * 0.7) + ' l S ' + n(s * 0.2) + ' ' + n(s * 0.5) + ' m ' + n(s * 0.55) + ' ' + n(s * 0.5) + ' l S';
           const ap = apparence(contenu, s, s);
           poser(an, { Subtype: 'Text', Name: 'Note', C: c, F: 28, Open: false, Contents: PDFHexString.fromText(an.text || '') }, ap, an);
+        } else if (an.type === 'marque-redact') {
+          // La marque de caviardage : la zone à caviarder, en attente. Le texte dessous n'est pas touché. Sans application, une visionneuse
+          // montre le cadre rouge et la mention ; Acrobat sait l'appliquer, et ce logiciel aussi (« Reprendre les marques de caviardage »).
+          const r = rectToUser(an, g);
+          const ap = apparence('1 0 0 RG 1 0 0 rg 1 w /GS gs 0.5 0.5 ' + n(an.w - 1) + ' ' + n(an.h - 1) + ' re B', an.w, an.h,
+            { ExtGState: { GS: { Type: 'ExtGState', CA: 0.9, ca: 0.12 } } });
+          poser(an, { Subtype: 'Redact', C: [1, 0, 0], IC: [0, 0, 0], OverlayText: PDFHexString.fromText(''), Contents: PDFHexString.fromText(tr('À caviarder')),
+            QuadPoints: [n(r.x), n(r.y + r.h), n(r.x + r.w), n(r.y + r.h), n(r.x), n(r.y), n(r.x + r.w), n(r.y)].map(n) }, ap, an);
         } else if (an.type === 'lien') {
           const r = rectToUser(an, g);
           const dict = { Type: 'Annot', Subtype: 'Link', Rect: [n(r.x), n(r.y), n(r.x + r.w), n(r.y + r.h)], F: 4, P: page.ref, Border: [0, 0, 0],

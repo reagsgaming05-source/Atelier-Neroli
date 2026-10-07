@@ -171,8 +171,8 @@ export const features: Feature[] = [
     category: "Reconnaître & extraire",
     summary: "Rendez un dossier scanné consultable : certificats, décisions, anciennes fiches.",
     description:
-      "La reconnaissance de texte (OCR) s'exécute sur le poste, avec le moteur et les modèles de langue inclus dans le logiciel : rien n'est envoyé nulle part. Elle reconnaît le français et l'allemand. Le texte reconnu sert ensuite à la recherche, au remplacement, au caviardage et à la copie, et repart dans le PDF exporté comme texte invisible placé sous l'image.",
-    details: ["Français et allemand", "Entièrement local, sans réseau", "Texte invisible dans le PDF exporté"],
+      "La reconnaissance de texte (OCR) s'exécute sur le poste, avec le moteur et les modèles de langue inclus dans le logiciel : rien n'est envoyé nulle part. Elle reconnaît le français et l'allemand, et peut choisir seule entre les deux en lisant la première page. Le texte reconnu sert ensuite à la recherche, au remplacement, au caviardage et à la copie, et repart dans le PDF exporté comme texte invisible placé sous l'image. Elle se lance aussi sur tout un lot de fichiers. Un écran de relecture montre, à côté de l'image du mot, ce que le moteur a lu avec le moins de confiance, pour le corriger. La mise en page d'origine (colonnes, tableaux) n'est pas reproduite : on retrouve le texte, pas la forme ; sur un scan de mauvaise qualité, le résultat sert à chercher, pas à republier.",
+    details: ["Français et allemand, détection possible", "Entièrement local, sans réseau", "Relecture des mots douteux", "Texte invisible dans le PDF exporté"],
     icon: "ocr",
   },
   {

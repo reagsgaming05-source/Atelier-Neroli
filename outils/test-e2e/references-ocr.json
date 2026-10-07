@@ -1,0 +1,5 @@
+{
+  "fra-decision": { "langue": "fra", "min": 0.95 },
+  "deu-beschluss": { "langue": "deu", "min": 0.95 },
+  "fra-chiffres": { "langue": "fra", "min": 0.93 }
+}

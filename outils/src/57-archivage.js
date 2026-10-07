@@ -10,13 +10,6 @@
   //  ces pages en images, avec l'accord de l'utilisateur.
   // =====================================================================
 
-  // L'empreinte SHA-256 d'un fichier, en hexadécimal : ce qui permet à une archive de vérifier, des années plus tard, que le fichier reçu est
-  // celui qui a été versé. Écrite aussi au format de sha256sum (« empreinte␣␣nom ») pour qu'un outil du système la relise.
-  async function empreinteSha256(octets) {
-    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', octets));
-    return Array.from(h, b => b.toString(16).padStart(2, '0')).join('');
-  }
-
   // Les pages dont des polices ne sont pas incorporées au fichier d'origine.
   async function pagesSansPolices() {
     const docs = new Map();

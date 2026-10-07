@@ -15,13 +15,13 @@ const modules = () => fs.readdirSync(SRC).filter(f => f.endsWith('.js')).sort().
 
 // Un texte « pour humain » : pas un sélecteur, une classe, un type MIME, une expression régulière…
 // Des textes que les règles de forme écartent à tort : repérés à la main, ils sont toujours retenus.
-const TEXTES_RETENUS = ['incertain', 'pdf.js indisponible', 'point (1234.50)', '[caviardé]', 'CONFIDENTIEL',
+const TEXTES_RETENUS = ['incertain', 'p.', 'pdf.js indisponible', 'point (1234.50)', '[caviardé]', 'CONFIDENTIEL',
   // les morceaux de noms de fichiers que le logiciel propose : traduits, ils ne ressemblent pas à des phrases
   '-extrait.pdf', '-signe.pdf', '-livret', '-par-feuille', '-sans-vides.pdf', '-leger.pdf', '-numerote.pdf', '-protege.pdf',
   'lot-', '-divise.zip', '-images.zip', '-tableau.csv', 'formulaire-', 'images.pdf', '(aucun texte)', 'Helvetica, Times ou Courier.'];
 
 // Des noms de touches du navigateur (event.key), comparés dans le code et jamais affichés : « Shift » devient « Maj » via la table des noms (src/97-raccourcis.js).
-const TEXTES_ECARTES = ['AktumFormat', 'Non', 'Off', 'Oui', 'Yes', 'AltGraph', 'Control', 'BaseEncoding', 'Dead', 'Differences', 'Heading', 'Meta', '_rels/.rels', 'Shift', 'Space'];
+const TEXTES_ECARTES = ['Redact', 'AktumFormat', 'Non', 'Off', 'Oui', 'Yes', 'AltGraph', 'Control', 'BaseEncoding', 'Dead', 'Differences', 'Heading', 'Meta', '_rels/.rels', 'Shift', 'Space'];
 
 function estUnTexte(s) {
   const t = s.trim();

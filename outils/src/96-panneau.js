@@ -54,6 +54,7 @@
       { id: 'proteger', title: 'Protéger', items: [
         // L'outil qui caviarde se trouve ici aussi : c'est ici qu'on le cherche.
         { id: 'nettoyer', name: 'Nettoyer le document', sub: 'Retire métadonnées, fichiers joints et scripts à l\'export', icon: IC.balai, need: 'pages', mots: 'sanitize assainir métadonnées masqué caché publier anonymiser auteur propriétés pièces jointes javascript', run: toolNettoyer, active: () => !!state.nettoyage },
+        { id: 'caviardage-mode', name: 'Mode du caviardage', sub: 'Appliqué, certifié (journal), ou marques à relire', icon: IC.redact, need: 'pages', mots: 'caviardage certifié journal marques redact relire appliquer attestation', run: toolModeCaviardage, active: () => !!(state.nettoyage && state.nettoyage.caviardage) },
         { id: 'caviarder', name: 'Rechercher, remplacer, caviarder', sub: 'Un mot, un nom, un numéro : dans tout le document', icon: IC.redact, need: 'pages', mots: 'biffer rédaction noircir masquer anonymiser numéro avs nom', run: toolSearch },
         { id: 'password', name: 'Mot de passe', sub: 'Chiffre à l\'export ; un mot de passe perdu est perdu', icon: IC.lock, need: 'pages', mots: 'chiffrer chiffrement protéger sécuriser autorisations imprimer copier', run: toolPassword, active: () => !!state.security },
         { id: 'certificat', name: 'Signer avec un certificat', sub: 'Un certificat personnel (.p12, .pfx), signature numérique', icon: IC.draw, need: 'pages', mots: 'signature numérique électronique p12 pfx certificat', run: toolCertificat },
@@ -64,6 +65,7 @@
         { id: 'access', name: 'Vérifier l\'accessibilité', sub: 'Titre, langue, balisage, pages sans texte', icon: IC.check, need: 'pages', mots: 'accessibilité accessible lecteur écran balisage pdf/ua handicap malvoyant wcag contrôle vérifier langue titre', run: toolAccessibilite },
         { id: 'search', name: 'Rechercher, remplacer, caviarder', sub: 'Un mot, un nom, un numéro : dans tout le document', icon: IC.search, need: 'pages', mots: 'chercher trouver remplacer biffer rédaction noircir masquer', run: toolSearch },
         { id: 'tableau', name: 'Copier un tableau', sub: 'Vers Excel, en colonnes', icon: IC.tableau, need: 'pages', mots: 'excel csv colonnes lignes extraire tableau', run: toolTableau },
+        { id: 'ocr-relire', name: 'Relire le texte reconnu', sub: 'Corriger les mots que le moteur a mal lus', icon: IC.ocr, need: 'pages', mots: 'ocr relire corriger vérifier texte reconnu scan fautes', run: toolRelireOcr },
         { id: 'ocr', name: 'Reconnaître le texte', sub: 'OCR local : un scan devient cherchable', icon: IC.ocr, need: 'pages', mots: 'ocr scan scanner numériser texte cherchable lisible', run: toolOcr, active: () => state.pages.some(p => p.ocr) },
         { id: 'voix', name: 'Lire à voix haute', sub: 'Une voix du poste dit le texte ; rien ne sort', icon: IC.voix, need: 'pages', mots: 'lecture audio voix parler synthèse vocale malvoyant écouter relire', run: toolVoix },
         { id: 'comparer', name: 'Comparer deux versions', sub: 'Côte à côte, mots ajoutés ou retirés', icon: IC.compare, need: 'pages', mots: 'différences versions modifications comparaison côte à côte', run: toolComparer },
@@ -101,16 +103,16 @@
   const ETATS_ACTIFS = {
     watermark: 'Un filigrane est posé sur ce document', stamp: 'Un en-tête ou un pied de page est posé sur ce document',
     number: 'Une numérotation est posée sur ce document', form: 'Le formulaire est rempli', commentaires: 'Des commentaires reçus sont retirés',
-    nettoyer: 'Le fichier exporté sera nettoyé de ce que vous avez coché', flatten: 'Le document sera aplati à l\'export', password: 'Le document sera protégé par un mot de passe à l\'export',
+    nettoyer: 'Le fichier exporté sera nettoyé de ce que vous avez coché', 'caviardage-mode': 'Le caviardage est certifié, ou en marques à relire, à l\'export', flatten: 'Le document sera aplati à l\'export', password: 'Le document sera protégé par un mot de passe à l\'export',
     props: 'Des propriétés sont définies pour ce document', signatures: 'Le document ouvert porte des signatures', ocr: 'Du texte a été reconnu sur ce document',
   };
   const TEINTES_OUTILS = {
     fusionner: '#2D9D5F', recadrer: '#2680EB', blank: '#2680EB', images: '#8C5AE8', vides: '#0D9F8F', 'select-plage': '#6E7681', split: '#E68619',
     dossier: '#D83790', resize: '#2680EB', lots: '#E68619',
     signer: '#D83790', edit: '#8C5AE8', 'caviarder-zone': '#D7373F', tampon: '#E68619', watermark: '#D83790', stamp: '#0D9F8F',
-    number: '#E68619', form: '#2D9D5F', 'champs-auto': '#2D9D5F', serie: '#2D9D5F', commentaires: '#E68619',
+    number: '#E68619', form: '#2D9D5F', 'champs-auto': '#2D9D5F', 'ocr-relire': '#0D9F8F', serie: '#2D9D5F', commentaires: '#E68619',
     archiver: '#6E7681', 'exp-img': '#8C5AE8', 'exp-txt': '#0D9F8F', 'exp-word': '#2680EB', voix: '#8C5AE8', compress: '#E68619', flatten: '#2680EB',
-    caviarder: '#D7373F', nettoyer: '#0D9F8F', password: '#D7373F', certificat: '#D83790', signatures: '#2680EB',
+    caviarder: '#D7373F', nettoyer: '#0D9F8F', 'caviardage-mode': '#D7373F', password: '#D7373F', certificat: '#D83790', signatures: '#2680EB',
     props: '#6E7681', access: '#2D9D5F', search: '#2680EB', tableau: '#2D9D5F', ocr: '#8C5AE8', comparer: '#0D9F8F',
   };
 

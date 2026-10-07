@@ -57,6 +57,8 @@ const longDossier = (n) => pdfDe(Array.from({ length: n }, (_, i) => [
 test('Échap interrompt une opération longue : aucun fichier, document inchangé', async ({ app, page }) => {
   await app.ouvrir('gros.pdf', pdfDe(Array.from({ length: 40 }, () => [])));
   await app.outil('compress');
+  // Convertir chaque page en image : le seul réglage qui prenne assez de temps pour qu'on ait le loisir de l'interrompre.
+  await page.selectOption('#cp-methode', 'pages');
   await page.locator('.dialog .dlg-foot .tb-btn.primary').click();
   const annuler = page.locator('#btn-annuler-op');
   await expect(annuler).toBeVisible({ timeout: 30000 });

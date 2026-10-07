@@ -169,6 +169,7 @@
     const mots = [], lignes = [];
     (data.blocks || []).forEach(b => (b.paragraphs || []).forEach(par => (par.lines || []).forEach(l => {
       const ml = [];
+      const li = lignes.length;
       // La ligne de base et le corps sont ceux de la ligne : un mot sans
       // jambage ni hampe garde le même repère que ses voisins.
       const lb = l.bbox || null, base = l.baseline && l.baseline.has_baseline !== false ? l.baseline : null;
@@ -182,7 +183,7 @@
         else if (base) b = base.y0 / echelle;
         else if (lb) b = (lb.y1 - (lb.y1 - lb.y0) * 0.22) / echelle;
         mots.push({ t, x: w.bbox.x0 / echelle, y: w.bbox.y0 / echelle, w: (w.bbox.x1 - w.bbox.x0) / echelle, h: (w.bbox.y1 - w.bbox.y0) / echelle,
-          b, s: corps ? +Math.min(corps * 0.95, corps).toFixed(2) : null, conf: Math.round(w.confidence || 0) });
+          b, s: corps ? +Math.min(corps * 0.95, corps).toFixed(2) : null, conf: Math.round(w.confidence || 0), li });
         ml.push(t);
       });
       if (ml.length) lignes.push(ml.join(' '));
@@ -225,6 +226,16 @@
     });
     page.pushOperators(PDFLib.setTextRenderingMode(PDFLib.TextRenderingMode.Fill));
   }
+  // Quelle langue lit le mieux cette page : une lecture en allemand puis une en français (dans cet ordre, pour que le moteur qui reste chargé soit
+  // le français, le cas courant), et la plus confiante l'emporte. À égalité — une page sans texte —, le français. Rend { code, resultat, confiances }.
+  async function ocrChoisirLangue(p, avancement) {
+    const mDe = await ocrMoteur(['deu'], avancement);
+    const rDe = await ocrPage(p, mDe);
+    const mFr = await ocrMoteur(['fra'], avancement);
+    const rFr = await ocrPage(p, mFr);
+    const de = rDe.mots.length ? rDe.conf : 0, fr = rFr.mots.length ? rFr.conf : 0;
+    return de > fr ? { code: 'deu', resultat: rDe, confiances: { deu: de, fra: fr } } : { code: 'fra', resultat: rFr, confiances: { deu: de, fra: fr } };
+  }
   function toolOcr() {
     if (!ocrDisponible()) {
       dialog({ title: 'Reconnaître le texte', icon: IC.ocr, build: b => b.append(note('La reconnaissance de texte n\'est pas disponible dans cette version de la page : utilisez la version hors ligne ou l\'application Windows, qui embarquent le moteur.', 'warn')) });
@@ -234,19 +245,19 @@
     // Sans choix mémorisé, la reconnaissance suit la langue de l'interface.
     let langueMemo = codeLangue() === 'de' ? 'deu' : 'fra';
     try { langueMemo = localStorage.getItem('aktum-ocr-langue') || langueMemo; } catch (e) { signaler('Préférence de langue', e, 'info'); }
-    const langue = select('ocr-langue', [['fra', 'Français'], ['fra+deu', 'Français et allemand'], ['deu', 'Allemand']], langueMemo);
+    const langue = select('ocr-langue', [['auto', 'Détecter : français ou allemand'], ['fra', 'Français'], ['fra+deu', 'Français et allemand'], ['deu', 'Allemand']], langueMemo);
     dialog({
       aide: 'ocr',
       title: 'Reconnaître le texte (OCR)', icon: IC.ocr,
       build: b => {
-        b.append(rowOf([field('Pages', quoi, 'La reconnaissance prend quelques secondes par page : limitez-la aux pages dont vous avez besoin.'), field('Langue', langue, 'La langue du texte imprimé. Une mauvaise langue donne un texte truffé de fautes ; choisissez les deux si le document mélange français et allemand.')]));
+        b.append(rowOf([field('Pages', quoi, 'La reconnaissance prend quelques secondes par page : limitez-la aux pages dont vous avez besoin.'), field('Langue', langue, 'La langue du texte imprimé. Une mauvaise langue donne un texte truffé de fautes ; choisissez les deux si le document mélange français et allemand. « Détecter » lit la première page dans chaque langue et garde la mieux lue : comptez quelques secondes de plus.')]));
         b.append(note('Le texte reconnu sert à la recherche, au remplacement, au tableau vers Excel et à la correction dans l\'éditeur ; il part dans le PDF exporté, invisible mais sélectionnable et cherchable. Tout se passe sur cet ordinateur : rien n\'est envoyé.'));
         b.append(note('Comptez quelques secondes par page. Un scan droit, net et bien contrasté se lit mieux.'));
       },
       actions: [{ label: 'Annuler', onClick: c => c() }, { label: 'Reconnaître', primary: true, onClick: async close => {
         close();
         try { localStorage.setItem('aktum-ocr-langue', langue.value); } catch (e) { signaler('Préférence de langue', e, 'info'); }
-        const langues = langue.value.split('+');
+        let langues = langue.value === 'auto' ? [] : langue.value.split('+');
         setBusy('Repérage des pages…', 0);
         let pages = quoi.value === 'sel' ? selectedPages() : state.pages.slice();
         if (quoi.value === 'sans') {
@@ -257,7 +268,14 @@
         if (!pages.length) { setBusy(''); toast(quoi.value === 'sans' ? 'Toutes les pages portent déjà du texte : rien à reconnaître.' : 'Aucune page à reconnaître.', 'warn'); return; }
         try {
           setBusy('Préparation du moteur de reconnaissance…', 0, { annuler: true });
-          const moteur = await ocrMoteur(langues, (etat, prog) => setBusy('Préparation… ' + etat, prog || 0, { annuler: true }));
+          const prepa = (etat, prog) => setBusy('Préparation… ' + etat, prog || 0, { annuler: true });
+          let sondage = null;
+          if (!langues.length) {
+            setBusy('Détection de la langue…', 0, { annuler: true });
+            sondage = await ocrChoisirLangue(pages[0], prepa);
+            langues = [sondage.code];
+          }
+          const moteur = await ocrMoteur(langues, prepa);
           snapshot('Reconnaître le texte');
           let mots = 0, faibles = 0, faites = 0, interrompu = false;
           const t0 = Date.now();
@@ -267,8 +285,8 @@
             // Le temps restant, d'après les pages déjà faites.
             const reste = i ? ' · environ ' + dureeTexte((Date.now() - t0) / i * (pages.length - i) / 1000) + ' restantes' : '';
             setBusy('Reconnaissance… page ' + (pageIndex(p.id) + 1) + ' (' + (i + 1) + '/' + pages.length + ')' + reste, i / pages.length, { annuler: true });
-            const r = await ocrPage(p, moteur);
-            p.ocr = { mots: r.mots, texte: r.texte, conf: r.conf, langues: langue.value, quand: Date.now() };
+            const r = i === 0 && sondage ? sondage.resultat : await ocrPage(p, moteur);
+            p.ocr = { mots: r.mots, texte: r.texte, conf: r.conf, langues: langues.join('+'), quand: Date.now() };
             textCache.set(pkey(p), r.texte);
             ocrCache.add(pkey(p));
             mots += r.mots.length; faites++;
@@ -277,7 +295,8 @@
           }
           state.touched = true;
           vue.render();
-          const bilan = plural(mots, 'mot reconnu', 'mots reconnus') + ' sur ' + plural(faites, 'page', 'pages');
+          const bilan = plural(mots, 'mot reconnu', 'mots reconnus') + ' sur ' + plural(faites, 'page', 'pages')
+            + (sondage ? (sondage.code === 'deu' ? ' (langue détectée : allemand)' : ' (langue détectée : français)') : '');
           setLast((interrompu ? 'Reconnaissance interrompue : ' : 'Texte reconnu : ') + bilan);
           toast(bilan + (interrompu ? ' avant l\'arrêt.' : '.') + (faibles ? ' ' + plural(faibles, 'page se lit mal', 'pages se lisent mal') + ' : le texte reconnu sert à chercher, pas à republier — relisez-le avant tout autre usage.' : ''), faibles || interrompu ? 'warn' : null);
         } catch (e) { toast(messageDEchec('La reconnaissance du texte', e), 'error'); }

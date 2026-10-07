@@ -86,7 +86,7 @@ test('un lien vers une adresse web part comme un vrai lien, et un lien dangereux
   expect(liens.find((l) => l.url.includes('exemple.ch')).contenu).toBe('Règlement de la salle');
 });
 
-test('un lien vers une page d'un document mène à cette page', async ({ app, page }) => {
+test('un lien vers une page d\'un document mène à cette page', async ({ app, page }) => {
   await ouvrirEditeur(app, page);
   await page.click('.ed-tool[data-tool="lien"]');
   await geste(page, [70, 200], [300, 218]);

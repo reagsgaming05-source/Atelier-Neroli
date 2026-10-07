@@ -191,7 +191,9 @@
     if (state.watermark) items.push({ label: 'Filigrane', value: state.watermark.text, clear: () => { snapshot('Retirer le filigrane'); state.watermark = null; vue.render(); } });
     if (state.stamp) items.push({ label: 'En-tête / pied de page', value: 'actif', clear: () => { snapshot('Retirer l\'en-tête et le pied de page'); state.stamp = null; vue.render(); } });
     if (state.security) items.push({ label: 'Mot de passe', value: state.security.userPassword ? 'à l\'ouverture' : 'autorisations', clear: () => { snapshot('Retirer la protection'); state.security = null; vue.render(); } });
-    if (state.nettoyage) items.push({ label: 'Nettoyage', value: 'à l\'export', clear: () => { snapshot('Retirer le nettoyage'); state.nettoyage = null; vue.render(); } });
+    if (state.nettoyage) items.push(state.nettoyage.caviardage
+      ? { label: 'Caviardage', value: state.nettoyage.caviardage === 'certifie' ? 'certifié' : 'marques à relire', clear: () => { snapshot('Retirer le mode du caviardage'); state.nettoyage = null; vue.render(); } }
+      : { label: 'Nettoyage', value: 'à l\'export', clear: () => { snapshot('Retirer le nettoyage'); state.nettoyage = null; vue.render(); } });
     if (state.flatten) items.push({ label: 'Aplatir', value: 'à l\'export', clear: () => { snapshot('Retirer l\'aplatissement'); state.flatten = false; vue.render(); } });
     if (state.figerAnnotations) items.push({ label: 'Annotations', value: 'figées', clear: () => { snapshot('Dégeler les annotations'); state.figerAnnotations = false; vue.render(); } });
     const retraits = state.pages.reduce((n, p) => n + ((p.retraits || []).length), 0);
