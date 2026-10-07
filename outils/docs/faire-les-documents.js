@@ -1,6 +1,7 @@
 /*
  * Les documents du dossier livré, en PDF : guide d'administration et de déploiement, fiche de
- * protection des données, fiche produit, procédure de support, déclaration d’accessibilité.
+ * protection des données, fiche produit, procédure de support, déclaration d’accessibilité, questions
+ * fréquentes, aide-mémoire (une feuille recto verso) et formation d'une heure.
  *
  *   node faire-les-documents.js [dossier-de-sortie]
  *
@@ -16,6 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const { chromium } = require(path.join(__dirname, '..', 'desktop', 'node_modules', 'playwright-core'));
 const { finirLePdf } = require('./finir-le-pdf');
+const { raccourcisDansLeDocument } = require('../guide/tableau-raccourcis');
 
 // En jours ouvrables. Tenables par une personne seule : accusé de réception sous un à deux jours,
 // jamais de promesse de correctif à heure fixe.
@@ -37,21 +39,15 @@ const SUPPORT = e.EDITEUR_EMAIL_SUPPORT || e.EDITEUR_EMAIL || 'l’adresse de su
 const version = require('../package.json').version;
 const PRODUIT = 'Aktum PDF';
 
-const DOCUMENTS = [
-  ['guide-administration.html', 'Guide-d-administration.pdf', 'Guide d’administration et de déploiement'],
-  ['protection-des-donnees.html', 'Fiche-protection-des-donnees.pdf', 'Fiche de protection des données'],
-  ['fiche-produit.html', 'Fiche-produit.pdf', 'Fiche produit'],
-  ['support.html', 'Procedure-de-support.pdf', 'Procédure de support'],
-  ['declaration-accessibilite.html', 'Declaration-d-accessibilite.pdf', 'Déclaration d’accessibilité'],
-];
+const { DOCUMENTS } = require('./liste-des-documents');
 
 (async () => {
   const sortie = path.resolve(process.argv[2] || path.join(__dirname, 'sortie'));
   fs.mkdirSync(sortie, { recursive: true });
   const nav = await chromium.launch(process.env.AKTUM_CHROMIUM ? { executablePath: process.env.AKTUM_CHROMIUM } : {});
   const remplacements = Object.assign({ VERSION: version, PRODUIT, COORDONNEES, SUPPORT, DATE_EVALUATION }, DELAIS);
-  for (const [source, nom, titre] of DOCUMENTS) {
-    let html = fs.readFileSync(path.join(__dirname, source), 'utf8');
+  for (const [source, nom, titre, pagesAttendues] of DOCUMENTS) {
+    let html = raccourcisDansLeDocument(fs.readFileSync(path.join(__dirname, source), 'utf8'));
     html = html.replace(/\{\{([A-Z0-9_]+)\}\}/g, (m, k) => { if (!(k in remplacements)) throw new Error(source + ' : « ' + m + ' » n’a pas de valeur'); return remplacements[k]; });
     // Écrit à côté de sa feuille de style, le temps d'imprimer.
     const tmp = path.join(__dirname, '.' + source);
@@ -63,8 +59,9 @@ const DOCUMENTS = [
     await page.pdf({ path: path.join(sortie, nom), format: 'A4', printBackground: true, tagged: true, outline: true, margin: { top: '16mm', bottom: '16mm', left: '16mm', right: '16mm' } });
     await page.close();
     fs.unlinkSync(tmp);
-    await finirLePdf(path.join(sortie, nom), { titre: titre + ' — ' + PRODUIT, sujet: titre + ', ' + PRODUIT + ' ' + version, mots: [PRODUIT, titre], auteur: e.EDITEUR_NOM || '', pied: PRODUIT + ' ' + version + ' — ' + titre });
+    const pages = await finirLePdf(path.join(sortie, nom), { titre: titre + ' — ' + PRODUIT, sujet: titre + ', ' + PRODUIT + ' ' + version, mots: [PRODUIT, titre], auteur: e.EDITEUR_NOM || '', pied: PRODUIT + ' ' + version + ' — ' + titre });
     if (refusees.length) throw new Error(source + ' : ressources non chargées : ' + refusees.join(', '));
+    if (pagesAttendues && pages !== pagesAttendues) throw new Error(source + ' : ' + pages + ' pages au lieu de ' + pagesAttendues);
     console.log(nom + ' — ' + Math.round(fs.statSync(path.join(sortie, nom)).size / 1024) + ' Ko');
   }
   await nav.close();

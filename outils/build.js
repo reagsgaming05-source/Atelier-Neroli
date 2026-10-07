@@ -86,6 +86,8 @@ const langue = code => fs.readFileSync(path.join(LIB, 'tesseract.js-data-' + cod
 // document, et poser des polices incorporées pour le PDF/A. Les polices sont comprimées
 // (gzip) puis codées en base 64 ; l'application ne les décomprime qu'au moment d'en avoir besoin.
 const zlib = require('zlib');
+const utifLib = read('utif-3.1.0/UTIF.js');
+const pakoInflate = read('pako-2.1.0/dist/pako_inflate.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
 const forgeLib = read('node-forge-1.3.1/dist/forge.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
 const fontkit = read('cantoo-fontkit-2.0.12/dist/fontkit.umd.min.js').replace(/\n\/\/# sourceMappingURL=.*$/m, '');
 const POLICES_UNICODE = [
@@ -121,6 +123,9 @@ const inline = [
   POLICES_UNICODE,
   '<!-- node-forge 1.3.1 (BSD-3-Clause) : certificats PKCS#12 et signature numérique -->',
   '<script>' + forgeLib + '</script>',
+  '<!-- UTIF 3.1.0 (MIT) et pako 2.1.0 (MIT et Zlib) : lecture des images TIFF des scanners -->',
+  '<script>' + pakoInflate + '</script>',
+  '<script>' + utifLib + '</script>',
 ].join('\n');
 // Remplacement par fonction : sinon les $& ou $` du code des bibliothèques
 // seraient interprétés comme des motifs et injecteraient le reste de la page.

@@ -41,8 +41,17 @@
     return a.type === 'edit' ? Math.max(a.h || 0, a.h0 || 0) : a.h;
   }
 
+  // Une flèche : le trait va de son départ au pied de la pointe, et la pointe est un triangle plein dont le sommet est le second point.
+  function geomFleche(a) {
+    const p0 = a.pts[0], p1 = a.pts[1], w = a.width || 2;
+    const dx = p1[0] - p0[0], dy = p1[1] - p0[1], len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;
+    const L = Math.min(len * 0.6, Math.max(9, w * 5)), H = L * 0.5;
+    const bx = p1[0] - ux * L, by = p1[1] - uy * L;
+    return { depart: p0, pied: [bx, by], tete: [[p1[0], p1[1]], [bx - uy * H, by + ux * H], [bx + uy * H, by - ux * H]] };
+  }
   function annBounds(a) {
-    if (a.type === 'draw') {
+    if (a.type === 'draw' || a.type === 'arrow') {
       const xs = a.pts.map(p => p[0]), ys = a.pts.map(p => p[1]);
       const x = Math.min.apply(null, xs), y = Math.min.apply(null, ys);
       return { x, y, w: Math.max.apply(null, xs) - x, h: Math.max.apply(null, ys) - y };

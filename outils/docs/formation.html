@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Formation d'une heure</title><link rel="stylesheet" href="style.css">
+<style>
+  body { font-size: 9.8pt; line-height: 1.42; }
+  h1 { font-size: 22pt; }
+  h2 { font-size: 12.5pt; margin: 13pt 0 5pt; }
+  table.plan td:first-child { white-space: nowrap; font-family: var(--sans); font-weight: 700; width: 17%; }
+  .exo { border: .8pt solid var(--trait); border-left: 3pt solid var(--rouge); padding: 6pt 10pt; margin: 6pt 0 9pt; break-inside: avoid; }
+  .exo h3 { margin: 0 0 3pt; font-size: 10.4pt; }
+  .exo ol { margin: 0 0 3pt; }
+  .reponses li { margin-bottom: 4pt; }
+  .cases li { list-style: none; margin-left: -12pt; }
+  .cases li::before { content: "\2610"; margin-right: 5pt; font-size: 11pt; }
+</style></head>
+<body>
+
+<p class="sur-titre">Formation — {{PRODUIT}} {{VERSION}}</p>
+<h1>Une heure pour savoir s'en servir</h1>
+<p class="lede">Une séance d'une heure pour un petit groupe (jusqu'à huit personnes, un poste chacune), sur le document d'exemple fourni avec l'application. Elle apprend dix gestes qui couvrent l'essentiel du quotidien d'un secrétariat communal ou scolaire, et surtout <strong>ce qu'un outil change vraiment</strong> — c'est de ce malentendu que viennent la plupart des appels au support.</p>
+
+<h2>Avant la séance (vingt minutes pour la personne qui anime)</h2>
+<ul class="cases">
+  <li>Un poste par participante, l'application lancée une fois (compte créé), <strong>en français</strong> ou <strong>en allemand</strong> selon le groupe : le bouton <strong>DE</strong> / <strong>FR</strong> change de langue sur-le-champ.</li>
+  <li>Le <strong>document d'exemple</strong> s'ouvre tout seul au premier lancement ; <strong>Aide › Découvrir {{PRODUIT}} en 5 minutes</strong> le rouvre si besoin. Il contient un préavis, un tableau, un formulaire, un courrier numérisé, un procès-verbal et une page à signer — tout est fictif.</li>
+  <li>Un dossier « formation » sur le poste, vide, pour y enregistrer les copies.</li>
+  <li>L'<strong>aide-mémoire</strong> imprimé en recto verso (un exemplaire par personne) et ce plan.</li>
+  <li>Avoir lu les chapitres 5 (rechercher, caviarder) et 16 (les outils) du mode d'emploi.</li>
+</ul>
+
+<h2>Le déroulé</h2>
+<table class="plan">
+  <tr><th>Minutes</th><th>Contenu</th><th>Ce que la personne doit savoir faire à la fin</th></tr>
+  <tr><td>0 – 5</td><td><strong>La fenêtre.</strong> Faire la visite guidée en cinq minutes (elle est dans l'application). Montrer le <strong>?</strong> des boîtes et {{RACCOURCI:raccourcis}}, et {{RACCOURCI:filtre-outils}} pour chercher un outil par un mot.</td><td>Trouver l'aide d'un outil ; chercher un outil par un mot qu'elle connaît.</td></tr>
+  <tr><td>5 – 15</td><td><strong>Organiser.</strong> Exercice 1. Insister : le fichier d'origine n'est jamais modifié tant qu'on n'a pas enregistré.</td><td>Retirer, pivoter, déplacer une page ; défaire avec {{RACCOURCI:annuler}} et lire ce que la barre d'état dit.</td></tr>
+  <tr><td>15 – 25</td><td><strong>Corriger et annoter.</strong> Exercice 2.</td><td>Corriger un mot, surligner, poser un tampon, dessiner et poser sa signature.</td></tr>
+  <tr><td>25 – 37</td><td><strong>Rechercher et caviarder.</strong> Exercice 3. C'est le geste qui engage le plus : prendre le temps de la vérification.</td><td>Caviarder un nom partout, exporter sous un autre nom, <strong>rouvrir la copie</strong> et vérifier.</td></tr>
+  <tr><td>37 – 45</td><td><strong>Scans et tableaux.</strong> Démonstration puis essai : reconnaître le texte du courrier numérisé ; copier le tableau du plan de financement vers Excel.</td><td>Savoir quand lancer « Reconnaître le texte » et pourquoi (sans lui, un scan n'a pas de texte).</td></tr>
+  <tr><td>45 – 52</td><td><strong>Enregistrer, exporter, protéger.</strong> Exercice 4. Enregistrer, Enregistrer sous, Exporter ; filigrane et mot de passe.</td><td>Dire ce qui est écrit à l'export et pas avant. Ne jamais perdre un mot de passe.</td></tr>
+  <tr><td>52 – 58</td><td><strong>Quand ça ne marche pas.</strong> Les codes de messages (aide-mémoire, verso), la reprise après un arrêt brutal, le rapport de diagnostic, qui appeler.</td><td>Lire un code, dire ce qu'elle faisait, joindre le rapport.</td></tr>
+  <tr><td>58 – 60</td><td><strong>Questions</strong> et fiche d'évaluation.</td><td>—</td></tr>
+</table>
+
+<h2>Les exercices, sur le document d'exemple</h2>
+
+<div class="exo"><h3>Exercice 1 — Organiser (10 minutes)</h3>
+<ol>
+  <li>Passer en vue <strong>Organiser</strong> ({{RACCOURCI:organiser}}). Cliquer la page « Tableau » et la <strong>retirer</strong> ({{RACCOURCI:supprimer-pages}}).</li>
+  <li>La rétablir avec {{RACCOURCI:annuler}} : lire le message de la barre d'état. Le dire à voix haute.</li>
+  <li>Pivoter la page du courrier numérisé à droite ({{RACCOURCI:pivoter-droite}}), puis à gauche.</li>
+  <li>Glisser le procès-verbal en tête du document. Annuler.</li>
+  <li><strong>Question :</strong> le fichier d'origine a-t-il changé ? <em>(Non : rien n'est écrit avant l'enregistrement.)</em></li>
+</ol></div>
+
+<div class="exo"><h3>Exercice 2 — Corriger, annoter, signer (10 minutes)</h3>
+<ol>
+  <li>Double-cliquer la page du préavis : l'éditeur s'ouvre. Avec <kbd>E</kbd>, corriger un mot dans le premier paragraphe.</li>
+  <li>Avec <kbd>H</kbd>, surligner le montant du crédit.</li>
+  <li>Avec <kbd>P</kbd>, poser le tampon « Reçu le » : la date du jour est inscrite.</li>
+  <li>Page « à signer » : avec <kbd>S</kbd>, tracer sa signature, la poser, la <strong>mémoriser</strong>.</li>
+  <li><strong>Question :</strong> cette signature prouve-t-elle que le document n'a pas changé ? <em>(Non : c'est une image. Pour cela : « Signer avec un certificat ».)</em></li>
+</ol></div>
+
+<div class="exo"><h3>Exercice 3 — Caviarder (12 minutes)</h3>
+<ol>
+  <li>{{RACCOURCI:rechercher}} : chercher « Exemple » — noter le nombre de résultats et les pages.</li>
+  <li>Chercher le nom d'une personne du document (« Claire », « Marc »). Choisir <strong>Caviarder tout</strong>, lire la liste, confirmer.</li>
+  <li><strong>Exporter sous un autre nom</strong> ({{RACCOURCI:exporter}}) dans le dossier « formation ».</li>
+  <li><strong>Ouvrir la copie</strong> ({{RACCOURCI:ouvrir}}), chercher à nouveau le nom : <strong>zéro résultat</strong>. Essayer aussi la variante sans accent.</li>
+  <li><strong>Question :</strong> un rectangle noir suffit-il à effacer un nom ? <em>(Non : le texte reste dans le fichier. Ici la page est reconstruite à l'export, sans lui.)</em></li>
+</ol></div>
+
+<div class="exo"><h3>Exercice 4 — Enregistrer et protéger (7 minutes)</h3>
+<ol>
+  <li>Poser un <strong>filigrane</strong> « COPIE » (outil Filigrane). Regarder la <strong>ligne de modifications</strong> sous la barre : le filigrane y figure, il n'est pas encore dans un fichier.</li>
+  <li>Poser un <strong>mot de passe</strong> d'ouverture. Le noter sur papier, pas sur le poste.</li>
+  <li><strong>Enregistrer sous…</strong> sous un nouveau nom, fermer, rouvrir : le mot de passe est demandé.</li>
+  <li>Retirer le filigrane de la ligne de modifications : le prochain export n'en portera plus.</li>
+</ol></div>
+
+<h2>Dix questions pour vérifier</h2>
+<ol class="reponses">
+  <li>Quand le fichier d'origine est-il modifié ? <em>Seulement par « Enregistrer », jamais par une modification à l'écran ni par « Enregistrer sous… ».</em></li>
+  <li>Que fait {{RACCOURCI:annuler}} ? <em>Défait la dernière action ; la barre d'état la nomme.</em></li>
+  <li>Une signature dessinée prouve-t-elle quelque chose ? <em>Non : elle n'est qu'une image.</em></li>
+  <li>Pourquoi « Reconnaître le texte » avant de chercher dans un scan ? <em>Un scan est une image : sans reconnaissance, il n'a pas de texte.</em></li>
+  <li>Que fait « Réduire la taille » du texte ? <em>Il devient une image : plus de sélection, plus de recherche. Garder l'original.</em></li>
+  <li>Comment vérifier un caviardage ? <em>Rouvrir la copie exportée et chercher le nom, y compris sans accent.</em></li>
+  <li>Que perd-on avec un mot de passe oublié ? <em>Le document : personne ne peut le retrouver.</em></li>
+  <li>Que fait l'application si l'ordinateur s'éteint ? <em>Elle propose de reprendre le travail au lancement suivant.</em></li>
+  <li>Que dit-on au support quand un message apparaît ? <em>Ce qu'on faisait, le code entre crochets, et on joint le rapport de diagnostic.</em></li>
+  <li>Où est l'aide d'un outil ? <em>Le bouton ? de la boîte, ou {{RACCOURCI:raccourcis}} ; chapitre 16 du mode d'emploi.</em></li>
+</ol>
+
+<h2>Fiche d'évaluation (à la fin de la séance)</h2>
+<table>
+  <tr><th>Je sais…</th><th style="width:12%">Oui</th><th style="width:12%">Un peu</th><th style="width:12%">Non</th></tr>
+  <tr><td>retirer, pivoter, déplacer une page et défaire</td><td></td><td></td><td></td></tr>
+  <tr><td>corriger un texte, surligner, tamponner, signer</td><td></td><td></td><td></td></tr>
+  <tr><td>caviarder un nom partout et vérifier la copie</td><td></td><td></td><td></td></tr>
+  <tr><td>rendre un scan cherchable, copier un tableau vers Excel</td><td></td><td></td><td></td></tr>
+  <tr><td>dire ce qui est écrit à l'export et ce qui ne l'est pas</td><td></td><td></td><td></td></tr>
+  <tr><td>lire un code de message et savoir qui appeler</td><td></td><td></td><td></td></tr>
+</table>
+<p>Ce qui m'a manqué, ce que j'aurais voulu voir : ……………………………………………………………………………………………………………………</p>
+<p class="petit">Une séance, c'est aussi une mesure : un geste que plusieurs personnes ne réussissent pas, c'est un défaut de l'outil ou de son explication — le noter et le transmettre à l'éditeur ({{SUPPORT}}).</p>
+<p class="petit">{{COORDONNEES}}</p>
+</body></html>

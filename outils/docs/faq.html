@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Questions fréquentes</title><link rel="stylesheet" href="style.css">
+<style>
+  body { font-size: 9.8pt; line-height: 1.42; }
+  h1 { font-size: 22pt; }
+  h2 { font-size: 12.5pt; margin: 14pt 0 5pt; }
+  .q { break-inside: avoid; margin: 0 0 7pt; }
+  .q h3 { font-size: 10.2pt; margin: 0 0 1pt; }
+  .q p { margin: 0; text-align: left; hyphens: manual; }
+  .num { color: var(--rouge); font-family: var(--sans); font-weight: 700; margin-right: 4pt; }
+</style></head>
+<body>
+<p class="sur-titre">Questions fréquentes — {{PRODUIT}} {{VERSION}}</p>
+<h1>Quarante questions, quarante réponses courtes</h1>
+<p class="lede">Ce qu'on demande le plus souvent, rangé par situation. Chaque réponse renvoie au chapitre du mode d'emploi qui la développe ; l'application elle-même explique chaque outil (bouton <strong>?</strong> ou touche <kbd>F1</kbd> dans une boîte). Si la réponse n'est pas ici : {{SUPPORT}}.</p>
+
+<h2>Démarrer</h2>
+<div class="q"><h3><span class="num">1</span>Faut-il installer quelque chose ?</h3><p>Non. L'application est un dossier : on le pose sur le serveur ou sur le poste, on double-clique, on travaille. Pas de droits d'administrateur, pas de registre, pas de service. (Mode d'emploi, chapitre 1.)</p></div>
+<div class="q"><h3><span class="num">2</span>Il faut un compte ?</h3><p>Un compte <em>local</em>, créé au premier lancement sur le poste ou dans le dossier de données : un nom, un mot de passe. Il sert à séparer les tampons et la signature de chaque personne. Rien n'est créé chez l'éditeur. (Chapitre 1.)</p></div>
+<div class="q"><h3><span class="num">3</span>J'ai oublié mon mot de passe.</h3><p>Utilisez le <strong>code de récupération</strong> noté à la création du compte : « Mot de passe oublié ? » sur l'écran du mot de passe, qui en pose un neuf. Sans le code, c'est la personne qui s'occupe de l'installation qui supprime votre dossier de données ; vous recréez un compte, et vos tampons et votre signature mémorisés sont perdus. Vos PDF ne sont jamais touchés. (Chapitre 1.)</p></div>
+<div class="q"><h3><span class="num">4</span>Où trouver ce que fait chaque outil ?</h3><p>Dans l'outil lui-même : le bouton <strong>?</strong> en haut à droite de chaque boîte, ou <kbd>F1</kbd>. Le même texte est au chapitre 16 du mode d'emploi, avec un index.</p></div>
+<div class="q"><h3><span class="num">5</span>Comment passer en allemand ?</h3><p>Le bouton <strong>DE</strong> de la barre du haut (<strong>FR</strong> en allemand), ou <strong>Aide › Langue</strong>. La langue du poste est suivie par défaut ; le choix est retenu. Le contenu des documents n'est jamais traduit. (Chapitre 2.)</p></div>
+
+<h2>Ouvrir, enregistrer, ne rien perdre</h2>
+<div class="q"><h3><span class="num">6</span>Quelle différence entre Enregistrer, Enregistrer sous et Exporter ?</h3><p><strong>Enregistrer</strong> ({{RACCOURCI:enregistrer}}) réécrit le fichier ouvert, avec une confirmation la première fois. <strong>Enregistrer sous…</strong> ({{RACCOURCI:exporter}}) crée un nouveau fichier et laisse l'original. Tant que vous n'avez ni l'un ni l'autre fait, rien n'est écrit. (Chapitre 9.)</p></div>
+<div class="q"><h3><span class="num">7</span>L'ordinateur s'est éteint : j'ai tout perdu ?</h3><p>Non. Le travail en cours est mis de côté quelques secondes après chaque changement ; au lancement suivant, l'application propose de le reprendre. Le document revient, pas l'historique : {{RACCOURCI:annuler}} ne remonte pas avant la reprise. (Chapitre 12.)</p></div>
+<div class="q"><h3><span class="num">8</span>Un message dit que le fichier a changé depuis son ouverture.</h3><p>Une collègue l'a enregistré entre-temps. Choisissez <strong>Enregistrer sous…</strong> : sa version reste intacte et la vôtre devient un nouveau fichier. N'écrasez qu'en connaissance de cause. (Chapitre 12.)</p></div>
+<div class="q"><h3><span class="num">9</span>Le fichier refuse de s'ouvrir.</h3><p>Le message dit pourquoi : vide, pas un PDF, ou incomplet (copié ou envoyé à moitié). Rouvrez-le depuis son origine. Le document déjà ouvert n'est pas touché. (Chapitre 17, code E-FICHIER.)</p></div>
+<div class="q"><h3><span class="num">10</span>Le document demande un mot de passe.</h3><p>C'est celui de la personne qui l'a protégé : ni l'éditeur ni nous ne pouvons le retrouver. L'application le demande à l'ouverture et ne le garde pas.</p></div>
+<div class="q"><h3><span class="num">11</span>Peut-on défaire ?</h3><p>Oui : {{RACCOURCI:annuler}} défait la dernière action et la barre d'état dit laquelle (« Annulé : Filigrane ») ; {{RACCOURCI:retablir}} la rétablit. Ce qui est <em>exporté</em> ne se défait plus.</p></div>
+
+<h2>Organiser et modifier</h2>
+<div class="q"><h3><span class="num">12</span>Comment réunir plusieurs PDF ?</h3><p>Ouvrez-les ensemble (ou <strong>Fusionner des PDF</strong>), réordonnez les pages dans la vue <strong>Organiser</strong>, exportez. Aucun original n'est modifié. (Chapitres 3 et 6.)</p></div>
+<div class="q"><h3><span class="num">13</span>Comment retirer les pages blanches d'un scan ?</h3><p><strong>Détecter les pages vides</strong> : la liste est cochée, avec une vignette par page ; décochez ce qu'il faut garder. Une page avec seulement un numéro est proposée, mais non cochée.</p></div>
+<div class="q"><h3><span class="num">14</span>Comment découper un PDF ?</h3><p><strong>Diviser le document</strong> : une page par fichier, des lots d'un même nombre de pages, ou des plages (« 1-3, 5, 8-10 »). Les fichiers arrivent dans une archive ZIP.</p></div>
+<div class="q"><h3><span class="num">15</span>Je veux corriger une faute dans un PDF.</h3><p><strong>Éditeur de page › Modifier le texte existant</strong> : le paragraphe se corrige avec la même police. Pour plusieurs fautes ou un mot partout, <strong>Rechercher, remplacer</strong>.</p></div>
+<div class="q"><h3><span class="num">16</span>Peut-on écrire sur un PDF sans formulaire ?</h3><p>Oui : <strong>Ajouter du texte</strong> dans l'éditeur de page. Les annotations partent comme de vrais commentaires PDF que le destinataire peut déplacer, sauf si vous <strong>aplatissez</strong>.</p></div>
+<div class="q"><h3><span class="num">17</span>Comment numéroter les pages ?</h3><p><strong>Numéroter les pages</strong> : « {p} / {n} » donne « 3 / 12 ». Pour un dossier juridique, la numérotation Bates fixe un préfixe et un nombre de chiffres. Le réglage est repris au document suivant.</p></div>
+
+<h2>Protéger, caviarder, signer</h2>
+<div class="q"><h3><span class="num">18</span>Caviarder, est-ce vraiment effacer ?</h3><p>Oui : à l'export la page est reconstruite, le texte caviardé n'existe plus dans le fichier, ni dans ses métadonnées ni dans ses annotations. Un rectangle noir seul n'effacerait rien. <strong>Vérifiez la copie</strong> avant d'envoyer.</p></div>
+<div class="q"><h3><span class="num">19</span>Le nom que je cherche n'est pas trouvé.</h3><p>Un mot écrit sans accent, coupé en fin de ligne ou en lettres espacées peut échapper : essayez des variantes. Sur un scan, lancez d'abord <strong>Reconnaître le texte</strong>.</p></div>
+<div class="q"><h3><span class="num">20</span>Un caviardage exporté se défait-il ?</h3><p>Non. Gardez l'original dans un dossier protégé, exportez sous un autre nom. Avant l'export, {{RACCOURCI:annuler}} le retire.</p></div>
+<div class="q"><h3><span class="num">21</span>Comment protéger un PDF par mot de passe ?</h3><p><strong>Mot de passe</strong> : choisissez le mot de passe d'ouverture et ce que le lecteur peut faire. Le chiffrement (AES-256) est appliqué à l'export. Un mot de passe perdu ne se retrouve pas : notez-le ailleurs que sur le poste.</p></div>
+<div class="q"><h3><span class="num">22</span>Ma signature dessinée a-t-elle une valeur juridique ?</h3><p>C'est une image posée sur la page : elle ne prouve pas que le document n'a pas changé. Pour une signature électronique, <strong>Signer avec un certificat</strong>. Sa valeur dépend du certificat (une signature qualifiée suppose un certificat reconnu).</p></div>
+<div class="q"><h3><span class="num">23</span>Comment signer avec un certificat ?</h3><p>Il vous faut un fichier .p12 ou .pfx remis par un prestataire et son mot de passe. L'application le lit sur le poste ; la clé n'en sort pas. Toute modification ultérieure du document invalide la signature. (Chapitre 10.)</p></div>
+<div class="q"><h3><span class="num">24</span>Comment vérifier une signature reçue ?</h3><p><strong>Vérifier les signatures</strong> : intact ou modifié, titulaire, date. Hors connexion, la chaîne de confiance et la révocation ne sont pas vérifiées : le contrôle porte sur l'intégrité et l'identité apparente.</p></div>
+<div class="q"><h3><span class="num">25</span>Mon PDF signé n'est plus valable après modification.</h3><p>C'est normal : toute modification invalide une signature. L'application le dit à l'ouverture d'un document signé et avant d'enregistrer. Envoyez l'original signé, ou resignez.</p></div>
+
+<h2>Scans, formulaires, tableaux</h2>
+<div class="q"><h3><span class="num">26</span>Comment rendre un scan cherchable ?</h3><p><strong>Reconnaître le texte</strong> : choisissez les pages et la langue (français, allemand, ou les deux si le document mélange). Comptez quelques secondes par page. Le calcul se fait sur le poste.</p></div>
+<div class="q"><h3><span class="num">27</span>La reconnaissance a fait des fautes.</h3><p>Aucune reconnaissance n'est exacte à 100 %. Un scan droit, net et contrasté se lit mieux ; vérifiez la langue choisie ; relisez les noms et les chiffres.</p></div>
+<div class="q"><h3><span class="num">28</span>Comment remplir un formulaire PDF ?</h3><p><strong>Remplir le formulaire</strong> : chaque champ dans une liste. Si vous réorganisez les pages ensuite, les champs sont aplatis pour garder ce que vous avez saisi.</p></div>
+<div class="q"><h3><span class="num">29</span>Un formulaire pour cinquante personnes ?</h3><p><strong>Remplir en série (CSV)</strong> : une copie du formulaire par ligne d'un tableau Excel exporté en CSV. Contrôlez la première copie avant d'envoyer les autres.</p></div>
+<div class="q"><h3><span class="num">30</span>Comment copier un tableau vers Excel ?</h3><p><strong>Copier un tableau</strong> : choisissez la page, vérifiez les colonnes dans l'aperçu, puis « Copier pour Excel » ou « Enregistrer en CSV ». Sur un scan, reconnaissez d'abord le texte.</p></div>
+
+<h2>Envoyer, imprimer, archiver</h2>
+<div class="q"><h3><span class="num">31</span>Le fichier est trop gros pour un courriel.</h3><p><strong>Réduire la taille</strong> : les pages deviennent des images, le fichier s'allège, mais le texte n'est plus sélectionnable. Gardez l'original. Alternative : exporter seulement les pages utiles.</p></div>
+<div class="q"><h3><span class="num">32</span>Comment imprimer un livret ?</h3><p><strong>Imprimer › Livret</strong> : choisissez la reliure ; pour le recto verso automatique, les bords courts. Les feuilles sortent dans l'ordre du pliage, c'est normal.</p></div>
+<div class="q"><h3><span class="num">33</span>Qu'est-ce que le PDF/A, et en ai-je besoin ?</h3><p>Un format d'archivage à long terme (ISO 19005). Si votre archive ou le canton l'exige : <strong>Archiver en PDF/A-2b</strong>. L'application contrôle le résultat et dit si une règle l'empêche ; elle ne déclare jamais PDF/A un fichier qui ne l'est pas.</p></div>
+<div class="q"><h3><span class="num">34</span>Comment rendre un document accessible ?</h3><p><strong>Propriétés</strong> : titre, langue, balisage ; puis <strong>Vérifier l'accessibilité</strong>. Le contrôle est automatique et ne juge ni la clarté du texte ni l'ordre de lecture : il faut aussi une relecture.</p></div>
+<div class="q"><h3><span class="num">35</span>Peut-on traiter vingt fichiers d'un coup ?</h3><p><strong>Traiter plusieurs fichiers</strong> : jusqu'à trois opérations à la suite (pages vides, compression, numérotation, mot de passe, images en PDF, séparation, texte), résultat dans une archive ZIP, compte rendu fichier par fichier.</p></div>
+
+<h2>Mises à jour, licence, support</h2>
+<div class="q"><h3><span class="num">36</span>Comment mettre à jour ?</h3><p>Posez le nouveau zip <em>et son fichier « .signature.json »</em> dans le dossier de l'application ; au lancement suivant, elle propose la mise à jour. Rien n'est téléchargé : c'est vous qui apportez le zip. Vos données restent en place. (Chapitre 13.)</p></div>
+<div class="q"><h3><span class="num">37</span>Que se passe-t-il quand l'essai se termine ?</h3><p>Après quarante-cinq jours, l'application se lit encore entièrement mais n'enregistre plus de nouveau fichier. Un fichier de licence posé à côté de l'exécutable la rouvre ; aucune activation, aucun lien à un poste.</p></div>
+<div class="q"><h3><span class="num">38</span>Envoie-t-on mes documents quelque part ?</h3><p>Non. Rien ne sort du poste : ni documents, ni statistiques, ni noms. L'application n'a pas besoin d'Internet pour fonctionner.</p></div>
+<div class="q"><h3><span class="num">39</span>Un message d'erreur avec un code entre crochets.</h3><p>Le code (E-MEM, E-FICHIER…) renvoie au chapitre 17 du mode d'emploi, qui dit ce qui s'est passé et quoi faire. Rien n'est écrit quand une opération échoue : le document ouvert est intact.</p></div>
+<div class="q"><h3><span class="num">40</span>Qui appeler, et que dire ?</h3><p>{{SUPPORT}}. Joignez le rapport préparé par <strong>Aide › Rapport de diagnostic pour le support…</strong> : il ne contient ni le texte de vos documents ni leurs noms, et vous le relisez avant de l'envoyer. Délais : voir la procédure de support.</p></div>
+
+<p class="petit">{{COORDONNEES}}</p>
+</body></html>

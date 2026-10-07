@@ -12,6 +12,7 @@
     ['Signatures mémorisées', ['aktum-signatures'], 'Les signatures dessinées sur ce poste : des images de votre main.'],
     ['Position de la signature', ['aktum-reglage-signature-position'], 'L\'endroit où vous posez d\'habitude votre signature sur une page.'],
     ['Dernière recherche', ['aktum-reglage-recherche'], 'Les derniers termes cherchés et les options choisies.'],
+    ['Auteur des annotations', ['aktum-auteur-annotations'], 'Votre choix d\'inscrire ou non votre nom sur les annotations que vous posez.'],
     ['Choix d\'écrasement', ['aktum-ecraser'], 'Votre réponse « toujours » à la question de réécrire le fichier ouvert.'],
     ['Langue de la reconnaissance de texte', ['aktum-ocr-langue'], 'Le français, l\'allemand ou les deux, pour lire un scan.'],
     ['Affichage', ['aktum-vue', 'aktum-zoom', 'aktum-zoom-lecture', 'aktum-dispo', 'aktum-volet', 'aktum-panneau-replie', 'aktum-groupes-replies'], 'La vue, le zoom, la disposition, le volet et les groupes d\'outils repliés.'],
@@ -35,6 +36,18 @@
           onglet.input.addEventListener('change', () => { bureau.ecrireReglage('toujoursEnOnglet', onglet.input.checked).catch(e => signaler('Préférences', e)); });
           b.append(groupOf('Ouverture des documents', [onglet, note('Concerne un double-clic sur un PDF depuis le bureau ou l\'explorateur, « Ouvrir avec » et la liste des fichiers récents. Sans ce réglage, chaque document s\'ouvre dans sa propre fenêtre. « Ouvrir » et « Nouvel onglet », dans la fenêtre, ouvrent toujours un onglet.')]));
         }
+
+        // --- Annotations : l'auteur qui part dans le fichier
+        let auteurCoupe = false;
+        try { auteurCoupe = localStorage.getItem(CLE_AUTEUR_ANNOT) === '0'; } catch (e) { signaler('Préférences', e, 'info'); }
+        const auteurCase = checkbox('pref-auteur', 'Inscrire mon nom comme auteur des annotations que je pose', !auteurCoupe);
+        auteurCase.input.addEventListener('change', () => {
+          try { if (auteurCase.input.checked) localStorage.removeItem(CLE_AUTEUR_ANNOT); else localStorage.setItem(CLE_AUTEUR_ANNOT, '0'); }
+          catch (e) { signaler('Préférences', e, 'info'); }
+        });
+        b.append(groupOf('Annotations', [auteurCase, note(bureau && bureau.profil
+          ? 'Surlignages, cadres, textes et tampons portent le nom de votre compte et la date : la personne qui relit sait de qui vient chaque remarque. Ce nom est lisible par quiconque reçoit le PDF. Décochez pour ne rien inscrire.'
+          : 'Hors d\'un compte, aucun nom n\'est inscrit : les annotations ne portent que leur date.')]));
 
         // --- Touches
         const seules = checkbox('pref-touches-seules', 'Touches à une lettre (R pivote, V sélectionne, H surligne…)', touchesSeulesActives());

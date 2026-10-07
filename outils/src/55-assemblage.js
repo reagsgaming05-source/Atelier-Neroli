@@ -74,9 +74,13 @@
   // Ce qui, à l'export, devient un vrai commentaire PDF — que le
   // destinataire retrouve, déplace ou retire dans Acrobat — plutôt qu'un
   // dessin fondu dans la page. À moins d'avoir demandé à tout figer.
-  const TYPES_REELS = ['highlight', 'box', 'draw', 'text', 'tampon'];
+  const TYPES_REELS = ['highlight', 'box', 'draw', 'text', 'tampon', 'underline', 'strike', 'arrow', 'note'];
   const annotationsReelles = () => !state.figerAnnotations;
-  const enCommentaire = an => annotationsReelles() && TYPES_REELS.indexOf(an.type) >= 0;
+  // Un lien est toujours un vrai lien : il n'y a rien à « figer » dans un lien.
+  const enCommentaire = an => an.type === 'lien' || (annotationsReelles() && TYPES_REELS.indexOf(an.type) >= 0);
+  // Les adresses qu'un lien peut viser : le web et la messagerie, jamais un fichier local ni un script (un PDF qui lance
+  // « javascript: » ou « file: » est exactement ce qu'un service informatique refuse).
+  const adresseDeLienPermise = u => /^(https?:\/\/|mailto:)[^\s]+$/i.test(String(u || '').trim());
 
   // Un rectangle aux coins arrondis, en chemin SVG (repère y vers le bas).
   function cheminArrondi(w, h, r) {
@@ -112,6 +116,7 @@
     const ctx = doc.context;
     const g = pageGeom(p);
     const quand = PDFString.fromDate(new Date());
+    const auteur = auteurDesAnnotations();
     // L'apparence est dessinée droite, telle qu'on la voit ; sa matrice la
     // tourne comme la page.
     const matrice = g.total === 90 ? [0, 1, -1, 0] : g.total === 180 ? [-1, 0, 0, -1] : g.total === 270 ? [0, -1, 1, 0] : [1, 0, 0, 1];
@@ -123,9 +128,10 @@
     const poser = (an, dict, ap, bb) => {
       const r = rectToUser(bb, g);
       Object.assign(dict, {
-        Type: 'Annot', Rect: [n(r.x), n(r.y), n(r.x + r.w), n(r.y + r.h)], F: 4, P: page.ref, M: quand,
-        NM: PDFString.of('aktum-' + an.id), AP: { N: ap },
+        Type: 'Annot', Rect: [n(r.x), n(r.y), n(r.x + r.w), n(r.y + r.h)], F: dict.F || 4, P: page.ref, M: quand,
+        NM: PDFString.of('aktum-' + an.id), AP: { N: ap }, CreationDate: quand,
       });
+      if (auteur) dict.T = PDFHexString.fromText(auteur);
       page.node.addAnnot(ctx.register(ctx.obj(dict)));
     };
     let compte = 0;
@@ -166,6 +172,40 @@
           const ap = apparence('BT /F1 ' + n(an.size) + ' Tf ' + c.join(' ') + ' rg ' + lignes.join(' ') + ' ET', an.w, an.h, { Font: { F1: font.ref } });
           poser(an, { Subtype: 'FreeText', Contents: PDFHexString.fromText(an.text || ''), DA: PDFString.of('/Helv ' + n(an.size) + ' Tf ' + c.join(' ') + ' rg'),
             Q: 0, Border: [0, 0, 0], C: [1, 1, 1], CA: 1 }, ap, an);
+        } else if (an.type === 'underline' || an.type === 'strike') {
+          const c = rvb(an.color || '#D7373F'), lw = an.width || 1.2;
+          const y = an.type === 'underline' ? lw / 2 : an.h / 2;
+          const ap = apparence(c.join(' ') + ' RG ' + n(lw) + ' w 0 ' + n(y) + ' m ' + n(an.w) + ' ' + n(y) + ' l S', an.w, an.h);
+          const r = rectToUser(an, g);
+          poser(an, { Subtype: an.type === 'underline' ? 'Underline' : 'StrikeOut', C: c, Contents: PDFHexString.fromText(''),
+            QuadPoints: [n(r.x), n(r.y + r.h), n(r.x + r.w), n(r.y + r.h), n(r.x), n(r.y), n(r.x + r.w), n(r.y)].map(n) }, ap, an);
+        } else if (an.type === 'arrow') {
+          if (!an.pts || an.pts.length < 2) continue;
+          const c = rvb(an.color || '#D7373F'), lw = an.width || 2, f = geomFleche(an), m = lw + 4;
+          const bb0 = annBounds(an);
+          const bb = { x: bb0.x - m, y: bb0.y - m, w: bb0.w + 2 * m, h: bb0.h + 2 * m };
+          const loc = q => n(q[0] - bb.x) + ' ' + n(bb.h - (q[1] - bb.y));
+          const ap = apparence(c.join(' ') + ' RG ' + c.join(' ') + ' rg ' + n(lw) + ' w 1 J ' + loc(f.depart) + ' m ' + loc(f.pied) + ' l S '
+            + loc(f.tete[0]) + ' m ' + loc(f.tete[1]) + ' l ' + loc(f.tete[2]) + ' l f', bb.w, bb.h);
+          const u0 = toUser(an.pts[0][0], an.pts[0][1], g), u1 = toUser(an.pts[1][0], an.pts[1][1], g);
+          poser(an, { Subtype: 'Line', C: c, IC: c, L: [n(u0.x), n(u0.y), n(u1.x), n(u1.y)], LE: ['None', 'ClosedArrow'], BS: { W: n(lw) }, Contents: PDFHexString.fromText('') }, ap, bb);
+        } else if (an.type === 'note') {
+          // La note autocollante : un petit carré jaune, et le texte que le lecteur ouvre en cliquant dessus.
+          const c = rvb(an.color || '#FFD43B'), s = an.w;
+          const contenu = c.join(' ') + ' rg 0.48 0.36 0 RG 0.8 w 0 ' + n(s) + ' m ' + n(s) + ' ' + n(s) + ' l ' + n(s) + ' ' + n(s * 0.3) + ' l ' + n(s * 0.7) + ' 0 l 0 0 l h B 0.48 0.36 0 RG '
+            + n(s * 0.2) + ' ' + n(s * 0.7) + ' m ' + n(s * 0.8) + ' ' + n(s * 0.7) + ' l S ' + n(s * 0.2) + ' ' + n(s * 0.5) + ' m ' + n(s * 0.55) + ' ' + n(s * 0.5) + ' l S';
+          const ap = apparence(contenu, s, s);
+          poser(an, { Subtype: 'Text', Name: 'Note', C: c, F: 28, Open: false, Contents: PDFHexString.fromText(an.text || '') }, ap, an);
+        } else if (an.type === 'lien') {
+          const r = rectToUser(an, g);
+          const dict = { Type: 'Annot', Subtype: 'Link', Rect: [n(r.x), n(r.y), n(r.x + r.w), n(r.y + r.h)], F: 4, P: page.ref, Border: [0, 0, 0],
+            Contents: PDFHexString.fromText(an.libelle || '') };
+          if (an.cibleType === 'page') { if (an.cibleId == null) continue; dict.AktumPageId = an.cibleId; }
+          else {
+            if (!adresseDeLienPermise(an.url)) { signaler('Lien', 'Un lien sans adresse web ou de messagerie valide n\'est pas écrit.', 'warn'); continue; }
+            dict.A = ctx.obj({ S: 'URI', URI: PDFString.of(an.url.trim()) });
+          }
+          page.node.addAnnot(ctx.register(ctx.obj(dict)));
         } else if (an.type === 'tampon') {
           const font = await getFont(doc, fonts, 'Helvetica', true, false);
           const c = rvb(an.color || '#C8102E');
@@ -191,6 +231,26 @@
       // Un vrai commentaire PDF : posé à part, jamais fondu dans la page.
       if (enCommentaire(an)) continue;
       if (an.type === 'tampon') { await dessinerTampon(doc, page, p, fonts, an); continue; }
+      if (an.type === 'underline' || an.type === 'strike') {
+        const r = rectToUser(an, g);
+        const y = an.type === 'underline' ? r.y : r.y + r.h / 2;
+        page.drawLine({ start: { x: r.x, y }, end: { x: r.x + r.w, y }, thickness: an.width || 1.2, color: pdfColor(an.color || '#D7373F') });
+        continue;
+      }
+      if (an.type === 'arrow' && an.pts && an.pts.length > 1) {
+        const f = geomFleche(an), c = pdfColor(an.color || '#D7373F');
+        const u = q => toUser(q[0], q[1], g);
+        page.drawLine({ start: u(f.depart), end: u(f.pied), thickness: an.width || 2, color: c });
+        const t = f.tete.map(u);
+        const e2 = v => (+v).toFixed(2);
+        page.drawSvgPath('M' + e2(t[0].x) + ' ' + e2(-t[0].y) + ' L' + e2(t[1].x) + ' ' + e2(-t[1].y) + ' L' + e2(t[2].x) + ' ' + e2(-t[2].y) + ' Z', { x: 0, y: 0, color: c, borderWidth: 0 });
+        continue;
+      }
+      if (an.type === 'note') {
+        const r = rectToUser(an, g);
+        page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.color || '#FFD43B'), borderColor: pdfColor('#7A5C00'), borderWidth: 0.8 });
+        continue;
+      }
       if (an.type === 'highlight' || an.type === 'redact' || an.type === 'box') {
         const r = rectToUser(an, g);
         if (r.w <= 0 || r.h <= 0) continue;
@@ -412,6 +472,18 @@
         ctx.textBaseline = 'alphabetic';
         const lh = an.size * 1.25;
         (an.lines || []).forEach((line, i) => ctx.fillText(line, an.x * s, (an.y + lh * i + an.size * 0.95) * s));
+      } else if (an.type === 'underline' || an.type === 'strike') {
+        const y = (an.type === 'underline' ? an.y + an.h : an.y + an.h / 2) * s;
+        ctx.strokeStyle = an.color; ctx.lineWidth = (an.width || 1.2) * s;
+        ctx.beginPath(); ctx.moveTo(an.x * s, y); ctx.lineTo((an.x + an.w) * s, y); ctx.stroke();
+      } else if (an.type === 'arrow' && an.pts && an.pts.length > 1) {
+        const f = geomFleche(an);
+        ctx.strokeStyle = an.color; ctx.fillStyle = an.color; ctx.lineWidth = (an.width || 2) * s; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(f.depart[0] * s, f.depart[1] * s); ctx.lineTo(f.pied[0] * s, f.pied[1] * s); ctx.stroke();
+        ctx.beginPath(); f.tete.forEach((q, i) => (i ? ctx.lineTo(q[0] * s, q[1] * s) : ctx.moveTo(q[0] * s, q[1] * s))); ctx.closePath(); ctx.fill();
+      } else if (an.type === 'note') {
+        ctx.fillStyle = an.color || '#FFD43B'; ctx.strokeStyle = '#7A5C00'; ctx.lineWidth = 0.8 * s;
+        ctx.fillRect(an.x * s, an.y * s, an.w * s, an.h * s); ctx.strokeRect(an.x * s, an.y * s, an.w * s, an.h * s);
       } else if (an.type === 'draw') {
         ctx.strokeStyle = an.color; ctx.lineWidth = (an.width || 2) * s;
         ctx.lineCap = 'round'; ctx.lineJoin = 'round';

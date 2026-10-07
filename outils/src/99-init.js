@@ -645,7 +645,7 @@
       } },
     });
     // L'éditeur de page : un outil par touche, et ses deux pages voisines
-    ['select', 'edittext', 'text', 'highlight', 'box', 'draw', 'redact', 'champ', 'tampon', 'sign', 'image'].forEach(outil => {
+    ['select', 'edittext', 'text', 'highlight', 'box', 'underline', 'strike', 'arrow', 'note', 'draw', 'redact', 'champ', 'lien', 'tampon', 'sign', 'image'].forEach(outil => {
       ACTIONS['ed-' + outil] = { quand: () => ed.root && !ed.root.hidden, agit: () => { const b = $('.ed-tool[data-tool="' + outil + '"]', ed.root); if (b) b.click(); } };
     });
     ACTIONS['ed-precedente'] = { quand: () => ed.root && !ed.root.hidden, agit: () => edGo(-1) };

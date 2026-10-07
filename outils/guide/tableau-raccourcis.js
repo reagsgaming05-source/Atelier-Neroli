@@ -49,4 +49,14 @@ function guideAvecRaccourcis(html) {
   if (a < 0 || b < a) throw new Error('guide.html : les repères ' + DEBUT + ' et ' + FIN + ' manquent');
   return html.slice(0, a) + tableauDesRaccourcis() + html.slice(b + FIN.length);
 }
-module.exports = { tableauDesRaccourcis, guideAvecRaccourcis, DEBUT, FIN };
+// Les touches d'une commande de la table, écrites comme dans le guide : « {{RACCOURCI:ouvrir}} » dans un document devient <kbd>Ctrl</kbd> + <kbd>O</kbd>.
+// Les documents ne recopient donc jamais une touche : elles suivent la table, comme le menu.
+function touchesDeLaCommande(id) {
+  const c = table.commandes.find((x) => x.id === id);
+  if (!c) throw new Error('raccourci inconnu : « ' + id + ' » (desktop/raccourcis.json)');
+  return [].concat(c.touches).map(kbd).join(' ou ');
+}
+function raccourcisDansLeDocument(html) {
+  return html.replace(/\{\{RACCOURCI:([a-z0-9-]+)\}\}/g, (m, id) => touchesDeLaCommande(id));
+}
+module.exports = { tableauDesRaccourcis, guideAvecRaccourcis, touchesDeLaCommande, raccourcisDansLeDocument, DEBUT, FIN };

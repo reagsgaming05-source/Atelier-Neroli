@@ -133,6 +133,17 @@ comptent ; toutes les commandes font 24 × 24 px au moins ; Échap écarte la ba
 **déclaration d'accessibilité** (critère par critère, WCAG 2.2 et EN 301 549) est livrée avec les documents, avec
 ses limites : l'éditeur de page ne se manie pas entièrement au clavier, et le balisage d'un PDF reçu n'est pas conservé.
 
+**Une aide à l'endroit où l'on décide.** Chaque boîte d'outil porte un bouton « ? » (ou F1) qui dit ce que l'outil
+fait, comment s'en servir et ce qu'il change vraiment — sans fermer la boîte. Le mode d'emploi grandit de trois chapitres
+écrits depuis la même donnée (les outils un par un, les messages et leurs codes, l'index) ; une foire aux questions de quarante
+questions, un aide-mémoire recto verso et une formation d'une heure sont livrés avec les documents. Quatre-vingts champs de
+boîte expliquent maintenant leur conséquence ; un outil grisé dit pourquoi ; Annuler et Rétablir nomment l'action (« Annulé :
+Filigrane ») ; chaque échec dit sa cause en français et porte un code (E-MEM, E-FICHIER…) que le manuel explique ; deux messages
+qui laissaient croire qu'un réglage était déjà écrit disent maintenant « à l'export ».
+
+**Dates et nombres à la suisse.** 31.12.2026 et 12’345.50, en français comme en allemand, dans l'application et dans ce
+qu'elle écrit dans vos documents (tampons, sommaires, intercalaires).
+
 **Et aussi** : les caractères que le PDF ne sait pas écrire dans un champ ou un tampon sont
 signalés (plus de « Miloševi? » silencieux) ; plus de limite de 800 signets ; « Réduire la
 taille » refuse de rendre un fichier plus gros ; Ctrl+Z juste après l'ouverture ne vide plus

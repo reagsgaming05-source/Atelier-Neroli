@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Aide-mémoire</title><link rel="stylesheet" href="style.css">
+<style>
+  /* Une feuille A4 recto verso : deux pages, pas une de plus. Imprimée, pliée en deux, elle tient près du clavier. */
+  @page { size: A4; margin: 12mm 13mm; }
+  body { font-size: 9.2pt; line-height: 1.34; }
+  h1 { font-size: 19pt; margin: 0 0 2pt; }
+  h2 { font-size: 11.5pt; margin: 9pt 0 4pt; padding-bottom: 2pt; }
+  .lede { font-size: 10pt; margin-bottom: 6pt; }
+  p { margin-bottom: 4pt; text-align: left; hyphens: manual; }
+  table { margin: 3pt 0 6pt; font-size: 9pt; }
+  th, td { padding: 2.6pt 5pt; }
+  td.je { width: 38%; font-family: var(--sans); font-weight: 700; }
+  ul { margin-bottom: 4pt; } li { margin-bottom: 1.5pt; }
+  .page { break-before: page; }
+  .cases li { list-style: none; margin-left: -12pt; }
+  .cases li::before { content: "\2610"; margin-right: 5pt; font-size: 11pt; }
+  kbd { font-family: var(--sans); font-size: 8.2pt; padding: 0 3pt; border: .6pt solid var(--trait); border-bottom-width: 1.4pt; border-radius: 2pt; background: #fbfcfd; }
+  .pied { margin-top: 8pt; font-size: 8pt; color: var(--gris); }
+</style></head>
+<body>
+
+<p class="sur-titre">Aide-mémoire — {{PRODUIT}} {{VERSION}}</p>
+<h1>Les gestes du quotidien</h1>
+<p class="lede">Une feuille à garder près du clavier. Dans l'application, le bouton <strong>?</strong> de chaque boîte (ou {{RACCOURCI:raccourcis}}) explique l'outil sans la fermer.</p>
+
+<table>
+  <tr><th>Je veux…</th><th>Je fais…</th></tr>
+  <tr><td class="je">Ouvrir un document</td><td>{{RACCOURCI:ouvrir}}, ou je dépose le fichier dans la fenêtre. Plusieurs fichiers : chacun a son onglet ({{RACCOURCI:nouvel-onglet}}).</td></tr>
+  <tr><td class="je">Réunir plusieurs PDF</td><td><strong>Outils › Fusionner des PDF</strong>, puis je range les pages dans la vue <strong>Organiser</strong> ({{RACCOURCI:organiser}}).</td></tr>
+  <tr><td class="je">Retirer, pivoter, déplacer des pages</td><td>Vue Organiser : je clique la page, puis {{RACCOURCI:supprimer-pages}} (retirer) ou {{RACCOURCI:pivoter-droite}} (pivoter), ou je la glisse à sa place.</td></tr>
+  <tr><td class="je">Enlever les pages blanches d'un scan</td><td><strong>Détecter les pages vides</strong> : je contrôle la liste cochée, je supprime.</td></tr>
+  <tr><td class="je">Corriger une faute</td><td>Double-clic sur la page : l'éditeur s'ouvre, <kbd>E</kbd> corrige le texte existant.</td></tr>
+  <tr><td class="je">Surligner, annoter, tamponner</td><td>Dans l'éditeur : <kbd>H</kbd> surligne, <kbd>T</kbd> écrit, <kbd>P</kbd> pose un tampon (« Reçu le… »), <kbd>S</kbd> signe.</td></tr>
+  <tr><td class="je">Trouver un mot, un nom</td><td>{{RACCOURCI:rechercher}} ; {{RACCOURCI:occurrence-suivante}} passe à la suivante.</td></tr>
+  <tr><td class="je">Caviarder un nom partout</td><td>{{RACCOURCI:rechercher}}, j'écris le nom, <strong>Caviarder tout</strong>, je vérifie la liste, j'exporte <em>sous un autre nom</em>, <strong>je rouvre la copie pour vérifier</strong>.</td></tr>
+  <tr><td class="je">Rendre un scan cherchable</td><td><strong>Reconnaître le texte</strong> : bonnes pages, bonne langue ; quelques secondes par page.</td></tr>
+  <tr><td class="je">Remplir un formulaire</td><td><strong>Remplir le formulaire</strong> ; pour une série, <strong>Remplir en série (CSV)</strong>.</td></tr>
+  <tr><td class="je">Alléger un fichier pour un courriel</td><td><strong>Réduire la taille</strong> — le texte n'est plus sélectionnable ; je garde l'original.</td></tr>
+  <tr><td class="je">Imprimer un livret</td><td>{{RACCOURCI:imprimer}} › <strong>Livret</strong> ; recto verso : bords courts.</td></tr>
+  <tr><td class="je">Enregistrer sans écraser</td><td>{{RACCOURCI:exporter}} (<strong>Enregistrer sous…</strong>) crée un nouveau fichier ; {{RACCOURCI:enregistrer}} réécrit celui qui est ouvert.</td></tr>
+  <tr><td class="je">Défaire</td><td>{{RACCOURCI:annuler}} (la barre d'état dit quoi) ; {{RACCOURCI:retablir}} rétablit. Ce qui est <em>exporté</em> ne se défait plus.</td></tr>
+  <tr><td class="je">Chercher un outil</td><td>{{RACCOURCI:filtre-outils}} : je tape « biffer », « livret », « excel »…</td></tr>
+</table>
+
+<h2>Trois choses à ne pas oublier</h2>
+<ul>
+  <li><strong>Rien n'est écrit tant que je n'ai pas enregistré ou exporté.</strong> Filigrane, en-tête, mot de passe, aplatissement : réglés maintenant, appliqués à l'export (la ligne sous la barre les liste).</li>
+  <li><strong>Une signature dessinée n'est pas une signature électronique.</strong> Pour prouver qu'un document n'a pas changé : <strong>Signer avec un certificat</strong>.</li>
+  <li><strong>Je verrouille ma session Windows en partant</strong> (<kbd>Windows</kbd> + <kbd>L</kbd>).</li>
+</ul>
+
+<div class="page"></div>
+<p class="sur-titre">Aide-mémoire — verso</p>
+<h1>Avant d'envoyer, et si ça ne marche pas</h1>
+
+<h2>Avant d'envoyer un document</h2>
+<ul class="cases">
+  <li>Je l'ai <strong>relu à l'écran</strong> tel qu'il partira (vue Lecture), toutes les pages.</li>
+  <li><strong>Caviardage</strong> : j'ai rouvert <em>la copie exportée</em>, cherché le nom avec {{RACCOURCI:rechercher}} : zéro résultat. Un mot écrit sans accent ou coupé en fin de ligne m'a échappé ? Je l'ai cherché aussi.</li>
+  <li><strong>Propriétés</strong> : le titre est juste ; l'<strong>auteur</strong> n'est pas quelqu'un qui ne doit pas apparaître.</li>
+  <li><strong>Mot de passe</strong> : je l'ai noté ailleurs que sur ce poste, et je le donne par un autre canal que le fichier.</li>
+  <li><strong>Formulaire</strong> à renvoyer rempli ? Je décide si je l'aplatis : après l'export, le destinataire ne peut plus rien changer.</li>
+  <li><strong>PDF signé</strong> ? Je n'ai rien modifié après la signature (sinon elle est invalide).</li>
+  <li><strong>Gros fichier</strong> ? Réduire la taille, ou seulement les pages utiles ; j'ai gardé l'original.</li>
+  <li><strong>Document public</strong> (site, mise à l'enquête) ? <strong>Vérifier l'accessibilité</strong> : titre, langue, balisage.</li>
+</ul>
+
+<h2>Si un message apparaît</h2>
+<table>
+  <tr><th style="width:17%">Code</th><th>Ce que cela veut dire</th><th style="width:44%">Je fais</th></tr>
+  <tr><td><code>E-MEM</code></td><td>La mémoire du poste ne suffit pas pour ce document.</td><td>Je ferme les autres documents, ou je traite moins de pages à la fois.</td></tr>
+  <tr><td><code>E-MDP</code></td><td>Le document est protégé par un mot de passe.</td><td>Je le rouvre en donnant le mot de passe.</td></tr>
+  <tr><td><code>E-FICHIER</code></td><td>Le fichier est vide, coupé ou abîmé.</td><td>Je le récupère depuis son origine.</td></tr>
+  <tr><td><code>E-DISQUE</code></td><td>L'écriture est refusée (disque plein, fichier tenu ouvert, droits).</td><td>Je change de dossier, je ferme le fichier ailleurs.</td></tr>
+  <tr><td><code>E-COMPOSANT</code></td><td>Une partie du logiciel ne s'est pas lancée.</td><td>Je ferme et rouvre l'application.</td></tr>
+  <tr><td><code>E-POLICE</code></td><td>Une police du document pose problème.</td><td>Je tente une autre police, ou l'export en images.</td></tr>
+  <tr><td><code>E-INCONNU</code></td><td>Cause non identifiée. Rien n'a été écrit.</td><td>Je recommence ; si ça persiste, rapport de diagnostic.</td></tr>
+</table>
+<p>L'application s'est arrêtée brutalement ? Au lancement suivant, elle propose de <strong>reprendre le travail</strong> là où il en était.</p>
+
+<h2>Qui appeler</h2>
+<p><strong>Support :</strong> {{SUPPORT}}. Je joins le rapport de <strong>Aide › Rapport de diagnostic pour le support…</strong> (ni le texte de mes documents, ni leurs noms ; je le relis avant d'envoyer), et je dis : ce que je voulais faire, le <strong>code</strong> du message, la version ({{PRODUIT}} {{VERSION}}).</p>
+<p class="pied">{{COORDONNEES}} — Mode d'emploi complet : chapitres 16 (les outils) et 17 (messages et codes).</p>
+</body></html>

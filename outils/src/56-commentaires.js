@@ -203,6 +203,9 @@
     const N = k => PDFName.of(k);
     const cible = new Map();
     mapped.forEach(({ p, page }) => { const k = p.src + ':' + p.index; if (!cible.has(k)) cible.set(k, page.ref); });
+    // les liens du sommaire d'un dossier visent une page par son identité, d'un document à l'autre
+    const parIdentite = new Map();
+    mapped.forEach(({ p, page }) => parIdentite.set(p.id, page.ref));
     let poses = 0, retires = 0;
     mapped.forEach(({ p, page }) => {
       let annots = null;
@@ -212,6 +215,15 @@
       let change = false;
       annots.asArray().forEach(item => {
         const a = ctx.lookup(item);
+        if (a instanceof PDFDict && a.has(N('AktumPageId'))) {
+          change = true;
+          const ref = parIdentite.get(a.get(N('AktumPageId')).asNumber());
+          a.delete(N('AktumPageId'));
+          if (!ref) { retires++; return; }
+          a.set(N('Dest'), ctx.obj([ref, N('Fit')]));
+          garde.push(item); poses++;
+          return;
+        }
         if (!(a instanceof PDFDict) || !a.has(N('AktumCible'))) { garde.push(item); return; }
         change = true;
         const idx = a.get(N('AktumCible')).asNumber();
@@ -424,6 +436,9 @@
       await tour(() => onProgress((i + 1) / mapped.length, 'Assemblage… ' + (i + 1) + '/' + mapped.length));
     }
 
+    // Les liens que l'éditeur vient de poser vers une page du document (et ceux du sommaire d'un dossier) se résolvent ici : toutes
+    // les pages existent, et chacune sait où elle est.
+    try { reposerLiens(out, mapped); } catch (e) { signaler('Liens', e); }
     // L'arbre de structure se pose une fois toutes les pages écrites.
     if (balisage) { balisage.terminer(); opts.balisee = true; }
     opts.rapportBalisage = balisage ? controlerBalisage(out) : null;

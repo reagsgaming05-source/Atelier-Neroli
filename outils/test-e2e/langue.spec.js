@@ -141,3 +141,32 @@ test.describe('documents produits en allemand', () => {
     expect(pages.join('\n')).not.toMatch(/Pièce n°|PIÈCE|Sommaire/);
   });
 });
+
+test.describe('aide des outils en allemand', () => {
+  test.use({ locale: 'de-CH' });
+
+  test('le « ? » de chaque boîte, F1, la raison d\'un outil grisé et Annuler parlent allemand', async ({ app, page }) => {
+    await app.pretAvecExemple();
+    const outils = require('../aide/outils.json').outils.filter((o) => o.groupe !== 'commande').map((o) => o.id);
+    // les outils qui s'ouvrent dans une boîte réglable
+    for (const id of ['blank', 'vides', 'select-plage', 'split', 'dossier', 'resize', 'lots', 'watermark', 'stamp', 'number', 'props', 'password', 'flatten', 'exp-img',
+      'compress', 'access', 'search', 'tableau', 'ocr', 'comparer', 'archiver', 'certificat', 'commentaires', 'form', 'serie']) {
+      expect(outils, id).toContain(id);
+      await app.outil(id);
+      await page.keyboard.press('F1');
+      const aide = page.locator('.dialog .dlg-aide');
+      await expect(aide, id).toBeVisible();
+      await expect(aide.locator('strong').first(), id).toHaveText(/Was sich dadurch ändert/);
+      const fr = (await textesLisibles(page, '.dialog')).filter(fuite);
+      expect(fr, id + ' : textes restés en français').toEqual([]);
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.dialog')).toHaveCount(0);
+    }
+    // un outil grisé dit pourquoi, dans la langue
+    await page.click('#tab-docs');
+    await page.click('#doc-list .doc-rm');
+    await expect.poll(() => app.nbPages()).toBe(0);
+    await page.click('#tab-tools');
+    await expect(page.locator('[data-tool="watermark"]')).toHaveAttribute('title', /Öffnen Sie zuerst ein Dokument/);
+  });
+});

@@ -38,7 +38,7 @@
   // gardent leurs accents, et ces pages sont conformes au PDF/A comme le reste.
   function fabriquerPagesDossier(o) { return avecEcritureUnicode(true, () => fabriquerPagesDossierEnPolices(o)); }
   async function fabriquerPagesDossierEnPolices(o) {
-    const { PDFDocument, PDFOperator, PDFName, rgb } = PDFLib;
+    const { PDFDocument, PDFOperator, PDFName, PDFHexString, rgb } = PDFLib;
     const doc = await PDFDocument.create();
     const reg = await policeDeBase(doc, false);
     const gras = await policeDeBase(doc, true);
@@ -93,6 +93,14 @@
           const titre = couperTexte(reg, pc.titre, 11, W - marge - wp - 14 - xT);
           dans(pg, 'TOCI', ligne, 'toc', () => pg.drawText(titre, { x: xT, y, size: 11, font: reg, color: noir }));
           dans(pg, 'TOCI', ligne, 'toc', () => pg.drawText(pageTxt, { x: W - marge - wp, y, size: 11, font: reg, color: noir }));
+          // la ligne est un lien : un clic mène à la première page de la pièce. La destination est celle d'une page du document
+          // exporté, qu'on ne connaît pas encore : on marque la page visée par son identité, et l'export la remplace (reposerLiens).
+          if (pc.cibleId != null) {
+            pg.node.addAnnot(doc.context.register(doc.context.obj({
+              Type: 'Annot', Subtype: 'Link', Rect: [marge - 2, y - 5, W - marge + 2, y + 14], Border: [0, 0, 0], F: 4,
+              Contents: PDFHexString.fromText(tr('Aller à la pièce n° ' + pc.n)), AktumPageId: pc.cibleId,
+            })));
+          }
           // les points de conduite
           const xFin = W - marge - wp - 8, xDeb = xT + reg.widthOfTextAtSize(titre, 11) + 6;
           decor(pg, null, () => { for (let x = xDeb; x < xFin; x += 5) pg.drawCircle({ x, y: y + 2, size: 0.55, color: gris }); });
@@ -172,7 +180,7 @@
     try {
       const pieces = d.pieces.map(pc => {
         const i = state.pages.findIndex(p => p.intercalaire === pc.n || p.pieceN === pc.n);
-        return { n: pc.n, titre: pc.titre, debut: i + 1, pages: new Array(state.pages.filter(p => p.pieceN === pc.n).length) };
+        return { n: pc.n, titre: pc.titre, debut: i + 1, cibleId: i >= 0 ? state.pages[i].id : null, pages: new Array(state.pages.filter(p => p.pieceN === pc.n).length) };
       });
       const o = { titre: d.titre, intercalaires: d.intercalaires, numerotation: d.numerotation, sommaire: d.sommaire, pieces, totalPages: state.pages.length };
       const bytes = await fabriquerPagesDossier(o);

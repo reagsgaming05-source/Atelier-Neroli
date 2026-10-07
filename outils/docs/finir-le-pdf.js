@@ -52,5 +52,6 @@ async function finirLePdf(chemin, o) {
   const flux = doc.context.stream(Buffer.from(xmp, 'utf8'), { Type: 'Metadata', Subtype: 'XML' });
   doc.catalog.set(PDFName.of('Metadata'), doc.context.register(flux));
   fs.writeFileSync(chemin, await doc.save({ useObjectStreams: false }));
+  return doc.getPageCount();
 }
 module.exports = { finirLePdf };

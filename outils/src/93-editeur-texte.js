@@ -538,7 +538,7 @@
       svg.appendChild(n);
       if (!picking) return;
       const bb = annBounds(a);
-      if (a.type === 'draw') {
+      if (a.type === 'draw' || a.type === 'arrow') {
         const hit = document.createElementNS(SVGNS, 'polyline');
         hit.setAttribute('points', a.pts.map(pt => pt[0].toFixed(2) + ',' + pt[1].toFixed(2)).join(' '));
         hit.setAttribute('fill', 'none');
@@ -579,7 +579,7 @@
       r.setAttribute('width', bb.w + 4); r.setAttribute('height', bb.h + 4);
       r.style.pointerEvents = 'none';
       svg.appendChild(r);
-      if (sel.type !== 'draw') {
+      if (sel.type !== 'draw' && sel.type !== 'arrow' && sel.type !== 'note') {
         const h = document.createElementNS(SVGNS, 'rect');
         const hs = 9 / ed.scale;
         h.setAttribute('class', 'handle');
@@ -623,6 +623,8 @@
     if (t === 'text') { edCreateText(pt); return; }
     if (t === 'tampon') { edPoserTampon(pt); return; }
     if (t === 'draw') { edStart('draw', pt, e); return; }
+    if (t === 'arrow') { edStart('arrow', pt, e); return; }
+    if (t === 'note') { edPoserNote(pt); return; }
     edStart('rect', pt, e);
   }
 
@@ -640,6 +642,10 @@
         width: ed.style.width,
       };
       if (ed.tool === 'champ') Object.assign(ed.pending, champNeuf());
+      if (ed.tool === 'lien') Object.assign(ed.pending, { cibleType: 'url', url: '', cibleId: null, libelle: '' });
+      if (ed.tool === 'underline' || ed.tool === 'strike') ed.pending.color = ed.style.textColor;
+    } else if (type === 'arrow') {
+      ed.pending = { id: -1, type: 'arrow', pts: [[pt.x, pt.y], [pt.x, pt.y]], color: ed.style.textColor, width: ed.style.width };
     } else if (type === 'draw') {
       ed.pending = { id: -1, type: 'draw', pts: [[pt.x, pt.y]], color: ed.style.textColor, width: ed.style.width };
     }
@@ -662,6 +668,9 @@
       ed.pending.w = Math.abs(pt.x - gst.start.x);
       ed.pending.h = Math.abs(pt.y - gst.start.y);
       edPreview();
+    } else if (gst.type === 'arrow') {
+      ed.pending.pts[1] = [pt.x, pt.y];
+      edPreview();
     } else if (gst.type === 'draw') {
       const last = ed.pending.pts[ed.pending.pts.length - 1];
       if (Math.hypot(pt.x - last[0], pt.y - last[1]) > 0.8) { ed.pending.pts.push([pt.x, pt.y]); edPreview(); }
@@ -671,7 +680,7 @@
       if (!gst.snapped) { snapshot(gst.type === 'move' ? 'Déplacer une annotation' : 'Redimensionner une annotation'); gst.snapped = true; state.touched = true; }
       const dx = pt.x - gst.start.x, dy = pt.y - gst.start.y;
       if (gst.type === 'move') {
-        if (a.type === 'draw') a.pts = gst.orig.pts.map(q => [q[0] + dx, q[1] + dy]);
+        if (a.type === 'draw' || a.type === 'arrow') a.pts = gst.orig.pts.map(q => [q[0] + dx, q[1] + dy]);
         else { a.x = gst.orig.x + dx; a.y = gst.orig.y + dy; }
       } else {
         a.w = Math.max(4, gst.orig.w + dx);
@@ -696,6 +705,9 @@
     if (gst.type === 'rect') {
       const a = ed.pending; ed.pending = null;
       if (a && a.w > 3 && a.h > 3) { edCommit(a); } else edDrawOverlay();
+    } else if (gst.type === 'arrow') {
+      const a = ed.pending; ed.pending = null;
+      if (a && Math.hypot(a.pts[1][0] - a.pts[0][0], a.pts[1][1] - a.pts[0][1]) > 8) edCommit(a); else edDrawOverlay();
     } else if (gst.type === 'draw') {
       const a = ed.pending; ed.pending = null;
       if (a && a.pts.length > 1) edCommit(a); else edDrawOverlay();
@@ -705,7 +717,7 @@
   }
 
   // Ce que l'annotation posée s'appelle, pour Annuler et pour la barre d'état.
-  const NOMS_ANNOTATIONS = { highlight: 'Surligner', box: 'Encadrer', redact: 'Caviarder une zone', tampon: 'Poser un tampon', draw: 'Dessiner à main levée', text: 'Ajouter du texte', edit: 'Corriger le texte', image: 'Insérer une image', champ: 'Ajouter un champ à remplir' };
+  const NOMS_ANNOTATIONS = { highlight: 'Surligner', box: 'Encadrer', redact: 'Caviarder une zone', tampon: 'Poser un tampon', draw: 'Dessiner à main levée', underline: 'Souligner', strike: 'Barrer du texte', arrow: 'Dessiner une flèche', note: 'Ajouter une note', lien: 'Ajouter un lien', text: 'Ajouter du texte', edit: 'Corriger le texte', image: 'Insérer une image', champ: 'Ajouter un champ à remplir' };
   function edCommit(a) {
     const p = edPage();
     const nom = NOMS_ANNOTATIONS[a.type] || 'Ajouter une annotation';
@@ -724,6 +736,14 @@
     if (!ed.pending) return;
     const n = annNode(ed.pending, true);
     if (n) { n.style.pointerEvents = 'none'; ed.svg.appendChild(n); }
+  }
+
+  // Une note autocollante : un clic la pose ; son texte s'écrit ensuite dans le panneau de droite.
+  function edPoserNote(pt) {
+    const g = pageGeom(edPage());
+    edCommit({ id: -1, type: 'note', x: Math.max(0, Math.min(g.Wd - 20, pt.x - 10)), y: Math.max(0, Math.min(g.Hd - 20, pt.y - 10)), w: 20, h: 20, color: '#FFD43B', text: '' });
+    const t = $('#ed-note-texte');
+    if (t) t.focus();
   }
 
   function edCreateText(pt) {

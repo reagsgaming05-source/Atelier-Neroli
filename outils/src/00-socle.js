@@ -18,7 +18,7 @@
     jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   };
   let pdfjs = null, PDFLib = null, JSZip = null;
-  const FEAT = { encrypt: false, zip: false, unicode: false, certificat: false };
+  const FEAT = { encrypt: false, zip: false, unicode: false, certificat: false, tiff: false };
 
   // Le produit a changé de nom : ses réglages (tampons, thème, zoom…), enregistrés sous l'ancien
   // préfixe, sont repris sous le nouveau, une fois. // @garder-ancien-nom
@@ -70,6 +70,8 @@
       FEAT.unicode = !!(window.fontkit && typeof window.fontkit.create === 'function' && document.getElementById('police-sans-r') && typeof DecompressionStream === 'function');
       // Le composant de signature par certificat (node-forge) est dans la page hors ligne.
       FEAT.certificat = !!(window.forge && window.forge.pkcs12 && window.forge.pkcs7);
+      // Le lecteur d'images TIFF (UTIF) : les TIFF des scanners deviennent des pages.
+      FEAT.tiff = !!(window.UTIF && typeof window.UTIF.decode === 'function' && window.pako);
       started();
       return;
     }

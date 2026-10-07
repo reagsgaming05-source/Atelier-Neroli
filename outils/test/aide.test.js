@@ -84,3 +84,36 @@ test('le manuel dit chaque code d\'erreur que l\'application peut afficher, et r
   assert.deepEqual(aide.messages.map((m) => m.code).sort(), codes.slice().sort());
   for (const m of aide.messages) assert.ok(m.titre && m.quoi && m.action, m.code + ' : titre, cause et action');
 });
+
+// Les documents de formation : la liste est la seule source du nombre de PDF que la chaîne attend, les touches viennent de la table.
+const { DOCUMENTS } = require('../docs/liste-des-documents');
+const { raccourcisDansLeDocument } = require('../guide/tableau-raccourcis');
+const doc = (f) => fs.readFileSync(path.join(__dirname, '..', 'docs', f), 'utf8');
+
+test('chaque document de la liste existe, et les touches qu\'il cite sont celles de la table', () => {
+  assert.ok(DOCUMENTS.length >= 8, DOCUMENTS.length + ' documents');
+  const noms = new Set();
+  for (const [source, pdf, titre] of DOCUMENTS) {
+    assert.ok(fs.existsSync(path.join(__dirname, '..', 'docs', source)), source + ' existe');
+    assert.ok(!noms.has(pdf), 'nom de PDF en double : ' + pdf); noms.add(pdf);
+    assert.ok(titre && /\.pdf$/.test(pdf));
+    // une touche inconnue lève une erreur : elle ne passe pas en silence dans un document livré
+    assert.doesNotThrow(() => raccourcisDansLeDocument(doc(source)), source);
+    assert.ok(!/<kbd>Ctrl<\/kbd>\s*\+\s*<kbd>[A-Z]<\/kbd>/.test(doc(source)), source + ' : une touche écrite à la main au lieu de {{RACCOURCI:…}}');
+  }
+});
+
+test('la FAQ compte quarante questions numérotées, sans trou ni doublon', () => {
+  const nums = [...doc('faq.html').matchAll(/<span class="num">(\d+)<\/span>/g)].map((m) => Number(m[1]));
+  assert.deepEqual(nums, Array.from({ length: 40 }, (_, i) => i + 1));
+});
+
+test('l\'aide-mémoire est une feuille recto verso, et la formation lie ses exercices à ce que l\'application sait faire', () => {
+  assert.equal(DOCUMENTS.find((d) => d[0] === 'aide-memoire.html')[3], 2, 'le contrôle de deux pages est demandé à la fabrication');
+  const f = doc('formation.html');
+  for (const n of [1, 2, 3, 4]) assert.ok(f.includes('Exercice ' + n), 'exercice ' + n);
+  // chaque outil que la formation nomme existe dans l'aide
+  for (const nom of ['Filigrane', 'Mot de passe', 'Reconnaître le texte', 'Copier un tableau', 'Signer avec un certificat']) {
+    assert.ok(aide.outils.some((o) => o.nom.includes(nom)), 'outil absent de l\'aide : ' + nom);
+  }
+});

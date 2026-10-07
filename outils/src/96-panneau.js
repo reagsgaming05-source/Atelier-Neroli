@@ -27,14 +27,14 @@
       { id: 'modifier', title: 'Modifier', items: [
         // La signature était mentionnée en sous-titre de l'éditeur. Pour un syndic qui doit signer un procès-verbal,
         // c'était introuvable. Elle s'ouvre sur la page qu'on lit, pas sur la première du document.
-        { id: 'signer', name: 'Signer', sub: 'Poser sa signature sur une page', icon: IC.draw, need: 'pages', mots: 'signature parapher manuscrite dessiner', run: () => {
+        { id: 'signer', name: 'Signer', sub: 'Votre signature en image (pas une signature électronique)', icon: IC.draw, need: 'pages', mots: 'signature parapher manuscrite dessiner', run: () => {
           openEditor(pageCouranteId());
           edSignature();
         } },
         { id: 'edit', name: 'Éditeur de page', sub: 'Texte, surlignage, signature', icon: IC.pencil, need: 'pages', mots: 'annoter annotation texte surligner modifier éditer', run: () => openEditor(pageCouranteId()) },
         { id: 'caviarder-zone', name: 'Caviarder une zone', sub: 'Masquer une zone de la page, texte compris', icon: IC.redact, need: 'pages', mots: 'biffer rédaction noircir masquer anonymiser cacher effacer', run: () => openEditor(pageCouranteId(), 'redact') },
         { id: 'tampon', name: 'Tampon', sub: 'Reçu le, Payé, Copie conforme, Visé…', icon: IC.stamp, need: 'pages', mots: 'cachet reçu payé copie conforme visé approuvé', run: () => openEditor(pageCouranteId(), 'tampon') },
-        { id: 'watermark', name: 'Filigrane', sub: 'Texte en surimpression', icon: IC.water, need: 'pages', mots: 'brouillon confidentiel copie surimpression texte en travers', run: toolWatermark, active: () => !!state.watermark },
+        { id: 'watermark', name: 'Filigrane', sub: 'Texte sur chaque page, posé à l\'export', icon: IC.water, need: 'pages', mots: 'brouillon confidentiel copie surimpression texte en travers', run: toolWatermark, active: () => !!state.watermark },
         { id: 'stamp', name: 'En-tête et pied de page', sub: 'Texte, date, nom du fichier', icon: IC.header, need: 'pages', mots: 'entête pied date nom du fichier bas de page haut de page', run: () => toolStamp(), active: () => !!state.stamp },
         { id: 'number', name: 'Numéroter les pages', sub: 'Numérotation simple ou Bates', icon: IC.hash, need: 'pages', mots: 'numérotation numéros de page bates pagination', run: () => toolStamp('number'), active: () => !!(state.stamp && (state.stamp.footerCenter || '').includes('{p}')) },
         { id: 'form', name: 'Remplir le formulaire', sub: 'Champs, cases, listes', icon: IC.form, need: 'pages', mots: 'champs cases cocher saisir', run: toolForm, active: () => state.sources.some(s => s.formValues && Object.keys(s.formValues).length) },
@@ -45,18 +45,18 @@
         { id: 'archiver', name: 'Archiver en PDF/A-2b', sub: 'Format d\'archivage à long terme, contrôlé', icon: IC.save, need: 'pages', mots: 'pdf/a pdfa archive archivage conservation long terme', run: toolArchiver },
         { id: 'exp-img', name: 'Exporter en images', sub: 'PNG ou JPEG', icon: IC.image, need: 'pages', mots: 'png jpg jpeg image convertir', run: toolExportImages },
         { id: 'exp-txt', name: 'Extraire le texte', sub: 'Fichier .txt', icon: IC.txt, need: 'pages', mots: 'txt texte brut copier contenu', run: toolExportText },
-        { id: 'compress', name: 'Réduire la taille', sub: 'Compression des pages', icon: IC.zap, need: 'pages', mots: 'compresser optimiser alléger poids mégaoctets envoyer par courriel', run: toolCompress },
-        { id: 'flatten', name: 'Aplatir', sub: 'Figer les champs et les annotations', icon: IC.flat, need: 'pages', mots: 'figer fusionner annotations champs verrouiller', run: toolFlatten, active: () => state.flatten || state.figerAnnotations },
+        { id: 'compress', name: 'Réduire la taille', sub: 'Plus léger ; le texte n\'est plus sélectionnable', icon: IC.zap, need: 'pages', mots: 'compresser optimiser alléger poids mégaoctets envoyer par courriel', run: toolCompress },
+        { id: 'flatten', name: 'Aplatir', sub: 'Fige champs et annotations (irréversible à l\'export)', icon: IC.flat, need: 'pages', mots: 'figer fusionner annotations champs verrouiller', run: toolFlatten, active: () => state.flatten || state.figerAnnotations },
       ] },
       { id: 'proteger', title: 'Protéger', items: [
         // L'outil qui caviarde se trouve ici aussi : c'est ici qu'on le cherche.
         { id: 'caviarder', name: 'Rechercher, remplacer, caviarder', sub: 'Un mot, un nom, un numéro : dans tout le document', icon: IC.redact, need: 'pages', mots: 'biffer rédaction noircir masquer anonymiser numéro avs nom', run: toolSearch },
-        { id: 'password', name: 'Mot de passe', sub: 'Chiffrement et autorisations', icon: IC.lock, need: 'pages', mots: 'chiffrer chiffrement protéger sécuriser autorisations imprimer copier', run: toolPassword, active: () => !!state.security },
+        { id: 'password', name: 'Mot de passe', sub: 'Chiffre à l\'export ; un mot de passe perdu est perdu', icon: IC.lock, need: 'pages', mots: 'chiffrer chiffrement protéger sécuriser autorisations imprimer copier', run: toolPassword, active: () => !!state.security },
         { id: 'certificat', name: 'Signer avec un certificat', sub: 'Un certificat personnel (.p12, .pfx), signature numérique', icon: IC.draw, need: 'pages', mots: 'signature numérique électronique p12 pfx certificat', run: toolCertificat },
         { id: 'signatures', name: 'Vérifier les signatures', sub: 'Un document signé reçu : intact, modifié, signé par qui', icon: IC.lock, mots: 'signature signé intact modifié authenticité vérifier', run: toolSignatures, active: () => state.sources.some(s => s.proprietes && s.proprietes.signatures) },
       ] },
       { id: 'document', title: 'Document', items: [
-        { id: 'props', name: 'Propriétés', sub: 'Titre, auteur, langue, accessibilité', icon: IC.info, need: 'pages', mots: 'titre auteur mots-clés métadonnées langue accessibilité balisé', run: toolProperties, active: () => !!(state.meta.title || state.meta.author || state.meta.subject || state.meta.keywords || state.meta.balise) },
+        { id: 'props', name: 'Propriétés', sub: 'Titre, auteur, langue : écrits dans le fichier', icon: IC.info, need: 'pages', mots: 'titre auteur mots-clés métadonnées langue accessibilité balisé', run: toolProperties, active: () => !!(state.meta.title || state.meta.author || state.meta.subject || state.meta.keywords || state.meta.balise) },
         { id: 'access', name: 'Vérifier l\'accessibilité', sub: 'Titre, langue, balisage, pages sans texte', icon: IC.check, need: 'pages', mots: 'accessibilité accessible lecteur écran balisage pdf/ua handicap malvoyant wcag contrôle vérifier langue titre', run: toolAccessibilite },
         { id: 'search', name: 'Rechercher, remplacer, caviarder', sub: 'Un mot, un nom, un numéro : dans tout le document', icon: IC.search, need: 'pages', mots: 'chercher trouver remplacer biffer rédaction noircir masquer', run: toolSearch },
         { id: 'tableau', name: 'Copier un tableau', sub: 'Vers Excel, en colonnes', icon: IC.tableau, need: 'pages', mots: 'excel csv colonnes lignes extraire tableau', run: toolTableau },

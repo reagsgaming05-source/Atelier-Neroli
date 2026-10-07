@@ -205,7 +205,10 @@
     const isEdit = sel ? sel.type === 'edit' : ed.tool === 'edittext';
     const isText = sel ? sel.type === 'text' : ed.tool === 'text';
     const isRect = sel ? (sel.type === 'highlight' || sel.type === 'box' || sel.type === 'redact') : (ed.tool === 'highlight' || ed.tool === 'box' || ed.tool === 'redact');
-    const isDraw = sel ? sel.type === 'draw' : ed.tool === 'draw';
+    // le trait d'un dessin, d'une flèche, d'un soulignement ou d'un texte barré : une couleur et une épaisseur
+    const isDraw = sel ? (sel.type === 'draw' || sel.type === 'arrow' || sel.type === 'underline' || sel.type === 'strike') : (ed.tool === 'draw' || ed.tool === 'arrow' || ed.tool === 'underline' || ed.tool === 'strike');
+    const isNote = sel ? sel.type === 'note' : ed.tool === 'note';
+    const isLien = sel ? sel.type === 'lien' : ed.tool === 'lien';
     const isImg = sel && sel.type === 'image';
     const isTampon = sel ? sel.type === 'tampon' : ed.tool === 'tampon';
     const texteModifiable = isText || (isEdit && !!sel);
@@ -228,6 +231,36 @@
       ed.side.appendChild(memo);
     } else if (isTampon) {
       ed.side.appendChild(note('Cliquez sur la page pour poser le tampon choisi. Pour en choisir un autre, cliquez à nouveau l\'outil Tampon.'));
+    }
+
+    if (isNote) {
+      if (sel) {
+        const tx = document.createElement('textarea'); tx.id = 'ed-note-texte'; tx.rows = 6; tx.value = sel.text || '';
+        tx.addEventListener('change', () => change(() => { sel.text = tx.value; }));
+        ed.side.appendChild(field('Texte de la note', tx, 'Ce que lit la personne qui ouvre la note dans son lecteur PDF : elle voit un petit carré jaune, et le texte s\'ouvre d\'un clic.'));
+        const c = input('ed-color', 'color', sel.color || '#FFD43B');
+        c.addEventListener('input', () => change(() => { sel.color = c.value; }));
+        ed.side.appendChild(field('Couleur', c, 'La couleur du carré de la note.'));
+      } else ed.side.appendChild(note('Cliquez sur la page à l\'endroit de la note, puis écrivez son texte ici.'));
+    }
+    if (isLien) {
+      if (sel) {
+        const type = select('ed-lien-type', [['url', 'Une adresse web ou de messagerie'], ['page', 'Une page de ce document']], sel.cibleType || 'url');
+        const url = input('ed-lien-url', 'text', sel.url || ''); url.placeholder = 'Adresse web ou de messagerie complète';
+        const pg = input('ed-lien-page', 'number', sel.cibleId != null && pageIndex(sel.cibleId) >= 0 ? pageIndex(sel.cibleId) + 1 : 1, { min: 1, max: Math.max(1, state.pages.length) });
+        const lib = input('ed-lien-libelle', 'text', sel.libelle || '');
+        const fu = field('Adresse', url, 'Seules les adresses http, https et mailto sont écrites : un lien vers un fichier du poste ou un script est refusé.');
+        const fp = field('Page visée', pg, 'Le lien suit la page : si elle change de place, il la suit.');
+        const maj = () => { fu.hidden = type.value !== 'url'; fp.hidden = type.value !== 'page'; };
+        type.addEventListener('change', () => { change(() => { sel.cibleType = type.value; }); maj(); });
+        url.addEventListener('change', () => { change(() => { sel.url = url.value.trim(); }); edSide(); });
+        pg.addEventListener('change', () => change(() => { const i = clampInt(pg.value, 1, state.pages.length) || 1; sel.cibleId = state.pages[i - 1].id; }));
+        lib.addEventListener('change', () => change(() => { sel.libelle = lib.value; }));
+        if (sel.cibleType === 'page' && sel.cibleId == null && state.pages.length) sel.cibleId = state.pages[0].id;
+        ed.side.append(field('Vers', type), fu, fp, field('Description', lib, 'Lue par un lecteur d\'écran à la place du lien : « Règlement de la salle », « page 3 ».'));
+        maj();
+        if (sel.cibleType === 'url' && sel.url && !adresseDeLienPermise(sel.url)) ed.side.appendChild(note('Cette adresse ne sera pas écrite : elle doit commencer par « http », « https » ou « mailto ».', 'warn'));
+      } else ed.side.appendChild(note('Tracez un rectangle sur le texte ou l\'image qui doit mener ailleurs, puis dites où dans le panneau de droite.'));
     }
 
     if (isEdit && !sel) {

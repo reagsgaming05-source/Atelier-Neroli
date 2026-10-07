@@ -9,6 +9,8 @@ const arg = (nom) => { const a = process.argv.find((x) => x.startsWith('--' + no
 contextBridge.exposeInMainWorld('AktumDesktop', {
   version: arg('aktum-version'),
   construction: arg('aktum-construction'),
+  // Le nom du compte connecté (vide hors des comptes) : l'auteur que la page inscrit sur les annotations qu'on pose, si on le veut.
+  profil: arg('aktum-profil'),
   electron: process.versions.electron,
   chrome: process.versions.chrome,
   fichiersInitiaux: () => ipcRenderer.invoke('aktum:fichiers-initiaux'),

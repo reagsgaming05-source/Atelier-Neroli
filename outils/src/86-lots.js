@@ -128,7 +128,7 @@
     const liste = document.createElement('div'); liste.className = 'list';
     const inp = document.createElement('input');
     inp.type = 'file'; inp.multiple = true; inp.id = 'lots-fichiers'; inp.className = 'sr-only'; inp.tabIndex = -1;
-    inp.accept = 'application/pdf,.pdf,image/png,image/jpeg,image/webp';
+    inp.accept = 'application/pdf,.pdf,image/png,image/jpeg,image/webp,image/tiff,.tif,.tiff';
     const choisir = document.createElement('button');
     choisir.type = 'button'; choisir.className = 'tb-btn'; choisir.style.border = '1px solid var(--trait)';
     choisir.textContent = 'Choisir les fichiers…';
@@ -248,7 +248,7 @@
 
   function toolImages() {
     const inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp'; inp.multiple = true;
+    inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp,image/tiff,.tif,.tiff'; inp.multiple = true;
     inp.addEventListener('change', () => addFiles(inp.files));
     inp.click();
   }

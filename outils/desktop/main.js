@@ -105,7 +105,7 @@ const verrou = require('./verrou');
 // Cette instance de l'application : le verrou d'un document dit « c'est moi », ou « c'est quelqu'un d'autre ».
 const INSTANCE = require('crypto').randomUUID();
 const verrousPoses = new Set();
-const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
+const EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.tif', '.tiff'];
 
 // Où vont les données : dans le dossier de la personne connectée, ou dans le
 // profil Windows de chacun quand les comptes ne peuvent pas s'ouvrir.
@@ -618,7 +618,7 @@ function createWindow(fichiers) {
       nodeIntegration: false,
       sandbox: true,
       spellcheck: false,
-      additionalArguments: ['--aktum-version=' + app.getVersion(), '--aktum-construction=' + CONSTRUCTION],
+      additionalArguments: ['--aktum-version=' + app.getVersion(), '--aktum-construction=' + CONSTRUCTION, '--aktum-profil=' + (PROFIL || '')],
     },
   });
   win.aktumFichiers = fichiers || [];
@@ -788,7 +788,7 @@ async function choisirDocuments(win) {
   const r = await dialog.showOpenDialog(win, {
     title: 'Ouvrir',
     properties: ['openFile', 'multiSelections'],
-    filters: [{ name: 'PDF et images', extensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp'] }, { name: 'Tous les fichiers', extensions: ['*'] }],
+    filters: [{ name: 'PDF et images', extensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'tif', 'tiff'] }, { name: 'Tous les fichiers', extensions: ['*'] }],
   });
   if (r.canceled) return [];
   r.filePaths.forEach(ajouterRecent);

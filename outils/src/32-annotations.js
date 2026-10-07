@@ -146,6 +146,60 @@
       pl.setAttribute('stroke-linejoin', 'round');
       return pl;
     }
+    if (a.type === 'underline' || a.type === 'strike') {
+      const gEl = document.createElementNS(SVGNS, 'g');
+      gEl.setAttribute('data-ann', a.id);
+      const zone = document.createElementNS(SVGNS, 'rect');
+      zone.setAttribute('x', a.x); zone.setAttribute('y', a.y); zone.setAttribute('width', Math.max(0, a.w)); zone.setAttribute('height', Math.max(0, a.h));
+      zone.setAttribute('fill', 'transparent');
+      const y = a.type === 'underline' ? a.y + a.h : a.y + a.h / 2;
+      const l = document.createElementNS(SVGNS, 'line');
+      l.setAttribute('x1', a.x); l.setAttribute('x2', a.x + a.w); l.setAttribute('y1', y); l.setAttribute('y2', y);
+      l.setAttribute('stroke', a.color); l.setAttribute('stroke-width', a.width || 1.2);
+      gEl.append(zone, l);
+      return gEl;
+    }
+    if (a.type === 'arrow' && a.pts && a.pts.length > 1) {
+      const gEl = document.createElementNS(SVGNS, 'g');
+      gEl.setAttribute('data-ann', a.id);
+      const f = geomFleche(a);
+      const l = document.createElementNS(SVGNS, 'line');
+      l.setAttribute('x1', f.depart[0]); l.setAttribute('y1', f.depart[1]); l.setAttribute('x2', f.pied[0]); l.setAttribute('y2', f.pied[1]);
+      l.setAttribute('stroke', a.color); l.setAttribute('stroke-width', a.width || 2); l.setAttribute('stroke-linecap', 'round');
+      const t = document.createElementNS(SVGNS, 'polygon');
+      t.setAttribute('points', f.tete.map(q => q[0].toFixed(2) + ',' + q[1].toFixed(2)).join(' '));
+      t.setAttribute('fill', a.color);
+      gEl.append(l, t);
+      return gEl;
+    }
+    if (a.type === 'note') {
+      const gEl = document.createElementNS(SVGNS, 'g');
+      gEl.setAttribute('data-ann', a.id);
+      const r = document.createElementNS(SVGNS, 'path');
+      const s = a.w, x = a.x, y = a.y;
+      r.setAttribute('d', ['M', x, ' ', y, 'h', s, 'v', s * 0.7, 'l', -s * 0.3, ' ', s * 0.3, 'h', -s * 0.7, 'z'].join(''));
+      r.setAttribute('fill', a.color || '#FFD43B'); r.setAttribute('stroke', '#7A5C00'); r.setAttribute('stroke-width', 0.8);
+      gEl.appendChild(r);
+      [0.3, 0.5].forEach((k, i) => {
+        const t = document.createElementNS(SVGNS, 'line');
+        t.setAttribute('x1', x + s * 0.2); t.setAttribute('x2', x + s * (i ? 0.55 : 0.8)); t.setAttribute('y1', y + s * k); t.setAttribute('y2', y + s * k);
+        t.setAttribute('stroke', '#7A5C00'); t.setAttribute('stroke-width', 0.8);
+        gEl.appendChild(t);
+      });
+      const titre = document.createElementNS(SVGNS, 'title'); titre.textContent = a.text || '';
+      gEl.appendChild(titre);
+      return gEl;
+    }
+    if (a.type === 'lien') {
+      // Un lien ne se voit pas sur la page : seul l'éditeur le dessine, en pointillés, pour qu'on le retrouve.
+      if (!forEditor) return null;
+      const r = document.createElementNS(SVGNS, 'rect');
+      r.setAttribute('data-ann', a.id);
+      r.setAttribute('x', a.x); r.setAttribute('y', a.y); r.setAttribute('width', Math.max(0, a.w)); r.setAttribute('height', Math.max(0, a.h));
+      r.setAttribute('fill', 'rgba(38,128,235,.12)'); r.setAttribute('stroke', '#2680EB'); r.setAttribute('stroke-width', 1); r.setAttribute('stroke-dasharray', '4 3');
+      r.setAttribute('vector-effect', 'non-scaling-stroke');
+      return r;
+    }
     if (a.type === 'image') {
       const im = document.createElementNS(SVGNS, 'image');
       im.setAttribute('data-ann', a.id);

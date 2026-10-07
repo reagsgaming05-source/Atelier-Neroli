@@ -2,7 +2,8 @@
   //  Loading documents
   // =====================================================================
   function isPdf(f) { return /\.pdf$/i.test(f.name) || f.type === 'application/pdf'; }
-  function isImage(f) { return /\.(png|jpe?g|webp)$/i.test(f.name) || /^image\/(png|jpeg|webp)$/.test(f.type); }
+  function isImage(f) { return /\.(png|jpe?g|webp|tiff?)$/i.test(f.name) || /^image\/(png|jpeg|webp|tiff)$/.test(f.type); }
+  const estTiff = f => /\.tiff?$/i.test(f.name) || f.type === 'image/tiff';
 
   // Un document déposé sur la fenêtre ou choisi par le champ de fichier ne passe pas par « Ouvrir » : l'application fenêtrée ne connaît pas
   // son chemin. Elle le demande au fichier lui-même, pour que « Récents » le retienne comme les autres (tous les chemins d'ouverture).
@@ -14,10 +15,25 @@
       if (chemins.length) b.noterRecents(chemins);
     } catch (e) { signaler('Fichiers récents', e, 'info'); }
   }
+  // Un fichier que l'application ne lit pas dit ce qu'il faut faire, pas seulement qu'il est refusé : un secrétariat dépose
+  // surtout du Word, de l'Excel et des courriels.
+  const CONSEILS_DE_FORMAT = [
+    [/\.(docx?|odt|rtf)$/i, 'Dans Word : Fichier › Enregistrer sous › PDF. Le PDF garde la mise en page.'],
+    [/\.(xlsx?|ods|csv)$/i, 'Dans Excel : Fichier › Exporter › PDF. Choisissez la zone à imprimer avant.'],
+    [/\.(pptx?|odp)$/i, 'Dans PowerPoint : Fichier › Exporter › PDF.'],
+    [/\.(msg|eml)$/i, 'Depuis la messagerie : imprimer le message en PDF (« Microsoft Print to PDF »).'],
+    [/\.(heic|heif|gif|bmp)$/i, 'Enregistrez d\'abord l\'image en JPEG ou en PNG.'],
+  ];
+  function refusDeFichiers(fichiers) {
+    const noms = fichiers.slice(0, 3).map(f => '« ' + f.name + ' »').join(', ') + (fichiers.length > 3 ? '…' : '');
+    const conseil = CONSEILS_DE_FORMAT.find(c => fichiers.some(f => c[0].test(f.name)));
+    return tr(plural(fichiers.length, 'fichier ignoré', 'fichiers ignorés')) + ' (' + noms + ') : ' + tr('seuls les PDF et les images (JPEG, PNG, WebP, TIFF) sont ouverts.')
+      + (conseil ? ' ' + tr(conseil[1]) : '');
+  }
   async function addFiles(fileList) {
     const files = Array.from(fileList || []).filter(f => isPdf(f) || isImage(f));
-    const rejected = Array.from(fileList || []).length - files.length;
-    if (rejected) toast(plural(rejected, 'fichier ignoré', 'fichiers ignorés') + ' : seuls les PDF et les images sont acceptés.', 'warn');
+    const refuses = Array.from(fileList || []).filter(f => !(isPdf(f) || isImage(f)));
+    if (refuses.length) toast(refusDeFichiers(refuses), 'warn');
     if (!files.length) return;
     noterLesRecents(files);
     // L'exemple cède sa place une fois le document lu (addPdfSource, remplaceExemple) : un fichier refusé ne le fait pas disparaître.
@@ -195,6 +211,15 @@
     const doc = await PDFLib.PDFDocument.create();
     for (const f of files) {
       const buf = await f.arrayBuffer();
+      if (estTiff(f)) {
+        // Un TIFF (la sortie d'un scanner) peut porter plusieurs pages : chacune devient une page du PDF, à sa taille réelle.
+        for (const t of await tiffEnPages(buf, f.name)) {
+          const im = await doc.embedPng(t.png);
+          const page = doc.addPage([t.largeur, t.hauteur]);
+          page.drawImage(im, { x: 0, y: 0, width: t.largeur, height: t.hauteur });
+        }
+        continue;
+      }
       let img;
       if (/png$/i.test(f.type) || /\.png$/i.test(f.name)) img = await doc.embedPng(buf);
       else if (/webp$/i.test(f.type) || /\.webp$/i.test(f.name)) img = await doc.embedPng(await webpToPng(buf));
@@ -205,6 +230,29 @@
     const bytes = await doc.save();
     const name = files.length === 1 ? baseName(files[0].name) + '.pdf' : tr('images.pdf');
     return { bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), name };
+  }
+  // Les pages d'un TIFF, en PNG (sans perte : un scan noir et blanc reste net), avec la taille que la résolution du fichier leur
+  // donne en points PDF. Sans résolution écrite, 200 points par pouce — la définition courante d'un scan de bureau.
+  async function tiffEnPages(buf, nom) {
+    if (!FEAT.tiff) throw Object.assign(new Error('Les images TIFF ne sont pas lisibles dans cette version.'), { humain: true });
+    let ifds;
+    try { ifds = UTIF.decode(buf); } catch (e) { throw Object.assign(new Error('« ' + nom + ' » n\'est pas un TIFF lisible : le fichier est peut-être abîmé.'), { humain: true }); }
+    const pages = [];
+    for (const ifd of ifds) {
+      if (!ifd.t256 || !ifd.t257) continue;   // une miniature ou des métadonnées, sans image
+      UTIF.decodeImage(buf, ifd);
+      const w = ifd.width, h = ifd.height;
+      const rgba = UTIF.toRGBA8(ifd);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.byteLength), w, h), 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+      const xr = ifd.t282 ? Number(ifd.t282[0]) : 0, yr = ifd.t283 ? Number(ifd.t283[0]) : 0;
+      const unite = ifd.t296 ? Number(ifd.t296[0]) : 2;   // 2 : pouce (la valeur par défaut du format), 3 : centimètre
+      const parPouce = v => (v > 0 ? (unite === 3 ? v * 2.54 : v) : 200);
+      pages.push({ png: await blob.arrayBuffer(), largeur: w * 72 / parPouce(xr), hauteur: h * 72 / parPouce(yr || xr) });
+    }
+    if (!pages.length) throw Object.assign(new Error('« ' + nom + ' » ne contient aucune image.'), { humain: true });
+    return pages;
   }
   async function webpToPng(buf) {
     const blob = new Blob([buf], { type: 'image/webp' });

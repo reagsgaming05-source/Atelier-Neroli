@@ -145,6 +145,14 @@
     for (const c of CAUSES_ECHEC) if (c[1].test(brut)) { cat = c; break; }
     return { code: 'E-' + cat[0], cause: tr(cat[2]), action: tr(cat[3]) };
   }
+  // L'auteur inscrit sur les annotations que l'on pose (surlignage, cadre, texte, tampon) : le nom du compte connecté, comme le fait
+  // Acrobat, pour que celle qui relit sache de qui vient chaque remarque. Se coupe dans Préférences ; hors des comptes, rien.
+  const CLE_AUTEUR_ANNOT = 'aktum-auteur-annotations';
+  function auteurDesAnnotations() {
+    try { if (localStorage.getItem(CLE_AUTEUR_ANNOT) === '0') return ''; } catch (e) { signaler('Auteur des annotations', e, 'info'); }
+    const d = window.AktumDesktop;
+    return d && d.profil ? String(d.profil).slice(0, 80) : '';
+  }
   function messageDEchec(quoi, e) {
     const a = analyserEchec(e);
     signaler(quoi + ' — échec [' + a.code + ']', e, 'erreur');
