@@ -4,12 +4,18 @@ name: Align a recording
 # a free speech recognizer finds where each text starts and ends, then the audio and its
 # timings are committed to public/data/narration/. Recordings go in narration-source/<episode>.mp3.
 
+# It runs by itself when a recording is added, for every recording not yet in the index.
+
 on:
+  push:
+    paths:
+      - 'narration-source/**'
+      - '.github/workflows/align.yml'
   workflow_dispatch:
     inputs:
       episodes:
-        description: 'Episode keys, space-separated (e.g. nuh-1)'
-        default: 'nuh-1'
+        description: 'Episode keys, space-separated (default: every new recording)'
+        default: ''
       voice:
         description: 'Voice credit'
         default: 'Gemini (Google AI Studio)'
@@ -35,10 +41,20 @@ jobs:
       - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
       - run: node scripts/narration/export.mjs
       - name: Align
+        env:
+          EPISODES: ${{ inputs.episodes }}
+          VOICE: ${{ inputs.voice || 'Gemini (Google AI Studio)' }}
         run: |
-          for e in ${{ inputs.episodes }}; do
+          if [ -z "$EPISODES" ]; then
+            for f in narration-source/*.mp3; do
+              e=$(basename "$f" .mp3)
+              grep -q "\"$e\":{\"file\":\"[^\"]*\",\"spans\":{[^}]*},\"custom\":true" public/data/narration/index.json 2>/dev/null || EPISODES="$EPISODES $e"
+            done
+          fi
+          echo "episodes: $EPISODES"
+          for e in $EPISODES; do
             echo "=== $e"
-            python scripts/narration/align.py "$e" "narration-source/$e.mp3" --voice "${{ inputs.voice }}"
+            python scripts/narration/align.py "$e" "narration-source/$e.mp3" --voice "$VOICE"
           done
       - name: Commit
         run: |
@@ -46,7 +62,7 @@ jobs:
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
           git add public/data/narration
           git diff --cached --quiet && exit 0
-          git commit -q -m "Add recorded episodes: ${{ inputs.episodes }}"
+          git commit -q -m "Add recorded episodes"
           for i in 1 2 3; do
             git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" && exit 0
             sleep 10
