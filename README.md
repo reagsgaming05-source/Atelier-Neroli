@@ -77,6 +77,8 @@ Les noms arabes sont réécrits pour la voix seulement (`LEXICON` dans `export.m
 
 ## Mise en ligne gratuite (GitHub Pages)
 
+Le workflow `publish.yml` met `main` à jour à chaque envoi sur la branche de travail, puis lance la publication : le site installé se met à jour sans autre geste.
+
 1. Dans le dépôt GitHub : **Settings → Pages → Source : GitHub Actions**.
 2. Fusionner sur `main` : le workflow `deploy.yml` teste, construit et publie l'application sur `https://<compte>.github.io/<dépôt>/`.
 3. Ouvrir ce lien sur le téléphone puis « Ajouter à l'écran d'accueil » (Safari : bouton Partager ; Chrome : menu ⋮ → Installer).
