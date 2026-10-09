@@ -13,6 +13,7 @@
     const r = await edLignesDe(p);
     ed.polices = r.polices;
     ed.lignes = r.blocs;
+    ed.tournes = r.tournes || 0;
     ed.lignesCle = cle;
     return ed.lignes;
   }
@@ -23,6 +24,7 @@
     const g = pageGeom(p);
     const morceaux = [];
     let polices = new Map();
+    let tournes = 0;
     try {
       const page = await src.pdfjs.getPage(p.index + 1);
       const vp = page.getViewport({ scale: 1, rotation: g.total });
@@ -34,7 +36,7 @@
         const geo = morceauGeom(m, it.width > 0 ? it.width : 0);
         if (geo.size < 1) return;
         // Un texte posé de côté ou à l'envers ne se corrige pas en ligne.
-        if (geo.vertical || geo.envers) return;
+        if (geo.vertical || geo.envers) { tournes++; return; }
         morceaux.push({
           str: it.str, x: geo.x, base: geo.base, size: geo.size,
           w: it.width > 0 ? it.width : geo.size * it.str.length * 0.5,
@@ -49,7 +51,7 @@
         p.ocr.mots.forEach(m => morceaux.push({ str: m.t, x: m.x, base: ocrBase(m), size: ocrCorps(m), w: m.w, pol: null }));
       }
     } catch (e) { console.error(e); }
-    return { blocs: edParagraphes(morceaux, g), polices: Array.from(new Set(polices.values())) };
+    return { blocs: edParagraphes(morceaux, g), polices: Array.from(new Set(polices.values())), tournes };
   }
 
   function edNouvelleLigne(m) {
@@ -90,6 +92,9 @@
         this.bouts.forEach(b => { b.y0 = haut; b.h0 = this.size * 1.18 + 2; });
         const dominant = this.bouts.reduce((m, b) => (!m || b.t.length > m.t.length ? b : m), null);
         this.pol = dominant ? dominant.pol : null;
+        // Le corps d'une ligne est celui de son texte : une puce un peu plus grande, ou dans une autre police, ne fait pas de la ligne une
+        // ligne d'un autre corps — elle ne se détacherait plus du paragraphe dont elle est la première ligne.
+        if (dominant && dominant.size > 0) this.size = dominant.size;
       },
     };
     l.pousser(m);
@@ -128,6 +133,62 @@
     return out;
   }
 
+  // La largeur du premier mot d'une ligne, en points : ce qui aurait dû tenir à la fin de la précédente pour qu'elle n'ait pas à se rompre.
+  function edPremierMot(l) {
+    const z = l.bouts[0];
+    if (!z || !z.pos || !z.pos.length) return 0;
+    const q = z.pos[0];
+    const t = String(q.t).replace(/^\s+/, '').replace(/\s+$/, '');
+    const mot = (t.match(/^\S+/) || [''])[0];
+    if (!mot) return 0;
+    if (mot.length === t.length) return q.w;
+    // La pièce entière a une largeur connue (celle du PDF) : on mesure le mot et la pièce avec la même police, et le rapport corrige la
+    // mesure du mot — l'écart entre la police de l'écran et celle du document disparaît presque.
+    if (typeof mesurerTexte === 'function' && typeof polAffichageRun === 'function') {
+      try {
+        const st = polAffichageRun({ pol: z.pol, gras: !!(z.pol && z.pol.gras), italique: !!(z.pol && z.pol.italique), genre: z.pol && z.pol.genre });
+        const mm = mesurerTexte(mot, z.size, st), mp = mesurerTexte(t, z.size, st);
+        if (mm > 0 && mp > 0) return mm * Math.max(0.8, Math.min(1.25, q.w / mp));
+      } catch (e) { /* mesure indisponible : l'estimation proportionnelle suffit */ }
+    }
+    return q.w * mot.length / t.length;
+  }
+  // La ligne suivante continue-t-elle la phrase de celle-ci ?
+  function edContinue(a, b) {
+    const fin = (a.bouts.length ? a.bouts[a.bouts.length - 1].t : '').replace(/\s+$/, '');
+    const debut = (b.bouts.length ? b.bouts[0].t : '').replace(/^\s+/, '');
+    if (!fin || !debut) return true;
+    if (/[-\u00ad\u2010\u2011]$/.test(fin)) return true;                   // un mot coupé en fin de ligne
+    if (/[.!?\u2026\u00bb\u201d)\]:;]$/.test(fin)) return true;             // fin de phrase ou de membre : la suivante peut ouvrir une phrase
+    return /^[a-z\u00e0-\u00f6\u00f8-\u00ff\u0153\u00e6(\u00ab"'\u2018\u201c,;:)\]]/.test(debut);   // sinon elle doit reprendre en minuscule
+  }
+  const edPuce = t => /^\s*([-\u2013\u2014\u2022\u00b7\u25cf\u25aa*]|\d{1,2}[.)])\s/.test(t);
+  // Les lignes consécutives d'une chaîne ne forment pas toutes un paragraphe : un bloc d'adresse, une liste, une formule de politesse sont
+  // faits de lignes que l'auteur a rompues exprès. Les fondre en un seul paragraphe fait passer un mot d'une ligne à l'autre dès qu'on en
+  // allonge une. Une ligne est rompue exprès quand le premier mot de la suivante aurait tenu à sa fin — un traitement de texte ne rompt
+  // une ligne que faute de place — ou, quand la place ne permet pas de conclure (la plus longue ligne du bloc), quand la suivante ne
+  // reprend visiblement pas la phrase. Dans un texte justifié, toutes les lignes touchent le bord : la place ne dit rien, elles coulent.
+  // Rend, pour chaque jonction, vrai si le bloc doit y être coupé.
+  function edRetoursVoulus(lignes) {
+    const N = lignes.length;
+    const coupe = new Array(Math.max(0, N - 1)).fill(false);
+    if (N < 2) return coupe;
+    const corps = lignes.reduce((m, l) => Math.max(m, l.size), 1);
+    const R = Math.max.apply(null, lignes.map(l => l.droite));
+    const pleine = l => l.droite >= R - Math.max(1.5, corps * 0.3);
+    const premieres = lignes.slice(0, -1);
+    const justifie = N >= 3 && premieres.filter(pleine).length >= Math.ceil(premieres.length * 0.6);
+    for (let i = 0; i < N - 1; i++) {
+      const a = lignes[i], b = lignes[i + 1];
+      const debut = b.bouts.length ? b.bouts[0].t : '';
+      if (edPuce(debut)) { coupe[i] = true; continue; }
+      const tient = a.droite + edPremierMot(b) + corps * 0.28 <= R + Math.max(1.5, corps * 0.15);
+      if (tient) { coupe[i] = true; continue; }
+      if (!justifie && !edContinue(a, b)) coupe[i] = true;
+    }
+    return coupe;
+  }
+
   function edParagraphes(morceaux, g) {
     morceaux.sort((a, b) => (a.base - b.base) || (a.x - b.x));
 
@@ -135,8 +196,11 @@
     const brutes = [];
     let R = null;
     morceaux.forEach(m => {
-      if (R && Math.abs(m.base - R.base) <= Math.max(1.2, R.size * 0.3) && m.x >= R.x - 1) {
+      // Une puce, ou un exposant, dont la ligne de base diffère d'un souffle de celle du texte tombe avant lui dans l'ordre de la page, mais à
+      // sa gauche : c'est la même ligne. Les morceaux se rangent par abscisse une fois la ligne faite.
+      if (R && Math.abs(m.base - R.base) <= Math.max(1.2, R.size * 0.3)) {
         R.items.push(m);
+        R.x = Math.min(R.x, m.x);
         R.droite = Math.max(R.droite, m.x + m.w);
         R.size = Math.max(R.size, m.size);
         return;
@@ -144,6 +208,7 @@
       R = { base: m.base, x: m.x, droite: m.x + m.w, size: m.size, items: [m] };
       brutes.push(R);
     });
+    brutes.forEach(b => b.items.sort((p, q) => p.x - q.x));
 
     // --- 2e temps : couper aux gouttières, pour séparer les colonnes.
     const rivieres = edRivieres(brutes, g);
@@ -228,35 +293,69 @@
     ecarts.sort((a, b) => a - b);
     const rythme = ecarts.length ? ecarts[Math.floor(ecarts.length / 2)] : 0;
 
-    // --- paragraphes : lignes qui se suivent, meme bord gauche, meme corps
-    const blocs = [];
-    colonnes.forEach(ls => {
-    let B = null;
-    ls.forEach(l => {
-      if (B) {
-        const prec = B.lignes[B.lignes.length - 1];
-        const saut = l.base - prec.base;
-        const corps = Math.max(prec.size, l.size, 1);
-        const attendu = rythme > 0 ? rythme : corps * 1.2;
-        // La ligne precedente s'arretait-elle bien avant le bord ? Alors elle
-        // finissait son paragraphe, et la suivante en ouvre un autre.
-        const bord = B.lignes.length > 1 ? B.droite : l.droite;
-        const courte = prec.droite < bord - corps * 4;
-        // Un titre n'entre pas dans le paragraphe qui le suit : ni le corps
-        // ni la police ne concordent.
-        if (l.pol === prec.pol && !courte
-          && Math.abs(l.size - prec.size) <= Math.max(0.35, prec.size * 0.08)
-          && Math.abs(l.x - B.x) <= corps * 1.8
-          && saut > attendu * 0.55 && saut < Math.min(attendu * 1.35, corps * 2.4)) {
-          B.lignes.push(l); B.sauts.push(saut);
-          B.x = Math.min(B.x, l.x);
-          B.droite = Math.max(B.droite, l.droite);
-          return;
-        }
-      }
-      B = { lignes: [l], sauts: [], x: l.x, droite: l.droite };
-      blocs.push(B);
+    // --- marges de chaque colonne : le bord droit que plusieurs lignes se partagent (un texte justifié, une date calée à droite), à défaut le
+    // plus lointain ; le bord gauche de même. Elles disent jusqu'où une ligne peut grandir avant de devoir se replier.
+    const partage = (valeurs, max) => {
+      let best = null;
+      valeurs.forEach(v => {
+        if (valeurs.filter(w => Math.abs(w - v) <= 1.5).length >= 2 && (best == null || (max ? v > best : v < best))) best = v;
+      });
+      return best;
+    };
+    const marges = new Map();
+    colonnes.forEach((ls, k) => {
+      const ds = ls.map(l => l.droite), gs = ls.map(l => Math.min.apply(null, l.bouts.map(z => z.x0)));
+      const d = partage(ds, true), gch = partage(gs, false);
+      marges.set(k, { droite: d != null ? d : Math.max.apply(null, ds), gauche: gch != null ? gch : Math.min.apply(null, gs) });
     });
+
+    // --- paragraphes : lignes qui se suivent, meme bord gauche, meme corps ; puis coupe aux retours voulus par l'auteur
+    const blocs = [];
+    colonnes.forEach((ls, k) => {
+      const chaines = [];
+      let B = null;
+      ls.forEach(l => {
+        if (B) {
+          const prec = B.lignes[B.lignes.length - 1];
+          const saut = l.base - prec.base;
+          const corps = Math.max(prec.size, l.size, 1);
+          const attendu = rythme > 0 ? rythme : corps * 1.2;
+          // Un titre n'entre pas dans le paragraphe qui le suit : ni le corps
+          // ni la police ne concordent.
+          // Un alinéa : la première ligne d'un paragraphe est rentrée, et touche le bord droit comme le reste du texte justifié ; la suivante repart
+          // du bord gauche, à une ou deux lettres de largeur de là. Ce n'est pas un autre paragraphe.
+          const alinea = B.lignes.length === 1 && B.x - l.x > corps * 0.5 && B.x - l.x <= corps * 3.2
+            && prec.droite >= (marges.get(k) ? marges.get(k).droite : B.droite) - Math.max(2, corps * 0.4);
+          if (l.pol === prec.pol
+            && Math.abs(l.size - prec.size) <= Math.max(0.35, prec.size * 0.08)
+            && (Math.abs(l.x - B.x) <= corps * 1.8 || alinea)
+            && saut > attendu * 0.55 && saut < Math.min(attendu * 1.35, corps * 2.4)) {
+            B.lignes.push(l);
+            B.x = Math.min(B.x, l.x);
+            B.droite = Math.max(B.droite, l.droite);
+            return;
+          }
+        }
+        B = { lignes: [l], x: l.x, droite: l.droite };
+        chaines.push(B);
+      });
+      chaines.forEach(ch => {
+        const coupes = edRetoursVoulus(ch.lignes);
+        let debut = 0;
+        for (let i = 0; i <= ch.lignes.length; i++) {
+          if (i < ch.lignes.length && !coupes[i]) continue;
+          const morceau = ch.lignes.slice(debut, i + 1);
+          debut = i + 1;
+          if (!morceau.length) continue;
+          blocs.push({
+            lignes: morceau,
+            sauts: morceau.slice(1).map((l, j) => l.base - morceau[j].base),
+            x: Math.min.apply(null, morceau.map(l => l.x)),
+            droite: Math.max.apply(null, morceau.map(l => l.droite)),
+            marges: marges.get(k),
+          });
+        }
+      });
     });
     return blocs.map(edBloc).filter(b => b.text.trim() && b.w > 1);
   }
@@ -296,7 +395,8 @@
       if (i && bouts.length) {
         const d = bouts[bouts.length - 1];
         const prec = lignes[i - 1];
-        const rupture = puce(l.bouts.map(z => z.t).join('')) || prec.droite < b.droite - corps * 4;
+        // Les retours voulus ont déjà coupé le bloc (voir edRetoursVoulus) : ses lignes coulent, sauf devant une puce.
+        const rupture = puce(l.bouts.map(z => z.t).join(''));
         const q = d.pos && d.pos[d.pos.length - 1];
         if (rupture) {
           d.t = d.t.replace(/\s+$/, '') + '\n';
@@ -315,6 +415,7 @@
       bouts, text: bouts.map(z => z.t).join(''),
       lignesBouts: lignes.map(l => l.bouts),
       lignesBase: lignes.map(l => l.base),
+      colDroite: b.marges ? b.marges.droite : null, colGauche: b.marges ? b.marges.gauche : null,
     };
   }
 
@@ -358,6 +459,10 @@
     const g = pageGeom(p);
     const fin = cible.x + cible.w;
     let gauche = cible.x, droite = Math.max(0, g.Wd - fin);
+    // Entre les marges du texte (celles que plusieurs lignes de la page se partagent), pas au-delà : une ligne calée à droite l'est contre la
+    // marge, pas contre le bord de la feuille, et une ligne qui grandit se replie à la marge au lieu de sortir du texte.
+    if (cible.colDroite != null && fin <= cible.colDroite + 2) droite = Math.min(droite, Math.max(0, cible.colDroite - fin));
+    if (cible.colGauche != null && cible.x >= cible.colGauche - 2) gauche = Math.min(gauche, Math.max(0, cible.x - cible.colGauche));
     lignes.forEach(l => {
       if (l === cible || l.y + l.h < cible.y + 1 || l.y > cible.y + cible.h - 1) return;
       if (l.x + l.w <= cible.x + 0.5) gauche = Math.min(gauche, cible.x - (l.x + l.w));
@@ -423,6 +528,20 @@
       if (place.gauche > 1.5 && Math.abs(place.gauche - place.droite) <= tol) aligne = 'centre';
       else if (place.droite <= Math.max(6, cible.size * 0.6) && place.gauche > place.droite * 3 + 4) aligne = 'droite';
       else aligne = 'gauche';
+      // Autant de place d'un côté que de l'autre ne dit pas encore « centré » : la cellule la plus longue d'une colonne, ajustée à son
+      // contenu, est aussi large que son texte plus deux fois la marge, qu'elle soit calée à gauche, à droite ou centrée. Les autres cellules de la
+      // colonne tranchent : si elles partagent le bord gauche (ou le bord droit) de celle-ci, c'est lui qui tient.
+      if (aligne === 'centre') {
+        const fin = cible.x + cible.w, milieu = cible.x + cible.w / 2;
+        const colG = cible.x - place.gauche, colD = fin + place.droite;
+        const voisines = lignes.filter(l => l !== cible && (l.lignesBouts || []).length === 1 && l.x >= colG - 3 && l.x + l.w <= colD + 3
+          && !(l.y < cible.y + cible.h && l.y + l.h > cible.y));
+        const nG = voisines.filter(l => Math.abs(l.x - cible.x) <= 1.2).length;
+        const nD = voisines.filter(l => Math.abs(l.x + l.w - fin) <= 1.2).length;
+        const nC = voisines.filter(l => Math.abs(l.x + l.w / 2 - milieu) <= 1.5).length;
+        if (nG >= 2 && nG > nC) aligne = 'gauche';
+        else if (nD >= 2 && nD > nC) aligne = 'droite';
+      }
       // Jamais jusqu'au trait lui-même, et pas au-delà du raisonnable.
       const plafond = Math.max(cible.w, 160);
       const aG = aligne === 'gauche' ? 0 : Math.min(plafond, Math.max(0, place.gauche - 1));
@@ -472,9 +591,16 @@
     // l'affiche et de le réécrire sur place au lieu de le recouvrir.
     const ancres = [];
     const styles = [];
+    const debuts = [], rects = [];
     let pos = 0;
     (cible.lignesBouts || []).forEach((bs, li) => {
       const base = cible.lignesBase && cible.lignesBase[li] != null ? cible.lignesBase[li] : cible.base;
+      debuts.push(pos);
+      // Le cadre de cette ligne d'origine : ce que la correction efface de la page, si elle la refait.
+      const xs = [], taille = bs.reduce((m, b) => Math.max(m, b.size), 0) || cible.size;
+      bs.forEach(b => (b.pos || []).forEach(q => { if (q.t) { xs.push(q.x, q.x + q.w); } }));
+      if (xs.length) rects.push({ x0: Math.min.apply(null, xs), x1: Math.max.apply(null, xs), base, size: taille });
+      else rects.push(null);
       bs.forEach(b => {
         (b.pos || []).forEach(q => {
           if (q.t) ancres.push({ i: pos, n: q.t.length, dx: q.x + 0.5, dy: base - 0.5 });
@@ -485,9 +611,37 @@
         if (styles.indexOf(cle) < 0) styles.push(cle);
       });
     });
-    a.origine = { texte: a.text, ancres, styles };
+    a.origine = { texte: a.text, ancres, styles, debuts, rects, cadre: { x: cible.x, y: cible.y, w: cible.w, h: cible.h } };
     edPoserOrigine(a, cible);
     return a;
+  }
+
+  // La correction a-t-elle grandi au point de toucher le texte voisin ? Un paragraphe qui prend une ligne de plus, une ligne qui s'allonge jusqu'à
+  // sa voisine : un PDF n'a pas de flux de texte qui pousserait le reste de la page, rien ne se décale tout seul. Rend les textes touchés.
+  function edDebord(a) {
+    const o = a.origine;
+    if (!o || !o.cadre) return [];
+    const p = edPage();
+    const lignesNeuves = [];
+    (a.lignes || []).forEach((seg, i) => {
+      if (!seg.length || i < (a.gardees || 0)) return;
+      const run = a.runs[seg[0].r];
+      const t = run ? run.size : a.size;
+      const dernier = seg[seg.length - 1];
+      const x0 = a.x + 1 + seg[0].x, x1 = a.x + 1 + dernier.x + dernier.w;
+      lignesNeuves.push({ x: x0, y: a.y + a.ly[i] - t * 0.8, w: Math.max(0, x1 - x0), h: t });
+    });
+    const dedans = (r, b) => r.x < b.x + b.w - 0.8 && r.x + r.w > b.x + 0.8 && r.y + 0.8 < b.y + b.h && r.y + r.h - 0.8 > b.y;
+    const part = (b, c) => {
+      const w = Math.min(b.x + b.w, c.x + c.w) - Math.max(b.x, c.x), h = Math.min(b.y + b.h, c.y + c.h) - Math.max(b.y, c.y);
+      return w > 0 && h > 0 ? (w * h) / Math.max(1, b.w * b.h) : 0;
+    };
+    // Les voisins : les blocs de la page qui ne sont pas celui qu'on corrige, et les autres corrections.
+    const voisins = (ed.lignes || []).filter(b => part(b, o.cadre) < 0.3).map(b => ({ x: b.x, y: b.y, w: b.w, h: b.h, t: b.text }));
+    (p.ann || []).forEach(x => { if (x !== a && x.type === 'edit') voisins.push({ x: x.x, y: x.y, w: x.w, h: annHauteur(x), t: runsTexte(x.runs || []) }); });
+    const touches = [];
+    voisins.forEach(b => { if (lignesNeuves.some(r => dedans(r, b))) touches.push(String(b.t || '').trim().slice(0, 40)); });
+    return touches;
   }
 
   async function edRenderPage() {
@@ -556,6 +710,14 @@
         hit.setAttribute('class', 'hit');
         svg.appendChild(hit);
       }
+    });
+    p.ann.forEach(a => {
+      if (a.type !== 'edit' || !a.deborde) return;
+      const r = document.createElementNS(SVGNS, 'rect');
+      r.setAttribute('class', 'deborde');
+      r.setAttribute('x', a.x - 1); r.setAttribute('y', a.y - 1);
+      r.setAttribute('width', a.w + 2); r.setAttribute('height', annHauteur(a) + 2);
+      svg.appendChild(r);
     });
     const mention = mentionNode(p, pageGeom(p));
     if (mention) { mention.style.pointerEvents = 'none'; svg.appendChild(mention); }

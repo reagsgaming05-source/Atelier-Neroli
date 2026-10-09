@@ -133,7 +133,7 @@
     let ctm = [1, 0, 0, 1, 0, 0];
     const pile = [];
     let Tm = [1, 0, 0, 1, 0, 0], Tlm = [1, 0, 0, 1, 0, 0];
-    let Tf = null, Tfs = 0, Tc = 0, Tw = 0, Th = 1, TL = 0, Ts = 0;
+    let Tf = null, Tfs = 0, Tc = 0, Tw = 0, Th = 1, TL = 0, Ts = 0, Tr = 0;
     let pol = null;
     const args = [];
     const large = code => (pol && pol.largeur ? pol.largeur(code) : 500) / 1000;
@@ -167,7 +167,7 @@
       out.push({
         trm, x: trm[4], y: trm[5], taille: Math.hypot(trm[2], trm[3]) || Math.abs(trm[3]) || Tfs,
         police: Tf, texte, large: larg, parts, operateur, crochets,
-        Tfs, Th, Tc, Tw, pol,
+        Tfs, Th, Tc, Tw, pol, rendu: Tr,
       });
       Tm = fxMat([1, 0, 0, 1, larg, 0], Tm);
     };
@@ -176,10 +176,10 @@
       if (j.t !== 'op' || j.v === '[' || j.v === ']' || j.v === '<<' || j.v === '>>') { args.push(j); continue; }
       const op = j.v;
       const nb = i => { const t = args[args.length + i]; return t && t.t === 'nombre' ? t.v : 0; };
-      if (op === 'q') pile.push({ ctm: ctm.slice(), Tf, Tfs, Tc, Tw, Th, TL, Ts, pol });
+      if (op === 'q') pile.push({ ctm: ctm.slice(), Tf, Tfs, Tc, Tw, Th, TL, Ts, Tr, pol });
       else if (op === 'Q') {
         const e = pile.pop();
-        if (e) { ctm = e.ctm; Tf = e.Tf; Tfs = e.Tfs; Tc = e.Tc; Tw = e.Tw; Th = e.Th; TL = e.TL; Ts = e.Ts; pol = e.pol; }
+        if (e) { ctm = e.ctm; Tf = e.Tf; Tfs = e.Tfs; Tc = e.Tc; Tw = e.Tw; Th = e.Th; TL = e.TL; Ts = e.Ts; Tr = e.Tr; pol = e.pol; }
       }
       else if (op === 'cm') ctm = fxMat([nb(-6), nb(-5), nb(-4), nb(-3), nb(-2), nb(-1)], ctm);
       else if (op === 'BT') { Tm = [1, 0, 0, 1, 0, 0]; Tlm = Tm.slice(); }
@@ -193,6 +193,7 @@
       else if (op === 'Tw') Tw = nb(-1);
       else if (op === 'Tz') Th = nb(-1) / 100;
       else if (op === 'Ts') Ts = nb(-1);
+      else if (op === 'Tr') Tr = nb(-1);
       else if (op === 'Tj' || op === "'" || op === '"') {
         if (op !== 'Tj') { Tlm = fxMat([1, 0, 0, 1, 0, -TL], Tlm); Tm = Tlm.slice(); }
         if (op === '"') { Tw = nb(-3); Tc = nb(-2); }
@@ -289,6 +290,84 @@
     });
     return plages;
   }
+  // Un texte qu'on ne voit pas : la couche de reconnaissance d'un scan (mode de rendu 3), ou un simple masque (7). Ce qu'on lit à l'écran,
+  // dans ce cas, est l'image : corriger ce texte-là ne change rien à ce que la page montre.
+  const fxCache = sh => sh.rendu === 3 || sh.rendu === 7;
+  // Comme fxGlyphesDans, mais en disant dans quelle zone tombe chaque lettre (et laquelle) : de quoi vérifier que ce qui part de la page est
+  // bien le texte qu'on croit retirer.
+  function fxGlyphesParZone(sh, zones) {
+    const plages = [], glyphes = [];
+    if (!sh.pol || !sh.trm || !sh.Tfs) return { plages, glyphes };
+    const pol = sh.pol, pas = pol.composite ? 2 : 1;
+    const k = 1 / (sh.Tfs * sh.Th || 1);
+    const ax = sh.trm[0] * k, ay = sh.trm[1] * k;
+    const hx = sh.trm[2] * 0.3, hy = sh.trm[3] * 0.3;
+    let cum = 0, pos = 0;
+    sh.parts.forEach(part => {
+      if (part.nombre != null) { cum += (-part.nombre / 1000) * sh.Tfs * sh.Th; return; }
+      const oct = part.octets;
+      for (let i = 0; i + pas <= oct.length; i += pas) {
+        const code = pas === 2 ? ((oct[i] << 8) | oct[i + 1]) : oct[i];
+        let adv = (pol.largeur ? pol.largeur(code) : 500) / 1000 * sh.Tfs + sh.Tc;
+        if (pas === 1 && code === 32) adv += sh.Tw;
+        adv *= sh.Th;
+        const t = (pol.unicode && pol.unicode(code)) || '';
+        const n = t.length;
+        const cx = sh.x + ax * (cum + adv / 2) + hx, cy = sh.y + ay * (cum + adv / 2) + hy;
+        const zi = n ? zones.findIndex(z => cx >= z.x && cx <= z.x + z.w && cy >= z.y && cy <= z.y + z.h) : -1;
+        if (zi >= 0) {
+          const d = plages[plages.length - 1];
+          if (d && d[1] === pos) d[1] = pos + n; else plages.push([pos, pos + n]);
+          glyphes.push({ zi, t });
+        }
+        cum += adv; pos += n;
+      }
+    });
+    return { plages, glyphes };
+  }
+  // Une correction qui ne se réécrit pas sur place refait des lignes entières. Leur texte d'origine part du flux par la place des lettres, ligne
+  // d'origine par ligne d'origine — quelle que soit la façon dont le générateur du PDF a découpé le texte (un affichage par ligne, par mot,
+  // par lettre) : chaque lettre dont le centre tombe dans le cadre d'une ligne refaite devient un blanc de même largeur. Plus rien n'est caché
+  // sous la correction, et plus besoin de la recouvrir : le reste de la page, fond et filets compris, n'est pas touché. Rend faux dès qu'on ne
+  // peut garantir que tout l'ancien texte est parti — les lettres retirées doivent être exactement celles de ces lignes.
+  function fxViderParPlace(a, shows, g, pris, parShow, cachees) {
+    const o = a.origine;
+    if (!o || !o.rects || !o.debuts) return false;
+    // `debut` : la première ligne d'origine à refaire ; `partiel` : la ligne dont seul le bout est refait.
+    const tenter = (debut, partiel) => {
+      const idx = [];
+      o.rects.forEach((r, i) => { if (r && i >= debut) idx.push(i); });
+      if (!idx.length) return o.rects.length > 0 && debut >= o.rects.length ? { aEcrire: [] } : null;   // rien d'ancien n'est refait : les lignes d'origine restent, on ajoute
+      // Sur la première ligne refaite, ce qui précède le premier caractère changé reste dans la page : on ne vide que la suite.
+      const depuisX = i => (partiel && partiel.ligne === i ? partiel.x - 0.3 : o.rects[i].x0 - 0.6);
+      const zones = idx.map(i => { const r = o.rects[i]; const x0 = depuisX(i); return rectToUser({ x: x0, y: r.base - r.size * 0.95, w: Math.max(0.5, r.x1 + 0.6 - x0), h: r.size * 1.25 }, g); });
+      const vus = idx.map(() => []);
+      const aEcrire = [];
+      for (const sh of shows) {
+        const gl = fxGlyphesParZone(sh, zones);
+        if (!gl.plages.length) continue;
+        if (pris.has(sh) || !sh.pol || !sh.crochets || !(sh.Tfs * sh.Th)) return null;
+        gl.glyphes.forEach(q => vus[q.zi].push(q.t));
+        aEcrire.push([sh, gl.plages]);
+      }
+      const norm = t => String(t).normalize('NFKC').replace(/[\s\u00ad]+/g, '').split('').sort().join('');
+      for (let k = 0; k < idx.length; k++) {
+        const i = idx[k];
+        const attendu = norm(o.texte.slice(partiel && partiel.ligne === i ? partiel.c : o.debuts[i], i + 1 < o.debuts.length ? o.debuts[i + 1] : o.texte.length));
+        if (norm(vus[k].join('')) !== attendu) return null;
+      }
+      return { aEcrire };
+    };
+    // Un texte qu'on ne voit pas (la couche de reconnaissance d'un scan) : ce qu'on lit est l'image. La correction recouvre alors les lignes
+    // refaites — en entier, y compris le début de la première — et les redessine ; les lignes d'avant restent dans l'image, et leur texte
+    // caché avec elles.
+    let r = tenter(a.gardees || 0, null);
+    if (r && r.aEcrire.length && r.aEcrire.every(([sh]) => fxCache(sh))) { if (cachees) cachees.add(a.id); }
+    else r = tenter(a.gardees || 0, a.partiel);
+    if (!r) return false;
+    r.aEcrire.forEach(([sh, pl]) => { if (!parShow.has(sh)) parShow.set(sh, []); pl.forEach(x => parShow.get(sh).push(x)); });
+    return true;
+  }
   // Les lettres des affichages du flux qui forment un des termes caviardés,
   // où qu'elles soient sur la page — hors de la feuille, en taille nulle, en
   // blanc sur blanc, sous une zone rognée, dans un calque masqué. La recherche
@@ -348,25 +427,59 @@
     const fondues = [];
     plages.forEach(pl => { const d = fondues[fondues.length - 1]; if (d && pl[0] <= d[1]) d[1] = Math.max(d[1], pl[1]); else fondues.push(pl.slice()); });
     const unite = sh.Tfs * sh.Th;
-    if (!unite || !sh.crochets) return null;
-    const parts = [];
-    let pos = 0, total = 0, bon = true;
-    const pousser = (texte, blanc) => {
-      if (!texte) return;
-      const w = fxLargeur(sh.pol, texte, sh);
-      if (w == null) { bon = false; return; }
-      total += w;
-      if (blanc) { parts.push((-w * 1000 / unite).toFixed(3)); return; }
-      const hex = fxEncoder(sh.pol, texte);
-      if (hex == null) { bon = false; return; }
-      parts.push('<' + hex + '>');
-    };
-    fondues.forEach(([d, f]) => { pousser(sh.texte.slice(pos, d), false); pousser(sh.texte.slice(d, f), true); pos = f; });
-    pousser(sh.texte.slice(pos), false);
-    if (!bon) return null;
-    const reste = sh.large - total;
-    if (Math.abs(reste) > 0.001) parts.push((-reste * 1000 / unite).toFixed(3));
-    const morceau = '[' + parts.join(' ') + '] TJ';
+    if (!unite || !sh.crochets || !sh.pol || sh.operateur === '"') return null;
+    // Chaque lettre qui reste garde ses octets, chaque nombre de crénage ou de justification du flux reste à sa place ; une lettre retirée
+    // devient un blanc de sa propre chasse. Rien d'autre sur la ligne ne bouge, quelle que soit la façon dont le générateur a écrit la ligne
+    // (une ligne de tableau entière dans un seul TJ, avec des écarts de plusieurs centaines de points, n'est plus aplatie).
+    const retire = e => e.n > 0 && fondues.some(([d, f]) => e.pos < f && e.pos + e.n > d);
+    const sortie = [];
+    let blanc = 0;
+    const lacher = () => { if (Math.abs(blanc) > 0.001) sortie.push({ nombre: -blanc * 1000 / unite }); blanc = 0; };
+    fxElements(sh).forEach(e => {
+      if (retire(e)) { blanc += e.adv; return; }
+      lacher();
+      sortie.push(e);
+    });
+    lacher();
+    return fxMorceauTJ(sh, fxEmettre(sortie));
+  }
+  // Les éléments d'un affichage, dans l'ordre du flux : chaque lettre (ses octets, son texte, sa chasse sur la ligne) et chaque nombre
+  // de crénage. Le texte `pos` suit celui de `sh.texte`.
+  function fxElements(sh) {
+    const pol = sh.pol, pas = pol && pol.composite ? 2 : 1;
+    const els = [];
+    let pos = 0;
+    sh.parts.forEach(part => {
+      if (part.nombre != null) { els.push({ nombre: part.nombre, adv: (-part.nombre / 1000) * sh.Tfs * sh.Th }); return; }
+      const oct = part.octets;
+      for (let i = 0; i + pas <= oct.length; i += pas) {
+        const code = pas === 2 ? ((oct[i] << 8) | oct[i + 1]) : oct[i];
+        let adv = (pol.largeur ? pol.largeur(code) : 500) / 1000 * sh.Tfs + sh.Tc;
+        if (pas === 1 && code === 32) adv += sh.Tw;
+        const t = (pol.unicode && pol.unicode(code)) || '';
+        els.push({ octets: Array.prototype.slice.call(oct, i, i + pas), t, n: t.length, pos, adv: adv * sh.Th });
+        pos += t.length;
+      }
+    });
+    return els;
+  }
+  const fxNb = v => String(+v.toFixed(3));
+  // Les éléments en jetons de TJ : les lettres voisines se recollent en une seule chaîne hexadécimale.
+  function fxEmettre(els) {
+    const jetons = [];
+    let hex = '';
+    const vider = () => { if (hex) { jetons.push('<' + hex + '>'); hex = ''; } };
+    els.forEach(e => {
+      if (e.octets) { e.octets.forEach(b => { hex += (b < 16 ? '0' : '') + b.toString(16).toUpperCase(); }); return; }
+      vider();
+      jetons.push(fxNb(e.nombre));
+    });
+    vider();
+    return jetons;
+  }
+  // Le morceau de flux qui remplace l'affichage : un TJ. Un affichage écrit avec l'apostrophe passait aussi à la ligne suivante.
+  function fxMorceauTJ(sh, jetons) {
+    const morceau = (sh.operateur === "'" ? 'T* ' : '') + '[' + jetons.join(' ') + '] TJ';
     const octets = [];
     for (let i = 0; i < morceau.length; i++) octets.push(morceau.charCodeAt(i));
     return { a: sh.crochets[0], b: sh.crochets[1], octets };
@@ -745,6 +858,9 @@
     'largeur inconnue': 'la largeur d\'une lettre de la correction n\'est pas connue',
     'trop long a gauche': 'la correction est trop longue : elle déborderait à gauche',
     'trop long pour la place': 'la correction est trop longue pour la place disponible',
+    'texte invisible': 'le texte de la page est invisible (couche de reconnaissance sous une image) : la correction est posée par-dessus',
+    'ecart dans le morceau': 'le texte à remplacer enjambe un grand écart (une séparation de colonnes)',
+    'affichage non reecrit': 'le texte est écrit avec un opérateur que l\'on ne réécrit pas',
   };
   const fxRaison = r => {
     if (FX_RAISONS[r]) return FX_RAISONS[r];
@@ -787,6 +903,7 @@
     let sh = shows.find(z => Math.abs(z.y - u.y) < 0.8 && u.x >= z.x - 0.8 && u.x <= z.x + z.large + 0.8);
     if (!sh) return fxNon('aucun affichage en ' + u.x.toFixed(1) + ',' + u.y.toFixed(1));
     if (!sh.pol || !sh.crochets) return fxNon('affichage sans police');
+    if (fxCache(sh)) return fxNon('texte invisible');
     // L'espace ajoutée en fin de ligne pour lier deux lignes n'existe pas
     // dans le flux : on la laisse de côté, tant que le changement ne la touche pas.
     const queue = /\s+$/.exec(ancienBout);
@@ -809,30 +926,80 @@
       } else return fxNon('bout introuvable : ' + JSON.stringify(ancienBout) + ' dans ' + JSON.stringify(sh.texte));
     }
     if (sh.texte.indexOf(ancienBout, k + 1) >= 0) return fxNon('bout ambigu');
-    const avant = sh.texte.slice(0, k), apres = sh.texte.slice(k + ancienBout.length);
-    const texteNeuf = avant + nouveauBout + apres;
-    const hex = fxEncoder(sh.pol, texteNeuf);
+    if (sh.operateur === '"') return fxNon('affichage non reecrit');
+    // Seul ce qui change vraiment est réécrit : le début et la fin du morceau restent tels qu'ils sont dans le flux, crénage et justification
+    // compris. Les frontières d'une lettre (une ligature « fi » en un seul signe) peuvent empêcher de couper là : on prend alors tout le morceau.
+    const els = fxElements(sh);
+    const tranche = (pre, suf) => {
+      const debutV = k + pre, finT = k + ancienBout.length - suf;
+      const coupe = nouveauBout.slice(pre, nouveauBout.length - suf);
+      let i0 = els.findIndex(e => e.n > 0 && e.pos >= debutV);
+      if (finT === debutV) {
+        // Rien à retirer : une insertion, juste avant la lettre qui suit (ou à la fin de la ligne).
+        if (i0 >= 0 && els[i0].pos !== debutV) return null;
+        if (i0 < 0) { for (let i = els.length - 1; i >= 0; i--) if (els[i].n > 0) { i0 = i + 1; break; } if (i0 < 0) return null; }
+        return { i0, i1: i0 - 1, coupe };
+      }
+      if (i0 < 0 || els[i0].pos !== debutV) return null;
+      let i1 = -1;
+      for (let i = els.length - 1; i >= i0; i--) if (els[i].n > 0 && els[i].pos + els[i].n <= finT) { i1 = i; break; }
+      if (i1 < i0) return null;
+      let somme = 0;
+      for (let i = i0; i <= i1; i++) somme += els[i].n || 0;
+      if (somme !== finT - debutV) return null;
+      return { i0, i1, coupe };
+    };
+    let pre = 0;
+    while (pre < ancienBout.length && pre < nouveauBout.length && ancienBout[pre] === nouveauBout[pre]) pre++;
+    let suf = 0;
+    while (suf < ancienBout.length - pre && suf < nouveauBout.length - pre && ancienBout[ancienBout.length - 1 - suf] === nouveauBout[nouveauBout.length - 1 - suf]) suf++;
+    const t = tranche(pre, suf) || tranche(0, 0);
+    if (!t) return fxNon('bout introuvable : ' + JSON.stringify(ancienBout) + ' dans ' + JSON.stringify(sh.texte));
+    // Un grand écart dans la partie remplacée est une séparation de colonnes, pas un espace : on n'écrase pas cela.
+    const GRAND = 1200;
+    const grand = e => e.nombre != null && Math.abs(e.nombre) >= GRAND;
+    for (let i = t.i0; i <= t.i1; i++) if (grand(els[i])) return fxNon('ecart dans le morceau');
+    const hex = fxEncoder(sh.pol, t.coupe);
     if (hex == null) return fxNon('lettre hors police');
-    const lNeuf = fxLargeur(sh.pol, texteNeuf, sh);
-    if (lNeuf == null) return fxNon('largeur inconnue');
+    const lCoupe = fxLargeur(sh.pol, t.coupe, sh);
+    if (lCoupe == null) return fxNon('largeur inconnue');
+    let lVieux = 0;
+    for (let i = t.i0; i <= t.i1; i++) lVieux += els[i].adv;
+    const delta = lCoupe - lVieux;
+    // Une ligne de tableau écrite d'un seul tenant (toutes ses cellules dans un seul TJ, séparées par de grands écarts) se réécrit cellule
+    // par cellule : l'alignement joue dans la cellule touchée, jamais sur la ligne entière, et les autres cellules ne bougent pas.
+    let iS = t.i0, iE = t.i1;
+    while (iS > 0 && !grand(els[iS - 1])) iS--;
+    while (iE < els.length - 1 && !grand(els[iE + 1])) iE++;
+    const unite = sh.Tfs * sh.Th;
+    const marge = 0.3 * Math.abs(unite);
+    let segFin = 0;
+    for (let i = 0; i <= iE; i++) segFin += els[i].adv;
     // Réécrire sur place ne sait pas replier le texte : si le nouveau mot
     // ne tient plus dans la place disponible, il mordrait sur ce qui suit.
     // On repasse alors par le recouvrement, qui sait replier le paragraphe.
     // Une ligne centrée grandit des deux côtés, une ligne calée à droite
     // grandit vers la gauche : le début recule d'autant.
     const part = a.aligne === 'centre' ? 0.5 : a.aligne === 'droite' ? 1 : 0;
-    const dx = -(lNeuf - sh.large) * part;
-    if (dx < -fxPlaceGauche(sh, shows) - 0.01) return fxNon('trop long a gauche');
-    if (lNeuf + dx > sh.large + fxPlace(sh, shows, a, g) + 0.01) return fxNon('trop long pour la place');
-    // Le crénage rattrape la différence : ce qui suit sur la ligne ne bouge
-    // pas d'un poil, exactement comme dans un éditeur professionnel.
-    const unite = sh.Tfs * sh.Th;
+    const dx = -delta * part;
+    const placeGauche = iS === 0 ? fxPlaceGauche(sh, shows) : Math.max(0, els[iS - 1].adv - marge);
+    if (dx < -placeGauche - 0.01) return fxNon('trop long a gauche');
+    // Le bord droit du cadre de la correction (la marge du texte, le trait d'une cellule) est une limite, quoi que laisse libre le reste de la
+    // ligne : une ligne de paragraphe qui s'allongerait sortirait du texte ; c'est au repli du paragraphe de la rendre.
+    const e = Math.hypot(sh.trm[0], sh.trm[1]) || 1;
+    const bordCadre = toUser(a.x + a.w, an.dy, g);
+    // (en unités de l'espace du texte, comme la largeur de l'affichage : on divise par l'échelle que le flux donne au texte)
+    const jusquauBord = (((bordCadre.x - sh.x) * sh.trm[0] + (bordCadre.y - sh.y) * sh.trm[1]) / e) * (sh.Tfs * sh.Th) / e;
+    const limiteDroite = iE === els.length - 1 ? sh.large + fxPlace(sh, shows, a, g) : segFin + Math.max(0, els[iE + 1].adv - marge);
+    if (segFin + delta + dx > Math.min(limiteDroite, jusquauBord) + 0.01) return fxNon('trop long pour la place');
+    // Le crénage rattrape la différence : ce qui suit la cellule ou la ligne ne bouge pas d'un poil, exactement comme dans un éditeur
+    // professionnel.
     const n0 = unite ? -dx * 1000 / unite : 0;
-    const n1 = unite ? -(sh.large - lNeuf - dx) * 1000 / unite : 0;
-    const morceau = '[' + (Math.abs(n0) > 0.001 ? n0.toFixed(3) + ' ' : '') + '<' + hex + '>' + (Math.abs(n1) > 0.001 ? ' ' + n1.toFixed(3) : '') + '] TJ';
-    const octets = [];
-    for (let i = 0; i < morceau.length; i++) octets.push(morceau.charCodeAt(i));
-    return [{ a: sh.crochets[0], b: sh.crochets[1], octets }];
+    const n1 = unite ? (dx + delta) * 1000 / unite : 0;
+    const ecrit = hex ? [{ octets: hex.match(/../g).map(h => parseInt(h, 16)) }] : [];
+    const liste = els.slice(0, iS)
+      .concat(Math.abs(n0) > 0.001 ? [{ nombre: n0 }] : [], els.slice(iS, t.i0), ecrit, els.slice(t.i1 + 1, iE + 1), Math.abs(n1) > 0.001 ? [{ nombre: n1 }] : [], els.slice(iE + 1));
+    return [fxMorceauTJ(sh, fxEmettre(liste))];
   }
 
   // La place libre à gauche d'un affichage : jusqu'au précédent sur la même
@@ -932,7 +1099,9 @@
     const pris = new Set();
     shows.forEach(sh => { if (sh.crochets && remplacements.some(r => r.a === sh.crochets[0])) pris.add(sh); });
     const parShow = new Map();
-    try { fxEffacerTous(recouvertes, shows, g, pris, parShow); } catch (e) { signaler('Effacement dans le flux', e); return { propre: false }; }
+    const cachees = new Set();
+    const restantes = recouvertes.filter(a => !fxViderParPlace(a, shows, g, pris, parShow, cachees));
+    try { fxEffacerTous(restantes, shows, g, pris, parShow); } catch (e) { signaler('Effacement dans le flux', e); return { propre: false }; }
     if (parShow.echecs) return { propre: false };
     for (const [sh, plages] of parShow) { if ((sh.Tfs * sh.Th) && fxRecrire(sh, plages) == null) return { propre: false }; }
     return { propre: true };
@@ -975,11 +1144,17 @@
     }
     // Les blocs recouverts : leur texte d'origine s'efface, sauf dans un
     // affichage déjà réécrit sur place.
+    const nettoyees = new Set(), cachees = new Set();
     if (recouvertes.length) {
       const pris = new Set();
       shows.forEach(sh => { if (sh.crochets && remplacements.some(r => r.a === sh.crochets[0])) pris.add(sh); });
-      try { fxEffacerTous(recouvertes, shows, g, pris, parShow); } catch (e) { signaler('Effacement dans le flux', e); }
+      // D'abord par la place des lettres ; ce qui ne s'y prête pas se retrouve par les ancres, sous un recouvrement.
+      const restantes = [];
+      recouvertes.forEach(a => { if (fxViderParPlace(a, shows, g, pris, parShow, cachees)) { if (!cachees.has(a.id)) nettoyees.add(a.id); } else restantes.push(a); });
+      try { fxEffacerTous(restantes, shows, g, pris, parShow); } catch (e) { signaler('Effacement dans le flux', e); }
     }
+    faits.nettoyees = nettoyees;
+    faits.cachees = cachees;
     for (const [sh, plages] of parShow) {
       const r = !(sh.Tfs * sh.Th) ? fxVider(sh) : fxRecrire(sh, plages);
       if (r) remplacements.push(r);

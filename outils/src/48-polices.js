@@ -84,6 +84,15 @@
     return ok;
   }
 
+  // La fonte embarquée d'un PDF ne garde que les lettres que le document emploie. Les autres — celles qu'on tape en corrigeant — viennent d'une
+  // police de secours, et c'est celle que l'export écrit : Arimo, Tinos ou Cousine, au même gras et à la même pente. La page doit les mesurer et
+  // les montrer de même ; sans quoi un mot en gras dont une lettre manque se mesure moitié gras, moitié maigre (le secours système est demandé
+  // « normal », puisque la fonte du document porte déjà le gras), et la suite de la ligne se pose trop tôt. On les déclare donc à la page,
+  // sous un nom qui n'est qu'à nous : la fonte du document, elle, n'est pas touchée (pdf.js s'en sert pour dessiner).
+  // (La mise en place des polices de secours est dans 49-unicode.js, où sont les polices : ce module la trouve ici, branchée au démarrage.)
+  let polSecoursDe = () => null;
+  let polSecoursAttendre = () => Promise.resolve();
+
   function polDescripteur(o, style) {
     const base = o && o.name ? String(o.name) : '';
     const st = polStyle(base, o);
@@ -94,9 +103,10 @@
     // chiffre ou porter des signes qui casseraient la declaration entiere.
     const cite = n => '"' + String(n).replace(/["\\]/g, '') + '"';
     const pile = [];
-    if (propre) pile.push(cite(face));
-    familles.forEach(n => { const v = cite(n); if (pile.indexOf(v) < 0) pile.push(v); });
     const genre = polGenre(base, o, style);
+    const secours = propre ? polSecoursDe(genre, st.gras, st.italique) : null;
+    if (propre) { pile.push(cite(face)); if (secours) pile.push(cite(secours)); }
+    familles.forEach(n => { const v = cite(n); if (pile.indexOf(v) < 0) pile.push(v); });
     pile.push(genre === 'Times' ? 'serif' : genre === 'Courier' ? 'monospace' : 'sans-serif');
     return {
       nom: base, genre, gras: st.gras, italique: st.italique,
@@ -125,6 +135,8 @@
       try { if (co && co.has && co.has(n)) o = co.get(n); } catch (_) { o = null; }
       map.set(n, polDescripteur(o, tc.styles && tc.styles[n]));
     });
+    // Les polices de secours sont prêtes avant la première mesure.
+    await polSecoursAttendre();
     return map;
   }
 

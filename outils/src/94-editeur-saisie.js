@@ -130,6 +130,13 @@
         s.a.runs = neufs;
         recalcRuns(s.a);
         state.touched = true;
+        const touches = edDebord(s.a);
+        s.a.deborde = touches.length > 0;
+        if (touches.length) {
+          const msg = 'Le texte corrigé touche le texte voisin : raccourcissez-le, ou réduisez sa taille (A−).';
+          setLast(msg);
+          toast(msg, 'warn');
+        }
       }
     }
     s.zone.remove();
@@ -325,12 +332,60 @@
     document.addEventListener('selectionchange', saisie.suivre);
     document.addEventListener('pointerdown', saisie.dehors, true);
 
+    // Défaire / refaire dans la zone : la nôtre, pas celle du navigateur. Ce qu'on tape, ce qu'on remplace et les changements de style passent par
+    // les mêmes morceaux ; une pile d'états, elle, ne se brouille pas quand le navigateur et nous touchons au même texte.
+    const defaire = [], refaire = [];
+    let derniereFrappe = 0;
+    const photo = () => ({ runs: richeLire(zone, a).map(r => Object.assign({}, r)), sel: richeOffsets(zone) || saisie.sel || { debut: 0, fin: 0 } });
+    const rejouer = etat => {
+      a.runs = etat.runs.map(r => Object.assign({}, r));
+      richePeindre(zone, a);
+      zone.focus();
+      richePlacer(zone, etat.sel.debut, etat.sel.fin);
+      saisie.sel = { debut: etat.sel.debut, fin: etat.sel.fin };
+      barre.maj();
+    };
+    // Le navigateur n'annonce « historyUndo » que s'il a lui-même quelque chose à défaire : après un remplacement que nous avons fait, il n'a rien,
+    // et Ctrl+Z ne ferait rien. On prend donc le clavier nous-mêmes (voir plus bas), et le menu du navigateur passe par la même fonction.
+    const reculer = defait => {
+      const de = defait ? defaire : refaire, vers = defait ? refaire : defaire;
+      const etat = de.pop();
+      if (etat) { vers.push(photo()); rejouer(etat); }
+    };
+    zone.addEventListener('beforeinput', e => {
+      const type = e.inputType;
+      if (type === 'historyUndo' || type === 'historyRedo') { e.preventDefault(); reculer(type === 'historyUndo'); return; }
+      const o = richeOffsets(zone);
+      const remplace = o && o.debut !== o.fin && (type === 'insertText' || type === 'insertFromPaste');
+      // Une rafale de lettres tapées à la suite ne fait qu'un pas en arrière.
+      const rafale = type === 'insertText' && !remplace && Date.now() - derniereFrappe < 900 && defaire.length;
+      derniereFrappe = Date.now();
+      if (!rafale) { defaire.push(photo()); refaire.length = 0; }
+      if (!remplace) return;
+      // Taper sur une sélection : le texte tapé prend le style de ce qu'il remplace (celui du premier caractère). Le navigateur, lui, le range dans
+      // le morceau qui PRÉCÈDE quand la sélection commence à la frontière de deux morceaux — le texte d'une puce, tapé par-dessus, prendrait la police de la puce.
+      const texte = type === 'insertText' ? e.data : (e.dataTransfer ? e.dataTransfer.getData('text/plain') : '');
+      if (texte == null) return;
+      e.preventDefault();
+      a.runs = richeLire(zone, a);
+      const total = runsTexte(a.runs).length;
+      const modele = a.runs[runDuCaractere(a.runs, o.debut)];
+      a.runs = runsRanger([].concat(runsTranche(a.runs, 0, o.debut), [Object.assign({}, modele, { t: String(texte) })], runsTranche(a.runs, o.fin, total)));
+      richePeindre(zone, a);
+      zone.focus();
+      const fin = o.debut + String(texte).length;
+      richePlacer(zone, fin, fin);
+      saisie.sel = { debut: fin, fin };
+      barre.maj();
+    });
     zone.addEventListener('keydown', e => {
       e.stopPropagation();
       const mod = e.ctrlKey || e.metaKey;
       // Entree fait un retour a la ligne, comme dans un traitement de texte ;
       // c'est Echap (ou Ctrl+Entree) qui valide la correction.
       if (e.key === 'Escape' || (e.key === 'Enter' && mod)) { e.preventDefault(); edFermerSaisie(); return; }
+      if (mod && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) { e.preventDefault(); reculer(true); return; }
+      if (mod && ((e.key === 'y' || e.key === 'Y') || ((e.key === 'z' || e.key === 'Z') && e.shiftKey))) { e.preventDefault(); reculer(false); return; }
       if (mod && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); basculerDepuisBarre('gras'); return; }
       if (mod && (e.key === 'i' || e.key === 'I')) { e.preventDefault(); basculerDepuisBarre('italique'); return; }
     });

@@ -295,7 +295,10 @@
     // Le balisage s'écrit avec des polices incorporées : un lecteur d'écran lit le texte d'une police
     // qui sait dire quelle lettre est quelle lettre, et l'archivage comme l'accessibilité l'exigent.
     const balise = opts.balise != null ? !!opts.balise : !!(state.meta && state.meta.balise);
-    const veut = !!(opts.archivage || opts.unicode || balise);
+    // Une page corrigée écrit ce que la police du document n'a pas avec les polices incorporées (Arimo, Tinos, Cousine : mêmes largeurs que Helvetica,
+    // Times et Courier, et mêmes dessins que Liberation) plutôt qu'avec Helvetica : la lettre ajoutée se voit moins.
+    const corrige = (pages || []).some(p => (p.ann || []).some(a => a.type === 'edit' && !a.efface && a.origine));
+    const veut = !!(opts.archivage || opts.unicode || balise || corrige);
     const octets = await avecEcritureUnicode(veut, () => construirePdf(pages, opts));
     if (!veut && FEAT.unicode && caracteresPerdus().length) {
       signaler('Caractères', 'Des caractères hors du jeu Windows sont écrits avec une police incorporée.', 'info');

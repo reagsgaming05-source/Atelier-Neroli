@@ -51,8 +51,20 @@
     const txt = String(o.text == null ? '' : o.text);
     if (!txt) return o.x;
     const suites = [];
+    // Avec `motEntier`, un mot dont une seule lettre manque à la police du document s'écrit tout entier avec la police de remplacement : deux
+    // dessins de lettres dans un même mot se verraient plus qu'un mot d'une autre police, de mêmes largeurs.
+    const manque = new Set();
+    if (o.motEntier && o.propre) {
+      let mot = [];
+      const arr = Array.from(txt);
+      const clore = () => { if (mot.some(k => !o.propre.connait(arr[k]))) mot.forEach(k => manque.add(k)); mot = []; };
+      arr.forEach((ch, i) => { if (/\s/.test(ch)) clore(); else mot.push(i); });
+      clore();
+    }
+    let rang = 0;
     for (const ch of txt) {
-      const propre = !!(o.propre && o.propre.connait(ch));
+      const propre = !!(o.propre && o.propre.connait(ch)) && !manque.has(rang);
+      rang++;
       const d = suites[suites.length - 1];
       if (d && d.propre === propre) d.t += ch;
       else suites.push({ propre, t: ch });
@@ -269,27 +281,45 @@
           page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.color || '#000000'), opacity: an.type === 'highlight' ? (an.opacity == null ? 0.35 : an.opacity) : 1 });
         }
       } else if (an.type === 'edit') {
-        const r = rectToUser({ x: an.x, y: an.y, w: an.w, h: annHauteur(an) }, g);
-        if (r.w > 0 && r.h > 0) page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.bg || '#FFFFFF') });
-        if (an.bgImg && an.h0 > 0) {
-          const fondImg = await embedDataUrl(doc, images, an.bgImg);
-          const coin = toUser(an.x, an.y + an.h0, g);
-          page.drawImage(fondImg, { x: coin.x, y: coin.y, width: an.w, height: an.h0, rotate: PDFLib.degrees(g.total) });
+        // L'ancien texte est parti du flux (voir fxViderParPlace) : rien à recouvrir, et les lignes que la correction n'a pas touchées restent
+        // celles du document — seules les lignes refaites sont écrites.
+        const nettoyee = !!(enPlace && enPlace.nettoyees && enPlace.nettoyees.has(an.id));
+        // Le texte qu'on voyait est dans une image (un scan, dont la couche de texte est cachée) : on recouvre les lignes refaites, et elles seules.
+        const cachee = !nettoyee && !!(enPlace && enPlace.cachees && enPlace.cachees.has(an.id));
+        const premiere = nettoyee || cachee ? (an.gardees || 0) : 0;
+        if (!nettoyee) {
+          // Le haut de la première ligne refaite, dans le bloc.
+          const dy = premiere && an.ly && an.ly[premiere] != null ? Math.max(0, Math.min(an.h0 || 0, an.ly[premiere] - (an.size || 10) * 0.9)) : 0;
+          const r = rectToUser({ x: an.x, y: an.y + dy, w: an.w, h: annHauteur(an) - dy }, g);
+          if (r.w > 0 && r.h > 0) page.drawRectangle({ x: r.x, y: r.y, width: r.w, height: r.h, color: pdfColor(an.bg || '#FFFFFF') });
+          if (an.bgImg && an.h0 > dy + 0.5) {
+            const fondImg = await embedDataUrl(doc, images, dy > 0 ? await fondRogne(an.bgImg, dy, an.h0) : an.bgImg);
+            const coin = toUser(an.x, an.y + an.h0, g);
+            page.drawImage(fondImg, { x: coin.x, y: coin.y, width: an.w, height: an.h0 - dy, rotate: PDFLib.degrees(g.total) });
+          }
         }
         const lignes = an.lignes || [];
-        for (let i = 0; i < lignes.length; i++) {
+        for (let i = premiere; i < lignes.length; i++) {
           for (const jeton of lignes[i]) {
             const run = an.runs[jeton.r];
             if (!run || !jeton.t) continue;
+            // La première ligne refaite garde ce qui précède le premier caractère changé (voir recalcRuns) : on n'écrit que la suite.
+            let texteJeton = jeton.t, xJeton = an.x + 1 + jeton.x;
+            if (nettoyee && an.partiel && an.partiel.ligne === i && jeton.c != null) {
+              const P = an.partiel.c;
+              if (jeton.c + jeton.t.length <= P) continue;
+              if (jeton.c < P) { xJeton = an.x + 1 + xDuCaractere(an.runs, [jeton], P) + an.partiel.dx; texteJeton = jeton.t.slice(P - jeton.c); }
+              else xJeton += an.partiel.dx;
+            }
             // la police du document ne convient que si sa graisse et son
             // italique sont bien ceux demandes pour ce morceau
             const exacte = run.pol && run.pol.nom && !!run.pol.gras === !!run.gras && !!run.pol.italique === !!run.italique;
             const propre = exacte ? polPourPage(doc, page, run.pol.nom, fonts, p.id) : null;
             const repli = await getFont(doc, fonts, (run.pol && run.pol.genre) || run.genre, run.gras, run.italique);
             dessinerSuites(page, g, {
-              text: jeton.t, x: an.x + 1 + jeton.x,
+              text: texteJeton, x: xJeton,
               y: an.y + (an.ly ? an.ly[i] : an.pad + run.size * 0.82),
-              size: run.size, color: run.color, propre, repli,
+              size: run.size, color: run.color, propre, repli, motEntier: true,
             });
           }
         }
@@ -566,6 +596,15 @@
   }
   function loadImage(src) {
     return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  }
+  // Le bas d'une image de fond (de `dy` à `h0`, en points de la page) : ce qui sert à recouvrir les lignes refaites, sans toucher celles du dessus.
+  async function fondRogne(src, dy, h0) {
+    const im = await loadImage(src);
+    const k = im.naturalHeight / h0, h = Math.max(1, Math.round((h0 - dy) * k));
+    const c = document.createElement('canvas');
+    c.width = im.naturalWidth; c.height = h;
+    c.getContext('2d').drawImage(im, 0, Math.min(im.naturalHeight - 1, Math.round(dy * k)), im.naturalWidth, h, 0, 0, im.naturalWidth, h);
+    return c.toDataURL('image/png');
   }
 
   async function sourceDoc(src, forceFlatten) {

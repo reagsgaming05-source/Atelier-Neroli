@@ -30,6 +30,28 @@
   }
   const styleDePolice = (gras, italique) => (gras ? (italique ? 'bi' : 'b') : (italique ? 'i' : 'r'));
 
+  // Les polices de secours des corrections de texte : celles que l'export écrit (Arimo, Tinos, Cousine, au même gras et à la même pente), déclarées à
+  // la page sous un nom qui n'est qu'à nous. Les lettres qu'un sous-ensemble de la fonte du document n'a pas — celles qu'on tape en corrigeant — se
+  // mesurent et se montrent ainsi comme elles s'écriront ; le secours du système, lui, est demandé « normal » (la fonte du document porte déjà le
+  // gras) et ferait d'un mot en gras un mot moitié gras, moitié maigre, dont la suite se poserait trop tôt. La fonte du document n'est pas touchée :
+  // pdf.js s'en sert pour dessiner.
+  const polSecoursPrets = new Map();
+  polSecoursDe = (genre, gras, italique) => {
+    const id = (FAMILLES_UNICODE[genre] || 'sans') + '-' + styleDePolice(gras, italique);
+    const nom = 'Aktum secours ' + id;
+    if (!polSecoursPrets.has(id)) {
+      polSecoursPrets.set(id, (async () => {
+        try {
+          const f = new FontFace(nom, await octetsDePolice(id));
+          await f.load();
+          document.fonts.add(f);
+        } catch (e) { signaler('Police de secours des corrections', e, 'info'); }
+      })());
+    }
+    return nom;
+  };
+  polSecoursAttendre = () => Promise.all(Array.from(polSecoursPrets.values()));
+
   // Les caractères que les trois familles savent écrire : hors de cet ensemble,
   // un caractère est remplacé par « ? » et signalé, comme avec les polices standard.
   async function preparerEcritureUnicode() {

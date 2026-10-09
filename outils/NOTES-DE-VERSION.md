@@ -14,6 +14,19 @@ ni dans les métadonnées. Le PDF caviardé est reconstruit, et un contrôle ind
 (quatre outils qui ne sont pas les nôtres) vérifie dix-sept documents piégés à chaque
 construction. La recherche trouve un mot même coupé en fin de ligne ou écrit sans accent.
 
+**Corriger un texte sans toucher au reste de la page.** Un nom dans un bloc d'adresse, un montant, une
+date, un mot dans un paragraphe se corrigent sur place : la ligne d'à côté ne bouge pas, un mot ne se
+fond plus dans la ligne du dessous (le défaut vu avec « Œuvre Téléphone »), et l'ancien texte quitte
+le fichier. L'outil a été éprouvé, avec des outils qui ne sont pas les nôtres, sur des PDF de
+LibreOffice, de Chromium, de Ghostscript, de Cairo et de reportlab, sur une page enregistrée en
+paysage et sur un scan reconnu par OCR (où la correction recouvre l'image : le texte qu'on corrigerait
+« dans la page » y est invisible). Une lettre que la police du document n'a pas (« ö », « Ł », « € »)
+s'écrit dans une police de même dessin que l'Arial, le Times ou le Courier, au lieu de l'Helvetica ;
+un mot en gras dont des lettres manquent se mesure en gras, et la virgule qui le suit ne le touche
+plus. Un texte couché ou à l'envers ne se corrige pas : l'outil le dit au lieu de rester muet. Un bloc
+qui grandit jusqu'à toucher le texte voisin est entouré de rouge et signalé ; l'outil ne déplace pas
+les blocs voisins, et la liste des limites le dit.
+
 **Plus rien n'est détruit en silence.** À l'ouverture, un PDF signé, un PDF/A, un document
 balisé ou un formulaire XFA est reconnu ; l'application dit ce que l'enregistrement
 détruirait avant de le faire, et ne laisse jamais une propriété annoncée alors qu'elle

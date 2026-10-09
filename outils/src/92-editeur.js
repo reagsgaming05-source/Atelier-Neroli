@@ -137,6 +137,8 @@
             setBusy('');
             edDrawOverlay();
             setLast(l.length ? plural(l.length, 'bloc de texte modifiable', 'blocs de texte modifiables') + ' sur cette page' : 'Aucun texte sur cette page');
+            // Un texte couché ou à l'envers ne se corrige pas tel quel : on dit quoi faire plutôt que de laisser une page muette.
+            if (!l.length && ed.tournes) toast('Le texte de cette page est couché ou à l\'envers : tournez d\'abord la page (Pivoter à gauche ou à droite, dans la vue Organiser), corrigez le texte, puis remettez la page dans son sens.', 'warn');
           });
         }
       });

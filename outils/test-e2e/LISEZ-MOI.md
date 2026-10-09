@@ -25,6 +25,7 @@ silence). Sur un poste de développement sans eux, les scénarios concernés se 
 | **Fichiers abîmés** | `corpus-abime.spec.js` | une exception, un blocage ou un export abîmé sur 15 fichiers tordus de façons courantes (table des références décalée, fin coupée, `/Length` faux, page sans `/MediaBox`, contenu qui renvoie à un objet absent…). |
 | **Rendu** | `visuel.spec.js` + `references/` | une différence d'un octet sur six captures de référence (le rendu est reproductible : même navigateur, même octet). À refaire quand Playwright change de Chromium. |
 | **Temps** | `perf.spec.js`, `memoire.spec.js` | une recherche sur 300 pages, l'export de 100 pages, un dossier de 10 pièces, la mémoire des aperçus, au-delà d'un plafond large. |
+| **Corriger un texte** | `modifier-texte.spec.js`, `fixtures/texte/` | un nouveau texte qu'on ne lit pas, un ancien qu'on lit encore (à l'écran, au copier-coller, dans les octets), un mot d'à côté qui bouge, un mot qui en recouvre un autre, un point du rendu qui change hors de la zone — jugés par poppler et qpdf sur des PDF de LibreOffice, Chromium, Ghostscript, Cairo, reportlab, une page tournée et un scan à texte caché |
 | **Chiffrement** | `protection.spec.js`, `lots.spec.js` | un mot de passe annoncé qui n'est pas dans les octets (`/Encrypt`), jugé par qpdf. |
 
 Ces gardes se règlent dans `aide.js`. `AKTUM_SANS_VERIFICATEURS=1` (poste Windows de la CI, sans qpdf ni poppler) met la barrière de format de

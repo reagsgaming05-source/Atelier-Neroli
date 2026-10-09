@@ -409,12 +409,21 @@
 
 <figure>
   <img src="captures/a9-corriger-texte.png" alt="Les blocs de texte encadrés">
-  <figcaption>Les blocs modifiables, encadrés par l'outil. Une case permet d'effacer réellement le texte d'origine plutôt que de le recouvrir.</figcaption>
+  <figcaption>Les blocs modifiables, encadrés par l'outil.</figcaption>
 </figure>
 
 <div class="note">
-  <div class="titre">Recouvrir ou effacer</div>
-  <p>Par défaut, le texte corrigé est posé par-dessus l'ancien, qui reste dans le fichier. Pour qu'il disparaisse vraiment — et ne se retrouve pas par copier-coller — cochez l'effacement. La page reste nette ; l'application ne la convertit en image qu'en dernier recours, et le journal le signale quand elle a dû le faire.</p>
+  <div class="titre">Ce que devient l'ancien texte</div>
+  <p>Quand la correction tient dans la place disponible (un nom, un montant, un mot), elle est écrite directement dans la page, à la place de l'ancien texte : rien n'est recouvert, le texte reste sélectionnable, et le reste de la ligne ne bouge pas. Quand elle ne tient pas — un mot plus long dans un paragraphe, dont les lignes se replient —, les lignes refaites sont réécrites et l'ancien texte est effacé de la page : il ne se retrouve ni à l'écran, ni par copier-coller, ni par la recherche. Les lignes que la correction n'a pas touchées restent celles du document, au point près. Si l'application ne peut pas effacer l'ancien texte (rangé dans un objet qu'elle ne sait pas ouvrir), elle convertit la page en image plutôt que de le laisser caché dessous, et le journal le dit. La case « Effacer vraiment le texte d'origine » étend l'effacement à toutes les lettres d'origine sous le bloc.</p>
+</div>
+
+<div class="note">
+  <div class="titre">Ce que l'outil ne fait pas</div>
+  <p><strong>Il ne déplace pas les blocs voisins.</strong> Un nom d'adresse allongé, ou une ligne ajoutée, grandit dans la place libre ; s'il touche le texte d'à côté, le bloc s'entoure de rouge et l'application le dit : raccourcissez le texte, ou réduisez sa taille.
+  <strong>Il ne corrige pas un texte couché ou à l'envers</strong> : tournez la page d'abord, corrigez, puis remettez-la dans son sens.
+  <strong>Dans un scan</strong>, ce qu'on lit est une image : la correction recouvre les lignes refaites et les redessine en texte ; le gras du scan n'est pas reconnu.
+  <strong>Une lettre que la police du document n'a pas</strong> (un « ö » dans un document qui n'en a jamais eu) est écrite dans une police de même dessin que l'Arial, le Times ou le Courier — pas dans la police d'origine, qui ne l'a pas : la différence ne se voit que de très près.
+  Pour changer un mot partout dans un document, utilisez <strong>Rechercher, remplacer</strong>.</p>
 </div>
 
 <h3>Annoter</h3>

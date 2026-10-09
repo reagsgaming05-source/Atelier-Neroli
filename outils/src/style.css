@@ -998,6 +998,8 @@
   }
   .ed-overlay .bloc.chaud { fill: rgba(91, 156, 246, .17); stroke: var(--bleu-vif); stroke-width: 1.6; }
   .ed-overlay .sel-box { fill: none; stroke: var(--bleu); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+  /* Une correction qui touche le texte voisin : son cadre est cerné de rouge tant qu'elle le fait. */
+  .ed-overlay .deborde { fill: rgba(215, 55, 63, .08); stroke: #D7373F; stroke-width: 1.5; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; pointer-events: none; }
   .ed-overlay .handle { fill: var(--bleu); stroke: #fff; stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: nwse-resize; }
   .ed-overlay .hit { cursor: move; }
   .ed-side { background: var(--feutre); border-left: 1px solid var(--trait); padding: var(--e-4); overflow-y: auto; display: flex; flex-direction: column; gap: var(--e-4); }

@@ -79,6 +79,11 @@ export const limites: GroupeDeLimites[] = [
         apres: "Le traitement par lots de nombreux fichiers.",
       },
       {
+        limite: "La correction du texte existant n'est pas un traitement de texte : elle ne déplace pas les blocs voisins (un bloc qui s'allonge et touche le texte d'à côté est signalé, pas poussé), ne corrige pas un texte couché ou à l'envers, et dans un scan elle recouvre l'image et redessine les lignes refaites (le gras du scan n'est pas reconnu) ; une lettre que la police du document n'a pas est écrite dans une police de même dessin que l'Arial, le Times ou le Courier",
+        apres:
+          "La correction « sur place » d'un nom, d'un montant, d'un mot ou d'un paragraphe, qui laisse intact tout le reste de la page (vérifiée par des outils qui ne sont pas les nôtres sur des PDF de LibreOffice, Chromium, Ghostscript, Cairo et reportlab) ; « Rechercher, remplacer » pour un mot partout ; l'avertissement et le cadre rouge quand le texte corrigé touche son voisin.",
+      },
+      {
         limite: "Le caviardage ne reconnaît pas de lui-même une donnée personnelle : il retire ce que la personne désigne (une zone, un mot, un modèle : numéro AVS, IBAN…)",
         apres:
           "Un mode « certifié » qui reconstruit le fichier, un journal, et un contrôle indépendant (quatre outils qui ne sont pas les nôtres) sur dix-sept documents piégés à chaque construction.",
