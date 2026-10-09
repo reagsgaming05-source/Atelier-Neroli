@@ -71,6 +71,8 @@ export function About() {
         </div>
         <p class="center small muted" style={{ marginTop: '20px' }}>
           Code source libre (licence MIT).
+          <br />
+          Version {__BUILD__.sha} · {__BUILD__.date}
         </p>
       </div>
     </>

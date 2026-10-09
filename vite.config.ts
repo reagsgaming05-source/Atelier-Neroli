@@ -6,8 +6,12 @@ import { VitePWA } from 'vite-plugin-pwa';
 // BASE lets the app live under a sub-path, e.g. https://<user>.github.io/<repo>/
 const base = process.env.BASE ?? '/';
 
+// Which version this is, shown in "À propos" so that it can be told apart from an older cached one.
+const build = { sha: (process.env.GITHUB_SHA ?? 'dev').slice(0, 7), date: new Date().toISOString().slice(0, 10) };
+
 export default defineConfig({
   base,
+  define: { __BUILD__: JSON.stringify(build) },
   plugins: [
     preact(),
     VitePWA({
