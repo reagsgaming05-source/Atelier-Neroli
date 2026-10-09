@@ -1,6 +1,11 @@
 import { render } from 'preact';
 import { registerSW } from 'virtual:pwa-register';
 import '@fontsource/amiri-quran/400.css';
+import '@fontsource/amiri/latin-400.css';
+import '@fontsource/amiri/latin-700.css';
+import '@fontsource/amiri/latin-400-italic.css';
+import '@fontsource/amiri/latin-ext-400.css';
+import '@fontsource/amiri/latin-ext-700.css';
 import './styles.css';
 import { App } from './app';
 

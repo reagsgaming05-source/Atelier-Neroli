@@ -16,16 +16,19 @@ export function Welcome() {
   if (step === 'intro') {
     return (
       <main class="welcome">
-        <div class="ar">السَّلَامُ عَلَيْكُمْ</div>
-        <h1>Bienvenue sur Sakina</h1>
-        <p>Votre compagnon de prière, gratuit pour toujours.</p>
-        <ul>
+        <div class="welcome-arch">
+          <div class="ar">السَّلَامُ عَلَيْكُمْ</div>
+          <small>Bienvenue sur</small>
+          <h1>Sakina</h1>
+          <p>Votre compagnon de prière, gratuit pour toujours.</p>
+        </div>
+        <ul class="welcome-list">
           <li>Horaires de prière précis, partout dans le monde</li>
           <li>Coran complet en arabe et en français, avec récitation</li>
           <li>Qibla, adhkar, tasbih, calendrier hégirien, zakat</li>
-          <li>Sans publicité, sans compte, sans pistage — vos données restent sur votre téléphone</li>
+          <li>Sans publicité, sans compte, sans pistage : vos données restent sur votre téléphone</li>
         </ul>
-        <button class="btn block" style={{ marginTop: '24px', background: '#d9b45a', color: '#1b1a12' }} onClick={() => setStep('place')}>
+        <button class="btn block gilded" onClick={() => setStep('place')}>
           Commencer
         </button>
       </main>
@@ -34,7 +37,7 @@ export function Welcome() {
 
   return (
     <main class="welcome" style={{ justifyContent: 'flex-start' }}>
-      <h1 style={{ marginTop: '24px' }}>Où priez-vous ?</h1>
+      <h1 class="place-title">Où priez-vous ?</h1>
       <p>Votre position sert uniquement à calculer les horaires et la qibla, sur votre appareil.</p>
       <div class="card" style={{ marginTop: '8px' }}>
         <PlacePicker onPick={pick} />

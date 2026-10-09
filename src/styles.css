@@ -1,68 +1,106 @@
+/*
+ * Sakina's look: a printed book of devotions. Warm paper with a fine grain, ink green,
+ * gilded hairlines, titles set in Amiri (the Latin of the same family as the Arabic),
+ * flat folios instead of floating cards, and a mihrab arch for the prayer of the hour.
+ */
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('../node_modules/@fontsource-variable/source-sans-3/files/source-sans-3-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('../node_modules/@fontsource-variable/source-sans-3/files/source-sans-3-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
-  --bg: #f5f1e8;
-  --surface: #fffdf8;
-  --surface-2: #efe9db;
-  --border: #e3dccb;
-  --text: #17231f;
-  --muted: #5f6e68;
+  --bg: #f3edde;
+  --surface: #f9f5ea;
+  --surface-2: #ebe3cf;
+  --rule: rgb(150 112 24 / 32%);
+  --rule-soft: rgb(150 112 24 / 16%);
+  --border: var(--rule);
+  --text: #1a2a23;
+  --muted: #5b685f;
   --primary: #0f5a47;
-  --primary-soft: #dcebe4;
-  --on-primary: #ffffff;
+  --primary-soft: #dde8dc;
+  --on-primary: #fbf6e6;
   --gold: #a67c12;
-  --gold-soft: #f3e6c4;
-  --danger: #b3261e;
-  --hero-1: #0f2a24;
-  --hero-2: #17473b;
+  --gold-text: #7f5c06;
+  --gold-soft: #f1e4bd;
+  --gilt: #d9b45a;
+  --danger: #a8281f;
+  --hero-1: #0d2822;
+  --hero-2: #14372e;
   --hero-text: #f4efe1;
-  --hero-muted: #b9c9bf;
-  --shadow: 0 1px 2px rgb(20 40 30 / 6%), 0 4px 16px rgb(20 40 30 / 6%);
-  --radius: 18px;
-  --radius-sm: 12px;
-  --nav-h: 64px;
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --hero-muted: #b3c4b9;
+  --shadow: none;
+  --grain: 0.5;
+  --radius: 4px;
+  --radius-sm: 3px;
+  --nav-h: 62px;
+  --font: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Amiri', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
   --font-ar: 'Amiri Quran', 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* An eight-pointed star (two squares), the mark that opens a section. */
+  --star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23b8902a' stroke-width='1.3'%3E%3Crect x='4.5' y='4.5' width='11' height='11'/%3E%3Crect x='4.5' y='4.5' width='11' height='11' transform='rotate(45 10 10)'/%3E%3C/svg%3E");
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0b1513;
-    --surface: #12201c;
-    --surface-2: #192b26;
-    --border: #233832;
-    --text: #e8eee9;
-    --muted: #93a69e;
+    --bg: #0c1613;
+    --surface: #111e1a;
+    --surface-2: #182923;
+    --rule: rgb(220 183 92 / 26%);
+    --rule-soft: rgb(220 183 92 / 12%);
+    --text: #e9eee6;
+    --muted: #94a69b;
     --primary: #5cc49f;
-    --primary-soft: #1b3a31;
+    --primary-soft: #1a3a30;
     --on-primary: #06231b;
     --gold: #dcb75c;
+    --gold-text: #dcb75c;
     --gold-soft: #3a3120;
+    --gilt: #dcb75c;
     --danger: #f2b8b5;
-    --hero-1: #0a1f1a;
-    --hero-2: #12382e;
-    --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 4px 16px rgb(0 0 0 / 25%);
+    --hero-1: #091d18;
+    --hero-2: #11332a;
+    --grain: 0.25;
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #0b1513;
-  --surface: #12201c;
-  --surface-2: #192b26;
-  --border: #233832;
-  --text: #e8eee9;
-  --muted: #93a69e;
+  --bg: #0c1613;
+  --surface: #111e1a;
+  --surface-2: #182923;
+  --rule: rgb(220 183 92 / 26%);
+  --rule-soft: rgb(220 183 92 / 12%);
+  --text: #e9eee6;
+  --muted: #94a69b;
   --primary: #5cc49f;
-  --primary-soft: #1b3a31;
+  --primary-soft: #1a3a30;
   --on-primary: #06231b;
   --gold: #dcb75c;
+  --gold-text: #dcb75c;
   --gold-soft: #3a3120;
+  --gilt: #dcb75c;
   --danger: #f2b8b5;
-  --hero-1: #0a1f1a;
-  --hero-2: #12382e;
-  --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 4px 16px rgb(0 0 0 / 25%);
+  --hero-1: #091d18;
+  --hero-2: #11332a;
+  --grain: 0.25;
   color-scheme: dark;
 }
 
@@ -85,6 +123,33 @@ body {
   font-size: 16px;
   line-height: 1.5;
   overscroll-behavior-y: none;
+}
+
+/* The paper: a fine grain over the whole page. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: var(--grain);
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0 0.15 0 0 0 0.11 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+:root[data-theme='dark'] body::before {
+  mix-blend-mode: screen;
+}
+
+/* The story player is a film: no paper over it. */
+body:has(.player-screen)::before {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) body::before {
+    mix-blend-mode: screen;
+  }
 }
 
 a {
@@ -125,7 +190,7 @@ button {
 .page {
   max-width: 720px;
   margin: 0 auto;
-  padding: calc(var(--safe-top) + 8px) 16px 16px;
+  padding: calc(var(--safe-top) + 8px) 18px 16px;
 }
 
 .topbar {
@@ -135,18 +200,22 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 56px;
+  min-height: 60px;
   padding: calc(var(--safe-top) + 6px) 8px 6px;
   background: var(--bg);
-  border-bottom: 1px solid var(--border);
+  /* A double rule, like the head of a printed page. */
+  border-bottom: 1px solid var(--rule);
+  box-shadow: 0 3px 0 -2px var(--bg), 0 4px 0 -2px var(--rule-soft);
 }
 
 .topbar h1 {
   flex: 1;
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -154,8 +223,10 @@ button {
 
 .topbar .sub {
   display: block;
-  font-size: 0.78rem;
-  font-weight: 450;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-style: italic;
+  font-weight: 400;
   color: var(--muted);
 }
 
@@ -192,10 +263,12 @@ button {
   height: calc(var(--nav-h) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
   background: var(--surface);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--rule);
+  box-shadow: 0 -3px 0 -2px var(--surface), 0 -4px 0 -2px var(--rule-soft);
 }
 
 .nav a {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -204,52 +277,87 @@ button {
   gap: 3px;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.7rem;
-  font-weight: 550;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.nav a svg {
+  stroke-width: 1.6;
 }
 
 .nav a[aria-current='page'] {
   color: var(--primary);
 }
 
+.nav a[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  transform: rotate(45deg);
+}
+
 .nav a[aria-current='page'] svg {
-  stroke-width: 2.2;
+  stroke-width: 2;
 }
 
 /* ---------- Building blocks ---------- */
 
+/* A folio: flat, framed by a gilded hairline and a fainter one inside. */
 .card {
+  position: relative;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 16px;
+  box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px var(--rule-soft);
+  padding: 20px 20px;
 }
 
 .card + .card,
 .section + .section,
 .card + .section,
 .section + .card {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .section-title {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin: 22px 4px 10px;
-  font-size: 0.8rem;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
+  align-items: center;
+  gap: 9px;
+  margin: 30px 0 14px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--primary);
 }
 
-.section-title a {
+.section-title::before {
+  content: '';
+  flex: none;
+  width: 15px;
+  height: 15px;
+  background: var(--star) center / contain no-repeat;
+}
+
+.section-title > :last-child:not(:first-child) {
+  margin-inline-start: auto;
+}
+
+.section-title a,
+.section-title button {
+  font-family: var(--font);
   font-size: 0.85rem;
-  letter-spacing: 0;
-  text-transform: none;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   text-decoration: none;
+  color: var(--gold-text);
 }
 
 .muted {
@@ -284,35 +392,41 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 46px;
-  padding: 0 18px;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  min-height: 48px;
+  padding: 0 22px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
   background: var(--primary);
+  /* A thin gilded line inside the edge. */
+  box-shadow: inset 0 0 0 2px var(--primary), inset 0 0 0 3px rgb(217 180 90 / 75%);
   color: var(--on-primary);
   font-weight: 600;
+  letter-spacing: 0.02em;
   text-decoration: none;
   transition: transform 0.08s ease;
 }
 
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.985);
 }
 
 .btn.secondary {
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--border);
+  background: transparent;
+  color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: none;
 }
 
 .btn.ghost {
   background: transparent;
+  border-color: transparent;
+  box-shadow: none;
   color: var(--primary);
 }
 
 .btn.small {
   min-height: 42px;
-  padding: 0 14px;
+  padding: 0 16px;
   font-size: 0.92rem;
   white-space: nowrap;
 }
@@ -341,25 +455,25 @@ button {
   flex-shrink: 0;
   min-height: 36px;
   padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: transparent;
   color: var(--text);
   font-size: 0.9rem;
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .chip[aria-pressed='true'] {
   background: var(--primary);
   border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary), inset 0 0 0 3px rgb(217 180 90 / 70%);
   color: var(--on-primary);
 }
 
+/* A table of contents: rows between gilded rules, no box. */
 .list {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
   overflow: hidden;
 }
 
@@ -368,8 +482,8 @@ button {
   align-items: center;
   gap: 14px;
   width: 100%;
-  min-height: 56px;
-  padding: 12px 16px;
+  min-height: 60px;
+  padding: 12px 4px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -378,7 +492,7 @@ button {
 }
 
 .list-item + .list-item {
-  border-top: 1px solid var(--border);
+  border-top: 1px dotted var(--rule);
 }
 
 .list-item:active {
@@ -386,7 +500,10 @@ button {
 }
 
 .list-item .title {
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .list-item .subtitle {
@@ -395,47 +512,54 @@ button {
 }
 
 .list-item > svg:last-child {
-  color: var(--muted);
+  color: var(--gold);
   flex-shrink: 0;
 }
 
-.badge {
+.badge,
+.badge.star {
+  position: relative;
   display: inline-grid;
   place-items: center;
-  min-width: 38px;
-  height: 38px;
+  min-width: 40px;
+  height: 40px;
   padding: 0 6px;
-  border-radius: 12px;
-  background: var(--primary-soft);
+  background: none;
   color: var(--primary);
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 0.9rem;
-  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+  font-variant-numeric: lining-nums tabular-nums;
   flex-shrink: 0;
 }
 
-.badge.star {
-  border-radius: 0;
-  background: none;
-  position: relative;
-  color: var(--primary);
-}
-
-.badge.star::before {
+/* A number sits in an eight-pointed star (two squares). */
+.badge::before,
+.badge::after {
   content: '';
   position: absolute;
-  inset: 3px;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
   border: 1.5px solid var(--gold);
+  border-radius: 2px;
+}
+
+.badge::before {
   transform: rotate(45deg);
-  border-radius: 6px;
 }
 
-.badge.star::after {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  border: 1.5px solid var(--gold);
-  border-radius: 6px;
+/* An icon stands by itself, drawn in line. */
+.badge:has(svg) {
+  min-width: 36px;
+  color: var(--gold);
+}
+
+.badge:has(svg)::before,
+.badge:has(svg)::after {
+  display: none;
 }
 
 .tile-grid {
@@ -450,37 +574,49 @@ button {
   }
 }
 
+/* A shortcut: a framed plate with the sign drawn in gold line, no tinted square. */
 .tile {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  min-height: 112px;
-  padding: 16px;
-  border: 1px solid var(--border);
+  gap: 6px;
+  min-height: 116px;
+  padding: 16px 14px 14px;
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px var(--rule-soft);
   color: inherit;
   text-decoration: none;
 }
 
-.tile .tile-icon {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: var(--primary-soft);
-  color: var(--primary);
+/* The first plate of a set is wider, and so is a last one that would stand alone. */
+.tile-grid > .tile:first-child,
+.tile-grid > .tile:last-child:nth-child(even) {
+  grid-column: 1 / -1;
+  min-height: 0;
 }
 
+.tile .tile-icon,
 .tile .tile-icon.gold {
-  background: var(--gold-soft);
+  display: block;
+  width: auto;
+  height: auto;
+  margin-bottom: 2px;
+  border-radius: 0;
+  background: none;
   color: var(--gold);
 }
 
+.tile .tile-icon.gold {
+  color: var(--primary);
+}
+
 .tile strong {
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .tile span {
@@ -494,7 +630,7 @@ button {
 }
 
 .field + .field {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .field > span {
@@ -502,6 +638,7 @@ button {
   margin-bottom: 6px;
   font-size: 0.85rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--muted);
 }
 
@@ -510,8 +647,8 @@ select.input {
   width: 100%;
   min-height: 48px;
   padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
   background: var(--surface);
   font-size: 1rem;
 }
@@ -529,24 +666,23 @@ select.input {
   position: absolute;
   inset: 0 auto 0 14px;
   margin: auto;
-  color: var(--muted);
+  color: var(--gold);
 }
 
 .search .input {
   padding-left: 44px;
-  border-radius: 999px;
 }
 
 .switch {
   position: relative;
-  width: 52px;
-  height: 32px;
+  width: 50px;
+  height: 28px;
   flex-shrink: 0;
   appearance: none;
   -webkit-appearance: none;
-  border-radius: 999px;
+  border-radius: 14px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule);
   transition: background 0.2s;
 }
 
@@ -555,11 +691,10 @@ select.input {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  background: var(--gold);
   transition: transform 0.2s;
 }
 
@@ -569,15 +704,16 @@ select.input {
 }
 
 .switch:checked::after {
-  transform: translateX(20px);
+  transform: translateX(22px);
+  background: var(--gilt);
 }
 
 .stepper {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
   background: var(--surface);
 }
 
@@ -585,7 +721,7 @@ select.input {
   width: 38px;
   height: 38px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 2px;
   background: transparent;
   display: grid;
   place-items: center;
@@ -600,7 +736,8 @@ select.input {
 
 .notice {
   padding: 12px 14px;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
   background: var(--gold-soft);
   color: var(--text);
   font-size: 0.9rem;
@@ -609,30 +746,31 @@ select.input {
 .empty {
   padding: 40px 16px;
   text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-style: italic;
   color: var(--muted);
 }
 
-/* ---------- Hero (home) ---------- */
+/* ---------- Hero (home): the mihrab ---------- */
 
 .hero {
   position: relative;
   overflow: hidden;
-  margin: 0 -16px;
-  padding: calc(var(--safe-top) + 18px) 20px 26px;
-  border-radius: 0 0 28px 28px;
-  background: linear-gradient(160deg, var(--hero-2), var(--hero-1) 70%);
+  margin: 0 -18px;
+  padding: calc(var(--safe-top) + 14px) 22px 30px;
+  background: var(--hero-1);
   color: var(--hero-text);
 }
 
-.hero::before {
+/* A gilded double line closes the green. */
+.hero::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23d9b45a' stroke-opacity='0.13' stroke-width='1'%3E%3Cpath d='M40 8l9.4 22.6L72 40l-22.6 9.4L40 72l-9.4-22.6L8 40l22.6-9.4z'/%3E%3Crect x='18' y='18' width='44' height='44' transform='rotate(45 40 40)'/%3E%3Crect x='18' y='18' width='44' height='44'/%3E%3Ccircle cx='40' cy='40' r='6'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 80px 80px;
-  mask-image: linear-gradient(180deg, #000 10%, transparent 95%);
-  -webkit-mask-image: linear-gradient(180deg, #000 10%, transparent 95%);
-  pointer-events: none;
+  inset: auto 0 0;
+  height: 7px;
+  border-top: 1px solid rgb(217 180 90 / 70%);
+  border-bottom: 1px solid rgb(217 180 90 / 35%);
 }
 
 .hero > * {
@@ -650,102 +788,137 @@ select.input {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 40px;
   max-width: 70%;
-  padding: 0 12px 0 8px;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 8%);
   color: var(--hero-text);
-  font-size: 0.88rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.hero-place svg {
+  color: var(--gilt);
+}
+
 .hero .icon-btn {
   color: var(--hero-text);
 }
 
-.hero-dates {
-  margin-top: 18px;
-  font-size: 0.9rem;
-  color: var(--hero-muted);
-}
-
-.hero-dates .ar {
-  font-size: 1.05rem;
-  line-height: 1.6;
-  color: var(--hero-text);
-}
-
-.hero-next {
-  margin-top: 18px;
+/* The arch frames the next prayer, as a mihrab frames the place of prayer. */
+.hero-arch {
+  max-width: 310px;
+  margin: 8px auto 0;
+  padding: 84px 20px 22px;
+  border: 1px solid rgb(217 180 90 / 60%);
+  border-radius: 155px 155px 0 0;
+  outline: 1px solid rgb(217 180 90 / 26%);
+  outline-offset: 5px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 14%, rgb(233 198 112 / 22%), transparent 70%),
+    var(--hero-2);
 }
 
 .hero-next .label {
-  font-size: 0.82rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #d9b45a;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-style: italic;
+  color: var(--gilt);
 }
 
 .hero-next .name {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-top: 2px;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 4px;
 }
 
 .hero-next .name strong {
-  font-size: 2.3rem;
+  font-family: var(--font-display);
+  font-size: 3rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  line-height: 1.05;
 }
 
 .hero-next .name .ar {
-  font-size: 1.6rem;
-  line-height: 1.4;
-  color: #d9b45a;
+  font-size: 1.7rem;
+  line-height: 1.5;
+  color: var(--gilt);
 }
 
 .hero-next .count {
-  font-size: 1.05rem;
+  margin-top: 4px;
+  font-size: 1rem;
+  color: var(--hero-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .hero-next .count b {
-  font-size: 1.3rem;
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--hero-text);
 }
 
 .hero-progress {
-  height: 4px;
-  margin-top: 14px;
-  border-radius: 4px;
-  background: rgb(255 255 255 / 12%);
-  overflow: hidden;
+  height: 1px;
+  margin: 18px 12px 0;
+  background: rgb(217 180 90 / 28%);
+  overflow: visible;
 }
 
 .hero-progress div {
-  height: 100%;
-  border-radius: 4px;
-  background: #d9b45a;
+  position: relative;
+  height: 1px;
+  background: var(--gilt);
+}
+
+.hero-progress div::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  background: var(--gilt);
+  transform: rotate(45deg);
+}
+
+.hero-dates {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  color: var(--hero-muted);
+}
+
+.hero-dates .ar {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--hero-text);
 }
 
 /* ---------- Prayer list ---------- */
 
 .prayers {
-  padding: 6px;
+  padding: 0;
 }
 
 .prayer {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 54px;
-  padding: 8px 10px;
-  border-radius: 14px;
+  min-height: 58px;
+  padding: 8px 6px;
+  border-radius: 0;
+}
+
+.prayer + .prayer {
+  border-top: 1px dotted var(--rule);
 }
 
 .prayer .p-name {
@@ -754,32 +927,42 @@ select.input {
 }
 
 .prayer .p-name b {
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.28rem;
+  font-weight: 700;
 }
 
 .prayer .p-name .ar {
   margin-left: 10px;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   line-height: 1;
-  color: var(--muted);
+  color: var(--gold-text);
 }
 
 .prayer .p-time {
-  font-size: 1.1rem;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .prayer.minor {
   color: var(--muted);
 }
 
-.prayer.minor .p-time {
-  font-weight: 500;
+.prayer.minor .p-name b {
+  font-weight: 400;
+  font-style: italic;
 }
 
+.prayer.minor .p-time {
+  font-weight: 400;
+}
+
+/* The prayer to come is marked in the margin with gold, as a place is marked in a book. */
 .prayer.next {
-  background: var(--primary-soft);
+  background: linear-gradient(90deg, var(--primary-soft), transparent 90%);
+  box-shadow: inset 3px 0 0 var(--gold);
 }
 
 .prayer.next .p-name b,
@@ -794,9 +977,9 @@ select.input {
 .tick {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 1.5px solid var(--border);
+  width: 30px;
+  height: 30px;
+  border: 1.5px solid var(--gold);
   border-radius: 50%;
   background: transparent;
   color: transparent;
@@ -807,36 +990,44 @@ select.input {
 .tick[aria-pressed='true'] {
   background: var(--primary);
   border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--surface), 0 0 0 2px var(--gold);
   color: var(--on-primary);
 }
 
 .tick-spacer {
-  width: 32px;
+  width: 30px;
   flex-shrink: 0;
 }
 
 .extra-times {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 12px;
+  margin-top: 14px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
   text-align: center;
 }
 
 .extra-times div {
   padding: 10px 4px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
+}
+
+.extra-times div + div {
+  border-inline-start: 1px dotted var(--rule);
 }
 
 .extra-times small {
   display: block;
-  font-size: 0.72rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-style: italic;
   color: var(--muted);
 }
 
 .extra-times b {
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 table.month {
@@ -849,8 +1040,9 @@ table.month {
 table.month th {
   padding: 8px 2px;
   background: var(--surface);
-  font-size: 0.72rem;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
   color: var(--muted);
   text-align: center;
 }
@@ -888,11 +1080,14 @@ table.month tr.friday td:first-child {
 }
 
 .reader-head {
-  margin: 4px 0 18px;
-  padding: 22px 16px 18px;
+  margin: 6px 0 18px;
+  padding: 24px 16px 20px;
+  border: 1px solid rgb(217 180 90 / 65%);
   border-radius: var(--radius);
+  outline: 1px solid rgb(217 180 90 / 30%);
+  outline-offset: -6px;
   text-align: center;
-  background: linear-gradient(160deg, var(--hero-2), var(--hero-1) 75%);
+  background: var(--hero-1);
   color: var(--hero-text);
   position: relative;
   overflow: hidden;
@@ -988,9 +1183,9 @@ table.month tr.friday td:first-child {
   display: inline-block;
   margin-inline-start: 6px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: var(--gold-soft);
-  color: var(--gold);
+  color: var(--gold-text);
   font-size: 0.75rem;
   font-weight: 650;
 }
@@ -1017,10 +1212,11 @@ table.month tr.friday td:first-child {
   max-width: 696px;
   margin: 0 auto;
   padding: 8px 8px 8px 16px;
-  border-radius: 999px;
+  border: 1px solid rgb(217 180 90 / 55%);
+  border-radius: var(--radius);
   background: var(--hero-1);
   color: var(--hero-text);
-  box-shadow: 0 8px 30px rgb(0 0 0 / 30%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 28%);
 }
 
 .player .icon-btn {
@@ -1090,13 +1286,26 @@ table.month tr.friday td:first-child {
   aspect-ratio: 1;
   border: 0;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--hero-2), var(--hero-1) 70%);
+  background: radial-gradient(circle at 50% 38%, var(--hero-2), var(--hero-1) 78%);
   color: var(--hero-text);
-  box-shadow: 0 18px 40px rgb(15 42 36 / 35%), inset 0 0 0 10px rgb(255 255 255 / 4%);
+  /* Two gilded rings outside and one engraved inside, like the face of a dial. */
+  box-shadow:
+    0 0 0 1px rgb(217 180 90 / 75%),
+    0 0 0 7px var(--bg),
+    0 0 0 8px rgb(217 180 90 / 45%);
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   transition: transform 0.06s ease;
+}
+
+.tasbih-btn::before {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgb(217 180 90 / 38%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .tasbih-btn:active {
@@ -1112,15 +1321,18 @@ table.month tr.friday td:first-child {
 }
 
 .tasbih-btn .n {
-  font-size: 4.2rem;
+  font-family: var(--font-display);
+  font-size: 5.2rem;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   line-height: 1;
 }
 
 .tasbih-btn .t {
   margin-top: 6px;
-  font-size: 0.95rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-style: italic;
   color: var(--hero-muted);
 }
 
@@ -1177,8 +1389,9 @@ table.month tr.friday td:first-child {
   min-height: 48px;
   padding: 0 20px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary), inset 0 0 0 3px rgb(217 180 90 / 70%);
   color: var(--on-primary);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -1189,13 +1402,14 @@ table.month tr.friday td:first-child {
 }
 
 .dhikr.done .counter-btn {
+  box-shadow: none;
   background: var(--surface-2);
   color: var(--primary);
 }
 
 .progress {
-  height: 6px;
-  border-radius: 6px;
+  height: 4px;
+  border-radius: 1px;
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -1203,7 +1417,7 @@ table.month tr.friday td:first-child {
 .progress div {
   height: 100%;
   background: var(--primary);
-  border-radius: 6px;
+  border-radius: 1px;
   transition: width 0.2s;
 }
 
@@ -1223,9 +1437,10 @@ table.month tr.friday td:first-child {
 
 .name-card {
   padding: 14px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px var(--rule-soft);
   text-align: center;
 }
 
@@ -1236,8 +1451,9 @@ table.month tr.friday td:first-child {
 }
 
 .name-card .tl {
-  font-weight: 650;
-  font-size: 0.92rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
 }
 
 .name-card .fr {
@@ -1246,8 +1462,8 @@ table.month tr.friday td:first-child {
 }
 
 .name-card .num {
-  font-size: 0.72rem;
-  color: var(--gold);
+  font-size: 0.78rem;
+  color: var(--gold-text);
   font-weight: 700;
 }
 
@@ -1271,12 +1487,13 @@ table.month tr.friday td:first-child {
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  border-radius: 10px;
+  border-radius: 2px;
   font-variant-numeric: tabular-nums;
 }
 
 .cal-day b {
-  font-size: 0.95rem;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
 }
 
 .cal-day small {
@@ -1328,29 +1545,37 @@ table.month tr.friday td:first-child {
   background: var(--surface-2);
 }
 
+/* Figures set side by side between rules, not in separate boxes. */
 .stat-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
 }
 
 .stat {
-  padding: 14px 10px;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  padding: 14px 8px;
   text-align: center;
+}
+
+.stat + .stat {
+  border-inline-start: 1px dotted var(--rule);
 }
 
 .stat b {
   display: block;
-  font-size: 1.6rem;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: lining-nums tabular-nums;
   color: var(--primary);
 }
 
 .stat small {
-  font-size: 0.75rem;
+  display: block;
+  font-size: 0.8rem;
+  line-height: 1.3;
   color: var(--muted);
 }
 
@@ -1362,23 +1587,27 @@ table.month tr.friday td:first-child {
 
 .heat div {
   aspect-ratio: 1;
-  border-radius: 6px;
+  border-radius: 2px;
   background: var(--surface-2);
 }
 
 .result {
-  padding: 18px;
+  padding: 20px 18px;
+  border: 1px solid rgb(217 180 90 / 65%);
   border-radius: var(--radius);
-  background: linear-gradient(160deg, var(--hero-2), var(--hero-1) 75%);
+  outline: 1px solid rgb(217 180 90 / 30%);
+  outline-offset: -6px;
+  background: var(--hero-1);
   color: var(--hero-text);
   text-align: center;
 }
 
 .result strong {
   display: block;
-  font-size: 2.2rem;
-  font-variant-numeric: tabular-nums;
-  color: #d9b45a;
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--gilt);
 }
 
 .welcome {
@@ -1386,34 +1615,95 @@ table.month tr.friday td:first-child {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
-  background: linear-gradient(170deg, var(--hero-2), var(--hero-1) 65%);
+  padding: calc(var(--safe-top) + 24px) 26px calc(var(--safe-bottom) + 24px);
+  background: var(--hero-1);
   color: var(--hero-text);
 }
 
+.welcome-arch {
+  margin: 0 auto 26px;
+  width: min(100%, 300px);
+  padding: 70px 20px 26px;
+  border: 1px solid rgb(217 180 90 / 60%);
+  border-radius: 150px 150px 0 0;
+  outline: 1px solid rgb(217 180 90 / 26%);
+  outline-offset: 5px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 14%, rgb(233 198 112 / 22%), transparent 70%),
+    var(--hero-2);
+}
+
 .welcome .ar {
-  font-size: 2.4rem;
+  font-size: 2.1rem;
   line-height: 1.6;
-  color: #d9b45a;
+  color: var(--gilt);
+}
+
+.welcome small {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-style: italic;
+  color: var(--hero-muted);
 }
 
 .welcome h1 {
-  margin: 8px 0 6px;
-  font-size: 2rem;
-  letter-spacing: -0.02em;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 3.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0;
 }
 
 .welcome p {
   color: var(--hero-muted);
 }
 
+.welcome-arch p {
+  margin: 8px 0 0;
+}
+
 .welcome .card {
   color: var(--text);
 }
 
-.welcome ul {
-  padding-left: 18px;
+.welcome-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   color: var(--hero-muted);
+}
+
+.welcome-list li {
+  position: relative;
+  padding: 7px 0 7px 26px;
+}
+
+.welcome-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 12px;
+  width: 13px;
+  height: 13px;
+  background: var(--star) center / contain no-repeat;
+}
+
+.btn.gilded,
+.btn.gilded:active {
+  margin-top: 26px;
+  border-color: var(--gilt);
+  background: var(--gilt);
+  box-shadow: inset 0 0 0 2px var(--gilt), inset 0 0 0 3px rgb(13 40 34 / 55%);
+  color: #14210f;
+}
+
+.welcome h1.place-title {
+  margin-top: 24px;
+  font-size: 2.2rem;
 }
 
 .toast {
@@ -1424,7 +1714,7 @@ table.month tr.friday td:first-child {
   transform: translateX(-50%);
   max-width: calc(100% - 32px);
   padding: 10px 18px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--text);
   color: var(--bg);
   font-size: 0.9rem;
@@ -1528,8 +1818,8 @@ a.goal-title::after {
   width: 100%;
   min-height: 52px;
   padding: 10px 16px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
   text-align: start;
@@ -1564,8 +1854,11 @@ a.goal-title::after {
   overflow: hidden;
   margin: 4px 0 16px;
   padding: 24px 18px 20px;
+  border: 1px solid rgb(217 180 90 / 65%);
   border-radius: var(--radius);
-  background: linear-gradient(160deg, var(--hero-2), var(--hero-1) 75%);
+  outline: 1px solid rgb(217 180 90 / 30%);
+  outline-offset: -6px;
+  background: var(--hero-1);
   color: var(--hero-text);
   text-align: center;
 }
@@ -1578,7 +1871,8 @@ a.goal-title::after {
 
 .story-hero h2 {
   margin: 2px 0 0;
-  font-size: 1.35rem;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
   text-wrap: balance;
 }
 
@@ -1643,9 +1937,21 @@ a.goal-title::after {
 
 .hadith-text {
   position: relative;
-  padding-inline-start: 16px;
-  border-inline-start: 3px solid var(--gold);
-  line-height: 1.75;
+  padding-top: 26px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  line-height: 1.7;
+}
+
+/* A large opening quotation mark in gold, as in a printed book. */
+.hadith-text::before {
+  content: '«';
+  position: absolute;
+  top: -6px;
+  left: -2px;
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--gold);
 }
 
 .step-num {
@@ -1654,11 +1960,13 @@ a.goal-title::after {
   width: 30px;
   height: 30px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 2px;
   background: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary), inset 0 0 0 3px rgb(217 180 90 / 75%);
   color: var(--on-primary);
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 1.05rem;
 }
 
 .guide-step {
@@ -2364,10 +2672,25 @@ a.goal-title::after {
   background: linear-gradient(180deg, transparent, rgb(0 0 0 / 75%));
 }
 
+.series-card::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgb(217 180 90 / 60%);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.series-card .info {
+  padding-inline: 16px;
+  padding-bottom: 16px;
+}
+
 .series-card .info b {
   display: block;
-  font-size: 0.98rem;
-  line-height: 1.25;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  line-height: 1.2;
 }
 
 .series-card .info small {
@@ -2389,13 +2712,13 @@ a.goal-title::after {
 
 .series-card .watched {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 14px;
+  left: 14px;
   display: grid;
   place-items: center;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: 2px;
   background: #d9b45a;
   color: #1b1a12;
 }
@@ -2423,7 +2746,9 @@ a.goal-title::after {
   height: 86px;
   flex-shrink: 0;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 2px;
+  outline: 1px solid rgb(217 180 90 / 55%);
+  outline-offset: -4px;
 }
 
 .series-hero {
@@ -2431,6 +2756,8 @@ a.goal-title::after {
   overflow: hidden;
   margin: 4px 0 16px;
   border-radius: var(--radius);
+  outline: 1px solid rgb(217 180 90 / 55%);
+  outline-offset: -8px;
   aspect-ratio: 4 / 3;
   max-width: 100%;
   max-height: 60vh;
@@ -2462,7 +2789,9 @@ a.goal-title::after {
 
 .series-hero .overlay h2 {
   margin: 0;
-  font-size: 1.4rem;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1.1;
   text-wrap: balance;
 }
 
@@ -2470,5 +2799,6 @@ a.goal-title::after {
   align-self: flex-start;
   margin-top: 10px;
   background: #d9b45a;
+  box-shadow: inset 0 0 0 2px #d9b45a, inset 0 0 0 3px rgb(13 40 34 / 55%);
   color: #1b1a12;
 }

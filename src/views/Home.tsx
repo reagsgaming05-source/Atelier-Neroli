@@ -49,14 +49,8 @@ export function Home() {
             <Icon name="settings" />
           </a>
         </div>
-        <div class="hero-dates">
-          <div class="ar">{formatHijri(hijri, 'ar')}</div>
-          <div>
-            <span style={{ textTransform: 'capitalize' }}>{gregorian}</span> · {formatHijri(hijri)}
-          </div>
-        </div>
         {next ? (
-          <div class="hero-next">
+          <div class="hero-arch hero-next">
             <div class="label">{next.id === 'sunrise' ? 'Prochain évènement' : 'Prochaine prière'}</div>
             <div class="name">
               <strong>{next.id === 'dhuhr' && isFriday ? 'Jumu‘a' : PRAYER_NAMES[next.id].fr}</strong>
@@ -72,6 +66,12 @@ export function Home() {
         ) : (
           <p>Horaires indisponibles pour ce lieu aujourd’hui.</p>
         )}
+        <div class="hero-dates">
+          <div class="ar">{formatHijri(hijri, 'ar')}</div>
+          <div>
+            <span style={{ textTransform: 'capitalize' }}>{gregorian}</span> · {formatHijri(hijri)}
+          </div>
+        </div>
       </section>
 
       {hijri.m === 9 && (
