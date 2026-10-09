@@ -43,15 +43,128 @@
           pol: polices.get(it.fontName) || null,
         });
       });
-      page.cleanup();
       // Une page reconnue par l'OCR : ses mots font des morceaux comme les
       // autres, et se corrigent de la même façon (le fond est relevé sur
       // l'image, le texte corrigé écrit par-dessus).
+      let lisibleSurImage = false;
       if (!morceaux.length && p.ocr && p.ocr.mots) {
         p.ocr.mots.forEach(m => morceaux.push({ str: m.t, x: m.x, base: ocrBase(m), size: ocrCorps(m), w: m.w, pol: null }));
-      }
+        lisibleSurImage = true;
+      } else if (morceaux.length) lisibleSurImage = await edTexteCache(page);
+      // Ce qu'on lit est alors l'image, et la couche de texte n'a qu'une police : le gras se lit dans l'encre.
+      if (lisibleSurImage) { try { await edGrasParEncre(morceaux, page, g); } catch (e) { signaler('Gras d\'un scan', e, 'info'); } }
+      page.cleanup();
     } catch (e) { console.error(e); }
     return { blocs: edParagraphes(morceaux, g), polices: Array.from(new Set(polices.values())), tournes };
+  }
+
+  // Tout le texte de la page est-il invisible (mode de rendu 3, ou 7) ? C'est la couche de reconnaissance d'un scan : ce qu'on lit est l'image.
+  async function edTexteCache(page) {
+    try {
+      const ol = await page.getOperatorList();
+      const modes = [];
+      ol.fnArray.forEach((f, i) => { if (f === pdfjs.OPS.setTextRenderingMode) modes.push(ol.argsArray[i][0]); });
+      return modes.length > 0 && modes.every(m => m === 3 || m === 7);
+    } catch (e) { signaler('Mode de rendu du texte', e, 'info'); return false; }
+  }
+
+  // Le gras d'un scan, lu dans l'encre. La couche de texte d'un scan n'a qu'une police et ne dit pas ce qui est en gras ; l'image, elle, le montre.
+  // Pour chaque mot, on compare l'encre de l'image à celle que laisseraient le même mot en maigre et en gras (Arimo, Tinos ou Cousine, les polices
+  // que l'export écrit) : la page est plus ou moins noire selon le scanner, on juge donc chaque mot par rapport à la médiane de la page, et il est
+  // en gras quand il s'en écarte de plus de la moitié de l'écart que le gras met entre les deux dessins. Une ligne qui mêle maigre et gras
+  // (« Montant : CHF 1 250.50 (TVA comprise) ») est coupée en morceaux de même graisse.
+  async function edGrasParEncre(morceaux, page, g) {
+    if (morceaux.filter(m => m.str.replace(/\s/g, '').length >= 3).length < 3) return;
+    const k = Math.max(2, Math.min(4, 2000 / g.Wd));
+    const vp = page.getViewport({ scale: k, rotation: g.total });
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+    const ctx = cv.getContext('2d', { alpha: false, willReadFrequently: true });
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    const pixelsPage = ctx.getImageData(0, 0, cv.width, cv.height).data;
+    // Les deux dessins de référence de chaque famille, prêts avant la première mesure.
+    const famille = m => (m.pol && m.pol.genre) || 'Helvetica';
+    const noms = new Map();
+    ['Helvetica', 'Times', 'Courier'].forEach(f => { noms.set(f + '0', polSecoursDe(f, false, false)); noms.set(f + '1', polSecoursDe(f, true, false)); });
+    await polSecoursAttendre();
+    const SEUIL = 150;
+    const cite = n => '"' + n + '"';
+    const trait = { penche: 'normal', poids: '400' };
+    const encre = (d, w, x0, y0, x1, y1) => {
+      let n = 0;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = (y * w + x) * 4; if (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2] < SEUIL) n++; }
+      return n;
+    };
+    const ref = document.createElement('canvas');
+    const rctx = ref.getContext('2d', { alpha: false, willReadFrequently: true });
+    const police = (m, gras) => { rctx.font = trait.penche + ' ' + trait.poids + ' ' + (m.size * k).toFixed(1) + 'px ' + cite(noms.get(famille(m) + (gras ? '1' : '0'))); };
+    // Les mots d'un morceau, avec leur place estimée sur la ligne (la largeur du morceau, répartie comme le fait le dessin du mot en maigre).
+    const motsDe = m => {
+      police(m, false);
+      const total = rctx.measureText(m.str).width || 1;
+      const out = [];
+      const re = /\S+/g;
+      let q;
+      while ((q = re.exec(m.str))) {
+        const avant = rctx.measureText(m.str.slice(0, q.index)).width, long = rctx.measureText(q[0]).width;
+        out.push({ str: q[0], x: m.x + (avant / total) * m.w, w: Math.max(1, (long / total) * m.w) });
+      }
+      return out;
+    };
+    const mesure = (m, mot) => {
+      const x0 = Math.max(0, Math.floor(mot.x * k)), x1 = Math.min(cv.width, Math.ceil((mot.x + mot.w) * k));
+      const top = m.base - 0.75 * m.size, y0 = Math.max(0, Math.floor(top * k)), y1 = Math.min(cv.height, Math.ceil((m.base + 0.22 * m.size) * k));
+      if (x1 - x0 < 6 || y1 - y0 < 6 || mot.str.length < 3 || m.size < 6) return null;
+      const scan = encre(pixelsPage, cv.width, x0, y0, x1, y1);
+      const dessin = gras => {
+        ref.width = x1 - x0; ref.height = y1 - y0;
+        rctx.fillStyle = '#fff'; rctx.fillRect(0, 0, ref.width, ref.height);
+        rctx.fillStyle = '#000';
+        police(m, gras);
+        rctx.textBaseline = 'alphabetic';
+        const mes = rctx.measureText(mot.str).width || 1;
+        rctx.setTransform(Math.max(0.6, Math.min(1.6, (mot.w * k) / mes)), 0, 0, 1, 0, 0);
+        rctx.fillText(mot.str, 0, m.base * k - y0);
+        rctx.setTransform(1, 0, 0, 1, 0, 0);
+        return encre(rctx.getImageData(0, 0, ref.width, ref.height).data, ref.width, 0, 0, ref.width, ref.height);
+      };
+      const maigre = dessin(false), gras = dessin(true);
+      if (maigre < 20 || gras <= maigre) return null;
+      return { rapport: scan / maigre, q: gras / maigre };
+    };
+    const analyses = morceaux.map(m => { const mots = motsDe(m); mots.forEach(mot => { mot.mes = mesure(m, mot); }); return { m, mots }; });
+    const rapports = [];
+    analyses.forEach(a => a.mots.forEach(mot => { if (mot.mes) rapports.push(mot.mes.rapport); }));
+    if (rapports.length < 3) return;
+    rapports.sort((x, y) => x - y);
+    const mediane = rapports[Math.floor(rapports.length / 2)] || 1;
+    const sortie = [];
+    let trouves = 0;
+    analyses.forEach(({ m, mots }) => {
+      // Les mots trop courts pour être jugés prennent la graisse de leurs voisins (celle de gauche, quand elles diffèrent).
+      const gras = mots.map(mot => (mot.mes ? (mot.mes.q >= 1.15 && mot.mes.rapport / mediane >= 1 + 0.5 * (mot.mes.q - 1) ? 1 : 0) : null));
+      for (let i = 0; i < gras.length; i++) {
+        if (gras[i] != null) continue;
+        let g0 = null, g1 = null;
+        for (let j = i - 1; j >= 0 && g0 == null; j--) g0 = gras[j];
+        for (let j = i + 1; j < gras.length && g1 == null; j++) g1 = gras[j];
+        gras[i] = g0 != null && g1 != null && g0 !== g1 ? g0 : (g0 != null ? g0 : (g1 != null ? g1 : 0));
+      }
+      if (!gras.length || gras.every(v => v === gras[0])) { if (gras[0]) { m.gras = true; trouves++; } sortie.push(m); return; }
+      // Graisses mêlées : un morceau par suite de mots de même graisse.
+      let debut = 0;
+      for (let i = 1; i <= gras.length; i++) {
+        if (i < gras.length && gras[i] === gras[debut]) continue;
+        const premier = mots[debut], dernier = mots[i - 1];
+        sortie.push(Object.assign({}, m, {
+          str: mots.slice(debut, i).map(x => x.str).join(' '), x: premier.x, w: Math.max(1, dernier.x + dernier.w - premier.x), gras: !!gras[debut],
+        }));
+        if (gras[debut]) trouves++;
+        debut = i;
+      }
+    });
+    if (trouves) morceaux.splice(0, morceaux.length, ...sortie);
   }
 
   function edNouvelleLigne(m) {
@@ -67,11 +180,11 @@
       },
       pousser(n) {
         const d = this.bouts[this.bouts.length - 1];
-        if (d && d.pol === n.pol && Math.abs(d.size - n.size) < 0.2) {
+        if (d && d.pol === n.pol && !!d.gras === !!n.gras && Math.abs(d.size - n.size) < 0.2) {
           d.t += n.str; d.x1 = n.x + n.w;
           d.pos.push({ t: n.str, x: n.x, w: n.w });
         } else {
-          this.bouts.push({ t: n.str, pol: n.pol, size: n.size, x0: n.x, x1: n.x + n.w,
+          this.bouts.push({ t: n.str, pol: n.pol, gras: !!n.gras, size: n.size, x0: n.x, x1: n.x + n.w,
             pos: [{ t: n.str, x: n.x, w: n.w }] });
         }
         this.droite = Math.max(this.droite, n.x + n.w);
@@ -564,7 +677,7 @@
       }
       return {
         t: b.t, pol: b.pol, polSrc: b.pol, genre: (b.pol && b.pol.genre) || 'Helvetica',
-        gras: !!(b.pol && b.pol.gras), italique: !!(b.pol && b.pol.italique),
+        gras: !!(b.pol && b.pol.gras) || !!b.gras, italique: !!(b.pol && b.pol.italique),
         size: b.size, color: encre,
       };
     };
@@ -606,7 +719,7 @@
           if (q.t) ancres.push({ i: pos, n: q.t.length, dx: q.x + 0.5, dy: base - 0.5 });
           pos += q.t.length;
         });
-        const cle = [Math.round(b.size * 100), b.pol && b.pol.gras ? 1 : 0, b.pol && b.pol.italique ? 1 : 0,
+        const cle = [Math.round(b.size * 100), (b.pol && b.pol.gras) || b.gras ? 1 : 0, b.pol && b.pol.italique ? 1 : 0,
           couleurs.encre, b.pol ? b.pol.nom : ''].join('|');
         if (styles.indexOf(cle) < 0) styles.push(cle);
       });

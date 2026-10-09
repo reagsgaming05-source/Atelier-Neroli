@@ -163,4 +163,11 @@ function zoneDe(page, trouves, opts) {
   return { x0, y0, x1, y1 };
 }
 
-module.exports = { CORPUS, ecrire, nettoyer, mots, texte, octets, polices, famille, images, pixels, collateral, chevauchements, trouver, zoneDe };
+// Un mot de la page est-il écrit en gras ? (le gras que pdftohtml lit dans le nom de la police du morceau qui le porte)
+function enGras(f, mot, p) {
+  const x = outil('pdftohtml', ['-xml', '-stdout', '-i', '-noframes', '-f', String(p || 1), '-l', String(p || 1), f]).stdout;
+  const ech = mot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('<b>[^<]*' + ech + '[^<]*</b>').test(x);
+}
+
+module.exports = { CORPUS, enGras, ecrire, nettoyer, mots, texte, octets, polices, famille, images, pixels, collateral, chevauchements, trouver, zoneDe };

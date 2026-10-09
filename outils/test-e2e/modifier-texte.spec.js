@@ -232,6 +232,18 @@ test('un scan dont la couche de texte est cachée : la correction se voit à l\'
   expect(parDessus(r.journal), 'posée par-dessus : le texte caché n\'est pas ce qu\'on voit').toBe(true);
 });
 
+test('un scan : le gras de l\'image se garde au milieu d\'une ligne, le reste de la ligne reste maigre', async ({ page, app }) => {
+  // la couche de texte d'un scan n'a qu'une police : le gras se relit dans l'encre de l'image
+  const r = await corriger(page, app, 'scan-ocr.pdf', 'CHF 1 250.50', 'CHF 1 350.50', { ou: 'Montant total à payer' });
+  expect(P.enGras(r.apres, '350.50'), 'le montant, en gras sur le scan, le reste').toBe(true);
+  expect(P.enGras(r.apres, 'Montant'), 'le début de la ligne, maigre sur le scan, le reste').toBe(false);
+});
+
+test('un scan : une ligne entière en gras (l\'objet d\'une lettre) le reste après correction', async ({ page, app }) => {
+  const r = await corriger(page, app, 'scan-ocr.pdf', 'demande', 'demande urgente', { ou: 'Objet' });
+  expect(P.enGras(r.apres, 'urgente'), 'la ligne d\'objet, en gras sur le scan, le reste').toBe(true);
+});
+
 test('un texte couché sur la page : l\'outil le dit, au lieu de rester muet', async ({ page, app }) => {
   const f = path.join(P.CORPUS, 'lettre-rot90.pdf');
   await app.ouvrir('lettre-rot90.pdf', fs.readFileSync(f));

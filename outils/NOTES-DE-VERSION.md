@@ -20,7 +20,7 @@ fond plus dans la ligne du dessous (le défaut vu avec « Œuvre Téléphone »)
 le fichier. L'outil a été éprouvé, avec des outils qui ne sont pas les nôtres, sur des PDF de
 LibreOffice, de Chromium, de Ghostscript, de Cairo et de reportlab, sur une page enregistrée en
 paysage et sur un scan reconnu par OCR (où la correction recouvre l'image : le texte qu'on corrigerait
-« dans la page » y est invisible). Une lettre que la police du document n'a pas (« ö », « Ł », « € »)
+« dans la page » y est invisible ; le gras du scan se relit dans l'encre et se garde, mot par mot). Une lettre que la police du document n'a pas (« ö », « Ł », « € »)
 s'écrit dans une police de même dessin que l'Arial, le Times ou le Courier, au lieu de l'Helvetica ;
 un mot en gras dont des lettres manquent se mesure en gras, et la virgule qui le suit ne le touche
 plus. Un texte couché ou à l'envers ne se corrige pas : l'outil le dit au lieu de rester muet. Un bloc
