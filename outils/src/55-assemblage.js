@@ -47,9 +47,9 @@
 
   // Trace une ligne en gardant la police du document partout ou elle
   // possede le caractere, et en repliant sur une police standard ailleurs.
-  function dessinerSuites(page, g, o) {
+  // Le texte d'une ligne en suites : ce que la police du document écrit, ce qu'écrit la police de remplacement.
+  function suitesDeTrace(o) {
     const txt = String(o.text == null ? '' : o.text);
-    if (!txt) return o.x;
     const suites = [];
     // Avec `motEntier`, un mot dont une seule lettre manque à la police du document s'écrit tout entier avec la police de remplacement : deux
     // dessins de lettres dans un même mot se verraient plus qu'un mot d'une autre police, de mêmes largeurs.
@@ -69,8 +69,20 @@
       if (d && d.propre === propre) d.t += ch;
       else suites.push({ propre, t: ch });
     }
+    return suites;
+  }
+  // La largeur que ce texte prend une fois écrit, avec les polices du fichier (et non celles de l'écran, dont la mesure diffère d'un poste à l'autre).
+  function largeurDeTrace(o) {
+    return suitesDeTrace(o).reduce((w, suite) => {
+      const font = suite.propre ? o.propre : o.repli;
+      const texte = suite.propre ? suite.t : winAnsi(suite.t);
+      return texte ? w + font.widthOfTextAtSize(texte, o.size) : w;
+    }, 0);
+  }
+  function dessinerSuites(page, g, o) {
+    if (!String(o.text == null ? '' : o.text)) return o.x;
     let x = o.x;
-    suites.forEach(suite => {
+    suitesDeTrace(o).forEach(suite => {
       const font = suite.propre ? o.propre : o.repli;
       const texte = suite.propre ? suite.t : winAnsi(suite.t);
       if (!texte) return;
@@ -300,6 +312,7 @@
         }
         const lignes = an.lignes || [];
         for (let i = premiere; i < lignes.length; i++) {
+          const prets = [];
           for (const jeton of lignes[i]) {
             const run = an.runs[jeton.r];
             if (!run || !jeton.t) continue;
@@ -316,12 +329,25 @@
             const exacte = run.pol && run.pol.nom && !!run.pol.gras === !!run.gras && !!run.pol.italique === !!run.italique;
             const propre = exacte ? polPourPage(doc, page, run.pol.nom, fonts, p.id) : null;
             const repli = await getFont(doc, fonts, (run.pol && run.pol.genre) || run.genre, run.gras, run.italique);
-            dessinerSuites(page, g, {
-              text: texteJeton, x: xJeton,
-              y: an.y + (an.ly ? an.ly[i] : an.pad + run.size * 0.82),
-              size: run.size, color: run.color, propre, repli, motEntier: true,
-            });
+            prets.push({ jeton, run, texteJeton, xJeton, propre, repli });
           }
+          // Une ligne centrée ou calée à droite se pose avec la largeur que lui donnent les polices du fichier : la mesure de l'écran s'en écarte de
+          // quelques dixièmes de point par lettre selon le poste, et un titre centré sur la mesure de l'écran ne l'est plus tout à fait sur le papier.
+          const alignee = (an.aligne === 'centre' && an.centreX != null) || (an.aligne === 'droite' && an.droiteX != null);
+          if (alignee && prets.length && !(nettoyee && an.partiel && an.partiel.ligne === i)) {
+            const larg = prets.map(q => largeurDeTrace({ text: q.texteJeton, size: q.run.size, propre: q.propre, repli: q.repli, motEntier: true }));
+            const trous = prets.map((q, k) => (k + 1 < prets.length ? Math.max(0, prets[k + 1].jeton.x - (q.jeton.x + q.jeton.w)) : 0));
+            const total = larg.reduce((t, w, k) => t + w + trous[k], 0);
+            let x = an.aligne === 'centre' ? an.centreX - total / 2 : an.droiteX - total;
+            prets.forEach((q, k) => { q.xJeton = x; x += larg[k] + trous[k]; });
+          }
+          prets.forEach(q => {
+            dessinerSuites(page, g, {
+              text: q.texteJeton, x: q.xJeton,
+              y: an.y + (an.ly ? an.ly[i] : an.pad + q.run.size * 0.82),
+              size: q.run.size, color: q.run.color, propre: q.propre, repli: q.repli, motEntier: true,
+            });
+          });
         }
       } else if (an.type === 'text') {
         const font = await getFont(doc, fonts, an.font, an.bold, an.italic);
