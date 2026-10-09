@@ -58,52 +58,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #0c1613;
-    --surface: #111e1a;
-    --surface-2: #182923;
-    --rule: rgb(220 183 92 / 26%);
-    --rule-soft: rgb(220 183 92 / 12%);
-    --text: #e9eee6;
-    --muted: #94a69b;
-    --primary: #5cc49f;
-    --primary-soft: #1a3a30;
-    --on-primary: #06231b;
-    --gold: #dcb75c;
-    --gold-text: #dcb75c;
-    --gold-soft: #3a3120;
-    --gilt: #dcb75c;
-    --danger: #f2b8b5;
-    --hero-1: #091d18;
-    --hero-2: #11332a;
-    --grain: 0.25;
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme='dark'] {
-  --bg: #0c1613;
-  --surface: #111e1a;
-  --surface-2: #182923;
-  --rule: rgb(220 183 92 / 26%);
-  --rule-soft: rgb(220 183 92 / 12%);
-  --text: #e9eee6;
-  --muted: #94a69b;
-  --primary: #5cc49f;
-  --primary-soft: #1a3a30;
-  --on-primary: #06231b;
-  --gold: #dcb75c;
-  --gold-text: #dcb75c;
-  --gold-soft: #3a3120;
-  --gilt: #dcb75c;
-  --danger: #f2b8b5;
-  --hero-1: #091d18;
-  --hero-2: #11332a;
-  --grain: 0.25;
-  color-scheme: dark;
-}
-
 *,
 *::before,
 *::after {
@@ -137,19 +91,9 @@ body::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0 0.15 0 0 0 0.11 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-:root[data-theme='dark'] body::before {
-  mix-blend-mode: screen;
-}
-
 /* The story player is a film: no paper over it. */
 body:has(.player-screen)::before {
   display: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) body::before {
-    mix-blend-mode: screen;
-  }
 }
 
 a {

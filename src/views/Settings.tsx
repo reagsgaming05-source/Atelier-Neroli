@@ -185,24 +185,6 @@ export function Settings() {
         <div class="card stack">
           <div>
             <div class="small muted" style={{ marginBottom: '6px' }}>
-              Thème
-            </div>
-            <div class="chip-row">
-              {(
-                [
-                  ['auto', 'Automatique'],
-                  ['light', 'Clair'],
-                  ['dark', 'Sombre'],
-                ] as [S['theme'], string][]
-              ).map(([v, label]) => (
-                <button class="chip" aria-pressed={settings.theme === v} onClick={() => update({ theme: v })} key={v}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div class="small muted" style={{ marginBottom: '6px' }}>
               Format de l’heure
             </div>
             <div class="chip-row">

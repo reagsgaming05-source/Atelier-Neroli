@@ -29,7 +29,6 @@ export interface Settings {
   /** Shift of the Hijri date in days, to follow local moon sighting. */
   hijriOffset: number;
   clock: '24h' | '12h';
-  theme: 'auto' | 'light' | 'dark';
   quran: {
     translation: 'fr-hamidullah' | 'fr-maash' | 'none';
     translit: boolean;
@@ -61,7 +60,6 @@ export const DEFAULT_SETTINGS: Settings = {
   adjust: { fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 },
   hijriOffset: 0,
   clock: '24h',
-  theme: 'auto',
   quran: { translation: 'fr-hamidullah', translit: false, arabicSize: 30, reciter: 'Alafasy_128kbps', hifz: false, repeat: 1 },
   notify: {
     enabled: false,

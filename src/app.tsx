@@ -41,13 +41,6 @@ export function App() {
   const route = useRoute();
   const [section = '', param, param2] = route.path;
 
-  // Theme override (auto follows the system).
-  useEffect(() => {
-    const root = document.documentElement;
-    if (settings.theme === 'auto') delete root.dataset.theme;
-    else root.dataset.theme = settings.theme;
-  }, [settings.theme]);
-
   // In-app prayer alerts, refreshed on changes and every hour.
   useEffect(() => {
     scheduleAlerts(settings);
