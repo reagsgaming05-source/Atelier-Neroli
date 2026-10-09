@@ -1,0 +1,41 @@
+name: Publish
+
+# Puts what is pushed to the working branch online: main is moved up to the branch
+# (only when that is a plain fast-forward) and the Pages deployment is started.
+# GitHub does not start other workflows for a push made by this workflow, so the
+# deployment is started explicitly.
+
+on:
+  push:
+    branches: [claude/affectionate-pascal-tmryso]
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Move main up to this branch and deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch -q origin main
+          if [ "$(git rev-parse origin/main)" = "$(git rev-parse HEAD)" ]; then
+            echo "main is already up to date"
+            exit 0
+          fi
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "::error::main has changes this branch does not have: not publishing"
+            exit 1
+          fi
+          git push origin HEAD:main
+          gh workflow run deploy.yml --ref main
