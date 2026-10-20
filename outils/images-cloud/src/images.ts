@@ -192,111 +192,96 @@ const AILLEURS: Record<string, string> = {
 	levels: "les niveaux", vignette: "le vignettage", sepia: "le sépia", grayscale: "le noir et blanc", denoise: "le débruitage",
 };
 
-/** Applies the operations in order; returns the result and whether it has transparency to keep. */
-export async function retoucher(env: Env, data: ArrayBuffer, ops: Operation[], format: string): Promise<{ data: ArrayBuffer; mime: string }> {
-	let { width: W, height: H } = await mesurer(env, data);
-	let t = env.IMAGES.input(flux(data));
-	let known = true;
-	let transparent = false;
-	const materialiser = async () => {
-		const out = await t.output({ format: "image/png" });
-		const buf = await octets(out.image());
-		({ width: W, height: H } = await mesurer(env, buf));
-		t = env.IMAGES.input(flux(buf));
-		known = true;
-	};
-	for (const op of ops) {
-		const name = String(op.op || "").toLowerCase();
-		const value = op.value;
-		if (!known) await materialiser();
-		if (name === "crop") {
-			if (op.box) {
-				const [l, tp, r, b] = fractions(op.box.map(Number), [W, H]);
-				const left = Math.max(0, Math.round(l)), top = Math.max(0, Math.round(tp));
-				const width = Math.min(W, Math.round(r)) - left, height = Math.min(H, Math.round(b)) - top;
-				if (width < 1 || height < 1) throw new Refus(`cadre vide : ${JSON.stringify(op.box)}`);
-				t = t.transform({ trim: { left, top, width, height } });
-				[W, H] = [width, height];
-			} else if (op.aspect !== undefined) {
-				const target = ratio(op.aspect);
-				const [w, h] = W / H < target ? [W, Math.round(W / target)] : [Math.round(H * target), H];
-				const focus = op.focus ?? "center";
-				const gravity = Array.isArray(focus) ? { x: Number(focus[0]), y: Number(focus[1]), mode: "remainder" as const } : GRAVITES[focus] ?? focus;
-				t = t.transform({ width: w, height: h, fit: "crop", gravity });
-				[W, H] = [w, h];
-			} else throw new Refus("crop : donner box [gauche, haut, droite, bas] ou aspect");
-		} else if (name === "resize") {
-			let k: number;
-			if (op.max_side) k = Number(op.max_side) / Math.max(W, H);
-			else if (op.width && op.height) k = Math.min(Number(op.width) / W, Number(op.height) / H);
-			else if (op.width) k = Number(op.width) / W;
-			else if (op.height) k = Number(op.height) / H;
-			else throw new Refus("resize : donner width, height ou max_side");
-			if (k > 1 && !op.upscale) k = 1;
-			[W, H] = [Math.max(1, Math.round(W * k)), Math.max(1, Math.round(H * k))];
-			t = t.transform({ width: W, height: H, fit: op.upscale ? "contain" : "scale-down" });
-		} else if (name === "rotate") {
-			const angle = ((Number(op.angle ?? value ?? 0) % 360) + 360) % 360;
-			if (angle % 90) throw new Refus("rotate : seulement 90, 180 ou 270 ici ; pour redresser une photo penchée, ai_edit_image");
-			// Cloudflare turns clockwise; the angle given is counterclockwise, as in the local server
-			t = t.transform({ rotate: ((360 - angle) % 360) as 0 | 90 | 180 | 270 });
-			if (angle % 180) [W, H] = [H, W];
-		} else if (name === "flip") {
-			t = t.transform({ flip: String(op.direction ?? value ?? "horizontal").startsWith("v") ? "v" : "h" });
-		} else if (["brightness", "contrast", "saturation", "gamma"].includes(name)) {
-			t = t.transform({ [name]: Number(value ?? 1) });
-		} else if (name === "sharpen") {
-			t = t.transform({ sharpen: Math.min(10, Number(value ?? op.amount ?? 1)) });
-		} else if (name === "blur") {
-			t = t.transform({ blur: Math.max(1, Math.min(250, Number(op.radius ?? value ?? 2))) });
-		} else if (name === "remove_background") {
-			t = t.transform({ segment: "foreground" });
-			transparent = true;
-		} else if (name === "background") {
-			t = t.transform({ background: String(op.color ?? value ?? "#ffffff") });
-			transparent = false;
-		} else if (name === "trim") {
-			t = t.transform({ trim: { border: { tolerance: Number(op.tolerance ?? 10), keep: Number(op.keep ?? 0) } } });
-			known = false;
-		} else if (name === "border") {
-			const width = Math.round(Number(op.width ?? value ?? 20));
-			t = t.transform({ border: { color: String(op.color ?? "#ffffff"), width } });
-			[W, H] = [W + 2 * width, H + 2 * width];
-		} else if (name === "pad") {
-			const color = String(op.color ?? "#ffffff");
-			const margin = Math.round(Number(op.margin ?? 0) * Math.max(W, H));
-			if (margin > 0) {
-				t = t.transform({ border: { color, width: margin } });
-				[W, H] = [W + 2 * margin, H + 2 * margin];
-			}
-			const target = op.aspect !== undefined ? ratio(op.aspect) : Number(op.width) / Number(op.height);
-			const [w, h] = W / H < target ? [Math.round(H * target), H] : [W, Math.round(W / target)];
-			t = t.transform({ width: w, height: h, fit: "pad", background: color });
-			[W, H] = [w, h];
-			transparent = false;
-		} else if (name === "overlay") {
-			const logo = (await env.FICHIERS.get(String(op.image || op.path)))?.arrayBuffer();
-			if (!logo) throw new Refus(`overlay : image introuvable : ${op.image || op.path}`);
-			const width = Math.max(1, Math.round(W * Number(op.scale ?? 0.2)));
-			t = t.draw(env.IMAGES.input(flux(await logo)).transform({ width }), {
-				opacity: Number(op.opacity ?? 1), ...placement(op.position, Math.round(Number(op.margin ?? 0.03) * W)),
-			});
-		} else if (name === "text") {
-			if (!op.text) throw new Refus("text : donner text");
-			const size = Number(op.size || Math.max(12, Math.round(H * 0.04)));
-			const writing = env.IMAGES.text(String(op.text), { font: { url: String(op.font || env.POLICE) }, size, color: String(op.color ?? "#ffffff") });
-			t = t.draw(writing, { opacity: Number(op.opacity ?? 0.9), ...placement(op.position, Math.round(Number(op.margin ?? size))) });
-		} else if (AILLEURS[name]) {
-			throw new Refus(`${AILLEURS[name]} n'est pas possible en ligne : ai_edit_image (« corrige la perspective… ») ou le serveur local codex-images`);
-		} else {
-			throw new Refus(`opération inconnue : ${JSON.stringify(name)}`);
+/** One operation, as a single Cloudflare Images step on a W×H picture. */
+async function etape(env: Env, t: ImageTransformer, op: Operation, W: number, H: number): Promise<{ t: ImageTransformer; transparent?: boolean }> {
+	const name = String(op.op || "").toLowerCase();
+	const value = op.value;
+	if (name === "crop") {
+		if (op.box) {
+			const [l, tp, r, b] = fractions(op.box.map(Number), [W, H]);
+			const left = Math.max(0, Math.round(l)), top = Math.max(0, Math.round(tp));
+			const width = Math.min(W, Math.round(r)) - left, height = Math.min(H, Math.round(b)) - top;
+			if (width < 1 || height < 1) throw new Refus(`cadre vide : ${JSON.stringify(op.box)}`);
+			return { t: t.transform({ trim: { left, top, width, height } }) };
 		}
+		if (op.aspect === undefined) throw new Refus("crop : donner box [gauche, haut, droite, bas] ou aspect");
+		const target = ratio(op.aspect);
+		const [w, h] = W / H < target ? [W, Math.round(W / target)] : [Math.round(H * target), H];
+		const focus = op.focus ?? "center";
+		const gravity = Array.isArray(focus) ? { x: Number(focus[0]), y: Number(focus[1]), mode: "remainder" as const } : GRAVITES[focus] ?? focus;
+		return { t: t.transform({ width: w, height: h, fit: "crop", gravity }) };
 	}
-	let mime = MIME[format.toLowerCase()];
-	if (!mime) throw new Refus(`format non pris en charge : ${format} (jpg, png, webp ou avif)`);
-	if (transparent && mime === "image/jpeg") mime = "image/png";
-	const out = await t.output({ format: mime, quality: 90, ...(mime === "image/jpeg" ? { background: "#ffffff" } : {}) });
-	return { data: await octets(out.image()), mime };
+	if (name === "resize") {
+		let k: number;
+		if (op.max_side) k = Number(op.max_side) / Math.max(W, H);
+		else if (op.width && op.height) k = Math.min(Number(op.width) / W, Number(op.height) / H);
+		else if (op.width) k = Number(op.width) / W;
+		else if (op.height) k = Number(op.height) / H;
+		else throw new Refus("resize : donner width, height ou max_side");
+		if (k > 1 && !op.upscale) k = 1;
+		return { t: t.transform({ width: Math.max(1, Math.round(W * k)), height: Math.max(1, Math.round(H * k)), fit: op.upscale ? "contain" : "scale-down" }) };
+	}
+	if (name === "rotate") {
+		const angle = ((Number(op.angle ?? value ?? 0) % 360) + 360) % 360;
+		if (angle % 90) throw new Refus("rotate : seulement 90, 180 ou 270 ici ; pour redresser une photo penchée, ai_edit_image");
+		// Cloudflare turns clockwise; the angle given is counterclockwise, as in the local server
+		return { t: t.transform({ rotate: ((360 - angle) % 360) as 0 | 90 | 180 | 270 }) };
+	}
+	if (name === "flip") return { t: t.transform({ flip: String(op.direction ?? value ?? "horizontal").startsWith("v") ? "v" : "h" }) };
+	if (["brightness", "contrast", "saturation", "gamma"].includes(name)) return { t: t.transform({ [name]: Number(value ?? 1) }) };
+	if (name === "sharpen") return { t: t.transform({ sharpen: Math.min(10, Number(value ?? op.amount ?? 1)) }) };
+	if (name === "blur") return { t: t.transform({ blur: Math.max(1, Math.min(250, Number(op.radius ?? value ?? 2))) }) };
+	if (name === "remove_background") return { t: t.transform({ segment: "foreground" }), transparent: true };
+	if (name === "background") return { t: t.transform({ background: String(op.color ?? value ?? "#ffffff") }), transparent: false };
+	if (name === "trim") return { t: t.transform({ trim: { border: { tolerance: Number(op.tolerance ?? 10), keep: Number(op.keep ?? 0) } } }) };
+	if (name === "border") return { t: t.transform({ border: { color: String(op.color ?? "#ffffff"), width: Math.round(Number(op.width ?? value ?? 20)) } }) };
+	if (name === "pad") {
+		// fit "pad" centres the picture on a w×h canvas (a margin was added before, as a border)
+		const target = op.aspect !== undefined ? ratio(op.aspect) : Number(op.width) / Number(op.height);
+		const [w, h] = W / H < target ? [Math.round(H * target), H] : [W, Math.round(W / target)];
+		return { t: t.transform({ width: w, height: h, fit: "pad", background: String(op.color ?? "#ffffff") }), transparent: false };
+	}
+	if (name === "overlay") {
+		const logo = await env.FICHIERS.get(String(op.image || op.path));
+		if (!logo) throw new Refus(`overlay : image introuvable : ${op.image || op.path} (le logo doit être rangé : save_image)`);
+		const width = Math.max(1, Math.round(W * Number(op.scale ?? 0.2)));
+		return { t: t.draw(env.IMAGES.input(flux(await logo.arrayBuffer())).transform({ width }), {
+			opacity: Number(op.opacity ?? 1), ...placement(op.position, Math.round(Number(op.margin ?? 0.03) * W)),
+		}) };
+	}
+	if (name === "text") {
+		if (!op.text) throw new Refus("text : donner text");
+		const size = Number(op.size || Math.max(12, Math.round(H * 0.04)));
+		const writing = env.IMAGES.text(String(op.text), { font: { url: String(op.font || env.POLICE) }, size, color: String(op.color ?? "#ffffff") });
+		return { t: t.draw(writing, { opacity: Number(op.opacity ?? 0.9), ...placement(op.position, Math.round(Number(op.margin ?? size))) }) };
+	}
+	if (AILLEURS[name]) throw new Refus(`${AILLEURS[name]} n'est pas possible en ligne : ai_edit_image (« corrige la perspective… ») ou le serveur local codex-images`);
+	throw new Refus(`opération inconnue : ${JSON.stringify(name)}`);
+}
+
+/** Applies the operations one after the other, each measured before the next, then saves in the format asked. */
+export async function retoucher(env: Env, data: ArrayBuffer, ops: Operation[], format: string): Promise<{ data: ArrayBuffer; mime: string }> {
+	const wanted = MIME[format.toLowerCase()];
+	if (!wanted) throw new Refus(`format non pris en charge : ${format} (jpg, png, webp ou avif)`);
+	let current = data;
+	let transparent = false;
+	let mime: ImageOutputOptions["format"] = wanted;
+	const queue = ops.length ? [...ops] : [{ op: "resize", max_side: 1e9 }]; // none: a plain conversion
+	while (queue.length) {
+		let op = queue.shift()!;
+		const { width, height } = await mesurer(env, current);
+		if (String(op.op).toLowerCase() === "pad" && Number(op.margin) > 0) {
+			queue.unshift({ ...op, margin: 0 });
+			op = { op: "border", color: op.color ?? "#ffffff", width: Math.round(Number(op.margin) * Math.max(width, height)) };
+		}
+		const step = await etape(env, env.IMAGES.input(flux(current)), op, width, height);
+		transparent = step.transparent ?? transparent;
+		const last = !queue.length;
+		mime = last && !(transparent && wanted === "image/jpeg") ? wanted : "image/png"; // lossless in between
+		const out = await step.t.output({ format: mime, quality: 90, ...(mime === "image/jpeg" ? { background: "#ffffff" } : {}) });
+		current = await octets(out.image());
+	}
+	return { data: current, mime };
 }
 
 export const extension = (mime: string) => EXT[mime] || "jpg";

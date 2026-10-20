@@ -1,17 +1,15 @@
 ## Images
 
-Pour toute image du site, utiliser les outils du serveur MCP `images`. Ne pas utiliser `curl` ni de script de téléchargement : le bac à sable n'a pas internet.
+La Briquetterie vend des jeux de briques de construction. Pour toute image, utiliser les outils du serveur MCP `images`. Ne pas utiliser `curl` ni de script de téléchargement : le bac à sable n'a pas internet.
 
-1. **Chercher** avec `search_images`, en français puis en anglais (« brick kiln », « clay bricks stack », « red brick facade »). Regarder la planche de vignettes et garder les images nettes, bien cadrées, sans texte ni filigrane, cohérentes entre elles.
-2. **Télécharger** les meilleures avec `download_image("rN", name="nom-parlant")`. Une adresse de page trouvée par la recherche web marche aussi.
-3. **Retoucher** avec `edit_image`, puis regarder l'avant/après et recommencer jusqu'à ce que ce soit juste :
-   - recadrer au format de l'emplacement (bandeau 16:9, vignette 4:3 ou 1:1), avec le sujet bien placé ;
-   - redresser les verticales des bâtiments (`perspective`, ou `rotate` avec `crop: true`) ;
-   - lumière naturelle et chaude, briques d'un rouge-orangé crédible, sans saturer ;
-   - une même série d'images reçoit les mêmes réglages ;
-   - pour le web : `resize` à 2000 px de large au plus, enregistrer en `.webp` ou en `.jpg`.
-4. Pour enlever un objet gênant ou changer un ciel : `ai_edit_image`, en précisant ce qui doit rester identique.
-5. **Vérifier** le résultat final avec `view_image`, puis ranger les images retenues dans `images/site/` (paramètre `output`).
-6. **Crédits** : `list_images` donne l'auteur et la licence de chaque image. Les reporter dans la page des mentions légales ou des crédits.
-
-Toujours garder `commercial_only` à `true` : le site est celui d'une entreprise.
+1. **Chercher** avec `search_images`, en français puis en anglais (« building bricks set », « brick toy box », nom exact du set). Pour la photo d'un produit précis, chercher sur tout le web (`source="web"`). Regarder les vignettes et garder les images nettes, en grand format, sans filigrane.
+2. **Télécharger** les meilleures avec `download_image` (ou `save_image` sur le serveur en ligne), en leur donnant un nom parlant. Une adresse de page trouvée par la recherche web marche aussi.
+3. **Retoucher avec le générateur d'images de Codex** (`image_gen.imagegen`) :
+   - serveur local : `referenced_image_paths` avec le chemin donné par `download_image` ;
+   - serveur en ligne : `num_last_images_to_include = 1`, juste après `save_image` ou `view_image` (`max_side` 2048) ;
+   - dans le prompt, dire ce qui doit **rester identique** : la boîte, les briques, leurs couleurs, les inscriptions et le logo ;
+   - photos de fiche produit : fond blanc pur, lumière de studio douce, produit centré, ombre légère au sol ;
+   - une même série d'images reçoit la même consigne, pour qu'elles s'accordent.
+4. **Gestes exacts sans IA** avec `edit_image` : format carré 1:1 pour les fiches produit (`pad` sur fond blanc), recadrage, redimensionnement à 2048 px au plus, logo.
+5. **Vérifier** le résultat avec `view_image` avant de le garder.
+6. **Crédits** : `list_images` donne l'auteur et la licence de chaque image téléchargée. Une photo prise sur le web n'est pas forcément libre de droits : le noter dans le récapitulatif.

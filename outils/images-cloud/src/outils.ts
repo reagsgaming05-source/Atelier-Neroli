@@ -9,6 +9,7 @@ import {
 import { LIBRES, SOURCES, configuree, type Trouvaille } from "./sources";
 
 const RESULTAT = /^[a-z2-9]{4}-\d{1,3}$/;
+const GENERATEUR = "pour la retoucher avec le générateur d'images de Codex : image_gen.imagegen avec num_last_images_to_include = 1 (c'est l'image ci-dessous)";
 
 /** Failures reach the model in words, so that it can correct itself. */
 function outil<A>(fn: (args: A) => Promise<Bloc[]>) {
@@ -29,9 +30,13 @@ export function serveur(env: Env, origin: string): McpServer {
 	const mcp = new McpServer({ name: "images", version: "1.0.0" }, {
 		jsonSchemaValidator: new CfWorkerJsonSchemaValidator(),
 		instructions: `Images du web, rangées en ligne : chaque image a une adresse publique ${origin}/f/…
-Démarche : search_images (regarder les vignettes) → save_image("xxxx-N") → edit_image (regarder l'avant/après,
-recommencer si besoin) → view_image pour vérifier. L'original n'est jamais modifié.
-Pour mettre une image sur la boutique Shopify : donner son adresse publique à l'outil Shopify comme originalSource
+Démarche : search_images (regarder les vignettes) → save_image("xxxx-N"), qui montre l'image
+→ retouche avec le générateur d'images de Codex : image_gen.imagegen avec num_last_images_to_include = 1,
+juste après save_image ou view_image (pour une image déjà rangée, d'abord view_image avec max_side 2048) ;
+le résultat est rangé par Codex sur l'ordinateur, dans generated_images/.
+edit_image sert aux gestes simples et exacts sans IA (détourer, fond blanc, format carré, recadrer, logo) ; il range le résultat en ligne.
+L'original n'est jamais modifié.
+Pour mettre une image rangée sur la boutique Shopify : donner son adresse publique à l'outil Shopify comme originalSource
 (productCreateMedia ou fileCreate) : Shopify va la chercher lui-même.
 Garder l'auteur et la licence : list_images les donne pour la page des crédits.`,
 	});
@@ -115,7 +120,7 @@ L'auteur, la licence et la provenance sont notés. name : nom souhaité, avec un
 		const key = await ranger(env, "originaux", name || credits.title || new URL(got.url).pathname.split("/").pop()?.replace(/\.\w+$/, "") || "image",
 			got.data, got.info.format, { title: credits.title, page: credits.page || got.page, license: credits.license, author: credits.author, provider: credits.provider, source: got.url });
 		const licence = credits.license || `inconnue : vérifier sur ${credits.page || got.page || got.url}`;
-		return [texte(`Enregistrée : ${decrire(key, adresse(origin, key), got.info, got.data.byteLength)}\nlicence : ${licence}`), await apercu(env, got.data)];
+		return [texte(`Enregistrée : ${decrire(key, adresse(origin, key), got.info, got.data.byteLength)}\nlicence : ${licence}\n${GENERATEUR}`), await apercu(env, got.data, 2048)];
 	}));
 
 	mcp.registerTool("view_image", {
@@ -126,7 +131,7 @@ L'auteur, la licence et la provenance sont notés. name : nom souhaité, avec un
 	}, outil(async ({ image: ref, max_side }) => {
 		const got = await charger(env, origin, ref);
 		const info = await mesurer(env, got.data);
-		return [texte(got.key ? decrire(got.key, adresse(origin, got.key), info, got.data.byteLength) : `${info.width}×${info.height} px`), await apercu(env, got.data, max_side)];
+		return [texte(`${got.key ? decrire(got.key, adresse(origin, got.key), info, got.data.byteLength) : `${info.width}×${info.height} px`}\n${GENERATEUR}`), await apercu(env, got.data, max_side)];
 	}));
 
 	mcp.registerTool("edit_image", {
@@ -168,8 +173,8 @@ name : nom du résultat (avec un dossier si on veut) ; format : jpg, png, webp o
 
 	mcp.registerTool("ai_edit_image", {
 		title: "Retoucher par IA",
-		description: `Retouche par IA (OpenAI ; clé OPENAI_API_KEY requise) : enlever un objet ou un reflet, changer le décor, redresser,
-harmoniser la lumière… prompt : la retouche voulue, en précisant ce qui doit rester identique (le produit, ses couleurs, ses inscriptions).
+		description: `Retouche par IA via l'API OpenAI (clé OPENAI_API_KEY requise), quand le générateur d'images de Codex (image_gen.imagegen)
+n'est pas disponible, par exemple depuis Claude ; le résultat est rangé en ligne. prompt : la retouche voulue, en précisant ce qui doit rester identique (le produit, ses couleurs, ses inscriptions).
 size : "auto", "1536x1024", "1024x1536" ou "1024x1024". Résultat rangé dans retouches/, avec l'avant/après.`,
 		inputSchema: { image: z.string().min(1), prompt: z.string().min(3), name: z.string().default(""), size: z.string().default("auto"), quality: z.string().default("high") },
 		annotations: { openWorldHint: true },

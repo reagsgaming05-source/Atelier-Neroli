@@ -34,8 +34,10 @@ RESULTS: dict[str, dict] = {}  # search results of this session, by id ("r1", "r
 _ids = itertools.count(1)
 
 mcp = MCPServer("images", instructions=f"""Images du web pour le projet, enregistrées dans {ROOT}.
-Démarche : search_images (regarder la planche de vignettes) → download_image("rN") → edit_image
-(regarder l'avant/après, recommencer si besoin) → view_image pour vérifier le résultat final.
+Démarche : search_images (regarder la planche de vignettes) → download_image("rN"), qui donne le chemin du fichier
+→ retouche avec le générateur d'images de Codex : image_gen.imagegen avec referenced_image_paths = [ce chemin]
+→ view_image pour vérifier le résultat. Codex range ce qu'il génère dans generated_images/.
+edit_image sert aux gestes simples et exacts (recadrer, redimensionner, redresser, ajouter un logo), sans IA.
 Ne jamais retoucher l'original : edit_image écrit toujours un nouveau fichier dans retouches/.
 Garder la licence et l'auteur (fichier .json à côté de chaque original) ; list_images donne les crédits.""")
 
@@ -637,7 +639,8 @@ def download_image(source: str, name: str = "") -> list:
     record.update(url=final, width=im.width, height=im.height, downloaded=datetime.now(timezone.utc).isoformat(timespec="seconds"))
     path.with_suffix(".json").write_text(json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8")
     im = ImageOps.exif_transpose(im)
-    return [f"Enregistrée : {_info(path, im)}\nlicence : {record.get('license', 'inconnue : vérifier sur ' + (record.get('page') or record['url']))}",
+    return [f"Enregistrée : {_info(path, im)}\nlicence : {record.get('license', 'inconnue : vérifier sur ' + (record.get('page') or record['url']))}"
+            f"\npour la retoucher avec le générateur d'images de Codex : image_gen.imagegen, referenced_image_paths = [\"{path}\"]",
             _preview(im)]
 
 
@@ -692,8 +695,8 @@ def edit_image(path: str, operations: list[dict[str, Any]], output: str = "", qu
 
 @tool
 def ai_edit_image(path: str, prompt: str, output: str = "", mask: str = "", size: str = "auto", quality: str = "high") -> list:
-    """Retouche par IA (OpenAI, clé OPENAI_API_KEY requise) : enlever un objet, changer le ciel, nettoyer une façade,
-    harmoniser la lumière… prompt : la retouche voulue, en précisant ce qui doit rester identique.
+    """Retouche par IA via l'API OpenAI (clé OPENAI_API_KEY requise), seulement si le générateur d'images de Codex
+    (image_gen.imagegen) n'est pas disponible. prompt : la retouche voulue, en précisant ce qui doit rester identique.
     mask : PNG facultatif dont les zones transparentes sont celles à modifier. size : "auto", "1536x1024", "1024x1536" ou "1024x1024".
     Résultat dans retouches/, avec l'avant/après."""
     key = _key("OPENAI_API_KEY")

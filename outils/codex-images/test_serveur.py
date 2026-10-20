@@ -93,6 +93,7 @@ async def end_to_end(base: str, root: Path) -> None:
         record = json.loads((root / "originaux/mur-de-briques.json").read_text(encoding="utf-8"))
         assert record["url"] == f"{base}/mur.jpg" and record["page"] == f"{base}/page.html" and record["width"] == 1200, record
         assert [im.size for im in images_of(r)] == [(1200, 800)]
+        assert f'referenced_image_paths = ["{root / "originaux/mur-de-briques.jpg"}"]' in text_of(r), text_of(r)
 
         r = await call(session, "download_image", source=f"{base}/redirection")
         assert not failed(r) and (root / "originaux/mur.jpg").exists(), text_of(r)

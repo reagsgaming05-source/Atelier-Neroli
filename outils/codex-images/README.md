@@ -1,6 +1,8 @@
 # Images du web pour Codex
 
-Un serveur MCP qui donne à Codex de quoi **chercher des images sur internet, les télécharger, les voir et les retoucher**, seul, sans rien demander.
+Un serveur MCP qui donne à Codex de quoi **chercher des images sur internet, les télécharger dans le projet et les voir**, pour qu'il les **retouche avec son propre générateur d'images**, seul, sans rien demander.
+
+Une version en ligne, sans rien à installer sur chaque ordinateur, se trouve dans [`../images-cloud`](../images-cloud).
 
 ## Pourquoi Codex n'y arrive pas tout seul
 
@@ -12,13 +14,15 @@ Le serveur règle les trois problèmes. Codex le lance hors du bac à sable, don
 
 ## Ce que Codex peut faire avec
 
+La retouche est faite par **le générateur d'images de Codex** (`image_gen`). `download_image` lui donne le chemin du fichier, et Codex le passe à son générateur avec `referenced_image_paths`. Le résultat est rangé par Codex dans `generated_images/`. Il faut un abonnement ChatGPT payant (le générateur n'existe pas sur l'offre gratuite).
+
 | Outil | Rôle |
 |---|---|
 | `search_images` | Cherche des images. Renvoie la liste (numéro `r1`, `r2`…, taille, licence, auteur) et **une planche de vignettes numérotées** que le modèle regarde pour choisir. |
 | `download_image` | Télécharge un résultat (`"r3"`), l'adresse directe d'une image, ou une page web, dont il prend l'image principale. Le fichier va dans `originaux/`, avec un `.json` qui note la source, l'auteur et la licence. |
 | `view_image` | Montre une image enregistrée. |
-| `edit_image` | Retouches classiques, sans clé ni coût : recadrage (dont format 16:9, 1:1…), redimensionnement, redressement, **perspective (façades, murs)**, contraste et balance des blancs automatiques, niveaux, luminosité, saturation, température, netteté, débruitage, vignettage, noir et blanc, fond étendu, texte, logo. Le résultat va dans `retouches/` et l'outil montre l'avant/après. L'original n'est jamais modifié. |
-| `ai_edit_image` | Retouche par IA (enlever un objet, changer le ciel, nettoyer une façade…). Facultatif : il faut une clé OpenAI. |
+| `edit_image` | Gestes exacts sans IA, sans clé ni coût : recadrage (dont format 16:9, 1:1…), redimensionnement, redressement, **perspective (façades, murs)**, contraste et balance des blancs automatiques, niveaux, luminosité, saturation, température, netteté, débruitage, vignettage, noir et blanc, fond étendu, texte, logo. Le résultat va dans `retouches/` et l'outil montre l'avant/après. L'original n'est jamais modifié. |
+| `ai_edit_image` | Retouche IA par l'API OpenAI, seulement si le générateur de Codex n'est pas disponible. Il faut une clé OpenAI. |
 | `compare_images` | Met plusieurs images côte à côte pour choisir. |
 | `list_images` | Liste les images, avec les crédits à citer sur le site. |
 
@@ -76,7 +80,7 @@ Ensuite, copie [`AGENTS.exemple.md`](AGENTS.exemple.md) dans le projet de la bri
 
 Redémarre Codex, puis tape `/mcp` : le serveur `images` doit apparaître avec ses 7 outils. Essaie par exemple :
 
-> Trouve 3 belles photos de four à briques pour la page d'accueil, recadre-les en 16:9, réchauffe un peu la lumière et mets-les dans images/site/.
+> Trouve une belle photo de boîte de briques de construction, télécharge-la, puis retouche-la avec ton générateur d'images : fond blanc pur, lumière de studio douce, sans rien changer à la boîte.
 
 ## Clés facultatives (meilleurs résultats)
 
