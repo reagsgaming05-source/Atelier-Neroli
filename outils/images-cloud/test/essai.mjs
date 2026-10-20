@@ -3,6 +3,7 @@
 //   npx wrangler dev   then, in another terminal:   node test/essai.mjs
 // .dev.vars must hold MOT_DE_PASSE=essai-mot-de-passe and CLE_API=cle-essai-123.
 import { execFileSync } from "node:child_process";
+import { createServer } from "node:http";
 import { createHash, randomBytes } from "node:crypto";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -92,7 +93,7 @@ const imagesOf = (res) => res.content.filter((b) => b.type === "image");
 
 const mcp = await connect(tokens.access_token);
 const tools = (await mcp.listTools()).tools.map((t) => t.name).sort();
-ok(JSON.stringify(tools) === JSON.stringify(["ai_edit_image", "compare_images", "edit_image", "list_images", "save_image", "search_images", "view_image"]), "les 7 outils", tools.join(","));
+ok(JSON.stringify(tools) === JSON.stringify(["ai_edit_image", "compare_images", "edit_image", "list_images", "page_images", "save_image", "search_images", "view_image"]), "les 8 outils", tools.join(","));
 
 let res = await mcp.callTool({ name: "view_image", arguments: { image: KEY } });
 ok(!res.isError && imagesOf(res).length === 1 && textOf(res).includes("600×400"), "view_image montre l'image", textOf(res));
@@ -145,8 +146,50 @@ ok(!res.isError && imagesOf(res).length === 2, "compare_images");
 res = await mcp.callTool({ name: "list_images", arguments: {} });
 ok(!res.isError && textOf(res).includes(KEY) && textOf(res).includes("retouches/boite-essai-"), "list_images", textOf(res).slice(0, 300));
 
+// 5. All the photos of a product page, from a stand-in shop on this computer (wrangler dev lets the Worker reach it;
+// once online, Cloudflare only lets it reach the public internet).
+const box = (w, h, rgb) => png(w, h, (x, y) => (x > w / 4 && x < (3 * w) / 4 && y > h / 4 && y < (3 * h) / 4 ? rgb : [255, 255, 255]));
+const site = {
+	"/produit.html": ["text/html", `<!doctype html><html><head><title>Boite 1234</title><meta property="og:image" content="/photos/a.png">
+<script type="application/ld+json">{"@type": "Product", "image": ["/photos/a.png", "/photos/b.png"]}</script></head>
+<body><img src="/logo.png"><img data-zoom-image="/photos/c.png" src="/photos/c-mini.png"><a href="/photos/d.png"><img src="/mini.png"></a></body></html>`],
+	"/photos/a.png": ["image/png", box(500, 400, [200, 30, 30])], "/photos/b.png": ["image/png", box(400, 400, [30, 30, 200])],
+	"/photos/c.png": ["image/png", box(600, 300, [30, 160, 30])], "/photos/d.png": ["image/png", box(300, 300, [230, 190, 20])],
+	"/mini.png": ["image/png", box(40, 40, [0, 0, 0])], "/logo.png": ["image/png", box(300, 100, [0, 0, 0])],
+};
+const fixture = createServer((req, rsp) => {
+	const hit = site[req.url.split("?")[0]];
+	rsp.writeHead(hit ? 200 : 404, { "Content-Type": hit ? hit[0] : "text/plain" }).end(hit ? hit[1] : "absent");
+});
+await new Promise((r) => fixture.listen(0, "127.0.0.1", r));
+const SITE = `http://127.0.0.1:${fixture.address().port}`;
+res = await mcp.callTool({ name: "page_images", arguments: { url: `${SITE}/produit.html` } });
+if (res.isError) {
+	ok(false, "page_images n'a pas pu lire le site d'essai", textOf(res));
+} else {
+	const listed = textOf(res).split("\n").filter((l) => /^[a-z2-9]{4}-\d+ /.test(l)).map((l) => l.split(/\s+/)[2]);
+	ok(JSON.stringify(listed) === JSON.stringify(["a", "b", "c", "d"].map((n) => `${SITE}/photos/${n}.png`)), "page_images : toute la galerie, sans logo ni miniature", textOf(res));
+	ok(imagesOf(res).length === 4 && textOf(res).includes("500×400"), "page_images : une vignette et la taille de chaque photo");
+	const id = textOf(res).split("\n").find((l) => l.includes("/photos/c.png")).split(/\s+/)[0];
+	res = await mcp.callTool({ name: "save_image", arguments: { source: id, name: "boutique/boite-1234-c" } });
+	ok(!res.isError && textOf(res).includes("boutique/boite-1234-c-") && textOf(res).includes("à vérifier"), "save_image d'une photo de la page", textOf(res));
+}
+fixture.close();
+
+// 6. A picture made on the computer goes online (what the local server's publish_image sends).
+const generated = box(512, 512, [120, 60, 200]);
+r = await fetch(`${BASE}/televerser/boutique/boite-1234-face.png`, { method: "PUT", body: generated, headers: { Authorization: `Bearer ${CLE}`, "Content-Type": "image/png" } });
+const sent = await r.json();
+ok(r.status === 200 && sent.width === 512 && /\/f\/boutique\/boite-1234-face-[a-z2-9]{4}\.png$/.test(sent.url), "mise en ligne d'une image générée", JSON.stringify(sent));
+r = await fetch(sent.url);
+ok(r.status === 200 && Buffer.from(await r.arrayBuffer()).equals(generated), "l'image mise en ligne est accessible telle quelle");
+r = await fetch(`${BASE}/televerser/x.png`, { method: "PUT", body: generated });
+ok(r.status === 401, "mise en ligne sans la clé refusée");
+r = await fetch(`${BASE}/televerser/x.png`, { method: "PUT", body: "pas une image", headers: { Authorization: `Bearer ${CLE}` } });
+ok(r.status === 400, "mise en ligne d'autre chose qu'une image refusée");
+
 const parCle = await connect(CLE);
-ok((await parCle.listTools()).tools.length === 7, "accès par la clé fixe (Codex)");
+ok((await parCle.listTools()).tools.length === 8, "accès par la clé fixe (Codex)");
 r = await fetch(`${BASE}/mcp`, { method: "POST", headers: { Authorization: "Bearer mauvaise-cle", "Content-Type": "application/json" }, body: "{}" });
 ok(r.status === 401, "mauvaise clé refusée");
 console.log("\ntout est bon");

@@ -34,9 +34,12 @@ RESULTS: dict[str, dict] = {}  # search results of this session, by id ("r1", "r
 _ids = itertools.count(1)
 
 mcp = MCPServer("images", instructions=f"""Images du web pour le projet, enregistrées dans {ROOT}.
-Démarche : search_images (regarder la planche de vignettes) → download_image("rN"), qui donne le chemin du fichier
+Démarche : trouver les photos (search_images, ou page_images pour toutes les photos d'une fiche produit d'un site)
+→ download_image("rN"), qui donne le chemin du fichier
 → retouche avec le générateur d'images de Codex : image_gen.imagegen avec referenced_image_paths = [ce chemin]
-→ view_image pour vérifier le résultat. Codex range ce qu'il génère dans generated_images/.
+→ view_image pour vérifier le résultat (Codex range ce qu'il génère dans generated_images/)
+→ publish_image avec le chemin de l'image générée : elle est mise en ligne et son adresse publique est donnée
+→ sur la boutique Shopify, l'outil Shopify reçoit cette adresse comme originalSource (productUpdate avec media).
 edit_image sert aux gestes simples et exacts (recadrer, redimensionner, redresser, ajouter un logo), sans IA.
 Ne jamais retoucher l'original : edit_image écrit toujours un nouveau fichier dans retouches/.
 Garder la licence et l'auteur (fichier .json à côté de chaque original) ; list_images donne les crédits.""")
@@ -110,6 +113,97 @@ def _page_image(page: str, base: str) -> str:
         if key in found:
             return urljoin(base, found[key])
     return ""
+
+
+# Attributes that hold a picture, best first: shops put the full size in a zoom attribute, then lazy-loading ones
+IMG_ATTRS = ("data-zoom-image", "data-large_image", "data-image-large-src", "data-full", "data-zoom", "srcset", "data-srcset",
+             "data-src", "data-original", "data-lazy-src", "src")
+NOISE = re.compile(r"(logo|icon|sprite|placeholder|spinner|loading|blank|pixel|avatar|flag|payment|badge)", re.I)
+
+
+def _srcset_best(value: str) -> str:
+    best, best_w = "", -1.0
+    for part in value.split(","):
+        bits = part.strip().split()
+        if bits:
+            w = float(re.sub(r"[^\d.]", "", bits[1]) or 0) if len(bits) > 1 else 0
+            if w >= best_w:
+                best, best_w = bits[0], w
+    return best
+
+
+def _full_size(url: str) -> str:
+    """Asks for the original instead of a thumbnail on common shop platforms (Shopify, WordPress)."""
+    u = urlparse(url)
+    if "shopify" in u.netloc or "/cdn/shop/" in u.path:
+        path = re.sub(r"_(\d+x\d*|\d*x\d+|pico|icon|thumb|small|compact|medium|large|grande)(@\dx)?(?=\.\w+$)", "", u.path)
+        return u._replace(path=path, query="").geturl()
+    if "/wp-content/uploads/" in u.path:
+        return u._replace(path=re.sub(r"-\d+x\d+(?=\.\w+$)", "", u.path)).geturl()
+    return url
+
+
+def _ld_images(node: Any, out: list) -> None:
+    """The pictures named in structured data (JSON-LD Product, ImageObject…)."""
+    if isinstance(node, list):
+        for x in node:
+            _ld_images(x, out)
+    elif isinstance(node, dict):
+        for k, v in node.items():
+            if k in ("image", "images"):
+                for x in v if isinstance(v, list) else [v]:
+                    if isinstance(x, str):
+                        out.append(x)
+                    elif isinstance(x, dict) and (x.get("contentUrl") or x.get("url")):
+                        out.append(x.get("contentUrl") or x.get("url"))
+            elif isinstance(v, (dict, list)):
+                _ld_images(v, out)
+
+
+def _page_pictures(page: str, base: str) -> list[str]:
+    """Every picture of a web page, gallery included: structured data, main picture, then the page's own pictures."""
+    found: list[str] = []
+    for block in re.findall(r"<script[^>]+application/ld\+json[^>]*>(.*?)</script>", page, re.S | re.I):
+        try:
+            _ld_images(json.loads(block.strip()), found)
+        except ValueError:
+            pass
+    if main := _page_image(page, base):
+        found.append(main)
+    for tag in re.findall(r"<(?:img|source|a)\b[^>]*>", page, re.I):
+        attrs = {k.lower(): html.unescape(a or b) for k, a, b in re.findall(r"([\w:-]+)\s*=\s*(?:\"([^\"]*)\"|'([^']*)')", tag)}
+        if tag[:2].lower() == "<a":
+            if re.search(r"\.(jpe?g|png|webp|avif)(\?|$)", attrs.get("href", ""), re.I):
+                found.append(attrs["href"])
+            continue
+        for key in IMG_ATTRS:
+            value = attrs.get(key, "").strip()
+            if value and not value.startswith("data:"):
+                found.append(_srcset_best(value) if "srcset" in key else value)
+                break
+    out, seen = [], set()
+    for url in found:
+        url = urljoin(base, url.strip())
+        if not url.startswith("http") or re.search(r"\.svg(\?|$)", url, re.I) or NOISE.search(urlparse(url).path):
+            continue
+        url = _full_size(url)
+        if url not in seen:
+            seen.add(url)
+            out.append(url)
+    return out
+
+
+def _shopify_product(page: str, url: str) -> list[dict]:
+    """On a Shopify shop, the product's own list of pictures, at full size."""
+    u = urlparse(url)
+    if "/products/" not in u.path or not re.search(r"cdn\.shopify\.com|/cdn/shop/|Shopify\.", page):
+        return []
+    try:
+        data = _get_json(u._replace(query="", fragment="", path=u.path.rstrip("/") + ".json").geturl(), {}, ua=WEB_UA)
+    except Exception:
+        return []
+    return [{"url": _full_size(urljoin(url, i["src"])), "width": i.get("width"), "height": i.get("height")}
+            for i in (data.get("product") or {}).get("images", []) if i.get("src")]
 
 
 # Search providers: each returns dicts with title, url, thumb, page, width, height, license, author, provider
@@ -608,6 +702,57 @@ def search_images(query: str, source: str = "auto", count: int = 12, commercial_
 
 
 @tool
+def page_images(url: str, count: int = 24, preview: bool = True) -> list:
+    """Récupère toutes les photos d'une page web, par exemple la fiche d'un produit dans une boutique en ligne,
+    galerie comprise et en grand format. Renvoie la liste numérotée (rN) et une planche de vignettes ; ensuite download_image("rN").
+    Les petites images (icônes, logos, moins de 200 px) sont écartées."""
+    count = max(1, min(int(count), 40))
+    data, ctype, final = _fetch(url)
+    if "html" not in ctype and not data[:200].lstrip().lower().startswith((b"<!doctype", b"<html")):
+        raise ValueError("ce n'est pas une page web : pour une image seule, download_image")
+    page = data.decode("utf-8", "ignore")
+    host = urlparse(final).hostname or ""
+    title = _strip_html((re.search(r"<title[^>]*>(.*?)</title>", page, re.S | re.I) or [None, host])[1]) or host
+    candidates, seen = [], set()
+    for item in _shopify_product(page, final) + [{"url": u} for u in _page_pictures(page, final)]:
+        if item["url"] not in seen:
+            seen.add(item["url"])
+            candidates.append(item)
+    if not candidates:
+        raise ValueError("aucune image sur cette page (le site bloque peut-être les robots, ou charge ses images autrement)")
+    candidates = candidates[:count * 2]
+    if preview:
+        with ThreadPoolExecutor(8) as pool:
+            thumbs = list(pool.map(lambda it: _thumb(it["url"], final), candidates))
+    else:
+        thumbs = [None] * len(candidates)
+    found = []
+    for item, th in zip(candidates, thumbs):
+        if preview and (th is None or max(th.size) < 200):
+            continue
+        if len(found) == count:
+            break
+        found.append(dict(title=f"{title[:60]} — photo {len(found) + 1}", url=item["url"], thumb=item["url"], page=final,
+                          width=th.width if th else item.get("width"), height=th.height if th else item.get("height"),
+                          license=f"à vérifier : photo du site {host}", author=host, provider="page", _thumb=th))
+    if not found:
+        raise ValueError("les images de cette page n'ont pas pu être téléchargées, ou ce ne sont que des icônes")
+    lines = [f"{len(found)} photos sur {final} :"]
+    for item in found:
+        item["id"] = f"r{next(_ids)}"
+        size = f"{item['width']}×{item['height']}" if item.get("width") else "taille ?"
+        lines.append(f"{item['id']}  {size}  {item['url']}")
+    lines.append(f"licence : à vérifier, ce sont les photos du site {host}")
+    out: list = ["\n".join(lines)]
+    if preview:
+        out.append(_sheet([(it["id"], it["_thumb"]) for it in found]))
+    for item in found:
+        item.pop("_thumb")
+        RESULTS[item["id"]] = item
+    return out
+
+
+@tool
 def download_image(source: str, name: str = "") -> list:
     """Télécharge une image dans originaux/ et la montre. source : un numéro de search_images (« r3 »),
     l'adresse directe d'une image, ou l'adresse d'une page web (son image principale est prise).
@@ -730,6 +875,35 @@ def ai_edit_image(path: str, prompt: str, output: str = "", mask: str = "", size
     _save(im, dest)
     im.format = dest.suffix[1:].upper()
     return [f"Enregistrée : {_info(dest, im)}\nretouche : {prompt}", _sheet([("avant", before), ("après", im)], cell=640, cols=2)]
+
+
+@tool
+def publish_image(path: str, name: str = "", folder: str = "boutique") -> list:
+    """Met en ligne une image de l'ordinateur (une image faite par le générateur de Codex, une retouche…) sur le serveur
+    d'images en ligne, et renvoie son adresse publique : c'est elle qu'on donne à Shopify (originalSource).
+    path : chemin du fichier (celui que le générateur de Codex indique, souvent dans generated_images/).
+    name : nom parlant (« porsche-911-face »), folder : dossier en ligne. Il faut IMAGES_EN_LIGNE et IMAGES_EN_LIGNE_CLE (voir README.md)."""
+    base, key = _key("IMAGES_EN_LIGNE").rstrip("/"), _key("IMAGES_EN_LIGNE_CLE")
+    if not base or not key:
+        raise ValueError("régler IMAGES_EN_LIGNE (adresse du serveur en ligne) et IMAGES_EN_LIGNE_CLE (sa clé CLE_API) : voir README.md")
+    src = _in(path)
+    data = src.read_bytes()
+    im = _open_bytes(data)
+    ext = FORMATS.get(im.format)
+    if not ext:  # TIFF, AVIF, BMP…: sent as PNG
+        buf = io.BytesIO()
+        im.save(buf, "PNG")
+        data, ext = buf.getvalue(), ".png"
+    mime = {".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif"}[ext]
+    target = f"{base}/televerser/{_slug(folder)}/{_slug(name or src.stem)}{ext}"
+    with _client(API_UA, 120) as c:
+        r = c.put(target, content=data, headers={"Authorization": f"Bearer {key}", "Content-Type": mime})
+    if r.status_code >= 400:
+        raise ValueError(f"le serveur en ligne a répondu {r.status_code} : {r.text[:300]}")
+    sent = r.json()
+    return [f"En ligne : {sent['url']}  ({sent['width']}×{sent['height']} px)\n"
+            f"pour la boutique Shopify : productUpdate(product: {{id: …}}, media: [{{originalSource: \"{sent['url']}\", mediaContentType: IMAGE, alt: …}}])",
+            _preview(ImageOps.exif_transpose(im), 768)]
 
 
 @tool

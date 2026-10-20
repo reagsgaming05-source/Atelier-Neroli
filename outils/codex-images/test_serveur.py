@@ -37,7 +37,22 @@ PAGES = {
     "/page.html": ("text/html", b'<html><head><meta content="/mur.jpg" property="og:image"></head><body>Briqueterie</body></html>'),
     "/sans-image.html": ("text/html", b"<!doctype html><html><body>rien</body></html>"),
     "/texte.txt": ("text/plain", b"pas une image"),
+    # A product page: structured data, main picture, zoomable gallery, srcset, a link to the large size, and noise
+    "/produit.html": ("text/html", b"""<!doctype html><html><head><title>Boite 1234 | Brick shop</title>
+<meta property="og:image" content="/photos/a.jpg">
+<script type="application/ld+json">{"@type": "Product", "name": "Boite", "image": ["/photos/a.jpg", "/photos/b.jpg"]}</script>
+</head><body><img src="/logo.png"><img data-zoom-image="/photos/c.jpg" src="/photos/c-petite.jpg">
+<img srcset="/photos/d-400.jpg 400w, /photos/d-1200.jpg 1200w" src="/photos/d-400.jpg">
+<a href="/photos/e.jpg"><img src="/petite.jpg"></a><img src="/dessin.svg"><img src="data:image/gif;base64,R0lGOD"></body></html>"""),
+    # A Shopify product: the shop gives its own list of pictures
+    "/products/boite-99": ("text/html", b'<html><head><title>Boite 99</title><link href="//cdn.shopify.com/s/x.css"></head><body><img src="/photos/a.jpg"></body></html>'),
+    "/products/boite-99.json": ("application/json", b'{"product": {"images": [{"src": "/photos/s1.jpg", "width": 900, "height": 600}, {"src": "/photos/s2.jpg"}]}}'),
+    "/petite.jpg": ("image/jpeg", brick_wall(60, 40)),
+    "/logo.png": ("image/jpeg", brick_wall(400, 100)),
 }
+for name, size in {"a": (1000, 700), "b": (900, 900), "c": (1200, 800), "d-1200": (1200, 900), "e": (800, 800), "s1": (900, 600), "s2": (700, 700)}.items():
+    PAGES[f"/photos/{name}.jpg"] = ("image/jpeg", brick_wall(*size))
+UPLOADS: dict[str, bytes] = {}
 
 
 class Site(BaseHTTPRequestHandler):
@@ -57,6 +72,21 @@ class Site(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def do_PUT(self):
+        """Stands in for the online server's /televerser."""
+        if not self.path.startswith("/televerser/") or self.headers.get("Authorization") != "Bearer cle-en-ligne":
+            self.send_error(401)
+            return
+        body = self.rfile.read(int(self.headers["Content-Length"]))
+        UPLOADS[self.path] = body
+        w, h = Image.open(io.BytesIO(body)).size
+        answer = json.dumps({"url": f"https://images.example/f{self.path[11:]}", "width": w, "height": h}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(answer)))
+        self.end_headers()
+        self.wfile.write(answer)
 
     def log_message(self, *args):
         pass
@@ -79,7 +109,7 @@ async def call(session, tool, **args):
 
 
 async def end_to_end(base: str, root: Path) -> None:
-    env = {**os.environ, "IMAGES_DIR": str(root), "IMAGES_ALLOW_PRIVATE": "1"}
+    env = {**os.environ, "IMAGES_DIR": str(root), "IMAGES_ALLOW_PRIVATE": "1", "IMAGES_EN_LIGNE": base, "IMAGES_EN_LIGNE_CLE": "cle-en-ligne"}
     params = StdioServerParameters(command=sys.executable, args=[str(HERE / "serveur_images.py")], env=env)
     async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
         await session.initialize()
@@ -151,6 +181,32 @@ async def end_to_end(base: str, root: Path) -> None:
         r = await call(session, "list_images")
         assert f"{base}/page.html" in text_of(r) and "site/bandeau.jpg" in text_of(r), text_of(r)
 
+        # Every picture of a product page, gallery included, without icons, logos or thumbnails.
+        r = await call(session, "page_images", url=f"{base}/produit.html")
+        assert not failed(r), text_of(r)
+        listed = [line.split()[2] for line in text_of(r).splitlines()[1:-1]]
+        assert listed == [f"{base}/photos/{n}.jpg" for n in ("a", "b", "c", "d-1200", "e")], listed
+        assert "Boite 1234" not in text_of(r) and "1200×900" in text_of(r) and len(images_of(r)) == 1, text_of(r)
+        rid = text_of(r).splitlines()[3].split()[0]
+        r = await call(session, "download_image", source=rid, name="boite-1234-c")
+        assert not failed(r) and (root / "originaux/boite-1234-c.jpg").read_bytes() == PAGES["/photos/c.jpg"][1], text_of(r)
+        record = json.loads((root / "originaux/boite-1234-c.json").read_text(encoding="utf-8"))
+        assert record["page"] == f"{base}/produit.html" and "à vérifier" in record["license"], record
+        r = await call(session, "page_images", url=f"{base}/products/boite-99")
+        listed = [line.split()[2] for line in text_of(r).splitlines()[1:-1]]
+        assert listed[:2] == [f"{base}/photos/s1.jpg", f"{base}/photos/s2.jpg"], text_of(r)
+        r = await call(session, "page_images", url=f"{base}/mur.jpg")
+        assert failed(r) and "download_image" in text_of(r)
+
+        # A picture made on the computer goes online, and its address is ready for Shopify.
+        generated = root.parent / "generated_images"
+        generated.mkdir()
+        (generated / "ig_123.png").write_bytes(logo())
+        r = await call(session, "publish_image", path=str(generated / "ig_123.png"), name="Boîte 1234 face")
+        assert not failed(r), text_of(r)
+        assert UPLOADS["/televerser/boutique/boite-1234-face.png"] == logo()
+        assert "https://images.example/f/boutique/boite-1234-face.png" in text_of(r) and "originalSource" in text_of(r), text_of(r)
+
         r = await call(session, "ai_edit_image", path="originaux/mur.jpg", prompt="ciel bleu")
         assert failed(r) and "OPENAI_API_KEY" in text_of(r), text_of(r)
         r = await call(session, "search_images", query="brique", source="web")
@@ -174,6 +230,10 @@ def search_providers(base: str, root: Path) -> None:
     sys.path.insert(0, str(HERE))
     import serveur_images as s
     s.ALLOW_PRIVATE = True
+    assert s._full_size("https://cdn.shopify.com/s/files/1/0/files/boite_400x.jpg?v=12") == "https://cdn.shopify.com/s/files/1/0/files/boite.jpg"
+    assert s._full_size("https://shop.ch/cdn/shop/files/boite_1200x1200@2x.png?v=1") == "https://shop.ch/cdn/shop/files/boite.png"
+    assert s._full_size("https://x.ch/wp-content/uploads/2024/01/boite-300x300.jpg") == "https://x.ch/wp-content/uploads/2024/01/boite.jpg"
+    assert s._full_size("https://x.ch/img/p/1/2/12-large_default.jpg") == "https://x.ch/img/p/1/2/12-large_default.jpg"
     thumb, full = f"{base}/vignette.jpg", f"{base}/mur.jpg"
     answers = {
         "api.openverse.org": {"results": [{"id": "a", "title": "Four à briques", "url": full, "thumbnail": thumb, "foreign_landing_url": "https://flickr.com/x",

@@ -4,7 +4,7 @@ Le serveur d'images de [`../codex-images`](../codex-images), hébergé sur Cloud
 
 Avec lui, Codex peut :
 
-1. **chercher** des images sur internet et les regarder (une vignette par résultat) ;
+1. **chercher** des images sur internet, ou **récupérer toutes les photos d'une fiche produit** d'un site, galerie comprise, et les regarder (une vignette par photo) ;
 2. **les enregistrer** : chaque image est rangée en ligne avec une adresse publique, et son auteur et sa licence sont notés ;
 3. **les retoucher avec son propre générateur d'images** (`image_gen`). Le serveur lui montre l'image, et Codex la passe à son générateur avec `num_last_images_to_include = 1`. Le résultat est rangé par Codex sur l'ordinateur, dans `generated_images/` ;
 4. faire **les gestes simples sans IA** (`edit_image`) : détourer, fond blanc, format carré pour une fiche produit, recadrer, redimensionner, ajouter le logo ;
@@ -13,6 +13,7 @@ Avec lui, Codex peut :
 | Outil | Rôle |
 |---|---|
 | `search_images` | Chercher (banques d'images libres, ou tout le web avec une clé Brave ou SerpAPI) |
+| `page_images` | Toutes les photos d'une page web (fiche produit d'un fournisseur), en grand format, sans icônes ni logos |
 | `save_image` | Ranger une image trouvée, ou celle d'une page web |
 | `view_image` | Montrer une image rangée (à faire juste avant le générateur de Codex) |
 | `edit_image` | Retouches exactes, sans IA (détourage, fond, format, recadrage, logo, texte…) |
@@ -47,10 +48,12 @@ npx wrangler deploy    # crée le stockage tout seul, puis donne l'adresse du se
 
 L'adresse ressemble à `https://images-briquetterie.jonathan-aljundi.workers.dev`.
 
-**3. Choisir le mot de passe** (demandé une fois par appareil au moment de brancher le serveur) :
+**3. Choisir le mot de passe et la clé** :
 
 ```bash
-npx wrangler secret put MOT_DE_PASSE
+npx wrangler secret put MOT_DE_PASSE   # demandé une fois par appareil, au moment de brancher le serveur
+openssl rand -hex 24                   # donne une clé au hasard : la copier
+npx wrangler secret put CLE_API        # coller cette clé (elle sert au serveur local pour envoyer les images générées)
 ```
 
 C'est fini. Ouvre l'adresse du serveur dans le navigateur : la page doit afficher « Serveur MCP d'images ».
@@ -73,7 +76,7 @@ default_tools_approval_mode = "approve"
 tool_timeout_sec = 300
 ```
 
-Redémarre Codex et tape `/mcp` : `images` doit apparaître avec ses 7 outils. Essaie par exemple :
+Redémarre Codex et tape `/mcp` : `images` doit apparaître avec ses 8 outils. Essaie par exemple :
 
 > Trouve une belle photo de boîte de briques de construction, enregistre-la, puis retouche-la avec ton générateur d'images : fond blanc pur, lumière de studio douce, sans rien changer à la boîte.
 
@@ -89,6 +92,17 @@ default_tools_approval_mode = "approve"
 tool_timeout_sec = 300
 ```
 </details>
+
+## La chaîne complète, jusqu'à Shopify
+
+L'image faite par le générateur de Codex est rangée **sur l'ordinateur**, et Shopify a besoin d'une adresse en ligne pour aller la chercher. C'est le serveur local [`../codex-images`](../codex-images) qui fait le lien : son outil `publish_image` envoie l'image ici, et reçoit son adresse publique.
+
+1. Choisis une clé (`openssl rand -hex 24`) et règle-la ici : `npx wrangler secret put CLE_API`.
+2. Installe le serveur local sur l'ordinateur où tourne Codex (voir son README), avec deux réglages de plus :
+   `IMAGES_EN_LIGNE` = l'adresse de ce serveur, et `IMAGES_EN_LIGNE_CLE` = la même clé.
+3. Ajoute dans Codex le connecteur de la boutique : son adresse se trouve sur claude.ai → Paramètres → Connecteurs → « boutique shopify ». Puis `codex mcp add boutique --url <adresse>` et `codex mcp login boutique`.
+
+Codex enchaîne alors seul : fiche produit du fournisseur → `page_images` → `save_image` → son générateur → `publish_image` → `productUpdate` sur la boutique.
 
 ## Brancher Claude (ordinateur, web, téléphone)
 

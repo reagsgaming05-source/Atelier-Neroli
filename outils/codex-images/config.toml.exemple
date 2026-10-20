@@ -21,5 +21,13 @@ IMAGES_DIR = "C:/Users/<toi>/projets/briqueterie/images"
 # Facultatif, recherche sur tout le web (source="web") :
 # BRAVE_API_KEY = "..."
 # SERPAPI_API_KEY = "..."
-# Facultatif, retouche par IA (ai_edit_image) :
+# Pour publish_image (mettre en ligne une image générée, pour Shopify) : le serveur en ligne et sa clé CLE_API
+# IMAGES_EN_LIGNE = "https://images-briquetterie.<ton-sous-domaine>.workers.dev"
+# IMAGES_EN_LIGNE_CLE = "..."
+# Facultatif, retouche par l'API OpenAI si le générateur de Codex n'est pas disponible (ai_edit_image) :
 # OPENAI_API_KEY = "sk-..."
+
+# Le connecteur de la boutique, pour que Codex ajoute les images aux produits
+# (adresse : claude.ai → Paramètres → Connecteurs → boutique shopify ; puis « codex mcp login boutique »)
+# [mcp_servers.boutique]
+# url = "<adresse du connecteur>"

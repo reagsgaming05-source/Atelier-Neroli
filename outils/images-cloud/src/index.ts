@@ -2,7 +2,7 @@ import { OAuthProvider } from "@cloudflare/workers-oauth-provider";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { autoriser } from "./connexion";
 import { memeSecret, type Env } from "./env";
-import { PRIVE } from "./images";
+import { PRIVE, Refus, adresse, mesurer, ranger } from "./images";
 import { serveur } from "./outils";
 
 /** The MCP endpoint, stateless: a fresh server for each request. */
@@ -27,6 +27,25 @@ async function fichier(request: Request, env: Env, url: URL): Promise<Response> 
 	headers.set("Access-Control-Allow-Origin", "*");
 	if (!("body" in obj)) return new Response(null, { status: 304, headers });
 	return new Response(request.method === "HEAD" ? null : obj.body, { headers });
+}
+
+/** PUT /televerser/<dossier>/<nom>.<ext>: a picture made on a computer (Codex's image generator) goes online.
+ * Sent by the local server's publish_image, with the fixed key. */
+async function televerser(request: Request, env: Env, url: URL): Promise<Response> {
+	const json = (body: unknown, status = 200) => Response.json(body, { status });
+	if (!env.CLE_API) return json({ erreur: "régler d'abord la clé : npx wrangler secret put CLE_API" }, 503);
+	const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+	if (!token || !(await memeSecret(token, env.CLE_API))) return json({ erreur: "clé manquante ou fausse" }, 401);
+	if (Number(request.headers.get("Content-Length") || 0) > 25 * 1048576) return json({ erreur: "image de plus de 25 Mo" }, 413);
+	const data = await request.arrayBuffer();
+	try {
+		const info = await mesurer(env, data);
+		const name = decodeURIComponent(url.pathname.slice("/televerser/".length)).replace(/\.\w+$/, "") || "image";
+		const key = await ranger(env, "generees", name, data, info.format, { source: "généré sur l'ordinateur" });
+		return json({ key, url: adresse(url.origin, key), width: info.width, height: info.height });
+	} catch (e) {
+		return json({ erreur: (e as Error).message }, e instanceof Refus ? 400 : 500);
+	}
 }
 
 const accueil = (origin: string) =>
@@ -66,6 +85,7 @@ export default {
 	fetch(request, env, ctx) {
 		const url = new URL(request.url);
 		if (url.pathname.startsWith("/f/") && (request.method === "GET" || request.method === "HEAD")) return fichier(request, env, url);
+		if (url.pathname.startsWith("/televerser/") && request.method === "PUT") return televerser(request, env, url);
 		return fournisseur(url.origin).fetch(request, env, ctx);
 	},
 } satisfies ExportedHandler<Env>;

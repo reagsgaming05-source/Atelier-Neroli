@@ -19,12 +19,14 @@ La retouche est faite par **le générateur d'images de Codex** (`image_gen`). `
 | Outil | Rôle |
 |---|---|
 | `search_images` | Cherche des images. Renvoie la liste (numéro `r1`, `r2`…, taille, licence, auteur) et **une planche de vignettes numérotées** que le modèle regarde pour choisir. |
+| `page_images` | Récupère **toutes les photos d'une page web**, par exemple la fiche d'un produit chez un fournisseur : galerie comprise, en grand format, sans les icônes ni les logos. Renvoie la planche numérotée. |
 | `download_image` | Télécharge un résultat (`"r3"`), l'adresse directe d'une image, ou une page web, dont il prend l'image principale. Le fichier va dans `originaux/`, avec un `.json` qui note la source, l'auteur et la licence. |
 | `view_image` | Montre une image enregistrée. |
 | `edit_image` | Gestes exacts sans IA, sans clé ni coût : recadrage (dont format 16:9, 1:1…), redimensionnement, redressement, **perspective (façades, murs)**, contraste et balance des blancs automatiques, niveaux, luminosité, saturation, température, netteté, débruitage, vignettage, noir et blanc, fond étendu, texte, logo. Le résultat va dans `retouches/` et l'outil montre l'avant/après. L'original n'est jamais modifié. |
 | `ai_edit_image` | Retouche IA par l'API OpenAI, seulement si le générateur de Codex n'est pas disponible. Il faut une clé OpenAI. |
 | `compare_images` | Met plusieurs images côte à côte pour choisir. |
 | `list_images` | Liste les images, avec les crédits à citer sur le site. |
+| `publish_image` | Met en ligne une image de l'ordinateur, par exemple celle que le générateur de Codex vient de faire, et renvoie son **adresse publique**. Shopify a besoin de cette adresse pour aller chercher l'image. Il faut le serveur en ligne ([`../images-cloud`](../images-cloud)). |
 
 Par défaut, la recherche se limite aux **images libres d'usage commercial et modifiables** : c'est ce qu'il faut pour le site d'une entreprise. Une photo prise au hasard sur Google n'est pas libre de droits.
 
@@ -78,9 +80,31 @@ Ensuite, copie [`AGENTS.exemple.md`](AGENTS.exemple.md) dans le projet de la bri
 
 ### 5. Vérifier
 
-Redémarre Codex, puis tape `/mcp` : le serveur `images` doit apparaître avec ses 7 outils. Essaie par exemple :
+Redémarre Codex, puis tape `/mcp` : le serveur `images` doit apparaître avec ses 9 outils. Essaie par exemple :
 
 > Trouve une belle photo de boîte de briques de construction, télécharge-la, puis retouche-la avec ton générateur d'images : fond blanc pur, lumière de studio douce, sans rien changer à la boîte.
+
+## La chaîne complète : d'une fiche produit jusqu'à Shopify
+
+Avec trois serveurs branchés dans Codex, il fait tout seul : la page du fournisseur → toutes les photos du produit → son générateur d'images → une adresse en ligne → la fiche produit de la boutique.
+
+1. **Ce serveur local**, avec deux réglages de plus sous `[mcp_servers.images.env]`, pour que `publish_image` puisse mettre les images en ligne :
+   ```toml
+   IMAGES_EN_LIGNE = "https://images-briquetterie.jonathan-aljundi.workers.dev"   # l'adresse du serveur en ligne
+   IMAGES_EN_LIGNE_CLE = "…"   # la même valeur que CLE_API sur le serveur en ligne
+   ```
+2. **Le serveur en ligne** ([`../images-cloud`](../images-cloud)), mis en ligne une fois, avec sa clé : `npx wrangler secret put CLE_API`.
+3. **Le connecteur de la boutique**, celui que Claude utilise déjà. Son adresse se trouve sur claude.ai → Paramètres → Connecteurs → « boutique shopify ». Dans le Terminal :
+   ```bash
+   codex mcp add boutique --url <adresse du connecteur>
+   codex mcp login boutique
+   ```
+
+Exemple de demande :
+
+> Va sur <adresse de la fiche produit>, récupère toutes les photos du produit, retouche-les avec ton générateur d'images (fond blanc pur, lumière de studio, sans rien changer à la boîte), mets-les en ligne et ajoute-les au produit « Boîte 1234 » de La Briquetterie.
+
+Vérifie d'abord que tu as le droit d'utiliser les photos du site, par exemple parce que c'est ton fournisseur.
 
 ## Clés facultatives (meilleurs résultats)
 

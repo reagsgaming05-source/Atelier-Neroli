@@ -3,9 +3,10 @@ import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validatio
 import { z } from "zod";
 import type { Env } from "./env";
 import {
-	PRIVE, Refus, adresse, apercu, charger, extension, hasard, mesurer, ranger, recuperer, retoucher, texte, vignette,
-	type Bloc, type Credits,
+	PRIVE, Refus, adresse, apercu, charger, extension, hasard, mesurer, ranger, recuperer, retoucher, telecharger, texte, vignette,
+	vignetteMesuree, type Bloc, type Credits,
 } from "./images";
+import { listeShopify, photosDeLaPage, tailleOriginale } from "./page";
 import { LIBRES, SOURCES, configuree, type Trouvaille } from "./sources";
 
 const RESULTAT = /^[a-z2-9]{4}-\d{1,3}$/;
@@ -30,10 +31,12 @@ export function serveur(env: Env, origin: string): McpServer {
 	const mcp = new McpServer({ name: "images", version: "1.0.0" }, {
 		jsonSchemaValidator: new CfWorkerJsonSchemaValidator(),
 		instructions: `Images du web, rangées en ligne : chaque image a une adresse publique ${origin}/f/…
-Démarche : search_images (regarder les vignettes) → save_image("xxxx-N"), qui montre l'image
+Démarche : trouver les photos (search_images, ou page_images pour toutes les photos d'une fiche produit d'un site)
+→ save_image("xxxx-N"), qui montre l'image
 → retouche avec le générateur d'images de Codex : image_gen.imagegen avec num_last_images_to_include = 1,
 juste après save_image ou view_image (pour une image déjà rangée, d'abord view_image avec max_side 2048) ;
-le résultat est rangé par Codex sur l'ordinateur, dans generated_images/.
+le résultat est rangé par Codex sur l'ordinateur, dans generated_images/ : pour le mettre en ligne, publish_image
+du serveur local d'images (il renvoie l'adresse publique).
 edit_image sert aux gestes simples et exacts sans IA (détourer, fond blanc, format carré, recadrer, logo) ; il range le résultat en ligne.
 L'original n'est jamais modifié.
 Pour mettre une image rangée sur la boutique Shopify : donner son adresse publique à l'outil Shopify comme originalSource
@@ -94,6 +97,51 @@ Astuce : chercher aussi en anglais, les banques d'images y sont plus riches.`,
 			out.push(texte(`${it.id}  ${size}  ${it.provider}  « ${it.title.slice(0, 70)} »  licence : ${it.license || "?"}  auteur : ${it.author.slice(0, 40) || "?"}  page : ${it.page}`));
 			out.push(thumbs[i] ?? texte("(vignette indisponible)"));
 		});
+		return out;
+	}));
+
+	mcp.registerTool("page_images", {
+		title: "Photos d'une page",
+		description: `Récupère toutes les photos d'une page web, par exemple la fiche d'un produit dans une boutique en ligne,
+galerie comprise et en grand format. Renvoie la liste numérotée et la vignette de chacune ; ensuite save_image avec le numéro.
+Les petites images (icônes, logos, moins de 200 px) sont écartées.`,
+		inputSchema: { url: z.string().url(), count: z.number().int().min(1).max(30).default(20) },
+		annotations: lecture,
+	}, outil(async ({ url, count }) => {
+		const got = await telecharger(url);
+		const head = new TextDecoder().decode(got.data.slice(0, 200)).trimStart().toLowerCase();
+		if (!got.type.includes("html") && !head.startsWith("<!doctype") && !head.startsWith("<html")) throw new Refus("ce n'est pas une page web : pour une image seule, save_image");
+		const page = new TextDecoder().decode(got.data);
+		const host = new URL(got.url).hostname;
+		const candidates: string[] = [];
+		const shopify = listeShopify(page, got.url);
+		if (shopify) {
+			try {
+				const list = await telecharger(shopify, got.url, 2 * 1048576);
+				const product = JSON.parse(new TextDecoder().decode(list.data)).product;
+				for (const i of product?.images || []) if (i.src) candidates.push(tailleOriginale(new URL(i.src, got.url).toString()));
+			} catch {
+				// the page itself is enough
+			}
+		}
+		for (const u of photosDeLaPage(page, got.url)) if (!candidates.includes(u)) candidates.push(u);
+		if (!candidates.length) throw new Refus("aucune image sur cette page (le site bloque peut-être les robots, ou charge ses images autrement)");
+		const tried = candidates.slice(0, count * 2);
+		const thumbs = await Promise.all(tried.map((u) => vignetteMesuree(env, u, got.url)));
+		const found: (Trouvaille & { bloc: Bloc })[] = [];
+		tried.forEach((u, i) => {
+			const t = thumbs[i];
+			if (t && Math.max(t.width, t.height) >= 200 && found.length < count) {
+				found.push({ title: `${host} — photo ${found.length + 1}`, url: u, thumb: u, page: got.url, width: t.width, height: t.height,
+					license: `à vérifier : photo du site ${host}`, author: host, provider: "page", bloc: t.bloc });
+			}
+		});
+		if (!found.length) throw new Refus("les images de cette page n'ont pas pu être téléchargées, ou ce ne sont que des icônes");
+		const sid = hasard(4);
+		found.forEach((it, i) => (it.id = `${sid}-${i + 1}`));
+		await env.FICHIERS.put(`${PRIVE}${sid}.json`, JSON.stringify(found.map(({ bloc, ...it }) => it)), { httpMetadata: { contentType: "application/json" } });
+		const out: Bloc[] = [texte(`${found.length} photos sur ${got.url}\nlicence : à vérifier, ce sont les photos du site ${host}`)];
+		for (const it of found) out.push(texte(`${it.id}  ${it.width}×${it.height}  ${it.url}`), it.bloc);
 		return out;
 	}));
 

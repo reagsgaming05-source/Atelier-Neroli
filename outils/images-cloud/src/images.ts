@@ -1,4 +1,5 @@
 import type { Env } from "./env";
+import { imageDeLaPage } from "./page";
 import { API_UA } from "./sources";
 
 export type Bloc = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -17,7 +18,7 @@ export class Refus extends Error {}
 
 // Fetching from the web
 
-async function telecharger(url: string, referer = "", max = MAX_OCTETS): Promise<{ data: ArrayBuffer; type: string; url: string }> {
+export async function telecharger(url: string, referer = "", max = MAX_OCTETS): Promise<{ data: ArrayBuffer; type: string; url: string }> {
 	let u: URL;
 	try {
 		u = new URL(url);
@@ -54,21 +55,6 @@ async function telecharger(url: string, referer = "", max = MAX_OCTETS): Promise
 	return { data: data.buffer, type: r.headers.get("content-type") || "", url: r.url || url };
 }
 
-/** The main picture of a web page (og:image, twitter:image, image_src). */
-function imageDeLaPage(page: string, base: string): string {
-	const keys = ["og:image:secure_url", "og:image:url", "og:image", "twitter:image", "twitter:image:src", "image_src"];
-	const found: Record<string, string> = {};
-	for (const tag of page.slice(0, 400_000).match(/<(?:meta|link)\b[^>]*>/gi) || []) {
-		const attrs: Record<string, string> = {};
-		for (const m of tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) attrs[m[1].toLowerCase()] = (m[2] ?? m[3]).replace(/&amp;/g, "&");
-		const key = (attrs.property || attrs.name || attrs.rel || "").toLowerCase();
-		const value = attrs.content || attrs.href;
-		if (value && keys.includes(key) && !(key in found)) found[key] = value;
-	}
-	for (const key of keys) if (found[key]) return new URL(found[key], base).toString();
-	return "";
-}
-
 /** Downloads a picture from an image address or a web page (its main picture). */
 export async function recuperer(env: Env, url: string, referer = ""): Promise<{ data: ArrayBuffer; url: string; page: string; info: { format: string; width: number; height: number } }> {
 	let got = await telecharger(url, referer);
@@ -95,10 +81,16 @@ export async function mesurer(env: Env, data: ArrayBuffer): Promise<{ format: st
 }
 
 export async function vignette(env: Env, url: string, referer: string): Promise<Bloc | null> {
+	return (await vignetteMesuree(env, url, referer))?.bloc ?? null;
+}
+
+/** A small view of a picture of the web, with its real size; null if it cannot be fetched. */
+export async function vignetteMesuree(env: Env, url: string, referer: string): Promise<{ bloc: Bloc; width: number; height: number } | null> {
 	try {
 		const got = await telecharger(url, referer, 8 * 1048576);
-		if (got.data.byteLength < 150_000 && /^image\/(jpeg|png|webp|gif)/.test(got.type)) return image(got.data, got.type.split(";")[0]);
-		return await apercu(env, got.data, 320);
+		const { width, height } = await mesurer(env, got.data);
+		const raw = got.data.byteLength < 150_000 && /^image\/(jpeg|png|webp|gif)/.test(got.type);
+		return { bloc: raw ? image(got.data, got.type.split(";")[0]) : await apercu(env, got.data, 320), width, height };
 	} catch {
 		return null;
 	}
