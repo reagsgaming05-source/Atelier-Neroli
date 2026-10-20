@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // L'adresse du serveur sera https://images-briquetterie.<ton-sous-domaine>.workers.dev
+  "name": "images-briquetterie",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // global_fetch_strictly_public : le serveur ne peut atteindre que l'internet public
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Créés automatiquement au premier déploiement
+  "kv_namespaces": [{ "binding": "OAUTH_KV" }],
+  "r2_buckets": [{ "binding": "FICHIERS", "bucket_name": "images-briquetterie" }],
+  "images": { "binding": "IMAGES" },
+  "vars": {
+    "OPENAI_IMAGE_MODEL": "gpt-image-1",
+    "POLICE": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.3.0/files/inter-latin-600-normal.woff2"
+  },
+  "observability": { "enabled": true }
+}
