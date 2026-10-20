@@ -1,0 +1,25 @@
+# À recopier dans ~/.codex/config.toml (Windows : C:\Users\<toi>\.codex\config.toml).
+# Remplacer <toi> et les chemins ; sous Windows, écrire les chemins avec des / .
+
+# Codex travaille seul : il ne s'arrête pas pour demander, et n'écrit que dans le projet.
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+
+[mcp_servers.images]
+command = "uv"
+args = ["run", "--script", "C:/Users/<toi>/outils/codex-images/serveur_images.py"]
+startup_timeout_sec = 120
+tool_timeout_sec = 300
+default_tools_approval_mode = "approve"
+
+[mcp_servers.images.env]
+IMAGES_DIR = "C:/Users/<toi>/projets/briqueterie/images"
+# Facultatif, pour de plus belles photos (clés gratuites) :
+# PEXELS_API_KEY = "..."
+# UNSPLASH_ACCESS_KEY = "..."
+# PIXABAY_API_KEY = "..."
+# Facultatif, recherche sur tout le web (source="web") :
+# BRAVE_API_KEY = "..."
+# SERPAPI_API_KEY = "..."
+# Facultatif, retouche par IA (ai_edit_image) :
+# OPENAI_API_KEY = "sk-..."
