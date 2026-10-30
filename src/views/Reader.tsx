@@ -5,6 +5,7 @@ import { SAJDAS, SURAHS, juzOf } from '../data/surahs';
 import { toArabicDigits } from '../lib/hijri';
 import { PAGE_STARTS } from '../lib/khatm';
 import { RECITERS, TRANSLATIONS, audioUrl, loadSurah } from '../lib/quran';
+import { Recitation } from '../lib/recitation';
 import { navigate } from '../lib/router';
 import { readingStore, settingsStore, useStore } from '../lib/settings';
 
@@ -26,8 +27,6 @@ export function Reader({ surah, verse }: { surah: number; verse?: number }) {
   const [playing, setPlaying] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
   const [revealed, setRevealed] = useState<Set<number>>(new Set());
-  const audio = useRef<HTMLAudioElement | null>(null);
-  const repeats = useRef(0);
   const qs = settings.quran;
 
   useEffect(() => {
@@ -80,52 +79,45 @@ export function Reader({ surah, verse }: { surah: number; verse?: number }) {
     };
   }, [texts, surah]);
 
+  // The recitation flows from verse to verse without a pause: the next verse
+  // is loaded while the current one is recited (see lib/recitation). It reads
+  // these at each verse, so a new reciter or repeat count is heard from the next one.
+  const latest = useRef({ surah, verses: info.verses, reciter: qs.reciter, repeat: qs.repeat });
+  latest.current = { surah, verses: info.verses, reciter: qs.reciter, repeat: qs.repeat };
+  const recitation = useRef<Recitation | null>(null);
+  const recite = () =>
+    (recitation.current ??= new Recitation({
+      url: (v) => audioUrl(latest.current.reciter, latest.current.surah, v),
+      lastVerse: () => latest.current.verses,
+      repeat: () => latest.current.repeat,
+      onVerse: (v, repetition) => {
+        setPlaying(v);
+        setPaused(false);
+        if (repetition === 0) document.getElementById(`v${v}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      },
+      onStop: (failed) => {
+        if (failed) toast('Récitation indisponible : vérifiez votre connexion');
+        setPlaying(null);
+        setPaused(false);
+      },
+    }));
+
   // Stop audio when leaving the surah.
   useEffect(() => () => stop(), [surah]);
 
-  const play = (v: number, repeat = 0) => {
-    if (!audio.current) {
-      audio.current = new Audio();
-      audio.current.preload = 'auto';
-    }
-    const el = audio.current;
-    repeats.current = repeat;
-    el.onended = () => {
-      // Memorisation: recite the same verse `qs.repeat` times before moving on.
-      if (repeats.current + 1 < qs.repeat) play(v, repeats.current + 1);
-      else if (v < info.verses) play(v + 1);
-      else stop();
-    };
-    el.onerror = () => {
-      toast('Récitation indisponible : vérifiez votre connexion');
-      stop();
-    };
-    el.src = audioUrl(qs.reciter, surah, v);
-    el.play().catch(() => {
-      /* error handler above reports failures */
-    });
-    setPlaying(v);
-    setPaused(false);
-    if (repeat === 0) document.getElementById(`v${v}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  };
+  const play = (v: number) => recite().play(v);
 
   const stop = () => {
-    audio.current?.pause();
-    if (audio.current) audio.current.src = '';
+    recitation.current?.stop();
     setPlaying(null);
     setPaused(false);
   };
 
   const togglePause = () => {
-    const el = audio.current;
-    if (!el) return;
-    if (el.paused) {
-      el.play();
-      setPaused(false);
-    } else {
-      el.pause();
-      setPaused(true);
-    }
+    const r = recitation.current;
+    if (!r) return;
+    r.toggle();
+    setPaused(r.paused);
   };
 
   const isBookmarked = (v: number) => reading.bookmarks.some((b) => b.surah === surah && b.verse === v);
