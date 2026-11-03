@@ -58,6 +58,14 @@ Chaque épisode est tourné comme un court film (`src/components/Stage.tsx`, `sr
 - **De la vie** : des silhouettes sans visage pour les gens ordinaires (foule, voyageurs, ouvriers, caravane), des oiseaux qui battent des ailes, des mouettes, des poissons qui sautent, des papillons, des chauves-souris, et une vie propre à chaque lieu même quand le découpage n'en prévoit pas. Au moins 60 % des images en contiennent (vérifié par un test). Jamais de prophète, d'ange, ni du Prophète ﷺ et de ses compagnons ; le bouton « Silhouettes » masque les personnes.
 - **Une caméra à ressorts** : deux ressorts en cascade la font démarrer et s'arrêter en douceur, sans jamais s'immobiliser.
 
+### Images peintes
+
+Chaque image du découpage peut être remplacée par une peinture, en deux styles au choix (« Livre » et « Cinéma »). Les peintures sont faites gratuitement sur GitHub par un petit modèle d'image (SD-Turbo, sur processeur, sans clé ni compte) :
+
+- `scripts/images/prompts.ts` écrit la description de chaque image à partir du découpage (ciel, paysage, objets, ce que la caméra regarde), dans `scripts/images/prompts/auto/` : `npx vite-node scripts/images/prompts.ts`. Les gens y sont toujours petits, de dos, en robe à capuche, sans visage.
+- Les fichiers écrits à la main dans `scripts/images/prompts/*.json` remplacent la description automatique de la même image.
+- Le workflow `paint.yml` peint chaque fichier sur sa propre machine, en parallèle, puis enregistre toutes les nouvelles images en une fois dans `public/data/paintings/`. Une image déjà peinte est gardée : pour la refaire, supprimer son fichier.
+
 ### Narration des histoires
 
 La narration est enregistrée d'avance par une voix neuronale française libre et gratuite ([Kokoro-82M](https://github.com/thewh1teagle/kokoro-onnx), voix `ff_siwis`) : un fichier MP3 par épisode dans `public/data/narration/`, avec dans `index.json` le passage où chaque texte est lu. Le lecteur retrouve chaque texte par son empreinte : une scène modifiée depuis l'enregistrement est simplement laissée à lire en silence, sans changer de voix au milieu d'un épisode.

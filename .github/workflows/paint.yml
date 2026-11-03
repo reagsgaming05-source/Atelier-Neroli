@@ -1,8 +1,10 @@
 name: Paint
 
-# Paints the pictures of the stories (scripts/images/prompts/*.json) with a free image model
-# on the runner (CPU, no key, no account) and commits them to public/data/paintings/.
-# Runs when a prompts file or the script changes. Pictures already painted are kept.
+# Paints the pictures of the stories (scripts/images/prompts/*.json and prompts/auto/*.json)
+# with a free image model on the runners (CPU, no key, no account) and commits them to
+# public/data/paintings/. One job per prompts file, run side by side; a last job gathers
+# the new pictures and commits them once. Pictures already painted are kept: delete one
+# to have it painted again.
 
 on:
   workflow_dispatch:
@@ -20,30 +22,77 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  paint:
+  list:
     runs-on: ubuntu-latest
-    timeout-minutes: 340
+    outputs:
+      files: ${{ steps.files.outputs.files }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - id: files
+        run: echo "files=$(ls scripts/images/prompts/*.json scripts/images/prompts/auto/*.json | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+  paint:
+    needs: list
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        file: ${{ fromJSON(needs.list.outputs.files) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Anything left to paint?
+        id: todo
+        run: |
+          left=$(python3 -c "import json,os,sys; d=json.load(open(sys.argv[1])); print(sum(not os.path.exists(f'public/data/paintings/{s}/{k}.webp') for k in d for s in ('book','cine')))" "${{ matrix.file }}")
+          echo "left=$left" >> "$GITHUB_OUTPUT"
+          echo "$left pictures to paint"
+      - if: steps.todo.outputs.left != '0'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install diffusers transformers accelerate safetensors pillow
-      - uses: actions/cache@v4
+      - if: steps.todo.outputs.left != '0'
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install diffusers transformers accelerate safetensors pillow
+      - if: steps.todo.outputs.left != '0'
+        uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
           key: hf-sd-turbo-v1
-      - name: Paint
+      - if: steps.todo.outputs.left != '0'
+        name: Paint
         run: |
-          mkdir -p public/data/paintings
-          cat scripts/images/prompts/*.json | python -c "import sys,json,re; d={}; [d.update(json.loads(m)) for m in re.findall(r'\{.*?\}', sys.stdin.read(), re.S)]; json.dump(d, open('all-prompts.json','w'))"
-          python scripts/images/paint.py stabilityai/sd-turbo all-prompts.json public/data/paintings
-          rm all-prompts.json
+          python scripts/images/paint.py stabilityai/sd-turbo "${{ matrix.file }}" public/data/paintings
+          git ls-files --others --exclude-standard public/data/paintings | grep '\.webp$' | tar -cf new.tar -T -
+          echo "NAME=$(basename '${{ matrix.file }}' .json)" >> "$GITHUB_ENV"
+      - if: steps.todo.outputs.left != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: paintings-${{ env.NAME }}
+          path: new.tar
+          retention-days: 3
+
+  commit:
+    needs: paint
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: paintings-*
+          path: new
       - name: Commit the pictures
         run: |
+          for t in new/*/new.tar; do [ -f "$t" ] && tar -xf "$t"; done
+          python3 - <<'PY'
+          import json, pathlib
+          root = pathlib.Path('public/data/paintings')
+          index = {s: sorted(p.stem for p in (root / s).glob('*.webp')) for s in ('book', 'cine') if (root / s).exists()}
+          (root / 'index.json').write_text(json.dumps(index, indent=1))
+          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          git add public/data/paintings
+          git add -A public/data/paintings
           git diff --cached --quiet && exit 0
           git commit -q -m "Paint the pictures"
           for i in 1 2 3; do

@@ -6,9 +6,11 @@ import torch
 from diffusers import AutoPipelineForText2Image
 
 model, prompts_file, out = sys.argv[1], pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
+# The model reads about 75 tokens: the style comes first and stays short, so that the
+# scene (and the "faces hidden" of its people) is never cut off.
 STYLES = {
-    "book": "warm hand-painted children's storybook illustration, soft gouache and watercolor texture, golden light, rich warm colors, gentle, magical, no text",
-    "cine": "cinematic matte painting, golden hour, volumetric light rays, atmospheric depth, rich warm colors, painterly, epic, no text",
+    "book": "gouache storybook illustration, warm colors",
+    "cine": "cinematic matte painting, volumetric light",
 }
 prompts = json.loads(prompts_file.read_text())
 pipe = AutoPipelineForText2Image.from_pretrained(model, torch_dtype=torch.float32)
@@ -24,7 +26,7 @@ for style, look in STYLES.items():
             if key not in index[style]: index[style].append(key)
             continue
         t = time.time()
-        image = pipe(prompt=f"{scene}, {look}", num_inference_steps=2, guidance_scale=0.0,
+        image = pipe(prompt=f"{look}, {scene}, flat-roofed mud-brick architecture, no text", num_inference_steps=2, guidance_scale=0.0,
                      width=512, height=640, generator=torch.Generator("cpu").manual_seed(7 + n)).images[0]
         image.save(file, quality=80)
         index.setdefault(style, []).append(key)
