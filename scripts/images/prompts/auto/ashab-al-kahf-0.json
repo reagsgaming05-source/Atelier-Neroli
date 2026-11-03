@@ -2,12 +2,30 @@
  "ashab-al-kahf-0-0-0": "a great rock, the dark mouth of a cave in a rocky hillside, a sky full of stars, a full moon, among rocky mountains, at night, deep blue sky, moonlight, ancient Near East, no people",
  "ashab-al-kahf-0-0-1": "a soft heavenly golden light shining from above, the dark mouth of a cave in a rocky hillside, a sky full of stars, one very bright star, among rocky mountains, at night, deep blue sky, moonlight, ancient Near East, no people",
  "ashab-al-kahf-0-1-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a small clay oil lamp glowing, a radiant sun, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "ashab-al-kahf-0-1-1": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a small clay oil lamp glowing, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "ashab-al-kahf-0-1-2": "tall carved stone pillars, a high mud-brick city wall, a flat-roofed mud-brick house, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "ashab-al-kahf-0-2-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, tall carved stone pillars, a small clay oil lamp glowing, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "ashab-al-kahf-0-3-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, tall carved stone pillars, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "ashab-al-kahf-0-3-1": "a rolled parchment scroll, a flat-roofed mud-brick house, a thin crescent moon, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "ashab-al-kahf-0-3-2": "dark heavy clouds, a flat-roofed mud-brick house, a high mud-brick city wall, a thin crescent moon, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "ashab-al-kahf-0-1-1": {
+  "book": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a small clay oil lamp glowing, birds flying, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a small clay oil lamp glowing, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "ashab-al-kahf-0-1-2": {
+  "book": "tall carved stone pillars, a high mud-brick city wall, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "tall carved stone pillars, a high mud-brick city wall, a flat-roofed mud-brick house, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "ashab-al-kahf-0-2-0": {
+  "book": "tall carved stone pillars, a small clay oil lamp glowing, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, tall carved stone pillars, a small clay oil lamp glowing, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "ashab-al-kahf-0-3-0": {
+  "book": "a flat-roofed mud-brick house, tall carved stone pillars, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, tall carved stone pillars, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "ashab-al-kahf-0-3-1": {
+  "book": "a rolled parchment scroll, a flat-roofed mud-brick house, a thin crescent moon, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a rolled parchment scroll, a flat-roofed mud-brick house, a thin crescent moon, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "ashab-al-kahf-0-3-2": {
+  "book": "dark heavy clouds, a flat-roofed mud-brick house, a high mud-brick city wall, a thin crescent moon, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "dark heavy clouds, a flat-roofed mud-brick house, a high mud-brick city wall, a thin crescent moon, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "ashab-al-kahf-0-4-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, footprints in the sand, among rocky mountains, at dusk, warm orange sunset light, long shadows, ancient Near East",
  "ashab-al-kahf-0-4-1": "the dark mouth of a cave in a rocky hillside, a great rock, a dusty winding path, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, among rocky mountains, at dusk, warm orange sunset light, long shadows, ancient Near East",
  "ashab-al-kahf-0-4-2": "a soft heavenly golden light shining from above, the dark mouth of a cave in a rocky hillside, a great rock, a thin crescent moon, among rocky mountains, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
@@ -15,6 +33,9 @@
  "ashab-al-kahf-0-6-0": "the dark mouth of a cave in a rocky hillside, a full moon, a sky full of stars, bats flying, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East, no people",
  "ashab-al-kahf-0-6-1": "the dark mouth of a cave in a rocky hillside, a great rock, a radiant sun, inside a rocky cave, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "ashab-al-kahf-0-7-0": "a soft heavenly golden light shining from above, the dark mouth of a cave in a rocky hillside, a great rock, a radiant sun, among rocky mountains, at dawn, soft pink and golden light, ancient Near East, no people",
- "ashab-al-kahf-0-7-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, the dark mouth of a cave in a rocky hillside, a great rock, a radiant sun, among rocky mountains, at dawn, soft pink and golden light, ancient Near East",
+ "ashab-al-kahf-0-7-1": {
+  "book": "the dark mouth of a cave in a rocky hillside, a great rock, a radiant sun, among rocky mountains, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, the dark mouth of a cave in a rocky hillside, a great rock, a radiant sun, among rocky mountains, at dawn, soft pink and golden light, ancient Near East"
+ },
  "ashab-al-kahf-0-7-2": "the dark mouth of a cave in a rocky hillside, a great rock, a radiant sun, soft white clouds, among rocky mountains, at dawn, soft pink and golden light, ancient Near East, no people"
 }

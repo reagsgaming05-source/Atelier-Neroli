@@ -1,12 +1,27 @@
 {
  "femme-et-chat-0-0-0": "a flat-roofed mud-brick house, a high mud-brick city wall, a dusty winding path, birds flying, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
- "femme-et-chat-0-0-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "femme-et-chat-0-1-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East",
+ "femme-et-chat-0-0-1": {
+  "book": "a flat-roofed mud-brick house, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "femme-et-chat-0-1-0": {
+  "book": "a flat-roofed mud-brick house, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "femme-et-chat-0-1-1": "a large old iron key, a flat-roofed mud-brick house, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
- "femme-et-chat-0-2-0": "dark heavy clouds, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, lightning bolts, in an ancient town of flat-roofed mud-brick houses, under a dark stormy sky, heavy grey clouds, ancient Near East",
+ "femme-et-chat-0-2-0": {
+  "book": "dark heavy clouds, a flat-roofed mud-brick house, lightning bolts, in an ancient town of flat-roofed mud-brick houses, under a dark stormy sky, heavy grey clouds, ancient Near East, no people",
+  "cine": "dark heavy clouds, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, lightning bolts, in an ancient town of flat-roofed mud-brick houses, under a dark stormy sky, heavy grey clouds, ancient Near East"
+ },
  "femme-et-chat-0-3-0": "a large old iron key, a flat-roofed mud-brick house, a small clay oil lamp glowing, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
- "femme-et-chat-0-3-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a small clay oil lamp glowing, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East",
- "femme-et-chat-0-4-0": "a large old tree, a flat-roofed mud-brick house, a large old iron key, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East",
+ "femme-et-chat-0-3-1": {
+  "book": "a flat-roofed mud-brick house, a small clay oil lamp glowing, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a small clay oil lamp glowing, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "femme-et-chat-0-4-0": {
+  "book": "a large old tree, a flat-roofed mud-brick house, a large old iron key, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a large old tree, a flat-roofed mud-brick house, a large old iron key, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East"
+ },
  "femme-et-chat-0-4-1": "a column of tiny ants, butterflies, a large old tree, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
  "femme-et-chat-0-5-0": "a soft heavenly golden light shining from above, a large old tree, a column of tiny ants, butterflies, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
  "femme-et-chat-0-5-1": "a spring of clear water gushing from the ground, a large old tree, birds flying, a flock of sheep, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",

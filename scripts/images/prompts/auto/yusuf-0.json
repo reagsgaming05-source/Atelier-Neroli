@@ -1,20 +1,47 @@
 {
  "yusuf-0-0-0": "an old open book with golden pages, a soft heavenly golden light shining from above, at dawn, soft pink and golden light, ancient Near East, no people",
- "yusuf-0-0-1": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, an old open book with golden pages, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East",
+ "yusuf-0-0-1": {
+  "book": "an old open book with golden pages, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, an old open book with golden pages, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East"
+ },
  "yusuf-0-1-0": "a sky full of stars, a flat-roofed mud-brick house, a radiant sun, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
  "yusuf-0-2-0": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
- "yusuf-0-2-1": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
+ "yusuf-0-2-1": {
+  "book": "a flat-roofed mud-brick house, a dusty winding path, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "yusuf-0-2-2": "an old open book with golden pages, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
- "yusuf-0-3-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a large old tree, a radiant sun, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East",
+ "yusuf-0-3-0": {
+  "book": "a flat-roofed mud-brick house, a large old tree, a radiant sun, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a large old tree, a radiant sun, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East"
+ },
  "yusuf-0-3-1": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a large old tree, a radiant sun, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "yusuf-0-4-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a large old tree, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
- "yusuf-0-4-1": "an old round stone well, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a coiled rope, a dusty winding path, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "yusuf-0-5-0": "a flat-roofed mud-brick house, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a large old tree, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
+ "yusuf-0-4-0": {
+  "book": "a dusty winding path, a large old tree, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a large old tree, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "yusuf-0-4-1": {
+  "book": "an old round stone well, a coiled rope, a dusty winding path, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "an old round stone well, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a coiled rope, a dusty winding path, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "yusuf-0-5-0": {
+  "book": "a flat-roofed mud-brick house, a dusty winding path, a large old tree, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a flat-roofed mud-brick house, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a large old tree, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
  "yusuf-0-5-1": "a grey wolf, a flat-roofed mud-brick house, a dusty winding path, a large old tree, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
  "yusuf-0-6-0": "a soft heavenly golden light shining from above, an old round stone well, a dusty winding path, a great rock, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
- "yusuf-0-7-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, footprints in the sand, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "yusuf-0-7-1": "a grey wolf, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
- "yusuf-0-7-2": "a simple linen tunic, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
+ "yusuf-0-7-0": {
+  "book": "a flat-roofed mud-brick house, a dusty winding path, footprints in the sand, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, footprints in the sand, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "yusuf-0-7-1": {
+  "book": "a grey wolf, a flat-roofed mud-brick house, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a grey wolf, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "yusuf-0-7-2": {
+  "book": "a simple linen tunic, a flat-roofed mud-brick house, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a simple linen tunic, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "yusuf-0-8-0": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a simple linen tunic, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
  "yusuf-0-9-0": "a camel caravan with robed riders seen from far away, a dusty winding path, an old round stone well, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
  "yusuf-0-9-1": "a coiled rope, a camel caravan with robed riders seen from far away, an old round stone well, clay jars, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",

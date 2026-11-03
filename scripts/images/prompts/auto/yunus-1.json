@@ -8,5 +8,8 @@
  "yunus-1-4-0": "a soft heavenly golden light shining from above, a broad-leaved gourd plant, a date palm, birds flying, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
  "yunus-1-4-1": "a camel caravan with robed riders seen from far away, a date palm, a dusty winding path, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
  "yunus-1-5-0": "a small wooden boat, a soft heavenly golden light shining from above, soft white clouds, seagulls, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
- "yunus-1-5-1": "a thin crescent moon, a small wooden boat, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, seagulls, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ "yunus-1-5-1": {
+  "book": "a thin crescent moon, a small wooden boat, seagulls, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a thin crescent moon, a small wooden boat, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, seagulls, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ }
 }

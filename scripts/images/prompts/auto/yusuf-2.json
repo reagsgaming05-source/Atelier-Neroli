@@ -1,25 +1,58 @@
 {
- "yusuf-2-0-0": "a dark stone prison cell with a barred opening, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt",
+ "yusuf-2-0-0": {
+  "book": "a dark stone prison cell with a barred opening, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
+  "cine": "a dark stone prison cell with a barred opening, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt"
+ },
  "yusuf-2-0-1": "a golden goblet, a dark stone prison cell with a barred opening, a full moon, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
  "yusuf-2-0-2": "loaves of flat bread, a dark stone prison cell with a barred opening, birds flying, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
- "yusuf-2-1-0": "one very bright star, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dark stone prison cell with a barred opening, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt",
- "yusuf-2-2-0": "a golden goblet, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dark stone prison cell with a barred opening, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt",
- "yusuf-2-2-1": "a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, footprints in the sand, a dark stone prison cell with a barred opening, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt",
+ "yusuf-2-1-0": {
+  "book": "one very bright star, a dark stone prison cell with a barred opening, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
+  "cine": "one very bright star, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dark stone prison cell with a barred opening, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt"
+ },
+ "yusuf-2-2-0": {
+  "book": "a golden goblet, a dark stone prison cell with a barred opening, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
+  "cine": "a golden goblet, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dark stone prison cell with a barred opening, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt"
+ },
+ "yusuf-2-2-1": {
+  "book": "a dusty winding path, footprints in the sand, a dark stone prison cell with a barred opening, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
+  "cine": "a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, footprints in the sand, a dark stone prison cell with a barred opening, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt"
+ },
  "yusuf-2-2-2": "a strong wind blowing sand and leaves, footprints in the sand, a dark stone prison cell with a barred opening, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
  "yusuf-2-3-0": "a dark stone prison cell with a barred opening, a full moon, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
  "yusuf-2-3-1": "cows, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Egypt, no people",
  "yusuf-2-3-2": "golden fields of wheat, withered dead plants, cows, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Egypt, no people",
- "yusuf-2-4-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, an empty ornate royal throne, a grand ancient stone palace with columns, tall carved stone pillars, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt",
+ "yusuf-2-4-0": {
+  "book": "an empty ornate royal throne, a grand ancient stone palace with columns, tall carved stone pillars, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, an empty ornate royal throne, a grand ancient stone palace with columns, tall carved stone pillars, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt"
+ },
  "yusuf-2-4-1": "a dark stone prison cell with a barred opening, a golden goblet, a dusty winding path, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
  "yusuf-2-4-2": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, a dark stone prison cell with a barred opening, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
  "yusuf-2-5-0": "golden fields of wheat, workers in plain robes at work, tiny and far away, seen from behind, faces hidden, a radiant sun, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Egypt",
- "yusuf-2-6-0": "withered dead plants, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, golden fields of wheat, a strong wind blowing sand and leaves, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt",
- "yusuf-2-6-1": "pouring rain, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, soft white clouds, golden fields of wheat, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt",
- "yusuf-2-7-0": "an empty ornate royal throne, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, tall carved stone pillars, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
+ "yusuf-2-6-0": {
+  "book": "withered dead plants, golden fields of wheat, a strong wind blowing sand and leaves, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "withered dead plants, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, golden fields of wheat, a strong wind blowing sand and leaves, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
+ "yusuf-2-6-1": {
+  "book": "pouring rain, soft white clouds, golden fields of wheat, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "pouring rain, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, soft white clouds, golden fields of wheat, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
+ "yusuf-2-7-0": {
+  "book": "an empty ornate royal throne, a grand ancient stone palace with columns, tall carved stone pillars, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "an empty ornate royal throne, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, tall carved stone pillars, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
  "yusuf-2-7-1": "a dark stone prison cell with a barred opening, a large old iron key, a high mud-brick city wall, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
- "yusuf-2-7-2": "a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a simple linen tunic, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
- "yusuf-2-8-0": "an empty ornate royal throne, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
+ "yusuf-2-7-2": {
+  "book": "a soft heavenly golden light shining from above, a simple linen tunic, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a simple linen tunic, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
+ "yusuf-2-8-0": {
+  "book": "an empty ornate royal throne, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "an empty ornate royal throne, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
  "yusuf-2-8-1": "golden fields of wheat, a large old iron key, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
  "yusuf-2-9-0": "a soft heavenly golden light shining from above, a grand ancient stone palace with columns, golden fields of wheat, a radiant sun, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
- "yusuf-2-9-1": "a radiant sun, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a soft heavenly golden light shining from above, a grove of date palms, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt"
+ "yusuf-2-9-1": {
+  "book": "a radiant sun, a soft heavenly golden light shining from above, a grove of date palms, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
+  "cine": "a radiant sun, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a soft heavenly golden light shining from above, a grove of date palms, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt"
+ }
 }

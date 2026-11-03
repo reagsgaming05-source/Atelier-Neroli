@@ -5,10 +5,22 @@
  "pecheresse-et-chien-0-1-1": "a dog lying down, a dusty winding path, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
  "pecheresse-et-chien-0-2-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, an old round stone well, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
  "pecheresse-et-chien-0-2-1": "a dog lying down, an old round stone well, a dusty winding path, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
- "pecheresse-et-chien-0-3-0": "a radiant sun, a dog lying down, an old round stone well, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
- "pecheresse-et-chien-0-4-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, an old round stone well, a coiled rope, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
- "pecheresse-et-chien-0-4-1": "a golden goblet, an old round stone well, a coiled rope, a dog lying down, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
- "pecheresse-et-chien-0-5-0": "a soft heavenly golden light shining from above, an old round stone well, a dog lying down, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "pecheresse-et-chien-0-3-0": {
+  "book": "a radiant sun, a dog lying down, an old round stone well, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a radiant sun, a dog lying down, an old round stone well, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "pecheresse-et-chien-0-4-0": {
+  "book": "an old round stone well, a coiled rope, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, an old round stone well, a coiled rope, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "pecheresse-et-chien-0-4-1": {
+  "book": "a golden goblet, an old round stone well, a coiled rope, a dog lying down, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a golden goblet, an old round stone well, a coiled rope, a dog lying down, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "pecheresse-et-chien-0-5-0": {
+  "book": "a soft heavenly golden light shining from above, an old round stone well, a dog lying down, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, an old round stone well, a dog lying down, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "pecheresse-et-chien-0-6-0": "a soft heavenly golden light shining from above, a spring of clear water gushing from the ground, birds flying, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people",
  "pecheresse-et-chien-0-6-1": "a dog lying down, a spring of clear water gushing from the ground, butterflies, a grove of date palms, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people"
 }

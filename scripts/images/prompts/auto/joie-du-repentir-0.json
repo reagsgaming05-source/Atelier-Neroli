@@ -4,15 +4,39 @@
  "joie-du-repentir-0-1-0": "a soft heavenly golden light shining from above, a thin crescent moon, birds flying, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East, no people",
  "joie-du-repentir-0-1-1": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East",
  "joie-du-repentir-0-1-2": "a camel caravan with robed riders seen from far away, a dusty winding path, a radiant sun, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East",
- "joie-du-repentir-0-2-0": "camels, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
+ "joie-du-repentir-0-2-0": {
+  "book": "camels, a dusty winding path, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "camels, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East"
+ },
  "joie-du-repentir-0-2-1": "loaves of flat bread, camels, clay jars, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
- "joie-du-repentir-0-3-0": "footprints in the sand, a radiant sun, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
- "joie-du-repentir-0-4-0": "footprints in the sand, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "joie-du-repentir-0-4-1": "a date palm, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, footprints in the sand, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "joie-du-repentir-0-5-0": "camels, a date palm, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "joie-du-repentir-0-5-1": "a coiled rope, camels, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a date palm, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "joie-du-repentir-0-6-0": "a soft heavenly golden light shining from above, camels, a coiled rope, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "joie-du-repentir-0-6-1": "clay jars, camels, loaves of flat bread, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "joie-du-repentir-0-3-0": {
+  "book": "footprints in the sand, a radiant sun, a dusty winding path, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "footprints in the sand, a radiant sun, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "joie-du-repentir-0-4-0": {
+  "book": "footprints in the sand, a dusty winding path, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "footprints in the sand, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "joie-du-repentir-0-4-1": {
+  "book": "a date palm, footprints in the sand, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a date palm, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, footprints in the sand, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "joie-du-repentir-0-5-0": {
+  "book": "camels, a date palm, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "camels, a date palm, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "joie-du-repentir-0-5-1": {
+  "book": "a coiled rope, camels, a date palm, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a coiled rope, camels, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a date palm, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "joie-du-repentir-0-6-0": {
+  "book": "a soft heavenly golden light shining from above, camels, a coiled rope, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, camels, a coiled rope, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "joie-du-repentir-0-6-1": {
+  "book": "clay jars, camels, loaves of flat bread, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "clay jars, camels, loaves of flat bread, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "joie-du-repentir-0-7-0": "a soft heavenly golden light shining from above, a radiant sun, camels, birds flying, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East, no people",
  "joie-du-repentir-0-7-1": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, footprints in the sand, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East"
 }

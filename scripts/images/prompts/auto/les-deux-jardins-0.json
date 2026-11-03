@@ -1,17 +1,32 @@
 {
- "les-deux-jardins-0-0-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grove of date palms, a dusty winding path, a soft heavenly golden light shining from above, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East",
+ "les-deux-jardins-0-0-0": {
+  "book": "a grove of date palms, a dusty winding path, a soft heavenly golden light shining from above, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grove of date palms, a dusty winding path, a soft heavenly golden light shining from above, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East"
+ },
  "les-deux-jardins-0-0-1": "a high mud-brick city wall, a grove of date palms, a large old tree, a soft heavenly golden light shining from above, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people",
  "les-deux-jardins-0-1-0": "a large old tree, a high mud-brick city wall, a grove of date palms, a radiant sun, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
  "les-deux-jardins-0-1-1": "golden fields of wheat, a grove of date palms, a large old tree, a radiant sun, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
  "les-deux-jardins-0-2-0": "clusters of ripe dates, a date palm, a large old tree, golden fields of wheat, on the bank of a wide river with reeds, in bright daylight, clear blue sky, ancient Near East, no people",
  "les-deux-jardins-0-2-1": "a spring of clear water gushing from the ground, a date palm, clusters of ripe dates, golden fields of wheat, on the bank of a wide river with reeds, in bright daylight, clear blue sky, ancient Near East, no people",
- "les-deux-jardins-0-3-0": "clusters of ripe dates, a grove of date palms, a flat-roofed mud-brick house, a spring of clear water gushing from the ground, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East",
- "les-deux-jardins-0-3-1": "a heap of gold treasure, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a few silver coins, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East",
+ "les-deux-jardins-0-3-0": {
+  "book": "clusters of ripe dates, a grove of date palms, a flat-roofed mud-brick house, a spring of clear water gushing from the ground, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "clusters of ripe dates, a grove of date palms, a flat-roofed mud-brick house, a spring of clear water gushing from the ground, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "les-deux-jardins-0-3-1": {
+  "book": "a heap of gold treasure, a flat-roofed mud-brick house, a few silver coins, clusters of ripe dates, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a heap of gold treasure, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a few silver coins, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East"
+ },
  "les-deux-jardins-0-4-0": "footprints in the sand, a dusty winding path, a high mud-brick city wall, a grove of date palms, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
  "les-deux-jardins-0-4-1": "a grove of date palms, clusters of ripe dates, golden fields of wheat, a radiant sun, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
  "les-deux-jardins-0-5-0": "soft white clouds, a grove of date palms, a high mud-brick city wall, clusters of ripe dates, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
- "les-deux-jardins-0-5-1": "a soft heavenly golden light shining from above, a grove of date palms, soft white clouds, clusters of ripe dates, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "les-deux-jardins-0-5-1": {
+  "book": "a soft heavenly golden light shining from above, a grove of date palms, soft white clouds, clusters of ripe dates, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a grove of date palms, soft white clouds, clusters of ripe dates, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "les-deux-jardins-0-5-2": "clusters of ripe dates, a grove of date palms, a high mud-brick city wall, soft white clouds, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "les-deux-jardins-0-6-0": "a soft heavenly golden light shining from above, a date palm, clusters of ripe dates, a thin crescent moon, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
- "les-deux-jardins-0-6-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a date palm, a dusty winding path, footprints in the sand, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ "les-deux-jardins-0-6-1": {
+  "book": "a date palm, a dusty winding path, footprints in the sand, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a date palm, a dusty winding path, footprints in the sand, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ }
 }

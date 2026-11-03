@@ -1,17 +1,44 @@
 {
- "hud-2-0-0": "a radiant sun, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
+ "hud-2-0-0": {
+  "book": "a radiant sun, a dusty winding path, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a radiant sun, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East"
+ },
  "hud-2-0-1": "footprints in the sand, a radiant sun, a dusty winding path, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
  "hud-2-0-2": "a dusty winding path, footprints in the sand, soft white clouds, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
- "hud-2-1-0": "a soft heavenly golden light shining from above, a grove of date palms, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East",
- "hud-2-1-1": "dark heavy clouds, a grove of date palms, a dusty winding path, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "hud-2-2-0": "a tall ancient brick tower, a high mud-brick city wall, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "hud-2-2-1": "dark heavy clouds, a tall ancient brick tower, a high mud-brick city wall, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "hud-2-3-0": "a rolled parchment scroll, a soft heavenly golden light shining from above, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, among rocky mountains, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "hud-2-4-0": "soft white clouds, a dusty winding path, a tall ancient brick tower, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "hud-2-4-1": "dark heavy clouds, soft white clouds, a strong wind blowing sand and leaves, a tall ancient brick tower, in a green valley between hills, under a dark stormy sky, heavy grey clouds, ancient Near East",
+ "hud-2-1-0": {
+  "book": "a soft heavenly golden light shining from above, a grove of date palms, a dusty winding path, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a grove of date palms, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "hud-2-1-1": {
+  "book": "dark heavy clouds, a grove of date palms, a dusty winding path, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "dark heavy clouds, a grove of date palms, a dusty winding path, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "hud-2-2-0": {
+  "book": "a tall ancient brick tower, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a tall ancient brick tower, a high mud-brick city wall, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "hud-2-2-1": {
+  "book": "dark heavy clouds, a tall ancient brick tower, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "dark heavy clouds, a tall ancient brick tower, a high mud-brick city wall, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "hud-2-3-0": {
+  "book": "a rolled parchment scroll, a soft heavenly golden light shining from above, a dusty winding path, among rocky mountains, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a rolled parchment scroll, a soft heavenly golden light shining from above, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, among rocky mountains, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "hud-2-4-0": {
+  "book": "soft white clouds, a dusty winding path, a tall ancient brick tower, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "soft white clouds, a dusty winding path, a tall ancient brick tower, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "hud-2-4-1": {
+  "book": "dark heavy clouds, soft white clouds, a strong wind blowing sand and leaves, a tall ancient brick tower, in a green valley between hills, under a dark stormy sky, heavy grey clouds, ancient Near East, no people",
+  "cine": "dark heavy clouds, soft white clouds, a strong wind blowing sand and leaves, a tall ancient brick tower, in a green valley between hills, under a dark stormy sky, heavy grey clouds, ancient Near East"
+ },
  "hud-2-5-0": "a strong wind blowing sand and leaves, dark heavy clouds, a tall ancient brick tower, in a vast golden sand desert with dunes, under a dark stormy sky, heavy grey clouds, ancient Near East, no people",
  "hud-2-5-1": "crumbling ancient ruins, a strong wind blowing sand and leaves, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
- "hud-2-6-0": "a grand ancient stone palace with columns, a tall ancient brick tower, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
+ "hud-2-6-0": {
+  "book": "a grand ancient stone palace with columns, a tall ancient brick tower, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a grand ancient stone palace with columns, a tall ancient brick tower, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
  "hud-2-6-1": "a strong wind blowing sand and leaves, crumbling ancient ruins, soft white clouds, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "hud-2-7-0": "soft white clouds, crumbling ancient ruins, a strong wind blowing sand and leaves, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "hud-2-7-1": "dark heavy clouds, soft white clouds, a strong wind blowing sand and leaves, crumbling ancient ruins, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",

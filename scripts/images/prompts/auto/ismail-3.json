@@ -9,6 +9,9 @@
  "ismail-3-4-0": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a sky full of stars, bats flying, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East, no people",
  "ismail-3-4-1": "a few silver coins, a flat-roofed mud-brick house, a small clay oil lamp glowing, a sky full of stars, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East, no people",
  "ismail-3-4-2": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a small clay oil lamp glowing, a sky full of stars, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East, no people",
- "ismail-3-5-0": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a radiant sun, a soft heavenly golden light shining from above, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East",
+ "ismail-3-5-0": {
+  "book": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a radiant sun, a soft heavenly golden light shining from above, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a radiant sun, a soft heavenly golden light shining from above, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East"
+ },
  "ismail-3-5-1": "a simple cube-shaped stone building in a rocky valley, a radiant sun, a soft heavenly golden light shining from above, a dusty winding path, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East, no people"
 }

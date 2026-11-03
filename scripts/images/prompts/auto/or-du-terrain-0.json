@@ -1,20 +1,65 @@
 {
  "or-du-terrain-0-0-0": "a flat-roofed mud-brick house, a dusty winding path, birds flying, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
- "or-du-terrain-0-0-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a few silver coins, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "or-du-terrain-0-1-0": "clay jars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "or-du-terrain-0-1-1": "a heap of gold treasure, clay jars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "or-du-terrain-0-2-0": "a heap of gold treasure, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, clay jars, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "or-du-terrain-0-2-1": "a flat-roofed mud-brick house, a heap of gold treasure, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "or-du-terrain-0-3-0": "a rolled parchment scroll, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "or-du-terrain-0-3-1": "clay jars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a heap of gold treasure, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "or-du-terrain-0-4-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a small clay oil lamp glowing, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "or-du-terrain-0-4-1": "a small wooden cradle, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a small clay oil lamp glowing, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "or-du-terrain-0-5-0": "a small wooden cradle, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East",
- "or-du-terrain-0-5-1": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East",
- "or-du-terrain-0-6-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a grove of date palms, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East",
- "or-du-terrain-0-6-1": "a heap of gold treasure, a few silver coins, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grove of date palms, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East",
+ "or-du-terrain-0-0-1": {
+  "book": "a flat-roofed mud-brick house, a few silver coins, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a few silver coins, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "or-du-terrain-0-1-0": {
+  "book": "clay jars, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "clay jars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "or-du-terrain-0-1-1": {
+  "book": "a heap of gold treasure, clay jars, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a heap of gold treasure, clay jars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "or-du-terrain-0-2-0": {
+  "book": "a heap of gold treasure, clay jars, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a heap of gold treasure, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, clay jars, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "or-du-terrain-0-2-1": {
+  "book": "a flat-roofed mud-brick house, a heap of gold treasure, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a flat-roofed mud-brick house, a heap of gold treasure, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "or-du-terrain-0-3-0": {
+  "book": "a rolled parchment scroll, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a rolled parchment scroll, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "or-du-terrain-0-3-1": {
+  "book": "clay jars, a heap of gold treasure, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "clay jars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a heap of gold treasure, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "or-du-terrain-0-4-0": {
+  "book": "a flat-roofed mud-brick house, a small clay oil lamp glowing, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a small clay oil lamp glowing, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "or-du-terrain-0-4-1": {
+  "book": "a small wooden cradle, a small clay oil lamp glowing, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a small wooden cradle, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a small clay oil lamp glowing, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "or-du-terrain-0-5-0": {
+  "book": "a small wooden cradle, a flat-roofed mud-brick house, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a small wooden cradle, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "or-du-terrain-0-5-1": {
+  "book": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a full moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "or-du-terrain-0-6-0": {
+  "book": "a flat-roofed mud-brick house, a grove of date palms, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a grove of date palms, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "or-du-terrain-0-6-1": {
+  "book": "a heap of gold treasure, a few silver coins, a grove of date palms, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a heap of gold treasure, a few silver coins, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grove of date palms, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East"
+ },
  "or-du-terrain-0-6-2": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a few silver coins, a grove of date palms, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East",
- "or-du-terrain-0-7-0": "a heap of gold treasure, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a large old tree, a soft heavenly golden light shining from above, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East",
- "or-du-terrain-0-7-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a large old tree, a soft heavenly golden light shining from above, birds flying, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East",
+ "or-du-terrain-0-7-0": {
+  "book": "a heap of gold treasure, a large old tree, a soft heavenly golden light shining from above, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a heap of gold treasure, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a large old tree, a soft heavenly golden light shining from above, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East"
+ },
+ "or-du-terrain-0-7-1": {
+  "book": "a large old tree, a soft heavenly golden light shining from above, birds flying, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a large old tree, a soft heavenly golden light shining from above, birds flying, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East"
+ },
  "or-du-terrain-0-7-2": "a small clay oil lamp glowing, a soft heavenly golden light shining from above, a large old tree, birds flying, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people"
 }

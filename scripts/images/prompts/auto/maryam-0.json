@@ -1,9 +1,15 @@
 {
  "maryam-0-0-0": "a flat-roofed mud-brick house, a high mud-brick city wall, a soft heavenly golden light shining from above, birds flying, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East, no people",
- "maryam-0-0-1": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East",
+ "maryam-0-0-1": {
+  "book": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East"
+ },
  "maryam-0-1-0": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, tall carved stone pillars, birds flying, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
  "maryam-0-2-0": "a small wooden cradle, a flat-roofed mud-brick house, birds flying, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
- "maryam-0-2-1": "a soft heavenly golden light shining from above, a small wooden cradle, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
+ "maryam-0-2-1": {
+  "book": "a soft heavenly golden light shining from above, a small wooden cradle, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a small wooden cradle, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
  "maryam-0-2-2": "a high mud-brick city wall, a small wooden cradle, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
  "maryam-0-3-0": "loaves of flat bread, tall carved stone pillars, a small clay oil lamp glowing, a low table laid with food, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
  "maryam-0-4-0": "loaves of flat bread, a low table laid with food, a soft heavenly golden light shining from above, tall carved stone pillars, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
