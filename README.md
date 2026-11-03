@@ -63,7 +63,7 @@ Chaque épisode est tourné comme un court film (`src/components/Stage.tsx`, `sr
 Chaque image du découpage peut être remplacée par une peinture, en deux styles au choix (« Livre » et « Cinéma »). Les peintures sont faites gratuitement sur GitHub par un petit modèle d'image (SD-Turbo, sur processeur, sans clé ni compte) :
 
 - `scripts/images/prompts.ts` écrit la description de chaque image à partir du découpage (ciel, paysage, objets, ce que la caméra regarde), dans `scripts/images/prompts/auto/` : `npx vite-node scripts/images/prompts.ts`. Les gens y sont toujours petits, de dos, en robe à capuche, sans visage.
-- Les fichiers écrits à la main dans `scripts/images/prompts/*.json` remplacent la description automatique de la même image.
+- Un fichier écrit à la main dans `scripts/images/prompts/*.json` remplacerait la description automatique de la même image.
 - Le workflow `paint.yml` peint chaque fichier sur sa propre machine, en parallèle, puis enregistre toutes les nouvelles images en une fois dans `public/data/paintings/`. Une image déjà peinte est gardée : pour la refaire, supprimer son fichier.
 
 ### Narration des histoires
