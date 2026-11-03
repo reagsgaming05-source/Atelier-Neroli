@@ -1,34 +1,79 @@
 {
- "musa-0-0-0": "a grand ancient stone palace with columns, tall carved stone pillars, a high mud-brick city wall, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt",
- "musa-0-0-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a flat-roofed mud-brick house, dark heavy clouds, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt",
- "musa-0-0-2": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, birds flying, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt",
+ "musa-0-0-0": {
+  "book": "a grand ancient stone palace with columns, tall carved stone pillars, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a grand ancient stone palace with columns, tall carved stone pillars, a high mud-brick city wall, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
+ "musa-0-0-1": {
+  "book": "a high mud-brick city wall, a flat-roofed mud-brick house, dark heavy clouds, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a flat-roofed mud-brick house, dark heavy clouds, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
+ "musa-0-0-2": {
+  "book": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, birds flying, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, birds flying, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
  "musa-0-1-0": "a small wooden cradle, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, birds flying, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
  "musa-0-1-1": "a small wooden boat, a grove of date palms, a soft heavenly golden light shining from above, birds flying, on the bank of a wide river with reeds, at dawn, soft pink and golden light, ancient Egypt, no people",
- "musa-0-2-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a small wooden boat, a grand ancient stone palace with columns, a grove of date palms, on the bank of a wide river with reeds, in bright daylight, clear blue sky, ancient Egypt",
- "musa-0-2-1": "a small wooden cradle, a grand ancient stone palace with columns, a grove of date palms, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the bank of a wide river with reeds, in bright daylight, clear blue sky, ancient Egypt",
+ "musa-0-2-0": {
+  "book": "a small wooden boat, a grand ancient stone palace with columns, a grove of date palms, on the bank of a wide river with reeds, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a small wooden boat, a grand ancient stone palace with columns, a grove of date palms, on the bank of a wide river with reeds, in bright daylight, clear blue sky, ancient Egypt"
+ },
+ "musa-0-2-1": {
+  "book": "a small wooden cradle, a grand ancient stone palace with columns, a grove of date palms, on the bank of a wide river with reeds, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "a small wooden cradle, a grand ancient stone palace with columns, a grove of date palms, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the bank of a wide river with reeds, in bright daylight, clear blue sky, ancient Egypt"
+ },
  "musa-0-2-2": "a soft heavenly golden light shining from above, a small wooden cradle, a grand ancient stone palace with columns, birds flying, on the bank of a wide river with reeds, in bright daylight, clear blue sky, ancient Egypt, no people",
  "musa-0-3-0": "a small wooden cradle, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
  "musa-0-3-1": "footprints in the sand, a flat-roofed mud-brick house, a dusty winding path, birds flying, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
- "musa-0-3-2": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a small wooden cradle, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
- "musa-0-3-3": "a flat-roofed mud-brick house, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
+ "musa-0-3-2": {
+  "book": "a grand ancient stone palace with columns, a small wooden cradle, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a small wooden cradle, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
+ "musa-0-3-3": {
+  "book": "a flat-roofed mud-brick house, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "a flat-roofed mud-brick house, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
  "musa-0-4-0": "a small wooden cradle, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
  "musa-0-4-1": "birds flying, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, butterflies, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
- "musa-0-4-2": "an old open book with golden pages, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
- "musa-0-5-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a tall ancient brick tower, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt",
- "musa-0-5-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt",
+ "musa-0-4-2": {
+  "book": "an old open book with golden pages, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "an old open book with golden pages, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
+ "musa-0-5-0": {
+  "book": "a high mud-brick city wall, a tall ancient brick tower, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a tall ancient brick tower, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
+ "musa-0-5-1": {
+  "book": "a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
  "musa-0-5-2": "footprints in the sand, a high mud-brick city wall, dark heavy clouds, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
  "musa-0-6-0": "dark heavy clouds, a high mud-brick city wall, a tall ancient brick tower, a thin crescent moon, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
  "musa-0-6-1": "a soft heavenly golden light shining from above, a high mud-brick city wall, a thin crescent moon, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
- "musa-0-7-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a dusty winding path, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt",
- "musa-0-7-1": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a sky full of stars, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt",
+ "musa-0-7-0": {
+  "book": "a high mud-brick city wall, a dusty winding path, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a dusty winding path, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt"
+ },
+ "musa-0-7-1": {
+  "book": "a high mud-brick city wall, a sky full of stars, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a high mud-brick city wall, a sky full of stars, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt"
+ },
  "musa-0-7-2": "footprints in the sand, a dusty winding path, a sky full of stars, a high mud-brick city wall, in a vast golden sand desert with dunes, at night, deep blue sky, moonlight, ancient Egypt, no people",
  "musa-0-7-3": "a soft heavenly golden light shining from above, a dusty winding path, footprints in the sand, a thin crescent moon, in a vast golden sand desert with dunes, at night, deep blue sky, moonlight, ancient Egypt, no people",
  "musa-0-7-4": "a dusty winding path, footprints in the sand, a radiant sun, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Egypt, no people",
  "musa-0-8-0": "an old round stone well, a dusty winding path, a large old tree, goats, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt, no people",
- "musa-0-8-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flock of sheep, goats, an old round stone well, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt",
+ "musa-0-8-1": {
+  "book": "a flock of sheep, goats, an old round stone well, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flock of sheep, goats, an old round stone well, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt"
+ },
  "musa-0-8-2": "a large old tree, an old round stone well, a flock of sheep, clay jars, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt, no people",
- "musa-0-9-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a black goat-hair bedouin tent, a flock of sheep, a large old tree, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt",
+ "musa-0-9-0": {
+  "book": "a black goat-hair bedouin tent, a flock of sheep, a large old tree, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a black goat-hair bedouin tent, a flock of sheep, a large old tree, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
  "musa-0-9-1": "a dusty winding path, a black goat-hair bedouin tent, a flock of sheep, goats, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
  "musa-0-9-2": "a flock of sheep, goats, a dusty winding path, golden fields of wheat, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
- "musa-0-9-3": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a flock of sheep, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ "musa-0-9-3": {
+  "book": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a flock of sheep, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a flock of sheep, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ }
 }

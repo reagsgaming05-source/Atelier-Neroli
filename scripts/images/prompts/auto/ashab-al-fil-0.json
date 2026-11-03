@@ -1,12 +1,33 @@
 {
- "ashab-al-fil-0-0-0": "a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia",
+ "ashab-al-fil-0-0-0": {
+  "book": "a huge war elephant, a dusty winding path, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia, no people",
+  "cine": "a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia"
+ },
  "ashab-al-fil-0-0-1": "an old open book with golden pages, a soft heavenly golden light shining from above, a huge war elephant, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia, no people",
- "ashab-al-fil-0-1-0": "a soft heavenly golden light shining from above, an old open book with golden pages, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia",
- "ashab-al-fil-0-1-1": "a simple cube-shaped stone building in a rocky valley, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia",
- "ashab-al-fil-0-2-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a huge war elephant, a dusty winding path, a simple cube-shaped stone building in a rocky valley, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia",
- "ashab-al-fil-0-2-1": "dark heavy clouds, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a simple cube-shaped stone building in a rocky valley, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia",
- "ashab-al-fil-0-3-0": "birds flying, dark heavy clouds, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia",
- "ashab-al-fil-0-4-0": "scattered stones, birds flying, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia",
+ "ashab-al-fil-0-1-0": {
+  "book": "a soft heavenly golden light shining from above, an old open book with golden pages, a huge war elephant, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia, no people",
+  "cine": "a soft heavenly golden light shining from above, an old open book with golden pages, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia"
+ },
+ "ashab-al-fil-0-1-1": {
+  "book": "a simple cube-shaped stone building in a rocky valley, a huge war elephant, a dusty winding path, a radiant sun, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia, no people",
+  "cine": "a simple cube-shaped stone building in a rocky valley, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Arabia"
+ },
+ "ashab-al-fil-0-2-0": {
+  "book": "a huge war elephant, a dusty winding path, a simple cube-shaped stone building in a rocky valley, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a huge war elephant, a dusty winding path, a simple cube-shaped stone building in a rocky valley, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia"
+ },
+ "ashab-al-fil-0-2-1": {
+  "book": "dark heavy clouds, a huge war elephant, a simple cube-shaped stone building in a rocky valley, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia, no people",
+  "cine": "dark heavy clouds, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a simple cube-shaped stone building in a rocky valley, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia"
+ },
+ "ashab-al-fil-0-3-0": {
+  "book": "birds flying, dark heavy clouds, a huge war elephant, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia, no people",
+  "cine": "birds flying, dark heavy clouds, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia"
+ },
+ "ashab-al-fil-0-4-0": {
+  "book": "scattered stones, birds flying, a huge war elephant, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia, no people",
+  "cine": "scattered stones, birds flying, a huge war elephant, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia"
+ },
  "ashab-al-fil-0-5-0": "golden fields of wheat, a strong wind blowing sand and leaves, scattered stones, birds flying, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Arabia, no people",
  "ashab-al-fil-0-6-0": "a simple cube-shaped stone building in a rocky valley, a huge war elephant, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Arabia, no people",
  "ashab-al-fil-0-6-1": "birds flying, a simple cube-shaped stone building in a rocky valley, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Arabia, no people"

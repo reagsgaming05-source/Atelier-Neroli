@@ -1,21 +1,48 @@
 {
- "dhul-qarnayn-0-0-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, footprints in the sand, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
+ "dhul-qarnayn-0-0-0": {
+  "book": "a dusty winding path, a radiant sun, footprints in the sand, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, footprints in the sand, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East"
+ },
  "dhul-qarnayn-0-0-1": "footprints in the sand, a dusty winding path, a radiant sun, birds flying, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
  "dhul-qarnayn-0-0-2": "an old open book with golden pages, a dusty winding path, a radiant sun, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
  "dhul-qarnayn-0-1-0": "a radiant sun, a dusty winding path, a great rock, a soft heavenly golden light shining from above, among rocky mountains, at dawn, soft pink and golden light, ancient Near East, no people",
  "dhul-qarnayn-0-2-0": "footprints in the sand, a dusty winding path, a radiant sun, birds flying, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
  "dhul-qarnayn-0-2-1": "a dusty winding path, footprints in the sand, a radiant sun, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "dhul-qarnayn-0-3-0": "a radiant sun, a spring of clear water gushing from the ground, a dusty winding path, footprints in the sand, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
- "dhul-qarnayn-0-3-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a black goat-hair bedouin tent, a spring of clear water gushing from the ground, footprints in the sand, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "dhul-qarnayn-0-4-0": "old balance scales, a black goat-hair bedouin tent, a soft heavenly golden light shining from above, a thin crescent moon, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "dhul-qarnayn-0-4-1": "loaves of flat bread, a black goat-hair bedouin tent, a small clay oil lamp glowing, a thin crescent moon, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "dhul-qarnayn-0-5-0": "old balance scales, a black goat-hair bedouin tent, a sky full of stars, a full moon, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East",
+ "dhul-qarnayn-0-3-1": {
+  "book": "a black goat-hair bedouin tent, a spring of clear water gushing from the ground, footprints in the sand, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a black goat-hair bedouin tent, a spring of clear water gushing from the ground, footprints in the sand, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "dhul-qarnayn-0-4-0": {
+  "book": "old balance scales, a black goat-hair bedouin tent, a soft heavenly golden light shining from above, a thin crescent moon, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "old balance scales, a black goat-hair bedouin tent, a soft heavenly golden light shining from above, a thin crescent moon, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "dhul-qarnayn-0-4-1": {
+  "book": "loaves of flat bread, a black goat-hair bedouin tent, a small clay oil lamp glowing, a thin crescent moon, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "loaves of flat bread, a black goat-hair bedouin tent, a small clay oil lamp glowing, a thin crescent moon, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "dhul-qarnayn-0-5-0": {
+  "book": "old balance scales, a black goat-hair bedouin tent, a sky full of stars, a full moon, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "old balance scales, a black goat-hair bedouin tent, a sky full of stars, a full moon, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "dhul-qarnayn-0-5-1": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a sky full of stars, one very bright star, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East, no people",
- "dhul-qarnayn-0-5-2": "dark heavy clouds, a black goat-hair bedouin tent, a sky full of stars, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East",
- "dhul-qarnayn-0-6-0": "a radiant sun, a black goat-hair bedouin tent, a soft heavenly golden light shining from above, a dusty winding path, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East",
+ "dhul-qarnayn-0-5-2": {
+  "book": "dark heavy clouds, a black goat-hair bedouin tent, a sky full of stars, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "dark heavy clouds, a black goat-hair bedouin tent, a sky full of stars, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "dhul-qarnayn-0-6-0": {
+  "book": "a radiant sun, a black goat-hair bedouin tent, a soft heavenly golden light shining from above, a dusty winding path, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a radiant sun, a black goat-hair bedouin tent, a soft heavenly golden light shining from above, a dusty winding path, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East"
+ },
  "dhul-qarnayn-0-7-0": "a dusty winding path, footprints in the sand, a black goat-hair bedouin tent, birds flying, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East, no people",
  "dhul-qarnayn-0-7-1": "a radiant sun, a dusty winding path, footprints in the sand, a soft heavenly golden light shining from above, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East, no people",
- "dhul-qarnayn-0-7-2": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a radiant sun, a soft heavenly golden light shining from above, footprints in the sand, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East",
- "dhul-qarnayn-0-8-0": "a radiant sun, a soft heavenly golden light shining from above, footprints in the sand, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East",
+ "dhul-qarnayn-0-7-2": {
+  "book": "a radiant sun, a soft heavenly golden light shining from above, footprints in the sand, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a radiant sun, a soft heavenly golden light shining from above, footprints in the sand, in a vast golden sand desert with dunes, at dawn, soft pink and golden light, ancient Near East"
+ },
+ "dhul-qarnayn-0-8-0": {
+  "book": "a radiant sun, a soft heavenly golden light shining from above, footprints in the sand, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a radiant sun, a soft heavenly golden light shining from above, footprints in the sand, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Near East"
+ },
  "dhul-qarnayn-0-8-1": "a radiant sun, a dusty winding path, footprints in the sand, among rocky mountains, in bright daylight, clear blue sky, ancient Near East, no people"
 }

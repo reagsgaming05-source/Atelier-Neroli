@@ -1,12 +1,21 @@
 {
  "ayyub-0-0-0": "a black goat-hair bedouin tent, a grove of date palms, birds flying, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "ayyub-0-0-1": "withered dead plants, a black goat-hair bedouin tent, dark heavy clouds, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
- "ayyub-0-0-2": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a black goat-hair bedouin tent, withered dead plants, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "ayyub-0-0-2": {
+  "book": "a black goat-hair bedouin tent, withered dead plants, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a black goat-hair bedouin tent, withered dead plants, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "ayyub-0-1-0": "a black goat-hair bedouin tent, withered dead plants, a sky full of stars, bats flying, in a vast golden sand desert with dunes, at night, deep blue sky, moonlight, ancient Near East, no people",
  "ayyub-0-1-1": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a sky full of stars, bats flying, in a vast golden sand desert with dunes, at night, deep blue sky, moonlight, ancient Near East, no people",
  "ayyub-0-2-0": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a thin crescent moon, bats flying, in a vast golden sand desert with dunes, at night, deep blue sky, moonlight, ancient Near East, no people",
- "ayyub-0-3-0": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a large old tree, a radiant sun, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East",
+ "ayyub-0-3-0": {
+  "book": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a large old tree, a radiant sun, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a large old tree, a radiant sun, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East"
+ },
  "ayyub-0-4-0": "a black goat-hair bedouin tent, a large old tree, birds flying, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
  "ayyub-0-4-1": "a soft heavenly golden light shining from above, a black goat-hair bedouin tent, a large old tree, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
- "ayyub-0-4-2": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a black goat-hair bedouin tent, a flat-roofed mud-brick house, butterflies, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East"
+ "ayyub-0-4-2": {
+  "book": "a black goat-hair bedouin tent, a flat-roofed mud-brick house, butterflies, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a black goat-hair bedouin tent, a flat-roofed mud-brick house, butterflies, in a lush garden with fruit trees and streams, in bright daylight, clear blue sky, ancient Near East"
+ }
 }

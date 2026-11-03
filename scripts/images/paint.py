@@ -1,6 +1,7 @@
 """Paints the pictures of the stories with a free image model, on CPU, in two styles.
   python paint.py <model> <prompts.json> <out dir>
-Writes <out>/<style>/<key>.webp and <out>/index.json. Pictures already painted are kept."""
+Writes <out>/<style>/<key>.webp and <out>/index.json. Pictures already painted are kept.
+A prompt is a text, or {"book": text, "cine": text} for one text per style."""
 import sys, json, time, pathlib
 import torch
 from diffusers import AutoPipelineForText2Image
@@ -26,7 +27,8 @@ for style, look in STYLES.items():
             if key not in index[style]: index[style].append(key)
             continue
         t = time.time()
-        image = pipe(prompt=f"{look}, {scene}, flat-roofed mud-brick architecture, no text", num_inference_steps=2, guidance_scale=0.0,
+        text = scene[style] if isinstance(scene, dict) else scene
+        image = pipe(prompt=f"{look}, {text}, flat-roofed mud-brick architecture, no text", num_inference_steps=2, guidance_scale=0.0,
                      width=512, height=640, generator=torch.Generator("cpu").manual_seed(7 + n)).images[0]
         image.save(file, quality=80)
         index.setdefault(style, []).append(key)

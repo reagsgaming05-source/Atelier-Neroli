@@ -1,27 +1,57 @@
 {
  "yusuf-3-0-0": "withered dead plants, a radiant sun, a strong wind blowing sand and leaves, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt, no people",
  "yusuf-3-0-1": "a camel caravan with robed riders seen from far away, a dusty winding path, withered dead plants, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt",
- "yusuf-3-1-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, an empty ornate royal throne, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
- "yusuf-3-2-0": "golden fields of wheat, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a woven reed basket, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
- "yusuf-3-2-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
+ "yusuf-3-1-0": {
+  "book": "a grand ancient stone palace with columns, an empty ornate royal throne, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, an empty ornate royal throne, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
+ "yusuf-3-2-0": {
+  "book": "golden fields of wheat, a woven reed basket, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "golden fields of wheat, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a woven reed basket, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
+ "yusuf-3-2-1": {
+  "book": "a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
  "yusuf-3-2-2": "a few silver coins, a camel caravan with robed riders seen from far away, a woven reed basket, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
  "yusuf-3-3-0": "a flat-roofed mud-brick house, a camel caravan with robed riders seen from far away, a dusty winding path, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt",
- "yusuf-3-3-1": "a soft heavenly golden light shining from above, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a small clay oil lamp glowing, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt",
- "yusuf-3-4-0": "a small clay oil lamp glowing, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Egypt",
+ "yusuf-3-3-1": {
+  "book": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a small clay oil lamp glowing, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a soft heavenly golden light shining from above, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a small clay oil lamp glowing, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
+ "yusuf-3-4-0": {
+  "book": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Egypt, no people",
+  "cine": "a small clay oil lamp glowing, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Egypt"
+ },
  "yusuf-3-4-1": "a high mud-brick city wall, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt",
  "yusuf-3-4-2": "a soft heavenly golden light shining from above, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt, no people",
- "yusuf-3-5-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, an empty ornate royal throne, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt",
+ "yusuf-3-5-0": {
+  "book": "a grand ancient stone palace with columns, an empty ornate royal throne, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, an empty ornate royal throne, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Egypt"
+ },
  "yusuf-3-5-1": "a small clay oil lamp glowing, a grand ancient stone palace with columns, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
  "yusuf-3-5-2": "a soft heavenly golden light shining from above, a grand ancient stone palace with columns, a small clay oil lamp glowing, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Egypt, no people",
  "yusuf-3-6-0": "a golden goblet, a woven reed basket, a grand ancient stone palace with columns, a camel caravan with robed riders seen from far away, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Egypt",
  "yusuf-3-6-1": "a camel caravan with robed riders seen from far away, a dusty winding path, a woven reed basket, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt",
- "yusuf-3-6-2": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a camel caravan with robed riders seen from far away, a dusty winding path, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt",
+ "yusuf-3-6-2": {
+  "book": "a camel caravan with robed riders seen from far away, a dusty winding path, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a camel caravan with robed riders seen from far away, a dusty winding path, in a vast golden sand desert with dunes, in bright daylight, clear blue sky, ancient Egypt"
+ },
  "yusuf-3-7-0": "a woven reed basket, a camel caravan with robed riders seen from far away, a dusty winding path, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt",
  "yusuf-3-7-1": "a golden goblet, a camel caravan with robed riders seen from far away, a woven reed basket, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt",
- "yusuf-3-8-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, an empty ornate royal throne, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt",
+ "yusuf-3-8-0": {
+  "book": "a grand ancient stone palace with columns, an empty ornate royal throne, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, an empty ornate royal throne, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
  "yusuf-3-8-1": "a flat-roofed mud-brick house, a dusty winding path, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
- "yusuf-3-8-2": "old balance scales, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a golden goblet, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt",
- "yusuf-3-9-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt",
+ "yusuf-3-8-2": {
+  "book": "old balance scales, a golden goblet, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "old balance scales, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a golden goblet, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
+ "yusuf-3-9-0": {
+  "book": "a grand ancient stone palace with columns, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a high mud-brick city wall, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Egypt"
+ },
  "yusuf-3-9-1": "footprints in the sand, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, camels, in a vast golden sand desert with dunes, at dusk, warm orange sunset light, long shadows, ancient Egypt",
  "yusuf-3-9-2": "a flat-roofed mud-brick house, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, footprints in the sand, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Egypt"
 }

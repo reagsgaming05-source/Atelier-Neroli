@@ -1,46 +1,142 @@
 {
  "garcon-et-roi-0-0-0": "a grand ancient stone palace with columns, a high mud-brick city wall, birds flying, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
- "garcon-et-roi-0-0-1": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-0-2": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-0-3": "an old open book with golden pages, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
+ "garcon-et-roi-0-0-1": {
+  "book": "a grand ancient stone palace with columns, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-0-2": {
+  "book": "a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-0-3": {
+  "book": "an old open book with golden pages, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "an old open book with golden pages, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
  "garcon-et-roi-0-1-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East",
- "garcon-et-roi-0-1-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East",
+ "garcon-et-roi-0-1-1": {
+  "book": "a flat-roofed mud-brick house, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East"
+ },
  "garcon-et-roi-0-1-2": "footprints in the sand, a flat-roofed mud-brick house, a dusty winding path, birds flying, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
- "garcon-et-roi-0-1-3": "a small clay oil lamp glowing, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-2-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-2-1": "scattered stones, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-2-2": "scattered stones, a dusty winding path, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-2-3": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-3-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-3-1": "soft white clouds, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-3-2": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-3-3": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a soft heavenly golden light shining from above, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
+ "garcon-et-roi-0-1-3": {
+  "book": "a small clay oil lamp glowing, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a small clay oil lamp glowing, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-2-0": {
+  "book": "a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-2-1": {
+  "book": "scattered stones, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "scattered stones, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-2-2": {
+  "book": "scattered stones, a dusty winding path, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "scattered stones, a dusty winding path, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-2-3": {
+  "book": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
+  "cine": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-3-0": {
+  "book": "a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-3-1": {
+  "book": "soft white clouds, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "soft white clouds, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-3-2": {
+  "book": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-3-3": {
+  "book": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a soft heavenly golden light shining from above, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
  "garcon-et-roi-0-4-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
  "garcon-et-roi-0-4-1": "a heap of gold treasure, a flat-roofed mud-brick house, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-4-2": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-4-3": "a radiant sun, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-5-0": "an empty ornate royal throne, a grand ancient stone palace with columns, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-5-1": "a soft heavenly golden light shining from above, a grand ancient stone palace with columns, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-5-2": "dark heavy clouds, a grand ancient stone palace with columns, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "garcon-et-roi-0-6-0": "a dark stone prison cell with a barred opening, a high mud-brick city wall, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East",
- "garcon-et-roi-0-6-1": "a small clay oil lamp glowing, a dark stone prison cell with a barred opening, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East",
- "garcon-et-roi-0-6-2": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dark stone prison cell with a barred opening, a small clay oil lamp glowing, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East",
+ "garcon-et-roi-0-4-2": {
+  "book": "a flat-roofed mud-brick house, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-4-3": {
+  "book": "a radiant sun, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a radiant sun, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-5-0": {
+  "book": "an empty ornate royal throne, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "an empty ornate royal throne, a grand ancient stone palace with columns, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-5-1": {
+  "book": "a soft heavenly golden light shining from above, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a grand ancient stone palace with columns, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-5-2": {
+  "book": "dark heavy clouds, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "dark heavy clouds, a grand ancient stone palace with columns, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "garcon-et-roi-0-6-0": {
+  "book": "a dark stone prison cell with a barred opening, a high mud-brick city wall, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a dark stone prison cell with a barred opening, a high mud-brick city wall, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "garcon-et-roi-0-6-1": {
+  "book": "a small clay oil lamp glowing, a dark stone prison cell with a barred opening, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a small clay oil lamp glowing, a dark stone prison cell with a barred opening, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "garcon-et-roi-0-6-2": {
+  "book": "a dark stone prison cell with a barred opening, a small clay oil lamp glowing, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dark stone prison cell with a barred opening, a small clay oil lamp glowing, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "garcon-et-roi-0-7-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, a great rock, a sky full of stars, among rocky mountains, at night, deep blue sky, moonlight, ancient Near East",
- "garcon-et-roi-0-7-1": "a soft heavenly golden light shining from above, a great rock, a sky full of stars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, among rocky mountains, at night, deep blue sky, moonlight, ancient Near East",
+ "garcon-et-roi-0-7-1": {
+  "book": "a soft heavenly golden light shining from above, a great rock, a sky full of stars, among rocky mountains, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a great rock, a sky full of stars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, among rocky mountains, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "garcon-et-roi-0-7-2": "a great rock, scattered stones, dark heavy clouds, among rocky mountains, under a dark stormy sky, heavy grey clouds, ancient Near East, no people",
  "garcon-et-roi-0-7-3": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, footprints in the sand, a great rock, among rocky mountains, at dawn, soft pink and golden light, ancient Near East",
- "garcon-et-roi-0-8-0": "a small wooden boat, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, seagulls, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-8-1": "a strong wind blowing sand and leaves, a small wooden boat, soft white clouds, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "garcon-et-roi-0-8-0": {
+  "book": "a small wooden boat, a dusty winding path, seagulls, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a small wooden boat, a dusty winding path, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, seagulls, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-8-1": {
+  "book": "a strong wind blowing sand and leaves, a small wooden boat, soft white clouds, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a strong wind blowing sand and leaves, a small wooden boat, soft white clouds, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "garcon-et-roi-0-8-2": "a small wooden boat, a vast flood of churning water, dark heavy clouds, a strong wind blowing sand and leaves, on the open sea, waves, under a dark stormy sky, heavy grey clouds, ancient Near East, no people",
  "garcon-et-roi-0-8-3": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, footprints in the sand, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East",
- "garcon-et-roi-0-9-0": "an empty ornate royal throne, a grand ancient stone palace with columns, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-9-1": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-9-2": "a soft heavenly golden light shining from above, a grand ancient stone palace with columns, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "garcon-et-roi-0-9-3": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, a radiant sun, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East",
+ "garcon-et-roi-0-9-0": {
+  "book": "an empty ornate royal throne, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "an empty ornate royal throne, a grand ancient stone palace with columns, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-9-1": {
+  "book": "a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-9-2": {
+  "book": "a soft heavenly golden light shining from above, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a grand ancient stone palace with columns, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "garcon-et-roi-0-9-3": {
+  "book": "a grand ancient stone palace with columns, a soft heavenly golden light shining from above, a radiant sun, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, a radiant sun, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East"
+ },
  "garcon-et-roi-0-10-0": "workers in plain robes at work, tiny and far away, seen from behind, faces hidden, tongues of flame, a dusty winding path, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
- "garcon-et-roi-0-10-1": "tongues of flame, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
- "garcon-et-roi-0-10-2": "a small clay oil lamp glowing, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
- "garcon-et-roi-0-10-3": "a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a small clay oil lamp glowing, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
+ "garcon-et-roi-0-10-1": {
+  "book": "tongues of flame, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "tongues of flame, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "garcon-et-roi-0-10-2": {
+  "book": "a small clay oil lamp glowing, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a small clay oil lamp glowing, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "garcon-et-roi-0-10-3": {
+  "book": "a soft heavenly golden light shining from above, a small clay oil lamp glowing, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a small clay oil lamp glowing, a sky full of stars, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "garcon-et-roi-0-11-0": "a radiant sun, a soft heavenly golden light shining from above, a small clay oil lamp glowing, birds flying, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East, no people",
- "garcon-et-roi-0-11-1": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a small clay oil lamp glowing, a dusty winding path, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East"
+ "garcon-et-roi-0-11-1": {
+  "book": "a small clay oil lamp glowing, a dusty winding path, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a small clay oil lamp glowing, a dusty winding path, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East"
+ }
 }

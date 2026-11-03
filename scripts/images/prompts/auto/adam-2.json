@@ -13,6 +13,9 @@
  "adam-2-5-0": "a soft heavenly golden light shining from above, a large old tree, a dusty winding path, birds flying, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people",
  "adam-2-6-0": "footprints in the sand, a dusty winding path, a large old tree, birds flying, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
  "adam-2-6-1": "a soft heavenly golden light shining from above, a dusty winding path, a radiant sun, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East",
- "adam-2-7-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "adam-2-7-0": {
+  "book": "a dusty winding path, a radiant sun, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, in a green valley between hills, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "adam-2-7-1": "a small clay oil lamp glowing, a sky full of stars, a dusty winding path, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, among rocky mountains, at night, deep blue sky, moonlight, ancient Near East"
 }

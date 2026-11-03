@@ -11,12 +11,24 @@
  "luqman-0-4-0": "a flat-roofed mud-brick house, a date palm, a thin crescent moon, birds flying, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "luqman-0-4-1": "a small wooden cradle, a flat-roofed mud-brick house, a small clay oil lamp glowing, a thin crescent moon, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "luqman-0-5-0": "a small wooden cradle, a flat-roofed mud-brick house, a sky full of stars, a small clay oil lamp glowing, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
- "luqman-0-6-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East",
+ "luqman-0-6-0": {
+  "book": "a flat-roofed mud-brick house, a dusty winding path, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East"
+ },
  "luqman-0-6-1": "loaves of flat bread, a flat-roofed mud-brick house, a dusty winding path, a soft heavenly golden light shining from above, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East, no people",
  "luqman-0-7-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, a soft heavenly golden light shining from above, footprints in the sand, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East",
- "luqman-0-7-1": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a soft heavenly golden light shining from above, soft white clouds, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East",
- "luqman-0-7-2": "an old open book with golden pages, old balance scales, a soft heavenly golden light shining from above, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East",
+ "luqman-0-7-1": {
+  "book": "a dusty winding path, a soft heavenly golden light shining from above, soft white clouds, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, a soft heavenly golden light shining from above, soft white clouds, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East"
+ },
+ "luqman-0-7-2": {
+  "book": "an old open book with golden pages, old balance scales, a soft heavenly golden light shining from above, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "an old open book with golden pages, old balance scales, a soft heavenly golden light shining from above, a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, at dawn, soft pink and golden light, ancient Near East"
+ },
  "luqman-0-8-0": "clusters of ripe dates, a large old tree, a soft heavenly golden light shining from above, a radiant sun, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
- "luqman-0-8-1": "a flat-roofed mud-brick house, a large old tree, a soft heavenly golden light shining from above, a radiant sun, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East",
+ "luqman-0-8-1": {
+  "book": "a flat-roofed mud-brick house, a large old tree, a soft heavenly golden light shining from above, a radiant sun, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a flat-roofed mud-brick house, a large old tree, a soft heavenly golden light shining from above, a radiant sun, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East"
+ },
  "luqman-0-8-2": "an old open book with golden pages, a large old tree, a soft heavenly golden light shining from above, a radiant sun, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people"
 }

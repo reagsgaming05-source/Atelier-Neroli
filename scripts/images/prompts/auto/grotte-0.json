@@ -4,30 +4,75 @@
  "grotte-0-1-0": "dark heavy clouds, pouring rain, a dusty winding path, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, among rocky mountains, under a dark stormy sky, heavy grey clouds, ancient Near East",
  "grotte-0-1-1": "the dark mouth of a cave in a rocky hillside, pouring rain, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, among rocky mountains, under a dark stormy sky, heavy grey clouds, ancient Near East",
  "grotte-0-1-2": "a great rock, the dark mouth of a cave in a rocky hillside, pouring rain, dark heavy clouds, among rocky mountains, under a dark stormy sky, heavy grey clouds, ancient Near East, no people",
- "grotte-0-2-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a great rock, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East",
- "grotte-0-2-1": "a great rock, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, scattered stones, bats flying, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East",
- "grotte-0-3-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a large old tree, a radiant sun, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "grotte-0-2-0": {
+  "book": "a great rock, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a great rock, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "grotte-0-2-1": {
+  "book": "a great rock, scattered stones, bats flying, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a great rock, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, scattered stones, bats flying, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "grotte-0-3-0": {
+  "book": "a flat-roofed mud-brick house, a large old tree, a radiant sun, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a large old tree, a radiant sun, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "grotte-0-3-1": "a flock of sheep, goats, a flat-roofed mud-brick house, a radiant sun, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
- "grotte-0-3-2": "a golden goblet, a flat-roofed mud-brick house, a full moon, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
+ "grotte-0-3-2": {
+  "book": "a golden goblet, a flat-roofed mud-brick house, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a golden goblet, a flat-roofed mud-brick house, a full moon, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "grotte-0-4-0": "golden fields of wheat, a dusty winding path, footprints in the sand, a flock of sheep, on a wide open plain with grass and olive trees, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "grotte-0-4-1": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a full moon, a flock of sheep, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
- "grotte-0-4-2": "a golden goblet, a small clay oil lamp glowing, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
- "grotte-0-5-0": "a small clay oil lamp glowing, a golden goblet, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East",
+ "grotte-0-4-2": {
+  "book": "a golden goblet, a small clay oil lamp glowing, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a golden goblet, a small clay oil lamp glowing, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "grotte-0-5-0": {
+  "book": "a small clay oil lamp glowing, a golden goblet, a flat-roofed mud-brick house, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a small clay oil lamp glowing, a golden goblet, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "grotte-0-5-1": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a golden goblet, birds flying, on a wide open plain with grass and olive trees, at dawn, soft pink and golden light, ancient Near East, no people",
- "grotte-0-5-2": "a great rock, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East",
- "grotte-0-5-3": "a sky full of stars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a great rock, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East",
- "grotte-0-6-0": "scattered stones, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a great rock, a sky full of stars, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East",
+ "grotte-0-5-2": {
+  "book": "a great rock, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a great rock, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "grotte-0-5-3": {
+  "book": "a sky full of stars, a great rock, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a sky full of stars, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a great rock, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "grotte-0-6-0": {
+  "book": "scattered stones, a great rock, a sky full of stars, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "scattered stones, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a great rock, a sky full of stars, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "grotte-0-6-1": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
  "grotte-0-6-2": "footprints in the sand, a flat-roofed mud-brick house, a dusty winding path, a full moon, on a wide open plain with grass and olive trees, at night, deep blue sky, moonlight, ancient Near East, no people",
- "grotte-0-7-0": "a great rock, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, scattered stones, a sky full of stars, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East",
- "grotte-0-7-1": "a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a great rock, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East",
+ "grotte-0-7-0": {
+  "book": "a great rock, scattered stones, a sky full of stars, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a great rock, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, scattered stones, a sky full of stars, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East"
+ },
+ "grotte-0-7-1": {
+  "book": "a soft heavenly golden light shining from above, a great rock, scattered stones, a sky full of stars, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a great rock, scattered stones, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "grotte-0-8-0": "workers in plain robes at work, tiny and far away, seen from behind, faces hidden, golden fields of wheat, a woven reed basket, a radiant sun, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East",
  "grotte-0-8-1": "golden fields of wheat, a large old tree, a radiant sun, birds flying, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
  "grotte-0-8-2": "cows, a flock of sheep, golden fields of wheat, goats, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
- "grotte-0-9-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, cows, a flock of sheep, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East",
- "grotte-0-9-1": "cows, a flock of sheep, a radiant sun, a large old tree, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East",
- "grotte-0-10-0": "a dusty winding path, a flock of sheep, cows, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East",
- "grotte-0-10-1": "a great rock, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, scattered stones, a sky full of stars, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East",
+ "grotte-0-9-0": {
+  "book": "a dusty winding path, cows, a flock of sheep, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, cows, a flock of sheep, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "grotte-0-9-1": {
+  "book": "cows, a flock of sheep, a radiant sun, a large old tree, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "cows, a flock of sheep, a radiant sun, a large old tree, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "grotte-0-10-0": {
+  "book": "a dusty winding path, a flock of sheep, cows, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a dusty winding path, a flock of sheep, cows, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "grotte-0-10-1": {
+  "book": "a great rock, scattered stones, a sky full of stars, a soft heavenly golden light shining from above, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "a great rock, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, scattered stones, a sky full of stars, inside a rocky cave, at night, deep blue sky, moonlight, ancient Near East"
+ },
  "grotte-0-10-2": "the dark mouth of a cave in a rocky hillside, a great rock, a soft heavenly golden light shining from above, a dusty winding path, among rocky mountains, at dawn, soft pink and golden light, ancient Near East",
  "grotte-0-11-0": "a heap of gold treasure, a soft heavenly golden light shining from above, the dark mouth of a cave in a rocky hillside, birds flying, among rocky mountains, at dawn, soft pink and golden light, ancient Near East, no people",
  "grotte-0-11-1": "a dusty winding path, a soft heavenly golden light shining from above, a great rock, a radiant sun, among rocky mountains, at dawn, soft pink and golden light, ancient Near East, no people"

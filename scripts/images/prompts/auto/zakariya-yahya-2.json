@@ -5,7 +5,13 @@
  "zakariya-yahya-2-2-0": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, a radiant sun, birds flying, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East, no people",
  "zakariya-yahya-2-2-1": "withered dead plants, a flat-roofed mud-brick house, a small clay oil lamp glowing, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East, no people",
  "zakariya-yahya-2-3-0": "a small wooden cradle, a flat-roofed mud-brick house, a date palm, a soft heavenly golden light shining from above, in a lush garden with fruit trees and streams, at dawn, soft pink and golden light, ancient Near East, no people",
- "zakariya-yahya-2-4-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, a large old tree, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "zakariya-yahya-2-4-0": {
+  "book": "a flat-roofed mud-brick house, a dusty winding path, a large old tree, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, a large old tree, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "zakariya-yahya-2-4-1": "a small clay oil lamp glowing, a flat-roofed mud-brick house, a soft heavenly golden light shining from above, a large old tree, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
- "zakariya-yahya-2-4-2": "a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a large old tree, a thin crescent moon, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ "zakariya-yahya-2-4-2": {
+  "book": "a flat-roofed mud-brick house, a large old tree, a thin crescent moon, a soft heavenly golden light shining from above, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a large old tree, a thin crescent moon, in a lush garden with fruit trees and streams, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ }
 }

@@ -10,7 +10,8 @@
  *
  * The image model reads only about 60 words: the focus comes first, then at most
  * three other motifs, then the light and the place. People are always small, far
- * away, seen from behind, in hooded robes: never a face.
+ * away, seen from behind, in hooded robes: never a face. The storybook style still draws
+ * faces in groups of people, so its pictures of a crowd or a few people leave them out.
  */
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -149,6 +150,9 @@ function resolve(beats: Beat[]): Required<Pick<Beat, 'sky' | 'ground' | 'motifs'
   });
 }
 
+/** Groups the storybook style keeps painting with faces, whatever the prompt says: it paints the scene without them. */
+const GROUPS: readonly Motif[] = ['crowd', 'folk'];
+
 export function promptFor(story: string, episode: number, b: { sky: Sky; ground: Ground; motifs: Motif[]; focus?: string }): string {
   const first = b.focus && (MOTIF as Record<string, string>)[b.focus] ? (b.focus as Motif) : undefined;
   const others = b.motifs.filter((m) => m !== first);
@@ -164,7 +168,7 @@ for (const f of readdirSync(DIR).filter((f) => f.endsWith('.json'))) Object.assi
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
-const files: Record<string, Record<string, string>> = {};
+const files: Record<string, Record<string, string | { book: string; cine: string }>> = {};
 for (const [sceneKey, beats] of Object.entries(STORYBOARD)) {
   const parts = sceneKey.split('-');
   const scene = Number(parts.pop());
@@ -173,7 +177,10 @@ for (const [sceneKey, beats] of Object.entries(STORYBOARD)) {
   resolve(beats).forEach((b, i) => {
     const key = `${story}-${episode}-${scene}-${i}`;
     if (handWritten[key]) return;
-    (files[`${story}-${episode}`] ??= {})[key] = promptFor(story, episode, b as never);
+    const cine = promptFor(story, episode, b as never);
+    const withoutGroups = { ...b, motifs: b.motifs.filter((m) => !GROUPS.includes(m)), focus: GROUPS.includes(b.focus as Motif) ? undefined : b.focus };
+    const book = withoutGroups.motifs.length === b.motifs.length ? cine : promptFor(story, episode, withoutGroups as never);
+    (files[`${story}-${episode}`] ??= {})[key] = book === cine ? cine : ({ book, cine } as never);
   });
 }
 let n = 0;

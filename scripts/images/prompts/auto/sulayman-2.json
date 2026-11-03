@@ -8,5 +8,8 @@
  "sulayman-2-3-0": "clay jars, a tall ancient brick tower, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
  "sulayman-2-4-0": "a wooden shepherd staff, an empty ornate royal throne, a grand ancient stone palace with columns, in an ancient town of flat-roofed mud-brick houses, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
  "sulayman-2-5-0": "a grand ancient stone palace with columns, a wooden shepherd staff, a sky full of stars, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
- "sulayman-2-5-1": "clusters of ripe dates, a soft heavenly golden light shining from above, a sky full of stars, a grove of date palms, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East"
+ "sulayman-2-5-1": {
+  "book": "clusters of ripe dates, a soft heavenly golden light shining from above, a sky full of stars, a grove of date palms, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East, no people",
+  "cine": "clusters of ripe dates, a soft heavenly golden light shining from above, a sky full of stars, a grove of date palms, in an ancient town of flat-roofed mud-brick houses, at night, deep blue sky, moonlight, ancient Near East"
+ }
 }

@@ -1,34 +1,97 @@
 {
  "mille-dinars-0-0-0": "a flat-roofed mud-brick house, a dusty winding path, birds flying, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
- "mille-dinars-0-0-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "mille-dinars-0-0-2": "a few silver coins, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "mille-dinars-0-1-0": "a rolled parchment scroll, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "mille-dinars-0-1-1": "a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a rolled parchment scroll, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "mille-dinars-0-1-2": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a few silver coins, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "mille-dinars-0-2-0": "a few silver coins, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a rolled parchment scroll, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
+ "mille-dinars-0-0-1": {
+  "book": "a flat-roofed mud-brick house, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "mille-dinars-0-0-2": {
+  "book": "a few silver coins, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few silver coins, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "mille-dinars-0-1-0": {
+  "book": "a rolled parchment scroll, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a rolled parchment scroll, a flat-roofed mud-brick house, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "mille-dinars-0-1-1": {
+  "book": "a soft heavenly golden light shining from above, a rolled parchment scroll, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a rolled parchment scroll, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "mille-dinars-0-1-2": {
+  "book": "a flat-roofed mud-brick house, a few silver coins, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a few silver coins, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "mille-dinars-0-2-0": {
+  "book": "a few silver coins, a rolled parchment scroll, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few silver coins, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a rolled parchment scroll, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
  "mille-dinars-0-2-1": "a small wooden boat, a few silver coins, seagulls, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East",
  "mille-dinars-0-3-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, footprints in the sand, seagulls, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East",
- "mille-dinars-0-3-1": "a dusty winding path, soft white clouds, seagulls, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East",
+ "mille-dinars-0-3-1": {
+  "book": "a dusty winding path, soft white clouds, seagulls, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a dusty winding path, soft white clouds, seagulls, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East"
+ },
  "mille-dinars-0-4-0": "wooden planks, ropes and tools, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "mille-dinars-0-4-1": "a few silver coins, wooden planks, ropes and tools, a rolled parchment scroll, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "mille-dinars-0-4-2": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, wooden planks, ropes and tools, a dusty winding path, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "mille-dinars-0-5-0": "wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, seagulls, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "mille-dinars-0-5-1": "a soft heavenly golden light shining from above, wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "mille-dinars-0-5-2": "a rolled parchment scroll, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, wooden planks, ropes and tools, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "mille-dinars-0-6-0": "wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a strong wind blowing sand and leaves, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East",
- "mille-dinars-0-6-1": "a soft heavenly golden light shining from above, wooden planks, ropes and tools, a strong wind blowing sand and leaves, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East",
+ "mille-dinars-0-4-1": {
+  "book": "a few silver coins, wooden planks, ropes and tools, a rolled parchment scroll, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few silver coins, wooden planks, ropes and tools, a rolled parchment scroll, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "mille-dinars-0-4-2": {
+  "book": "wooden planks, ropes and tools, a dusty winding path, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, wooden planks, ropes and tools, a dusty winding path, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "mille-dinars-0-5-0": {
+  "book": "wooden planks, ropes and tools, a dusty winding path, seagulls, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, seagulls, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "mille-dinars-0-5-1": {
+  "book": "a soft heavenly golden light shining from above, wooden planks, ropes and tools, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "mille-dinars-0-5-2": {
+  "book": "a rolled parchment scroll, a soft heavenly golden light shining from above, wooden planks, ropes and tools, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a rolled parchment scroll, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, wooden planks, ropes and tools, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "mille-dinars-0-6-0": {
+  "book": "wooden planks, ropes and tools, a strong wind blowing sand and leaves, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a strong wind blowing sand and leaves, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
+ "mille-dinars-0-6-1": {
+  "book": "a soft heavenly golden light shining from above, wooden planks, ropes and tools, a strong wind blowing sand and leaves, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, wooden planks, ropes and tools, a strong wind blowing sand and leaves, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dusk, warm orange sunset light, long shadows, ancient Near East"
+ },
  "mille-dinars-0-6-2": "wooden planks, ropes and tools, a strong wind blowing sand and leaves, a full moon, seagulls, on the open sea, waves, at night, deep blue sky, moonlight, ancient Near East, no people",
  "mille-dinars-0-6-3": "a full moon, a strong wind blowing sand and leaves, seagulls, on the open sea, waves, at night, deep blue sky, moonlight, ancient Near East, no people",
  "mille-dinars-0-7-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, a radiant sun, seagulls, on the open sea, waves, at dawn, soft pink and golden light, ancient Near East",
- "mille-dinars-0-7-1": "wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a radiant sun, seagulls, on the open sea, waves, at dawn, soft pink and golden light, ancient Near East",
- "mille-dinars-0-7-2": "a flat-roofed mud-brick house, wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East",
- "mille-dinars-0-8-0": "a few silver coins, wooden planks, ropes and tools, a rolled parchment scroll, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
+ "mille-dinars-0-7-1": {
+  "book": "wooden planks, ropes and tools, a radiant sun, seagulls, on the open sea, waves, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a radiant sun, seagulls, on the open sea, waves, at dawn, soft pink and golden light, ancient Near East"
+ },
+ "mille-dinars-0-7-2": {
+  "book": "a flat-roofed mud-brick house, wooden planks, ropes and tools, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a flat-roofed mud-brick house, wooden planks, ropes and tools, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a dusty winding path, in an ancient town of flat-roofed mud-brick houses, at dawn, soft pink and golden light, ancient Near East"
+ },
+ "mille-dinars-0-8-0": {
+  "book": "a few silver coins, wooden planks, ropes and tools, a rolled parchment scroll, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few silver coins, wooden planks, ropes and tools, a rolled parchment scroll, a flat-roofed mud-brick house, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
  "mille-dinars-0-9-0": "a small wooden boat, a few silver coins, seagulls, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East",
- "mille-dinars-0-9-1": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a few silver coins, a dusty winding path, a small wooden boat, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East",
+ "mille-dinars-0-9-1": {
+  "book": "a few silver coins, a dusty winding path, a small wooden boat, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a few silver coins, a dusty winding path, a small wooden boat, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East"
+ },
  "mille-dinars-0-9-2": "seagulls, a small wooden boat, a few silver coins, a radiant sun, on the open sea, waves, in bright daylight, clear blue sky, ancient Near East, no people",
- "mille-dinars-0-10-0": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a few silver coins, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "mille-dinars-0-10-1": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, wooden planks, ropes and tools, a few silver coins, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
+ "mille-dinars-0-10-0": {
+  "book": "a flat-roofed mud-brick house, a few silver coins, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a flat-roofed mud-brick house, a few silver coins, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "mille-dinars-0-10-1": {
+  "book": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, wooden planks, ropes and tools, a few silver coins, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a flat-roofed mud-brick house, wooden planks, ropes and tools, a few silver coins, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
  "mille-dinars-0-10-2": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a few silver coins, a dusty winding path, footprints in the sand, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
  "mille-dinars-0-11-0": "a small wooden boat, a few silver coins, a soft heavenly golden light shining from above, seagulls, on the open sea, waves, at dawn, soft pink and golden light, ancient Near East, no people",
- "mille-dinars-0-11-1": "a soft heavenly golden light shining from above, a small wooden boat, a radiant sun, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dawn, soft pink and golden light, ancient Near East"
+ "mille-dinars-0-11-1": {
+  "book": "a soft heavenly golden light shining from above, a small wooden boat, a radiant sun, on the open sea, waves, at dawn, soft pink and golden light, ancient Near East, no people",
+  "cine": "a soft heavenly golden light shining from above, a small wooden boat, a radiant sun, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, on the open sea, waves, at dawn, soft pink and golden light, ancient Near East"
+ }
 }

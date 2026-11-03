@@ -1,8 +1,17 @@
 {
- "sulayman-0-0-0": "an old open book with golden pages, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
+ "sulayman-0-0-0": {
+  "book": "an old open book with golden pages, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "an old open book with golden pages, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, a few people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
  "sulayman-0-0-1": "a radiant sun, a soft heavenly golden light shining from above, a grand ancient stone palace with columns, birds flying, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
- "sulayman-0-1-0": "birds flying, an empty ornate royal throne, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East",
- "sulayman-0-2-0": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a dusty winding path, footprints in the sand, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
+ "sulayman-0-1-0": {
+  "book": "birds flying, an empty ornate royal throne, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "birds flying, an empty ornate royal throne, a grand ancient stone palace with columns, a soft heavenly golden light shining from above, in an ancient town of flat-roofed mud-brick houses, in bright daylight, clear blue sky, ancient Near East"
+ },
+ "sulayman-0-2-0": {
+  "book": "a grand ancient stone palace with columns, a dusty winding path, footprints in the sand, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East, no people",
+  "cine": "a crowd of people in earth-toned hooded robes, tiny and far away, seen from behind, faces hidden, a grand ancient stone palace with columns, a dusty winding path, footprints in the sand, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East"
+ },
  "sulayman-0-2-1": "birds flying, a dusty winding path, travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, on a wide open plain with grass and olive trees, in bright daylight, clear blue sky, ancient Near East",
  "sulayman-0-3-0": "travellers in hooded robes walking away, tiny and far away, seen from behind, faces hidden, a dusty winding path, a great rock, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East",
  "sulayman-0-3-1": "a column of tiny ants, the dark mouth of a cave in a rocky hillside, a great rock, in a green valley between hills, in bright daylight, clear blue sky, ancient Near East, no people",
