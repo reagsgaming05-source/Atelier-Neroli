@@ -2910,3 +2910,39 @@ img.scene-art.poster {
   box-shadow: none;
   border-radius: 10px;
 }
+
+/* Folios: one hairline and rounder corners, without the second frame inside. */
+.card {
+  box-shadow: none;
+  border-color: var(--rule-soft);
+  border-radius: 10px;
+}
+
+/* Numbers (surahs, verses, steps) stand as plain numerals, not in a star. */
+.badge::before,
+.badge::after {
+  display: none;
+}
+
+.badge,
+.badge.star {
+  min-width: 32px;
+  color: var(--gold-text);
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.lessons li::before {
+  border-radius: 50%;
+  transform: none;
+  background: var(--gold);
+  border: 0;
+  width: 6px;
+  height: 6px;
+}
+
+.reader-head {
+  outline: none;
+  border-radius: 10px;
+}
