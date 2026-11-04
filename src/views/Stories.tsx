@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { Icon } from '../components/Icon';
 import { QuizRunner } from '../components/QuizRunner';
-import { SceneArt } from '../components/SceneArt';
+import { Poster } from '../components/Poster';
 import { getSeries } from '../data/series';
 import { SectionTitle, Spinner, TopBar, share } from '../components/ui';
 import { PROPHET_STORIES } from '../data/prophets';
@@ -34,7 +34,7 @@ function SeriesCard({ id, href, title, ar, sub }: { id: string; href: string; ti
   const c = cover(id);
   return (
     <a class="series-card" href={href}>
-      <SceneArt sky={c.sky} ground={c.ground} motifs={c.motifs} still label={title} />
+      <Poster storyId={id} scene={c} label={title} />
       {ar && (
         <span class="ar" lang="ar">
           {ar}
@@ -94,7 +94,7 @@ function SeriesHeader({ id, title, ar, subtitle }: { id: string; title: string; 
   return (
     <>
       <div class="series-hero">
-        <SceneArt sky={c.sky} ground={c.ground} motifs={c.motifs} label={title} />
+        <Poster storyId={id} scene={c} label={title} still={false} />
         <div class="overlay">
           {ar && (
             <div class="ar" lang="ar">
@@ -120,7 +120,7 @@ function SeriesHeader({ id, title, ar, subtitle }: { id: string; title: string; 
               return (
                 <a class="episode-row" href={`#/serie/${id}/${i + 1}`} key={i}>
                   <span class="thumb">
-                    <SceneArt sky={s.sky} ground={s.ground} motifs={s.motifs} still label={ep.title} />
+                    <Poster storyId={id} episode={i} scene={s} label={ep.title} />
                   </span>
                   <span class="grow">
                     <span class="small muted" style={{ display: 'block' }}>

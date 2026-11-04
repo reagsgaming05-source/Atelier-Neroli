@@ -2,6 +2,7 @@ import { useMemo } from 'preact/hooks';
 import { Icon } from '../components/Icon';
 import { SectionTitle } from '../components/ui';
 import { PrayerList } from '../components/PrayerList';
+import { DayArc } from '../components/DayArc';
 import { formatHijri, hijriDate, noonUtc } from '../lib/hijri';
 import { PRAYER_NAMES, dayIn, dayKey, formatCountdown, formatTime, nextPrayer, prayerTimes } from '../lib/prayer';
 import { khatmStore, readingStore, settingsStore, useStore } from '../lib/settings';
@@ -26,11 +27,6 @@ export function Home() {
   const gregorian = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: place.tz }).format(now);
   const isFriday = new Date(Date.UTC(today.y, today.m - 1, today.d)).getUTCDay() === 5;
 
-  let progress = 0;
-  if (next?.currentStart) {
-    const span = next.time.getTime() - next.currentStart.getTime();
-    progress = Math.min(1, (now.getTime() - next.currentStart.getTime()) / span);
-  }
 
   // Suggest the adhkar that fit the time of day: morning from Fajr to Asr, evening after.
   const adhkarId =
@@ -50,7 +46,7 @@ export function Home() {
           </a>
         </div>
         {next ? (
-          <div class="hero-arch hero-next">
+          <div class="hero-next">
             <div class="label">{next.id === 'sunrise' ? 'Prochain évènement' : 'Prochaine prière'}</div>
             <div class="name">
               <strong>{next.id === 'dhuhr' && isFriday ? 'Jumu‘a' : PRAYER_NAMES[next.id].fr}</strong>
@@ -59,9 +55,7 @@ export function Home() {
             <div class="count" aria-live="off">
               dans <b>{formatCountdown(next.time.getTime() - now.getTime())}</b>
             </div>
-            <div class="hero-progress" aria-hidden="true">
-              <div style={{ width: `${progress * 100}%` }} />
-            </div>
+            <DayArc times={times} next={next.id} now={now} />
           </div>
         ) : (
           <p>Horaires indisponibles pour ce lieu aujourd’hui.</p>

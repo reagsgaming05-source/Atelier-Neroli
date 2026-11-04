@@ -1,4 +1,5 @@
 import { Icon, type IconName } from '../components/Icon';
+import { Poster } from '../components/Poster';
 import { SectionTitle, TopBar } from '../components/ui';
 import { GUIDES } from '../data/learn';
 import { PROPHET_STORIES } from '../data/prophets';
@@ -24,53 +25,44 @@ export function Learn() {
     <>
       <TopBar title="Apprendre" subtitle="Histoires, hadiths, guides et quiz" />
       <div class="page">
-        <div class="tile-grid">
-          <a class="tile" href="#/histoires">
-            <span class="tile-icon gold">
-              <Icon name="scroll" />
-            </span>
-            <strong>Histoires des prophètes</strong>
-            <span>
-              {PROPHET_STORIES.length} séries illustrées et racontées · {storiesRead} ouverte{storiesRead > 1 ? 's' : ''}
-            </span>
-          </a>
-          <a class="tile" href="#/histoires">
-            <span class="tile-icon">
-              <Icon name="quote" />
-            </span>
-            <strong>Récits de la Sunna</strong>
-            <span>
-              {SUNNAH_STORIES.length} histoires racontées par le Prophète ﷺ · {sunnaRead} lue{sunnaRead > 1 ? 's' : ''}
-            </span>
-          </a>
-          <a class="tile" href="#/hadiths/nawawi">
-            <span class="tile-icon">
-              <Icon name="book" />
-            </span>
-            <strong>Les 40 hadiths</strong>
-            <span>Les bases de la religion selon an-Nawawī</span>
-          </a>
-          <a class="tile" href="#/hadiths/qudsi">
-            <span class="tile-icon gold">
-              <Icon name="star" />
-            </span>
-            <strong>Hadiths qudsi</strong>
-            <span>40 paroles d’Allah rapportées par le Prophète ﷺ</span>
-          </a>
-          <a class="tile" href="#/quiz">
-            <span class="tile-icon gold">
-              <Icon name="question" />
-            </span>
-            <strong>Quiz</strong>
-            <span>Coran, noms d’Allah, prophètes, Sunna</span>
-          </a>
-          <a class="tile" href="#/noms">
-            <span class="tile-icon">
-              <Icon name="heart" />
-            </span>
-            <strong>99 noms d’Allah</strong>
-            <span>Les connaître et les comprendre</span>
-          </a>
+        <a class="feature-card" href="#/histoires">
+          <Poster storyId="nuh" episode={1} label="Histoires des prophètes" />
+          <span class="info">
+            <b>Histoires des prophètes</b>
+            <small>
+              {PROPHET_STORIES.length} séries illustrées et racontées
+              {storiesRead > 0 ? ` · ${storiesRead} commencée${storiesRead > 1 ? 's' : ''}` : ''}
+            </small>
+          </span>
+        </a>
+        <a class="feature-card" href="#/histoires">
+          <Poster storyId="grotte" label="Récits de la Sunna" />
+          <span class="info">
+            <b>Récits de la Sunna</b>
+            <small>
+              {SUNNAH_STORIES.length} histoires racontées par le Prophète ﷺ
+              {sunnaRead > 0 ? ` · ${sunnaRead} lue${sunnaRead > 1 ? 's' : ''}` : ''}
+            </small>
+          </span>
+        </a>
+
+        <SectionTitle>Hadiths et connaissances</SectionTitle>
+        <div class="list">
+          {[
+            { href: '#/hadiths/nawawi', icon: 'book', title: 'Les 40 hadiths', subtitle: 'Les bases de la religion selon an-Nawawī' },
+            { href: '#/hadiths/qudsi', icon: 'star', title: 'Hadiths qudsi', subtitle: '40 paroles d’Allah rapportées par le Prophète ﷺ' },
+            { href: '#/noms', icon: 'heart', title: '99 noms d’Allah', subtitle: 'Les connaître et les comprendre' },
+            { href: '#/quiz', icon: 'question', title: 'Quiz', subtitle: 'Coran, noms d’Allah, prophètes, Sunna' },
+          ].map((it) => (
+            <a class="list-item" href={it.href} key={it.href}>
+              <Icon name={it.icon as IconName} />
+              <div class="grow">
+                <div class="title">{it.title}</div>
+                <div class="subtitle">{it.subtitle}</div>
+              </div>
+              <Icon name="chevron" size={18} />
+            </a>
+          ))}
         </div>
 
         <SectionTitle>Guides pratiques</SectionTitle>
