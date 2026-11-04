@@ -1,55 +1,60 @@
 /*
- * Sakina's look: a printed book of devotions. Warm paper with a fine grain, ink green,
+ * Sakina's look (first version): a printed book of devotions. The second version, at the
+ * end of this file, keeps the layout and turns it into a light, modern app: white
+ * surfaces, Inter, soft shadows, green as the one accent.
+ *
+ * The first look: Warm paper with a fine grain, ink green,
  * gilded hairlines, titles set in Amiri (the Latin of the same family as the Arabic),
  * flat folios instead of floating cards, and a mihrab arch for the prayer of the hour.
  */
 
 @font-face {
-  font-family: 'Source Sans 3';
+  font-family: 'Inter Variable';
   font-style: normal;
-  font-weight: 200 900;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('../node_modules/@fontsource-variable/source-sans-3/files/source-sans-3-latin-wght-normal.woff2') format('woff2');
+  src: url('../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
-  font-family: 'Source Sans 3';
+  font-family: 'Inter Variable';
   font-style: normal;
-  font-weight: 200 900;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('../node_modules/@fontsource-variable/source-sans-3/files/source-sans-3-latin-ext-wght-normal.woff2') format('woff2');
+  src: url('../node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 :root {
-  --bg: #f3edde;
-  --surface: #f9f5ea;
-  --surface-2: #ebe3cf;
-  --rule: rgb(150 112 24 / 32%);
-  --rule-soft: rgb(150 112 24 / 16%);
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --surface-2: #eeefeb;
+  --rule: rgb(20 30 25 / 12%);
+  --rule-soft: rgb(20 30 25 / 7%);
   --border: var(--rule);
-  --text: #1a2a23;
-  --muted: #5b685f;
-  --primary: #0f5a47;
-  --primary-soft: #dde8dc;
-  --on-primary: #fbf6e6;
-  --gold: #a67c12;
-  --gold-text: #7f5c06;
-  --gold-soft: #f1e4bd;
-  --gilt: #d9b45a;
-  --danger: #a8281f;
-  --hero-1: #0d2822;
-  --hero-2: #14372e;
-  --hero-text: #f4efe1;
-  --hero-muted: #b3c4b9;
-  --shadow: none;
-  --grain: 0.5;
-  --radius: 4px;
-  --radius-sm: 3px;
+  --text: #121815;
+  --muted: #69716c;
+  --primary: #10775a;
+  --primary-soft: #e2f1ea;
+  --on-primary: #ffffff;
+  /* The old gold now leans on the green, so the page keeps one accent. */
+  --gold: #2f9474;
+  --gold-text: #55776a;
+  --gold-soft: #e7f2ec;
+  --gilt: #2f9474;
+  --danger: #c0392b;
+  --hero-1: #e6f2ec;
+  --hero-2: #f7f7f4;
+  --hero-text: #121815;
+  --hero-muted: #5c6a63;
+  --shadow: 0 1px 2px rgb(20 30 25 / 5%), 0 4px 16px rgb(20 30 25 / 5%);
+  --grain: 0;
+  --radius: 16px;
+  --radius-sm: 10px;
   --nav-h: 62px;
-  --font: 'Source Sans 3', 'Amiri Quran', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Amiri', 'Amiri Quran', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font: 'Inter Variable', 'Amiri Quran', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Inter Variable', 'Amiri Quran', system-ui, sans-serif;
   --font-ar: 'Amiri Quran', 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -436,7 +441,7 @@ button {
 }
 
 .list-item + .list-item {
-  border-top: 1px dotted var(--rule);
+  border-top: 1px solid var(--rule-soft);
 }
 
 .list-item:active {
@@ -862,7 +867,7 @@ select.input {
 }
 
 .prayer + .prayer {
-  border-top: 1px dotted var(--rule);
+  border-top: 1px solid var(--rule-soft);
 }
 
 .prayer .p-name {
@@ -957,7 +962,7 @@ select.input {
 }
 
 .extra-times div + div {
-  border-inline-start: 1px dotted var(--rule);
+  border-inline-start: 1px solid var(--rule-soft);
 }
 
 .extra-times small {
@@ -1503,7 +1508,7 @@ table.month tr.friday td:first-child {
 }
 
 .stat + .stat {
-  border-inline-start: 1px dotted var(--rule);
+  border-inline-start: 1px solid var(--rule-soft);
 }
 
 .stat b {
@@ -2945,4 +2950,199 @@ img.scene-art.poster {
 .reader-head {
   outline: none;
   border-radius: 10px;
+}
+
+/* ================================================================
+   Second look: a light, modern app. White surfaces lifted by a soft shadow instead
+   of gilded hairlines, Inter everywhere but the Arabic, upright type, one green accent.
+   ================================================================ */
+
+body::before {
+  display: none;
+}
+
+h1, h2, h3,
+.topbar h1,
+.section-title,
+.hero-next .name strong,
+.hero-next .count b {
+  letter-spacing: -0.02em;
+}
+
+/* Upright type: italics stay only for transliterations. */
+.empty,
+.hero-next .label,
+.prayer.minor .p-name b,
+.extra-times small,
+.tasbih-btn .t,
+.welcome small,
+.topbar .sub,
+.section-title a,
+.section-title button {
+  font-style: normal;
+}
+
+.topbar {
+  border-bottom: 0;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(1.6) blur(14px);
+  -webkit-backdrop-filter: saturate(1.6) blur(14px);
+}
+
+.topbar h1 {
+  font-size: 1.6rem;
+  font-weight: 750;
+}
+
+.topbar .sub {
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 450;
+  letter-spacing: 0;
+}
+
+.nav {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: saturate(1.6) blur(14px);
+  -webkit-backdrop-filter: saturate(1.6) blur(14px);
+  border-top: 1px solid var(--rule-soft);
+  box-shadow: none;
+}
+
+.nav a {
+  font-size: 0.68rem;
+  font-weight: 550;
+  letter-spacing: 0;
+}
+
+.nav a[aria-current='page']::before {
+  display: none;
+}
+
+.nav a svg {
+  padding: 3px 16px;
+  width: 56px;
+  height: 30px;
+  border-radius: 15px;
+  box-sizing: border-box;
+}
+
+.nav a[aria-current='page'] svg {
+  background: var(--primary-soft);
+}
+
+.card,
+.tile,
+.list,
+.feature-card,
+.series-card {
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.section-title {
+  margin: 28px 0 12px;
+  padding-bottom: 0;
+  border-bottom: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.section-title a,
+.section-title button {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* Home: the next prayer on a pale green morning, dark type, the sun's path in green. */
+.hero {
+  margin: 0 -18px;
+  padding-bottom: 26px;
+  background: linear-gradient(180deg, var(--hero-1) 0%, var(--hero-1) 55%, var(--bg) 100%);
+}
+
+.hero-place svg {
+  color: var(--primary);
+}
+
+.hero-next .label {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+}
+
+.hero-next .name strong {
+  font-size: 4rem;
+  font-weight: 800;
+}
+
+.hero-next .name .ar {
+  color: var(--primary);
+}
+
+.hero-next .count b {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.day-arc .horizon {
+  stroke: rgb(20 30 25 / 14%);
+}
+
+.day-arc .path {
+  stroke: rgb(20 30 25 / 22%);
+}
+
+.day-arc .path.done {
+  stroke: var(--primary);
+  opacity: 1;
+}
+
+.day-arc .mark {
+  fill: var(--surface);
+  stroke: rgb(20 30 25 / 30%);
+}
+
+.day-arc .mark.past {
+  fill: var(--primary);
+}
+
+.day-arc .mark.next {
+  fill: var(--surface);
+  stroke: var(--primary);
+}
+
+.day-arc .sun {
+  fill: #f2a93b;
+}
+
+.day-arc .glow {
+  fill: rgb(242 169 59 / 22%);
+}
+
+.day-arc .moon {
+  fill: #8796a8;
+}
+
+.day-arc .glow.night {
+  fill: rgb(135 150 168 / 20%);
+}
+
+.hero-dates .ar {
+  color: var(--text);
+}
+
+.badge,
+.badge.star {
+  color: var(--primary);
+}
+
+.lessons li::before {
+  background: var(--primary);
 }
