@@ -1,9 +1,15 @@
+import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 /** What a page of the storybook shows: its painting and its words. */
 export interface Leaf {
   painting?: string;
+  /** What lies over the picture, such as the title of the episode on its first page. */
+  cover?: ComponentChildren;
   text: string;
+  /** The first page of a scene opens with a large initial. */
+  opening?: boolean;
+  verse?: { ar: string; fr: string };
 }
 
 /** How long a page takes to turn, in ms (the CSS animation lasts as long). */
@@ -56,8 +62,23 @@ export function PageTurn({ pageKey, order, leaf, sound }: { pageKey: string; ord
   if (!turning) return null;
   return (
     <div class={turning.back ? 'leaf back' : 'leaf'} key={turning.id} aria-hidden="true">
-      {turning.leaf.painting && <img class="leaf-picture" src={turning.leaf.painting} alt="" />}
-      <div class="leaf-text">{turning.leaf.text}</div>
+      <div class="leaf-picture">
+        {turning.leaf.painting && <img src={turning.leaf.painting} alt="" />}
+        {turning.leaf.cover}
+      </div>
+      <div class="page-text">
+        <div class={turning.leaf.opening ? 'narration opening' : 'narration'} lang="fr">
+          {turning.leaf.text}
+        </div>
+        {turning.leaf.verse && (
+          <>
+            <div class="verse-ar" lang="ar">
+              {turning.leaf.verse.ar}
+            </div>
+            <div class="verse-fr">{turning.leaf.verse.fr}</div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

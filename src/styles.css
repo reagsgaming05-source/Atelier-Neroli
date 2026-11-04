@@ -3156,7 +3156,7 @@ h1, h2, h3,
 .book {
   flex: 1;
   min-height: 0;
-  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 6px 6px;
+  padding: 6px 12px 6px 6px;
 }
 
 .book-page {
@@ -3190,20 +3190,33 @@ h1, h2, h3,
   padding: 16px 22px 34px 28px;
 }
 
+/* Set like a printed page: ink, justified, a large initial at the start of each scene; the word being told is softly marked. */
 .page-text .narration {
   font-family: 'Amiri', var(--font-display);
   font-size: 1.32rem;
   line-height: 1.55;
-  text-wrap: pretty;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
 }
 
 .page-text .narration .w {
-  opacity: 0.38;
-  transition: opacity 0.35s ease;
+  border-radius: 3px;
+  transition: background-color 0.3s ease;
 }
 
-.page-text .narration .w.on {
-  opacity: 1;
+.page-text .narration .w.now {
+  background: rgb(214 168 72 / 30%);
+  box-shadow: 0 0 0 2px rgb(214 168 72 / 30%);
+}
+
+.page-text .narration.opening::first-letter {
+  float: left;
+  margin: 0.08em 0.1em 0 0;
+  font-size: 3.3em;
+  line-height: 0.78;
+  font-weight: 700;
+  color: #8a5a12;
 }
 
 .page-text .verse-ar {
@@ -3270,20 +3283,35 @@ h1, h2, h3,
 }
 
 .leaf-picture {
+  position: relative;
   flex: 2;
   min-height: 0;
-  width: calc(100% - 38px);
   margin: 16px 16px 0 22px;
   border-radius: 6px;
+  overflow: hidden;
+}
+
+.leaf-picture img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.leaf-text {
-  flex: 1;
-  padding: 16px 22px 34px 28px;
-  font-family: 'Amiri', var(--font-display);
-  font-size: 1.32rem;
-  line-height: 1.55;
+/* In the book, the title stays on the first page (it turns with it) instead of fading away. */
+.book-mode .title-card {
+  animation: title-card-in 0.9s ease both;
+}
+
+.leaf .title-card {
+  animation: none;
+}
+
+@keyframes title-card-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.leaf .page-text {
   overflow: hidden;
 }
 
@@ -3302,14 +3330,15 @@ h1, h2, h3,
   to { opacity: 1; }
 }
 
-/* On the page the painting is framed small: no title over it (the title card says it), light text on the cards. */
-.book-mode .player-title .grow {
-  visibility: hidden;
+/* Above the book, not on the page: the progress through the episode, its title and the close button. */
+.book-mode > .player-top {
+  position: relative;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 14px 2px;
+  background: none;
 }
 
-.book-mode .player-stage .icon-btn {
-  color: #fff;
-  background: rgb(0 0 0 / 28%);
+.book-mode > .player-top .player-title {
+  margin-top: 4px;
 }
 
 .book-mode .title-card,
