@@ -350,6 +350,36 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   };
   const toggle = (key: 'voice' | 'recitation' | 'ambience' | 'people' | 'camera') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
 
+  const titleCard = started && index === 0 && !ended && (!bookMode || pictureNo === 0) && (
+    <div class="title-card" key={`title-${storyId}-${episode}`}>
+      <small>{series.episodes.length > 1 ? `Épisode ${episode + 1}` : 'Récit'}</small>
+      <h2>{ep.title}</h2>
+      {info.ar && <span class="ar" lang="ar">{info.ar}</span>}
+    </div>
+  );
+
+  const top = (
+    <div class="player-top">
+      <div class="player-bars" aria-hidden="true">
+        {ep.scenes.map((_, i) => (
+          <span key={i}>
+            <i style={{ width: i < index || ended ? '100%' : i === index ? (phase === 'text' ? '35%' : '75%') : '0%' }} />
+          </span>
+        ))}
+      </div>
+      <div class="player-title">
+        <div class="grow">
+          <b>{info.title}</b>
+          {series.episodes.length > 1 ? `Épisode ${episode + 1}/${series.episodes.length} · ` : ''}
+          {ep.title}
+        </div>
+        <button class="icon-btn" aria-label="Fermer" onClick={close}>
+          <Icon name="close" />
+        </button>
+      </div>
+    </div>
+  );
+
   const stage = (
     <div class="player-stage">
       {bookMode && painting ? (
@@ -373,33 +403,9 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
           />
       )}
 
-      {started && index === 0 && !ended && (
-        <div class="title-card" key={`title-${storyId}-${episode}`}>
-          <small>{series.episodes.length > 1 ? `Épisode ${episode + 1}` : 'Récit'}</small>
-          <h2>{ep.title}</h2>
-          {info.ar && <span class="ar" lang="ar">{info.ar}</span>}
-        </div>
-      )}
+      {titleCard}
 
-      <div class="player-top">
-        <div class="player-bars" aria-hidden="true">
-          {ep.scenes.map((_, i) => (
-            <span key={i}>
-              <i style={{ width: i < index || ended ? '100%' : i === index ? (phase === 'text' ? '35%' : '75%') : '0%' }} />
-            </span>
-          ))}
-        </div>
-        <div class="player-title">
-          <div class="grow">
-            <b>{info.title}</b>
-            {series.episodes.length > 1 ? `Épisode ${episode + 1}/${series.episodes.length} · ` : ''}
-            {ep.title}
-          </div>
-          <button class="icon-btn" aria-label="Fermer" onClick={close}>
-            <Icon name="close" />
-          </button>
-        </div>
-      </div>
+      {!bookMode && top}
 
       {started && !ended && (
         <div class="player-tap">
@@ -469,9 +475,9 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
 
   const text = (
     <>
-      <div class="narration">
+      <div class={bookMode && pictureNo === 0 ? 'narration opening' : 'narration'} lang="fr">
         {(bookMode ? pageWords : words.map((_, i) => i)).map((i) => (
-          <span key={i} class={i < lit ? 'w on' : 'w'}>
+          <span key={i} class={i < lit ? (i === lit - 1 && phase === 'text' && playing ? 'w on now' : 'w on') : 'w'}>
             {words[i]}{' '}
           </span>
         ))}
@@ -493,6 +499,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
 
   return (
     <div class={bookMode ? 'player-screen book-mode' : 'player-screen'} role="dialog" aria-label={`${info.title}, ${ep.title}`}>
+      {bookMode && top}
       {bookMode ? (
         <div class="book">
           <div class="book-page">
@@ -504,7 +511,13 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
             <PageTurn
               pageKey={`${storyId}-${episode}-${index}-${pictureNo}`}
               order={pageNo}
-              leaf={{ painting, text: pageWords.map((i) => words[i]).join(' ') }}
+              leaf={{
+                painting,
+                cover: titleCard || undefined,
+                text: pageWords.map((i) => words[i]).join(' '),
+                opening: pictureNo === 0,
+                verse: showVerse && verses ? { ar: verses.ar[verse.verse - 1], fr: verses.tr[verse.verse - 1] } : undefined,
+              }}
               sound={wantAmbience ? ambience.current?.ctx : undefined}
             />
           </div>
