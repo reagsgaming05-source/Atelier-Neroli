@@ -3146,3 +3146,194 @@ h1, h2, h3,
 .lessons li::before {
   background: var(--primary);
 }
+
+/* ---------- Story player, storybook look: a book whose pages turn as the story is told ---------- */
+
+.player-screen.book-mode {
+  background: radial-gradient(ellipse 120% 80% at 50% 30%, #3a2c20, #1d1610);
+}
+
+.book {
+  flex: 1;
+  min-height: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 6px 6px;
+}
+
+.book-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  perspective: 2200px;
+  color: #2c2219;
+  background:
+    linear-gradient(90deg, rgb(60 40 20 / 28%), rgb(60 40 20 / 6%) 4%, transparent 9%),
+    #f6eedd;
+  border-radius: 3px 14px 14px 3px;
+  box-shadow:
+    4px 0 0 -1px #e8dcc3,
+    7px 0 0 -2px #d9cbb0,
+    0 18px 40px rgb(0 0 0 / 45%);
+}
+
+.book-page > .player-stage {
+  flex: 2;
+  margin: 16px 16px 0 22px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
+}
+
+.page-text {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 22px 34px 28px;
+}
+
+.page-text .narration {
+  font-family: 'Amiri', var(--font-display);
+  font-size: 1.32rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.page-text .narration .w {
+  opacity: 0.38;
+  transition: opacity 0.35s ease;
+}
+
+.page-text .narration .w.on {
+  opacity: 1;
+}
+
+.page-text .verse-ar {
+  margin-top: 10px;
+  font-family: var(--font-ar);
+  direction: rtl;
+  text-align: right;
+  font-size: 1.5rem;
+  line-height: 2;
+  color: #8a5a12;
+}
+
+.page-text .verse-fr {
+  margin-top: 4px;
+  font-family: 'Amiri', var(--font-display);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.page-text .verse-ref {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: #8b7a64;
+}
+
+.page-no {
+  position: absolute;
+  inset: auto 0 10px;
+  text-align: center;
+  font-family: 'Amiri', var(--font-display);
+  font-size: 0.85rem;
+  color: #a08f76;
+  pointer-events: none;
+}
+
+/* The page just read lifts from the spine and folds over to the left, uncovering the next. */
+.leaf {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  background: #f6eedd;
+  border-radius: 3px 14px 14px 3px;
+  transform-origin: left center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  animation: leaf-turn 0.9s cubic-bezier(0.45, 0.05, 0.4, 1) forwards;
+  pointer-events: none;
+}
+
+.leaf::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgb(0 0 0 / 0%), rgb(0 0 0 / 30%));
+  animation: leaf-shade 0.9s ease-in forwards;
+}
+
+.leaf.back {
+  transform-origin: right center;
+  animation-name: leaf-turn-back;
+}
+
+.leaf-picture {
+  flex: 2;
+  min-height: 0;
+  width: calc(100% - 38px);
+  margin: 16px 16px 0 22px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.leaf-text {
+  flex: 1;
+  padding: 16px 22px 34px 28px;
+  font-family: 'Amiri', var(--font-display);
+  font-size: 1.32rem;
+  line-height: 1.55;
+  overflow: hidden;
+}
+
+@keyframes leaf-turn {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(-178deg); }
+}
+
+@keyframes leaf-turn-back {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(178deg); }
+}
+
+@keyframes leaf-shade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* On the page the painting is framed small: no title over it (the title card says it), light text on the cards. */
+.book-mode .player-title .grow {
+  visibility: hidden;
+}
+
+.book-mode .player-stage .icon-btn {
+  color: #fff;
+  background: rgb(0 0 0 / 28%);
+}
+
+.book-mode .title-card,
+.book-mode .player-start,
+.book-mode .player-end {
+  color: #f4efe1;
+}
+
+.book-mode .player-caption {
+  height: auto;
+  padding-top: 8px;
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf {
+    animation: leaf-shade 0.4s ease reverse forwards;
+  }
+}
+
+.page-picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

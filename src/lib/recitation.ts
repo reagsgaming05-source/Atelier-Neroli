@@ -7,6 +7,11 @@
  * elements take turns: while one recites a verse, the other already loads
  * the next one, so when the first ends the second starts at once.
  *
+ * Even so, waiting for "ended" left a short gap: each recording closes on a
+ * little silence, the event comes late, and a phone takes a moment to start
+ * the next element. So the next verse starts a little before the current one
+ * is over (LEAD), while that one plays out its last silence.
+ *
  * Media elements are used rather than Web Audio so that the recitation goes
  * on with the screen locked, on iPhone as on Android.
  */
@@ -19,6 +24,12 @@ export interface MediaLike {
   readonly error: unknown;
   onended: ((this: any, ev: Event) => any) | null;
   onerror: ((this: any, ev: Event | string) => any) | null;
+  /** Seconds played and seconds in all; absent or NaN until known. */
+  readonly currentTime?: number;
+  readonly duration?: number;
+  /** 4: enough is loaded to play through. */
+  readonly readyState?: number;
+  ontimeupdate?: ((this: any, ev: Event) => any) | null;
   load(): void;
   play(): Promise<void>;
   pause(): void;
@@ -40,6 +51,9 @@ export interface RecitationOptions {
   create?: () => MediaLike;
 }
 
+/** How long before the end of a verse the next one starts, in seconds. */
+export const LEAD = 0.3;
+
 /** Whether the element holds this recording, loaded or loading, and in good order. */
 const holds = (el: MediaLike, url: string) => el.src === url && !el.error;
 
@@ -51,6 +65,8 @@ export class Recitation {
   private repetition = 0;
   /** Bumped at each start and stop, so a stale play() rejection is ignored. */
   private token = 0;
+  /** The timer that starts the next verse a little early. */
+  private early: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly o: RecitationOptions) {}
 
@@ -74,7 +90,9 @@ export class Recitation {
   }
 
   pause() {
-    this.players?.[this.current].pause();
+    this.cancelEarly();
+    // Both: the verse before may still be playing out its last silence.
+    for (const el of this.players ?? []) el.pause();
   }
 
   resume() {
@@ -89,11 +107,12 @@ export class Recitation {
 
   /** Silence, and let go of the recordings. */
   stop() {
+    this.cancelEarly();
     this.token++;
     this.verse = 0;
     this.repetition = 0;
     for (const el of this.players ?? []) {
-      el.onended = el.onerror = null;
+      el.onended = el.onerror = el.ontimeupdate = null;
       el.pause();
       // Dropping the attribute frees the recording quietly; setting src to ''
       // would raise an error event instead.
@@ -111,7 +130,9 @@ export class Recitation {
     return this.players;
   }
 
-  private start(verse: number, repetition: number) {
+  /** `overlap`: the element before is playing out its last silence, let it finish. */
+  private start(verse: number, repetition: number, overlap = false) {
+    this.cancelEarly();
     const players = this.ensure();
     const url = this.o.url(verse);
     // Take the element that already holds this verse: the one loaded ahead, usually.
@@ -124,11 +145,31 @@ export class Recitation {
     this.repetition = repetition;
     const token = ++this.token;
 
-    other.onended = other.onerror = null;
-    other.pause();
+    other.onerror = other.ontimeupdate = null;
+    // Load the next verse ahead on the idle element: now, or once it has played out.
+    const preload = () => {
+      if (token !== this.token || verse >= this.o.lastVerse()) return;
+      const next = this.o.url(verse + 1);
+      if (!holds(other, next)) {
+        other.src = next;
+        // Setting src already loads; load() is what also lifts, on iPhone, the
+        // gesture requirement for this element when called from a tap.
+        other.load();
+      }
+    };
+    if (overlap && other !== el) {
+      other.onended = () => {
+        other.onended = null;
+        preload();
+      };
+    } else {
+      other.onended = null;
+      other.pause();
+    }
 
     el.onended = () => this.advance();
     el.onerror = () => this.fail();
+    el.ontimeupdate = () => this.watch(el, token);
     if (!holds(el, url)) el.src = url;
     // On an element that has ended, play() starts over from the beginning: that is a repetition.
     el.play().catch((e: unknown) => {
@@ -137,18 +178,32 @@ export class Recitation {
       if (token === this.token && (e as Error | null)?.name !== 'AbortError') this.fail();
     });
 
-    // Load the next verse ahead on the idle element.
-    if (verse < this.o.lastVerse()) {
-      const next = this.o.url(verse + 1);
-      if (!holds(other, next)) {
-        other.src = next;
-        // Setting src already loads; load() is what also lifts, on iPhone, the
-        // gesture requirement for this element when called from a tap.
-        other.load();
-      }
-    }
+    if (!(overlap && other !== el)) preload();
 
     this.o.onVerse(verse, repetition);
+  }
+
+  /** Near the end of a verse, sets a timer to start the next one LEAD seconds before the end. */
+  private watch(el: MediaLike, token: number) {
+    if (this.early || token !== this.token || el.paused) return;
+    const left = (el.duration ?? NaN) - (el.currentTime ?? NaN);
+    if (!(left > 0) || left > 1.5) return;
+    // A repetition plays the same element again from the start: it waits for "ended".
+    if (this.repetition + 1 < this.o.repeat() || this.verse >= this.o.lastVerse()) return;
+    const players = this.players!;
+    const other = players[1 - this.current];
+    if (!holds(other, this.o.url(this.verse + 1)) || (other.readyState ?? 4) < 3) return;
+    this.early = setTimeout(() => {
+      this.early = null;
+      if (token !== this.token || el.paused) return;
+      el.onended = null;
+      this.start(this.verse + 1, 0, true);
+    }, Math.max(0, (left - LEAD) * 1000));
+  }
+
+  private cancelEarly() {
+    if (this.early) clearTimeout(this.early);
+    this.early = null;
   }
 
   private advance() {
