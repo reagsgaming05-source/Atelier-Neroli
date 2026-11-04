@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Recitation, type MediaLike } from '../src/lib/recitation';
 
 /** An <audio> element as far as the recitation is concerned. */
@@ -8,6 +8,10 @@ class FakeAudio implements MediaLike {
   error: unknown = null;
   onended: MediaLike['onended'] = null;
   onerror: MediaLike['onerror'] = null;
+  ontimeupdate: MediaLike['ontimeupdate'] = null;
+  currentTime = 0;
+  duration = NaN;
+  readyState = 4;
   /** How many times a recording was (re)loaded: setting src loads, so does load(). */
   loads = 0;
   plays = 0;
@@ -39,6 +43,12 @@ class FakeAudio implements MediaLike {
   }
   removeAttribute(name: string) {
     if (name === 'src') this._src = '';
+  }
+  /** Plays on to `t` seconds of a `duration`-second recording. */
+  at(t: number, duration = 5) {
+    this.currentTime = t;
+    this.duration = duration;
+    this.ontimeupdate?.(new Event('timeupdate'));
   }
   end() {
     this.paused = true;
@@ -243,5 +253,66 @@ describe('recitation', () => {
     recitation.play(1);
     expect(made[0].paused).toBe(false);
     expect(events).toEqual(['verse 2', 'verse 1']);
+  });
+
+  it('starts the next verse just before the current one ends, and lets it play out', () => {
+    vi.useFakeTimers();
+    try {
+      const { recitation, made, events, url } = setup();
+      recitation.play(1);
+      made[0].at(4, 5);
+      vi.advanceTimersByTime(600);
+      expect(made[1].paused).toBe(true);
+      vi.advanceTimersByTime(200);
+      // 0.3 s before the end of verse 1, verse 2 has started; verse 1 is not cut.
+      expect(made[1].paused).toBe(false);
+      expect(made[0].paused).toBe(false);
+      expect(events).toEqual(['verse 1', 'verse 2']);
+      // Only once verse 1 has played out does its element load verse 3.
+      expect(made[0].src).toBe(url(1));
+      made[0].end();
+      expect(made[0].src).toBe(url(3));
+      expect(events).toEqual(['verse 1', 'verse 2']);
+      expect(recitation.playing).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('waits for the end when the verse is repeated, or the next one is not loaded yet', () => {
+    vi.useFakeTimers();
+    try {
+      const { recitation, made, events, state } = setup();
+      state.repeat = 2;
+      recitation.play(1);
+      made[0].at(4.9, 5);
+      vi.advanceTimersByTime(1000);
+      expect(made[1].paused).toBe(true);
+      made[0].end();
+      state.repeat = 1;
+      made[1].readyState = 1;
+      made[0].at(4.9, 5);
+      vi.advanceTimersByTime(1000);
+      expect(made[1].paused).toBe(true);
+      made[0].end();
+      expect(events).toEqual(['verse 1', 'verse 1 ×2', 'verse 2']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a pause cancels the early start', () => {
+    vi.useFakeTimers();
+    try {
+      const { recitation, made } = setup();
+      recitation.play(1);
+      made[0].at(4.5, 5);
+      recitation.pause();
+      vi.advanceTimersByTime(1000);
+      expect(made[1].paused).toBe(true);
+      expect(recitation.playing).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

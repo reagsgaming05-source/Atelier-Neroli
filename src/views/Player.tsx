@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../components/Icon';
 import { Ambience, AMBIENCE_LEVEL, createAudioContext, sceneMix } from '../lib/ambience';
 import { Stage } from '../components/Stage';
+import { PageTurn } from '../components/PageTurn';
 import { getBeats } from '../data/storyboards';
 import { sceneSeed } from '../lib/direction';
 import { pictureAt, picturesOf } from '../lib/storyboard';
@@ -325,6 +326,19 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const words = scene.text.split(' ');
   const lit = phase === 'text' ? Math.round(progress * words.length * 1.04) : words.length;
 
+  // The storybook look is a book: each picture is a page with its own words, and the page turns as the story goes on.
+  const bookMode = look === 'book';
+  const pageWords: number[] = [];
+  if (bookMode) {
+    let at = 0;
+    words.forEach((w, i) => {
+      const f = at / scene.text.length;
+      if ((f >= picture.from || pictureNo === 0) && (f < picture.to || lastPicture)) pageWords.push(i);
+      at += w.length + 1;
+    });
+  }
+  const pageNo = ep.scenes.slice(0, index).reduce((n, s, i) => n + picturesOf(s, getBeats(storyId, episode, i)).length, 0) + pictureNo + 1;
+
   const isLast = episode + 1 >= series.episodes.length;
   const verse = scene.verse;
   // The verse stays on screen for the whole scene, so it can be read when paused.
@@ -336,138 +350,171 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   };
   const toggle = (key: 'voice' | 'recitation' | 'ambience' | 'people' | 'camera') => setSettings((s) => ({ ...s, stories: { ...s.stories, [key]: !s.stories[key] } }));
 
-  return (
-    <div class="player-screen" role="dialog" aria-label={`${info.title}, ${ep.title}`}>
-      <div class="player-stage">
-        <Stage
-          key={`${storyId}-${episode}`}
-          pictureKey={`${index}-${pictureNo}`}
-          sky={picture.sky}
-          ground={picture.ground}
-          motifs={picture.motifs}
-          focus={picture.focus}
-          seed={sceneSeed(scene.text) + pictureNo * 7919}
-          ms={pictureMs}
-          playing={playing}
-          label={scene.text}
-          people={prefs.people}
-          painting={painting}
-          camera={prefs.camera === true}
-        />
+  const stage = (
+    <div class="player-stage">
+      {bookMode && painting ? (
+        // A book's picture holds still and changes with the page, under the page that turns.
+        <img class="scene-art page-picture" key={painting} src={painting} alt="" decoding="sync" />
+      ) : (
+          <Stage
+            key={`${storyId}-${episode}`}
+            pictureKey={`${index}-${pictureNo}`}
+            sky={picture.sky}
+            ground={picture.ground}
+            motifs={picture.motifs}
+            focus={picture.focus}
+            seed={sceneSeed(scene.text) + pictureNo * 7919}
+            ms={pictureMs}
+            playing={playing}
+            label={scene.text}
+            people={prefs.people}
+            painting={painting}
+            camera={prefs.camera === true}
+          />
+      )}
 
-        {started && index === 0 && !ended && (
-          <div class="title-card" key={`title-${storyId}-${episode}`}>
-            <small>{series.episodes.length > 1 ? `Épisode ${episode + 1}` : 'Récit'}</small>
-            <h2>{ep.title}</h2>
-            {info.ar && <span class="ar" lang="ar">{info.ar}</span>}
-          </div>
-        )}
-
-        <div class="player-top">
-          <div class="player-bars" aria-hidden="true">
-            {ep.scenes.map((_, i) => (
-              <span key={i}>
-                <i style={{ width: i < index || ended ? '100%' : i === index ? (phase === 'text' ? '35%' : '75%') : '0%' }} />
-              </span>
-            ))}
-          </div>
-          <div class="player-title">
-            <div class="grow">
-              <b>{info.title}</b>
-              {series.episodes.length > 1 ? `Épisode ${episode + 1}/${series.episodes.length} · ` : ''}
-              {ep.title}
-            </div>
-            <button class="icon-btn" aria-label="Fermer" onClick={close}>
-              <Icon name="close" />
-            </button>
-          </div>
+      {started && index === 0 && !ended && (
+        <div class="title-card" key={`title-${storyId}-${episode}`}>
+          <small>{series.episodes.length > 1 ? `Épisode ${episode + 1}` : 'Récit'}</small>
+          <h2>{ep.title}</h2>
+          {info.ar && <span class="ar" lang="ar">{info.ar}</span>}
         </div>
+      )}
 
-        {started && !ended && (
-          <div class="player-tap">
-            <button aria-label="Scène précédente" onClick={prev} />
-            <button aria-label={playing ? 'Pause' : 'Lecture'} onClick={() => setPlaying(!playing)} />
-            <button aria-label="Scène suivante" onClick={next} />
-          </div>
-        )}
-
-        {!started && (
-          <div class="player-start">
-            <button onClick={start}>
-              <span>
-                <Icon name="play" size={34} />
-              </span>
-              <span>{episode === 0 ? 'Regarder' : `Regarder l’épisode ${episode + 1}`}</span>
-              <small style={{ fontWeight: 450, opacity: 0.8 }}>
-                {!prefs.voice || (narration === null && !speechSupported())
-                  ? 'Le texte défile automatiquement'
-                  : narration === undefined
-                    ? 'Chargement de la voix…'
-                    : narration
-                      ? `Voix enregistrée : ${narration.voice || 'narrateur'} — montez le son`
-                      : 'Voix de l’appareil — montez le son'}
-              </small>
-            </button>
-          </div>
-        )}
-
-        {ended && (
-          <div class="player-end">
-            <h2>{isLast ? (series.episodes.length > 1 ? 'Fin de la série' : 'Fin de l’histoire') : 'Fin de l’épisode'}</h2>
-            {isLast && info.lessons.length > 0 && (
-              <ul class="lessons" style={{ textAlign: 'start', maxWidth: '520px', margin: '6px auto' }}>
-                {info.lessons.slice(0, 3).map((l) => (
-                  <li key={l}>{l}</li>
-                ))}
-              </ul>
-            )}
-            {!isLast && (
-              <button
-                class="btn"
-                style={{ background: '#d9b45a', color: '#1b1a12' }}
-                onClick={() => navigate(`/serie/${storyId}/${episode + 2}`, true)}
-              >
-                Épisode suivant : {series.episodes[episode + 1].title} <Icon name="chevron" size={18} />
-              </button>
-            )}
-            <button
-              class="btn secondary"
-              onClick={() => {
-                setIndex(0);
-                setPhase('text');
-                setEnded(false);
-                setPlaying(true);
-              }}
-            >
-              <Icon name="reset" size={18} /> Revoir
-            </button>
-            <button class="btn ghost" style={{ color: '#f4efe1' }} onClick={close}>
-              {isLast ? 'Leçons, versets et quiz' : 'Retour à la série'}
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div class="player-caption" aria-live="polite">
-        <div class="narration">
-          {words.map((w, i) => (
-            <span key={i} class={i < lit ? 'w on' : 'w'}>
-              {w}{' '}
+      <div class="player-top">
+        <div class="player-bars" aria-hidden="true">
+          {ep.scenes.map((_, i) => (
+            <span key={i}>
+              <i style={{ width: i < index || ended ? '100%' : i === index ? (phase === 'text' ? '35%' : '75%') : '0%' }} />
             </span>
           ))}
         </div>
-        {showVerse && verses && (
-          <div class="fade-in">
-            <div class="verse-ar" lang="ar">
-              {verses.ar[verse.verse - 1]}
-            </div>
-            <div class="verse-fr">{verses.tr[verse.verse - 1]}</div>
-            <div class="verse-ref">
-              {SURAHS[verse.surah - 1].name}, verset {verse.verse}
-              {phase === 'recite' ? ' · récitation' : ''}
-            </div>
+        <div class="player-title">
+          <div class="grow">
+            <b>{info.title}</b>
+            {series.episodes.length > 1 ? `Épisode ${episode + 1}/${series.episodes.length} · ` : ''}
+            {ep.title}
           </div>
-        )}
+          <button class="icon-btn" aria-label="Fermer" onClick={close}>
+            <Icon name="close" />
+          </button>
+        </div>
+      </div>
+
+      {started && !ended && (
+        <div class="player-tap">
+          <button aria-label="Scène précédente" onClick={prev} />
+          <button aria-label={playing ? 'Pause' : 'Lecture'} onClick={() => setPlaying(!playing)} />
+          <button aria-label="Scène suivante" onClick={next} />
+        </div>
+      )}
+
+      {!started && (
+        <div class="player-start">
+          <button onClick={start}>
+            <span>
+              <Icon name="play" size={34} />
+            </span>
+            <span>{episode === 0 ? 'Regarder' : `Regarder l’épisode ${episode + 1}`}</span>
+            <small style={{ fontWeight: 450, opacity: 0.8 }}>
+              {!prefs.voice || (narration === null && !speechSupported())
+                ? 'Le texte défile automatiquement'
+                : narration === undefined
+                  ? 'Chargement de la voix…'
+                  : narration
+                    ? `Voix enregistrée : ${narration.voice || 'narrateur'} — montez le son`
+                    : 'Voix de l’appareil — montez le son'}
+            </small>
+          </button>
+        </div>
+      )}
+
+      {ended && (
+        <div class="player-end">
+          <h2>{isLast ? (series.episodes.length > 1 ? 'Fin de la série' : 'Fin de l’histoire') : 'Fin de l’épisode'}</h2>
+          {isLast && info.lessons.length > 0 && (
+            <ul class="lessons" style={{ textAlign: 'start', maxWidth: '520px', margin: '6px auto' }}>
+              {info.lessons.slice(0, 3).map((l) => (
+                <li key={l}>{l}</li>
+              ))}
+            </ul>
+          )}
+          {!isLast && (
+            <button
+              class="btn"
+              style={{ background: '#d9b45a', color: '#1b1a12' }}
+              onClick={() => navigate(`/serie/${storyId}/${episode + 2}`, true)}
+            >
+              Épisode suivant : {series.episodes[episode + 1].title} <Icon name="chevron" size={18} />
+            </button>
+          )}
+          <button
+            class="btn secondary"
+            onClick={() => {
+              setIndex(0);
+              setPhase('text');
+              setEnded(false);
+              setPlaying(true);
+            }}
+          >
+            <Icon name="reset" size={18} /> Revoir
+          </button>
+          <button class="btn ghost" style={{ color: '#f4efe1' }} onClick={close}>
+            {isLast ? 'Leçons, versets et quiz' : 'Retour à la série'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const text = (
+    <>
+      <div class="narration">
+        {(bookMode ? pageWords : words.map((_, i) => i)).map((i) => (
+          <span key={i} class={i < lit ? 'w on' : 'w'}>
+            {words[i]}{' '}
+          </span>
+        ))}
+      </div>
+      {showVerse && verses && (
+        <div class="fade-in">
+          <div class="verse-ar" lang="ar">
+            {verses.ar[verse.verse - 1]}
+          </div>
+          <div class="verse-fr">{verses.tr[verse.verse - 1]}</div>
+          <div class="verse-ref">
+            {SURAHS[verse.surah - 1].name}, verset {verse.verse}
+            {phase === 'recite' ? ' · récitation' : ''}
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <div class={bookMode ? 'player-screen book-mode' : 'player-screen'} role="dialog" aria-label={`${info.title}, ${ep.title}`}>
+      {bookMode ? (
+        <div class="book">
+          <div class="book-page">
+            {stage}
+            <div class="page-text">
+              {text}
+            </div>
+            <div class="page-no">{pageNo}</div>
+            <PageTurn
+              pageKey={`${storyId}-${episode}-${index}-${pictureNo}`}
+              order={pageNo}
+              leaf={{ painting, text: pageWords.map((i) => words[i]).join(' ') }}
+              sound={wantAmbience ? ambience.current?.ctx : undefined}
+            />
+          </div>
+        </div>
+      ) : (
+        stage
+      )}
+
+      <div class="player-caption" aria-live="polite">
+        {!bookMode && text}
         {audioFailed && (
           <div class="small" role="status" style={{ marginTop: '8px', opacity: 0.85 }}>
             L’audio de cet épisode ne se charge pas ici : le texte défile en silence.
