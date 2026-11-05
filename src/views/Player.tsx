@@ -14,7 +14,8 @@ import { SURAHS } from '../data/surahs';
 import { audioUrl, loadSurah } from '../lib/quran';
 import { navigate } from '../lib/router';
 import { learnStore, settingsStore, useStore } from '../lib/settings';
-import { loadNarration, playSpan, SILENCE, spanFor, type EpisodeNarration, type SpanHandle } from '../lib/narration';
+import { charAt, wordsSaid } from '../lib/readalong';
+import { loadNarration, marksFor, playSpan, SILENCE, spanFor, type EpisodeNarration, type SpanHandle } from '../lib/narration';
 import { readingTime, speak, speechSupported, stopSpeaking, type SpeakHandle } from '../lib/speech';
 
 type Phase = 'text' | 'verse' | 'recite';
@@ -205,15 +206,24 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
     if (!started || !playing || ended || phase !== 'text' || !scene) return;
     const span = narration && prefs.voice ? spanFor(narration, scene.text) : undefined;
     const length = span ? ((span[1] - span[0]) * 1000) / prefs.rate : readingTime(scene.text, prefs.rate);
+    const marks = span && narration ? marksFor(narration, scene.text) : undefined;
     const origin = Date.now() - progress * length;
     const id = window.setInterval(() => {
       const audio = narrator.current;
-      // With a recording, follow the sound itself (minus the silence it keeps at both ends); otherwise follow the clock.
-      const p = span && audio && !audio.paused ? (audio.currentTime - span[0] - 0.25) / (span[1] - span[0] - 0.75) : (Date.now() - origin) / length;
-      setTold({ key: sceneKey, p: Math.min(1, Math.max(0, p)) });
-    }, 120);
+      const sounding = span && audio && !audio.paused && !audio.muted;
+      // With a recording, follow the sound itself: pinned to its pauses when the episode has been listened to,
+      // else evenly between the silences it keeps at both ends. Without one, follow the clock.
+      const p = !sounding
+        ? span && audio && !audioFailed
+          ? null
+          : (Date.now() - origin) / length
+        : marks
+          ? charAt(marks, audio.currentTime) / scene.text.length
+          : (audio.currentTime - span[0] - 0.25) / (span[1] - span[0] - 0.75);
+      if (p !== null) setTold({ key: sceneKey, p: Math.min(1, Math.max(0, p)) });
+    }, 80);
     return () => clearInterval(id);
-  }, [started, playing, ended, phase, index, narration, prefs.voice, prefs.rate]);
+  }, [started, playing, ended, phase, index, narration, audioFailed, prefs.voice, prefs.rate]);
 
   // Nature sounds follow the scene: they fade with it, and fall silent when paused.
   useEffect(() => {
@@ -314,7 +324,8 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
 
   // The pictures of the scene follow what is being said: the one on screen is the one whose words are being told.
   const pictures = picturesOf(scene, getBeats(storyId, episode, index));
-  const pictureNo = pictureAt(pictures, phase === 'text' ? progress : 1);
+  // The page turns as its first word is said, not before.
+  const pictureNo = pictureAt(pictures, phase === 'text' ? progress : 1, 0);
   const picture = pictures[Math.min(pictureNo, pictures.length - 1)];
   const lastPicture = pictureNo >= pictures.length - 1;
   const pictureMs = Math.max(textMs * (picture.to - picture.from), 2500) + (lastPicture && scene.verse ? 6000 : 0);
@@ -324,7 +335,7 @@ export function Player({ storyId, episode }: { storyId: string; episode: number 
   const paintedLooks = found ? LOOKS.filter((l) => l.id !== 'draw' && hasPaintings(found, l.id as Exclude<Look, 'draw'>, storyId, episode)) : [];
 
   const words = scene.text.split(' ');
-  const lit = phase === 'text' ? Math.round(progress * words.length * 1.04) : words.length;
+  const lit = phase === 'text' ? wordsSaid(scene.text, progress * scene.text.length) : words.length;
 
   // The storybook look is a book: each picture is a page with its own words, and the page turns as the story goes on.
   const bookMode = look === 'book';

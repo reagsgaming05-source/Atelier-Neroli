@@ -9,19 +9,23 @@
  * to silent reading until the episode is recorded again.
  */
 
+import type { Mark } from './readalong';
+
 /** [start, end] of one spoken text in the episode file, in seconds. */
 export type Span = [number, number];
 
 export interface EpisodeNarration {
   url: string;
   spans: Record<string, Span>;
+  /** For each scene text, where its words fall in the file (see readalong.ts). */
+  marks?: Record<string, Mark[]>;
   /** Short name of the voice, e.g. "Gemini" or "Kokoro-82M". */
   voice: string;
 }
 
 interface NarrationIndex {
   voice: string;
-  episodes: Record<string, { file: string; spans: Record<string, Span>; voice?: string }>;
+  episodes: Record<string, { file: string; spans: Record<string, Span>; marks?: Record<string, Mark[]>; voice?: string }>;
 }
 
 /** FNV-1a over UTF-16 code units: short, stable id for a text (8 hex digits). */
@@ -60,11 +64,15 @@ export async function loadNarration(storyId: string, episode: number): Promise<E
   // listening; the <audio> element itself only asks for byte ranges.
   if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) fetch(url).catch(() => {});
   const full = entry.voice ?? (await loadIndex())?.voice ?? '';
-  return { url, spans: entry.spans, voice: full.split('(')[0].trim() };
+  return { url, spans: entry.spans, marks: entry.marks, voice: full.split('(')[0].trim() };
 }
 
 export function spanFor(narration: EpisodeNarration, text: string): Span | undefined {
   return narration.spans[textHash(text)];
+}
+
+export function marksFor(narration: EpisodeNarration, text: string): Mark[] | undefined {
+  return narration.marks?.[textHash(text)];
 }
 
 /** A silent WAV, played from the first tap so iOS lets the page play audio later. */
